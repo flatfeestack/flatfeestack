@@ -1,15 +1,14 @@
 package main
 
 import (
-	"git-contribution/models"
-	"github.com/go-git/go-git"
-	"github.com/go-git/go-git/plumbing/object"
-	"github.com/go-git/go-git/storage/memory"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"os"
 	"time"
 )
 
-func analyzeRepository(src string, since time.Time, until time.Time) (map[models.Contributor]models.CommitChange, error) {
+func analyzeRepository(src string, since time.Time, until time.Time) (map[Contributor]CommitChange, error) {
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:      src,
 		Progress: os.Stdout,
@@ -18,7 +17,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[models
 		return nil, err
 	}
 
-	authorMap := make(map[models.Contributor]models.CommitChange)
+	authorMap := make(map[Contributor]CommitChange)
 
 	var timeZeroValue time.Time
 	var options git.LogOptions
@@ -37,7 +36,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[models
 	}
 
 	err = commits.ForEach(func(c *object.Commit) error {
-		author := models.Contributor{
+		author := Contributor{
 			Name:  c.Author.Name,
 			Email: c.Author.Email,
 		}
@@ -46,7 +45,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[models
 		if err != nil {
 			return err
 		}
-		contribution := models.CommitChange{
+		contribution := CommitChange{
 			Addition: 0,
 			Deletion: 0,
 		}
@@ -58,7 +57,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[models
 		if _, found := authorMap[author]; !found {
 			authorMap[author] = contribution
 		} else {
-			authorMap[author] = models.CommitChange{
+			authorMap[author] = CommitChange{
 				Addition: authorMap[author].Addition + contribution.Addition,
 				Deletion: authorMap[author].Deletion + contribution.Deletion,
 			}

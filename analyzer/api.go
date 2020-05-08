@@ -3,20 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"git-contribution/models"
-	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
-
-func makeRestAPI() {
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", getAllContributions).Methods("GET")
-	log.Fatal(http.ListenAndServe(":8080", router))
-}
 
 func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	repositoryUrl := r.URL.Query()["repositoryUrl"]
@@ -63,9 +54,9 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var contributions []models.Contribution
+	var contributions []Contribution
 	for k, v := range contributionMap {
-		contributions = append(contributions, models.Contribution{Contributor: k, Changes: v})
+		contributions = append(contributions, Contribution{Contributor: k, Changes: v})
 	}
 	json.NewEncoder(w).Encode(contributions)
 }
