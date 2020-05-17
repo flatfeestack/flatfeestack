@@ -8,9 +8,11 @@ NAME:=engine
 all: dep build
 build:
 	go build -v ./...
-dep:
+dep: go.mod
 	go mod tidy
 	go get -v -u ./...
+go.mod:
+	go mod init $(NAME)
 clean:
 	go clean
 	rm -f $(NAME)
