@@ -13,4 +13,7 @@ type CommitChange struct {
 type Contribution struct {
 	Contributor Contributor  `json:"contributor"`
 	Changes     CommitChange `json:"changes"`
+	Merges		int			`json:"merges"`
+	Commits		int 		`json:"commits"`
+}
 }

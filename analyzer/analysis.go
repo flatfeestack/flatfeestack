@@ -8,16 +8,17 @@ import (
 	"time"
 )
 
-func analyzeRepository(src string, since time.Time, until time.Time) (map[Contributor]CommitChange, error) {
+func analyzeRepository(src string, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:      src,
 		Progress: os.Stdout,
+		NoCheckout:	true,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	authorMap := make(map[Contributor]CommitChange)
+	authorMap := make(map[Contributor]Contribution)
 
 	var timeZeroValue time.Time
 	var options git.LogOptions
@@ -41,25 +42,43 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 			Email: c.Author.Email,
 		}
 
-		stats, err := c.Stats()
+		merge := 0
+		commit := 1
+
+		if len(c.ParentHashes) > 1 {
+			merge = 1
+			commit = 0
+		}
+
+			stats, err := c.Stats()
 		if err != nil {
 			return err
 		}
-		contribution := CommitChange{
+		changes := CommitChange{
 			Addition: 0,
 			Deletion: 0,
 		}
 		for index := range stats {
-			contribution.Addition += stats[index].Addition
-			contribution.Deletion += stats[index].Deletion
+			changes.Addition += stats[index].Addition
+			changes.Deletion += stats[index].Deletion
 		}
 
 		if _, found := authorMap[author]; !found {
-			authorMap[author] = contribution
+			authorMap[author] = Contribution{
+				Contributor: author,
+				Changes:     changes,
+				Merges:      merge,
+				Commits:     commit,
+			}
 		} else {
-			authorMap[author] = CommitChange{
-				Addition: authorMap[author].Addition + contribution.Addition,
-				Deletion: authorMap[author].Deletion + contribution.Deletion,
+			authorMap[author] = Contribution{
+				Contributor: author,
+				Changes:     CommitChange{
+					Addition: authorMap[author].Changes.Addition + changes.Addition,
+					Deletion: authorMap[author].Changes.Deletion + changes.Deletion,
+				},
+				Merges:      authorMap[author].Merges + merge,
+				Commits:     authorMap[author].Commits + commit,
 			}
 		}
 		return nil

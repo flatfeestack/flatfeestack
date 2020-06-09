@@ -55,8 +55,8 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var contributions []Contribution
-	for k, v := range contributionMap {
-		contributions = append(contributions, Contribution{Contributor: k, Changes: v})
+	for _, v := range contributionMap {
+		contributions = append(contributions, v)
 	}
 	json.NewEncoder(w).Encode(contributions)
 }
