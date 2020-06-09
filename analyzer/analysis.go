@@ -88,3 +88,48 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 	}
 	return authorMap, nil
 }
+
+func weightContributions(contributions map[Contributor]Contribution) (map[Contributor]FlatFeeWeight, error) {
+
+	// Parameters
+	additionWeight := 0.4
+	deletionWeight := 0.3
+	commitWeight := 0.2
+	mergeWeight := 0.1
+
+
+	authorMap := make(map[Contributor]FlatFeeWeight)
+
+	totalChanges := CommitChange{
+		Addition: 0,
+		Deletion: 0,
+	}
+	totalMerge := 0
+	totalCommit := 0
+	var authors []Contributor
+
+	for _, v := range contributions {
+		authors = append(authors, v.Contributor)
+		totalChanges = CommitChange{
+			Addition: totalChanges.Addition + v.Changes.Addition,
+			Deletion: totalChanges.Deletion + v.Changes.Deletion,
+		}
+		totalMerge += v.Merges
+		totalCommit += v.Commits
+	}
+
+	for _, author := range authors {
+		additionPercentage := float64(contributions[author].Changes.Addition) / float64(totalChanges.Addition)
+		deletionPercentage := float64(contributions[author].Changes.Deletion) / float64(totalChanges.Deletion)
+		mergePercentage := float64(contributions[author].Merges) / float64(totalMerge)
+		commitPercentage := float64(contributions[author].Commits) / float64(totalCommit)
+
+		authorMap[author] = FlatFeeWeight{
+			Contributor: author,
+			Weight:      additionPercentage * additionWeight + deletionPercentage * deletionWeight + mergePercentage * mergeWeight + commitPercentage * commitWeight,
+		}
+	}
+
+	return authorMap, nil
+
+}

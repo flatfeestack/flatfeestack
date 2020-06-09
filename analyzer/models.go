@@ -16,4 +16,8 @@ type Contribution struct {
 	Merges		int			`json:"merges"`
 	Commits		int 		`json:"commits"`
 }
+
+type FlatFeeWeight struct {
+	Contributor Contributor	`json:"contributor"`
+	Weight		float64		`json:"weight"`
 }
