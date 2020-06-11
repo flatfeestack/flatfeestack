@@ -3,17 +3,11 @@ package main
 import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/storage/memory"
-	"os"
 	"time"
 )
 
 func analyzeRepository(src string, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
-	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:      src,
-		Progress: os.Stdout,
-		NoCheckout:	true,
-	})
+	repo, err := CloneOrUpdateRepository(src)
 	if err != nil {
 		return nil, err
 	}

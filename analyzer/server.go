@@ -1,12 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 )
 
 func main() {
+	err := setEnvs();
+	if err != nil {
+		fmt.Println(err)
+	}
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
 	router.HandleFunc("/weights", getContributionWeights).Methods("GET")

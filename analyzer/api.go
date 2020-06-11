@@ -116,7 +116,6 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	for _, v := range weightsMap {
 		contributionWeights = append(contributionWeights, v)
 	}
-	fmt.Println(contributionWeights)
 	json.NewEncoder(w).Encode(contributionWeights)
 }
 
