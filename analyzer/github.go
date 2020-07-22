@@ -19,9 +19,20 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 
 	repositoryOwner, repositoryName := getOwnerAndNameOfGithubUrl(src)
 
+	//var repository GQLIssueConnection
+	repositoryIssues, err := getRepositoryIssues(repositoryOwner, repositoryName, since, until)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(len(repositoryIssues.Nodes))
+}
+
+func getRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) (GQLIssueConnection, error) {
 	var timeZeroValue time.Time
 
 	sinceFilterBy := ""
+	pageLength := 100
 
 	if since != timeZeroValue {
 		sinceFilterBy = `since: "` + since.Format(time.RFC3339) + `"`
@@ -30,7 +41,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 	query := fmt.Sprintf(
 		`{
 			repository(owner:"%s", name:"%s") {
-				issues(last:3, filterBy: {%s}) {
+				issues(first:%d, filterBy: {%s}) {
 					pageInfo {
 						endCursor
 						hasNextPage
@@ -41,7 +52,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 						author {
 							login
 						}
-						comments(first:100) {
+						comments(first: %d) {
 							pageInfo {
 								endCursor
 								hasNextPage
@@ -57,15 +68,118 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 					}
 				}
 			}
-		}`, repositoryOwner, repositoryName, sinceFilterBy)
+		}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, pageLength)
 
 	resp, err := manualGQL(query)
 	if err != nil {
-		fmt.Println(err)
+		return GQLIssueConnection{}, err
 	}
 	var response RequestGQLRepositoryInformation
 	if err := json.Unmarshal(resp, &response); err != nil {
-		fmt.Println(err)
+		return GQLIssueConnection{}, err
+	}
+
+	// Pagination
+
+	// Fetch the missing issues
+
+	issuesAfter := ""
+
+	for ok0 := true; ok0; ok0 = response.Data.Repository.Issues.PageInfo.HasNextPage {
+		if response.Data.Repository.Issues.PageInfo.HasNextPage {
+			issuesAfter = response.Data.Repository.Issues.PageInfo.EndCursor
+			issueRefetchQuery := fmt.Sprintf(
+				`{
+				repository(owner:"%s", name:"%s") {
+					issues(first:%d, filterBy: {%s}, after: "%s") {
+						pageInfo {
+							endCursor
+							hasNextPage
+						}
+						nodes {
+							title
+							number
+							author {
+								login
+							}
+							comments(first: %d) {
+								pageInfo {
+									endCursor
+									hasNextPage
+								}						
+								nodes {
+									author {
+										login
+									}
+									updatedAt
+								}
+							}
+							updatedAt
+						}
+					}
+				}
+			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
+			resp, err := manualGQL(issueRefetchQuery)
+			if err != nil {
+				fmt.Println(err)
+			}
+			var refetchResponse RequestGQLRepositoryInformation
+			if err := json.Unmarshal(resp, &refetchResponse); err != nil {
+				fmt.Println(err)
+			}
+			response.Data.Repository.Issues.Nodes = append(response.Data.Repository.Issues.Nodes, refetchResponse.Data.Repository.Issues.Nodes...)
+			response.Data.Repository.Issues.PageInfo = refetchResponse.Data.Repository.Issues.PageInfo
+			fmt.Println(len(response.Data.Repository.Issues.Nodes))
+		}
+	}
+
+	//Fetch the missing IssueComments
+
+	issueCommentsAfter := ""
+	var issueToRefech int
+
+	for index := range response.Data.Repository.Issues.Nodes {
+		issueToRefech = response.Data.Repository.Issues.Nodes[index].Number
+		for ok1 := true; ok1; ok1 = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
+			if response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
+				issueCommentsAfter = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.EndCursor
+				specificIssueQuery := fmt.Sprintf(
+					`{
+					repository(owner:"%s", name:"%s") {
+						issue(number: %d) {
+							title
+							number
+							author {
+								login
+							}
+							comments(first: %d, after: "%s") {
+								pageInfo {
+									endCursor
+									hasNextPage
+								}
+								nodes {
+									author {
+										login
+									}
+									updatedAt
+								}
+							}
+							updatedAt
+						}
+					}
+				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
+				resp, err := manualGQL(specificIssueQuery)
+				if err != nil {
+					fmt.Println(err)
+				}
+				var refetchResponse RequestGQLRepositoryInformation
+				if err := json.Unmarshal(resp, &refetchResponse); err != nil {
+					fmt.Println(err)
+				}
+				response.Data.Repository.Issues.Nodes[index].Comments.Nodes = append(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, refetchResponse.Data.Repository.Issue.Comments.Nodes...)
+				response.Data.Repository.Issues.Nodes[index].Comments.PageInfo = refetchResponse.Data.Repository.Issue.Comments.PageInfo
+			}
+		}
 	}
 
 	// Filtering
@@ -74,8 +188,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 		response.Data.Repository.Issues.Nodes[index].Comments.Nodes = filterIssueCommentsByDate(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, since, until)
 	}
 
-
-	fmt.Println(response.Data.Repository.Issues.Nodes)
+	return response.Data.Repository.Issues, nil
 }
 
 func manualGQL(query string) ([]byte, error) {

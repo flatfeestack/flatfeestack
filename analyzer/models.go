@@ -33,7 +33,8 @@ type GQLData struct {
 }
 
 type GQLRepository struct {
-	Issues GQLIssueConnection `json:"issues"`
+	Issues 	GQLIssueConnection 	`json:"issues"`
+	Issue	GQLIssue			`json:"issue"`
 }
 
 type GQLIssueConnection struct {
