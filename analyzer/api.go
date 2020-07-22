@@ -54,6 +54,8 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
+
 	var contributions []Contribution
 	for _, v := range contributionMap {
 		contributions = append(contributions, v)

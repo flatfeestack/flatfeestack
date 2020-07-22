@@ -8,11 +8,10 @@ import (
 )
 
 func main() {
-	err := setEnvs();
+	err := setEnvs()
 	if err != nil {
 		fmt.Println(err)
 	}
-	getPlatformInformation()
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
 	router.HandleFunc("/weights", getContributionWeights).Methods("GET")

@@ -44,7 +44,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 			commit = 0
 		}
 
-			stats, err := c.Stats()
+		stats, err := c.Stats()
 		if err != nil {
 			return err
 		}
@@ -67,12 +67,12 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 		} else {
 			authorMap[author] = Contribution{
 				Contributor: author,
-				Changes:     CommitChange{
+				Changes: CommitChange{
 					Addition: authorMap[author].Changes.Addition + changes.Addition,
 					Deletion: authorMap[author].Changes.Deletion + changes.Deletion,
 				},
-				Merges:      authorMap[author].Merges + merge,
-				Commits:     authorMap[author].Commits + commit,
+				Merges:  authorMap[author].Merges + merge,
+				Commits: authorMap[author].Commits + commit,
 			}
 		}
 		return nil
@@ -90,7 +90,6 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	deletionWeight := 0.3
 	commitWeight := 0.2
 	mergeWeight := 0.1
-
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -120,7 +119,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
-			Weight:      additionPercentage * additionWeight + deletionPercentage * deletionWeight + mergePercentage * mergeWeight + commitPercentage * commitWeight,
+			Weight:      additionPercentage*additionWeight + deletionPercentage*deletionWeight + mergePercentage*mergeWeight + commitPercentage*commitWeight,
 		}
 	}
 
