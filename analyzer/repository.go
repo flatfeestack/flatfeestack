@@ -8,6 +8,8 @@ import (
 )
 
 func CloneOrUpdateRepository(src string) (*git.Repository, error) {
+	//getIssues(src)
+	getPlatformInformation()
 	repo, err := UpdateRepository(src)
 	if err != nil {
 		return CloneRepository(src)
