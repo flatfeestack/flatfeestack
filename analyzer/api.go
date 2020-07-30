@@ -66,13 +66,16 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, err.Error())
+			return
 		}
 
 		var contributions []ContributionWithPlatformInformation
 		for k, v := range contributionMap {
 			userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, k.Email)
 			if err != nil {
-				fmt.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, err.Error())
+				return
 			}
 			contributions = append(contributions, ContributionWithPlatformInformation{
 				GitInformation:      v,
