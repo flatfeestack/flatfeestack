@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, error) {
+func getGithubPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, error) {
 
 	// Check if repository is on Github
 	if !strings.Contains(src, "github.com") {
@@ -21,7 +21,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQL
 	repositoryOwner, repositoryName := getOwnerAndNameOfGithubUrl(src)
 
 	//var repository GQLIssueConnection
-	repositoryIssues, err := getRepositoryIssues(repositoryOwner, repositoryName, since, until)
+	repositoryIssues, err := getGithubRepositoryIssues(repositoryOwner, repositoryName, since, until)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -29,7 +29,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQL
 	return repositoryIssues, nil
 }
 
-func getRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLIssue, error) {
+func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLIssue, error) {
 	var timeZeroValue time.Time
 
 	sinceFilterBy := ""
@@ -71,7 +71,7 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 			}
 		}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, pageLength)
 
-	resp, err := manualGQL(query)
+	resp, err := manualGithubGQL(query)
 	if err != nil {
 		return []GQLIssue{}, err
 	}
@@ -122,7 +122,7 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 					}
 				}
 			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
-			resp, err := manualGQL(issueRefetchQuery)
+			resp, err := manualGithubGQL(issueRefetchQuery)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -170,7 +170,7 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 						}
 					}
 				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
-				resp, err := manualGQL(specificIssueQuery)
+				resp, err := manualGithubGQL(specificIssueQuery)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -197,7 +197,7 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 	return response.Data.Repository.Issues.Nodes, nil
 }
 
-func manualGQL(query string) ([]byte, error) {
+func manualGithubGQL(query string) ([]byte, error) {
 	jsonData := map[string]string{
 		"query": query,
 	}
@@ -266,7 +266,7 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 			}
       	}`, repositoryOwner, repositoryName, email)
 
-	resp, err := manualGQL(query)
+	resp, err := manualGithubGQL(query)
 	if err != nil {
 		return "", err
 	}
@@ -280,7 +280,7 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 	return response.Data.Repository.Ref.Target.History.Nodes[0].Author.User.Login, nil
 }
 
-func getPlatformInformationFromUser(src string, issues []GQLIssue, userEmail string) (IssueUserInformation, error) {
+func getGithubPlatformInformationFromUser(src string, issues []GQLIssue, userEmail string) (IssueUserInformation, error) {
 
 	repoOwner, repoName := getOwnerAndNameOfGithubUrl(src)
 
