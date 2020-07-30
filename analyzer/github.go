@@ -308,6 +308,7 @@ func getPlatformInformationFromUser(src string, issues []GQLIssue, userEmail str
 	}
 
 	return IssueUserInformation{
+		UserName:  login,
 		Author:    issuesWhereUserIsAuthor,
 		Commenter: amountOfIssueCommenter,
 	}, nil

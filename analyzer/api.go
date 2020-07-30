@@ -17,6 +17,12 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	analyzePlatformInformation := false
+	platformInformationUrlParam := r.URL.Query()["platformInformation"]
+	if len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true" {
+		analyzePlatformInformation = true
+	}
+
 	// convert since timestamp into go time
 	var err error
 	commitsSinceString := r.URL.Query()["since"]
@@ -55,25 +61,32 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issues, err := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error())
-	}
-
-	for k, _ := range contributionMap {
-		userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, k.Email)
+	if analyzePlatformInformation {
+		issues, err := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
 		if err != nil {
-			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, err.Error())
 		}
-		fmt.Println(userInformation)
-	}
 
-	var contributions []Contribution
-	for _, v := range contributionMap {
-		contributions = append(contributions, v)
+		var contributions []ContributionWithPlatformInformation
+		for k, v := range contributionMap {
+			userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, k.Email)
+			if err != nil {
+				fmt.Println(err)
+			}
+			contributions = append(contributions, ContributionWithPlatformInformation{
+				GitInformation:      v,
+				PlatformInformation: userInformation,
+			})
+		}
+		json.NewEncoder(w).Encode(contributions)
+	} else {
+		var contributions []Contribution
+		for _, v := range contributionMap {
+			contributions = append(contributions, v)
+		}
+		json.NewEncoder(w).Encode(contributions)
 	}
-	json.NewEncoder(w).Encode(contributions)
 }
 
 func getContributionWeights(w http.ResponseWriter, r *http.Request) {

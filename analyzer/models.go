@@ -21,6 +21,11 @@ type Contribution struct {
 	Commits     int          `json:"commits"`
 }
 
+type ContributionWithPlatformInformation struct {
+	GitInformation      Contribution         `json:"gitInformation"`
+	PlatformInformation IssueUserInformation `json:"platformInformation"`
+}
+
 type FlatFeeWeight struct {
 	Contributor Contributor `json:"contributor"`
 	Weight      float64     `json:"weight"`
@@ -93,6 +98,7 @@ type GQLGitActor struct {
 }
 
 type IssueUserInformation struct {
-	Author    []int
-	Commenter int
+	UserName  string `json:"userName"`
+	Author    []int  `json:"author"`
+	Commenter int    `json:"commenter"`
 }
