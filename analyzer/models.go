@@ -1,6 +1,8 @@
 package main
 
-import "time"
+import (
+	"time"
+)
 
 type Contributor struct {
 	Name  string `json:"name"`
@@ -33,13 +35,14 @@ type GQLData struct {
 }
 
 type GQLRepository struct {
-	Issues 	GQLIssueConnection 	`json:"issues"`
-	Issue	GQLIssue			`json:"issue"`
+	Issues GQLIssueConnection `json:"issues"`
+	Issue  GQLIssue           `json:"issue"`
+	Ref    GQLRef             `json:"ref"`
 }
 
 type GQLIssueConnection struct {
-	Nodes 		[]GQLIssue 		`json:"nodes"`
-	PageInfo	GQLPageInfo		`json:"pageInfo"`
+	Nodes    []GQLIssue  `json:"nodes"`
+	PageInfo GQLPageInfo `json:"pageInfo"`
 }
 
 type GQLIssue struct {
@@ -55,8 +58,8 @@ type GQLActor struct {
 }
 
 type GQLIssueCommentConnection struct {
-	Nodes      	[]GQLIssueComment 	`json:"nodes"`
-	PageInfo	GQLPageInfo     	`json:"pageInfo"`
+	Nodes    []GQLIssueComment `json:"nodes"`
+	PageInfo GQLPageInfo       `json:"pageInfo"`
 }
 
 type GQLIssueComment struct {
@@ -65,6 +68,31 @@ type GQLIssueComment struct {
 }
 
 type GQLPageInfo struct {
-	EndCursor	string	`json:"endCursor"`
-	HasNextPage	bool	`json:"hasNextPage"`
+	EndCursor   string `json:"endCursor"`
+	HasNextPage bool   `json:"hasNextPage"`
+}
+
+type GQLRef struct {
+	Target GQLGitObject `json:"target"`
+}
+
+type GQLGitObject struct {
+	History GQLCommitHistoryConnection `json:"history"`
+}
+
+type GQLCommitHistoryConnection struct {
+	Nodes []GQLCommit `json:"nodes"`
+}
+
+type GQLCommit struct {
+	Author GQLGitActor
+}
+
+type GQLGitActor struct {
+	User GQLActor `json:"user"`
+}
+
+type IssueUserInformation struct {
+	Author    []int
+	Commenter int
 }

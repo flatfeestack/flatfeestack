@@ -17,8 +17,8 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// convert since timestamp into go time
 	var err error
-
 	commitsSinceString := r.URL.Query()["since"]
 	var commitsSince time.Time
 	if len(commitsSinceString) > 0 {
@@ -31,6 +31,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+	// convert until timestamp into go time
 	commitsUntilString := r.URL.Query()["until"]
 	var commitsUntil time.Time
 	if len(commitsUntilString) > 0 {
@@ -54,7 +55,19 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
+	issues, err := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, err.Error())
+	}
+
+	for k, _ := range contributionMap {
+		userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, k.Email)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(userInformation)
+	}
 
 	var contributions []Contribution
 	for _, v := range contributionMap {
@@ -62,6 +75,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(contributions)
 }
+
 func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	repositoryUrl := r.URL.Query()["repositoryUrl"]
 	if len(repositoryUrl) < 1 {

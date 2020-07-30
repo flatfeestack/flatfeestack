@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,11 +11,11 @@ import (
 	"time"
 )
 
-func getPlatformInformation(src string, since time.Time, until time.Time) {
+func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, error) {
 
+	// Check if repository is on Github
 	if !strings.Contains(src, "github.com") {
-		fmt.Println("Repository is not on github")
-		return
+		return []GQLIssue{}, errors.New("repository is not on github")
 	}
 
 	repositoryOwner, repositoryName := getOwnerAndNameOfGithubUrl(src)
@@ -25,10 +26,10 @@ func getPlatformInformation(src string, since time.Time, until time.Time) {
 		fmt.Println(err)
 	}
 
-	fmt.Println(len(repositoryIssues.Nodes))
+	return repositoryIssues, nil
 }
 
-func getRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) (GQLIssueConnection, error) {
+func getRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLIssue, error) {
 	var timeZeroValue time.Time
 
 	sinceFilterBy := ""
@@ -72,14 +73,16 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 
 	resp, err := manualGQL(query)
 	if err != nil {
-		return GQLIssueConnection{}, err
+		return []GQLIssue{}, err
 	}
 	var response RequestGQLRepositoryInformation
 	if err := json.Unmarshal(resp, &response); err != nil {
-		return GQLIssueConnection{}, err
+		return []GQLIssue{}, err
 	}
 
+	// ----------
 	// Pagination
+	// ----------
 
 	// Fetch the missing issues
 
@@ -129,7 +132,6 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 			}
 			response.Data.Repository.Issues.Nodes = append(response.Data.Repository.Issues.Nodes, refetchResponse.Data.Repository.Issues.Nodes...)
 			response.Data.Repository.Issues.PageInfo = refetchResponse.Data.Repository.Issues.PageInfo
-			fmt.Println(len(response.Data.Repository.Issues.Nodes))
 		}
 	}
 
@@ -182,20 +184,23 @@ func getRepositoryIssues(repositoryOwner string, repositoryName string, since ti
 		}
 	}
 
+	// ---------
 	// Filtering
+	// ---------
+
+	// Filtering because there is no until filter in gql
 	response.Data.Repository.Issues.Nodes = filterIssuesByDate(response.Data.Repository.Issues.Nodes, since, until)
 	for index := range response.Data.Repository.Issues.Nodes {
 		response.Data.Repository.Issues.Nodes[index].Comments.Nodes = filterIssueCommentsByDate(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, since, until)
 	}
 
-	return response.Data.Repository.Issues, nil
+	return response.Data.Repository.Issues.Nodes, nil
 }
 
 func manualGQL(query string) ([]byte, error) {
 	jsonData := map[string]string{
 		"query": query,
 	}
-	fmt.Println("Making request with this query", query)
 	jsonValue, _ := json.Marshal(jsonData)
 	request, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewBuffer(jsonValue))
 	if err != nil {
@@ -234,4 +239,76 @@ func filterIssuesByDate(issueEdges []GQLIssue, since time.Time, until time.Time)
 		}
 	}
 	return filteredIssues
+}
+
+func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string, email string) (string, error) {
+	query := fmt.Sprintf(
+		`{
+			repository(owner:"%s", name:"%s") {
+				ref(qualifiedName: "master") {
+				  	target {
+						... on Commit {
+						  	history(first: 1, author: {emails: "%s"} ) {
+								nodes {
+									author {
+										name
+										email
+										date
+										user {
+											login
+										}
+									}
+								}
+						  	}
+						}
+					}
+				}
+			}
+      	}`, repositoryOwner, repositoryName, email)
+
+	resp, err := manualGQL(query)
+	if err != nil {
+		return "", err
+	}
+	var response RequestGQLRepositoryInformation
+	if err := json.Unmarshal(resp, &response); err != nil {
+		return "", err
+	}
+	if len(response.Data.Repository.Ref.Target.History.Nodes) < 1 {
+		return "", errors.New("could not find user")
+	}
+	return response.Data.Repository.Ref.Target.History.Nodes[0].Author.User.Login, nil
+}
+
+func getPlatformInformationFromUser(src string, issues []GQLIssue, userEmail string) (IssueUserInformation, error) {
+
+	repoOwner, repoName := getOwnerAndNameOfGithubUrl(src)
+
+	login, err := getGithubUsernameFromGitEmail(repoOwner, repoName, userEmail)
+
+	if err != nil {
+		return IssueUserInformation{}, err
+	}
+
+	// list issues where user is author, where the values are the amount of comments inside that issue
+	var issuesWhereUserIsAuthor []int
+
+	// amount of comments user wrote in issues
+	amountOfIssueCommenter := 0
+
+	for i := 0; i < len(issues); i++ {
+		if issues[i].Author.Login == login {
+			issuesWhereUserIsAuthor = append(issuesWhereUserIsAuthor, len(issues[i].Comments.Nodes))
+		}
+		for j := 0; j < len(issues[i].Comments.Nodes); j++ {
+			if issues[i].Comments.Nodes[j].Author.Login == login {
+				amountOfIssueCommenter++
+			}
+		}
+	}
+
+	return IssueUserInformation{
+		Author:    issuesWhereUserIsAuthor,
+		Commenter: amountOfIssueCommenter,
+	}, nil
 }
