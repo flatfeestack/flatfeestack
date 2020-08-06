@@ -9,7 +9,7 @@ import (
 func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {
-		return getGithubPlatformInformation(src,since,until)
+		return getGithubPlatformInformation(src, since, until)
 	} else {
 		return []GQLIssue{}, errors.New("repository is not on a platform that is supported ")
 	}
