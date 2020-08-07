@@ -15,8 +15,9 @@ type GitAnalyzationChannel struct {
 }
 
 type PlatformInformationChannel struct {
-	Result []GQLIssue
-	Reason error
+	ResultIssues       []GQLIssue
+	ResultPullRequests []GQLPullRequest
+	Reason             error
 }
 
 func getAllContributions(w http.ResponseWriter, r *http.Request) {
@@ -93,9 +94,10 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	// execute go routine to fetch the platform information only when the platformInformation flag is set
 	if analyzePlatformInformation {
 		go func() {
-			routineIssues, routineErr := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
+			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
 			platformInformationChannel <- PlatformInformationChannel{
-				Result: routineIssues,
+				ResultIssues: routineIssues,
+				ResultPullRequests: routinePullRequests,
 				Reason: routineErr,
 			}
 			close(platformInformationChannel)
@@ -109,6 +111,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	// initialize the return variables for the go routines
 	var contributionMap map[Contributor]Contribution
 	var issues []GQLIssue
+	var pullRequests []GQLPullRequest
 
 	// wait for the results of both go routines
 	for chanel1Open || chanel2Open {
@@ -151,7 +154,8 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 				return
 			} else {
 				// save the return value to the initialized variable
-				issues = msg2.Result
+				issues = msg2.ResultIssues
+				pullRequests = msg2.ResultPullRequests
 			}
 		}
 	}
@@ -161,7 +165,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		// return the platform information and the git contribution
 		var contributions []ContributionWithPlatformInformation
 		for k, v := range contributionMap {
-			userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, k.Email)
+			userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, pullRequests, k.Email)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				_, fmtErr := fmt.Fprintf(w, err.Error())

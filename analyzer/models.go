@@ -22,13 +22,34 @@ type Contribution struct {
 }
 
 type ContributionWithPlatformInformation struct {
-	GitInformation      Contribution         `json:"gitInformation"`
-	PlatformInformation IssueUserInformation `json:"platformInformation"`
+	GitInformation      Contribution            `json:"gitInformation"`
+	PlatformInformation PlatformUserInformation `json:"platformInformation"`
 }
 
 type FlatFeeWeight struct {
 	Contributor Contributor `json:"contributor"`
 	Weight      float64     `json:"weight"`
+}
+
+type PlatformUserInformation struct {
+	UserName               string                     `json:"userName"`
+	IssueInformation       IssueUserInformation       `json:"issueInformation"`
+	PullRequestInformation PullRequestUserInformation `json:"pullRequestInformation"`
+}
+
+type IssueUserInformation struct {
+	Author    []int `json:"author"`    // array of amount of comments of the issue where user is author
+	Commenter int   `json:"commenter"` // amount of comments
+}
+
+type PullRequestUserInformation struct {
+	Author   []PullRequestInformation `json:"author"`   // array of pullrequest informations where user is author
+	Reviewer int                      `json:"reviewer"` // amount of reviews
+}
+
+type PullRequestInformation struct {
+	State   string   `json:"state"`
+	Reviews []string `json:"reviews"`
 }
 
 type RequestGQLRepositoryInformation struct {
@@ -40,9 +61,11 @@ type GQLData struct {
 }
 
 type GQLRepository struct {
-	Issues GQLIssueConnection `json:"issues"`
-	Issue  GQLIssue           `json:"issue"`
-	Ref    GQLRef             `json:"ref"`
+	Issues       GQLIssueConnection       `json:"issues"`
+	Issue        GQLIssue                 `json:"issue"`
+	PullRequests GQLPullRequestConnection `json:"pullRequests"`
+	PullRequest  GQLPullRequest           `json:"pullRequest"`
+	Ref          GQLRef                   `json:"ref"`
 }
 
 type GQLIssueConnection struct {
@@ -97,8 +120,27 @@ type GQLGitActor struct {
 	User GQLActor `json:"user"`
 }
 
-type IssueUserInformation struct {
-	UserName  string `json:"userName"`
-	Author    []int  `json:"author"`
-	Commenter int    `json:"commenter"`
+type GQLPullRequestConnection struct {
+	Nodes    []GQLPullRequest `json:"nodes"`
+	PageInfo GQLPageInfo      `json:"pageInfo"`
+}
+
+type GQLPullRequest struct {
+	Title     string                         `json:"title"`
+	Number    int                            `json:"number"`
+	Author    GQLActor                       `json:"author"`
+	State     string                         `json:"state"`
+	Reviews   GQLPullRequestReviewConnection `json:"reviews"`
+	UpdatedAt time.Time                      `json:"updatedAt"`
+}
+
+type GQLPullRequestReviewConnection struct {
+	Nodes    []GQLPullRequestReview `json:"nodes"`
+	PageInfo GQLPageInfo            `json:"pageInfo"`
+}
+
+type GQLPullRequestReview struct {
+	Author    GQLActor  `json:"author"`
+	State     string    `json:"state"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }

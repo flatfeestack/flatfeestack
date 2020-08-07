@@ -6,20 +6,20 @@ import (
 	"time"
 )
 
-func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, error) {
+func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {
 		return getGithubPlatformInformation(src, since, until)
 	} else {
-		return []GQLIssue{}, errors.New("repository is not on a platform that is supported ")
+		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on a platform that is supported ")
 	}
 }
 
-func getPlatformInformationFromUser(src string, issues []GQLIssue, userEmail string) (IssueUserInformation, error) {
+func getPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests []GQLPullRequest, userEmail string) (PlatformUserInformation, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {
-		return getGithubPlatformInformationFromUser(src, issues, userEmail)
+		return getGithubPlatformInformationFromUser(src, issues, pullRequests, userEmail)
 	} else {
-		return IssueUserInformation{}, errors.New("repository is not on a platform that is supported ")
+		return PlatformUserInformation{}, errors.New("repository is not on a platform that is supported ")
 	}
 }
