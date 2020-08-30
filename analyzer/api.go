@@ -278,8 +278,10 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 
 func convertTimestampStringToTime(stamp string) (time.Time, error) {
 	commitsSinceInt, err := strconv.ParseInt(stamp, 10, 64)
+func convertTimestampStringToTime(rfc3339time string) (time.Time, error) {
+	commitsSinceTime, err := time.Parse(time.RFC3339, rfc3339time)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return time.Unix(commitsSinceInt, 0), nil
+	return commitsSinceTime, nil
 }
