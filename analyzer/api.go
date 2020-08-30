@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -22,54 +22,22 @@ type PlatformInformationChannel struct {
 
 func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+
 	// get the repository url from the request
-	repositoryUrl := r.URL.Query()["repositoryUrl"]
-	if len(repositoryUrl) < 1 {
-		w.WriteHeader(http.StatusNotFound)
-		_, fmtErr := fmt.Fprintf(w, "Repository not found")
-		if fmtErr != nil {
-			fmt.Println("Could not format", fmtErr)
-		}
+	repositoryUrl, err := getRepositoryFromRequest(r)
+	if err != nil {
+		makeHttpStatusErr(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	// detect whether the platformInformation flag in the request was set
-	analyzePlatformInformation := false
-	platformInformationUrlParam := r.URL.Query()["platformInformation"]
-	if len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true" {
-		analyzePlatformInformation = true
-	}
+	analyzePlatformInformation := getShouldAnalyzePlatformInformation(r)
 
-	// convert since timestamp into go time
-	var err error
-	commitsSinceString := r.URL.Query()["since"]
-	var commitsSince time.Time
-	if len(commitsSinceString) > 0 {
-		commitsSince, err = convertTimestampStringToTime(commitsSinceString[0])
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, fmtErr := fmt.Fprintf(w, err.Error())
-			if fmtErr != nil {
-				fmt.Println("Could not format", fmtErr)
-			}
-			return
-		}
-
-	}
-
-	// convert until timestamp into go time
-	commitsUntilString := r.URL.Query()["until"]
-	var commitsUntil time.Time
-	if len(commitsUntilString) > 0 {
-		commitsUntil, err = convertTimestampStringToTime(commitsUntilString[0])
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, fmtErr := fmt.Fprintf(w, err.Error())
-			if fmtErr != nil {
-				fmt.Println("Could not format", fmtErr)
-			}
-			return
-		}
+	commitsSince, commitsUntil, err := getTimeRange(r)
+	if err != nil {
+		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// make the channels for both go routines (analyze repo / platform information)
@@ -83,7 +51,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl[0], commitsSince, commitsUntil)
+		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -94,7 +62,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	// execute go routine to fetch the platform information only when the platformInformation flag is set
 	if analyzePlatformInformation {
 		go func() {
-			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl[0], commitsSince, commitsUntil)
+			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl, commitsSince, commitsUntil)
 			platformInformationChannel <- PlatformInformationChannel{
 				ResultIssues: routineIssues,
 				ResultPullRequests: routinePullRequests,
@@ -123,17 +91,9 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 			} else if msg1.Reason != nil {
 				// error handling
 				if strings.Contains(msg1.Reason.Error(), "authentication") {
-					w.WriteHeader(http.StatusUnauthorized)
-					_, fmtErr := fmt.Fprintf(w, msg1.Reason.Error())
-					if fmtErr != nil {
-						fmt.Println("Could not format", fmtErr)
-					}
+					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusUnauthorized)
 				} else {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, fmtErr := fmt.Fprintf(w, msg1.Reason.Error())
-					if fmtErr != nil {
-						fmt.Println("Could not format", fmtErr)
-					}
+					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusInternalServerError)
 				}
 				return
 			} else {
@@ -146,11 +106,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 				chanel2Open = false
 			} else if msg2.Reason != nil {
 				// error handling
-				w.WriteHeader(http.StatusInternalServerError)
-				_, fmtErr := fmt.Fprintf(w, msg2.Reason.Error())
-				if fmtErr != nil {
-					fmt.Println("Could not format", fmtErr)
-				}
+				makeHttpStatusErr(w, msg2.Reason.Error(), http.StatusInternalServerError)
 				return
 			} else {
 				// save the return value to the initialized variable
@@ -165,13 +121,9 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		// return the platform information and the git contribution
 		var contributions []ContributionWithPlatformInformation
 		for k, v := range contributionMap {
-			userInformation, err := getPlatformInformationFromUser(repositoryUrl[0], issues, pullRequests, k.Email)
+			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, fmtErr := fmt.Fprintf(w, err.Error())
-				if fmtErr != nil {
-					fmt.Println("Could not format", fmtErr)
-				}
+				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			contributions = append(contributions, ContributionWithPlatformInformation{
@@ -276,8 +228,54 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func convertTimestampStringToTime(stamp string) (time.Time, error) {
-	commitsSinceInt, err := strconv.ParseInt(stamp, 10, 64)
+func getRepositoryFromRequest(r *http.Request) (string, error) {
+	repositoryUrl := r.URL.Query()["repositoryUrl"]
+	if len(repositoryUrl) < 1 {
+		return "", errors.New("repository not found")
+	}
+	return repositoryUrl[0], nil
+}
+
+// returns the time range in the format since, until, error from the request with time in rfc3339 format
+func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
+	var err error
+
+	// convert since RFC3339 into golang time
+	commitsSinceString := r.URL.Query()["since"]
+	var commitsSince time.Time
+	if len(commitsSinceString) > 0 {
+		commitsSince, err = convertTimestampStringToTime(commitsSinceString[0])
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+	}
+
+	// convert until RFC3339 into golang time
+	commitsUntilString := r.URL.Query()["until"]
+	var commitsUntil time.Time
+	if len(commitsUntilString) > 0 {
+		commitsUntil, err = convertTimestampStringToTime(commitsUntilString[0])
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+	}
+
+	return commitsSince, commitsUntil, nil
+}
+
+func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
+	w.WriteHeader(http.StatusInternalServerError)
+	_, fmtErr := fmt.Fprintf(w, errString)
+	if fmtErr != nil {
+		fmt.Println("Could not format", fmtErr)
+	}
+}
+
+func getShouldAnalyzePlatformInformation(r *http.Request) bool {
+	platformInformationUrlParam := r.URL.Query()["platformInformation"]
+	return len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true"
+}
+
 func convertTimestampStringToTime(rfc3339time string) (time.Time, error) {
 	commitsSinceTime, err := time.Parse(time.RFC3339, rfc3339time)
 	if err != nil {
