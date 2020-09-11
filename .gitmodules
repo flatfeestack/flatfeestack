@@ -1,0 +1,10 @@
+[submodule "auth"]
+	path = auth
+	url = git@github.com:flatfeestack/auth.git
+[submodule "analysis-engine"]
+	path = analysis-engine
+	url = git@github.com:flatfeestack/analysis-engine.git
+	branch = develop
+[submodule "frontend-new"]
+	path = frontend-new
+	url = git@github.com:flatfeestack/frontend-new.git

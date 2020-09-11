@@ -1,0 +1,13 @@
+:80
+# Set this path to your site's directory.
+root * /var/www/html
+
+reverse_proxy web:8080
+
+route /auth/* {
+    reverse_proxy auth:8080
+}
+
+route /analysis/* {
+    reverse_proxy analysis-engine:8080
+}
