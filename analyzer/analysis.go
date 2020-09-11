@@ -126,3 +126,58 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	return authorMap, nil
 
 }
+
+func weightContributionsWithPlatformInformation(contributions map[Contributor]ContributionWithPlatformInformation) (map[Contributor]FlatFeeWeight, error) {
+
+	// Parameter
+
+	// Category "Changes" devided into additions and deletions. both must sum up to 1
+	additionWeight := 0.7
+	deletionWeight := 0.3
+
+	// Category "GitHistory" devided into commits and merges. both must sum up to 1
+	commitWeight := 0.7
+	mergeWeight := 0.3
+
+	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
+	changesWeight := 0.8
+	gitHistoryWeight := 0.2
+
+	authorMap := make(map[Contributor]FlatFeeWeight)
+
+	totalChanges := CommitChange{
+		Addition: 0,
+		Deletion: 0,
+	}
+	totalMerge := 0
+	totalCommit := 0
+	var authors []Contributor
+
+	for _, v := range contributions {
+		authors = append(authors, v.GitInformation.Contributor)
+		totalChanges = CommitChange{
+			Addition: totalChanges.Addition + v.GitInformation.Changes.Addition,
+			Deletion: totalChanges.Deletion + v.GitInformation.Changes.Deletion,
+		}
+		totalMerge += v.GitInformation.Merges
+		totalCommit += v.GitInformation.Commits
+	}
+
+	for _, author := range authors {
+		authorChangesWeighted := float64(contributions[author].GitInformation.Changes.Addition)*additionWeight + float64(contributions[author].GitInformation.Changes.Deletion)*deletionWeight
+		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
+		changesPercentage := authorChangesWeighted / totalChangesWeighted
+
+		authorGitHistoryWeighted := float64(contributions[author].GitInformation.Merges)*mergeWeight + float64(contributions[author].GitInformation.Commits)*commitWeight
+		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
+		gitHistoryPercentage := authorGitHistoryWeighted / totalGitHistoryWeighted
+
+		authorMap[author] = FlatFeeWeight{
+			Contributor: author,
+			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
+		}
+	}
+
+	return authorMap, nil
+
+}

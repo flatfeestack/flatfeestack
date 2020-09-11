@@ -242,24 +242,54 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// only temporary since we don't include platform information in the weights yet
-	fmt.Println(issues)
-	fmt.Println(pullRequests)
+	if analyzePlatformInformation {
+		// if platform information is desired, filter out the platform information per git user and
+		// return the platform information and the git contribution
+		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
+		for k, v := range contributionMap {
+			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
+			if err != nil {
+				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+				GitInformation:      v,
+				PlatformInformation: userInformation,
+			}
+		}
 
-	weightsMap, err := weightContributions(contributionMap)
+		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
 
-	if err != nil {
-		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		if err != nil {
+			makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	var contributionWeights []FlatFeeWeight
-	for _, v := range weightsMap {
-		contributionWeights = append(contributionWeights, v)
-	}
-	jsonErr := json.NewEncoder(w).Encode(contributionWeights)
-	if jsonErr != nil {
-		fmt.Println("Could not encode to json", jsonErr)
+		var contributionWeights []FlatFeeWeight
+		for _, v := range weightsMap {
+			contributionWeights = append(contributionWeights, v)
+		}
+
+		jsonErr := json.NewEncoder(w).Encode(contributionWeights)
+		if jsonErr != nil {
+			fmt.Println("Could not encode to json", jsonErr)
+		}
+	} else {
+		weightsMap, err := weightContributions(contributionMap)
+
+		if err != nil {
+			makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var contributionWeights []FlatFeeWeight
+		for _, v := range weightsMap {
+			contributionWeights = append(contributionWeights, v)
+		}
+		jsonErr := json.NewEncoder(w).Encode(contributionWeights)
+		if jsonErr != nil {
+			fmt.Println("Could not encode to json", jsonErr)
+		}
 	}
 }
 
