@@ -85,11 +85,19 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 
 func weightContributions(contributions map[Contributor]Contribution) (map[Contributor]FlatFeeWeight, error) {
 
-	// Parameters
-	additionWeight := 0.4
+	// Parameter
+
+	// Category "Changes" devided into additions and deletions. both must sum up to 1
+	additionWeight := 0.7
 	deletionWeight := 0.3
-	commitWeight := 0.2
-	mergeWeight := 0.1
+
+	// Category "GitHistory" devided into commits and merges. both must sum up to 1
+	commitWeight := 0.7
+	mergeWeight := 0.3
+
+	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
+	changesWeight := 0.66
+	gitHistoryWeight := 0.34
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -99,6 +107,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	}
 	totalMerge := 0
 	totalCommit := 0
+
 	var authors []Contributor
 
 	for _, v := range contributions {
@@ -112,14 +121,17 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	}
 
 	for _, author := range authors {
-		additionPercentage := float64(contributions[author].Changes.Addition) / float64(totalChanges.Addition)
-		deletionPercentage := float64(contributions[author].Changes.Deletion) / float64(totalChanges.Deletion)
-		mergePercentage := float64(contributions[author].Merges) / float64(totalMerge)
-		commitPercentage := float64(contributions[author].Commits) / float64(totalCommit)
+		authorChangesWeighted := float64(contributions[author].Changes.Addition)*additionWeight + float64(contributions[author].Changes.Deletion)*deletionWeight
+		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
+		changesPercentage := authorChangesWeighted / totalChangesWeighted
+
+		authorGitHistoryWeighted := float64(contributions[author].Merges)*mergeWeight + float64(contributions[author].Commits)*commitWeight
+		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
+		gitHistoryPercentage := authorGitHistoryWeighted / totalGitHistoryWeighted
 
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
-			Weight:      additionPercentage*additionWeight + deletionPercentage*deletionWeight + mergePercentage*mergeWeight + commitPercentage*commitWeight,
+			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
 		}
 	}
 
@@ -139,9 +151,15 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	commitWeight := 0.7
 	mergeWeight := 0.3
 
+	// Category "Issues"
+	issueWeight := 0.5
+	issueCommentsWeight := 0.2
+	issueCommenterWeight := 0.3
+
 	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
-	changesWeight := 0.8
-	gitHistoryWeight := 0.2
+	changesWeight := 0.6
+	gitHistoryWeight := 0.3
+	issueCategoryWeight := 0.1
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -151,6 +169,10 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	}
 	totalMerge := 0
 	totalCommit := 0
+	totalIssues := 0
+	totalComments := 0
+	totalCommenter := 0
+
 	var authors []Contributor
 
 	for _, v := range contributions {
@@ -161,6 +183,9 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		}
 		totalMerge += v.GitInformation.Merges
 		totalCommit += v.GitInformation.Commits
+		totalIssues += len(v.PlatformInformation.IssueInformation.Author)
+		totalComments += getSumOfCommentsOfIssues(v.PlatformInformation.IssueInformation.Author)
+		totalCommenter += v.PlatformInformation.IssueInformation.Commenter
 	}
 
 	for _, author := range authors {
@@ -172,12 +197,24 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
 		gitHistoryPercentage := authorGitHistoryWeighted / totalGitHistoryWeighted
 
+		authorIssuesWeighted := float64(len(contributions[author].PlatformInformation.IssueInformation.Author))*issueWeight + float64(getSumOfCommentsOfIssues(contributions[author].PlatformInformation.IssueInformation.Author))*issueCommentsWeight + float64(contributions[author].PlatformInformation.IssueInformation.Commenter)*issueCommenterWeight
+		totalIssuesWeighted := float64(totalIssues)*issueWeight + float64(totalComments)*issueCommentsWeight + float64(totalCommenter)*issueCommenterWeight
+		issuesPercentage := authorIssuesWeighted / totalIssuesWeighted
+
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
-			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
+			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight + issuesPercentage*issueCategoryWeight,
 		}
 	}
 
 	return authorMap, nil
 
+}
+
+func getSumOfCommentsOfIssues(issues []int) int {
+	totalComments := 0
+	for _, i := range issues {
+		totalComments += i
+	}
+	return totalComments
 }
