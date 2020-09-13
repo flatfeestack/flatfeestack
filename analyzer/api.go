@@ -119,16 +119,24 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		// if platform information is desired, filter out the platform information per git user and
 		// return the platform information and the git contribution
 		var contributions []ContributionWithPlatformInformation
+		takenUsernames := make(map[string]string)
 		for k, v := range contributionMap {
 			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
 			if err != nil {
 				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			contributions = append(contributions, ContributionWithPlatformInformation{
-				GitInformation:      v,
-				PlatformInformation: userInformation,
-			})
+			if _,found := takenUsernames[userInformation.UserName]; !found {
+				takenUsernames[userInformation.UserName] = userInformation.UserName
+				contributions = append(contributions, ContributionWithPlatformInformation{
+					GitInformation:      v,
+					PlatformInformation: userInformation,
+				})
+			} else {
+				contributions = append(contributions, ContributionWithPlatformInformation{
+					GitInformation:      v,
+				})
+			}
 		}
 		jsonErr := json.NewEncoder(w).Encode(contributions)
 		if jsonErr != nil {
@@ -246,15 +254,23 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 		// if platform information is desired, filter out the platform information per git user and
 		// return the platform information and the git contribution
 		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
+		takenUsernames := make(map[string]string)
 		for k, v := range contributionMap {
 			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
 			if err != nil {
 				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-				GitInformation:      v,
-				PlatformInformation: userInformation,
+			if _, found := takenUsernames[userInformation.UserName]; !found {
+				takenUsernames[userInformation.UserName] = userInformation.UserName
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation:      v,
+					PlatformInformation: userInformation,
+				}
+			} else {
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation:      v,
+				}
 			}
 		}
 
