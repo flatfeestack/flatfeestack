@@ -156,10 +156,15 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	issueCommentsWeight := 0.2
 	issueCommenterWeight := 0.3
 
+	// Category "PullRequests"
+	pullRequestAuthorWeight := 0.7
+	pullRequestReviewerWeight := 0.3
+
 	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
-	changesWeight := 0.6
-	gitHistoryWeight := 0.3
-	issueCategoryWeight := 0.1
+	changesWeight := 0.55
+	gitHistoryWeight := 0.25
+	issueCategoryWeight := 0.08
+	pullRequestCategoryWeight := 0.12
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -169,9 +174,13 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	}
 	totalMerge := 0
 	totalCommit := 0
+
 	totalIssues := 0
 	totalComments := 0
 	totalCommenter := 0
+
+	totalPullRequestsValue := 0.0
+	totalPullRequestsReviews := 0
 
 	var authors []Contributor
 
@@ -186,6 +195,8 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		totalIssues += len(v.PlatformInformation.IssueInformation.Author)
 		totalComments += getSumOfCommentsOfIssues(v.PlatformInformation.IssueInformation.Author)
 		totalCommenter += v.PlatformInformation.IssueInformation.Commenter
+		totalPullRequestsValue += getAuthorPullRequestValue(v.PlatformInformation.PullRequestInformation.Author)
+		totalPullRequestsReviews += v.PlatformInformation.PullRequestInformation.Reviewer
 	}
 
 	for _, author := range authors {
@@ -201,9 +212,13 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		totalIssuesWeighted := float64(totalIssues)*issueWeight + float64(totalComments)*issueCommentsWeight + float64(totalCommenter)*issueCommenterWeight
 		issuesPercentage := authorIssuesWeighted / totalIssuesWeighted
 
+		authorPullRequestsWeighted := getAuthorPullRequestValue(contributions[author].PlatformInformation.PullRequestInformation.Author)*pullRequestAuthorWeight + float64(contributions[author].PlatformInformation.PullRequestInformation.Reviewer)*pullRequestReviewerWeight
+		totalPullRequestsWeighted := totalPullRequestsValue*pullRequestAuthorWeight + float64(totalPullRequestsReviews)*pullRequestReviewerWeight
+		pullRequestPercentage := authorPullRequestsWeighted / totalPullRequestsWeighted
+
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
-			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight + issuesPercentage*issueCategoryWeight,
+			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight + issuesPercentage*issueCategoryWeight + pullRequestPercentage*pullRequestCategoryWeight,
 		}
 	}
 
@@ -217,4 +232,41 @@ func getSumOfCommentsOfIssues(issues []int) int {
 		totalComments += i
 	}
 	return totalComments
+}
+
+func getAuthorPullRequestValue(pullRequests []PullRequestInformation) float64 {
+	pullRequestClosedValue := 0.6
+	pullRequestMergedValue := 1.5
+	pullRequestOpenValue := 1.0
+	approvedMultiplyer := 1.4
+
+	totalScore := 0.0
+
+	for _, request := range pullRequests {
+		isApproved := false
+		for _, review := range request.Reviews {
+			if review == "APPROVED" {
+				isApproved = true
+				break
+			}
+		}
+		currentValue := 0.0
+		switch request.State {
+		case "CLOSED":
+			currentValue = pullRequestClosedValue
+		case "OPEN":
+			currentValue = pullRequestOpenValue
+		case "MERGED":
+			currentValue = pullRequestMergedValue
+		default:
+			currentValue = pullRequestOpenValue
+		}
+
+		if isApproved {
+			totalScore += currentValue * approvedMultiplyer
+		} else {
+			totalScore += currentValue
+		}
+	}
+	return totalScore
 }
