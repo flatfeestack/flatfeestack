@@ -1,11 +1,16 @@
 package main
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 func setEnvs() error {
 	err := os.Setenv("GO_GIT_BASE_PATH", "/tmp")
 	if err != nil {
 		return err
 	}
-	return os.Setenv("GO_GIT_DEFAULT_BRANCH", "master")
+	err = os.Setenv("GO_GIT_DEFAULT_BRANCH", "master-3.x")
+	fmt.Println("envs set")
+	return err
 }
