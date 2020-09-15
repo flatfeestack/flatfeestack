@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"time"
@@ -12,9 +11,6 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 	if err != nil {
 		return nil, err
 	}
-
-	h, _ := repo.Head()
-	fmt.Println(h.Name())
 
 	authorMap := make(map[Contributor]Contribution)
 

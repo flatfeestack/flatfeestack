@@ -34,23 +34,24 @@ func UpdateRepository(src string) (*git.Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("this is really executed", os.Getenv("GO_GIT_DEFAULT_BRANCH"))
 	firstRefSpecArgument := fmt.Sprintf("*/%s:*/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"), os.Getenv("GO_GIT_DEFAULT_BRANCH"))
-	//secondRefSpecArgument := fmt.Sprintf("HEAD:refs/heads/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"))
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		RefSpecs: []config.RefSpec{config.RefSpec(firstRefSpecArgument)},
 	})
-	//RefSpecs: []config.RefSpec{"refs/heads/master-3.x:refs/remotes/origin/master-3.x", "HEAD:refs/heads/master-3.x"},
 	if err != nil && err.Error() != "already up-to-date" {
 		return repo, err
 	}
-	//w, err := repo.Worktree()
-	//
-	//err = w.Checkout(&git.CheckoutOptions{
-	//	Branch: plumbing.ReferenceName(fmt.Sprintf("refs/*/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"))),
-	//	Force: true,
-	//})
+	w, err := repo.Worktree()
 
-	return repo, err
+	if err != nil {
+		return repo, err
+	}
+
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"))),
+		Force: true,
+	})
+
+	return repo, nil
 }
