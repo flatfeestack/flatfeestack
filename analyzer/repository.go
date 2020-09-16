@@ -8,33 +8,36 @@ import (
 	"os"
 )
 
-func CloneOrUpdateRepository(src string) (*git.Repository, error) {
-	repo, err := UpdateRepository(src)
+func CloneOrUpdateRepository(src string, branch string) (*git.Repository, error) {
+	// check if the repository can successfully be updated
+	repo, err := UpdateRepository(src, branch)
+	// if not try to clone it
 	if err != nil {
 		fmt.Println(err.Error())
-		return CloneRepository(src)
+		return CloneRepository(src, branch)
 	}
 	return repo, nil
 }
 
-func CloneRepository(src string) (*git.Repository, error) {
+func CloneRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
-	fmt.Println("the branch is", os.Getenv("GO_GIT_DEFAULT_BRANCH"))
+	// clone just one branch
 	return git.PlainClone(os.Getenv("GO_GIT_BASE_PATH")+"/"+folderName, false, &git.CloneOptions{
 		URL:           src,
 		Progress:      os.Stdout,
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"))),
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
 		SingleBranch:  true,
 	})
 }
 
-func UpdateRepository(src string) (*git.Repository, error) {
+func UpdateRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
 	repo, err := git.PlainOpen(os.Getenv("GO_GIT_BASE_PATH") + "/" + folderName)
 	if err != nil {
 		return nil, err
 	}
-	firstRefSpecArgument := fmt.Sprintf("*/%s:*/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"), os.Getenv("GO_GIT_DEFAULT_BRANCH"))
+	// take just one remote branch and assign it to a local branch with the same name
+	firstRefSpecArgument := fmt.Sprintf("refs/heads/%s:refs/heads/%s", branch, branch)
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		RefSpecs: []config.RefSpec{config.RefSpec(firstRefSpecArgument)},
@@ -48,8 +51,9 @@ func UpdateRepository(src string) (*git.Repository, error) {
 		return repo, err
 	}
 
+	// checkout the correct branch
 	err = w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", os.Getenv("GO_GIT_DEFAULT_BRANCH"))),
+		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
 		Force: true,
 	})
 

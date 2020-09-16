@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -9,7 +10,11 @@ import (
 func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {
-		return getGithubPlatformInformation(src, since, until)
+		platformInformationStart := time.Now()
+		issues, pullRequests, err := getGithubPlatformInformation(src, since, until)
+		platformInformationEnd := time.Now()
+		fmt.Printf("---> platform information collection in %dms\n", platformInformationEnd.Sub(platformInformationStart).Milliseconds())
+		return issues, pullRequests, err
 	} else {
 		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on a platform that is supported ")
 	}

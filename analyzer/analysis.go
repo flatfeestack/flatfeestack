@@ -1,13 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"time"
 )
 
-func analyzeRepository(src string, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
-	repo, err := CloneOrUpdateRepository(src)
+func analyzeRepository(src string, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
+	cloneUpdateStart := time.Now()
+	repo, err := CloneOrUpdateRepository(src, branch)
+	cloneUpdateEnd := time.Now()
+	fmt.Printf("---> cloned/updated repository in %dms\n", cloneUpdateEnd.Sub(cloneUpdateStart).Milliseconds())
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +34,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 		return nil, err
 	}
 
+	gitAnalysisStart := time.Now()
 	err = commits.ForEach(func(c *object.Commit) error {
 		author := Contributor{
 			Name:  c.Author.Name,
@@ -77,6 +82,9 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 		}
 		return nil
 	})
+	gitAnalysisEnd := time.Now()
+	fmt.Printf("---> git analysis in %dms\n", gitAnalysisEnd.Sub(gitAnalysisStart).Milliseconds())
+
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +92,7 @@ func analyzeRepository(src string, since time.Time, until time.Time) (map[Contri
 }
 
 func weightContributions(contributions map[Contributor]Contribution) (map[Contributor]FlatFeeWeight, error) {
-
+	weightContributionsStart := time.Now()
 	// Parameter
 
 	// Category "Changes" devided into additions and deletions. both must sum up to 1
@@ -135,12 +143,13 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 		}
 	}
 
+	weightContributionsEnd := time.Now()
+	fmt.Printf("---> weight contributions in %dms\n", weightContributionsEnd.Sub(weightContributionsStart).Milliseconds())
 	return authorMap, nil
-
 }
 
 func weightContributionsWithPlatformInformation(contributions map[Contributor]ContributionWithPlatformInformation) (map[Contributor]FlatFeeWeight, error) {
-
+	weightContributionsStart := time.Now()
 	// Parameter
 
 	// Category "Changes" devided into additions and deletions. both must sum up to 1
@@ -222,8 +231,9 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		}
 	}
 
+	weightContributionsEnd := time.Now()
+	fmt.Printf("---> weight contributions in %dms\n", weightContributionsEnd.Sub(weightContributionsStart).Milliseconds())
 	return authorMap, nil
-
 }
 
 func getSumOfCommentsOfIssues(issues []int) int {

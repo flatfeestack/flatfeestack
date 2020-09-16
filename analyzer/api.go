@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -33,11 +34,16 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	// detect whether the platformInformation flag in the request was set
 	analyzePlatformInformation := getShouldAnalyzePlatformInformation(r)
 
+	// detect branch to analyze
+	branch := getBranchToAnalyze(r)
+
 	commitsSince, commitsUntil, err := getTimeRange(r)
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Printf("\n\n---> contribution analysis request for repository %s on branch %s \n", repositoryUrl, branch)
 
 	// make the channels for both go routines (analyze repo / platform information)
 	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
@@ -50,7 +56,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil)
+		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -118,13 +124,18 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	if analyzePlatformInformation {
 		// if platform information is desired, filter out the platform information per git user and
 		// return the platform information and the git contribution
+
+		platformInformationMappingStart := time.Now()
 		var contributions []ContributionWithPlatformInformation
 		takenUsernames := make(map[string]string)
 		for k, v := range contributionMap {
 			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
 			if err != nil {
-				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-				return
+				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
+				contributions = append(contributions, ContributionWithPlatformInformation{
+					GitInformation:      v,
+				})
+				continue
 			}
 			if _,found := takenUsernames[userInformation.UserName]; !found {
 				takenUsernames[userInformation.UserName] = userInformation.UserName
@@ -138,6 +149,9 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 		}
+		platformInformationMappingEnd := time.Now()
+		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
+
 		jsonErr := json.NewEncoder(w).Encode(contributions)
 		if jsonErr != nil {
 			fmt.Println("Could not encode to json", jsonErr)
@@ -168,11 +182,16 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	// detect whether the platformInformation flag in the request was set
 	analyzePlatformInformation := getShouldAnalyzePlatformInformation(r)
 
+	// detect branch to analyze
+	branch := getBranchToAnalyze(r)
+
 	commitsSince, commitsUntil, err := getTimeRange(r)
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Printf("\n\n---> weight contributions request for repository %s on branch %s \n", repositoryUrl, branch)
 
 	// make the channels for both go routines (analyze repo / platform information)
 	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
@@ -185,7 +204,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil)
+		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -253,13 +272,18 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	if analyzePlatformInformation {
 		// if platform information is desired, filter out the platform information per git user and
 		// return the platform information and the git contribution
+
+		platformInformationMappingStart := time.Now()
 		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
 		takenUsernames := make(map[string]string)
 		for k, v := range contributionMap {
 			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
 			if err != nil {
-				makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-				return
+				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation:      v,
+				}
+				continue
 			}
 			if _, found := takenUsernames[userInformation.UserName]; !found {
 				takenUsernames[userInformation.UserName] = userInformation.UserName
@@ -273,6 +297,8 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		platformInformationMappingEnd := time.Now()
+		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
 
 		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
 
@@ -355,6 +381,16 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 func getShouldAnalyzePlatformInformation(r *http.Request) bool {
 	platformInformationUrlParam := r.URL.Query()["platformInformation"]
 	return len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true"
+}
+
+func getBranchToAnalyze(r *http.Request) string {
+	branchUrlParam := r.URL.Query()["branch"]
+	// check whether the param was set. If it was return this branch name, else return the default one
+	if len(branchUrlParam) > 0 {
+		return branchUrlParam[0]
+	} else {
+		return os.Getenv("GO_GIT_DEFAULT_BRANCH")
+	}
 }
 
 func convertTimestampStringToTime(rfc3339time string) (time.Time, error) {
