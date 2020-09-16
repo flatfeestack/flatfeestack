@@ -69,9 +69,9 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl, commitsSince, commitsUntil)
 			platformInformationChannel <- PlatformInformationChannel{
-				ResultIssues: routineIssues,
+				ResultIssues:       routineIssues,
 				ResultPullRequests: routinePullRequests,
-				Reason: routineErr,
+				Reason:             routineErr,
 			}
 			close(platformInformationChannel)
 		}()
@@ -133,11 +133,11 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
 				contributions = append(contributions, ContributionWithPlatformInformation{
-					GitInformation:      v,
+					GitInformation: v,
 				})
 				continue
 			}
-			if _,found := takenUsernames[userInformation.UserName]; !found {
+			if _, found := takenUsernames[userInformation.UserName]; !found {
 				takenUsernames[userInformation.UserName] = userInformation.UserName
 				contributions = append(contributions, ContributionWithPlatformInformation{
 					GitInformation:      v,
@@ -145,7 +145,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 				})
 			} else {
 				contributions = append(contributions, ContributionWithPlatformInformation{
-					GitInformation:      v,
+					GitInformation: v,
 				})
 			}
 		}
@@ -217,9 +217,9 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl, commitsSince, commitsUntil)
 			platformInformationChannel <- PlatformInformationChannel{
-				ResultIssues: routineIssues,
+				ResultIssues:       routineIssues,
 				ResultPullRequests: routinePullRequests,
-				Reason: routineErr,
+				Reason:             routineErr,
 			}
 			close(platformInformationChannel)
 		}()
@@ -281,7 +281,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
 				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation:      v,
+					GitInformation: v,
 				}
 				continue
 			}
@@ -293,7 +293,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 				}
 			} else {
 				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation:      v,
+					GitInformation: v,
 				}
 			}
 		}

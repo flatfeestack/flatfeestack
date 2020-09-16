@@ -40,7 +40,7 @@ func UpdateRepository(src string, branch string) (*git.Repository, error) {
 	firstRefSpecArgument := fmt.Sprintf("refs/heads/%s:refs/heads/%s", branch, branch)
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
-		RefSpecs: []config.RefSpec{config.RefSpec(firstRefSpecArgument)},
+		RefSpecs:   []config.RefSpec{config.RefSpec(firstRefSpecArgument)},
 	})
 	if err != nil && err.Error() != "already up-to-date" {
 		return repo, err
@@ -54,7 +54,7 @@ func UpdateRepository(src string, branch string) (*git.Repository, error) {
 	// checkout the correct branch
 	err = w.Checkout(&git.CheckoutOptions{
 		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-		Force: true,
+		Force:  true,
 	})
 
 	return repo, nil

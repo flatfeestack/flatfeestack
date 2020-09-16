@@ -57,9 +57,13 @@ func analyzeRepository(src string, since time.Time, until time.Time, branch stri
 			Addition: 0,
 			Deletion: 0,
 		}
-		for index := range stats {
-			changes.Addition += stats[index].Addition
-			changes.Deletion += stats[index].Deletion
+
+		// only count the lines if its not a merge
+		if merge == 0 {
+			for index := range stats {
+				changes.Addition += stats[index].Addition
+				changes.Deletion += stats[index].Deletion
+			}
 		}
 
 		if _, found := authorMap[author]; !found {
