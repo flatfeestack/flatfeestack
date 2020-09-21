@@ -4,7 +4,7 @@
 [submodule "analysis-engine"]
 	path = analysis-engine
 	url = git@github.com:flatfeestack/analysis-engine.git
-	branch = develop
+	branch = master
 [submodule "frontend-new"]
 	path = frontend-new
 	url = git@github.com:flatfeestack/frontend-new.git
