@@ -1,0 +1,10 @@
+@charset "utf-8";
+
+// https://colorhunt.co/palette/19113
+$primary: #ff5722;
+$info: #00adb5;
+$link: $info;
+$background: #eeeeee;
+$text: #303841;
+
+@import "../node_modules/bulma/bulma.sass";
