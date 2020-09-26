@@ -16,6 +16,9 @@ func analyzeRepository(src string, since time.Time, until time.Time, branch stri
 		return nil, err
 	}
 
+	// weight the merged lines with this factor while contributed lines are factor 1
+	mergedLinesWeight := 0.1
+
 	authorMap := make(map[Contributor]Contribution)
 
 	var timeZeroValue time.Time
@@ -66,6 +69,11 @@ func analyzeRepository(src string, since time.Time, until time.Time, branch stri
 			for index := range stats {
 				changes.Addition += stats[index].Addition
 				changes.Deletion += stats[index].Deletion
+			}
+		} else {
+			for index := range stats {
+				changes.Addition += int(float64(stats[index].Addition) * mergedLinesWeight)
+				changes.Deletion += int(float64(stats[index].Deletion) * mergedLinesWeight)
 			}
 		}
 
