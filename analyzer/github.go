@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+var GClientWrapper GithubClientWrapper
+
+type GithubClientWrapper interface {
+	Query(query string) ([]byte, error)
+}
+
+type GithubClientWrapperClient struct {
+	GitHubURL string
+}
+
 func getGithubPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 
 	// Check if repository is on Github
@@ -77,7 +87,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 			}
 		}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, pageLength)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return []GQLIssue{}, err
 	}
@@ -128,7 +138,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 					}
 				}
 			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
-			resp, err := manualGithubGQL(issueRefetchQuery)
+			resp, err := GClientWrapper.Query(issueRefetchQuery)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -176,7 +186,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 						}
 					}
 				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
-				resp, err := manualGithubGQL(specificIssueQuery)
+				resp, err := GClientWrapper.Query(specificIssueQuery)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -240,7 +250,7 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 			}
 		}`, repositoryOwner, repositoryName, pageLength, pageLength)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return []GQLPullRequest{}, err
 	}
@@ -293,7 +303,7 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 					}
 				}
 			}`, repositoryOwner, repositoryName, pageLength, pullRequestsAfter, pageLength)
-			resp, err := manualGithubGQL(pullRequestRefetchQuery)
+			resp, err := GClientWrapper.Query(pullRequestRefetchQuery)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -343,7 +353,7 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 						}
 					}
 				}`, repositoryOwner, repositoryName, pullRequestToRefech, pageLength, pullRequestReviewsAfter)
-				resp, err := manualGithubGQL(specificPullRequestQuery)
+				resp, err := GClientWrapper.Query(specificPullRequestQuery)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -370,12 +380,12 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 	return response.Data.Repository.PullRequests.Nodes, nil
 }
 
-func manualGithubGQL(query string) ([]byte, error) {
+func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	jsonData := map[string]string{
 		"query": query,
 	}
 	jsonValue, _ := json.Marshal(jsonData)
-	request, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewBuffer(jsonValue))
+	request, err := http.NewRequest("POST", g.GitHubURL, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +471,7 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 			}
       	}`, repositoryOwner, repositoryName, email)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return "", err
 	}
