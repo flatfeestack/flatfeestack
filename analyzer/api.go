@@ -371,7 +371,7 @@ func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
 }
 
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(httpStatusError)
 	_, fmtErr := fmt.Fprintf(w, errString)
 	if fmtErr != nil {
 		fmt.Println("Could not format", fmtErr)
