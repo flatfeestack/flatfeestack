@@ -42,7 +42,7 @@ Request a listing of all contributors with their contributions:
 * repositoryUrl
     + required
     + link to .git file or the repository
-    + example: `repositoryUrlhttps://github.com/neow3j/neow3j.git`
+    + example: `repositoryUrl=https://github.com/neow3j/neow3j.git`
 * since
     + optional (default: date of first commit)
     + date at which the analysis should start in RFC3339 format.
