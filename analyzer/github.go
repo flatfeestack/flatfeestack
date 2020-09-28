@@ -28,7 +28,10 @@ func getGithubPlatformInformation(src string, since time.Time, until time.Time) 
 		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on github")
 	}
 
-	repositoryOwner, repositoryName := getOwnerAndNameOfGithubUrl(src)
+	repositoryOwner, repositoryName, err := getOwnerAndNameOfGithubUrl(src)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	//var repository GQLIssueConnection
 	repositoryIssues, err := getGithubRepositoryIssues(repositoryOwner, repositoryName, since, until)
@@ -397,9 +400,16 @@ func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
-func getOwnerAndNameOfGithubUrl(src string) (string, string) {
-	ownerAndName := strings.Split(strings.Split(src[0:len(src)-4], "github.com/")[1], "/")
-	return ownerAndName[0], ownerAndName[1]
+func getOwnerAndNameOfGithubUrl(src string) (string, string, error) {
+	partAfterDomain := strings.Split(src[0:len(src)-4], "github.com/")
+	if len(partAfterDomain) < 2 {
+		return "", "", errors.New("incorrect github repository url")
+	}
+	ownerAndName := strings.Split(partAfterDomain[1], "/")
+	if len(ownerAndName) < 2 {
+		return "", "", errors.New("incorrect github repository url")
+	}
+	return ownerAndName[0], ownerAndName[1], nil
 }
 
 func filterIssueCommentsByDate(comments []GQLIssueComment, since time.Time, until time.Time) []GQLIssueComment {
@@ -487,7 +497,10 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 
 func getGithubPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests []GQLPullRequest, userEmail string) (PlatformUserInformation, error) {
 
-	repoOwner, repoName := getOwnerAndNameOfGithubUrl(src)
+	repoOwner, repoName, err := getOwnerAndNameOfGithubUrl(src)
+	if err != nil {
+		return PlatformUserInformation{}, err
+	}
 
 	login, err := getGithubUsernameFromGitEmail(repoOwner, repoName, userEmail)
 

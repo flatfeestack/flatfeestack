@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func analyzeRepository(src string, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
+func analyzeRepositoryFromString(src string, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
 	cloneUpdateStart := time.Now()
 	repo, err := CloneOrUpdateRepository(src, branch)
 	cloneUpdateEnd := time.Now()
@@ -16,6 +16,10 @@ func analyzeRepository(src string, since time.Time, until time.Time, branch stri
 		return nil, err
 	}
 
+	return analyzeRepositoryFromRepository(repo, since, until, branch)
+}
+
+func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
 	// weight the merged lines with this factor while contributed lines are factor 1
 	mergedLinesWeight := 0.1
 

@@ -56,7 +56,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
+		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -204,7 +204,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
+		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
