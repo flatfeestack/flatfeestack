@@ -1024,6 +1024,19 @@ func TestGetAuthorPullRequestValue_MixedInfo(t *testing.T) {
 	assert.Equal(t, 7.44, RoundToDecimals(output, 20))
 }
 
+
+func TestGetAuthorPullRequestValue_ImpossibleInfo(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "OPEN",
+		Reviews: nil,
+	}, {
+		State:   "NON_EXISTING_STATE",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 2.0, RoundToDecimals(output, 20))
+}
+
 func TestGetSumOfCommentsOfIssues_Valid(t *testing.T) {
 	inputIssues := []int{1,4,2,5,2,6,3,0}
 

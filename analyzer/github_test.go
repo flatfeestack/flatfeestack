@@ -342,6 +342,482 @@ func TestGetGithubRepositoryIssues_NoFiltering(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestFetchPaginationIssues(t *testing.T) {
+	input := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issues: GQLIssueConnection{
+					Nodes: []GQLIssue{
+						{
+							Title:  "Issue 1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+						},
+						{
+							Title:  "Issue 2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "somePointerToTheNextPage",
+						HasNextPage: true,
+					},
+				},
+			},
+		},
+	}
+
+	paginationResponse := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issues: GQLIssueConnection{
+					Nodes: []GQLIssue{
+						{
+							Title:  "Issue 3",
+							Number: 2,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-03-22T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	GClientWrapper = &TestGithubClientWrapperClient{
+		RequestRepoInfo: &paginationResponse,
+	}
+
+	startTime := parseRFC3339WithoutError("2020-02-21T12:00:00Z")
+
+	sinceFilterBy := `since: "` + startTime.Format(time.RFC3339) + `"`
+
+	output, err := fetchPaginationIssues(input, "octocat", "sampleRepo", 2, sinceFilterBy)
+
+	expectedOutput := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issues: GQLIssueConnection{
+					Nodes: []GQLIssue{
+						{
+							Title:  "Issue 1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+						},
+						{
+							Title:  "Issue 2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+						},
+						{
+							Title:  "Issue 3",
+							Number: 2,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-03-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-03-22T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t, expectedOutput, output)
+}
+
+func TestFetchPaginationIssueComments(t *testing.T) {
+	input := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issues: GQLIssueConnection{
+					Nodes: []GQLIssue{
+						{
+							Title:  "Issue 1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+						},
+						{
+							Title:  "Issue 2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "somePointerToTheNextPage",
+									HasNextPage: true,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	paginationResponse := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issue: GQLIssue{
+					Title:  "Issue 2",
+					Number: 1,
+					Author: GQLActor{
+						Login: "octodog",
+					},
+					Comments: GQLIssueCommentConnection{
+						Nodes: []GQLIssueComment{
+							{
+								Author: GQLActor{
+									Login: "octopig",
+								},
+								UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+							},
+						},
+						PageInfo: GQLPageInfo{
+							EndCursor:   "",
+							HasNextPage: false,
+						},
+					},
+					UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+				},
+			},
+		},
+	}
+
+	GClientWrapper = &TestGithubClientWrapperClient{
+		RequestRepoInfo: &paginationResponse,
+	}
+
+	output, err := fetchPaginationIssueComments(input, "octocat", "sampleRepo", 3)
+
+	expectedOutput := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				Issues: GQLIssueConnection{
+					Nodes: []GQLIssue{
+						{
+							Title:  "Issue 1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-01-22T12:00:00Z"),
+						},
+						{
+							Title:  "Issue 2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							Comments: GQLIssueCommentConnection{
+								Nodes: []GQLIssueComment{
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-19T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-20T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octopig",
+										},
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t, expectedOutput, output)
+}
+
 func TestGetGithubRepositoryPullRequests_Filtering(t *testing.T) {
 
 	resRepo := RequestGQLRepositoryInformation{
@@ -710,6 +1186,14 @@ func TestGetOwnerAndNameOfGithubUrl(t *testing.T) {
 
 func TestGetOwnerAndNameOfGithubUrl_IncorrectUrl(t *testing.T) {
 	owner, name, err := getOwnerAndNameOfGithubUrl("https://github.com/repoName.git")
+	assert.Equal(t, "", owner)
+	assert.Equal(t, "", name)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "incorrect github repository url", err.Error())
+}
+
+func TestGetOwnerAndNameOfGithubUrl_IncorrectUrlNoGithub(t *testing.T) {
+	owner, name, err := getOwnerAndNameOfGithubUrl("https://gitlab.com/ownerName/repoName.git")
 	assert.Equal(t, "", owner)
 	assert.Equal(t, "", name)
 	assert.NotEqual(t, nil, err)
@@ -1618,7 +2102,7 @@ func TestGetGithubPlatformInformationFromUser_NoActivity(t *testing.T) {
 			Commenter: 0,
 		},
 		PullRequestInformation: PullRequestUserInformation{
-			Author: nil,
+			Author:   nil,
 			Reviewer: 0,
 		},
 	}

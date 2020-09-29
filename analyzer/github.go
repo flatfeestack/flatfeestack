@@ -105,102 +105,15 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 
 	// Fetch the missing issues
 
-	issuesAfter := ""
-
-	for ok0 := true; ok0; ok0 = response.Data.Repository.Issues.PageInfo.HasNextPage {
-		if response.Data.Repository.Issues.PageInfo.HasNextPage {
-			issuesAfter = response.Data.Repository.Issues.PageInfo.EndCursor
-			issueRefetchQuery := fmt.Sprintf(
-				`{
-				repository(owner:"%s", name:"%s") {
-					issues(first:%d, filterBy: {%s}, after: "%s") {
-						pageInfo {
-							endCursor
-							hasNextPage
-						}
-						nodes {
-							title
-							number
-							author {
-								login
-							}
-							comments(first: %d) {
-								pageInfo {
-									endCursor
-									hasNextPage
-								}						
-								nodes {
-									author {
-										login
-									}
-									updatedAt
-								}
-							}
-							updatedAt
-						}
-					}
-				}
-			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
-			resp, err := GClientWrapper.Query(issueRefetchQuery)
-			if err != nil {
-				fmt.Println(err)
-			}
-			var refetchResponse RequestGQLRepositoryInformation
-			if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-				fmt.Println(err)
-			}
-			response.Data.Repository.Issues.Nodes = append(response.Data.Repository.Issues.Nodes, refetchResponse.Data.Repository.Issues.Nodes...)
-			response.Data.Repository.Issues.PageInfo = refetchResponse.Data.Repository.Issues.PageInfo
-		}
+	response, err = fetchPaginationIssues(response, repositoryOwner, repositoryName, pageLength, sinceFilterBy)
+	if err != nil {
+		return []GQLIssue{}, err
 	}
-
 	//Fetch the missing IssueComments
 
-	issueCommentsAfter := ""
-	var issueToRefech int
-
-	for index := range response.Data.Repository.Issues.Nodes {
-		issueToRefech = response.Data.Repository.Issues.Nodes[index].Number
-		for ok1 := true; ok1; ok1 = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
-			if response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
-				issueCommentsAfter = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.EndCursor
-				specificIssueQuery := fmt.Sprintf(
-					`{
-					repository(owner:"%s", name:"%s") {
-						issue(number: %d) {
-							title
-							number
-							author {
-								login
-							}
-							comments(first: %d, after: "%s") {
-								pageInfo {
-									endCursor
-									hasNextPage
-								}
-								nodes {
-									author {
-										login
-									}
-									updatedAt
-								}
-							}
-							updatedAt
-						}
-					}
-				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
-				resp, err := GClientWrapper.Query(specificIssueQuery)
-				if err != nil {
-					fmt.Println(err)
-				}
-				var refetchResponse RequestGQLRepositoryInformation
-				if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-					fmt.Println(err)
-				}
-				response.Data.Repository.Issues.Nodes[index].Comments.Nodes = append(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, refetchResponse.Data.Repository.Issue.Comments.Nodes...)
-				response.Data.Repository.Issues.Nodes[index].Comments.PageInfo = refetchResponse.Data.Repository.Issue.Comments.PageInfo
-			}
-		}
+	response, err = fetchPaginationIssueComments(response, repositoryOwner, repositoryName, pageLength)
+	if err != nil {
+		return []GQLIssue{}, err
 	}
 
 	// ---------
@@ -398,6 +311,111 @@ func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 		return nil, err
 	}
 	return ioutil.ReadAll(response.Body)
+}
+
+func fetchPaginationIssues(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int, sinceFilterBy string) (RequestGQLRepositoryInformation, error) {
+	issuesAfter := ""
+
+	for ok0 := true; ok0; ok0 = response.Data.Repository.Issues.PageInfo.HasNextPage {
+		if response.Data.Repository.Issues.PageInfo.HasNextPage {
+			issuesAfter = response.Data.Repository.Issues.PageInfo.EndCursor
+			issueRefetchQuery := fmt.Sprintf(
+				`{
+				repository(owner:"%s", name:"%s") {
+					issues(first:%d, filterBy: {%s}, after: "%s") {
+						pageInfo {
+							endCursor
+							hasNextPage
+						}
+						nodes {
+							title
+							number
+							author {
+								login
+							}
+							comments(first: %d) {
+								pageInfo {
+									endCursor
+									hasNextPage
+								}						
+								nodes {
+									author {
+										login
+									}
+									updatedAt
+								}
+							}
+							updatedAt
+						}
+					}
+				}
+			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
+			resp, err := GClientWrapper.Query(issueRefetchQuery)
+			if err != nil {
+				return response, err
+			}
+			var refetchResponse RequestGQLRepositoryInformation
+			if err := json.Unmarshal(resp, &refetchResponse); err != nil {
+				return response, err
+			}
+			response.Data.Repository.Issues.Nodes = append(response.Data.Repository.Issues.Nodes, refetchResponse.Data.Repository.Issues.Nodes...)
+			response.Data.Repository.Issues.PageInfo = refetchResponse.Data.Repository.Issues.PageInfo
+		}
+	}
+
+	return response, nil
+}
+
+func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
+	issueCommentsAfter := ""
+	var issueToRefech int
+
+	for index := range response.Data.Repository.Issues.Nodes {
+		issueToRefech = response.Data.Repository.Issues.Nodes[index].Number
+		for ok1 := true; ok1; ok1 = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
+			if response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
+				issueCommentsAfter = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.EndCursor
+				specificIssueQuery := fmt.Sprintf(
+					`{
+					repository(owner:"%s", name:"%s") {
+						issue(number: %d) {
+							title
+							number
+							author {
+								login
+							}
+							comments(first: %d, after: "%s") {
+								pageInfo {
+									endCursor
+									hasNextPage
+								}
+								nodes {
+									author {
+										login
+									}
+									updatedAt
+								}
+							}
+							updatedAt
+						}
+					}
+				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
+				resp, err := GClientWrapper.Query(specificIssueQuery)
+				if err != nil {
+					return response, nil
+				}
+				var refetchResponse RequestGQLRepositoryInformation
+				if err := json.Unmarshal(resp, &refetchResponse); err != nil {
+					return response, nil
+				}
+				response.Data.Repository.Issues.Nodes[index].Comments.Nodes = append(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, refetchResponse.Data.Repository.Issue.Comments.Nodes...)
+				response.Data.Repository.Issues.Nodes[index].Comments.PageInfo = refetchResponse.Data.Repository.Issue.Comments.PageInfo
+			}
+		}
+	}
+
+	return response, nil
+
 }
 
 func getOwnerAndNameOfGithubUrl(src string) (string, string, error) {
