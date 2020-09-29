@@ -6,12 +6,17 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func RoundToDecimals(f float64, decimals int) float64 {
+	return math.Round(f*float64(10)*float64(decimals))/(float64(10)*float64(decimals))
+}
 
 func Unzip(src string, dest string) ([]string, error) {
 
@@ -497,6 +502,79 @@ func TestWeightContributions(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestWeightContributions_OneInput(t *testing.T) {
+
+	inputContributions := make(map[Contributor]Contribution)
+
+	inputContributions[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "claude@axlabs.com",
+		},
+		Changes: CommitChange{
+			Addition: 10245,
+			Deletion: 6405,
+		},
+		Merges:  6,
+		Commits: 64,
+	}
+
+	outputScore, err := weightContributions(inputContributions)
+
+	expectedOutput := make(map[Contributor]FlatFeeWeight)
+	expectedOutput[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "claude@axlabs.com",
+		},
+		Weight: 1.0,
+	}
+
+
+	sumOfScores := 0.0
+
+	for k, v := range outputScore {
+		expected, found := expectedOutput[k]
+		sumOfScores += v.Weight
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	for k, _ := range expectedOutput {
+		_, found := outputScore[k]
+		assert.Equal(t, true, found)
+	}
+	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, nil, err)
+}
+
+func TestWeightContributions_NoInput(t *testing.T) {
+
+	inputContributions := make(map[Contributor]Contribution)
+
+	outputScore, err := weightContributions(inputContributions)
+
+	expectedOutput := make(map[Contributor]FlatFeeWeight)
+
+	for k, v := range outputScore {
+		expected, found := expectedOutput[k]
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	for k, _ := range expectedOutput {
+		_, found := outputScore[k]
+		assert.Equal(t, true, found)
+	}
+	assert.Equal(t, nil, err)
+}
+
 func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 
 	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
@@ -735,4 +813,227 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 	}
 	assert.Equal(t, 1.0, sumOfScores)
 	assert.Equal(t, nil, err)
+}
+
+func TestWeightContributionsWithPlatformInformation_OneInput(t *testing.T) {
+
+	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
+
+	inputContributions[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = ContributionWithPlatformInformation{
+		GitInformation: Contribution{
+			Contributor: Contributor{
+				Name:  "Claude Muller",
+				Email: "claude@axlabs.com",
+			},
+			Changes: CommitChange{
+				Addition: 10245,
+				Deletion: 6405,
+			},
+			Merges:  6,
+			Commits: 64},
+		PlatformInformation: PlatformUserInformation{
+			UserName:               "csmuller",
+			IssueInformation:       IssueUserInformation{
+				Author:    nil,
+				Commenter: 6,
+			},
+			PullRequestInformation: PullRequestUserInformation{
+				Author:   []PullRequestInformation{{
+					State:   "MERGED",
+					Reviews: nil,
+				}, {
+					State:   "MERGED",
+					Reviews: nil,
+				}, {
+					State:   "MERGED",
+					Reviews: []string{
+						"CHANGES_REQUESTED",
+						"COMMENTED",
+						"APPROVED",
+					},
+				}, {
+					State:   "CLOSED",
+					Reviews: nil,
+				}, {
+					State:   "MERGED",
+					Reviews: nil,
+				}, {
+					State:   "MERGED",
+					Reviews: []string{
+						"COMMENTED",
+					},
+				}},
+				Reviewer: 1,
+			},
+		},
+	}
+
+	outputScore, err := weightContributionsWithPlatformInformation(inputContributions)
+
+	expectedOutput := make(map[Contributor]FlatFeeWeight)
+	expectedOutput[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "claude@axlabs.com",
+		},
+		Weight: 1.0,
+	}
+
+	sumOfScores := 0.0
+	for k, v := range outputScore {
+		expected, found := expectedOutput[k]
+		sumOfScores += v.Weight
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	for k, _ := range expectedOutput {
+		_, found := outputScore[k]
+		assert.Equal(t, true, found)
+	}
+	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, nil, err)
+}
+
+func TestWeightContributionsWithPlatformInformation_NoInput(t *testing.T) {
+
+	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
+
+	outputScore, err := weightContributionsWithPlatformInformation(inputContributions)
+
+	expectedOutput := make(map[Contributor]FlatFeeWeight)
+
+	for k, v := range outputScore {
+		expected, found := expectedOutput[k]
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	for k, _ := range expectedOutput {
+		_, found := outputScore[k]
+		assert.Equal(t, true, found)
+	}
+	assert.Equal(t, nil, err)
+}
+
+func TestGetAuthorPullRequestValue_OpenOpen(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "OPEN",
+		Reviews: nil,
+	}, {
+		State:   "OPEN",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 2.0, output)
+}
+
+func TestGetAuthorPullRequestValue_OpenClosed(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "OPEN",
+		Reviews: nil,
+	}, {
+		State:   "CLOSED",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 1.6, output)
+}
+
+func TestGetAuthorPullRequestValue_OpenMerged(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "OPEN",
+		Reviews: nil,
+	}, {
+		State:   "MERGED",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 2.5, output)
+}
+
+func TestGetAuthorPullRequestValue_OpenApproved(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "OPEN",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "OPEN",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 2.4, output)
+}
+
+func TestGetAuthorPullRequestValue_ClosedApproved(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "CLOSED",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "OPEN",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 1.84, RoundToDecimals(output, 20))
+}
+
+func TestGetAuthorPullRequestValue_MergedApproved(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "MERGED",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "OPEN",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 3.1, RoundToDecimals(output, 20))
+}
+
+func TestGetAuthorPullRequestValue_NoInfo(t *testing.T) {
+	var pullRequests []PullRequestInformation
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 0.0, RoundToDecimals(output, 20))
+}
+
+func TestGetAuthorPullRequestValue_MixedInfo(t *testing.T) {
+	pullRequests := []PullRequestInformation{{
+		State:   "MERGED",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "OPEN",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "CLOSED",
+		Reviews: []string{"APPROVED"},
+	}, {
+		State:   "MERGED",
+		Reviews: nil,
+	}, {
+		State:   "OPEN",
+		Reviews: nil,
+	}, {
+		State:   "CLOSED",
+		Reviews: nil,
+	}}
+	output := getAuthorPullRequestValue(pullRequests)
+	assert.Equal(t, 7.44, RoundToDecimals(output, 20))
+}
+
+func TestGetSumOfCommentsOfIssues_Valid(t *testing.T) {
+	inputIssues := []int{1,4,2,5,2,6,3,0}
+
+	sum := getSumOfCommentsOfIssues(inputIssues)
+	assert.Equal(t, 23, sum)
+}
+
+func TestGetSumOfCommentsOfIssues_Empty(t *testing.T) {
+	var inputIssues []int
+
+	sum := getSumOfCommentsOfIssues(inputIssues)
+	assert.Equal(t, 0, sum)
 }
