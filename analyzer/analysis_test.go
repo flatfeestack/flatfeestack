@@ -281,3 +281,219 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 
 	_ = os.RemoveAll("./test-repository")
 }
+
+func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
+	_, _ = Unzip("test-repository.zip", "test-repository")
+
+	repo, _ := git.PlainOpen("./test-repository")
+
+	startDate := parseRFC3339WithoutError("2019-02-01T12:00:00Z")
+	endDate := parseRFC3339WithoutError("2019-04-30T12:00:00Z")
+
+	contributions, err := analyzeRepositoryFromRepository(repo, startDate, endDate, "master")
+
+	expectedContributions := make(map[Contributor]Contribution)
+
+	expectedContributions[Contributor{
+		Name:  "Nikita Andrejevs",
+		Email: "nimmortalz@gmail.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Nikita Andrejevs",
+			Email: "nimmortalz@gmail.com",
+		},
+		Changes:     CommitChange{
+			Addition: 474,
+			Deletion: 131,
+		},
+		Merges:      0,
+		Commits:     3,
+	}
+	expectedContributions[Contributor{
+		Name:  "Freddy Tuxworth",
+		Email: "freddytuxworth@gmail.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Freddy Tuxworth",
+			Email: "freddytuxworth@gmail.com",
+		},
+		Changes:     CommitChange{
+			Addition: 47,
+			Deletion: 0,
+		},
+		Merges:      0,
+		Commits:     1,
+	}
+	expectedContributions[Contributor{
+		Name:  "Guilherme Sperb Machado",
+		Email: "guil@axlabs.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Guilherme Sperb Machado",
+			Email: "guil@axlabs.com",
+		},
+		Changes:     CommitChange{
+			Addition: 3634,
+			Deletion: 457,
+		},
+		Merges:      0,
+		Commits:     34,
+	}
+
+
+	assert.Equal(t, expectedContributions, contributions)
+	assert.Equal(t, nil, err)
+
+	_ = os.RemoveAll("./test-repository")
+}
+
+func TestWeightContributions(t *testing.T) {
+
+	inputContributions := make(map[Contributor]Contribution)
+
+	inputContributions[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "claude@axlabs.com",
+		},
+		Changes:     CommitChange{
+			Addition: 10245,
+			Deletion: 6405,
+		},
+		Merges:      6,
+		Commits:     64,
+	}
+	inputContributions[Contributor{
+		Name:  "Claude Muller",
+		Email: "37138571+claudemiller@users.noreply.github.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "37138571+claudemiller@users.noreply.github.com",
+		},
+		Changes:     CommitChange{
+			Addition: 668,
+			Deletion: 372,
+		},
+		Merges:      3,
+		Commits:     1,
+	}
+	inputContributions[Contributor{
+		Name:  "Guil. Sperb Machado",
+		Email: "guil@axlabs.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Guil. Sperb Machado",
+			Email: "guil@axlabs.com",
+		},
+		Changes:     CommitChange{
+			Addition: 90,
+			Deletion: 25,
+		},
+		Merges:      3,
+		Commits:     0,
+	}
+	inputContributions[Contributor{
+		Name:  "Nikita Andrejevs",
+		Email: "nimmortalz@gmail.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Nikita Andrejevs",
+			Email: "nimmortalz@gmail.com",
+		},
+		Changes:     CommitChange{
+			Addition: 2116,
+			Deletion: 729,
+		},
+		Merges:      2,
+		Commits:     2,
+	}
+	inputContributions[Contributor{
+		Name:  "Guilherme Sperb Machado",
+		Email: "guil@axlabs.com",
+	}] = Contribution{
+		Contributor: Contributor{
+			Name:  "Guilherme Sperb Machado",
+			Email: "guil@axlabs.com",
+		},
+		Changes:     CommitChange{
+			Addition: 2571,
+			Deletion: 1093,
+		},
+		Merges:      8,
+		Commits:     35,
+	}
+
+	outputScore, err := weightContributions(inputContributions)
+
+	expectedOutput := make(map[Contributor]FlatFeeWeight)
+	expectedOutput[Contributor{
+		Name:  "Claude Muller",
+		Email: "claude@axlabs.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "claude@axlabs.com",
+		},
+		Weight: 0.6453751874866082,
+	}
+	expectedOutput[Contributor{
+		Name:  "Claude Muller",
+		Email: "37138571+claudemiller@users.noreply.github.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Claude Muller",
+			Email: "37138571+claudemiller@users.noreply.github.com",
+		},
+		Weight: 0.03514431962342826,
+	}
+	expectedOutput[Contributor{
+		Name:  "Guil. Sperb Machado",
+		Email: "guil@axlabs.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Guil. Sperb Machado",
+			Email: "guil@axlabs.com",
+		},
+		Weight: 0.007351913638821717,
+	}
+	expectedOutput[Contributor{
+		Name:  "Nikita Andrejevs",
+		Email: "nimmortalz@gmail.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Nikita Andrejevs",
+			Email: "nimmortalz@gmail.com",
+		},
+		Weight: 0.09139425415191431,
+	}
+	expectedOutput[Contributor{
+		Name:  "Guilherme Sperb Machado",
+		Email: "guil@axlabs.com",
+	}] = FlatFeeWeight{
+		Contributor: Contributor{
+			Name:  "Guilherme Sperb Machado",
+			Email: "guil@axlabs.com",
+		},
+		Weight: 0.22073432509922764,
+	}
+
+	sumOfScores := 0.0
+
+	for k, v := range outputScore {
+		expected, found := expectedOutput[k]
+		sumOfScores += v.Weight
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	for k, _ := range expectedOutput {
+		_, found := outputScore[k]
+		assert.Equal(t, true, found)
+	}
+	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, nil, err)
+}
