@@ -1177,6 +1177,521 @@ func TestGetGithubRepositoryPullRequests_NoFiltering(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestFetchPaginationPullRequests(t *testing.T) {
+	input := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequests: GQLPullRequestConnection{
+					Nodes: []GQLPullRequest{
+						{
+							Title:  "PR1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+						},
+						{
+							Title:  "PR2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-03-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-04-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "somePointerToTheNextPage",
+						HasNextPage: true,
+					},
+				},
+			},
+		},
+	}
+
+	paginationResponse := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequests: GQLPullRequestConnection{
+					Nodes: []GQLPullRequest{
+						{
+							Title:  "PR3",
+							Number: 2,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-06-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-06-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-06-23T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	GClientWrapper = &TestGithubClientWrapperClient{
+		RequestRepoInfo: &paginationResponse,
+	}
+
+	response, err := fetchPaginationPullRequests(input, "octocat", "sampleRepo", 2)
+
+	expectedOutcome := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequests: GQLPullRequestConnection{
+					Nodes: []GQLPullRequest{
+						{
+							Title:  "PR1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+						},
+						{
+							Title:  "PR2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-03-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-04-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+						},
+						{
+							Title:  "PR3",
+							Number: 2,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-06-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-06-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-06-23T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, expectedOutcome, response)
+	assert.Equal(t, nil, err)
+}
+
+func TestFetchPaginationPullRequestReviews(t *testing.T) {
+	input := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequests: GQLPullRequestConnection{
+					Nodes: []GQLPullRequest{
+						{
+							Title:  "PR1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+						},
+						{
+							Title:  "PR2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-03-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-04-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "somePointerToTheNextPage",
+									HasNextPage: true,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	paginationResponse := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequest: GQLPullRequest{
+					Title:  "PR2",
+					Number: 1,
+					Author: GQLActor{
+						Login: "octodog",
+					},
+					State: "MERGED",
+					Reviews: GQLPullRequestReviewConnection{
+						Nodes: []GQLPullRequestReview{
+							{
+								Author: GQLActor{
+									Login: "octopig",
+								},
+								State:     "APPROVED",
+								UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+							},
+						},
+						PageInfo: GQLPageInfo{
+							EndCursor:   "",
+							HasNextPage: false,
+						},
+					},
+					UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+				},
+			},
+		},
+	}
+
+	GClientWrapper = &TestGithubClientWrapperClient{
+		RequestRepoInfo: &paginationResponse,
+	}
+
+	response, err := fetchPaginationPullRequestReviews(input, "octocat", "sampleRepo", 3)
+
+	expectedOutcome := RequestGQLRepositoryInformation{
+		Data: GQLData{
+			Repository: GQLRepository{
+				PullRequests: GQLPullRequestConnection{
+					Nodes: []GQLPullRequest{
+						{
+							Title:  "PR1",
+							Number: 0,
+							Author: GQLActor{
+								Login: "octocat",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octodog",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-02-23T12:00:00Z"),
+						},
+						{
+							Title:  "PR2",
+							Number: 1,
+							Author: GQLActor{
+								Login: "octodog",
+							},
+							State: "MERGED",
+							Reviews: GQLPullRequestReviewConnection{
+								Nodes: []GQLPullRequestReview{
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "COMMENTED",
+										UpdatedAt: parseRFC3339WithoutError("2020-03-21T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octocat",
+										},
+										State:     "CODE REVIEW",
+										UpdatedAt: parseRFC3339WithoutError("2020-04-22T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octoduck",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+									},
+									{
+										Author: GQLActor{
+											Login: "octopig",
+										},
+										State:     "APPROVED",
+										UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+									},
+								},
+								PageInfo: GQLPageInfo{
+									EndCursor:   "",
+									HasNextPage: false,
+								},
+							},
+							UpdatedAt: parseRFC3339WithoutError("2020-05-23T12:00:00Z"),
+						},
+					},
+					PageInfo: GQLPageInfo{
+						EndCursor:   "",
+						HasNextPage: false,
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, expectedOutcome, response)
+	assert.Equal(t, nil, err)
+}
+
 func TestGetOwnerAndNameOfGithubUrl(t *testing.T) {
 	owner, name, err := getOwnerAndNameOfGithubUrl("https://github.com/ownerName/repoName.git")
 	assert.Equal(t, "ownerName", owner)
