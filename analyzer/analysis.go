@@ -16,10 +16,10 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 		return nil, err
 	}
 
-	return analyzeRepositoryFromRepository(repo, since, until, branch)
+	return analyzeRepositoryFromRepository(repo, since, until)
 }
 
-func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
+func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
 	// weight the merged lines with this factor while contributed lines are factor 1
 	mergedLinesWeight := 0.1
 

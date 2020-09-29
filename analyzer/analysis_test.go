@@ -81,7 +81,7 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 
 	var defaultTime time.Time
 
-	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime, "master")
+	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime)
 
 	expectedContributions := make(map[Contributor]Contribution)
 
@@ -295,7 +295,7 @@ func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
 	startDate := parseRFC3339WithoutError("2019-02-01T12:00:00Z")
 	endDate := parseRFC3339WithoutError("2019-04-30T12:00:00Z")
 
-	contributions, err := analyzeRepositoryFromRepository(repo, startDate, endDate, "master")
+	contributions, err := analyzeRepositoryFromRepository(repo, startDate, endDate)
 
 	expectedContributions := make(map[Contributor]Contribution)
 
