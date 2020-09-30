@@ -38,7 +38,7 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 
 	commits, err := repo.Log(&options)
 	if err != nil {
-		return nil, err
+		return authorMap, err
 	}
 
 	commitCounter := 0
@@ -105,7 +105,7 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 	fmt.Printf("---> git analysis in %dms (%d commits)\n", gitAnalysisEnd.Sub(gitAnalysisStart).Milliseconds(), commitCounter)
 
 	if err != nil {
-		return nil, err
+		return authorMap, err
 	}
 	return authorMap, nil
 }

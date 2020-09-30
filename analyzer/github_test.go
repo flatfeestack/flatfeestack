@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// Helpers
+
 type TestGithubClientWrapperClient struct {
 	RequestRepoInfo *RequestGQLRepositoryInformation
 }
@@ -19,6 +21,16 @@ func parseRFC3339WithoutError(date string) time.Time {
 	golangTime, _ := time.Parse(time.RFC3339, date)
 	return golangTime
 }
+
+// Tests
+
+// getGithubPlatformInformation
+
+/*
+	Integration test that combines the following unit tests
+*/
+
+// getGithubRepositoryIssues
 
 func TestGetGithubRepositoryIssues_Filtering(t *testing.T) {
 
@@ -342,6 +354,8 @@ func TestGetGithubRepositoryIssues_NoFiltering(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+// fetchPaginationIssues
+
 func TestFetchPaginationIssues(t *testing.T) {
 	input := RequestGQLRepositoryInformation{
 		Data: GQLData{
@@ -606,6 +620,8 @@ func TestFetchPaginationIssues(t *testing.T) {
 	assert.Equal(t, expectedOutput, output)
 }
 
+// fetchPaginationIssueComments
+
 func TestFetchPaginationIssueComments(t *testing.T) {
 	input := RequestGQLRepositoryInformation{
 		Data: GQLData{
@@ -817,6 +833,8 @@ func TestFetchPaginationIssueComments(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, expectedOutput, output)
 }
+
+// getGithubRepositoryPullRequests
 
 func TestGetGithubRepositoryPullRequests_Filtering(t *testing.T) {
 
@@ -1177,6 +1195,8 @@ func TestGetGithubRepositoryPullRequests_NoFiltering(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+// fetchPaginationPullRequests
+
 func TestFetchPaginationPullRequests(t *testing.T) {
 	input := RequestGQLRepositoryInformation{
 		Data: GQLData{
@@ -1461,6 +1481,8 @@ func TestFetchPaginationPullRequests(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+// fetchPaginationPullRequestReviews
+
 func TestFetchPaginationPullRequestReviews(t *testing.T) {
 	input := RequestGQLRepositoryInformation{
 		Data: GQLData{
@@ -1692,6 +1714,14 @@ func TestFetchPaginationPullRequestReviews(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+// Query
+
+/*
+	Helper method, that redirects a request to the github api. Overwitten in tests.
+*/
+
+// getOwnerAndNameOfGithubUrl
+
 func TestGetOwnerAndNameOfGithubUrl(t *testing.T) {
 	owner, name, err := getOwnerAndNameOfGithubUrl("https://github.com/ownerName/repoName.git")
 	assert.Equal(t, "ownerName", owner)
@@ -1714,6 +1744,8 @@ func TestGetOwnerAndNameOfGithubUrl_IncorrectUrlNoGithub(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "incorrect github repository url", err.Error())
 }
+
+// getGithubUsernameFromGitEmail
 
 func TestGetGithubUsernameFromGitEmail_Found(t *testing.T) {
 	resRepo := RequestGQLRepositoryInformation{
@@ -1771,6 +1803,8 @@ func TestGetGithubUsernameFromGitEmail_NotFound(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "could not find user", err.Error())
 }
+
+// getPullRequestReviewStateArray
 
 func TestGetPullRequestReviewStateArray(t *testing.T) {
 	pullRequest := GQLPullRequest{
@@ -1836,6 +1870,8 @@ func TestGetPullRequestReviewStateArray_NoReviews(t *testing.T) {
 	var emptyStrings []string
 	assert.Equal(t, emptyStrings, activity)
 }
+
+// getGithubPlatformInformationFromUser
 
 func TestGetGithubPlatformInformationFromUser(t *testing.T) {
 	resRepo := RequestGQLRepositoryInformation{

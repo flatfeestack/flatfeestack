@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"math"
@@ -13,6 +14,8 @@ import (
 	"testing"
 	"time"
 )
+
+// Helpers
 
 func RoundToDecimals(f float64, decimals int) float64 {
 	return math.Round(f*float64(10)*float64(decimals))/(float64(10)*float64(decimals))
@@ -73,6 +76,18 @@ func Unzip(src string, dest string) ([]string, error) {
 	}
 	return filenames, nil
 }
+
+// Tests
+
+// analyzeRepositoryFromString
+
+/*
+	This adds just the part of cloning/updating the repository
+	before the analysis that is already tested. Since we don't test
+	go-git we won't test that.
+*/
+
+// analyzeRepositoryFromRepository
 
 func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 	_, _ = Unzip("test-repository.zip", "test-repository")
@@ -351,6 +366,25 @@ func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
 	_ = os.RemoveAll("./test-repository")
 }
 
+func TestAnalyzeRepositoryFromRepository_EmptyRepo(t *testing.T) {
+
+	storer := memory.NewStorage()
+
+	repo, _ := git.Init(storer, nil)
+
+	var defaultTime time.Time
+
+	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime)
+
+	expectedContributions := make(map[Contributor]Contribution)
+
+	// Expect error since git logging an empty repo returns an error
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, expectedContributions, contributions)
+}
+
+// weightContributions
+
 func TestWeightContributions(t *testing.T) {
 
 	inputContributions := make(map[Contributor]Contribution)
@@ -498,7 +532,7 @@ func TestWeightContributions(t *testing.T) {
 		_, found := outputScore[k]
 		assert.Equal(t, true, found)
 	}
-	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
@@ -550,7 +584,7 @@ func TestWeightContributions_OneInput(t *testing.T) {
 		_, found := outputScore[k]
 		assert.Equal(t, true, found)
 	}
-	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
@@ -574,6 +608,8 @@ func TestWeightContributions_NoInput(t *testing.T) {
 	}
 	assert.Equal(t, nil, err)
 }
+
+// weightContributionsWithPlatformInformation
 
 func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 
@@ -897,7 +933,7 @@ func TestWeightContributionsWithPlatformInformation_OneInput(t *testing.T) {
 		_, found := outputScore[k]
 		assert.Equal(t, true, found)
 	}
-	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
@@ -921,6 +957,8 @@ func TestWeightContributionsWithPlatformInformation_NoInput(t *testing.T) {
 	}
 	assert.Equal(t, nil, err)
 }
+
+// getAuthorPullRequestValue
 
 func TestGetAuthorPullRequestValue_OpenOpen(t *testing.T) {
 	pullRequests := []PullRequestInformation{{
@@ -1024,7 +1062,6 @@ func TestGetAuthorPullRequestValue_MixedInfo(t *testing.T) {
 	assert.Equal(t, 7.44, RoundToDecimals(output, 20))
 }
 
-
 func TestGetAuthorPullRequestValue_ImpossibleInfo(t *testing.T) {
 	pullRequests := []PullRequestInformation{{
 		State:   "OPEN",
@@ -1036,6 +1073,8 @@ func TestGetAuthorPullRequestValue_ImpossibleInfo(t *testing.T) {
 	output := getAuthorPullRequestValue(pullRequests)
 	assert.Equal(t, 2.0, RoundToDecimals(output, 20))
 }
+
+// getSumOfCommentsOfIssues
 
 func TestGetSumOfCommentsOfIssues_Valid(t *testing.T) {
 	inputIssues := []int{1,4,2,5,2,6,3,0}

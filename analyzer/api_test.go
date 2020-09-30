@@ -10,18 +10,38 @@ import (
 	"time"
 )
 
-func TestGetRepositoryFromRequestRepo(t *testing.T)  {
+// Tests
+
+// getAllContributions
+
+/*
+	Would be a integration test with a lot of requests, cloning repositories etc.
+	The part added in this project is already unit tested. Testing this would
+	additionally test the gorilla/mux the github api and go-git/go-git.
+*/
+
+// getContributionWeights
+
+/*
+	Would be a integration test with a lot of requests, cloning repositories etc.
+	The part added in this project is already unit tested. Testing this would
+	additionally test the gorilla/mux the github api and go-git/go-git.
+*/
+
+// getRepositoryFromRequest
+
+func TestGetRepositoryFromRequest_Valid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?repositoryUrl=https://github.com/neow3j/neow3j.git")
 	req := http.Request{
 		Method: "GET",
 		URL:    uri,
 	}
 	repo, err := getRepositoryFromRequest(&req)
-	assert.Equal(t, nil, err, "err should be nil")
-	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo, "they should be equal")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo)
 }
 
-func TestGetRepositoryFromRequestMultiParam(t *testing.T)  {
+func TestGetRepositoryFromRequest_MultiParam(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?repositoryUrl=https://github.com/neow3j/neow3j.git&repositoryUrl=https://github.com/go-git/go-git.git")
 	req := http.Request{
 		Method: "GET",
@@ -32,7 +52,7 @@ func TestGetRepositoryFromRequestMultiParam(t *testing.T)  {
 	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo, "they should be equal")
 }
 
-func TestGetRepositoryFromRequestNoRepo(t *testing.T)  {
+func TestGetRepositoryFromRequest_NoRepo(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions")
 	req := http.Request{
 		Method: "GET",
@@ -44,57 +64,9 @@ func TestGetRepositoryFromRequestNoRepo(t *testing.T)  {
 	assert.Equal(t, "", repo, "they should be equal")
 }
 
-func TestGetShouldAnalyzePlatformInformation(t *testing.T)  {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=true")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, true, info, "they should be equal")
-}
+// getTimeRange
 
-func TestGetShouldAnalyzePlatformInformationNoParam(t *testing.T)  {
-	uri, _ := url.Parse("http://localhost:8080/contributions")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "they should be equal")
-}
-
-func TestGetShouldAnalyzePlatformInformationFalse(t *testing.T)  {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=false")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "they should be equal")
-}
-
-func TestGetShouldAnalyzePlatformInformationWrongContent(t *testing.T)  {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "should be treated as false")
-}
-
-func TestGetShouldAnalyzePlatformInformationMultiParam(t *testing.T)  {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum&platformInformation=true")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "should be treated as false")
-}
-
-func TestGetTimeRangeNoInput(t *testing.T)  {
+func TestGetTimeRange_NoInput(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions")
 	req := http.Request{
 		Method: "GET",
@@ -107,7 +79,7 @@ func TestGetTimeRangeNoInput(t *testing.T)  {
 	assert.Equal(t, nil, err, "should take default time")
 }
 
-func TestGetTimeRangeSinceValid(t *testing.T)  {
+func TestGetTimeRange_SinceValid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?since=2020-01-22T15:04:05Z")
 	req := http.Request{
 		Method: "GET",
@@ -121,7 +93,7 @@ func TestGetTimeRangeSinceValid(t *testing.T)  {
 	assert.Equal(t, nil, err, "should take default time")
 }
 
-func TestGetTimeRangeUntilValid(t *testing.T)  {
+func TestGetTimeRange_UntilValid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?until=2020-01-22T15:04:05Z")
 	req := http.Request{
 		Method: "GET",
@@ -135,7 +107,7 @@ func TestGetTimeRangeUntilValid(t *testing.T)  {
 	assert.Equal(t, nil, err)
 }
 
-func TestGetTimeRangeBothValid(t *testing.T)  {
+func TestGetTimeRange_BothValid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?until=2020-01-22T15:04:05Z&since=2020-01-22T15:04:05Z")
 	req := http.Request{
 		Method: "GET",
@@ -148,7 +120,7 @@ func TestGetTimeRangeBothValid(t *testing.T)  {
 	assert.Equal(t, nil, err)
 }
 
-func TestGetTimeRangeUntilInvalid(t *testing.T)  {
+func TestGetTimeRange_UntilInvalid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?until=2020-01-22T15:04:05:11Z&since=2020-01-22T15:04:05Z")
 	req := http.Request{
 		Method: "GET",
@@ -163,7 +135,7 @@ func TestGetTimeRangeUntilInvalid(t *testing.T)  {
 	assert.Equal(t, expectedErr.Error(), err.Error())
 }
 
-func TestGetTimeRangeSinceInvalid(t *testing.T)  {
+func TestGetTimeRange_SinceInvalid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?since=2020-01-22T15:04:05:11Z&until=2020-01-22T15:04:05Z")
 	req := http.Request{
 		Method: "GET",
@@ -178,7 +150,67 @@ func TestGetTimeRangeSinceInvalid(t *testing.T)  {
 	assert.Equal(t, expectedErr.Error(), err.Error())
 }
 
-func TestGetBranchToAnalyzeValid(t *testing.T)  {
+// makeHttpStatusErr
+
+/*
+	Testing this would just test whether the http package with the responseWriter works.
+*/
+
+// getShouldAnalyzePlatformInformation
+
+func TestGetShouldAnalyzePlatformInformation(t *testing.T)  {
+	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=true")
+	req := http.Request{
+		Method: "GET",
+		URL:    uri,
+	}
+	info := getShouldAnalyzePlatformInformation(&req)
+	assert.Equal(t, true, info, "they should be equal")
+}
+
+func TestGetShouldAnalyzePlatformInformation_NoParam(t *testing.T)  {
+	uri, _ := url.Parse("http://localhost:8080/contributions")
+	req := http.Request{
+		Method: "GET",
+		URL:    uri,
+	}
+	info := getShouldAnalyzePlatformInformation(&req)
+	assert.Equal(t, false, info, "they should be equal")
+}
+
+func TestGetShouldAnalyzePlatformInformation_False(t *testing.T)  {
+	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=false")
+	req := http.Request{
+		Method: "GET",
+		URL:    uri,
+	}
+	info := getShouldAnalyzePlatformInformation(&req)
+	assert.Equal(t, false, info, "they should be equal")
+}
+
+func TestGetShouldAnalyzePlatformInformation_WrongContent(t *testing.T)  {
+	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum")
+	req := http.Request{
+		Method: "GET",
+		URL:    uri,
+	}
+	info := getShouldAnalyzePlatformInformation(&req)
+	assert.Equal(t, false, info, "should be treated as false")
+}
+
+func TestGetShouldAnalyzePlatformInformation_MultiParam(t *testing.T)  {
+	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum&platformInformation=true")
+	req := http.Request{
+		Method: "GET",
+		URL:    uri,
+	}
+	info := getShouldAnalyzePlatformInformation(&req)
+	assert.Equal(t, false, info, "should be treated as false")
+}
+
+// getBranchToAnalyze
+
+func TestGetBranchToAnalyze_Valid(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions?branch=develop")
 	req := http.Request{
 		Method: "GET",
@@ -188,7 +220,7 @@ func TestGetBranchToAnalyzeValid(t *testing.T)  {
 	assert.Equal(t, "develop", branch)
 }
 
-func TestGetBranchToAnalyzeNoParam(t *testing.T)  {
+func TestGetBranchToAnalyze_NoParam(t *testing.T)  {
 	uri, _ := url.Parse("http://localhost:8080/contributions")
 	req := http.Request{
 		Method: "GET",
