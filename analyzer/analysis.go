@@ -20,9 +20,6 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 }
 
 func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
-	// weight the merged lines with this factor while contributed lines are factor 1
-	mergedLinesWeight := 0.1
-
 	authorMap := make(map[Contributor]Contribution)
 
 	var timeZeroValue time.Time
@@ -112,19 +109,6 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 
 func weightContributions(contributions map[Contributor]Contribution) (map[Contributor]FlatFeeWeight, error) {
 	weightContributionsStart := time.Now()
-	// Parameter
-
-	// Category "Changes" devided into additions and deletions. both must sum up to 1
-	additionWeight := 0.7
-	deletionWeight := 0.3
-
-	// Category "GitHistory" devided into commits and merges. both must sum up to 1
-	commitWeight := 0.7
-	mergeWeight := 0.3
-
-	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
-	changesWeight := 0.66
-	gitHistoryWeight := 0.34
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -169,30 +153,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 
 func weightContributionsWithPlatformInformation(contributions map[Contributor]ContributionWithPlatformInformation) (map[Contributor]FlatFeeWeight, error) {
 	weightContributionsStart := time.Now()
-	// Parameter
 
-	// Category "Changes" devided into additions and deletions. both must sum up to 1
-	additionWeight := 0.7
-	deletionWeight := 0.3
-
-	// Category "GitHistory" devided into commits and merges. both must sum up to 1
-	commitWeight := 0.7
-	mergeWeight := 0.3
-
-	// Category "Issues"
-	issueWeight := 0.5
-	issueCommentsWeight := 0.2
-	issueCommenterWeight := 0.3
-
-	// Category "PullRequests"
-	pullRequestAuthorWeight := 0.7
-	pullRequestReviewerWeight := 0.3
-
-	// Intercategory weights between categories Changes and Githistory. all must sum up to 1
-	changesWeight := 0.55
-	gitHistoryWeight := 0.25
-	issueCategoryWeight := 0.08
-	pullRequestCategoryWeight := 0.12
 
 	authorMap := make(map[Contributor]FlatFeeWeight)
 
@@ -246,7 +207,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
-			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight + issuesPercentage*issueCategoryWeight + pullRequestPercentage*pullRequestCategoryWeight,
+			Weight:      changesPercentage*changesWeightPlatformInfo + gitHistoryPercentage*gitHistoryWeightPlatformInfo + issuesPercentage*issueCategoryWeightPlatformInfo + pullRequestPercentage*pullRequestCategoryWeightPlatformInfo,
 		}
 	}
 
@@ -264,11 +225,6 @@ func getSumOfCommentsOfIssues(issues []int) int {
 }
 
 func getAuthorPullRequestValue(pullRequests []PullRequestInformation) float64 {
-	pullRequestClosedValue := 0.6
-	pullRequestMergedValue := 1.5
-	pullRequestOpenValue := 1.0
-	approvedMultiplyer := 1.4
-
 	totalScore := 0.0
 
 	for _, request := range pullRequests {
@@ -292,7 +248,7 @@ func getAuthorPullRequestValue(pullRequests []PullRequestInformation) float64 {
 		}
 
 		if isApproved {
-			totalScore += currentValue * approvedMultiplyer
+			totalScore += currentValue * approvedMultiplier
 		} else {
 			totalScore += currentValue
 		}
