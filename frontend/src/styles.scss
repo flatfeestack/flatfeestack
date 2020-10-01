@@ -7,4 +7,80 @@ $link: $info;
 $background: #eeeeee;
 $text: #303841;
 
-@import "../node_modules/bulma/bulma.sass";
+:root{
+  //colors
+  --primary: #06623b;
+  --light: #649d66;
+  --text: #212529;
+  //Spacing
+  --spacing-x1: 8px;
+  --spacing-x2: 16px;
+  --spacing-x3: 24px;
+  --spacing-x4: 32px;
+  --spacing-x5: 40px;
+  //misc
+  --navbar-height: 80px;
+}
+
+// Alignment
+.flex{
+  display: flex;
+}
+.flex-1{
+  flex: 1;
+}
+.flex-2{
+  flex: 2
+}
+.justify-center{
+  display: flex;
+  justify-content: center;
+}
+
+// normalize
+body{
+  padding: 0;
+}
+a{
+  &:hover{
+    text-decoration: none;
+    color: inherit;
+  }
+}
+button{
+  border: none;
+}
+section{
+  margin: calc(2 * var(--spacing-x5)) 0;
+}
+
+.container{
+  max-width: 1440px;
+  margin: auto;
+  @media(max-width: 1440px) {
+    padding: var(--spacing-x2);
+  }
+}
+.section-padding {
+  padding: var(--spacing-x5) 0;
+}
+
+// Typography
+.lead{
+  font-family: 'Raleway-Black', serif;
+  font-size: 72px;
+  color: #212529;
+  letter-spacing: 0.9px;
+}
+.subtitle{
+  font-family: 'OpenSans-SemiBold', sans-serif;
+  font-size: 22px;
+  color: #649D66;
+  letter-spacing: 0.3px;
+}
+.section-title{
+  font-family: 'Raleway-Black', serif;
+  font-size: 52px;
+  color: #212529;
+  letter-spacing: 0.9px;
+}

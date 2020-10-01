@@ -1,5 +1,15 @@
 <script lang="ts">
-  export let name: string;
+  import {Router, Link, Route} from "svelte-routing";
+  import About from "./routes/About.svelte";
+  import Landing from "./routes/Landing.svelte";
+  import Login from "./routes/Login.svelte";
+  import Integrate from "./routes/Integrate.svelte";
+  import Score from "./routes/Score.svelte";
+  import Navigation from "./components/Navigation.svelte";
+  import Footer from "./components/Footer.svelte";
+
+  export let url = "";
+
 </script>
 
 <style>
@@ -17,32 +27,20 @@
   }
 </style>
 
-<main>
-  <div class="container">
-    <h1 class="title is-1">j0nezz Svelte Starter</h1>
-    <p class="subtitle is-4">
-      <strong>Svelte</strong>🚀 + Typescript + Sass + <a
-        href="https://bulma.io/">Bulma</a>
-    </p>
-    <section class="section">
-      <div class="subtitle">
-        Customize colors in the <span class="tag"> styles.scss </span> file using
-        Sass variables
-      </div>
-      <span class="tag is-black">Black</span>
-      <span class="tag is-dark">Dark</span>
-      <span class="tag is-light">Light</span>
-      <span class="tag is-white">White</span>
-      <span class="tag is-primary">Primary</span>
-      <span class="tag is-link">Link</span>
-      <span class="tag is-info">Info</span>
-      <span class="tag is-success">Success</span>
-      <span class="tag is-warning">Warning</span>
-      <span class="tag is-danger">Danger</span>
-    </section>
+<Router url="{url}">
+  <Navigation/>
+  <div>
+    <Route path="about" component="{About}" />
+    <Route path="login" component="{Login}" />
+    <Route path="integrate" component="{Integrate}" />
+    <Route path="score" component="{Score}" />
+    <Route path="/"><Landing /></Route>
   </div>
-</main>
+  <Footer/>
+</Router>
+
 <svelte:head>
   <style src="styles.scss">
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Raleway:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </svelte:head>
