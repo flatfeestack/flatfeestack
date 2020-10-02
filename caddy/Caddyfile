@@ -5,9 +5,11 @@ root * /var/www/html
 reverse_proxy web:5000
 
 route /auth/* {
+    uri strip_prefix /auth
     reverse_proxy auth:8080
 }
 
 route /analysis/* {
+    uri strip_prefix /analysis
     reverse_proxy analysis-engine:8080
 }
