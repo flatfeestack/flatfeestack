@@ -2,7 +2,7 @@
 # Set this path to your site's directory.
 root * /var/www/html
 
-reverse_proxy web:8080
+reverse_proxy web:5000
 
 route /auth/* {
     reverse_proxy auth:8080

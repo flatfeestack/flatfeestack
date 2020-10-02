@@ -1,44 +1,39 @@
-version: '3'
+version: "3"
 
 volumes:
-    caddy_data:
+  caddy_data:
 
-services: 
-    web:
-        container_name: flatfeestack-frontend
-        restart: always
-        build: 
-            context: ./frontend-new
-            dockerfile: ../Dockerfile-frontend
-        ports:
-            - '3000:8080'
+services:
+  web:
+    container_name: flatfeestack-frontend
+    build: ./frontend
 
-    auth:
-        container_name: flatfeestack-auth
-        build:
-            context: ./auth
-            dockerfile: ../Dockerfile-auth
-        ports:
-            - '8000:8080'
+  auth:
+    container_name: flatfeestack-auth
+    build: ./auth
+    environment:
+      - PORT=8090
+      - DEV=test
+      - USERS=tom:pw1;ile:pw2;Sevi:1234
 
-    analysis-engine:
-        container_name: flatfeestack-analysis-engine
-        build:
-            context: ./analysis-engine
-            dockerfile: ../Dockerfile-analysis
-        ports:
-            - '7000:8080'
-    
-    caddy:
-        container_name: "flatfeestack-caddy"
-        build: ./caddy
-        volumes:
-            - caddy_data:/root/.caddy  # to save certificates on disk
-        ports:
-            - "2015:2015"
-            - "80:80"
-            - "443:443"
-        depends_on:
-            - web
-            - analysis-engine
-            - auth
+  analysis-engine:
+    container_name: flatfeestack-analysis-engine
+    build:
+      context: ./analysis-engine
+      dockerfile: ../Dockerfile-analysis
+    ports:
+      - "7000:8080"
+
+  caddy:
+    container_name: "flatfeestack-caddy"
+    build: ./caddy
+    volumes:
+      - caddy_data:/root/.caddy # to save certificates on disk
+    ports:
+      - "2015:2015"
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+      - analysis-engine
+      - auth
