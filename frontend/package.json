@@ -12,7 +12,10 @@
     "@rollup/plugin-node-resolve": "^8.0.0",
     "@rollup/plugin-typescript": "^6.0.0",
     "@tsconfig/svelte": "^1.0.10",
+    "@types/yup": "^0.29.7",
     "node-sass": "^4.14.1",
+    "prettier": "^2.1.2",
+    "prettier-plugin-svelte": "^1.4.0",
     "rollup": "^2.3.4",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^6.0.0",
@@ -24,7 +27,11 @@
     "typescript": "^3.9.3"
   },
   "dependencies": {
+    "axios": "^0.20.0",
+    "http-proxy-middleware": "^1.0.5",
     "sirv-cli": "^1.0.0",
-    "svelte-routing": "^1.4.2"
+    "svelte-routing": "^1.4.2",
+    "sveltejs-forms": "^2.1.2",
+    "yup": "^0.29.3"
   }
 }

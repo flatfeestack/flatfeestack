@@ -1,25 +1,45 @@
 @charset "utf-8";
 
 // https://colorhunt.co/palette/19113
-$primary: #ff5722;
-$info: #00adb5;
-$link: $info;
+$primary: #06623b;
+$light:#649d66;
+$info: #015F6E;
 $background: #eeeeee;
-$text: #303841;
+$text: #212529;
+$error: #AD1B00;
+$danger: #f6d743;
+
+$spacing: 8;
+
+$navbar-height: 80px;
+$footer-height: 100px;
+
+
 
 :root{
   //colors
-  --primary: #06623b;
-  --light: #649d66;
-  --text: #212529;
+  --primary: #{$primary};
+  --light: #{$light};
+  --text: #{$text};
+  --error: #{$error};
+  --danger: #{$danger};
+  --info: #{$info};
   //Spacing
-  --spacing-x1: 8px;
-  --spacing-x2: 16px;
-  --spacing-x3: 24px;
-  --spacing-x4: 32px;
-  --spacing-x5: 40px;
+  --spacing-x1: #{$spacing}px;
+  --spacing-x2: #{$spacing*2}px;
+  --spacing-x3: #{$spacing*3}px;
+  --spacing-x4: #{$spacing*4}px;
+  --spacing-x5: #{$spacing*5}px;
   //misc
-  --navbar-height: 80px;
+  --navbar-height: #{$navbar-height};
+  --footer-height: #{$footer-height};
+}
+
+// Mixins
+
+@mixin background-opacity($color, $opacity: 0.3) {
+  background: $color; /* The Fallback */
+  background: rgba($color, $opacity);
 }
 
 // Alignment
@@ -40,6 +60,7 @@ $text: #303841;
 // normalize
 body{
   padding: 0;
+  font-family: "Open Sans", sans-serif;
 }
 a{
   &:hover{
@@ -47,22 +68,75 @@ a{
     color: inherit;
   }
 }
-button{
-  border: none;
-}
 section{
-  margin: calc(2 * var(--spacing-x5)) 0;
+  margin: $spacing*10px 0;
 }
-
+.page{
+  min-height: calc(100vh - var(--navbar-height) - var(--footer-height));
+}
 .container{
   max-width: 1440px;
   margin: auto;
   @media(max-width: 1440px) {
-    padding: var(--spacing-x2);
+    padding: $spacing * 2px;
   }
 }
 .section-padding {
-  padding: var(--spacing-x5) 0;
+  padding: $spacing * 5px 0;
+}
+
+.card{
+  padding: $spacing*3px;
+  box-shadow: 2px 2px 15px 2px rgba(0,0,0,.05);
+}
+
+// FORM COMPONETNS
+input{
+  border-radius: 5px;
+  padding: $spacing * 1px;
+  border-width: 2px;
+  border-color: #eee;
+  color: var(--text);
+  min-width: 250px;
+  &:hover{
+    border-color: $light;
+  }
+  &:active, &:focus{
+    outline: none;
+    border-color: $primary;
+  }
+  transition: all ease .1s;
+}
+button{
+  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.15);
+  border-radius: 8px;
+  font-family: "Open Sans", sans-serif;
+  padding: var(--spacing-x1) var(--spacing-x2);
+  border: none;
+  &:hover{
+    color: white;
+    cursor: pointer;
+    background-color: $primary;
+
+  }
+  &:active, &:focus{
+    background-color: $light;
+    color: white;
+    cursor: pointer;
+  }
+  transition: all ease .3s;
+}
+
+label{
+  color: $light;
+  font-weight: 600;
+
+}
+.message{
+  @include background-opacity($error,0.5);
+  color: white;
+  padding: var(--spacing-x1);
+  border-radius: 5px;
 }
 
 // Typography
@@ -84,3 +158,5 @@ section{
   color: #212529;
   letter-spacing: 0.9px;
 }
+
+
