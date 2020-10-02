@@ -45,10 +45,11 @@ function handleReset() {
     let:isSubmitting
     let:isValid
   >
-    <label>Email</label>
-    <Input name="email" type="text" />
-    <label>Password</label>
-    <Input name="password" type="password" />
+    <label for="email-input">Email </label>
+    <Input id="email-input" name="email" type="text" />
+    <Spacer x2 />
+    <label for="password-input">Password </label>
+    <Input id="password-input" name="password" type="password" />
     <button type="submit" disabled="{isSubmitting}">Sign in</button>
   </Form>
 </div>

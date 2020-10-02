@@ -23,7 +23,6 @@ async function handleSubmit({
   try {
     const res = await API.auth.login(email, password);
     const t = res.headers["token"];
-    console.log("t in login", t, res.headers);
     if (t) {
       token.set(t);
     }
@@ -57,11 +56,11 @@ function handleReset() {
         let:isSubmitting
         let:isValid
       >
-        <label>Email</label>
-        <Input name="email" type="text" />
+        <label for="email-input">Email </label>
+        <Input id="email-input" name="email" type="text" />
         <Spacer x2 />
-        <label>Password</label>
-        <Input name="password" type="password" />
+        <label for="password-input">Password </label>
+        <Input id="password-input" name="password" type="password" />
         <button type="submit" disabled="{isSubmitting}">Sign in</button>
       </Form>
     </div>
