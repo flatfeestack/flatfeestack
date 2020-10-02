@@ -1,0 +1,139 @@
+<svg id="ff-svg-earner" class="badge" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewbox="0 0 130 40">
+    <path d="M0 37V10h120v30H3c-2.964-.032-3-3-3-3z" fill="#555"/>
+    <path d="M0 10V3S-.06-.032 3 0h124c2.871.114 3 3 3 3v7z" fill="#4c1"/>
+    <path d="M1.098 1.553H5.2v1.58H1.098m0 1.353h2.673v1.645H1.098m1.331 1.217v1.65h-1.33v-1.65"/>
+    <path d="M3.771 4.485H5.2v1.646H3.771M5.2 7.348v1.65H2.43v-1.65" fill="#c8c8c8" fill-opacity=".5"/>
+    <path d="M120 10h10v27s-.227 2.985-3 3h-7z"/>
+
+    <text id="ff-multiplier-text" x="18" y="-122.5" transform="rotate(90)" fill="#fff">
+        <a id="ff-multiplier-a" xlink:href="https://github.com/neow3j/neow3j">1234x</a>
+    </text>
+
+    <text id="ff-earner" x="5" y="8">
+        <a id="ff-earner-a" xlink:href="https://github.com/neow3j/neow3j">tbocek</a><tspan fill="#fff"></tspan>
+    </text>
+
+
+
+    <script type="text/javascript"><![CDATA[
+
+                            //fetch this json from a service, make sure service uses allow-origin:*
+                            const textEarner = '{"earner_url":"https://github.com/neow3j/neow3j",' +
+                                '"earner":"tbocek",' +
+                                '"multiplier":"1",' +
+                                '"earner_more_url":"https://github.com/neow3j/neow3j",' +
+                                '"backer_more_url":"https://github.com/neow3j/neow3j",' +
+                                '"backer_urls":[' +
+                                '{"name":"ethereumj","url":"https://1b"},' +
+                                '{"name":"neow3j","url":"https://2b"},' +
+                                '{"name":"Kubernetesss","url":"https://3b"},' +
+                                '{"name":"vue.js","url":"https://4b"},' +
+                                '{"name":"Elasticsearch","url":"https://5b"},' +
+                                '{"name":"NixOS","url":"https://6b"},' +
+                                '{"name":"Open Stack Neutron","url":"https://8b"},' +
+                                '{"name":"Homebrew","url":"https://9b"},' +
+                                '{"name":"Cloud Foundry","url":"https://10b"},' +
+                                '{"name":"uBlock","url":"https://11b"},' +
+                                '{"name":"TomP2P","url":"https://12b"}' +
+                                '],' +
+                                '"earner_urls":[' +
+                                '{"name":"ethereumj","url":"https://1e"},' +
+                                '{"name":"neow3j","url":"https://2e"},' +
+                                '{"name":"Kubern","url":"https://3e"},' +
+                                '{"name":"vue.js","url":"https://4e"},' +
+                                '{"name":"Elasticsearch","url":"https://5e"},' +
+                                '{"name":"NixOS","url":"https://6e"},' +
+                                '{"name":"Open Stack Neutron","url":"https://8e"},' +
+                                '{"name":"Homebrew","url":"https://9e"},' +
+                                '{"name":"Cloud Foundry","url":"https://10e"},' +
+                                '{"name":"uBlock","url":"https://11e"},' +
+                                '{"name":"TomP2P","url":"https://12e"}' +
+                                ']' +
+                                '}';
+                            const jsonEarner = JSON.parse(textEarner);
+
+                            document.getElementById("ff-multiplier-text").setAttribute("x", 22 - (jsonEarner.multiplier.length * 2));
+                            document.getElementById("ff-multiplier-a").setAttribute("xlink:href", jsonEarner.earner_url);
+                            document.getElementById("ff-multiplier-a").textContent = jsonEarner.multiplier + 'x';
+
+                            document.getElementById("ff-earner-a").setAttribute("xlink:href", jsonEarner.earner_url);
+                            document.getElementById("ff-earner-a").textContent = jsonEarner.earner;
+                            document.getElementById("ff-earner").appendChild(createSingleLineNameUrl(jsonEarner.earner_urls, jsonEarner.earner_more_url, 31, jsonEarner.earner.length)); // +1 due to :
+                            createMultiLineNameUrl(document.getElementById('ff-svg-earner'), jsonEarner.backer_urls, jsonEarner.backer_more_url, 29, 4, 9, 2.5, 9);
+
+                            function createMultiLineNameUrl(root, urls, moreUrl, charPerLine, maxLines, lineHeight, x, y) {
+                                let wordCount = 0, c = 0;
+                                let text = createElemT(x, y += lineHeight);
+                                root.appendChild(text);
+                                urls.some(function (obj) {
+                                    if (wordCount + obj.name.length + (wordCount == 0 ? 0 : 1) > charPerLine) {
+                                        text = createElemT(2.5, y += lineHeight);
+                                        root.append(text);
+                                        wordCount = 0;
+                                    }
+                                    let more = (wordCount == 0 ? '' : ',') + '(' + (urls.length - c) + '+)';
+                                    let nextMore = ',(' + (urls.length - (c-1)) + '+)';
+                                    let next = (wordCount == 0 ? '' : ',') + obj.name;
+                                    let a = createElemA((wordCount == 0 ? '' : ',') + obj.name, obj.url);
+
+                                    if(y == lineHeight * maxLines && wordCount + next.length + nextMore.length > charPerLine) {
+                                        a = createElemA(more, moreUrl);
+                                        text.appendChild(a);
+                                        return true;
+                                    }
+
+                                    c++;
+                                    text.appendChild(a);
+                                    wordCount += obj.name.length + (wordCount == 0 ? 0 : 1);
+
+                                });
+                                return root;
+                            }
+
+                            function createSingleLineNameUrl(urls, moreUrl, charPerLine, len) {
+                                const tspan = document.createElementNS('http://www.w3.org/2000/svg', "tspan");
+                                tspan.setAttribute("fill", "#fff");
+                                let wordCount = len;
+                                let c = 0;
+                                urls.some(function (obj) {
+                                    let more = (wordCount == len ? '' : ',') + '(' + (urls.length - c) + '+)';
+                                    let nextMore = ',(' + (urls.length - (c-1)) + '+)';
+                                    let next = (wordCount == len ? '' : ',') + obj.name;
+                                    let a = createElemA((wordCount == len ? '' : ',') + obj.name, obj.url);
+
+                                    if(wordCount + next.length + nextMore.length > charPerLine) {
+                                        a = createElemA(more, moreUrl);
+                                        tspan.appendChild(a);
+                                        return true;
+                                    }
+
+                                    c++;
+                                    tspan.appendChild(a);
+                                    wordCount += obj.name.length + (wordCount == len ? 0 : 1);
+
+                                });
+                                return tspan;
+                            }
+
+                            function createElemT(x, y) {
+                                const text = document.createElementNS('http://www.w3.org/2000/svg', "text");
+                                text.setAttribute("x", x);
+                                text.setAttribute("y", y);
+                                text.setAttribute("fill", "#fff");
+                                text.setAttribute("style", "font-family:monospace;");
+                                return text;
+                            }
+
+                            function createElemA(name, url) {
+                                const a = document.createElementNS('http://www.w3.org/2000/svg', "a");
+                                a.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url);
+                                a.appendChild(document.createTextNode(name));
+                                return a;
+                            }
+
+                            ]]></script>
+
+
+
+</svg>

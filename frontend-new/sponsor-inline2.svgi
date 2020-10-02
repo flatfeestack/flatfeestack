@@ -1,0 +1,82 @@
+<svg id="ff-svg-sponsor" class="badge" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewbox="0 0 130 40">
+    <path d="M0 37V10h120v30H3c-2.964-.032-3-3-3-3z" fill="#555"/>
+    <path d="M0 10V3S-.06-.032 3 0h124c2.871.114 3 3 3 3v7z" fill="#4c1"/>
+    <path d="M1.098 1.553H5.2v1.58H1.098m0 1.353h2.673v1.645H1.098m1.331 1.217v1.65h-1.33v-1.65"/>
+    <path d="M3.771 4.485H5.2v1.646H3.771M5.2 7.348v1.65H2.43v-1.65" fill="#c8c8c8" fill-opacity=".5"/>
+    <path d="M120 10h10v27s-.227 2.985-3 3h-7z" fill="#fff"/>
+
+    <text  id="ff-sponsor-urls-text" x="16.5" y="-122.5" transform="rotate(90)" fill="#000">
+        <a id="ff-sponsor-urls-a" xlink:href="https://github.com/neow3j/neow3j">127+</a>
+    </text>
+    <text x="6" y="8">
+        <a id="ff-sponsor-a" xlink:href="https://github.com/neow3j/neow3j">Awesome Corporation</a>
+    </text>
+
+    <script type="text/javascript"><![CDATA[
+
+    function init(document) {
+
+                            //fetch this json from a service, make sure service uses allow-origin:*
+                            const textSponser = '{"earner_url":"https://github.com/neow3j/neow3j",' +
+                                '"sponsor":"Awesome Corporation",' +
+                                '"sponsor_url":"https://github.com/neow3j/neow3j",' +
+                                '"sponsor_nr":"123",' +
+                                '"sponsor_more_url":"https://github.com/neow3j/neow3j",' +
+                                '"sponsor_urls":[' +
+                                '{"name":"ethereumj","url":"https://1"},' +
+                                '{"name":"neow3j","url":"https://2"},' +
+                                '{"name":"Kubernetesss","url":"https://3"},' +
+                                '{"name":"vue.js","url":"https://4"},' +
+                                '{"name":"Elasticsearch","url":"https://5"},' +
+                                '{"name":"NixOS","url":"https://6"},' +
+                                '{"name":"Open Stack Neutron","url":"https://8"},' +
+                                '{"name":"Homebrew","url":"https://9"},' +
+                                '{"name":"Cloud Foundry","url":"https://10"},' +
+                                '{"name":"uBlock","url":"https://11"},' +
+                                '{"name":"TomP2P","url":"https://12"}' +
+                                ']' +
+                                '}';
+                            const jsonSponser = JSON.parse(textSponser);
+
+                            document.getElementById("ff-sponsor-urls-text").setAttribute("x", 22 - (jsonSponser.sponsor_nr.length * 2));
+                            document.getElementById("ff-sponsor-urls-a").setAttribute("xlink:href", jsonSponser.sponsor_url);
+                            document.getElementById("ff-sponsor-urls-a").textContent = jsonSponser.sponsor_nr + '+';
+
+                            document.getElementById("ff-sponsor-a").setAttribute("xlink:href", jsonSponser.sponsor_url);
+                            document.getElementById("ff-sponsor-a").textContent = jsonSponser.sponsor;
+
+                            createMultiLineNameUrl(document.getElementById('ff-svg-sponsor'), jsonSponser.sponsor_urls, jsonSponser.sponsor_more_url, 29, 4, 9, 2.5, 9);
+    }
+                            function createMultiLineNameUrl(root, urls, moreUrl, charPerLine, maxLines, lineHeight, x, y) {
+                                let wordCount = 0, c = 0;
+                                let text = createElemT(x, y += lineHeight);
+                                root.appendChild(text);
+                                urls.some(function (obj) {
+                                    if (wordCount + obj.name.length + (wordCount == 0 ? 0 : 1) > charPerLine) {
+                                        text = createElemT(2.5, y += lineHeight);
+                                        root.append(text);
+                                        wordCount = 0;
+                                    }
+                                    let more = (wordCount == 0 ? '' : ',') + '(' + (urls.length - c) + '+)';
+                                    let nextMore = ',(' + (urls.length - (c-1)) + '+)';
+                                    let next = (wordCount == 0 ? '' : ',') + obj.name;
+                                    let a = createElemA((wordCount == 0 ? '' : ',') + obj.name, obj.url);
+
+                                    if(y == lineHeight * maxLines && wordCount + next.length + nextMore.length > charPerLine) {
+                                        a = createElemA(more, moreUrl);
+                                        text.appendChild(a);
+                                        return true;
+                                    }
+
+                                    c++;
+                                    text.appendChild(a);
+                                    wordCount += obj.name.length + (wordCount == 0 ? 0 : 1);
+
+                                });
+                                return root;
+                            }
+
+                            ]]></script>
+
+</svg>

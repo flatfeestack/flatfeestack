@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="100"
+   height="40"
+   version="1.1"
+   id="svg25"
+   sodipodi:docname="badge-company.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <metadata
+     id="metadata31">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs29" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1680"
+     inkscape:window-height="1013"
+     id="namedview27"
+     showgrid="false"
+     showguides="false"
+     inkscape:zoom="7.76"
+     inkscape:cx="51.304052"
+     inkscape:cy="13.420648"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg25"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <linearGradient
+     id="a"
+     x2="0"
+     y2="44.721359"
+     gradientTransform="matrix(2.4406566,0,0,0.84774642,-8.7628866,29.123711)"
+     x1="0"
+     y1="0"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#bbb"
+       stop-opacity=".1"
+       id="stop2" />
+    <stop
+       offset="2"
+       stop-opacity=".1"
+       id="stop4" />
+  </linearGradient>
+  <path
+     style="fill:#555555"
+     d="M 3,0 H 60 V 20 H 0 V 3 C 0,1.338 1.338,0 3,0 Z"
+     id="rect7"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="sccccs" />
+  <!-- Comment -->
+  <path
+     style="fill:#44cc11"
+     d="m 60,0 h 37 c 1.662,0 3,1.338 3,3 0,5.6666667 0,11.333333 0,17 H 60 Z"
+     id="rect9"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="cscccc" />
+  <path
+     d="m 33.290506,20.128866 c -30.852284,0 -15.426142,0 0,0 z"
+     id="path11"
+     inkscape:connector-curvature="0"
+     style="fill:#44cc11;stroke-width:0.7979039"
+     sodipodi:nodetypes="cc" />
+  <text
+     style="font-size:7.68847609px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#010101;fill-opacity:0.3;stroke-width:0.6407063"
+     id="text15"
+     y="8.2930107"
+     x="14.456479">Tech Stack</text>
+  <text
+     style="font-size:7.68847609px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#ffffff;stroke-width:0.6407063"
+     id="text17"
+     y="7.6523032"
+     x="14.456479">Tech Stack</text>
+  <text
+     style="font-size:medium;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-anchor:middle;fill:#010101;fill-opacity:0.3"
+     id="text19"
+     y="15"
+     x="78">17</text>
+  <text
+     style="font-size:medium;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-anchor:middle;fill:#ffffff"
+     id="text21"
+     y="14"
+     x="78">17</text>
+  <g
+     transform="matrix(1.8899824,0,0,1.8899824,252.13873,75.630665)"
+     id="layer1"
+     inkscape:label="Layer 1">
+    <path
+       d="m -132.02935,-38.503762 h 4.01108 v 1.545167 h -4.01108 m 0,1.322917 h 2.61408 v 1.608666 h -2.61408 m 1.30175,1.190625 v 1.613958 h -1.30175 v -1.613958"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:medium;line-height:1.25;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono Bold';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       id="path819"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccccccc" />
+    <path
+       d="m -129.41527,-35.635678 h 1.397 v 1.608666 h -1.397 m 1.397,1.190625 v 1.613958 h -2.70933 v -1.613958"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:medium;line-height:1.25;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono Bold';letter-spacing:0px;word-spacing:0px;fill:#c8c8c8;fill-opacity:0.50196078;stroke:none;stroke-width:0.26458332"
+       id="path819-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccc" />
+  </g>
+  <text
+     style="font-size:6.16812944px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#010101;fill-opacity:0.3;stroke-width:0.51401079"
+     id="text15-3"
+     y="16.075766"
+     x="13.529254">AwesomeCorp</text>
+  <text
+     style="font-size:6.16812944px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#44cc11;fill-opacity:1;stroke-width:0.51401079"
+     id="text17-6"
+     y="15.561753"
+     x="13.529254">AwesomeCorp</text>
+  <path
+     style="fill:#969696;fill-opacity:1;stroke-width:1.28932977"
+     d="m 100,20 v 17 c 0,2.730734 -0.23713,3 -3,3 H 3 C 0.237139,40 0,39.730734 0,37 V 20 Z"
+     id="rect7-7"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="csssscc" />
+  <g
+     id="g958-1"
+     transform="translate(0,0.51546392)"
+     style="fill:#3c3c3c;fill-opacity:1">
+    <text
+       x="1.8496819"
+       y="24.943773"
+       id="text17-6-5-2"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893-7"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1">vue.js|parallel-n64|bbolt|ethereumj</tspan>
+    </text>
+    <text
+       x="1.8496819"
+       y="30.843842"
+       id="text17-6-5-3-0"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893-5-9"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1">libreoffice|gnome-shell|metamask</tspan>
+    </text>
+    <text
+       x="1.8496819"
+       y="36.743908"
+       id="text17-6-5-3-6-3"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893-5-2-6"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start;fill:#3c3c3c;fill-opacity:1">inkscape|libreelec|openwrt|...(217+)</tspan>
+    </text>
+  </g>
+  <g
+     id="g958">
+    <text
+       x="1.8496819"
+       y="24.943773"
+       id="text17-6-5"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start">vue.js|parallel-n64|bbolt|ethereumj</tspan>
+    </text>
+    <text
+       x="1.8496819"
+       y="30.843842"
+       id="text17-6-5-3"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893-5"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start">libreoffice|gnome-shell|metamask</tspan>
+    </text>
+    <text
+       x="1.8496819"
+       y="36.743908"
+       id="text17-6-5-3-6"
+       style="font-size:7.73041677px;font-family:'DejaVu Sans', Verdana, Geneva, sans-serif;text-align:start;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke-width:0.6442014">
+      <tspan
+         id="tspan893-5-2"
+         style="font-size:5.33333349px;text-align:start;text-anchor:start">inkscape|libreelec|openwrt|...(217+)</tspan>
+    </text>
+  </g>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:40px;line-height:1.25;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     x="43.427834"
+     y="29.536081"
+     id="text935"><tspan
+       sodipodi:role="line"
+       id="tspan933"
+       x="43.427834"
+       y="66.843773" /></text>
+  <path
+     style="fill:url(#a);stroke-width:1.43842196"
+     d="m 3,0 h 94 c 1.814065,0 3,1.185936 3,3 v 34 c 0,1.814064 -1.185935,3 -3,3 H 3 C 1.1859355,40 0,38.814064 0,37 V 3 C 0,1.185936 1.1859355,0 3,0 Z"
+     id="rect13"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="sssssssss" />
+</svg>

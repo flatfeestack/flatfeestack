@@ -1,0 +1,44 @@
+<svg id="ff-badge-svg" style="height:2em;" class="badge" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewbox="0 0 130 10">
+
+    <path id="ff-badge" d="M2 0
+                    h124
+                    s2 0 2 2
+                    v6
+                    c0 2 -2 2 -2 2
+                    H2
+                    S0 10 0 8
+                    V2
+                    C0 0 2 0 2 0z" fill="#4c1"/>
+    <path d="M1.335 1.05h4.102v1.58H1.335m0 1.352h2.673v1.645H1.335m1.33 1.217v1.65h-1.33v-1.65"/>
+    <path d="M4.008 3.981h1.429v1.646h-1.43m1.43 1.217v1.65h-2.77v-1.65" fill="#c8c8c8" fill-opacity=".5"/>
+
+    <text x="7" y="7.5">
+        <a id="ff-badge-a1" xlink:href="https://github.com/neow3j/neow3j"><tspan id="ff-badge-name">name:</tspan></a>
+        <a id="ff-badge-a2" xlink:href="https://github.com/neow3j/neow3j"><tspan id="ff-badge-nr" fill="#fff">backers</tspan></a>
+        <a id="ff-badge-a3" xlink:href="https://github.com/neow3j/neow3j"><tspan id="ff-badge-nr">👍</tspan></a>
+    </text>
+
+
+    <script type="text/javascript"><![CDATA[
+
+                    const textBadge = '{' +
+                        '"project_url":"https://github.com/neow3j/neow3j",' +
+                        '"project_name":"neow3j",' +
+                        '"backers":"17"}';
+                    const jsonBadge = JSON.parse(textBadge);
+                    document.getElementById("ff-badge-a1").setAttribute("xlink:href", jsonBadge.project_url);
+                    document.getElementById("ff-badge-a2").setAttribute("xlink:href", jsonBadge.project_url);
+                    document.getElementById("ff-badge-a3").setAttribute("xlink:href", jsonBadge.project_url);
+                    document.getElementById("ff-badge-name").textContent=jsonBadge.project_name+':';
+                    document.getElementById("ff-badge-nr").textContent=jsonBadge.backers+' backers';
+
+                    let path = document.getElementById('ff-badge');
+                    let data = path.getAttribute('d');
+                    let len = (jsonBadge.project_name+':'+jsonBadge.backers+' backers 👍').length;
+
+                    document.getElementById('ff-badge').setAttribute('d', data.replace('h124', 'h'+(10 + (len*4))));
+                    document.getElementById('ff-badge-svg').setAttribute("viewBox", "0 0 "+ (16 + (len*4)) + " 10");
+
+                    ]]></script>
+</svg>
