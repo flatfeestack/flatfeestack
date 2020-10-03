@@ -11,8 +11,19 @@ import Navigation from "./components/Navigation.svelte";
 import Footer from "./components/Footer.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
 import { loggedIn } from "./store/auth.ts";
+import { API } from "src/api/api.ts";
 
 export let url = "";
+
+async function refresh() {
+  try {
+    const res = await API.auth.refresh();
+  } catch (e) {
+    console.log(String(e));
+  }
+}
+
+refresh();
 </script>
 
 <Router url="{url}">

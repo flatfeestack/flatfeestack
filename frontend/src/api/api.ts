@@ -27,9 +27,13 @@ export const API = {
     signup: (email: string, password: string) =>
       authInstance.post("/signup", { email, password }),
     login: (email: string, password: string) =>
-      authInstance.post("/login", { email, password }),
-  },
-  test: {
-    token: () => apiInstance.post("/test"),
+      authInstance.post(
+        "/login",
+        { email, password },
+        {
+          withCredentials: true,
+        }
+      ),
+    refresh: () => authInstance.post("/refresh", null),
   },
 };
