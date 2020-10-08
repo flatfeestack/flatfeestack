@@ -42,7 +42,8 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 
 	gitAnalysisStart := time.Now()
 	err = commits.ForEach(func(c *object.Commit) error {
-		commitCounter++;
+		commitCounter++
+		fmt.Printf("\033[2K\r%d commits", commitCounter)
 		author := Contributor{
 			Name:  c.Author.Name,
 			Email: c.Author.Email,
@@ -98,6 +99,7 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 		}
 		return nil
 	})
+	fmt.Println()
 	gitAnalysisEnd := time.Now()
 	fmt.Printf("---> git analysis in %dms (%d commits)\n", gitAnalysisEnd.Sub(gitAnalysisStart).Milliseconds(), commitCounter)
 
