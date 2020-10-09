@@ -56,7 +56,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
+		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -204,7 +204,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepository(repositoryUrl, commitsSince, commitsUntil, branch)
+		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -371,7 +371,7 @@ func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
 }
 
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(httpStatusError)
 	_, fmtErr := fmt.Fprintf(w, errString)
 	if fmtErr != nil {
 		fmt.Println("Could not format", fmtErr)

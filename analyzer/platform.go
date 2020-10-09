@@ -16,7 +16,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQL
 		fmt.Printf("---> platform information collection in %dms\n", platformInformationEnd.Sub(platformInformationStart).Milliseconds())
 		return issues, pullRequests, err
 	} else {
-		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on a platform that is supported ")
+		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on a platform that is supported")
 	}
 }
 
@@ -25,6 +25,6 @@ func getPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests 
 	if strings.Contains(src, "github.com") {
 		return getGithubPlatformInformationFromUser(src, issues, pullRequests, userEmail)
 	} else {
-		return PlatformUserInformation{}, errors.New("repository is not on a platform that is supported ")
+		return PlatformUserInformation{}, errors.New("repository is not on a platform that is supported")
 	}
 }

@@ -12,6 +12,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	GClientWrapper = &GithubClientWrapperClient{
+		GitHubURL: "https://api.github.com/graphql",
+	}
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
 	router.HandleFunc("/weights", getContributionWeights).Methods("GET")

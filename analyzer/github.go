@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+var GClientWrapper GithubClientWrapper
+
+type GithubClientWrapper interface {
+	Query(query string) ([]byte, error)
+}
+
+type GithubClientWrapperClient struct {
+	GitHubURL string
+}
+
 func getGithubPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 
 	// Check if repository is on Github
@@ -18,7 +28,10 @@ func getGithubPlatformInformation(src string, since time.Time, until time.Time) 
 		return []GQLIssue{}, []GQLPullRequest{}, errors.New("repository is not on github")
 	}
 
-	repositoryOwner, repositoryName := getOwnerAndNameOfGithubUrl(src)
+	repositoryOwner, repositoryName, err := getOwnerAndNameOfGithubUrl(src)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	//var repository GQLIssueConnection
 	repositoryIssues, err := getGithubRepositoryIssues(repositoryOwner, repositoryName, since, until)
@@ -77,7 +90,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 			}
 		}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, pageLength)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return []GQLIssue{}, err
 	}
@@ -92,6 +105,31 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 
 	// Fetch the missing issues
 
+	response, err = fetchPaginationIssues(response, repositoryOwner, repositoryName, pageLength, sinceFilterBy)
+	if err != nil {
+		return []GQLIssue{}, err
+	}
+	//Fetch the missing IssueComments
+
+	response, err = fetchPaginationIssueComments(response, repositoryOwner, repositoryName, pageLength)
+	if err != nil {
+		return []GQLIssue{}, err
+	}
+
+	// ---------
+	// Filtering
+	// ---------
+
+	// Filtering because there is no until filter in gql
+	response.Data.Repository.Issues.Nodes = filterIssuesByDate(response.Data.Repository.Issues.Nodes, since, until)
+	for index := range response.Data.Repository.Issues.Nodes {
+		response.Data.Repository.Issues.Nodes[index].Comments.Nodes = filterIssueCommentsByDate(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, since, until)
+	}
+
+	return response.Data.Repository.Issues.Nodes, nil
+}
+
+func fetchPaginationIssues(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int, sinceFilterBy string) (RequestGQLRepositoryInformation, error) {
 	issuesAfter := ""
 
 	for ok0 := true; ok0; ok0 = response.Data.Repository.Issues.PageInfo.HasNextPage {
@@ -128,21 +166,23 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 					}
 				}
 			}`, repositoryOwner, repositoryName, pageLength, sinceFilterBy, issuesAfter, pageLength)
-			resp, err := manualGithubGQL(issueRefetchQuery)
+			resp, err := GClientWrapper.Query(issueRefetchQuery)
 			if err != nil {
-				fmt.Println(err)
+				return response, err
 			}
 			var refetchResponse RequestGQLRepositoryInformation
 			if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-				fmt.Println(err)
+				return response, err
 			}
 			response.Data.Repository.Issues.Nodes = append(response.Data.Repository.Issues.Nodes, refetchResponse.Data.Repository.Issues.Nodes...)
 			response.Data.Repository.Issues.PageInfo = refetchResponse.Data.Repository.Issues.PageInfo
 		}
 	}
 
-	//Fetch the missing IssueComments
+	return response, nil
+}
 
+func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	issueCommentsAfter := ""
 	var issueToRefech int
 
@@ -176,13 +216,13 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 						}
 					}
 				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
-				resp, err := manualGithubGQL(specificIssueQuery)
+				resp, err := GClientWrapper.Query(specificIssueQuery)
 				if err != nil {
-					fmt.Println(err)
+					return response, nil
 				}
 				var refetchResponse RequestGQLRepositoryInformation
 				if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-					fmt.Println(err)
+					return response, nil
 				}
 				response.Data.Repository.Issues.Nodes[index].Comments.Nodes = append(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, refetchResponse.Data.Repository.Issue.Comments.Nodes...)
 				response.Data.Repository.Issues.Nodes[index].Comments.PageInfo = refetchResponse.Data.Repository.Issue.Comments.PageInfo
@@ -190,17 +230,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 		}
 	}
 
-	// ---------
-	// Filtering
-	// ---------
-
-	// Filtering because there is no until filter in gql
-	response.Data.Repository.Issues.Nodes = filterIssuesByDate(response.Data.Repository.Issues.Nodes, since, until)
-	for index := range response.Data.Repository.Issues.Nodes {
-		response.Data.Repository.Issues.Nodes[index].Comments.Nodes = filterIssueCommentsByDate(response.Data.Repository.Issues.Nodes[index].Comments.Nodes, since, until)
-	}
-
-	return response.Data.Repository.Issues.Nodes, nil
+	return response, nil
 }
 
 func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLPullRequest, error) {
@@ -240,7 +270,7 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 			}
 		}`, repositoryOwner, repositoryName, pageLength, pageLength)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return []GQLPullRequest{}, err
 	}
@@ -255,6 +285,26 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 
 	// Fetch the missing pullRequests
 
+	response, err = fetchPaginationPullRequests(response, repositoryOwner, repositoryName, pageLength)
+
+	//Fetch the missing PullRequestReviews
+
+	response, err = fetchPaginationPullRequestReviews(response, repositoryOwner, repositoryName, pageLength)
+
+	// ---------
+	// Filtering
+	// ---------
+
+	// Filtering because there is no until filter in gql
+	response.Data.Repository.PullRequests.Nodes = filterPullRequestsByDate(response.Data.Repository.PullRequests.Nodes, since, until)
+	for index := range response.Data.Repository.PullRequests.Nodes {
+		response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes = filterPullRequestReviewsByDate(response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes, since, until)
+	}
+
+	return response.Data.Repository.PullRequests.Nodes, nil
+}
+
+func fetchPaginationPullRequests(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	pullRequestsAfter := ""
 
 	for ok0 := true; ok0; ok0 = response.Data.Repository.PullRequests.PageInfo.HasNextPage {
@@ -293,21 +343,22 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 					}
 				}
 			}`, repositoryOwner, repositoryName, pageLength, pullRequestsAfter, pageLength)
-			resp, err := manualGithubGQL(pullRequestRefetchQuery)
+			resp, err := GClientWrapper.Query(pullRequestRefetchQuery)
 			if err != nil {
-				fmt.Println(err)
+				return response, err
 			}
 			var refetchResponse RequestGQLRepositoryInformation
 			if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-				fmt.Println(err)
+				return response, err
 			}
 			response.Data.Repository.PullRequests.Nodes = append(response.Data.Repository.PullRequests.Nodes, refetchResponse.Data.Repository.PullRequests.Nodes...)
 			response.Data.Repository.PullRequests.PageInfo = refetchResponse.Data.Repository.PullRequests.PageInfo
 		}
 	}
+	return response, nil
+}
 
-	//Fetch the missing PullRequestReviews
-
+func fetchPaginationPullRequestReviews(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	pullRequestReviewsAfter := ""
 	var pullRequestToRefech int
 
@@ -343,39 +394,28 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 						}
 					}
 				}`, repositoryOwner, repositoryName, pullRequestToRefech, pageLength, pullRequestReviewsAfter)
-				resp, err := manualGithubGQL(specificPullRequestQuery)
+				resp, err := GClientWrapper.Query(specificPullRequestQuery)
 				if err != nil {
-					fmt.Println(err)
+					return response, err
 				}
 				var refetchResponse RequestGQLRepositoryInformation
 				if err := json.Unmarshal(resp, &refetchResponse); err != nil {
-					fmt.Println(err)
+					return response, err
 				}
 				response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes = append(response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes, refetchResponse.Data.Repository.PullRequest.Reviews.Nodes...)
 				response.Data.Repository.PullRequests.Nodes[index].Reviews.PageInfo = refetchResponse.Data.Repository.PullRequest.Reviews.PageInfo
 			}
 		}
 	}
-
-	// ---------
-	// Filtering
-	// ---------
-
-	// Filtering because there is no until filter in gql
-	response.Data.Repository.PullRequests.Nodes = filterPullRequestsByDate(response.Data.Repository.PullRequests.Nodes, since, until)
-	for index := range response.Data.Repository.PullRequests.Nodes {
-		response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes = filterPullRequestReviewsByDate(response.Data.Repository.PullRequests.Nodes[index].Reviews.Nodes, since, until)
-	}
-
-	return response.Data.Repository.PullRequests.Nodes, nil
+	return response, nil
 }
 
-func manualGithubGQL(query string) ([]byte, error) {
+func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	jsonData := map[string]string{
 		"query": query,
 	}
 	jsonValue, _ := json.Marshal(jsonData)
-	request, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewBuffer(jsonValue))
+	request, err := http.NewRequest("POST", g.GitHubURL, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, err
 	}
@@ -387,9 +427,16 @@ func manualGithubGQL(query string) ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
-func getOwnerAndNameOfGithubUrl(src string) (string, string) {
-	ownerAndName := strings.Split(strings.Split(src[0:len(src)-4], "github.com/")[1], "/")
-	return ownerAndName[0], ownerAndName[1]
+func getOwnerAndNameOfGithubUrl(src string) (string, string, error) {
+	partAfterDomain := strings.Split(src[0:len(src)-4], "github.com/")
+	if len(partAfterDomain) < 2 {
+		return "", "", errors.New("incorrect github repository url")
+	}
+	ownerAndName := strings.Split(partAfterDomain[1], "/")
+	if len(ownerAndName) < 2 {
+		return "", "", errors.New("incorrect github repository url")
+	}
+	return ownerAndName[0], ownerAndName[1], nil
 }
 
 func filterIssueCommentsByDate(comments []GQLIssueComment, since time.Time, until time.Time) []GQLIssueComment {
@@ -461,7 +508,7 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 			}
       	}`, repositoryOwner, repositoryName, email)
 
-	resp, err := manualGithubGQL(query)
+	resp, err := GClientWrapper.Query(query)
 	if err != nil {
 		return "", err
 	}
@@ -477,7 +524,10 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 
 func getGithubPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests []GQLPullRequest, userEmail string) (PlatformUserInformation, error) {
 
-	repoOwner, repoName := getOwnerAndNameOfGithubUrl(src)
+	repoOwner, repoName, err := getOwnerAndNameOfGithubUrl(src)
+	if err != nil {
+		return PlatformUserInformation{}, err
+	}
 
 	login, err := getGithubUsernameFromGitEmail(repoOwner, repoName, userEmail)
 
