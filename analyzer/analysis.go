@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+type ContributionChannel struct {
+	Result Contribution
+	Reason error
+}
+
 func analyzeRepositoryFromString(src string, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
 	cloneUpdateStart := time.Now()
 	repo, err := CloneOrUpdateRepository(src, branch)
@@ -21,6 +26,7 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 
 func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
 	authorMap := make(map[Contributor]Contribution)
+	contributionChannel := make(chan ContributionChannel)
 
 	var timeZeroValue time.Time
 	var options git.LogOptions
@@ -44,62 +50,96 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 	err = commits.ForEach(func(c *object.Commit) error {
 		commitCounter++
 		fmt.Printf("\033[2K\r%d commits", commitCounter)
-		author := Contributor{
-			Name:  c.Author.Name,
-			Email: c.Author.Email,
-		}
-
-		merge := 0
-		commit := 1
-
-		if len(c.ParentHashes) > 1 {
-			merge = 1
-			commit = 0
-		}
-
-		stats, err := c.Stats()
-		if err != nil {
-			return err
-		}
-		changes := CommitChange{
-			Addition: 0,
-			Deletion: 0,
-		}
-
-		// only count the lines if its not a merge
-		if merge == 0 {
-			for index := range stats {
-				changes.Addition += stats[index].Addition
-				changes.Deletion += stats[index].Deletion
+		go func() {
+			author := Contributor{
+				Name:  c.Author.Name,
+				Email: c.Author.Email,
 			}
-		} else {
-			for index := range stats {
-				changes.Addition += int(float64(stats[index].Addition) * mergedLinesWeight)
-				changes.Deletion += int(float64(stats[index].Deletion) * mergedLinesWeight)
-			}
-		}
 
-		if _, found := authorMap[author]; !found {
-			authorMap[author] = Contribution{
-				Contributor: author,
-				Changes:     changes,
-				Merges:      merge,
-				Commits:     commit,
+			merge := 0
+			commit := 1
+
+			if len(c.ParentHashes) > 1 {
+				merge = 1
+				commit = 0
 			}
-		} else {
-			authorMap[author] = Contribution{
-				Contributor: author,
-				Changes: CommitChange{
-					Addition: authorMap[author].Changes.Addition + changes.Addition,
-					Deletion: authorMap[author].Changes.Deletion + changes.Deletion,
-				},
-				Merges:  authorMap[author].Merges + merge,
-				Commits: authorMap[author].Commits + commit,
+
+			stats, err := c.Stats()
+			if err != nil {
+				contributionChannel <- ContributionChannel{
+					Result: Contribution{
+						Contributor: Contributor{
+							Name:  "",
+							Email: "",
+						},
+						Changes:     CommitChange{
+							Addition: 0,
+							Deletion: 0,
+						},
+						Merges:      0,
+						Commits:     0,
+					},
+					Reason: err,
+				}
+			} else {
+				changes := CommitChange{
+					Addition: 0,
+					Deletion: 0,
+				}
+
+				// only count the lines if its not a merge
+				if merge == 0 {
+					for index := range stats {
+						changes.Addition += stats[index].Addition
+						changes.Deletion += stats[index].Deletion
+					}
+				} else {
+					for index := range stats {
+						changes.Addition += int(float64(stats[index].Addition) * mergedLinesWeight)
+						changes.Deletion += int(float64(stats[index].Deletion) * mergedLinesWeight)
+					}
+				}
+
+				contributionChannel <- ContributionChannel{
+					Result: Contribution{
+						Contributor: author,
+						Changes:     changes,
+						Merges:      merge,
+						Commits:     commit,
+					},
+					Reason: nil,
+				}
 			}
-		}
+		}()
 		return nil
 	})
 	fmt.Println()
+	answersReceived := 0
+	for res := range contributionChannel {
+		if res.Reason != nil {
+			return nil, err
+		} else {
+			author := res.Result.Contributor
+			if _, found := authorMap[author]; !found {
+				authorMap[author] = res.Result
+			} else {
+				authorMap[author] = Contribution{
+					Contributor: author,
+					Changes: CommitChange{
+						Addition: authorMap[author].Changes.Addition + res.Result.Changes.Addition,
+						Deletion: authorMap[author].Changes.Deletion + res.Result.Changes.Deletion,
+					},
+					Merges:  authorMap[author].Merges + res.Result.Merges,
+					Commits: authorMap[author].Commits + res.Result.Commits,
+				}
+			}
+		}
+
+		answersReceived++
+		if commitCounter == answersReceived {
+			close(contributionChannel)
+		}
+	}
 	gitAnalysisEnd := time.Now()
 	fmt.Printf("---> git analysis in %dms (%d commits)\n", gitAnalysisEnd.Sub(gitAnalysisStart).Milliseconds(), commitCounter)
 
