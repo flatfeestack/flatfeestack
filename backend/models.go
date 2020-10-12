@@ -3,8 +3,9 @@ package main
 // User schema of the user table
 type User struct {
 	ID       string  `json:"id"`
-	StripeId     string `json:"stripe_id"`
+	StripeId     string `json:"-"`
 	Email string `json:"email"`
+	Username string `json:"username"`
 }
 
 type UserRepository interface {

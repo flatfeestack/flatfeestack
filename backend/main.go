@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	_ "github.com/flatfeestack/api/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"log"
 	"net/http"
 	"os"
 )
-
+// @title Flatfeestack API
+// @version 0.0.1
+// @host localhost:8080
+// @BasePath /
 func main() {
-	// open DB connectino
 	db := createConnection()
-
-	// Repos
 
 	userRepo := NewUserRepo(db)
 	repoRepo := NewRepoRepo(db)
@@ -23,20 +25,20 @@ func main() {
 
 
 	// Routes
-	protectedRouter := mux.NewRouter()
-	protectedRouter.HandleFunc("/api/users/{id}", h.GetUserByID).Methods("GET", "OPTIONS")
-	protectedRouter.HandleFunc("/api/users", h.CreateUser).Methods("POST", "OPTIONS")
-	protectedRouter.HandleFunc("/api/repos", h.CreateRepo).Methods("POST", "OPTIONS")
-	protectedRouter.Use(AuthMiddleware)
+	router := mux.NewRouter()
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter.HandleFunc("/users/{id}", h.GetUserByID).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users", h.CreateUser).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos", h.CreateRepo).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos/{id}", h.GetRepoByID).Methods("GET", "OPTIONS")
+	//apiRouter.Use(AuthMiddleware)
 
-	publicRouter := mux.NewRouter()
-	publicRouter.HandleFunc("/api/repos/{id}", h.GetRepoByID).Methods("GET", "OPTIONS")
+	// Swagger
+	router.PathPrefix("/swagger").Handler( httpSwagger.WrapHandler)
 
-
-	// http.Handle("/", fs)
 	fmt.Println("Starting server on the port 8080...")
 
-	log.Fatal(http.ListenAndServe(":8080", protectedRouter))
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 

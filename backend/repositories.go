@@ -35,7 +35,7 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 	row := r.db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email)
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
 
 	switch err {
 		case sql.ErrNoRows:
@@ -53,10 +53,10 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 
 // Save inserts a user into the database
 func (r *UserRepo) Save(user *User) error {
-	sqlStatement := `INSERT INTO "user" (id, email, "stripe_id") VALUES ($1, $2, $3) RETURNING id`
+	sqlStatement := `INSERT INTO "user" (id, email, "stripe_id", username) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var id string
-	err := r.db.QueryRow(sqlStatement, user.ID, user.Email, user.StripeId).Scan(&id)
+	err := r.db.QueryRow(sqlStatement, user.ID, user.Email, user.StripeId, user.Username).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -85,8 +85,32 @@ func NewRepoRepo(db *sql.DB) *RepoRepo {
 
 func (r *RepoRepo) FindByID(ID string) (*Repo, error){
 	var repo Repo
-	log.Println("not implemented yet, return empty repo")
-	return &repo, nil
+
+	if ID == "" {
+		return &repo, fmt.Errorf("ID cannot be empty")
+	}
+
+	// create the select sql query
+	sqlStatement := `SELECT * FROM "repo" WHERE id=$1`
+
+	// execute the sql statement
+	row := r.db.QueryRow(sqlStatement, ID)
+
+	// unmarshal the row object to user
+	err := row.Scan(&repo.ID, &repo.Name, &repo.Url)
+
+	switch err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+		return &repo, nil
+	case nil:
+		return &repo, nil
+	default:
+		log.Fatalf("Unable to scan the row. %v", err)
+	}
+
+	// return empty user on error
+	return &repo, err
 }
 
 func (r *RepoRepo) Save(repo *Repo) error{
