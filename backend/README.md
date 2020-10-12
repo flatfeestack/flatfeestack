@@ -10,3 +10,12 @@ The setup will soon be dockerized, but for now you can create your own Postgres 
 POSTGRES_URL="postgresql://postgres:password@localhost:5432/flatfeestack?sslmode=disable"
 ```
 
+## Start
+
+```make && ./api```
+
+## Documentation
+
+Swagger is included and available under `/swagger/index.html`
+
+
