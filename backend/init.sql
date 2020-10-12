@@ -108,7 +108,7 @@ create table sponsor_event
         constraint "repoId"
             references repo,
     type sponsorevent not null,
-    timestamp timestamp
+    timestamp bigint not null
 );
 
 alter table sponsor_event owner to postgres;

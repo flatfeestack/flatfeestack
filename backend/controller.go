@@ -11,13 +11,15 @@ import (
 type BaseHandler struct {
 	userRepo UserRepository
 	repoRepo RepoRepository
+	sponsorEventRepo SponsorEventRepository
 }
 
 // NewBaseHandler returns a new BaseHandler
-func NewBaseHandler(userRepo UserRepository, repoRepo RepoRepository) *BaseHandler {
+func NewBaseHandler(userRepo UserRepository, repoRepo RepoRepository, sponsorEventRepo SponsorEventRepository) *BaseHandler {
 	return &BaseHandler{
 		userRepo: userRepo,
 		repoRepo: repoRepo,
+		sponsorEventRepo: sponsorEventRepo,
 	}
 }
 
@@ -221,6 +223,62 @@ func(h *BaseHandler) GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	}
 	// send the HttpResponse
 	_  = json.NewEncoder(w).Encode(res)
+}
+
+/*
+ *	==== SPONSOR EVENT ====
+ */
+
+type SponsorRepoDTO struct {
+	Uid string `json:"uid"`
+}
+type SponsorRepoResponse struct {
+	HttpResponse
+	Data SponsorEvent `json:"data,omitempty"`
+
+}
+
+// @Summary Create new repo
+// @Tags repo
+// @Param body body SponsorRepoDTO true "Request Body"
+// @Param id path string true "Repo ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} SponsorRepoResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/repos/{id}/sponsor [post]
+func(h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// create an empty user of type User
+	var dto SponsorRepoDTO
+	jsonErr := json.NewDecoder(r.Body).Decode(&dto)
+	params := mux.Vars(r)
+	repoId := params["id"]
+	if jsonErr != nil {
+		res := NewHttpErrorResponse("Unable to decode the request body.")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	event, dbErr := h.sponsorEventRepo.Sponsor(repoId, dto.Uid)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not write to database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data: event,
+		Message: "Repo created successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 

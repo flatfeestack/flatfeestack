@@ -20,8 +20,9 @@ func main() {
 
 	userRepo := NewUserRepo(db)
 	repoRepo := NewRepoRepo(db)
+	sponsorEventRepo := NewSponsorEventRepo(db)
 
-	h := NewBaseHandler(userRepo, repoRepo)
+	h := NewBaseHandler(userRepo, repoRepo, sponsorEventRepo)
 
 
 	// Routes
@@ -31,6 +32,7 @@ func main() {
 	apiRouter.HandleFunc("/users", h.CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos", h.CreateRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}", h.GetRepoByID).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/repos/{id}/sponsor", h.SponsorRepo).Methods("POST", "OPTIONS")
 	//apiRouter.Use(AuthMiddleware)
 
 	// Swagger

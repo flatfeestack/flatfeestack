@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 )
 
 /*
@@ -20,6 +21,7 @@ func NewUserRepo(db *sql.DB) *UserRepo {
 		db: db,
 	}
 }
+
 // FindByID returns a single user
 func (r *UserRepo) FindByID(ID string) (*User, error) {
 	var user User
@@ -38,13 +40,13 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
 
 	switch err {
-		case sql.ErrNoRows:
-			fmt.Println("No rows were returned!")
-			return &user, nil
-		case nil:
-			return &user, nil
-		default:
-			log.Fatalf("Unable to scan the row. %v", err)
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+		return &user, nil
+	case nil:
+		return &user, nil
+	default:
+		log.Fatalf("Unable to scan the row. %v", err)
 	}
 
 	// return empty user on error
@@ -83,7 +85,7 @@ func NewRepoRepo(db *sql.DB) *RepoRepo {
 	}
 }
 
-func (r *RepoRepo) FindByID(ID string) (*Repo, error){
+func (r *RepoRepo) FindByID(ID string) (*Repo, error) {
 	var repo Repo
 
 	if ID == "" {
@@ -113,7 +115,7 @@ func (r *RepoRepo) FindByID(ID string) (*Repo, error){
 	return &repo, err
 }
 
-func (r *RepoRepo) Save(repo *Repo) error{
+func (r *RepoRepo) Save(repo *Repo) error {
 	sqlStatement := `INSERT INTO "repo" (id, url, name) VALUES ($1, $2, $3) RETURNING id`
 
 	var id string
@@ -126,5 +128,39 @@ func (r *RepoRepo) Save(repo *Repo) error{
 
 	fmt.Printf("Inserted a single record %v", id)
 
+	return nil
+}
+
+/*
+ *	==== SPONSOR EVENT ====
+ */
+// RepoRepo implements RepoRepository
+type SponsorEventRepo struct {
+	db *sql.DB
+}
+
+func NewSponsorEventRepo(db *sql.DB) *SponsorEventRepo {
+	return &SponsorEventRepo{
+		db: db,
+	}
+}
+
+func (r *SponsorEventRepo) Sponsor(repoID string, uid string) (*SponsorEvent, error) {
+	var event SponsorEvent
+	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
+	err := r.db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
+
+	if err != nil {
+		log.Println(err)
+		return &event, err
+	}
+
+	fmt.Printf("Inserted a single record %v", &event.ID)
+
+	return &event, nil
+}
+
+
+func (r *SponsorEventRepo) 	Unsponsor(repoId string, uid string) error {
 	return nil
 }
