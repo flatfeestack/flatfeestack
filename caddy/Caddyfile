@@ -2,7 +2,7 @@
 # Set this path to your site's directory.
 root * /var/www/html
 
-reverse_proxy web:5000
+reverse_proxy web:3000
 
 route /auth/* {
     uri strip_prefix /auth
