@@ -173,14 +173,26 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 		totalCommit += v.Commits
 	}
 
+	totalAmountOfAuthors := len(authors)
+
 	for _, author := range authors {
 		authorChangesWeighted := float64(contributions[author].Changes.Addition)*additionWeight + float64(contributions[author].Changes.Deletion)*deletionWeight
 		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
-		changesPercentage := authorChangesWeighted / totalChangesWeighted
+		var changesPercentage float64
+		if totalChangesWeighted == 0 {
+			changesPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			changesPercentage = authorChangesWeighted / totalChangesWeighted
+		}
 
 		authorGitHistoryWeighted := float64(contributions[author].Merges)*mergeWeight + float64(contributions[author].Commits)*commitWeight
 		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
-		gitHistoryPercentage := authorGitHistoryWeighted / totalGitHistoryWeighted
+		var gitHistoryPercentage float64
+		if totalGitHistoryWeighted == 0 {
+			gitHistoryPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			gitHistoryPercentage = authorGitHistoryWeighted / totalGitHistoryWeighted
+		}
 
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
@@ -230,22 +242,44 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 		totalPullRequestsReviews += v.PlatformInformation.PullRequestInformation.Reviewer
 	}
 
+	totalAmountOfAuthors := len(authors)
+
 	for _, author := range authors {
 		authorChangesWeighted := float64(contributions[author].GitInformation.Changes.Addition)*additionWeight + float64(contributions[author].GitInformation.Changes.Deletion)*deletionWeight
 		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
-		changesPercentage := authorChangesWeighted / totalChangesWeighted
+		var changesPercentage float64
+		if totalChangesWeighted == 0 {
+			changesPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			changesPercentage = authorChangesWeighted / totalChangesWeighted
+		}
 
 		authorGitHistoryWeighted := float64(contributions[author].GitInformation.Merges)*mergeWeight + float64(contributions[author].GitInformation.Commits)*commitWeight
 		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
-		gitHistoryPercentage := authorGitHistoryWeighted / totalGitHistoryWeighted
+		var gitHistoryPercentage float64
+		if totalGitHistoryWeighted == 0 {
+			gitHistoryPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			gitHistoryPercentage = authorGitHistoryWeighted / totalGitHistoryWeighted
+		}
 
 		authorIssuesWeighted := float64(len(contributions[author].PlatformInformation.IssueInformation.Author))*issueWeight + float64(getSumOfCommentsOfIssues(contributions[author].PlatformInformation.IssueInformation.Author))*issueCommentsWeight + float64(contributions[author].PlatformInformation.IssueInformation.Commenter)*issueCommenterWeight
 		totalIssuesWeighted := float64(totalIssues)*issueWeight + float64(totalComments)*issueCommentsWeight + float64(totalCommenter)*issueCommenterWeight
-		issuesPercentage := authorIssuesWeighted / totalIssuesWeighted
+		var issuesPercentage float64
+		if totalIssuesWeighted == 0 {
+			issuesPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			issuesPercentage = authorIssuesWeighted / totalIssuesWeighted
+		}
 
 		authorPullRequestsWeighted := getAuthorPullRequestValue(contributions[author].PlatformInformation.PullRequestInformation.Author)*pullRequestAuthorWeight + float64(contributions[author].PlatformInformation.PullRequestInformation.Reviewer)*pullRequestReviewerWeight
 		totalPullRequestsWeighted := totalPullRequestsValue*pullRequestAuthorWeight + float64(totalPullRequestsReviews)*pullRequestReviewerWeight
-		pullRequestPercentage := authorPullRequestsWeighted / totalPullRequestsWeighted
+		var pullRequestPercentage float64
+		if totalPullRequestsWeighted == 0 {
+			pullRequestPercentage = 1.0 / float64(totalAmountOfAuthors)
+		} else {
+			pullRequestPercentage = authorPullRequestsWeighted / totalPullRequestsWeighted
+		}
 
 		authorMap[author] = FlatFeeWeight{
 			Contributor: author,
