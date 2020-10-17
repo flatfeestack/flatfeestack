@@ -49,7 +49,7 @@ type CreateUserDTO struct {
 	Username string `json:"username" example:"flatfee"`
 }
 // @Summary Create new user
-// @Tags user
+// @Tags Users
 // @Param user body CreateUserDTO true "Request Body"
 // @Accept  json
 // @Produce  json
@@ -105,7 +105,7 @@ type GetUserByIDResponse struct{
 // GetUsers godoc
 // @Summary Get User by ID
 // @Description Get details of all users
-// @Tags user
+// @Tags Users
 // @Param id path string true "User ID"
 // @Accept  json
 // @Produce  json
@@ -144,7 +144,7 @@ type CreateRepoDTO struct {
 	Name string `json:"name"`
 }
 // @Summary Create new repo
-// @Tags repo
+// @Tags Repos
 // @Param repo body CreateRepoDTO true "Request Body"
 // @Accept  json
 // @Produce  json
@@ -197,7 +197,7 @@ type GetRepoByIDResponse struct{
 }
 
 // @Summary Get Repo By ID
-// @Tags repo
+// @Tags Repos
 // @Param id path string true "Repo ID"
 // @Accept  json
 // @Produce  json
@@ -238,8 +238,8 @@ type SponsorRepoResponse struct {
 
 }
 
-// @Summary Create new repo
-// @Tags repo
+// @Summary Sponsor a repo
+// @Tags Repos
 // @Param body body SponsorRepoDTO true "Request Body"
 // @Param id path string true "Repo ID"
 // @Accept  json
@@ -275,7 +275,90 @@ func(h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	res := HttpResponse{
 		Success: true,
 		Data: event,
-		Message: "Repo created successfully",
+		Message: "Sponsored repo successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// @Summary Unsponsor a repo
+// @Tags Repos
+// @Param body body SponsorRepoDTO true "Request Body"
+// @Param id path string true "Repo ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} SponsorRepoResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/repos/{id}/unsponsor [post]
+func(h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// create an empty user of type User
+	var dto SponsorRepoDTO
+	jsonErr := json.NewDecoder(r.Body).Decode(&dto)
+	params := mux.Vars(r)
+	repoId := params["id"]
+	if jsonErr != nil {
+		res := NewHttpErrorResponse("Unable to decode the request body.")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	event, dbErr := h.sponsorEventRepo.Unsponsor(repoId, dto.Uid)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not write to database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data: event,
+		Message: "Unsponsored repo successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+
+type GetSponsoredReposResponse struct {
+	HttpResponse
+	Data []Repo `json:"data,omitempty"`
+
+}
+// @Summary List sponsored Repos of a user
+// @Tags Users
+// @Param id path string true "User ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} GetSponsoredReposResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/users/{id}/sponsored [get]
+func(h *BaseHandler) GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	params := mux.Vars(r)
+	uid := params["id"]
+	repos, dbErr := h.sponsorEventRepo.GetSponsoredRepos(uid)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not read from database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data: repos,
+		Message: "Retrieved sponsored repos successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)

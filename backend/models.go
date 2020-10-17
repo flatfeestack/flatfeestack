@@ -34,5 +34,18 @@ type SponsorEvent struct {
 
 type SponsorEventRepository interface {
 	Sponsor(repoID string, uid string) (*SponsorEvent, error)
-	Unsponsor(repoId string, uid string) error
+	Unsponsor(repoID string, uid string) (*SponsorEvent, error)
+	GetSponsoredRepos(uid string) ([]Repo, error)
+}
+
+type DailyRepoBalance struct {
+	ID int `json:"id"`
+	RepoId string `json:"repo_id"`
+	Uid string `json:"uid"`
+	ComputedAt string `json:"computed_at"`
+	Balance int `json:"balance"`
+}
+
+type DailyRepoBalanceRepository interface {
+	
 }

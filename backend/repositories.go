@@ -160,7 +160,47 @@ func (r *SponsorEventRepo) Sponsor(repoID string, uid string) (*SponsorEvent, er
 	return &event, nil
 }
 
+func (r *SponsorEventRepo) Unsponsor(repoID string, uid string) (*SponsorEvent, error) {
+	var event SponsorEvent
+	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
+	err := r.db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
 
-func (r *SponsorEventRepo) 	Unsponsor(repoId string, uid string) error {
-	return nil
+	if err != nil {
+		log.Println(err)
+		return &event, err
+	}
+
+	fmt.Printf("Inserted a single record %v", &event.ID)
+
+	return &event, nil
+}
+
+func (r *SponsorEventRepo) GetSponsoredRepos(uid string) ([]Repo, error) {
+	var repos []Repo
+	sqlStatement := `SELECT r.* FROM 
+		(SELECT uid, repo_id, max("timestamp") as "timestamp" 
+			FROM sponsor_event 
+			GROUP BY uid, repo_id) as latest 
+		JOIN sponsor_event s on latest.uid = s.uid AND latest.repo_id = s.repo_id AND latest.timestamp = s."timestamp"
+		JOIN repo r on r.id = s.repo_id
+		WHERE s."type" = 'SPONSOR' AND s.uid = $1`
+	rows, err := r.db.Query(sqlStatement, uid)
+
+	if err != nil {
+		log.Println(err)
+		return repos, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var repo Repo
+		err = rows.Scan(&repo.ID, &repo.Name, &repo.Url)
+		if err != nil {
+			fmt.Printf("could not destructure row %v", err)
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
+
 }
