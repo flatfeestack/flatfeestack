@@ -1,3 +1,12 @@
+create type userbalanceevent as enum ('PAY_USER', 'PAY_REPO');
+
+alter type userbalanceevent owner to postgres;
+
+create type sponsorevent as enum ('SPONSOR', 'UNSPONSOR');
+
+alter type sponsorevent owner to postgres;
+
+
 create table "user"
 (
     id uuid not null
@@ -79,7 +88,7 @@ comment on table git_user_balance is 'if the the uid is null, there is no regist
 
 alter table git_user_balance owner to postgres;
 
-create table git_user_balance_event
+create table git_userbalanceevent
 (
     id serial not null
         constraint gituserbalanceevent_pk
@@ -91,15 +100,15 @@ create table git_user_balance_event
     type userbalanceevent not null
 );
 
-alter table git_user_balance_event owner to postgres;
+alter table git_userbalanceevent owner to postgres;
 
 create unique index gituserbalanceevent_id_uindex
-    on git_user_balance_event (id);
+    on git_userbalanceevent (id);
 
 create table sponsor_event
 (
     id serial not null
-        constraint sponsorevent_pk
+        constraint sponsor_event_pk
             primary key,
     uid uuid not null
         constraint uid
