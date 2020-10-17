@@ -3,9 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	_ "github.com/flatfeestack/api/docs"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	_ "github.com/flatfeestack/api/docs"
+	_ "github.com/lib/pq"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"log"
 	"net/http"
