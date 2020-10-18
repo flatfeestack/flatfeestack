@@ -9,45 +9,49 @@ import (
 )
 
 type BaseHandler struct {
-	userRepo UserRepository
-	repoRepo RepoRepository
-	sponsorEventRepo SponsorEventRepository
+	userRepo             UserRepository
+	repoRepo             RepoRepository
+	sponsorEventRepo     SponsorEventRepository
+	dailyRepoBalanceRepo DailyRepoBalanceRepository
 }
 
 // NewBaseHandler returns a new BaseHandler
-func NewBaseHandler(userRepo UserRepository, repoRepo RepoRepository, sponsorEventRepo SponsorEventRepository) *BaseHandler {
+func NewBaseHandler(userRepo UserRepository,
+	repoRepo RepoRepository,
+	sponsorEventRepo SponsorEventRepository,
+	dailyRepoBalanceRepo DailyRepoBalanceRepository) *BaseHandler {
 	return &BaseHandler{
-		userRepo: userRepo,
-		repoRepo: repoRepo,
-		sponsorEventRepo: sponsorEventRepo,
+		userRepo:             userRepo,
+		repoRepo:             repoRepo,
+		sponsorEventRepo:     sponsorEventRepo,
+		dailyRepoBalanceRepo: dailyRepoBalanceRepo,
 	}
 }
 
 // HttpResponse format
 type HttpResponse struct {
-	Success bool `json:"success"`
-	Message string `json:"message,omitempty"`
-	Data interface{} `json:"data,omitempty"`
+	Success bool        `json:"success"`
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
-
-func NewHttpErrorResponse(message string) HttpResponse{
+func NewHttpErrorResponse(message string) HttpResponse {
 	return HttpResponse{Success: false, Message: message}
 }
-
 
 /*
  *	==== USER ====
  */
 
-type CreateUserResponse struct{
+type CreateUserResponse struct {
 	HttpResponse
 	Data User `json:"data,omitempty"`
 }
 type CreateUserDTO struct {
-	Email string `json:"email" example:"info@flatfeestack"`
+	Email    string `json:"email" example:"info@flatfeestack"`
 	Username string `json:"username" example:"flatfee"`
 }
+
 // @Summary Create new user
 // @Tags Users
 // @Param user body CreateUserDTO true "Request Body"
@@ -72,7 +76,7 @@ func (h *BaseHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	// generate uuuid
 	uid, uuidErr := uuid.NewRandom()
-	if uuidErr != nil{
+	if uuidErr != nil {
 		res := NewHttpErrorResponse("Unable to create uuid.")
 		_ = json.NewEncoder(w).Encode(res)
 		return
@@ -90,14 +94,14 @@ func (h *BaseHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data: user,
+		Data:    user,
 		Message: "User created successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-type GetUserByIDResponse struct{
+type GetUserByIDResponse struct {
 	HttpResponse
 	Data User `json:"data,omitempty"`
 }
@@ -112,7 +116,7 @@ type GetUserByIDResponse struct{
 // @Success 200 {object} GetUserByIDResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/users/{id} [get]
-func(h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["id"]
@@ -125,24 +129,25 @@ func(h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 	res := HttpResponse{
 		Success: true,
-		Data: user,
+		Data:    user,
 		Message: "User created successfully",
 	}
 	// send the HttpResponse
-	_  = json.NewEncoder(w).Encode(res)
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 /*
  *	==== REPO ====
  */
-type CreateRepoResponse struct{
+type CreateRepoResponse struct {
 	HttpResponse
 	Data Repo `json:"data,omitempty"`
 }
 type CreateRepoDTO struct {
-	Url string `json:"url"`
+	Url  string `json:"url"`
 	Name string `json:"name"`
 }
+
 // @Summary Create new repo
 // @Tags Repos
 // @Param repo body CreateRepoDTO true "Request Body"
@@ -151,7 +156,7 @@ type CreateRepoDTO struct {
 // @Success 200 {object} CreateRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos [post]
-func(h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -166,7 +171,7 @@ func(h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	// generate uuuid
 	uid, uuidErr := uuid.NewRandom()
-	if uuidErr != nil{
+	if uuidErr != nil {
 		res := NewHttpErrorResponse("Unable to create uuid.")
 		_ = json.NewEncoder(w).Encode(res)
 		return
@@ -184,14 +189,14 @@ func(h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data: repo,
+		Data:    repo,
 		Message: "Repo created successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-type GetRepoByIDResponse struct{
+type GetRepoByIDResponse struct {
 	HttpResponse
 	Data Repo `json:"data,omitempty"`
 }
@@ -204,7 +209,7 @@ type GetRepoByIDResponse struct{
 // @Success 200 {object} GetRepoByIDResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/repos/{id} [get]
-func(h *BaseHandler) GetRepoByID(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["id"]
@@ -218,11 +223,11 @@ func(h *BaseHandler) GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	}
 	res := HttpResponse{
 		Success: true,
-		Data: repo,
+		Data:    repo,
 		Message: "",
 	}
 	// send the HttpResponse
-	_  = json.NewEncoder(w).Encode(res)
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 /*
@@ -235,7 +240,6 @@ type SponsorRepoDTO struct {
 type SponsorRepoResponse struct {
 	HttpResponse
 	Data SponsorEvent `json:"data,omitempty"`
-
 }
 
 // @Summary Sponsor a repo
@@ -247,7 +251,7 @@ type SponsorRepoResponse struct {
 // @Success 200 {object} SponsorRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos/{id}/sponsor [post]
-func(h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -274,7 +278,7 @@ func(h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data: event,
+		Data:    event,
 		Message: "Sponsored repo successfully",
 	}
 	// send the HttpResponse
@@ -290,7 +294,7 @@ func(h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} SponsorRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos/{id}/unsponsor [post]
-func(h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -317,19 +321,18 @@ func(h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data: event,
+		Data:    event,
 		Message: "Unsponsored repo successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-
 type GetSponsoredReposResponse struct {
 	HttpResponse
 	Data []Repo `json:"data,omitempty"`
-
 }
+
 // @Summary List sponsored Repos of a user
 // @Tags Users
 // @Param id path string true "User ID"
@@ -338,7 +341,7 @@ type GetSponsoredReposResponse struct {
 // @Success 200 {object} GetSponsoredReposResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/users/{id}/sponsored [get]
-func(h *BaseHandler) GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
+func (h *BaseHandler) GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -357,12 +360,56 @@ func(h *BaseHandler) GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data: repos,
+		Data:    repos,
 		Message: "Retrieved sponsored repos successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+type CalculateDailyRepoBalanceByUserResponse struct {
+	HttpResponse
+	Data []DailyRepoBalance `json:"data,omitempty"`
+}
 
+// @Summary Calculate Daily Repo Balance for user
+// @Tags Users
+// @Param id path string true "User ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} CalculateDailyRepoBalanceByUserResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/users/{id}/sponsored/calculateDaily [post]
+func (h *BaseHandler) CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
+	params := mux.Vars(r)
+	uid := params["id"]
+	sponsoredRepos, dbErr := h.sponsorEventRepo.GetSponsoredRepos(uid)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not read from database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	repoBalance, dbErr1 := h.dailyRepoBalanceRepo.CalculateDailyByUser(uid, sponsoredRepos, 100)
+	if dbErr1 != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not read from database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data:    repoBalance,
+		Message: "Retrieved sponsored repos successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}

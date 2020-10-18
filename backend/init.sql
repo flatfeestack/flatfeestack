@@ -147,7 +147,7 @@ create table daily_repo_balance
     uid uuid not null
         constraint uid
             references "user",
-    computed_at timestamp not null,
+    computed_at date not null,
     balance integer not null
 );
 

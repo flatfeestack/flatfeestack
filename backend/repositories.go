@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
+	"strconv"
 	"time"
 )
 
@@ -203,4 +205,58 @@ func (r *SponsorEventRepo) GetSponsoredRepos(uid string) ([]Repo, error) {
 	}
 	return repos, nil
 
+}
+
+/*
+ *	==== DAILY REPO BALANCE ====
+ */
+// DailyRepoBalanceRepo implements DailyRepoBalanceRepository
+type DailyRepoBalanceRepo struct {
+	db *sql.DB
+}
+
+func NewDailyRepoBalanceRepo(db *sql.DB) *DailyRepoBalanceRepo {
+	return &DailyRepoBalanceRepo{
+		db: db,
+	}
+}
+
+func (r *DailyRepoBalanceRepo) CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) ([]DailyRepoBalance, error) {
+	var repoBalances []DailyRepoBalance
+	var n = len(sponsoredRepos)
+	query := `INSERT INTO "daily_repo_balance" ("repo_id", "uid", "computed_at", "balance") VALUES`
+	var values []interface{}
+	for i, s := range sponsoredRepos {
+		values = append(values, s.ID, uid, time.Now(), math.Floor(float64(amountToShare/n)))
+
+		numFields := 4
+		n := i * numFields
+
+		query += `(`
+		for j := 0; j < numFields; j++ {
+			query += `$` + strconv.Itoa(n+j+1) + `,`
+		}
+		query = query[:len(query)-1] + `),`
+	}
+	query = query[:len(query)-1] // remove the trailing comma
+	query += ` RETURNING "id", "repo_id", "uid", "computed_at", "balance"`
+	rows, err := r.db.Query(query, values...)
+
+	if err != nil {
+		fmt.Printf("error executing query %v", err)
+		return repoBalances, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var dailyBalance DailyRepoBalance
+		err = rows.Scan(&dailyBalance.ID, &dailyBalance.RepoId, &dailyBalance.Uid, &dailyBalance.ComputedAt, &dailyBalance.Balance)
+		if err != nil {
+			fmt.Printf("\ncould not destructure row %v", err)
+		}
+		repoBalances = append(repoBalances, dailyBalance)
+	}
+
+	return repoBalances, nil
 }

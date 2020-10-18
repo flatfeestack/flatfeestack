@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 )
+
 // @title Flatfeestack API
 // @version 0.0.1
 // @host localhost:8080
@@ -22,15 +23,16 @@ func main() {
 	userRepo := NewUserRepo(db)
 	repoRepo := NewRepoRepo(db)
 	sponsorEventRepo := NewSponsorEventRepo(db)
+	dailyRepoBalanceRepo := NewDailyRepoBalanceRepo(db)
 
-	h := NewBaseHandler(userRepo, repoRepo, sponsorEventRepo)
-
+	h := NewBaseHandler(userRepo, repoRepo, sponsorEventRepo, dailyRepoBalanceRepo)
 
 	// Routes
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/users/{id}", h.GetUserByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/{id}/sponsored", h.GetSponsoredRepos).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users/{id}/sponsored/calculateDaily", h.CalculateDailyRepoBalanceByUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/users", h.CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos", h.CreateRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}", h.GetRepoByID).Methods("GET", "OPTIONS")
@@ -39,15 +41,14 @@ func main() {
 	//apiRouter.Use(AuthMiddleware)
 
 	// Swagger
-	router.PathPrefix("/swagger").Handler( httpSwagger.WrapHandler)
+	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
 	fmt.Println("Starting server on the port 8080...")
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
-
-func AuthMiddleware (next http.Handler) http.Handler {
+func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("X-Session-Token")
 
@@ -60,7 +61,6 @@ func AuthMiddleware (next http.Handler) http.Handler {
 		}
 	})
 }
-
 
 // create connection with postgres db
 func createConnection() *sql.DB {
