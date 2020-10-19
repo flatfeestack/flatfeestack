@@ -36,15 +36,15 @@ const pullRequestReviewerWeight = 0.3
 
 // Intercategory weights between categories Changes and Githistory. all must sum up to 1
 // Only when platformInformation IS NOT considered
-const changesWeight = 0.66
-const gitHistoryWeight = 0.34
+const changesWeight = 0.55
+const gitHistoryWeight = 0.45
 
 // Intercategory weights between categories Changes, Githistory, Issues and Pull Requests. all must sum up to 1
 // Only when platformInformation IS considered
-const changesWeightPlatformInfo = 0.55
-const gitHistoryWeightPlatformInfo = 0.25
-const issueCategoryWeightPlatformInfo = 0.08
-const pullRequestCategoryWeightPlatformInfo = 0.12
+const changesWeightPlatformInfo = 0.36
+const gitHistoryWeightPlatformInfo = 0.3
+const issueCategoryWeightPlatformInfo = 0.14
+const pullRequestCategoryWeightPlatformInfo = 0.2
 
 /*
 	******** Pull Request Value ********
