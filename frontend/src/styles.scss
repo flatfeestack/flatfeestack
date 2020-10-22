@@ -141,10 +141,11 @@ label{
 
 // Typography
 .lead{
-  font-family: 'Raleway-Black', serif;
+  font-family: 'Raleway', serif;
   font-size: 72px;
   color: #212529;
   letter-spacing: 0.9px;
+  font-weight: bold;
 }
 .subtitle{
   font-family: 'OpenSans-SemiBold', sans-serif;
@@ -153,7 +154,7 @@ label{
   letter-spacing: 0.3px;
 }
 .section-title{
-  font-family: 'Raleway-Black', serif;
+  font-family: 'Raleway', serif;
   font-size: 52px;
   color: #212529;
   letter-spacing: 0.9px;

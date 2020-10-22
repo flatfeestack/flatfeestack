@@ -10,25 +10,13 @@ import DashboardOverview from "./routes/Dashboard/Overview.svelte";
 import Navigation from "./components/Navigation.svelte";
 import Footer from "./components/Footer.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
-import { loggedIn } from "./store/auth.ts";
-import { API } from "src/api/api.ts";
-import { token } from "src/store/auth";
+import { user } from "./store/auth.ts";
+import { onMount } from "svelte";
+import { tryToAuthenticate } from "./store/authService";
 
 export let url = "";
 
-async function refresh() {
-  try {
-    const res = await API.auth.refresh();
-    const t = res.headers["token"];
-    if (t) {
-      token.set(t);
-    }
-  } catch (e) {
-    console.log(String(e));
-  }
-}
-
-refresh();
+onMount(() => tryToAuthenticate());
 </script>
 
 <Router url="{url}">
@@ -42,7 +30,7 @@ refresh();
     <Route path="/">
       <Landing />
     </Route>
-    {#if $loggedIn}
+    {#if $user}
       <Route path="dashboard" component="{DashboardOverview}" />
     {/if}
     <Route path="*" component="{CatchAll}" />

@@ -36,4 +36,9 @@ export const API = {
       ),
     refresh: () => authInstance.post("/refresh", null),
   },
+  api: {
+    user: {
+      get: () => apiInstance.get(`/users/me`),
+    },
+  },
 };

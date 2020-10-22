@@ -6,6 +6,7 @@ import { API } from "../api/api.ts";
 import Spacer from "../components/UI/Spacer.svelte";
 import { token } from "../store/auth.ts";
 import { navigate } from "svelte-routing";
+import { login } from "../store/authService";
 
 const schema = yup.object().shape({
   //TOOD: add validation again
@@ -21,13 +22,8 @@ async function handleSubmit({
   },
 }) {
   try {
-    const res = await API.auth.login(email, password);
-    const t = res.headers["token"];
-    if (t) {
-      token.set(t);
-    }
+    await login(email, password);
     setSubmitting(false);
-    console.log();
     navigate("dashboard");
     resetForm();
   } catch (e) {

@@ -38,7 +38,7 @@
 
 <script lang="ts">
 import { Link } from "svelte-routing";
-import { loggedIn } from "src/store/auth";
+import { user } from "src/store/auth";
 let yScroll;
 $: sticky = yScroll > 0;
 </script>
@@ -61,7 +61,7 @@ $: sticky = yScroll > 0;
         <div class="nav-link">Score</div>
       </Link>
 
-      {#if loggedIn}
+      {#if $user}
         <Link to="/dashboard">
           <div class="nav-link link-primary">Dashboard</div>
         </Link>
