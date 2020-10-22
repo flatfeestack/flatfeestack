@@ -14,4 +14,14 @@ This repo includes a caddy server to create reverse proxies to the different pac
 
 **/analysis/*** --> Analysis Engine
 
+## Env
+
+Sample .env
+
+```
+POSTGRES_PASSWORD=password
+POSTGRES_USER=postgres
+POSTGRES_DB=flatfeestack
+```
+
 
