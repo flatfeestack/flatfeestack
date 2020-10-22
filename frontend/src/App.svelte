@@ -12,12 +12,17 @@ import Footer from "./components/Footer.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
 import { loggedIn } from "./store/auth.ts";
 import { API } from "src/api/api.ts";
+import { token } from "src/store/auth";
 
 export let url = "";
 
 async function refresh() {
   try {
     const res = await API.auth.refresh();
+    const t = res.headers["token"];
+    if (t) {
+      token.set(t);
+    }
   } catch (e) {
     console.log(String(e));
   }
