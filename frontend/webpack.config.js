@@ -51,7 +51,7 @@ module.exports = {
     mainFields: ["svelte", "browser", "module", "main"],
   },
   output: {
-    publicPath: "/build/",
+    publicPath: "/beta/build/",
     path: __dirname + "/public/build",
     filename: "[name].js",
     chunkFilename: "[name].[id].js",

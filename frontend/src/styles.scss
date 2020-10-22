@@ -1,7 +1,7 @@
 @charset "utf-8";
 
 // https://colorhunt.co/palette/19113
-$primary: #06623b;
+$primary: #000000;
 $light:#649d66;
 $info: #015F6E;
 $background: #eeeeee;
@@ -55,12 +55,22 @@ $footer-height: 100px;
 .justify-center{
   display: flex;
   justify-content: center;
+  text-align: center;
+}
+
+.vertical{
+  display: flex;
+  vertical-align: center;
+  text-align: left;
+  align-items: center;
 }
 
 // normalize
 body{
   padding: 0;
-  font-family: "Open Sans", sans-serif;
+  font-family: "Roboto";
+  font-weight: 300;
+  font-size: 18px;
 }
 a{
   &:hover{
@@ -68,9 +78,7 @@ a{
     color: inherit;
   }
 }
-section{
-  margin: $spacing*10px 0;
-}
+
 .page{
   min-height: calc(100vh - var(--navbar-height) - var(--footer-height));
 }
@@ -141,22 +149,62 @@ label{
 
 // Typography
 .lead{
-  font-family: 'Raleway-Black', serif;
-  font-size: 72px;
+  font-size: 64px;
   color: #212529;
-  letter-spacing: 0.9px;
+  font-weight: 400;
 }
-.subtitle{
-  font-family: 'OpenSans-SemiBold', sans-serif;
-  font-size: 22px;
+.lead2{
+  font-size: 25px;
   color: #649D66;
   letter-spacing: 0.3px;
+  font-weight: 400;
+}
+
+.subtitle{
+  font-size: 25px;
+  color: #649D66;
+  letter-spacing: 0.3px;
+  font-weight: 300;
+}
+.subtitle2{
+  font-size: 24px;
+  color: black;
+  letter-spacing: 0.3px;
+  font-weight: 300;
 }
 .section-title{
-  font-family: 'Raleway-Black', serif;
   font-size: 52px;
   color: #212529;
-  letter-spacing: 0.9px;
 }
 
+.vl{
+  display: inline-block;
+  border-left: 1px solid #ccc;
+  margin: 0 10px;
+}
 
+.grey img {
+  filter: grayscale(100%);
+  transform:scale(0.5);
+}
+.grey2 img {
+  filter: grayscale(100%);
+  transform:scale(0.25);
+}
+
+.btn-primary{
+  background: #06623B;
+  color: #FFFFFF;
+}
+
+.btn-base{
+  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.15);
+  border-radius: 8px;
+  font-family: "Open Sans", sans-serif;
+  padding: var(--spacing-x2);
+}
+
+.btn-secondary{
+  background: rgba(248,248,248,0.79);
+  color: var(--primary);
+}

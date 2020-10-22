@@ -28,7 +28,7 @@
   text-decoration: underline;
 }
 .sticky {
-  position: fixed;
+  position: sticky;
   top: 0;
   width: 100%;
   box-shadow: 0 5px 15px 2px rgba(0, 0, 0, 0.06);
@@ -46,9 +46,9 @@ $: sticky = yScroll > 0;
 <svelte:window bind:scrollY="{yScroll}" />
 <div class="wrapper {sticky ? 'sticky' : ''}">
   <div class="nav-wrapper">
-    <Link to="/"><img src="/assets/images/logo.svg" alt="Flatfeestack" /></Link>
+    <Link to="/"><img src="assets/images/logo.svg" alt="Flatfeestack" /></Link>
     <div class="flex">
-      <Link to="/">
+      <Link to="/beta">
         <div class="nav-link">Home</div>
       </Link>
       <Link to="/about">
@@ -63,11 +63,11 @@ $: sticky = yScroll > 0;
 
       {#if loggedIn}
         <Link to="/dashboard">
-          <div class="nav-link link-primary">Dashboard</div>
+          <div class="nav-link <!--link-primary-->">Dashboard</div>
         </Link>
       {:else}
         <Link to="/login">
-          <div class="nav-link link-primary">Login</div>
+          <div class="nav-link <!--link-primary-->">Login</div>
         </Link>
       {/if}
     </div>
