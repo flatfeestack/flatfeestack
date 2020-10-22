@@ -6,36 +6,39 @@ import Login from "./routes/Login.svelte";
 import Integrate from "./routes/Integrate.svelte";
 import Score from "./routes/Score.svelte";
 import Signup from "./routes/Signup.svelte";
-import DashboardOverview from "./routes/Dashboard/Overview.svelte";
+import Dashboard from "./routes/Dashboard.svelte";
 import Navigation from "./components/Navigation.svelte";
 import Footer from "./components/Footer.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
 import { user } from "./store/auth.ts";
 import { onMount } from "svelte";
 import { tryToAuthenticate } from "./store/authService";
-
-export let url = "";
+import Modal from "svelte-simple-modal";
 
 onMount(() => tryToAuthenticate());
+
+export let url = "";
 </script>
 
 <Router url="{url}">
-  <Navigation />
-  <div>
-    <Route path="about" component="{About}" />
-    <Route path="login" component="{Login}" />
-    <Route path="integrate" component="{Integrate}" />
-    <Route path="score" component="{Score}" />
-    <Route path="signup" component="{Signup}" />
-    <Route path="/">
-      <Landing />
-    </Route>
-    {#if $user}
-      <Route path="dashboard" component="{DashboardOverview}" />
-    {/if}
-    <Route path="*" component="{CatchAll}" />
-  </div>
-  <Footer />
+  <Modal>
+    <Navigation />
+    <div>
+      <Route path="about" component="{About}" />
+      <Route path="login" component="{Login}" />
+      <Route path="integrate" component="{Integrate}" />
+      <Route path="score" component="{Score}" />
+      <Route path="signup" component="{Signup}" />
+      <Route path="/">
+        <Landing />
+      </Route>
+      {#if $user}
+        <Route path="dashboard" component="{Dashboard}" />
+      {/if}
+      <Route path="*" component="{CatchAll}" />
+    </div>
+    <Footer />
+  </Modal>
 </Router>
 
 <svelte:head>

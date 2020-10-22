@@ -1,5 +1,4 @@
 import { derived, writable } from "svelte/store";
-import jwt_decode from "jwt-decode";
 import { User } from "../types/user";
 
 export const loading = writable(false);

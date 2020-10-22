@@ -4,7 +4,7 @@ import Spacer from "../components/UI/Spacer.svelte";
 
 <div class="page container">
   <div class="lead">About</div>
-  <div class="subtitle">Tbd</div>
+  <div class="subtitle">coming soon</div>
   <Spacer x5 />
   <Spacer x5 />
   <Spacer x5 />

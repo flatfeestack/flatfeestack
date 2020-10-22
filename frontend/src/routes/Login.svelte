@@ -1,10 +1,8 @@
 <script lang="ts">
-import { Form, Input, Select, Choice } from "sveltejs-forms";
+import { Form, Input } from "sveltejs-forms";
 import { Link } from "svelte-routing";
 import * as yup from "yup";
-import { API } from "../api/api.ts";
 import Spacer from "../components/UI/Spacer.svelte";
-import { token } from "../store/auth.ts";
 import { navigate } from "svelte-routing";
 import { login } from "../store/authService";
 
