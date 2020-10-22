@@ -3,9 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/flatfeestack/api/docs"
+	_ "api/docs"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"log"
@@ -64,15 +63,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 // create connection with postgres db
 func createConnection() *sql.DB {
-	// load .env file
-	err := godotenv.Load(".env")
-
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-
 	// Open the connection
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	log.Printf("postgresql://%v:%v@postgres:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"),os.Getenv("POSTGRES_PASSWORD"),os.Getenv("POSTGRES_DB"))
+	db, err := sql.Open("postgres", fmt.Sprintf("postgresql://%v:%v@postgres:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"),os.Getenv("POSTGRES_PASSWORD"),os.Getenv("POSTGRES_DB")))
 
 	if err != nil {
 		panic(err)
