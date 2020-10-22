@@ -9,3 +9,6 @@
 	path = frontend
 	url = git@github.com:flatfeestack/frontend.git
 	branch = master
+[submodule "api"]
+	path = api
+	url = git@github.com:flatfeestack/api.git

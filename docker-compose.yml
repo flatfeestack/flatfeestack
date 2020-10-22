@@ -18,6 +18,7 @@ services:
       - PORT=8080
       - DEV=test
       - USERS=tom:pw1;ile:pw2;Sevi:1234
+      - REFRESH_COOKIE_PATH=/auth/refresh
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
@@ -26,6 +27,19 @@ services:
       dockerfile: ../Dockerfile-analysis
     ports:
       - "7000:8080"
+
+  api:
+    container_name: flatfeestack-api
+    build: ./api
+    ports:
+      - "6000:8080"
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on: 
+      - postgres
+
 
   postgres:
     image: postgres:alpine

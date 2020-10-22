@@ -9,6 +9,11 @@ route /auth/* {
     reverse_proxy auth:8080
 }
 
+route /api/* {
+    uri strip_prefix /api
+    reverse_proxy api:8080
+}
+
 route /analysis/* {
     uri strip_prefix /analysis
     reverse_proxy analysis-engine:8080
