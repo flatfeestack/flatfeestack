@@ -12,6 +12,7 @@ type User struct {
 
 type UserRepository interface {
 	FindByID(ID string) (*User, error)
+	FindByEmail(email string) (*User, error)
 	Save(user *User) error
 }
 

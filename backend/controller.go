@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"log"
@@ -106,7 +107,6 @@ type GetUserByIDResponse struct {
 	Data User `json:"data,omitempty"`
 }
 
-// GetUsers godoc
 // @Summary Get User by ID
 // @Description Get details of all users
 // @Tags Users
@@ -120,6 +120,12 @@ func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["id"]
+	if !IsValidUUID(id) {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Not a valid user id")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
 	user, err := h.userRepo.FindByID(id)
 	if err != nil {
 		w.WriteHeader(404)
@@ -127,6 +133,31 @@ func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
+	res := HttpResponse{
+		Success: true,
+		Data:    user,
+		Message: "User created successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// @Summary Get User by sub in token
+// @Description Get details of all users
+// @Tags Users
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} GetUserByIDResponse
+// @Failure 404 {object} HttpResponse
+// @Router /api/users/me [get]
+func (h *BaseHandler) GetMyUser(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromContext(r)
+	if err != nil {
+		res := NewHttpErrorResponse("Not a valid user")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	res := HttpResponse{
 		Success: true,
 		Data:    user,
@@ -412,4 +443,22 @@ func (h *BaseHandler) CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
+}
+
+/*
+ *	==== Helper ====
+ */
+
+func IsValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
+}
+
+func getUserFromContext(r *http.Request) (user *User,err error) {
+	ctx := r.Context()
+	user, ok := ctx.Value(authMiddlewareKey("user")).(*User)
+	if !ok {
+		return user, errors.New("could not get usre")
+	}
+	return user, nil
 }

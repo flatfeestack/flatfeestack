@@ -55,6 +55,37 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 	return &user, err
 }
 
+// FindByID returns a single user
+func (r *UserRepo) FindByEmail(ID string) (*User, error) {
+	var user User
+
+	if ID == "" {
+		return &user, fmt.Errorf("ID cannot be empty")
+	}
+
+	// create the select sql query
+	sqlStatement := `SELECT * FROM "user" WHERE email=$1`
+
+	// execute the sql statement
+	row := r.db.QueryRow(sqlStatement, ID)
+
+	// unmarshal the row object to user
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
+
+	switch err {
+	case sql.ErrNoRows:
+		log.Println("No rows were returned!")
+		return &user, nil
+	case nil:
+		return &user, nil
+	default:
+		log.Fatalf("Unable to scan the row. %v", err)
+	}
+
+	// return empty user on error
+	return &user, err
+}
+
 // Save inserts a user into the database
 func (r *UserRepo) Save(user *User) error {
 	sqlStatement := `INSERT INTO "user" (id, email, "stripe_id", username) VALUES ($1, $2, $3, $4) RETURNING id`
