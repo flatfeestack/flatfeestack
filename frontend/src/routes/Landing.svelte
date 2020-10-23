@@ -149,8 +149,8 @@
             Sponsoring open source projects is difficult for a company.
             Try to convince your accounting department to sponsor &lt;insert-open-source-project&gt;. Flatfeestack is
             compatible with your
-            accounting department. If the accounting department calculates 1500$/per year per developer for its IT cost,
-            with Flatfeestack it is 1620$. And the developer can support as many projects as you want.
+            accounting department. If the accounting department calculates $1500/per year per developer for its IT cost,
+            with Flatfeestack it is $120 (12 month x $10) more: $1620. And the developer can support as many projects as you want.
           </div>
         </div>
       </div>
