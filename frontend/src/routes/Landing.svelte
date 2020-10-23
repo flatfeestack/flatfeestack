@@ -106,9 +106,9 @@
         </div>
         <Spacer x5 />
         <div class="justify-center">
-          Earn money if your open source project is backed. Your developer badge
-          shows a multiplicator, earned money divided by $10. Compare your
-          score with other developers.
+          Earn money if your open source project is backed. Your project badge
+          shows the number of sponsors. Your developer badge shows in addition
+          a score based on your earnings. Compare your score with other developers.
         </div>
       </div>
     </div>
