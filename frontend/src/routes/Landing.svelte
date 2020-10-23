@@ -91,7 +91,7 @@
         </div>
         <Spacer x5 />
         <div class="justify-center">
-          For a flat fee of $10 per month, you can support as many open source project
+          For a flat fee of $10 per month (or $119 per year), you can support as many open source project
           as you like. Your developer badge shows which projects you are
           passionate about.
         </div>
