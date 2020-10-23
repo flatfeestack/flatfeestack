@@ -48,7 +48,7 @@ $: sticky = yScroll > 0;
   <div class="nav-wrapper">
     <Link to="/"><img src="assets/images/logo.svg" alt="Flatfeestack" /></Link>
     <div class="flex">
-      <Link to="/beta">
+      <Link to="/">
         <div class="nav-link">Home</div>
       </Link>
       <Link to="/about">

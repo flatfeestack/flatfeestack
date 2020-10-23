@@ -41,7 +41,7 @@ refresh();*/
     <Route path="integrate" component="{Integrate}" />
     <Route path="score" component="{Score}" />
     <Route path="signup" component="{Signup}" />
-    <Route path="/beta">
+    <Route path="/">
       <Landing />
     </Route>
     <!--{#if $loggedIn}-->

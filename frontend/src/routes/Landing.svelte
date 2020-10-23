@@ -72,13 +72,13 @@
 <section>
   <div class="container">
     <div class="flex spacing">
-      <div class="section-title">&#171;Software Engineers should be able to make living
+      <div class="section-title">&#171;Software Engineers should be able to make a living
         with open source software&#187;
       </div>
     </div>
     <Spacer x5 />
     <div class="subtitle">
-      Some individuals already live the dream of developing open source software and manage to make a decent living.
+      Some individuals already live their dream of developing open source software and manage to make a decent living.
       However, those are exceptions rather then the norm. We want to change this!
     </div>
     <div class="flex spacing">
