@@ -91,7 +91,7 @@
         </div>
         <Spacer x5 />
         <div class="justify-center">
-          For a flat fee of $10, you can support as many open source project
+          For a flat fee of $10 per month, you can support as many open source project
           as you like. Your developer badge shows which projects you are
           passionate about.
         </div>
@@ -162,7 +162,7 @@
           <Spacer x3 />
           <div>
             Each project receives your donation equally divided. Simply donate and
-            don't worry about how many projects you want to support, it is always $10. It is a similar concept to Flattr
+            don't worry about how many projects you want to support, it is always $10 per month. It is a similar concept to Flattr
             for open source projects, where git commits decide how much each contributor earns.
           </div>
         </div>
