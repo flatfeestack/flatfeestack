@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2 #checkout to $GITHUB_WORKSPACE
       - uses: actions/setup-node@v1
-          with:
-            node-version: 12
+        with:
+          node-version: 12
       - run: npm run build
       - run: tar cvfz /tmp/upload.tar.gz public
       - run: >-
