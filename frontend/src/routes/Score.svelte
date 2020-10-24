@@ -1,5 +1,5 @@
 <script>
-import PageLayout from "../components/PageLayout.svelte";
+import PageLayout from "../layout/PageLayout.svelte";
 </script>
 
 <PageLayout>

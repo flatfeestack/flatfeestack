@@ -41,8 +41,11 @@
     "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/free-solid-svg-icons": "^5.15.1",
     "axios": "^0.20.0",
     "serve": "^11.3.2",
+    "svelte-fa": "^2.1.1",
     "svelte-routing": "^1.4.2",
     "svelte-simple-modal": "^0.6.1",
     "sveltejs-forms": "^2.1.2",

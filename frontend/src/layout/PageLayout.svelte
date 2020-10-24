@@ -1,6 +1,6 @@
 <script>
-import Navigation from "./Navigation.svelte";
-import Footer from "./Footer.svelte";
+import Navigation from "../components/Navigation.svelte";
+import Footer from "../components/Footer.svelte";
 </script>
 
 <div class="page min-h-screen flex flex-col">

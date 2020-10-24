@@ -31,7 +31,7 @@ $: console.log(sticky);
   >
     <div class="flex flex-shrink-0 text-white mr-6">
       <Link to="/">
-        <img src="assets/images/logo.svg" alt="Flatfeestack" />
+        <img src="/assets/images/logo.svg" alt="Flatfeestack" />
       </Link>
     </div>
     <div class="lg:hidden">
