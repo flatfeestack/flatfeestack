@@ -37,7 +37,6 @@ export let url = "";
       {/if}
       <Route path="*" component="{CatchAll}" />
     </div>
-    <Footer />
   </Modal>
 </Router>
 

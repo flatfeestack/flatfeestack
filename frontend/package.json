@@ -44,8 +44,9 @@
     "axios": "^0.20.0",
     "serve": "^11.3.2",
     "svelte-routing": "^1.4.2",
-    "sveltejs-forms": "^2.1.2",
     "svelte-simple-modal": "^0.6.1",
+    "sveltejs-forms": "^2.1.2",
+    "tailwindcss": "^1.9.5",
     "yup": "^0.29.3"
   }
 }

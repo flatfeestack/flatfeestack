@@ -1,0 +1,27 @@
+#example: https://stackoverflow.com/questions/62059183/how-to-execute-shell-scripts
+
+name: publish zip to flatfeestack
+
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  TOKEN: ${{ secrets.WWW_TOKEN }}
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2 #checkout to $GITHUB_WORKSPACE
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - run: 'npm install'
+      - run: 'npm run build'
+      - run: 'cd public; tar cvfz /tmp/upload.tar.gz *'
+      - run: 'curl -H "Authorization: Bearer ${TOKEN}" -X POST -F "upload=@/tmp/upload.tar.gz" https://flatfeestack.io/upload'
