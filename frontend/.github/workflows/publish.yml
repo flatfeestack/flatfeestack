@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: npm install
-      - run: npm run build
-      - run: tar cvfz /tmp/upload.tar.gz public/*
+      - run: 'npm install'
+      - run: 'npm run build'
+      - run: 'tar cvfz /tmp/upload.tar.gz public/*'
       - run: 'curl -H "Authorization: Bearer ${secrets.WWW_TOKEN}" -X POST -F 'upload=@/tmp/upload.tar.gz' https://flatfeestack.io/upload'
