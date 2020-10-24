@@ -1,11 +1,8 @@
 <script>
-import Spacer from "../components/UI/Spacer.svelte";
+import PageLayout from "../components/PageLayout.svelte";
 </script>
 
-<div class="page container">
-  <div class="lead">Score</div>
-  <div class="subtitle">coming soon</div>
-  <Spacer x5 />
-  <Spacer x5 />
-  <Spacer x5 />
-</div>
+<PageLayout>
+  <h1 class="text-primary-500">Score</h1>
+  <h2>coming soon</h2>
+</PageLayout>

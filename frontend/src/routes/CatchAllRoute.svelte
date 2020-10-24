@@ -1,4 +1,8 @@
-<div class="container page">
-  <div class="lead">404</div>
-  <div class="subtitle">The requested ressource could not be found.</div>
-</div>
+<script>
+import PageLayout from "../components/PageLayout.svelte";
+</script>
+
+<PageLayout>
+  <h1 class="text-primary-500">404</h1>
+  <h2>The requested ressource could not be found.</h2>
+</PageLayout>

@@ -74,7 +74,7 @@ module.exports = {
             preprocess: Preprocess({
               scss: true,
               postcss: {
-                plugins: [require("autoprefixer")],
+                plugins: [require("autoprefixer"), require("tailwindcss")],
               },
             }),
           },
@@ -94,7 +94,7 @@ module.exports = {
           {
             loader: "postcss-loader",
             options: {
-              plugins: [require("autoprefixer")],
+              plugins: [require("autoprefixer"), require("tailwindcss")],
             },
           },
           "sass-loader",
