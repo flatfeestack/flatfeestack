@@ -12,6 +12,8 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      env:
+        TOKEN: ${{ secrets.WWW_TOKEN }}
       - uses: actions/checkout@v2 #checkout to $GITHUB_WORKSPACE
       - uses: actions/setup-node@v1
         with:
@@ -19,4 +21,4 @@ jobs:
       - run: 'npm install'
       - run: 'npm run build'
       - run: 'tar cvfz /tmp/upload.tar.gz public/*'
-      - run: 'curl -H "Authorization: Bearer ${secrets.WWW_TOKEN}" -X POST -F "upload=@/tmp/upload.tar.gz" https://flatfeestack.io/upload'
+      - run: 'curl -H "Authorization: Bearer ${TOKEN}" -X POST -F "upload=@/tmp/upload.tar.gz" https://flatfeestack.io/upload'
