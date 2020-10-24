@@ -234,7 +234,7 @@ let svgVisible = true;
     </div>
   </section>
 
-  <section class="mt-20">
+  <section class="mt-20 bg-white">
     <div class="container mx-auto px-3 lg:px-0">
       <div class="text-lg text-center font-light text-gray-600">
         Flatfeestack is supported by:
