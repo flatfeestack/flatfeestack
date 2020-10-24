@@ -1,210 +1,27 @@
 @charset "utf-8";
 
-// https://colorhunt.co/palette/19113
-$primary: #000000;
-$light:#649d66;
-$info: #015F6E;
-$background: #eeeeee;
-$text: #212529;
-$error: #AD1B00;
-$danger: #f6d743;
+@import "tailwindcss/base";
 
-$spacing: 8;
-
-$navbar-height: 80px;
-$footer-height: 100px;
-
-
-
-:root{
-  //colors
-  --primary: #{$primary};
-  --light: #{$light};
-  --text: #{$text};
-  --error: #{$error};
-  --danger: #{$danger};
-  --info: #{$info};
-  //Spacing
-  --spacing-x1: #{$spacing}px;
-  --spacing-x2: #{$spacing*2}px;
-  --spacing-x3: #{$spacing*3}px;
-  --spacing-x4: #{$spacing*4}px;
-  --spacing-x5: #{$spacing*5}px;
-  //misc
-  --navbar-height: #{$navbar-height};
-  --footer-height: #{$footer-height};
+h1,h2,h3,h4,h5{
+  @apply font-raleway
 }
-
-// Mixins
-
-@mixin background-opacity($color, $opacity: 0.3) {
-  background: $color; /* The Fallback */
-  background: rgba($color, $opacity);
+h1{
+  @apply text-5xl font-bold
 }
-
-// Alignment
-.flex{
-  display: flex;
+h2{
+  @apply text-2xl font-semibold
 }
-.flex-1{
-  flex: 1;
-}
-.flex-2{
-  flex: 2
-}
-.justify-center{
-  display: flex;
-  justify-content: center;
-  text-align: center;
-}
-
-.vertical{
-  display: flex;
-  vertical-align: center;
-  text-align: left;
-  align-items: center;
-}
-
-// normalize
 body{
-  padding: 0;
-  font-family: "Roboto";
-  font-weight: 300;
-  font-size: 18px;
+  @apply font-openSans
 }
-a{
-  &:hover{
-    text-decoration: none;
-    color: inherit;
-  }
-}
+
+@import "tailwindcss/components";
+
+@import "tailwindcss/utilities";
 
 .page{
-  min-height: calc(100vh - var(--navbar-height) - var(--footer-height));
-}
-.container{
-  max-width: 1440px;
-  margin: auto;
-  @media(max-width: 1440px) {
-    padding: $spacing * 2px;
-  }
-}
-.section-padding {
-  padding: $spacing * 5px 0;
+  @apply pt-20
 }
 
-.card{
-  padding: $spacing*3px;
-  box-shadow: 2px 2px 15px 2px rgba(0,0,0,.05);
-}
 
-// FORM COMPONETNS
-input{
-  border-radius: 5px;
-  padding: $spacing * 1px;
-  border-width: 2px;
-  border-color: #eee;
-  color: var(--text);
-  min-width: 250px;
-  &:hover{
-    border-color: $light;
-  }
-  &:active, &:focus{
-    outline: none;
-    border-color: $primary;
-  }
-  transition: all ease .1s;
-}
-button{
-  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.15);
-  border-radius: 8px;
-  font-family: "Open Sans", sans-serif;
-  padding: var(--spacing-x1) var(--spacing-x2);
-  border: none;
-  &:hover{
-    color: white;
-    cursor: pointer;
-    background-color: $primary;
 
-  }
-  &:active, &:focus{
-    background-color: $light;
-    color: white;
-    cursor: pointer;
-  }
-  transition: all ease .3s;
-}
-
-label{
-  color: $light;
-  font-weight: 600;
-
-}
-.message{
-  @include background-opacity($error,0.5);
-  color: white;
-  padding: var(--spacing-x1);
-  border-radius: 5px;
-}
-
-// Typography
-.lead{
-  font-size: 64px;
-  color: #212529;
-  font-weight: 400;
-}
-.lead2{
-  font-size: 25px;
-  color: #649D66;
-  letter-spacing: 0.3px;
-  font-weight: 400;
-}
-
-.subtitle{
-  font-size: 25px;
-  color: #649D66;
-  letter-spacing: 0.3px;
-  font-weight: 300;
-}
-.subtitle2{
-  font-size: 24px;
-  color: black;
-  letter-spacing: 0.3px;
-  font-weight: 300;
-}
-.section-title{
-  font-size: 52px;
-  color: #212529;
-}
-
-.vl{
-  display: inline-block;
-  border-left: 1px solid #ccc;
-  margin: 0 10px;
-}
-
-.grey img {
-  filter: grayscale(100%);
-  transform:scale(0.5);
-}
-.grey2 img {
-  filter: grayscale(100%);
-  transform:scale(0.25);
-}
-
-.btn-primary{
-  background: #06623B;
-  color: #FFFFFF;
-}
-
-.btn-base{
-  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.15);
-  border-radius: 8px;
-  font-family: "Open Sans", sans-serif;
-  padding: var(--spacing-x2);
-}
-
-.btn-secondary{
-  background: rgba(248,248,248,0.79);
-  color: var(--primary);
-}
