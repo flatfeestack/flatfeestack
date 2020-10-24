@@ -1,0 +1,22 @@
+name: publish zip to flatfeestack
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2 #checkout to $GITHUB_WORKSPACE
+      - uses: actions/setup-node@v1
+          with:
+            node-version: 12
+      - run: npm run build
+      - run: tar cvfz /tmp/upload.tar.gz public
+      - run: >-
+          curl -H "Authorization: Bearer ${secrets.WWW_TOKEN}" -X POST -F 'upload=@/tmp/upload.tar.gz' https://flatfeestack.io/upload
