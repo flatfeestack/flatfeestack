@@ -1,6 +1,7 @@
-[submodule "auth"]
-	path = auth
-	url = git@github.com:flatfeestack/auth.git
+[submodule "fastauth"]
+	path = fastauth
+	url = git@github.com:flatfeestack/fastauth.git
+	branch = master
 [submodule "analysis-engine"]
 	path = analysis-engine
 	url = git@github.com:flatfeestack/analysis-engine.git
