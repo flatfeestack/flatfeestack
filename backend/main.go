@@ -52,6 +52,7 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
+
 type authMiddlewareKey string
 
 func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
@@ -74,7 +75,7 @@ func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 			}
 
-			sub := fmt.Sprintf("%v",out["sub"])
+			sub := fmt.Sprintf("%v", out["sub"])
 
 			// Fetch user from DB
 			user, userErr := h.userRepo.FindByEmail(sub)
@@ -95,7 +96,7 @@ func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
 				newUser.Email = sub
 				userErr := h.userRepo.Save(&newUser)
 				if userErr != nil {
-					log.Printf("Could not create user %v",userErr)
+					log.Printf("Could not create user %v", userErr)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
@@ -120,7 +121,7 @@ func createConnection() *sql.DB {
 	// Open the connection
 	var dbString string
 	if os.Getenv("ENV") != "local" {
-		dbString = fmt.Sprintf("postgresql://%v:%v@postgres:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"))
+		dbString = fmt.Sprintf("postgresql://%v:%v@db:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"))
 	} else {
 		dbString = "postgresql://postgres:password@localhost:5432/flatfeestack?sslmode=disable"
 	}
