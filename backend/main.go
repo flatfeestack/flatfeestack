@@ -16,33 +16,30 @@ import (
 	"strings"
 )
 
+var (
+	db *sql.DB
+)
+
 // @title Flatfeestack API
 // @version 0.0.1
 // @host localhost:8080
 // @BasePath /
 func main() {
-	db := createConnection()
-
-	userRepo := NewUserRepo(db)
-	repoRepo := NewRepoRepo(db)
-	sponsorEventRepo := NewSponsorEventRepo(db)
-	dailyRepoBalanceRepo := NewDailyRepoBalanceRepo(db)
-
-	h := NewBaseHandler(userRepo, repoRepo, sponsorEventRepo, dailyRepoBalanceRepo)
+	db = createConnection()
 
 	// Routes
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
-	apiRouter.Use(AuthMiddleware(h))
-	apiRouter.HandleFunc("/users/me", h.GetMyUser).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/users/{id}", h.GetUserByID).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/users/{id}/sponsored", h.GetSponsoredRepos).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/users/{id}/sponsored/calculateDaily", h.CalculateDailyRepoBalanceByUser).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/users", h.CreateUser).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/repos", h.CreateRepo).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/repos/{id}", h.GetRepoByID).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/repos/{id}/sponsor", h.SponsorRepo).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/repos/{id}/unsponsor", h.UnsponsorRepo).Methods("POST", "OPTIONS")
+	apiRouter.Use(AuthMiddleware())
+	apiRouter.HandleFunc("/users/me", GetMyUser).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users/{id}", GetUserByID).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users/{id}/sponsored", GetSponsoredRepos).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users/{id}/sponsored/calculateDaily", CalculateDailyRepoBalanceByUser).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/users", CreateUser).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos", CreateRepo).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos/{id}", GetRepoByID).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/repos/{id}/sponsor", SponsorRepo).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos/{id}/unsponsor", UnsponsorRepo).Methods("POST", "OPTIONS")
 	//apiRouter.Use(AuthMiddleware)
 
 	// Swagger
@@ -55,7 +52,7 @@ func main() {
 
 type authMiddlewareKey string
 
-func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
+func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqToken := r.Header.Get("Authorization")
@@ -78,7 +75,7 @@ func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
 			sub := fmt.Sprintf("%v", out["sub"])
 
 			// Fetch user from DB
-			user, userErr := h.userRepo.FindByEmail(sub)
+			user, userErr := FindUserByEmail(sub)
 			if userErr != nil {
 				log.Printf("Could not get user %s, %v\n", userErr, user)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -94,7 +91,7 @@ func AuthMiddleware(h *BaseHandler) func(http.Handler) http.Handler {
 				}
 				newUser.ID = uid.String()
 				newUser.Email = sub
-				userErr := h.userRepo.Save(&newUser)
+				userErr := SaveUser(&newUser)
 				if userErr != nil {
 					log.Printf("Could not create user %v", userErr)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)

@@ -9,23 +9,8 @@ import (
 	"time"
 )
 
-/*
- *	==== USER ====
- */
-
-// UserRepo implements UserRepository
-type UserRepo struct {
-	db *sql.DB
-}
-
-func NewUserRepo(db *sql.DB) *UserRepo {
-	return &UserRepo{
-		db: db,
-	}
-}
-
 // FindByID returns a single user
-func (r *UserRepo) FindByID(ID string) (*User, error) {
+func FindUserByID(ID string) (*User, error) {
 	var user User
 
 	if ID == "" {
@@ -36,7 +21,7 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 	sqlStatement := `SELECT * FROM "user" WHERE id=$1`
 
 	// execute the sql statement
-	row := r.db.QueryRow(sqlStatement, ID)
+	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
 	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
@@ -56,7 +41,7 @@ func (r *UserRepo) FindByID(ID string) (*User, error) {
 }
 
 // FindByID returns a single user
-func (r *UserRepo) FindByEmail(ID string) (*User, error) {
+func FindUserByEmail(ID string) (*User, error) {
 	var user User
 
 	if ID == "" {
@@ -67,7 +52,7 @@ func (r *UserRepo) FindByEmail(ID string) (*User, error) {
 	sqlStatement := `SELECT * FROM "user" WHERE email=$1`
 
 	// execute the sql statement
-	row := r.db.QueryRow(sqlStatement, ID)
+	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
 	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
@@ -87,11 +72,11 @@ func (r *UserRepo) FindByEmail(ID string) (*User, error) {
 }
 
 // Save inserts a user into the database
-func (r *UserRepo) Save(user *User) error {
+func SaveUser(user *User) error {
 	sqlStatement := `INSERT INTO "user" (id, email, "stripe_id", username) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var id string
-	err := r.db.QueryRow(sqlStatement, user.ID, user.Email, user.StripeId, user.Username).Scan(&id)
+	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.StripeId, user.Username).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -103,22 +88,7 @@ func (r *UserRepo) Save(user *User) error {
 	return nil
 }
 
-/*
- *	==== REPO ====
- */
-
-// RepoRepo implements RepoRepository
-type RepoRepo struct {
-	db *sql.DB
-}
-
-func NewRepoRepo(db *sql.DB) *RepoRepo {
-	return &RepoRepo{
-		db: db,
-	}
-}
-
-func (r *RepoRepo) FindByID(ID string) (*Repo, error) {
+func FindRepoByID(ID string) (*Repo, error) {
 	var repo Repo
 
 	if ID == "" {
@@ -129,7 +99,7 @@ func (r *RepoRepo) FindByID(ID string) (*Repo, error) {
 	sqlStatement := `SELECT * FROM "repo" WHERE id=$1`
 
 	// execute the sql statement
-	row := r.db.QueryRow(sqlStatement, ID)
+	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
 	err := row.Scan(&repo.ID, &repo.Name, &repo.Url)
@@ -148,11 +118,11 @@ func (r *RepoRepo) FindByID(ID string) (*Repo, error) {
 	return &repo, err
 }
 
-func (r *RepoRepo) Save(repo *Repo) error {
+func SaveRepo(repo *Repo) error {
 	sqlStatement := `INSERT INTO "repo" (id, url, name) VALUES ($1, $2, $3) RETURNING id`
 
 	var id string
-	err := r.db.QueryRow(sqlStatement, repo.ID, repo.Url, repo.Name).Scan(&id)
+	err := db.QueryRow(sqlStatement, repo.ID, repo.Url, repo.Name).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -164,24 +134,10 @@ func (r *RepoRepo) Save(repo *Repo) error {
 	return nil
 }
 
-/*
- *	==== SPONSOR EVENT ====
- */
-// RepoRepo implements RepoRepository
-type SponsorEventRepo struct {
-	db *sql.DB
-}
-
-func NewSponsorEventRepo(db *sql.DB) *SponsorEventRepo {
-	return &SponsorEventRepo{
-		db: db,
-	}
-}
-
-func (r *SponsorEventRepo) Sponsor(repoID string, uid string) (*SponsorEvent, error) {
+func Sponsor(repoID string, uid string) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
-	err := r.db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
+	err := db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
 
 	if err != nil {
 		log.Println(err)
@@ -193,10 +149,10 @@ func (r *SponsorEventRepo) Sponsor(repoID string, uid string) (*SponsorEvent, er
 	return &event, nil
 }
 
-func (r *SponsorEventRepo) Unsponsor(repoID string, uid string) (*SponsorEvent, error) {
+func Unsponsor(repoID string, uid string) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
-	err := r.db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
+	err := db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
 
 	if err != nil {
 		log.Println(err)
@@ -208,7 +164,7 @@ func (r *SponsorEventRepo) Unsponsor(repoID string, uid string) (*SponsorEvent, 
 	return &event, nil
 }
 
-func (r *SponsorEventRepo) GetSponsoredRepos(uid string) ([]Repo, error) {
+func GetSponsoredReposById(uid string) ([]Repo, error) {
 	var repos []Repo
 	sqlStatement := `SELECT r.* FROM 
 		(SELECT uid, repo_id, max("timestamp") as "timestamp" 
@@ -217,7 +173,7 @@ func (r *SponsorEventRepo) GetSponsoredRepos(uid string) ([]Repo, error) {
 		JOIN sponsor_event s on latest.uid = s.uid AND latest.repo_id = s.repo_id AND latest.timestamp = s."timestamp"
 		JOIN repo r on r.id = s.repo_id
 		WHERE s."type" = 'SPONSOR' AND s.uid = $1`
-	rows, err := r.db.Query(sqlStatement, uid)
+	rows, err := db.Query(sqlStatement, uid)
 
 	if err != nil {
 		log.Println(err)
@@ -238,21 +194,7 @@ func (r *SponsorEventRepo) GetSponsoredRepos(uid string) ([]Repo, error) {
 
 }
 
-/*
- *	==== DAILY REPO BALANCE ====
- */
-// DailyRepoBalanceRepo implements DailyRepoBalanceRepository
-type DailyRepoBalanceRepo struct {
-	db *sql.DB
-}
-
-func NewDailyRepoBalanceRepo(db *sql.DB) *DailyRepoBalanceRepo {
-	return &DailyRepoBalanceRepo{
-		db: db,
-	}
-}
-
-func (r *DailyRepoBalanceRepo) CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) ([]DailyRepoBalance, error) {
+func CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) ([]DailyRepoBalance, error) {
 	var repoBalances []DailyRepoBalance
 	var n = len(sponsoredRepos)
 	query := `INSERT INTO "daily_repo_balance" ("repo_id", "uid", "computed_at", "balance") VALUES`
@@ -271,7 +213,7 @@ func (r *DailyRepoBalanceRepo) CalculateDailyByUser(uid string, sponsoredRepos [
 	}
 	query = query[:len(query)-1] // remove the trailing comma
 	query += ` RETURNING "id", "repo_id", "uid", "computed_at", "balance"`
-	rows, err := r.db.Query(query, values...)
+	rows, err := db.Query(query, values...)
 
 	if err != nil {
 		fmt.Printf("error executing query %v", err)

@@ -9,26 +9,6 @@ import (
 	"net/http"
 )
 
-type BaseHandler struct {
-	userRepo             UserRepository
-	repoRepo             RepoRepository
-	sponsorEventRepo     SponsorEventRepository
-	dailyRepoBalanceRepo DailyRepoBalanceRepository
-}
-
-// NewBaseHandler returns a new BaseHandler
-func NewBaseHandler(userRepo UserRepository,
-	repoRepo RepoRepository,
-	sponsorEventRepo SponsorEventRepository,
-	dailyRepoBalanceRepo DailyRepoBalanceRepository) *BaseHandler {
-	return &BaseHandler{
-		userRepo:             userRepo,
-		repoRepo:             repoRepo,
-		sponsorEventRepo:     sponsorEventRepo,
-		dailyRepoBalanceRepo: dailyRepoBalanceRepo,
-	}
-}
-
 // HttpResponse format
 type HttpResponse struct {
 	Success bool        `json:"success"`
@@ -61,7 +41,7 @@ type CreateUserDTO struct {
 // @Success 200 {object} CreateUserResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/users [post]
-func (h *BaseHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -84,7 +64,7 @@ func (h *BaseHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user.ID = uid.String()
 	// call insert user function and pass the user
-	dbErr := h.userRepo.Save(&user)
+	dbErr := SaveUser(&user)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -116,7 +96,7 @@ type GetUserByIDResponse struct {
 // @Success 200 {object} GetUserByIDResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/users/{id} [get]
-func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func GetUserByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["id"]
@@ -126,7 +106,7 @@ func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	user, err := h.userRepo.FindByID(id)
+	user, err := FindUserByID(id)
 	if err != nil {
 		w.WriteHeader(404)
 		res := NewHttpErrorResponse("Could not write to database")
@@ -150,7 +130,7 @@ func (h *BaseHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} GetUserByIDResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/users/me [get]
-func (h *BaseHandler) GetMyUser(w http.ResponseWriter, r *http.Request) {
+func GetMyUser(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromContext(r)
 	if err != nil {
 		res := NewHttpErrorResponse("Not a valid user")
@@ -187,7 +167,7 @@ type CreateRepoDTO struct {
 // @Success 200 {object} CreateRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos [post]
-func (h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
+func CreateRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -209,7 +189,7 @@ func (h *BaseHandler) CreateRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	repo.ID = uid.String()
 	// call insert user function and pass the user
-	dbErr := h.repoRepo.Save(&repo)
+	dbErr := SaveRepo(&repo)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -240,11 +220,11 @@ type GetRepoByIDResponse struct {
 // @Success 200 {object} GetRepoByIDResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/repos/{id} [get]
-func (h *BaseHandler) GetRepoByID(w http.ResponseWriter, r *http.Request) {
+func GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["id"]
-	repo, err := h.repoRepo.FindByID(id)
+	repo, err := FindRepoByID(id)
 	if err != nil {
 		log.Println(err)
 		//w.WriteHeader(404)
@@ -282,7 +262,7 @@ type SponsorRepoResponse struct {
 // @Success 200 {object} SponsorRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos/{id}/sponsor [post]
-func (h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
+func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -297,7 +277,7 @@ func (h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	event, dbErr := h.sponsorEventRepo.Sponsor(repoId, dto.Uid)
+	event, dbErr := Sponsor(repoId, dto.Uid)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -325,7 +305,7 @@ func (h *BaseHandler) SponsorRepo(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} SponsorRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos/{id}/unsponsor [post]
-func (h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
+func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -340,7 +320,7 @@ func (h *BaseHandler) UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	event, dbErr := h.sponsorEventRepo.Unsponsor(repoId, dto.Uid)
+	event, dbErr := Unsponsor(repoId, dto.Uid)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -372,14 +352,14 @@ type GetSponsoredReposResponse struct {
 // @Success 200 {object} GetSponsoredReposResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/users/{id}/sponsored [get]
-func (h *BaseHandler) GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
+func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	params := mux.Vars(r)
 	uid := params["id"]
-	repos, dbErr := h.sponsorEventRepo.GetSponsoredRepos(uid)
+	repos, dbErr := GetSponsoredReposById(uid)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -411,14 +391,14 @@ type CalculateDailyRepoBalanceByUserResponse struct {
 // @Success 200 {object} CalculateDailyRepoBalanceByUserResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/users/{id}/sponsored/calculateDaily [post]
-func (h *BaseHandler) CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *http.Request) {
+func CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	params := mux.Vars(r)
 	uid := params["id"]
-	sponsoredRepos, dbErr := h.sponsorEventRepo.GetSponsoredRepos(uid)
+	sponsoredRepos, dbErr := GetSponsoredReposById(uid)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -427,7 +407,7 @@ func (h *BaseHandler) CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *
 		return
 	}
 
-	repoBalance, dbErr1 := h.dailyRepoBalanceRepo.CalculateDailyByUser(uid, sponsoredRepos, 100)
+	repoBalance, dbErr1 := CalculateDailyByUser(uid, sponsoredRepos, 100)
 	if dbErr1 != nil {
 		w.WriteHeader(500)
 		res := NewHttpErrorResponse("Could not read from database")
@@ -454,7 +434,7 @@ func IsValidUUID(u string) bool {
 	return err == nil
 }
 
-func getUserFromContext(r *http.Request) (user *User,err error) {
+func getUserFromContext(r *http.Request) (user *User, err error) {
 	ctx := r.Context()
 	user, ok := ctx.Value(authMiddlewareKey("user")).(*User)
 	if !ok {
