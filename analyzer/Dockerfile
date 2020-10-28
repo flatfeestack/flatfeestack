@@ -1,11 +1,16 @@
-FROM golang:1.14
-
-WORKDIR /go/src/app
+FROM golang:1.14-alpine AS builder
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk add make gcc musl-dev
+WORKDIR /app
 COPY . .
-
-RUN go get -d -v ./...
-RUN go install -v ./...
-
+RUN chown -R appuser:appgroup /app
+USER appuser
 RUN make
 
-CMD ["./engine"]
+FROM alpine:3.12
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --from=builder /app/engine ./
+RUN chown -R appuser:appgroup /app
+USER appuser
+ENTRYPOINT ["./engine"]
