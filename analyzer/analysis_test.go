@@ -109,8 +109,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "claude@axlabs.com",
 		},
 		Changes: CommitChange{
-			Addition: 20297,
-			Deletion: 12134,
+			Addition: 15419,
+			Deletion: 7256,
 		},
 		Merges:  11,
 		Commits: 143,
@@ -124,8 +124,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "37138571+claudemiller@users.noreply.github.com",
 		},
 		Changes: CommitChange{
-			Addition: 839,
-			Deletion: 652,
+			Addition: 674,
+			Deletion: 488,
 		},
 		Merges:  5,
 		Commits: 4,
@@ -139,8 +139,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "guil@axlabs.com",
 		},
 		Changes: CommitChange{
-			Addition: 948,
-			Deletion: 398,
+			Addition: 864,
+			Deletion: 315,
 		},
 		Merges:  18,
 		Commits: 0,
@@ -184,8 +184,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "nimmortalz@gmail.com",
 		},
 		Changes: CommitChange{
-			Addition: 3720,
-			Deletion: 1303,
+			Addition: 3433,
+			Deletion: 1016,
 		},
 		Merges:  4,
 		Commits: 7,
@@ -214,8 +214,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "guil@axlabs.com",
 		},
 		Changes: CommitChange{
-			Addition: 39585,
-			Deletion: 14353,
+			Addition: 29253,
+			Deletion: 4021,
 		},
 		Merges:  18,
 		Commits: 188,
@@ -244,8 +244,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "nikita.andrejevs@knowledgeprice.com",
 		},
 		Changes: CommitChange{
-			Addition: 273,
-			Deletion: 55,
+			Addition: 242,
+			Deletion: 24,
 		},
 		Merges:  2,
 		Commits: 0,
@@ -274,8 +274,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 			Email: "claude@axlabs.com",
 		},
 		Changes: CommitChange{
-			Addition: 314,
-			Deletion: 257,
+			Addition: 263,
+			Deletion: 206,
 		},
 		Merges:  0,
 		Commits: 1,
@@ -353,8 +353,8 @@ func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
 			Email: "guil@axlabs.com",
 		},
 		Changes: CommitChange{
-			Addition: 3634,
-			Deletion: 457,
+			Addition: 3527,
+			Deletion: 350,
 		},
 		Merges:  0,
 		Commits: 34,
@@ -476,7 +476,7 @@ func TestWeightContributions(t *testing.T) {
 			Name:  "Claude Muller",
 			Email: "claude@axlabs.com",
 		},
-		Weight: 0.6453751874866082,
+		Weight: 0.6373853058114897,
 	}
 	expectedOutput[Contributor{
 		Name:  "Claude Muller",
@@ -486,7 +486,7 @@ func TestWeightContributions(t *testing.T) {
 			Name:  "Claude Muller",
 			Email: "37138571+claudemiller@users.noreply.github.com",
 		},
-		Weight: 0.03514431962342826,
+		Weight: 0.03270573643832697,
 	}
 	expectedOutput[Contributor{
 		Name:  "Guil. Sperb Machado",
@@ -496,7 +496,7 @@ func TestWeightContributions(t *testing.T) {
 			Name:  "Guil. Sperb Machado",
 			Email: "guil@axlabs.com",
 		},
-		Weight: 0.007351913638821717,
+		Weight: 0.008049671622095021,
 	}
 	expectedOutput[Contributor{
 		Name:  "Nikita Andrejevs",
@@ -506,7 +506,7 @@ func TestWeightContributions(t *testing.T) {
 			Name:  "Nikita Andrejevs",
 			Email: "nimmortalz@gmail.com",
 		},
-		Weight: 0.09139425415191431,
+		Weight: 0.08043538273343287,
 	}
 	expectedOutput[Contributor{
 		Name:  "Guilherme Sperb Machado",
@@ -516,7 +516,7 @@ func TestWeightContributions(t *testing.T) {
 			Name:  "Guilherme Sperb Machado",
 			Email: "guil@axlabs.com",
 		},
-		Weight: 0.22073432509922764,
+		Weight: 0.2414239033946555,
 	}
 
 	sumOfScores := 0.0
@@ -792,7 +792,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 			Name:  "Claude Muller",
 			Email: "claude@axlabs.com",
 		},
-		Weight: 0.6234323728996527,
+		Weight: 0.5978468069306204,
 	}
 	expectedOutput[Contributor{
 		Name:  "Claude Muller",
@@ -802,7 +802,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 			Name:  "Claude Muller",
 			Email: "37138571+claudemiller@users.noreply.github.com",
 		},
-		Weight: 0.028603172335762865,
+		Weight: 0.02151927923515667,
 	}
 	expectedOutput[Contributor{
 		Name:  "Guil. Sperb Machado",
@@ -812,7 +812,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 			Name:  "Guil. Sperb Machado",
 			Email: "guil@axlabs.com",
 		},
-		Weight: 0.0057419793144027126,
+		Weight: 0.005331813033762895,
 	}
 	expectedOutput[Contributor{
 		Name:  "Nikita Andrejevs",
@@ -822,7 +822,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 			Name:  "Nikita Andrejevs",
 			Email: "nimmortalz@gmail.com",
 		},
-		Weight: 0.10244416390659761,
+		Weight: 0.098600118128269,
 	}
 	expectedOutput[Contributor{
 		Name:  "Guilherme Sperb Machado",
@@ -832,7 +832,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 			Name:  "Guilherme Sperb Machado",
 			Email: "guil@axlabs.com",
 		},
-		Weight: 0.2397783115435842,
+		Weight: 0.27670198267219104,
 	}
 
 	sumOfScores := 0.0
@@ -847,7 +847,7 @@ func TestWeightContributionsWithPlatformInformation(t *testing.T) {
 		_, found := outputScore[k]
 		assert.Equal(t, true, found)
 	}
-	assert.Equal(t, 1.0, sumOfScores)
+	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
