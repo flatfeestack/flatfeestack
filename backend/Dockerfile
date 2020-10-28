@@ -1,10 +1,16 @@
-FROM golang:1.14
-
-ENV GOPATH /go
-
-COPY . /go/src/api
-WORKDIR /go/src/api
-
+FROM golang:1.14-alpine AS builder
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk add make gcc musl-dev
+WORKDIR /app
+COPY . .
+RUN chown -R appuser:appgroup /app
+USER appuser
 RUN make
 
-CMD ["./api"]
+FROM alpine:3.12
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --from=builder /app/api ./
+RUN chown -R appuser:appgroup /app
+USER appuser
+ENTRYPOINT ["./api"]
