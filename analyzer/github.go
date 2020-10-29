@@ -21,6 +21,7 @@ type GithubClientWrapperClient struct {
 	GitHubURL string
 }
 
+// getGithubPlatformInformation collects ALL platform information (issues & pull requests) from github
 func getGithubPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 
 	// Check if repository is on Github
@@ -48,6 +49,7 @@ func getGithubPlatformInformation(src string, since time.Time, until time.Time) 
 	return repositoryIssues, repositoryPullRequests, nil
 }
 
+// getGithubRepositoryIssues fetches ALL issues from github
 func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLIssue, error) {
 	var timeZeroValue time.Time
 
@@ -129,6 +131,7 @@ func getGithubRepositoryIssues(repositoryOwner string, repositoryName string, si
 	return response.Data.Repository.Issues.Nodes, nil
 }
 
+// fetchPaginationIssues fetch missing issues repeatedly until github indicates no further pages
 func fetchPaginationIssues(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int, sinceFilterBy string) (RequestGQLRepositoryInformation, error) {
 	issuesAfter := ""
 
@@ -182,6 +185,7 @@ func fetchPaginationIssues(response RequestGQLRepositoryInformation, repositoryO
 	return response, nil
 }
 
+// fetchPaginationIssues fetch missing issue comments repeatedly until github indicates no further pages
 func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	issueCommentsAfter := ""
 	var issueToRefech int
@@ -233,6 +237,7 @@ func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repo
 	return response, nil
 }
 
+// getGithubRepositoryPullRequests fetches ALL pull requests from github
 func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName string, since time.Time, until time.Time) ([]GQLPullRequest, error) {
 	pageLength := 100
 
@@ -304,6 +309,7 @@ func getGithubRepositoryPullRequests(repositoryOwner string, repositoryName stri
 	return response.Data.Repository.PullRequests.Nodes, nil
 }
 
+// fetchPaginationPullRequests fetch missing pull requests repeatedly until github indicates no further pages
 func fetchPaginationPullRequests(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	pullRequestsAfter := ""
 
@@ -358,6 +364,7 @@ func fetchPaginationPullRequests(response RequestGQLRepositoryInformation, repos
 	return response, nil
 }
 
+// fetchPaginationIssues fetch missing pull request reviews repeatedly until github indicates no further pages
 func fetchPaginationPullRequestReviews(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	pullRequestReviewsAfter := ""
 	var pullRequestToRefech int
@@ -410,6 +417,7 @@ func fetchPaginationPullRequestReviews(response RequestGQLRepositoryInformation,
 	return response, nil
 }
 
+// Query abstracts the requests to the github graphql api
 func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	jsonData := map[string]string{
 		"query": query,
@@ -427,6 +435,7 @@ func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
+// getOwnerAndNameOfGithubUrl parses the src string to extract the owner and name of the repository
 func getOwnerAndNameOfGithubUrl(src string) (string, string, error) {
 	partAfterDomain := strings.Split(src[0:len(src)-4], "github.com/")
 	if len(partAfterDomain) < 2 {
@@ -439,6 +448,7 @@ func getOwnerAndNameOfGithubUrl(src string) (string, string, error) {
 	return ownerAndName[0], ownerAndName[1], nil
 }
 
+// filterIssueCommentsByDate filters the issue comments so that only they between since and until are kept
 func filterIssueCommentsByDate(comments []GQLIssueComment, since time.Time, until time.Time) []GQLIssueComment {
 	var timeZeroValue time.Time
 	var filteredIssueComments []GQLIssueComment
@@ -450,6 +460,7 @@ func filterIssueCommentsByDate(comments []GQLIssueComment, since time.Time, unti
 	return filteredIssueComments
 }
 
+// filterIssuesByDate filters the issues so that only they between since and until are kept
 func filterIssuesByDate(issueEdges []GQLIssue, since time.Time, until time.Time) []GQLIssue {
 	var timeZeroValue time.Time
 	var filteredIssues []GQLIssue
@@ -461,6 +472,7 @@ func filterIssuesByDate(issueEdges []GQLIssue, since time.Time, until time.Time)
 	return filteredIssues
 }
 
+// filterPullRequestsByDate filters the pull requests so that only they between since and until are kept
 func filterPullRequestsByDate(pullRequestEdges []GQLPullRequest, since time.Time, until time.Time) []GQLPullRequest {
 	var timeZeroValue time.Time
 	var filteredPullRequests []GQLPullRequest
@@ -472,6 +484,7 @@ func filterPullRequestsByDate(pullRequestEdges []GQLPullRequest, since time.Time
 	return filteredPullRequests
 }
 
+// filterPullRequestReviewsByDate filters the pull requests reviews so that only they between since and until are kept
 func filterPullRequestReviewsByDate(reviews []GQLPullRequestReview, since time.Time, until time.Time) []GQLPullRequestReview {
 	var timeZeroValue time.Time
 	var filteredPullRequestReviews []GQLPullRequestReview
@@ -483,6 +496,7 @@ func filterPullRequestReviewsByDate(reviews []GQLPullRequestReview, since time.T
 	return filteredPullRequestReviews
 }
 
+// getGithubUsernameFromGitEmail check whether there exists a github user assigned to a commit that was created by a git user with this email
 func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string, email string) (string, error) {
 	query := fmt.Sprintf(
 		`{
@@ -522,6 +536,7 @@ func getGithubUsernameFromGitEmail(repositoryOwner string, repositoryName string
 	return response.Data.Repository.Ref.Target.History.Nodes[0].Author.User.Login, nil
 }
 
+// getGithubPlatformInformationFromUser extract the platform information for a specific user from the collected platform metrics
 func getGithubPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests []GQLPullRequest, userEmail string) (PlatformUserInformation, error) {
 
 	repoOwner, repoName, err := getOwnerAndNameOfGithubUrl(src)
@@ -585,6 +600,7 @@ func getGithubPlatformInformationFromUser(src string, issues []GQLIssue, pullReq
 	}, nil
 }
 
+// getPullRequestReviewStateArray creates an array containing all the events happened in the reviewing process on a pull request
 func getPullRequestReviewStateArray(pullRequest GQLPullRequest) []string {
 	var reviews []string
 	for i := range pullRequest.Reviews.Nodes {

@@ -21,6 +21,7 @@ type PlatformInformationChannel struct {
 	Reason             error
 }
 
+// getAllContributions controls the whole process of the /contribution endpoint
 func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -169,6 +170,7 @@ func getAllContributions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getContributionWeights controls the whole process of the /weights endpoint
 func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -335,6 +337,7 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getRepositoryFromRequest extracts the repository from the route parameters
 func getRepositoryFromRequest(r *http.Request) (string, error) {
 	repositoryUrl := r.URL.Query()["repositoryUrl"]
 	if len(repositoryUrl) < 1 {
@@ -343,7 +346,7 @@ func getRepositoryFromRequest(r *http.Request) (string, error) {
 	return repositoryUrl[0], nil
 }
 
-// returns the time range in the format since, until, error from the request with time in rfc3339 format
+// getTimeRange returns the time range in the format since, until, error from the request with time in rfc3339 format
 func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
 	var err error
 
@@ -370,6 +373,7 @@ func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
 	return commitsSince, commitsUntil, nil
 }
 
+// makeHttpStatusErr writes an http status error with a specific message
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
 	w.WriteHeader(httpStatusError)
 	_, fmtErr := fmt.Fprintf(w, errString)
@@ -378,11 +382,13 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 	}
 }
 
+// getShouldAnalyzePlatformInformation extracts whether platform information should be considered from the route parameters
 func getShouldAnalyzePlatformInformation(r *http.Request) bool {
 	platformInformationUrlParam := r.URL.Query()["platformInformation"]
 	return len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true"
 }
 
+// getBranchToAnalyze extracts from the route parameters and env variables the correct branch to analyze
 func getBranchToAnalyze(r *http.Request) string {
 	branchUrlParam := r.URL.Query()["branch"]
 	// check whether the param was set. If it was return this branch name, else return the default one
@@ -393,6 +399,7 @@ func getBranchToAnalyze(r *http.Request) string {
 	}
 }
 
+// convertTimestampStringToTime is a timestamp converter to the time interpretation of go
 func convertTimestampStringToTime(rfc3339time string) (time.Time, error) {
 	commitsSinceTime, err := time.Parse(time.RFC3339, rfc3339time)
 	if err != nil {

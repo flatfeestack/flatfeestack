@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+// CloneOrUpdateRepository clones the repository if it is not already on the disk, else update it
 func CloneOrUpdateRepository(src string, branch string) (*git.Repository, error) {
 	// check if the repository can successfully be updated
 	repo, err := UpdateRepository(src, branch)
@@ -19,6 +20,7 @@ func CloneOrUpdateRepository(src string, branch string) (*git.Repository, error)
 	return repo, nil
 }
 
+// CloneRepository clones the repository as a single branch repository with the desired branch
 func CloneRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
 	// clone just one branch
@@ -30,6 +32,7 @@ func CloneRepository(src string, branch string) (*git.Repository, error) {
 	})
 }
 
+// CloneRepository updates the repository and checks out the desired branch
 func UpdateRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
 	repo, err := git.PlainOpen(os.Getenv("GO_GIT_BASE_PATH") + "/" + folderName)

@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// getPlatformInformation distributes the platform collection request to the correct platform handler if the platform is supported
 func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQLIssue, []GQLPullRequest, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {
@@ -20,6 +21,7 @@ func getPlatformInformation(src string, since time.Time, until time.Time) ([]GQL
 	}
 }
 
+// getPlatformInformationFromUser distributes the platform information mapping request to the correct platform handler if the platform is supported
 func getPlatformInformationFromUser(src string, issues []GQLIssue, pullRequests []GQLPullRequest, userEmail string) (PlatformUserInformation, error) {
 	// Check if repository is on Github
 	if strings.Contains(src, "github.com") {

@@ -12,6 +12,8 @@ type ContributionChannel struct {
 	Reason error
 }
 
+
+// analyzeRepositoryFromString manages the whole analysis process (opens the repository and initialized the analysis)
 func analyzeRepositoryFromString(src string, since time.Time, until time.Time, branch string) (map[Contributor]Contribution, error) {
 	cloneUpdateStart := time.Now()
 	repo, err := CloneOrUpdateRepository(src, branch)
@@ -24,6 +26,7 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 	return analyzeRepositoryFromRepository(repo, since, until)
 }
 
+// analyzeRepositoryFromRepository uses go-git to extract the metrics from the opened repository
 func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, until time.Time) (map[Contributor]Contribution, error) {
 	authorMap := make(map[Contributor]Contribution)
 	contributionChannel := make(chan ContributionChannel)
@@ -149,6 +152,7 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 	return authorMap, nil
 }
 
+// weightContributions calculates the scores of the contributors by weighting the collected metrics (repository)
 func weightContributions(contributions map[Contributor]Contribution) (map[Contributor]FlatFeeWeight, error) {
 	weightContributionsStart := time.Now()
 
@@ -176,6 +180,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	totalAmountOfAuthors := len(authors)
 
 	for _, author := range authors {
+		// calculation of changes category
 		authorChangesWeighted := float64(contributions[author].Changes.Addition)*additionWeight + float64(contributions[author].Changes.Deletion)*deletionWeight
 		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
 		var changesPercentage float64
@@ -185,6 +190,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 			changesPercentage = authorChangesWeighted / totalChangesWeighted
 		}
 
+		// calculation of git history category
 		authorGitHistoryWeighted := float64(contributions[author].Merges)*mergeWeight + float64(contributions[author].Commits)*commitWeight
 		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
 		var gitHistoryPercentage float64
@@ -205,6 +211,7 @@ func weightContributions(contributions map[Contributor]Contribution) (map[Contri
 	return authorMap, nil
 }
 
+// weightContributionsWithPlatformInformation calculates the scores of the contributors by weighting the collected metrics (repository & platform info)
 func weightContributionsWithPlatformInformation(contributions map[Contributor]ContributionWithPlatformInformation) (map[Contributor]FlatFeeWeight, error) {
 	weightContributionsStart := time.Now()
 
@@ -245,6 +252,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	totalAmountOfAuthors := len(authors)
 
 	for _, author := range authors {
+		// calculation of changes category
 		authorChangesWeighted := float64(contributions[author].GitInformation.Changes.Addition)*additionWeight + float64(contributions[author].GitInformation.Changes.Deletion)*deletionWeight
 		totalChangesWeighted := float64(totalChanges.Addition)*additionWeight + float64(totalChanges.Deletion)*deletionWeight
 		var changesPercentage float64
@@ -254,6 +262,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 			changesPercentage = authorChangesWeighted / totalChangesWeighted
 		}
 
+		// calculation of git history category
 		authorGitHistoryWeighted := float64(contributions[author].GitInformation.Merges)*mergeWeight + float64(contributions[author].GitInformation.Commits)*commitWeight
 		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
 		var gitHistoryPercentage float64
@@ -263,6 +272,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 			gitHistoryPercentage = authorGitHistoryWeighted / totalGitHistoryWeighted
 		}
 
+		// calculation of issues category
 		authorIssuesWeighted := float64(len(contributions[author].PlatformInformation.IssueInformation.Author))*issueWeight + float64(getSumOfCommentsOfIssues(contributions[author].PlatformInformation.IssueInformation.Author))*issueCommentsWeight + float64(contributions[author].PlatformInformation.IssueInformation.Commenter)*issueCommenterWeight
 		totalIssuesWeighted := float64(totalIssues)*issueWeight + float64(totalComments)*issueCommentsWeight + float64(totalCommenter)*issueCommenterWeight
 		var issuesPercentage float64
@@ -272,6 +282,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 			issuesPercentage = authorIssuesWeighted / totalIssuesWeighted
 		}
 
+		// calculation of pull requests category
 		authorPullRequestsWeighted := getAuthorPullRequestValue(contributions[author].PlatformInformation.PullRequestInformation.Author)*pullRequestAuthorWeight + float64(contributions[author].PlatformInformation.PullRequestInformation.Reviewer)*pullRequestReviewerWeight
 		totalPullRequestsWeighted := totalPullRequestsValue*pullRequestAuthorWeight + float64(totalPullRequestsReviews)*pullRequestReviewerWeight
 		var pullRequestPercentage float64
@@ -292,6 +303,7 @@ func weightContributionsWithPlatformInformation(contributions map[Contributor]Co
 	return authorMap, nil
 }
 
+// getSumOfCommentsOfIssues determines the total amount of issue comments on all issues
 func getSumOfCommentsOfIssues(issues []int) int {
 	totalComments := 0
 	for _, i := range issues {
@@ -300,6 +312,7 @@ func getSumOfCommentsOfIssues(issues []int) int {
 	return totalComments
 }
 
+// getAuthorPullRequestValue determines the total value of the pull requests
 func getAuthorPullRequestValue(pullRequests []PullRequestInformation) float64 {
 	totalScore := 0.0
 
