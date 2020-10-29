@@ -24,7 +24,7 @@ func FindUserByID(ID string) (*User, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -55,7 +55,7 @@ func FindUserByEmail(ID string) (*User, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username)
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -73,10 +73,10 @@ func FindUserByEmail(ID string) (*User, error) {
 
 // Save inserts a user into the database
 func SaveUser(user *User) error {
-	sqlStatement := `INSERT INTO "user" (id, email, "stripe_id", username) VALUES ($1, $2, $3, $4) RETURNING id`
+	sqlStatement := `INSERT INTO "user" (id, email, username) VALUES ($1, $2, $3) RETURNING id`
 
 	var id string
-	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.StripeId, user.Username).Scan(&id)
+	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -85,6 +85,20 @@ func SaveUser(user *User) error {
 
 	fmt.Printf("Inserted a single record %v", id)
 
+	return nil
+}
+
+func UpdateUser(user *User) error{
+	sqlStatement := `UPDATE "user" SET (email, username, stripe_id, subscription ) = ($2, $3, $4, $5) 
+						WHERE id=$1 RETURNING id`
+
+	var id string
+	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username, user.StripeId, user.Subscription).Scan(&id)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	return nil
 }
 

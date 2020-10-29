@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/stripe/stripe-go/v72"
 	"log"
 	"net/http"
 )
@@ -26,7 +28,7 @@ func NewHttpErrorResponse(message string) HttpResponse {
 
 type CreateUserResponse struct {
 	HttpResponse
-	Data User `json:"data,omitempty"`
+	Data UserDTO `json:"data,omitempty"`
 }
 type CreateUserDTO struct {
 	Email    string `json:"email" example:"info@flatfeestack"`
@@ -84,7 +86,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 type GetUserByIDResponse struct {
 	HttpResponse
-	Data User `json:"data,omitempty"`
+	Data UserDTO `json:"data,omitempty"`
 }
 
 // @Summary Get User by ID
@@ -133,6 +135,7 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 func GetMyUser(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromContext(r)
 	if err != nil {
+		w.WriteHeader(404)
 		res := NewHttpErrorResponse("Not a valid user")
 		_ = json.NewEncoder(w).Encode(res)
 		return
@@ -424,6 +427,68 @@ func CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *http.Request) {
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
+/*
+	==== Payment
+ */
+
+type PostSubscriptionBody struct {
+	Plan string `json:"plan"`
+	PaymentMethod string `json:"paymentMethod"`
+}
+
+type PostSubscriptionResponse struct {
+	HttpResponse
+	Data stripe.Subscription `json:"data,omitempty"`
+}
+
+// @Summary Create a subscription
+// @Tags Repos
+// @Param body body PostSubscriptionBody true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} interface{}
+// @Failure 400 {object} HttpResponse
+// @Router /api/payments/subscriptions [post]
+func PostSubscription(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	var body PostSubscriptionBody
+	jsonErr := json.NewDecoder(r.Body).Decode(&body)
+	if jsonErr != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Unable to decode the request body.")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	s, err := CreateSubscription(*user, body.Plan, body.PaymentMethod)
+	if err != nil {
+		// Make error more specifix
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Something went wrong")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data:    s,
+		Message: "Created subscription",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
 
 /*
  *	==== Helper ====
@@ -438,7 +503,8 @@ func getUserFromContext(r *http.Request) (user *User, err error) {
 	ctx := r.Context()
 	user, ok := ctx.Value(authMiddlewareKey("user")).(*User)
 	if !ok {
-		return user, errors.New("could not get usre")
+		fmt.Printf("Could not get user from token %v", ok)
+		return user, errors.New("could not get user")
 	}
 	return user, nil
 }

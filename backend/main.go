@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/stripe/stripe-go/v72"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"io/ioutil"
@@ -15,10 +16,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/joho/godotenv"
 )
 
 var (
 	db *sql.DB
+	host string
 )
 
 // @title Flatfeestack API
@@ -26,6 +29,18 @@ var (
 // @host localhost:8080
 // @BasePath /
 func main() {
+	host = "db"
+	if os.Getenv("ENV") == "local" {
+		//if run locally get environment file from above docker config file
+		err := godotenv.Load("../.env")
+		if err!=nil{
+			log.Fatalf("could not find env file. Please add an .env file if you want to run it without docker.",err)
+		}
+		host = "localhost"
+	}
+
+	stripe.Key = os.Getenv("STRIPE_SECRET")
+
 	db = createConnection()
 	initDbErr := initDB()
 	if initDbErr != nil {
@@ -45,13 +60,13 @@ func main() {
 	apiRouter.HandleFunc("/repos/{id}", GetRepoByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/sponsor", SponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", UnsponsorRepo).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/payments/subscriptions", PostSubscription).Methods("POST", "OPTIONS")
 	//apiRouter.Use(AuthMiddleware)
 
 	// Swagger
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
 	fmt.Println("Starting server on the port 8080...")
-
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
@@ -86,6 +101,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			// User needs to be created
 			if user.ID == "" {
 				log.Printf("need to create a user")
 				var newUser User
@@ -103,7 +119,15 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 					return
 				}
 				log.Printf("user created")
-				user = &newUser
+
+				// Create Stripe user
+				userWithStripe, stripeErr := CreateStripeCustomer(newUser)
+				if stripeErr != nil {
+					log.Printf("Could not create user in stripe %v", stripeErr)
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				user = userWithStripe
 			}
 
 			if user.ID == "" {
@@ -122,11 +146,8 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 func createConnection() *sql.DB {
 	// Open the connection
 	var dbString string
-	if os.Getenv("ENV") != "local" {
-		dbString = fmt.Sprintf("postgresql://%v:%v@db:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"))
-	} else {
-		dbString = "postgresql://postgres:password@localhost:5432/flatfeestack?sslmode=disable"
-	}
+
+	dbString = fmt.Sprintf("postgresql://%v:%v@%v:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), host, os.Getenv("POSTGRES_DB"))
 	db, err := sql.Open("postgres", dbString)
 
 	if err != nil {

@@ -180,13 +180,6 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    create unique index user_username_uindex
-    on "user" (username);
-EXCEPTION
-    WHEN duplicate_table THEN null;
-END $$;
-
-DO $$ BEGIN
     create unique index gitemail_email_uindex
     on git_email (email);
 EXCEPTION

@@ -1,19 +1,48 @@
 package main
 
-import "time"
+import (
+	"database/sql"
+	"time"
+	"encoding/json"
+
+)
+
+// NullString is an alias for sql.NullString data type
+type NullString struct {
+	sql.NullString
+}
+
+// MarshalJSON for NullString
+func (ns *NullString) MarshalJSON() ([]byte, error) {
+	if !ns.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(ns.String)
+}
 
 // User schema of the user table
 type User struct {
 	ID       string `json:"id"`
+	StripeId NullString `json:"-"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Subscription NullString `json:"subscription"`
+}
+
+// Swaggo does not support sql.Nullstring
+type UserDTO struct {
+	ID       string `json:"id"`
 	StripeId string `json:"-"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
+	Subscription string `json:"subscription"`
 }
 
 type UserRepository interface {
 	FindByID(ID string) (*User, error)
 	FindByEmail(email string) (*User, error)
 	Save(user *User) error
+	UpdateUser(user *User) (*User, error)
 }
 
 type Repo struct {
