@@ -241,7 +241,7 @@ let svgVisible = true;
       </div>
       <div class="flex flex-wrap">
         <a
-          href="https://axlabs.io"
+          href="https://axlabs.com"
           class="w-full md:w-1/3 flex justify-center grey"
         ><img
             class="object-contain w-full h-full"
