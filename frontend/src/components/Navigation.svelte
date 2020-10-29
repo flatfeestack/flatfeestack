@@ -64,7 +64,7 @@ $: console.log(sticky);
           <div class="lg:px-3 nav-item">Score</div>
         </Link>
 
-        {#if user}
+        {#if $user}
           <Link to="/dashboard">
             <div class="nav-item">Dashboard</div>
           </Link>

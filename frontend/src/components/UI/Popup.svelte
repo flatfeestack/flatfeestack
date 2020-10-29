@@ -32,7 +32,7 @@ const sendEmail = async () => {
   <div>&nbsp;</div>
   <div class="flex">
     <input
-      class="w-2/3 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      class="w-2/3 input"
       bind:value="{email}"
       placeholder="E-Mail"
     />&nbsp;

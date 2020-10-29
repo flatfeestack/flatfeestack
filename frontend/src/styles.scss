@@ -23,5 +23,12 @@ body{
   @apply pt-20
 }
 
+.input{
+  @apply shadow appearance-none rounded w-full py-2 px-3 text-gray-700 leading-tight transition-all duration-200 border-2 border-gray-200;
+}
+
+.input:focus{
+  @apply outline-none border-primary-400 ;
+}
 
 

@@ -40,5 +40,9 @@ export const API = {
     user: {
       get: () => apiInstance.get(`/users/me`),
     },
+    payments: {
+      createSubscription: (plan: string, paymentMethod: string) =>
+        apiInstance.post("/payments/subscriptions", { plan, paymentMethod }),
+    },
   },
 };

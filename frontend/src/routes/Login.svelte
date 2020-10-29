@@ -1,10 +1,16 @@
-<script lang="ts">
+<style>
+:global(.sveltejs-forms) {
+  @apply w-2/3 mx-auto py-10;
+}
+</style>
+
+<script>
 import { Form, Input } from "sveltejs-forms";
 import { Link } from "svelte-routing";
 import * as yup from "yup";
-import Spacer from "../components/UI/Spacer.svelte";
 import { navigate } from "svelte-routing";
 import { login } from "../store/authService";
+import PageLayout from "../layout/PageLayout.svelte";
 
 const schema = yup.object().shape({
   //TOOD: add validation again
@@ -32,31 +38,48 @@ async function handleSubmit({
 function handleReset() {
   console.log("reset");
 }
+
+let isSubmitting = false;
 </script>
 
-<div class="page container">
-  <div class="lead">Login</div>
+<PageLayout>
+  <h1 class="text-primary-500">Login</h1>
   <div class="subtitle">
     Don't have an account already?
-    <Link to="signup">Sign up</Link>
+    <span class="text-secondary-500">
+      <Link to="signup">Sign up</Link>
+    </span>
   </div>
-  <Spacer x5 />
-  <div class="flex justify-center">
-    <div class="card">
-      <Form
-        schema="{schema}"
-        on:submit="{handleSubmit}"
-        on:reset="{handleReset}"
-        let:isSubmitting
-        let:isValid
-      >
-        <label for="email-input">Email </label>
-        <Input id="email-input" name="email" type="text" />
-        <Spacer x2 />
-        <label for="password-input">Password </label>
-        <Input id="password-input" name="password" type="password" />
-        <button type="submit" disabled="{isSubmitting}">Sign in</button>
-      </Form>
-    </div>
+  <div class="bg-white shadow-xl flex mx-auto w-1/3">
+    <Form
+      schema="{schema}"
+      on:submit="{handleSubmit}"
+      on:reset="{handleReset}"
+      let:isSubmitting
+      let:isValid
+    >
+      <label
+        for="email-input"
+        class="block text-grey-darker text-sm font-bold mb-2 w-full"
+      >Email
+      </label>
+      <Input id="email-input" name="email" type="text" class="input mb-5" />
+      <label
+        for="password-input"
+        class="block text-grey-darker text-sm font-bold mb-2 w-full"
+      >Password
+      </label>
+      <Input
+        id="password-input"
+        name="password"
+        type="password"
+        class="input w-100"
+      />
+      <button
+        class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4"
+        disabled="{isSubmitting}"
+        type="submit"
+      >Sign in</button>
+    </Form>
   </div>
-</div>
+</PageLayout>

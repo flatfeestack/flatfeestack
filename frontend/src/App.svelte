@@ -10,7 +10,7 @@ import Dashboard from "./routes/Dashboard/Dashboard.svelte";
 import Navigation from "./components/Navigation.svelte";
 import Footer from "./components/Footer.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
-import { user } from "./store/auth.ts";
+import { loading, user } from "./store/auth.ts";
 import { onMount } from "svelte";
 import { tryToAuthenticate } from "./store/authService";
 import Modal from "svelte-simple-modal";
@@ -19,6 +19,7 @@ import Sponsoring from "./routes/Dashboard/Sponsoring.svelte";
 import Income from "./routes/Dashboard/Income.svelte";
 import Settings from "./routes/Dashboard/Settings.svelte";
 import Profile from "./routes/Dashboard/Profile.svelte";
+import Redirect from "./helpers/Redirect.svelte";
 
 onMount(() => tryToAuthenticate());
 

@@ -131,8 +131,7 @@ module.exports = {
         pathRewrite: { "^/auth": "" },
       },
       "/api": {
-        target: "http://localhost:8081",
-        //pathRewrite: { "^/api": "" },
+        target: "http://localhost:8080",
       },
     },
   },
