@@ -19,14 +19,12 @@ libraries [gorilla/mux](https://github.com/gorilla/mux/) and [go-git/go-git](htt
 ## Installation
 
 1. Clone the repository into your GOPATH (e.g. src/github.com/flatfeestack/analysis-engine)
-2. Get the dependencies with `go get`
+2. Get the dependencies with `go install`
 
 ## Usage
 
-Run the server:
-```
-go run github.com/flatfeestack/analysis-engine
-```
+Build a binary using `go build` and execute it.  
+
 ### API
 
 The project is configured that way, that it runs the server at port 8080 of localhost. 

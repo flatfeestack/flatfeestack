@@ -90,7 +90,7 @@ func analyzeRepositoryFromRepository(repo *git.Repository, since time.Time, unti
 					Deletion: 0,
 				}
 
-				// only count the lines if its not a merge
+				// count the lines if its not a merge, otherwise use a factor
 				if merge == 0 {
 					for index := range stats {
 						changes.Addition += stats[index].Addition
