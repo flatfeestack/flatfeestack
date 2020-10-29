@@ -1,13 +1,21 @@
-create type userbalanceevent as enum ('PAY_USER', 'PAY_REPO');
+DO $$ BEGIN
+    create type userbalanceevent as enum ('PAY_USER', 'PAY_REPO');
+    alter type userbalanceevent owner to postgres;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-alter type userbalanceevent owner to postgres;
+DO $$ BEGIN
+    create type sponsorevent as enum ('SPONSOR', 'UNSPONSOR');
+    alter type sponsorevent owner to postgres;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-create type sponsorevent as enum ('SPONSOR', 'UNSPONSOR');
-
-alter type sponsorevent owner to postgres;
 
 
-create table "user"
+
+CREATE TABLE IF NOT EXISTS "user"
 (
     id uuid not null
         constraint users_pkey
@@ -19,13 +27,9 @@ create table "user"
 
 alter table "user" owner to postgres;
 
-create unique index users_email_uindex
-    on "user" (email);
 
-create unique index user_username_uindex
-    on "user" (username);
 
-create table git_email
+CREATE TABLE IF NOT EXISTS git_email
 (
     email varchar(255) not null,
     uid uuid
@@ -35,10 +39,9 @@ create table git_email
 
 alter table git_email owner to postgres;
 
-create unique index gitemail_email_uindex
-    on git_email (email);
 
-create table pay_out_address
+
+CREATE TABLE IF NOT EXISTS pay_out_address
 (
     id serial not null
         constraint payoutaddress_pk
@@ -52,7 +55,7 @@ create table pay_out_address
 
 alter table pay_out_address owner to postgres;
 
-create table repo
+CREATE TABLE IF NOT EXISTS repo
 (
     id uuid not null
         constraint repo_pk
@@ -63,10 +66,8 @@ create table repo
 
 alter table repo owner to postgres;
 
-create unique index repo_url_uindex
-    on repo (url);
 
-create table git_user_balance
+CREATE TABLE IF NOT EXISTS git_user_balance
 (
     id serial not null
         constraint gituserbalance_pk
@@ -88,7 +89,7 @@ comment on table git_user_balance is 'if the the uid is null, there is no regist
 
 alter table git_user_balance owner to postgres;
 
-create table git_userbalanceevent
+CREATE TABLE IF NOT EXISTS git_userbalanceevent
 (
     id serial not null
         constraint gituserbalanceevent_pk
@@ -102,10 +103,9 @@ create table git_userbalanceevent
 
 alter table git_userbalanceevent owner to postgres;
 
-create unique index gituserbalanceevent_id_uindex
-    on git_userbalanceevent (id);
 
-create table sponsor_event
+
+CREATE TABLE IF NOT EXISTS sponsor_event
 (
     id serial not null
         constraint sponsor_event_pk
@@ -122,7 +122,7 @@ create table sponsor_event
 
 alter table sponsor_event owner to postgres;
 
-create table repo_balance
+CREATE TABLE IF NOT EXISTS repo_balance
 (
     id serial not null
         constraint repobalance_pk
@@ -136,7 +136,7 @@ create table repo_balance
 
 alter table repo_balance owner to postgres;
 
-create table daily_repo_balance
+CREATE TABLE IF NOT EXISTS daily_repo_balance
 (
     id serial not null
         constraint dailyrepobalance_pk
@@ -153,7 +153,7 @@ create table daily_repo_balance
 
 alter table daily_repo_balance owner to postgres;
 
-create table contribution
+CREATE TABLE IF NOT EXISTS contribution
 (
     id serial not null
         constraint contribution_pk
@@ -171,3 +171,38 @@ create table contribution
 
 alter table contribution owner to postgres;
 
+
+DO $$ BEGIN
+    create unique index users_email_uindex
+        on "user" (email);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    create unique index user_username_uindex
+    on "user" (username);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    create unique index gitemail_email_uindex
+    on git_email (email);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    create unique index repo_url_uindex
+    on repo (url);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
+
+DO $$ BEGIN
+    create unique index gituserbalanceevent_id_uindex
+    on git_userbalanceevent (id);
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
