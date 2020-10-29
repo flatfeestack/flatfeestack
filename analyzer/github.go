@@ -427,7 +427,7 @@ func (g *GithubClientWrapperClient) Query(query string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("Authorization", "bearer d4598c799e5085885405e23e873606d5795e19c8")
+	request.Header.Set("Authorization", "bearer 534321b71c6cd86f0d87a26445f982954c0a8594")
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return nil, err
