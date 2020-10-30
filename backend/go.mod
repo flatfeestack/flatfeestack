@@ -17,6 +17,6 @@ require (
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/net v0.0.0-20201029221708-28c70e62bb1d // indirect
 	golang.org/x/text v0.3.4 // indirect
-	golang.org/x/tools v0.0.0-20201030143252-cf7a54d06671 // indirect
+	golang.org/x/tools v0.0.0-20201030204249-4fc0492b8eca // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1
 )

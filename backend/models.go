@@ -27,6 +27,7 @@ type User struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Subscription NullString `json:"subscription"`
+	SubscriptionState NullString `json:"subscription_state"`
 }
 
 // Swaggo does not support sql.Nullstring

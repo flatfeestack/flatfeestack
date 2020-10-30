@@ -55,6 +55,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 			},
 		},
 	}
+	subParams.AddExpand("latest_invoice.payment_intent")
 	s, sErr := sub.New(subParams)
 	if sErr != nil {
 		log.Printf("could not create subscription: %v", sErr)
@@ -76,6 +77,14 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	return s, nil
 }
 
+// @Summary Stripe Webhook handler
+// @Tags Webhooks
+// @Param user body interface{} true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200
+// @Failure 400
+// @Router /api/hooks/stripe [post]
 func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
@@ -94,7 +103,7 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 	}
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
-	case "customer.subscription.created":
+	case "customer.subscription.created","customer.subscription.updated", "customer.subscription.deleted" :
 		var subscription stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
@@ -102,57 +111,11 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		c := subscription.Customer
-		cfull, err := customer.Get(c.ID, nil)
-		if err != nil {
-			log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		user, err := FindUserByID(cfull.Metadata["uid"])
-		if err != nil {
-			log.Printf("customer.subscription.created: No matching user found %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		user.Subscription.String = subscription.ID
-		user.Subscription.Valid = true
-		err = UpdateUser(user)
-		if err != nil {
-			log.Printf("Could not update user %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		// With 3D secure, the subscription may also be created with status incomplete,
+		// because the user first has to verify the payment. In this case, the subscription
+		// will be activated in the customer.subscription.updated hook.
+		w.WriteHeader(checkSubscription(&subscription))
 
-	case "customer.subscription.deleted":
-		var subscription stripe.Subscription
-		err := json.Unmarshal(event.Data.Raw, &subscription)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		c := subscription.Customer
-		cfull, err := customer.Get(c.ID, nil)
-		if err != nil {
-			log.Printf("customer.subscription.deleted: Could not retrieve stripe customer %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		user, err := FindUserByID(cfull.Metadata["uid"])
-		if err != nil {
-			log.Printf("customer.subscription.deleted: No matching user found %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		user.Subscription.String = ""
-		user.Subscription.Valid = false
-		err = UpdateUser(user)
-		if err != nil {
-			log.Printf("Could not update user %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 	case "invoice.payment_failed":
 		var invoice stripe.Invoice
 		err := json.Unmarshal(event.Data.Raw, &invoice)
@@ -174,7 +137,58 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 	// ... handle other event types
 	default:
 		log.Printf( "Unhandled event type: %s\n", event.Type)
+		w.WriteHeader(http.StatusOK)
 	}
 
-	w.WriteHeader(http.StatusOK)
+}
+
+// Helpers
+
+func checkSubscription (subscription *stripe.Subscription) int {
+	c := subscription.Customer
+	cfull, err := customer.Get(c.ID, nil)
+	if err != nil {
+		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
+		return http.StatusBadRequest
+	}
+	user, err := FindUserByID(cfull.Metadata["uid"])
+	if err != nil {
+		log.Printf("customer.subscription.created: No matching user found %v\n", err)
+		return http.StatusBadRequest
+	}
+
+	if subscription.Status == "active"{
+		user.Subscription.String = subscription.ID
+		user.Subscription.Valid = true
+		user.SubscriptionState.String = "active"
+		user.SubscriptionState.Valid = true
+		err = UpdateUser(user)
+		if err != nil {
+			log.Printf("Could not update user %v\n", err)
+			return http.StatusInternalServerError
+		}
+	} else if subscription.Status == "canceled" || subscription.Status == "unpaid"{
+		// TODO: Check stripe retry rules and deactivate subscription at some point
+		user.SubscriptionState.String = ""
+		user.SubscriptionState.Valid = false
+		user.Subscription.String = ""
+		user.Subscription.Valid = false
+		err = UpdateUser(user)
+		if err != nil {
+			log.Printf("Could not update user %v\n", err)
+			return http.StatusInternalServerError
+		}
+	} else {
+		// Keep subscriptionId the same, but update the status so the subscription can be reactivated later
+		user.SubscriptionState.String = string(subscription.Status)
+		user.SubscriptionState.Valid = true
+		user.Subscription.String = subscription.ID
+		user.Subscription.Valid = true
+		err = UpdateUser(user)
+		if err != nil {
+			log.Printf("Could not update user %v\n", err)
+			return http.StatusInternalServerError
+		}
+	}
+	return http.StatusOK
 }

@@ -24,7 +24,7 @@ func FindUserByID(ID string) (*User, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription)
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription, &user.SubscriptionState)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -55,7 +55,7 @@ func FindUserByEmail(ID string) (*User, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription)
+	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription, &user.SubscriptionState)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -89,11 +89,11 @@ func SaveUser(user *User) error {
 }
 
 func UpdateUser(user *User) error{
-	sqlStatement := `UPDATE "user" SET (email, username, stripe_id, subscription ) = ($2, $3, $4, $5) 
+	sqlStatement := `UPDATE "user" SET (email, username, stripe_id, subscription, "subscription_state") = ($2, $3, $4, $5, $6) 
 						WHERE id=$1 RETURNING id`
 
 	var id string
-	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username, user.StripeId, user.Subscription).Scan(&id)
+	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username, user.StripeId, user.Subscription, user.SubscriptionState).Scan(&id)
 
 	if err != nil {
 		log.Println(err)

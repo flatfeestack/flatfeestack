@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS "user"
             primary key,
     stripe_id varchar,
     email varchar,
-    username varchar not null
+    username varchar not null,
+    subscription varchar,
+    subscription_state varchar
 );
 
 alter table "user" owner to postgres;
