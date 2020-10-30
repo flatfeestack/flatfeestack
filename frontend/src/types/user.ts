@@ -3,4 +3,5 @@ export type User = {
   email: string;
   username: string;
   subscription: string;
+  subscription_state: string;
 };

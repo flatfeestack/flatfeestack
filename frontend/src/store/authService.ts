@@ -32,3 +32,12 @@ export const login = async (email: string, password: string) => {
     console.log(e);
   }
 };
+
+export const updateUser = async () => {
+  try {
+    const u = await API.api.user.get();
+    user.set(u.data.data);
+  } catch (e) {
+    console.log("could not fetch user", e);
+  }
+};

@@ -43,7 +43,9 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@fortawesome/free-solid-svg-icons": "^5.15.1",
+    "@lottiefiles/svelte-lottie-player": "^0.1.4",
     "axios": "^0.20.0",
+    "date-fns": "^2.16.1",
     "serve": "^11.3.2",
     "svelte-fa": "^2.1.1",
     "svelte-routing": "^1.4.2",
