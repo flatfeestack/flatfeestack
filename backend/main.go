@@ -61,7 +61,9 @@ func main() {
 	apiRouter.HandleFunc("/repos/{id}/sponsor", SponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", UnsponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/payments/subscriptions", PostSubscription).Methods("POST", "OPTIONS")
-	//apiRouter.Use(AuthMiddleware)
+
+	//webhooks
+	apiRouter.HandleFunc("/hooks/stripe", StripeWebhook).Methods("POST","OPTIONS")
 
 	// Swagger
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
@@ -75,6 +77,11 @@ type authMiddlewareKey string
 func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/hooks"){
+				// webhook routes are not protected by middleware, but verified on an individual level
+				next.ServeHTTP(w, r)
+				return
+			}
 			reqToken := r.Header.Get("Authorization")
 			splitToken := strings.Split(reqToken, "Bearer ")
 			if len(splitToken) != 2 {
