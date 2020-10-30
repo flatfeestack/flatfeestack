@@ -17,7 +17,7 @@ services:
     environment:
       - PORT=8080
       - DEV=test
-      - USERS=tom:pw1;ile:pw2;Sevi:1234
+      - USERS=info@flatfeestack.io:pw1;jonas@flatfeestack.io:pw2
       - REFRESH_COOKIE_PATH=/auth/refresh
 
   analysis-engine:
@@ -35,6 +35,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
+      - STRIPE_SECRET=${STRIPE_SECRET}
     depends_on:
       - db
 
