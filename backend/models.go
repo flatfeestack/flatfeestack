@@ -39,23 +39,13 @@ type UserDTO struct {
 	Subscription string `json:"subscription"`
 }
 
-type UserRepository interface {
-	FindByID(ID string) (*User, error)
-	FindByEmail(email string) (*User, error)
-	Save(user *User) error
-	UpdateUser(user *User) (*User, error)
-}
-
 type Repo struct {
-	ID   string `json:"id"`
-	Url  string `json:"url"`
-	Name string `json:"name"`
+	ID   int32 `json:"id"`
+	Url  string `json:"html_url"`
+	Name string `json:"full_name"`
+	Description string `json:"description"`
 }
 
-type RepoRepository interface {
-	FindByID(ID string) (*Repo, error)
-	Save(repo *Repo) error
-}
 
 type SponsorEvent struct {
 	ID        string `json:"id"`
@@ -65,11 +55,6 @@ type SponsorEvent struct {
 	Timestamp string `json:"timestamp"`
 }
 
-type SponsorEventRepository interface {
-	Sponsor(repoID string, uid string) (*SponsorEvent, error)
-	Unsponsor(repoID string, uid string) (*SponsorEvent, error)
-	GetSponsoredRepos(uid string) ([]Repo, error)
-}
 
 type DailyRepoBalance struct {
 	ID         int       `json:"id"`
@@ -79,6 +64,3 @@ type DailyRepoBalance struct {
 	Balance    int       `json:"balance"`
 }
 
-type DailyRepoBalanceRepository interface {
-	CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) ([]DailyRepoBalance, error)
-}

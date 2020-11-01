@@ -183,14 +183,6 @@ func CreateRepo(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	// generate uuuid
-	uid, uuidErr := uuid.NewRandom()
-	if uuidErr != nil {
-		res := NewHttpErrorResponse("Unable to create uuid.")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-	repo.ID = uid.String()
 	// call insert user function and pass the user
 	dbErr := SaveRepo(&repo)
 

@@ -57,6 +57,7 @@ func main() {
 	apiRouter.HandleFunc("/users/{id}/sponsored/calculateDaily", CalculateDailyRepoBalanceByUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/users", CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos", CreateRepo).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/repos/search", SearchRepo).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}", GetRepoByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/sponsor", SponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", UnsponsorRepo).Methods("POST", "OPTIONS")
@@ -83,9 +84,14 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 			reqToken := r.Header.Get("Authorization")
+			if !strings.HasPrefix(reqToken, "Bearer"){
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
 			splitToken := strings.Split(reqToken, "Bearer ")
 			if len(splitToken) != 2 {
 				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
 			}
 			reqToken = splitToken[1]
 			token, err := jwt.ParseSigned(reqToken)
@@ -97,6 +103,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			}
 			if err != nil {
 				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
 			}
 
 			sub := fmt.Sprintf("%v", out["sub"])

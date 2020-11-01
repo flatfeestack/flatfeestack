@@ -59,11 +59,12 @@ alter table pay_out_address owner to postgres;
 
 CREATE TABLE IF NOT EXISTS repo
 (
-    id uuid not null
+    id integer not null
         constraint repo_pk
             primary key,
     url varchar not null,
-    name varchar not null
+    name varchar not null,
+    description varchar
 );
 
 alter table repo owner to postgres;
