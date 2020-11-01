@@ -17,6 +17,10 @@ import Sponsoring from "./routes/Dashboard/Sponsoring.svelte";
 import Income from "./routes/Dashboard/Income.svelte";
 import Settings from "./routes/Dashboard/Settings.svelte";
 import Profile from "./routes/Dashboard/Profile.svelte";
+import PageLayout from "./layout/PageLayout.svelte";
+import { initialFetchDone } from "src/store/auth";
+import Spinner from "./components/UI/Spinner.svelte";
+import Redirect from "./helpers/Redirect.svelte";
 
 onMount(() => tryToAuthenticate());
 
@@ -40,6 +44,14 @@ export let url = "";
         <Route path="{ROUTES.DASHBOARD_INCOME}" component="{Income}" />
         <Route path="{ROUTES.DASHBOARD_SETTINGS}" component="{Settings}" />
         <Route path="{ROUTES.DASHBOARD_PROFILE}" component="{Profile}" />
+      {:else if !$initialFetchDone}
+        <Route path="/dashboard/*">
+          <PageLayout>
+            <Spinner />
+          </PageLayout>
+        </Route>
+      {:else}
+        <Redirect to="{ROUTES.LOGIN}" />
       {/if}
       <Route path="*" component="{CatchAll}" />
     </div>

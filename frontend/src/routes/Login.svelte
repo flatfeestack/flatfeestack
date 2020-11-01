@@ -2,9 +2,12 @@
 :global(.sveltejs-forms) {
   @apply w-2/3 mx-auto py-10;
 }
+:global(.message) {
+  @apply text-red-500 pt-1;
+}
 </style>
 
-<script>
+<script lang="ts">
 import { Form, Input } from "sveltejs-forms";
 import { Link } from "svelte-routing";
 import * as yup from "yup";
@@ -12,6 +15,7 @@ import { navigate } from "svelte-routing";
 import { login } from "../store/authService";
 import PageLayout from "../layout/PageLayout.svelte";
 
+let error = "";
 const schema = yup.object().shape({
   //TOOD: add validation again
   email: yup.string().required(), //.email(),
@@ -31,7 +35,13 @@ async function handleSubmit({
     navigate("dashboard");
     resetForm();
   } catch (e) {
-    console.log(e);
+    if (e?.response?.status === 400) {
+      error = "No match found for username / password combination";
+    } else {
+      error = "Something went wrong. Please try again.";
+    }
+    setSubmitting(false);
+    resetForm();
   }
 }
 
@@ -63,10 +73,10 @@ let isSubmitting = false;
         class="block text-grey-darker text-sm font-bold mb-2 w-full"
       >Email
       </label>
-      <Input id="email-input" name="email" type="text" class="input mb-5" />
+      <Input id="email-input" name="email" type="text" class="input" />
       <label
         for="password-input"
-        class="block text-grey-darker text-sm font-bold mb-2 w-full"
+        class="block text-grey-darker text-sm font-bold mb-2 w-full mt-5"
       >Password
       </label>
       <Input
@@ -76,10 +86,14 @@ let isSubmitting = false;
         class="input w-100"
       />
       <button
-        class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4"
+        class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75"
         disabled="{isSubmitting}"
         type="submit"
-      >Sign in</button>
+      >Sign in{#if isSubmitting}...{/if}</button>
+
+      {#if error}
+        <div class="bg-red-500 p-2 text-white mt-2">{error}</div>
+      {/if}
     </Form>
   </div>
 </PageLayout>
