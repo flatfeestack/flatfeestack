@@ -11,7 +11,7 @@ export const tryToAuthenticate = async () => {
       return;
     }
     token.set(t);
-    const u = await API.api.user.get();
+    const u = await API.user.get();
     user.set(u.data.data);
   } catch (e) {
     console.log("fetch user service error", String(e));
@@ -26,14 +26,14 @@ export const login = async (email: string, password: string) => {
   if (t) {
     token.set(t);
   }
-  const u = await API.api.user.get();
+  const u = await API.user.get();
   console.log(u);
   user.set(u.data.data);
 };
 
 export const updateUser = async () => {
   try {
-    const u = await API.api.user.get();
+    const u = await API.user.get();
     user.set(u.data.data);
   } catch (e) {
     console.log("could not fetch user", e);

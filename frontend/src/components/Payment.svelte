@@ -106,7 +106,7 @@ const handleSubmit = async (event) => {
     }
 
     // Create Subscription on the Server
-    const res = await API.api.payments.createSubscription(
+    const res = await API.payments.createSubscription(
       plans[selectedPlan].stripe_id,
       paymentMethod.id
     );

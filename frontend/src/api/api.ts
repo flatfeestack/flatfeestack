@@ -36,13 +36,14 @@ export const API = {
       ),
     refresh: () => authInstance.post("/refresh", null),
   },
-  api: {
-    user: {
-      get: () => apiInstance.get(`/users/me`),
-    },
-    payments: {
-      createSubscription: (plan: string, paymentMethod: string) =>
-        apiInstance.post("/payments/subscriptions", { plan, paymentMethod }),
-    },
+  user: {
+    get: () => apiInstance.get(`/users/me`),
+  },
+  payments: {
+    createSubscription: (plan: string, paymentMethod: string) =>
+      apiInstance.post("/payments/subscriptions", { plan, paymentMethod }),
+  },
+  repos: {
+    search: (q: string) => apiInstance.get(`/repos/search?q=${encodeURI(q)}`),
   },
 };
