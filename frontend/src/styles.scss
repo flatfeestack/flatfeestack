@@ -31,4 +31,12 @@ body{
   @apply outline-none border-primary-400 ;
 }
 
+.button{
+  @apply py-2 px-3 bg-primary-500 rounded-md text-white;
+    &:disabled {
+    @apply opacity-75;
+  }
+}
+
+
 

@@ -19,7 +19,10 @@ import { Link } from "svelte-routing";
 
 <div class="flex flex-col md:flex-row">
   <div
-    class="bg-white shadow-2xl h-16 fixed bottom-0 md:relative md:h-screen z-10 w-full md:w-56"
+    class="md:fixed bg-white shadow-lg md:w-56 md:h-screen md:block hidden"
+  ></div>
+  <div
+    class="bg-white h-16 fixed bottom-0 md:relative md:h-screen z-10 w-full md:w-56"
   >
     <div
       class="md:mt-12 md:w-48 md:fixed md:pin-l md:pin-t content-center md:content-start text-left justify-between"
@@ -62,7 +65,7 @@ import { Link } from "svelte-routing";
   </div>
 
   <div
-    class="main-content flex-1 bg-grey-lightest mt-12 md:mt-2 pb-24 md:pb-5 pl-0 md:pl-10"
+    class="main-content flex-1 bg-grey-lightest mt-12 md:mt-2 pb-24 md:pb-5 px-3 md:px-0 md:pl-10"
   >
     <slot />
   </div>

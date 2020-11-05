@@ -45,5 +45,8 @@ export const API = {
   },
   repos: {
     search: (q: string) => apiInstance.get(`/repos/search?q=${encodeURI(q)}`),
+    sponsor: (id: number) => apiInstance.post(`/repos/${id}/sponsor`),
+    unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
+    getSponsored: () => apiInstance.get("/users/sponsored"),
   },
 };

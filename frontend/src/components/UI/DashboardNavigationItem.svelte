@@ -10,6 +10,7 @@ export let label;
 import { getContext } from "svelte";
 import { Link } from "svelte-routing";
 import { ROUTER } from "svelte-routing/src/contexts";
+
 const { activeRoute } = getContext(ROUTER);
 const active = $activeRoute?.uri;
 
