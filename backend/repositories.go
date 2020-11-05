@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -102,12 +103,8 @@ func UpdateUser(user *User) error{
 	return nil
 }
 
-func FindRepoByID(ID string) (*Repo, error) {
+func FindRepoByID(ID int) (*Repo, error) {
 	var repo Repo
-
-	if ID == "" {
-		return &repo, fmt.Errorf("ID cannot be empty")
-	}
 
 	// create the select sql query
 	sqlStatement := `SELECT * FROM "repo" WHERE id=$1`
@@ -116,12 +113,12 @@ func FindRepoByID(ID string) (*Repo, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&repo.ID, &repo.Name, &repo.Url)
+	err := row.Scan(&repo.ID, &repo.Url, &repo.Name, &repo.Description)
 
 	switch err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
-		return &repo, nil
+		return nil, errors.New("Not found")
 	case nil:
 		return &repo, nil
 	default:
@@ -133,10 +130,10 @@ func FindRepoByID(ID string) (*Repo, error) {
 }
 
 func SaveRepo(repo *Repo) error {
-	sqlStatement := `INSERT INTO "repo" (id, url, name) VALUES ($1, $2, $3) RETURNING id`
+	sqlStatement := `INSERT INTO "repo" (id, url, name, description) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var id string
-	err := db.QueryRow(sqlStatement, repo.ID, repo.Url, repo.Name).Scan(&id)
+	err := db.QueryRow(sqlStatement, repo.ID, repo.Url, repo.Name, repo.Description).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -148,7 +145,7 @@ func SaveRepo(repo *Repo) error {
 	return nil
 }
 
-func Sponsor(repoID string, uid string) (*SponsorEvent, error) {
+func Sponsor(repoID int, uid string) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
 	err := db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
@@ -163,7 +160,7 @@ func Sponsor(repoID string, uid string) (*SponsorEvent, error) {
 	return &event, nil
 }
 
-func Unsponsor(repoID string, uid string) (*SponsorEvent, error) {
+func Unsponsor(repoID int, uid string) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
 	err := db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
@@ -198,7 +195,7 @@ func GetSponsoredReposById(uid string) ([]Repo, error) {
 
 	for rows.Next() {
 		var repo Repo
-		err = rows.Scan(&repo.ID, &repo.Name, &repo.Url)
+		err = rows.Scan(&repo.ID, &repo.Url, &repo.Name, &repo.Description)
 		if err != nil {
 			fmt.Printf("could not destructure row %v", err)
 		}

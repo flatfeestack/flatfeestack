@@ -52,8 +52,8 @@ func main() {
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	apiRouter.Use(AuthMiddleware())
 	apiRouter.HandleFunc("/users/me", GetMyUser).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/users/sponsored", GetSponsoredRepos).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/{id}", GetUserByID).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/users/{id}/sponsored", GetSponsoredRepos).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/{id}/sponsored/calculateDaily", CalculateDailyRepoBalanceByUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/users", CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos", CreateRepo).Methods("POST", "OPTIONS")
@@ -183,12 +183,12 @@ func createConnection() *sql.DB {
 func initDB() error {
 	//this will create or alter tables
 	//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
-	if _, err := os.Stat("startup.sql"); err == nil {
+	if _, err := os.Stat("init.sql"); err == nil {
 		file, err := ioutil.ReadFile("init.sql")
 		if err != nil {
 			return err
 		}
-		requests := strings.Split(string(file), ";")
+		requests := strings.Split(string(file), ";\n\n")
 		for _, request := range requests {
 			request = strings.Replace(request, "\n", "", -1)
 			request = strings.Replace(request, "\t", "", -1)

@@ -2,15 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 )
 type RepoSearchResponse struct{
-	TotalCount int8 `json:"total_count"`
-	Items []Repo `json:"items"`
+	TotalCount int32 `json:"total_count"`
+	Items []RepoDTO `json:"items"`
 }
-func FetchGithubRepoSearch(q string) ([]Repo, error){
+func FetchGithubRepoSearch(q string) ([]RepoDTO, error){
 	log.Print("http://api.github.com/search/repositories?q="+url.QueryEscape(q))
 	res, err := http.Get("http://api.github.com/search/repositories?q="+url.QueryEscape(q))
 	if err != nil {
@@ -28,17 +29,36 @@ func FetchGithubRepoSearch(q string) ([]Repo, error){
 		log.Printf("%v", result.Items[0])
 		return result.Items,nil
 	}
-	return []Repo{}, nil
+	return []RepoDTO{}, nil
+}
+
+func FetchGithubRepoById(id int) (*Repo, error){
+	res, err := http.Get("http://api.github.com/repositories/"+url.QueryEscape(fmt.Sprint(id)))
+	if err != nil {
+		log.Printf("Could not fetch for repo details %v",err)
+		return nil,err
+	}
+
+	var result Repo
+	err = json.NewDecoder(res.Body).Decode(&result)
+	if err != nil {
+		log.Printf("cant decode json %v",err)
+		return nil, err
+	}
+	return &result, nil
 }
 
 
-
+type SearchRepoResponse struct {
+	HttpResponse
+	Data []RepoDTO `json:"data,omitempty"`
+}
 // @Summary Search for Repos on github
 // @Tags Repos
 // @Param q query string true "Search String"
 // @Accept  json
 // @Produce  json
-// @Success 200 {object} []Repo
+// @Success 200 {object} SearchRepoResponse
 // @Failure 404 {object} HttpResponse
 // @Router /api/repos/search [get]
 func SearchRepo(w http.ResponseWriter, r *http.Request) {

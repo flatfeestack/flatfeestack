@@ -9,6 +9,7 @@ import (
 	"github.com/stripe/stripe-go/v72"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 // HttpResponse format
@@ -155,7 +156,7 @@ func GetMyUser(w http.ResponseWriter, r *http.Request) {
  */
 type CreateRepoResponse struct {
 	HttpResponse
-	Data Repo `json:"data,omitempty"`
+	Data RepoDTO `json:"data,omitempty"`
 }
 type CreateRepoDTO struct {
 	Url  string `json:"url"`
@@ -204,7 +205,7 @@ func CreateRepo(w http.ResponseWriter, r *http.Request) {
 
 type GetRepoByIDResponse struct {
 	HttpResponse
-	Data Repo `json:"data,omitempty"`
+	Data RepoDTO `json:"data,omitempty"`
 }
 
 // @Summary Get Repo By ID
@@ -218,7 +219,13 @@ type GetRepoByIDResponse struct {
 func GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id := params["id"]
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Invalid repoId")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
 	repo, err := FindRepoByID(id)
 	if err != nil {
 		log.Println(err)
@@ -245,12 +252,11 @@ type SponsorRepoDTO struct {
 }
 type SponsorRepoResponse struct {
 	HttpResponse
-	Data SponsorEvent `json:"data,omitempty"`
+	Data RepoDTO `json:"data,omitempty"`
 }
 
 // @Summary Sponsor a repo
 // @Tags Repos
-// @Param body body SponsorRepoDTO true "Request Body"
 // @Param id path string true "Repo ID"
 // @Accept  json
 // @Produce  json
@@ -262,17 +268,43 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	// create an empty user of type User
-	var dto SponsorRepoDTO
-	jsonErr := json.NewDecoder(r.Body).Decode(&dto)
-	params := mux.Vars(r)
-	repoId := params["id"]
-	if jsonErr != nil {
-		res := NewHttpErrorResponse("Unable to decode the request body.")
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	event, dbErr := Sponsor(repoId, dto.Uid)
+
+	params := mux.Vars(r)
+	repoId, err := strconv.Atoi(params["id"])
+	if err != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Invalid repoId")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	repo, e := FindRepoByID(repoId)
+	if e!=nil{
+		// If repo does not exists, create the repo
+		repo, err = FetchGithubRepoById(repoId)
+		if err != nil {
+			w.WriteHeader(400)
+			res := NewHttpErrorResponse("Could not find matching Github Repo")
+			_ = json.NewEncoder(w).Encode(res)
+			return
+		}
+		err = SaveRepo(repo)
+		if err != nil {
+			w.WriteHeader(500)
+			res := NewHttpErrorResponse("Could not save repo")
+			_ = json.NewEncoder(w).Encode(res)
+			return
+		}
+	}
+
+	_, dbErr := Sponsor(repoId, user.ID)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -284,20 +316,24 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data:    event,
+		Data:    repo,
 		Message: "Sponsored repo successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+type UnsponsorRepoResponse struct {
+	HttpResponse
+	Data SponsorEvent `json:"data,omitempty"`
+}
+
 // @Summary Unsponsor a repo
 // @Tags Repos
-// @Param body body SponsorRepoDTO true "Request Body"
 // @Param id path string true "Repo ID"
 // @Accept  json
 // @Produce  json
-// @Success 200 {object} SponsorRepoResponse
+// @Success 200 {object} UnsponsorRepoResponse
 // @Failure 400 {object} HttpResponse
 // @Router /api/repos/{id}/unsponsor [post]
 func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
@@ -305,17 +341,25 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	// create an empty user of type User
-	var dto SponsorRepoDTO
-	jsonErr := json.NewDecoder(r.Body).Decode(&dto)
-	params := mux.Vars(r)
-	repoId := params["id"]
-	if jsonErr != nil {
-		res := NewHttpErrorResponse("Unable to decode the request body.")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	event, dbErr := Unsponsor(repoId, dto.Uid)
+
+	params := mux.Vars(r)
+	repoId, err := strconv.Atoi(params["id"])
+	if err != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Invalid repoId")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	event, dbErr := Unsponsor(repoId, user.ID)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -336,25 +380,31 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 
 type GetSponsoredReposResponse struct {
 	HttpResponse
-	Data []Repo `json:"data,omitempty"`
+	Data []RepoDTO `json:"data,omitempty"`
 }
 
 // @Summary List sponsored Repos of a user
 // @Tags Users
-// @Param id path string true "User ID"
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} GetSponsoredReposResponse
 // @Failure 400 {object} HttpResponse
-// @Router /api/users/{id}/sponsored [get]
+// @Router /api/users/sponsored [get]
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	params := mux.Vars(r)
-	uid := params["id"]
-	repos, dbErr := GetSponsoredReposById(uid)
+	log.Printf("In GetSponsoredRepos")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	repos, dbErr := GetSponsoredReposById(user.ID)
 
 	if dbErr != nil {
 		w.WriteHeader(500)

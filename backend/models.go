@@ -39,11 +39,18 @@ type UserDTO struct {
 	Subscription string `json:"subscription"`
 }
 
-type Repo struct {
+type RepoDTO struct {
 	ID   int32 `json:"id"`
 	Url  string `json:"html_url"`
 	Name string `json:"full_name"`
 	Description string `json:"description"`
+}
+
+type Repo struct {
+	ID   int32 `json:"id"`
+	Url  string `json:"html_url"`
+	Name string `json:"full_name"`
+	Description NullString `json:"description"`
 }
 
 
