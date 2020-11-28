@@ -11,62 +11,6 @@ import Spinner from "../../components/UI/Spinner.svelte";
 import { onMount } from "svelte";
 import { sponsoredRepos } from "../../store/repos";
 
-const mockRepos: Repo[] = [
-  {
-    id: 1231231,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/fastauth",
-    full_name: "Fastauth",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/api",
-    full_name: "Flatfeestack API",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/analysis-engine",
-    full_name: "Analysis Engine",
-  },
-  {
-    id: 1231231,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/fastauth",
-    full_name: "Fastauth",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/api",
-    full_name: "Flatfeestack API",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/analysis-engine",
-    full_name: "Analysis Engine",
-  },
-  {
-    id: 1231231,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/fastauth",
-    full_name: "Fastauth",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/api",
-    full_name: "Flatfeestack API",
-  },
-  {
-    id: 12311243,
-    description: "This is the description",
-    html_url: "https://github.com/flatfeestack/analysis-engine",
-    full_name: "Analysis Engine",
-  },
-];
 let search = "";
 let response: Repo[] = [];
 let fetching = false;
@@ -98,9 +42,11 @@ onMount(async () => {
   <h1>Sponsoring</h1>
   <h2>Sponsored Repos</h2>
   <div class="flex flex-wrap overflow-hidden p-3">
-    {#each $sponsoredRepos as repo}
-      <RepoCard repo="{repo}" />
-    {/each}
+    {#if $sponsoredRepos && $sponsoredRepos.length > 0}
+      {#each $sponsoredRepos as repo}
+        <RepoCard repo="{repo}" />
+      {/each}
+    {/if}
   </div>
   <h2 class="mt-10">Sponsor new Repos</h2>
   <div class="w-1/3 mt-2">
