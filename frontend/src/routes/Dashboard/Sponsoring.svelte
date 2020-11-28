@@ -31,7 +31,9 @@ const onSubmit = async (e) => {
 onMount(async () => {
   try {
     const res = await API.repos.getSponsored();
-    sponsoredRepos.set(res.data.data);
+    if (res.data.data) {
+      sponsoredRepos.set(res.data.data);
+    }
   } catch (e) {
     console.log(e);
   }
@@ -42,11 +44,9 @@ onMount(async () => {
   <h1>Sponsoring</h1>
   <h2>Sponsored Repos</h2>
   <div class="flex flex-wrap overflow-hidden p-3">
-    {#if $sponsoredRepos && $sponsoredRepos.length > 0}
-      {#each $sponsoredRepos as repo}
-        <RepoCard repo="{repo}" />
-      {/each}
-    {/if}
+    {#each $sponsoredRepos as repo}
+      <RepoCard repo="{repo}" />
+    {/each}
   </div>
   <h2 class="mt-10">Sponsor new Repos</h2>
   <div class="w-1/3 mt-2">
