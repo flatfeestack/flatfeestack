@@ -144,3 +144,22 @@ type GQLPullRequestReview struct {
 	State     string    `json:"state"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+type WebhookRequest struct {
+	RepositoryUrl       string `json:"repository_url"`
+	Since               string `json:"since"`
+	Until               string `json:"until"`
+	PlatformInformation bool   `json:"platform_information"`
+	Branch              string `json:"branch"`
+}
+
+type WebhookResponse struct {
+	RequestId string `json:"request_id"`
+}
+
+type WebhookCallback struct {
+	RequestId string `json:"request_id"`
+	Success bool `json:"success"`
+	Error string `json:"error"`
+	Result []FlatFeeWeight `json:"result"`
+}

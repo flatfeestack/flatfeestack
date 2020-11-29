@@ -18,5 +18,6 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
 	router.HandleFunc("/weights", getContributionWeights).Methods("GET")
+	router.HandleFunc("/webhook", analyzeRepository).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }

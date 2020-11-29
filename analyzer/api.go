@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type GitAnalyzationChannel struct {
@@ -337,6 +340,217 @@ func getContributionWeights(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func analyzeRepository(w http.ResponseWriter, r *http.Request) {
+	var request WebhookRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
+	}
+
+	fmt.Println(request)
+
+	if len(request.RepositoryUrl) == 0 {
+		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
+	}
+
+	var branch string
+	if len(request.Branch) > 0 {
+		branch = request.Branch
+	} else {
+		branch = os.Getenv("GO_GIT_DEFAULT_BRANCH")
+	}
+
+	var commitsSince time.Time
+	if len(request.Since) > 0 {
+		commitsSince, err = convertTimestampStringToTime(request.Since)
+		if err != nil {
+			makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
+		}
+	}
+
+	var commitsUntil time.Time
+	if len(request.Until) > 0 {
+		commitsUntil, err = convertTimestampStringToTime(request.Until)
+		if err != nil {
+			makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
+		}
+	}
+
+	requestId := uuid.New().String()
+
+	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: requestId})
+	if err != nil {
+		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
+
+	}
+
+	go analyzeForWebhookInBackground(requestId, request, branch, commitsSince, commitsUntil)
+	fmt.Println("is analyzing")
+
+}
+
+func analyzeForWebhookInBackground(requestId string, request WebhookRequest, branch string, commitsSince time.Time, commitsUntil time.Time) {
+	fmt.Printf("\n\n---> webhook request for repository %s on branch %s \n", request.RepositoryUrl, branch)
+	fmt.Printf("Request id: %s\n", requestId)
+
+	// make the channels for both go routines (analyze repo / platform information)
+	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
+	platformInformationChannel := make(chan PlatformInformationChannel)
+
+	// if we don't have to analyze the platform, close the channel again since we don't need it
+	if !request.PlatformInformation {
+		close(platformInformationChannel)
+	}
+
+	// go routine to analyze the repository using git independently from main thread
+	go func() {
+		routineContributionMap, routineErr := analyzeRepositoryFromString(request.RepositoryUrl, commitsSince, commitsUntil, branch)
+		gitAnalyzationChannel <- GitAnalyzationChannel{
+			Result: routineContributionMap,
+			Reason: routineErr,
+		}
+		close(gitAnalyzationChannel)
+	}()
+
+	// execute go routine to fetch the platform information only when the platformInformation flag is set
+	if request.PlatformInformation {
+		go func() {
+			routineIssues, routinePullRequests, routineErr := getPlatformInformation(request.RepositoryUrl, commitsSince, commitsUntil)
+			platformInformationChannel <- PlatformInformationChannel{
+				ResultIssues:       routineIssues,
+				ResultPullRequests: routinePullRequests,
+				Reason:             routineErr,
+			}
+			close(platformInformationChannel)
+		}()
+	}
+
+	// set the openness of the to the default value
+	chanel1Open := true
+	chanel2Open := request.PlatformInformation
+
+	// initialize the return variables for the go routines
+	var contributionMap map[Contributor]Contribution
+	var issues []GQLIssue
+	var pullRequests []GQLPullRequest
+
+	// wait for the results of both go routines
+	for chanel1Open || chanel2Open {
+		select {
+		case msg1, ok1 := <-gitAnalyzationChannel:
+			if !ok1 {
+				// if the channel is closed set the flag to false
+				chanel1Open = false
+			} else if msg1.Reason != nil {
+				// error handling
+				callbackToWebhook(WebhookCallback{
+					RequestId: requestId,
+					Success:   false,
+					Error:     msg1.Reason.Error(),
+				})
+				return
+			} else {
+				// save the return value to the initialized variable
+				contributionMap = msg1.Result
+			}
+		case msg2, ok2 := <-platformInformationChannel:
+			if !ok2 {
+				// if the channel is closed set the flag to false
+				chanel2Open = false
+			} else if msg2.Reason != nil {
+				// error handling
+				callbackToWebhook(WebhookCallback{
+					RequestId: requestId,
+					Success:   false,
+					Error:     msg2.Reason.Error(),
+				})
+				return
+			} else {
+				// save the return value to the initialized variable
+				issues = msg2.ResultIssues
+				pullRequests = msg2.ResultPullRequests
+			}
+		}
+	}
+
+	if request.PlatformInformation {
+		// if platform information is desired, filter out the platform information per git user and
+		// return the platform information and the git contribution
+
+		platformInformationMappingStart := time.Now()
+		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
+		takenUsernames := make(map[string]string)
+		for k, v := range contributionMap {
+			userInformation, err := getPlatformInformationFromUser(request.RepositoryUrl, issues, pullRequests, k.Email)
+			if err != nil {
+				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation: v,
+				}
+				continue
+			}
+			if _, found := takenUsernames[userInformation.UserName]; !found {
+				takenUsernames[userInformation.UserName] = userInformation.UserName
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation:      v,
+					PlatformInformation: userInformation,
+				}
+			} else {
+				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
+					GitInformation: v,
+				}
+			}
+		}
+		platformInformationMappingEnd := time.Now()
+		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
+
+		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
+
+		if err != nil {
+			callbackToWebhook(WebhookCallback{
+				RequestId: requestId,
+				Success:   false,
+				Error:     err.Error(),
+			})
+			return
+		}
+
+		var contributionWeights []FlatFeeWeight
+		for _, v := range weightsMap {
+			contributionWeights = append(contributionWeights, v)
+		}
+
+		callbackToWebhook(WebhookCallback{
+			RequestId: requestId,
+			Success:   true,
+			Result:    contributionWeights,
+		})
+	} else {
+		weightsMap, err := weightContributions(contributionMap)
+
+		if err != nil {
+			callbackToWebhook(
+				WebhookCallback{
+					RequestId: requestId,
+					Success:   false,
+					Error:     err.Error(),
+				})
+			return
+		}
+
+		var contributionWeights []FlatFeeWeight
+		for _, v := range weightsMap {
+			contributionWeights = append(contributionWeights, v)
+		}
+		callbackToWebhook(WebhookCallback{
+			RequestId: requestId,
+			Success:   true,
+			Result:    contributionWeights,
+		})
+	}
+	fmt.Printf("Finished request %s\n", requestId)
+}
+
 // getRepositoryFromRequest extracts the repository from the route parameters
 func getRepositoryFromRequest(r *http.Request) (string, error) {
 	repositoryUrl := r.URL.Query()["repositoryUrl"]
@@ -380,6 +594,11 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 	if fmtErr != nil {
 		fmt.Println("Could not format", fmtErr)
 	}
+}
+
+func callbackToWebhook(body WebhookCallback) {
+	reqBody, _ := json.Marshal(body)
+	_, _ = http.Post(os.Getenv("WEBHOOK_CALLBACK_URL"), "application/json", bytes.NewBuffer(reqBody))
 }
 
 // getShouldAnalyzePlatformInformation extracts whether platform information should be considered from the route parameters
