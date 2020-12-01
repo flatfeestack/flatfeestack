@@ -12,12 +12,22 @@ type NullString struct {
 	sql.NullString
 }
 
-// MarshalJSON for NullString
+// JSON handling for NullString
 func (ns *NullString) MarshalJSON() ([]byte, error) {
 	if !ns.Valid {
 		return []byte("null"), nil
 	}
 	return json.Marshal(ns.String)
+}
+
+func (ns *NullString) UnmarshalJSON(data []byte)  error {
+	var s string
+	if err := json.Unmarshal(data, &s); err !=nil {
+		return err
+	}
+	ns.String = s
+	ns.Valid = true
+	return nil
 }
 
 // User schema of the user table
