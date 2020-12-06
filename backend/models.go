@@ -81,3 +81,11 @@ type DailyRepoBalance struct {
 	Balance    int       `json:"balance"`
 }
 
+
+type Payment struct {
+	Uid string
+	Amount int64
+	From time.Time
+	To time.Time
+	Sub string
+}

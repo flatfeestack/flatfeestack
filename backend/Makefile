@@ -1,4 +1,4 @@
-NAME:=fastauth
+NAME:=api
 
 all: swag dep build
 dep: go.mod

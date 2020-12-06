@@ -6,11 +6,13 @@ import (
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
+	"github.com/stripe/stripe-go/v72/charge"
 	"github.com/stripe/stripe-go/v72/sub"
 	"github.com/stripe/stripe-go/v72/webhook"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 func CreateStripeCustomer(user User) (*User, error) {
@@ -95,7 +97,7 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), "whsec_4sKlkahWOOeyImUNXxSPBwNJejj2yu9Y")
+	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), "whsec_kWkkVF7yCS3n2SoWf7XLJe3TbKEpN5f1")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 		log.Printf("Error evaluating signed webhook request: %v", err)
@@ -133,7 +135,44 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 		}
 		log.Printf("invoice failed for user %s", cfull.Metadata["uid"])
 		// TODO: notify user that he needs to update CC
+	case "invoice.payment_succeeded":
+		var invoice stripe.Invoice
+		err := json.Unmarshal(event.Data.Raw, &invoice)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		cu := invoice.Customer
+		cufull, err := customer.Get(cu.ID, nil)
+		if err != nil {
+			log.Printf("invoice.payment_succeeded: Could not retrieve stripe customer %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
+		params := &stripe.ChargeParams{}
+		params.AddExpand("balance_transaction")
+		ch, ch_err := charge.Get(invoice.Charge.ID, params)
+		if ch_err != nil {
+			log.Printf("Error retrieving charge %v\n", ch_err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		net := ch.BalanceTransaction.Net
+		paid := ch.BalanceTransaction.Amount
+		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil{
+			invoiceData := invoice.Lines.Data[0]
+			err = SavePayment(&Payment{Uid: cufull.Metadata["uid"], From: time.Unix(invoiceData.Period.Start,0), To: time.Unix(invoiceData.Period.End,0), Sub: invoiceData.ID, Amount: net})
+
+			if err != nil {
+				log.Printf("invoice.payment_succeeded: Error saving payment %v\n", err)
+				// return OK to stripe, as the error is on our side
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+		}
+		log.Printf("Payment stored to database: customer %s paid %v, flatfeestack received %v \n", invoice.Customer.ID, paid, net)
 	// ... handle other event types
 	default:
 		log.Printf( "Unhandled event type: %s\n", event.Type)

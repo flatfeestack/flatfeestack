@@ -244,3 +244,15 @@ func CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) 
 
 	return repoBalances, nil
 }
+
+func SavePayment(payment *Payment) error {
+	var paymentId int
+	sqlStatement := `INSERT INTO "payments" ("uid", "from", "to", "sub", "amount") VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := db.QueryRow(sqlStatement, payment.Uid, payment.From, payment.To, payment.Sub, payment.Amount).Scan(&paymentId)
+	if err != nil {
+		log.Printf("Error inserting payment %v",err)
+		return err
+	}
+	fmt.Printf("Inserted a payment of user%v", paymentId)
+	return nil
+}

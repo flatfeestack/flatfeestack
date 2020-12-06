@@ -190,8 +190,8 @@ func initDB() error {
 		}
 		requests := strings.Split(string(file), ";\n\n")
 		for _, request := range requests {
-			request = strings.Replace(request, "\n", "", -1)
-			request = strings.Replace(request, "\t", "", -1)
+			request = strings.Replace(request, "\n", " ", -1)
+			request = strings.Replace(request, "\t", " ", -1)
 			if !strings.HasPrefix(request, "#") {
 				_, err = db.Exec(request)
 				if err != nil {
