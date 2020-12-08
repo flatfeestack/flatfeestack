@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -598,7 +599,11 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 
 func callbackToWebhook(body WebhookCallback) {
 	reqBody, _ := json.Marshal(body)
-	_, _ = http.Post(os.Getenv("WEBHOOK_CALLBACK_URL"), "application/json", bytes.NewBuffer(reqBody))
+	log.Printf("Call to %s with success %v",os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
+	_, err := http.Post(os.Getenv("WEBHOOK_CALLBACK_URL"), "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Printf("Could not call webhook %v",err)
+	}
 }
 
 // getShouldAnalyzePlatformInformation extracts whether platform information should be considered from the route parameters
