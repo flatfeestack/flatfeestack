@@ -13,3 +13,6 @@
 [submodule "api"]
 	path = api
 	url = git@github.com:flatfeestack/api.git
+[submodule "scheduler"]
+	path = scheduler
+	url = git@github.com:flatfeestack/scheduler.git

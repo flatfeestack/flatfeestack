@@ -1,8 +1,6 @@
 :80
-# Set this path to your site's directory.
 root * /var/www/html
-
-reverse_proxy web:3000
+encode gzip
 
 route /auth/* {
     uri strip_prefix /auth
@@ -17,3 +15,15 @@ route /analysis/* {
     uri strip_prefix /analysis
     reverse_proxy analysis-engine:8080
 }
+
+@notProxy {
+   not {
+       path /api/* /analysis/* /auth/*
+   }
+   file {
+      try_files {path} {file} /index.html
+   }
+}
+
+rewrite @notProxy {http.matchers.file.relative}
+file_server

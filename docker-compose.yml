@@ -5,10 +5,6 @@ volumes:
   postgres_data:
 
 services:
-  web:
-    container_name: flatfeestack-frontend
-    build: ./frontend
-
   auth:
     container_name: flatfeestack-auth
     build: ./fastauth
@@ -25,6 +21,8 @@ services:
     build: ./analysis-engine
     ports:
       - "7000:8080"
+    environment: 
+      - WEBHOOK_CALLBACK_URL=${WEBHOOK_CALLBACK_URL}
 
   api:
     container_name: flatfeestack-api
@@ -38,6 +36,16 @@ services:
       - STRIPE_SECRET=${STRIPE_SECRET}
     depends_on:
       - db
+
+  scheduler:
+    container_name: flatfeestack-scheduler
+    build: ./scheduler
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - db  
 
   db:
     image: postgres:alpine
@@ -53,11 +61,11 @@ services:
 
   caddy:
     container_name: "flatfeestack-caddy"
-    build: ./caddy
+    build: 
+      context: ./
+      dockerfile: ./Dockerfile
     volumes:
       - caddy_data:/root/.caddy # to save certificates on disk
     ports:
       - "80:80"
       - "443:443"
-    depends_on:
-      - web
