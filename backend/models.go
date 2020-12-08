@@ -63,7 +63,7 @@ type Repo struct {
 	Description NullString `json:"description"`
 }
 
-
+// TODO: change timestampe to time.Time
 type SponsorEvent struct {
 	ID        string `json:"id"`
 	Uid       string `json:"uid"`

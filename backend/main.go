@@ -7,16 +7,15 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/stripe/stripe-go/v72"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"github.com/joho/godotenv"
 )
 
 var (
@@ -42,10 +41,6 @@ func main() {
 	stripe.Key = os.Getenv("STRIPE_SECRET")
 
 	db = createConnection()
-	initDbErr := initDB()
-	if initDbErr != nil {
-		fmt.Printf("Could not init DB %v", initDbErr)
-	}
 
 	// Routes
 	router := mux.NewRouter()
@@ -178,27 +173,4 @@ func createConnection() *sql.DB {
 	fmt.Println("Successfully connected!")
 	// return the connection
 	return db
-}
-
-func initDB() error {
-	//this will create or alter tables
-	//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
-	if _, err := os.Stat("init.sql"); err == nil {
-		file, err := ioutil.ReadFile("init.sql")
-		if err != nil {
-			return err
-		}
-		requests := strings.Split(string(file), ";\n\n")
-		for _, request := range requests {
-			request = strings.Replace(request, "\n", " ", -1)
-			request = strings.Replace(request, "\t", " ", -1)
-			if !strings.HasPrefix(request, "#") {
-				_, err = db.Exec(request)
-				if err != nil {
-					return fmt.Errorf("[%v] %v", request, err)
-				}
-			}
-		}
-	}
-	return nil
 }
