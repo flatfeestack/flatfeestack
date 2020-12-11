@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // HttpResponse format
@@ -302,6 +304,34 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(res)
 			return
 		}
+		// Trigger first analysis of the repo
+
+		webhookRequest := WebhookRequest{
+			RepositoryUrl:       repo.Url,
+			Since:               time.Now().AddDate(0, -3, 0).Format(time.RFC3339),
+			Until:               time.Now().Format(time.RFC3339),
+			PlatformInformation: false,
+			Branch:              "master",
+		}
+		body, jsonErr := json.Marshal(webhookRequest)
+		if jsonErr != nil {
+			log.Printf("Could not marshal json body: %v", jsonErr)
+		}
+
+		res, err := http.Post("http://analysis-engine:8080/webhook", "application/json", bytes.NewBuffer(body))
+		if err != nil {
+			log.Printf("Could not send POST request to analyze repository %v", err)
+		} else {
+			var webhookResponse WebhookResponse
+			err = json.NewDecoder(res.Body).Decode(&webhookResponse)
+			// insert request ID in DB
+			sqlInsert := `INSERT INTO "analysis_request" ("id","from", "to", "repo_id", "branch") VALUES ($1, $2, $3, $4, $5)`
+			_, insertErr := db.Exec(sqlInsert, webhookResponse.RequestId, webhookRequest.Since, webhookRequest.Until, repo.ID, webhookRequest.Branch)
+			if insertErr != nil {
+				log.Printf("Could not insert Analysis Request into DB: %v", insertErr)
+			}
+			log.Printf("Requested analysis for repo %v (requestID:%v)",repo.ID,webhookResponse.RequestId)
+		}
 	}
 
 	_, dbErr := Sponsor(repoId, user.ID)
@@ -394,8 +424,6 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	log.Printf("In GetSponsoredRepos")
 
 	user, err := getUserFromContext(r)
 	if err != nil {

@@ -89,3 +89,15 @@ type Payment struct {
 	To time.Time
 	Sub string
 }
+
+type WebhookRequest struct {
+	RepositoryUrl       string `json:"repository_url"`
+	Since               string `json:"since"`
+	Until               string `json:"until"`
+	PlatformInformation bool   `json:"platform_information"`
+	Branch              string `json:"branch"`
+}
+
+type WebhookResponse struct {
+	RequestId string `json:"request_id"`
+}
