@@ -40,6 +40,17 @@ type User struct {
 	SubscriptionState NullString `json:"subscription_state"`
 }
 
+// User schema of the user table
+type UserWithConnectedEmails struct {
+	ID       string `json:"id"`
+	StripeId NullString `json:"-"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Subscription NullString `json:"subscription"`
+	SubscriptionState NullString `json:"subscription_state"`
+	ConnectedEmails []string `json:"connected_emails"`
+}
+
 // Swaggo does not support sql.Nullstring
 type UserDTO struct {
 	ID       string `json:"id"`

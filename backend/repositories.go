@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
-	"strconv"
 	"time"
 )
 
@@ -39,6 +37,60 @@ func FindUserByID(ID string) (*User, error) {
 
 	// return empty user on error
 	return &user, err
+}
+
+func FindConnectedEmails(uid string) ([]string, error){
+	if uid == "" {
+		return nil, fmt.Errorf("ID cannot be empty")
+	}
+	var emails []string
+
+
+	sqlStatement := `SELECT email FROM git_email WHERE uid=$1;`
+	rows, err := db.Query(sqlStatement, uid)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var email string
+		err = rows.Scan(&email)
+		if err != nil {
+			fmt.Printf("could not destructure row %v", err)
+		}
+		emails = append(emails, email)
+	}
+	// return empty user on error
+	return emails, err
+}
+
+func InsertConnectedEmail(uid string, email string)  error{
+	if uid == "" {
+		return  fmt.Errorf("ID cannot be empty")
+	}
+	sqlStatement := `INSERT INTO git_email(email, uid) VALUES($1,$2);`
+	_, err := db.Exec(sqlStatement, email, uid)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func DeleteConnectedEmail(uid string, email string)  error{
+	if uid == "" {
+		return  fmt.Errorf("ID cannot be empty")
+	}
+	sqlStatement := `DELETE FROM git_email WHERE email=$1 AND uid=$2`
+	_, err := db.Exec(sqlStatement, email, uid)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 // FindByID returns a single user
@@ -203,46 +255,6 @@ func GetSponsoredReposById(uid string) ([]Repo, error) {
 	}
 	return repos, nil
 
-}
-
-func CalculateDailyByUser(uid string, sponsoredRepos []Repo, amountToShare int) ([]DailyRepoBalance, error) {
-	var repoBalances []DailyRepoBalance
-	var n = len(sponsoredRepos)
-	query := `INSERT INTO "daily_repo_balance" ("repo_id", "uid", "computed_at", "balance") VALUES`
-	var values []interface{}
-	for i, s := range sponsoredRepos {
-		values = append(values, s.ID, uid, time.Now(), math.Floor(float64(amountToShare/n)))
-
-		numFields := 4
-		n := i * numFields
-
-		query += `(`
-		for j := 0; j < numFields; j++ {
-			query += `$` + strconv.Itoa(n+j+1) + `,`
-		}
-		query = query[:len(query)-1] + `),`
-	}
-	query = query[:len(query)-1] // remove the trailing comma
-	query += ` RETURNING "id", "repo_id", "uid", "computed_at", "balance"`
-	rows, err := db.Query(query, values...)
-
-	if err != nil {
-		fmt.Printf("error executing query %v", err)
-		return repoBalances, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var dailyBalance DailyRepoBalance
-		err = rows.Scan(&dailyBalance.ID, &dailyBalance.RepoId, &dailyBalance.Uid, &dailyBalance.ComputedAt, &dailyBalance.Balance)
-		if err != nil {
-			fmt.Printf("\ncould not destructure row %v", err)
-		}
-		repoBalances = append(repoBalances, dailyBalance)
-	}
-
-	return repoBalances, nil
 }
 
 func SavePayment(payment *Payment) error {

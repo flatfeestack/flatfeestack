@@ -153,6 +153,153 @@ func GetMyUser(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+type GetMyConnectedEmailsResponse struct {
+	HttpResponse
+	Data []string `json:"data,omitempty"`
+}
+
+// @Summary Get connected Git Email addresses
+// @Description Get details of all users
+// @Tags Users
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} GetMyConnectedEmailsResponse
+// @Failure 404 {object} HttpResponse
+// @Router /api/users/me/connectedEmails [get]
+func GetMyConnectedEmails(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(404)
+		res := NewHttpErrorResponse("Not a valid user")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	emails, err := FindConnectedEmails(user.ID)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Not a valid user")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+	res := HttpResponse{
+		Success: true,
+		Data:    emails,
+		Message: "User created successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+
+type GitEmailRequest struct {
+	Email string `json:"email"`
+}
+
+// @Summary Add new git email
+// @Tags Repos
+// @Param repo body GitEmailRequest true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} CreateRepoResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/users/me/connectedEmails [post]
+func AddGitEmail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(403)
+		res := NewHttpErrorResponse("Unauthorized")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// create an empty user of type User
+	var body GitEmailRequest
+	jsonErr := json.NewDecoder(r.Body).Decode(&body)
+	if jsonErr != nil {
+		res := NewHttpErrorResponse("Unable to decode the request body.")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	//TODO: send email to user and add email after verification
+
+	dbErr := InsertConnectedEmail(user.ID, body.Email)
+
+	if dbErr != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Could not write to database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data:    nil,
+		Message: "Added email successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// @Summary Delete git email
+// @Tags Repos
+// @Param email path string true "Git email"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} CreateRepoResponse
+// @Failure 400 {object} HttpResponse
+// @Router /api/users/me/connectedEmails [delete]
+func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(403)
+		res := NewHttpErrorResponse("Unauthorized")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	params := mux.Vars(r)
+	email := params["email"]
+	if err != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Invalid email")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	//TODO: send email to user and add email after verification
+
+	dbErr := DeleteConnectedEmail(user.ID, email)
+
+	if dbErr != nil {
+		res := NewHttpErrorResponse("Could not write to database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data:    nil,
+		Message: "Removed email successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
 /*
  *	==== REPO ====
  */
@@ -451,52 +598,6 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-type CalculateDailyRepoBalanceByUserResponse struct {
-	HttpResponse
-	Data []DailyRepoBalance `json:"data,omitempty"`
-}
-
-// @Summary Calculate Daily Repo Balance for user
-// @Tags Users
-// @Param id path string true "User ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} CalculateDailyRepoBalanceByUserResponse
-// @Failure 400 {object} HttpResponse
-// @Router /api/users/{id}/sponsored/calculateDaily [post]
-func CalculateDailyRepoBalanceByUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Methods", "POST")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	params := mux.Vars(r)
-	uid := params["id"]
-	sponsoredRepos, dbErr := GetSponsoredReposById(uid)
-
-	if dbErr != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not read from database")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	repoBalance, dbErr1 := CalculateDailyByUser(uid, sponsoredRepos, 100)
-	if dbErr1 != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not read from database")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	// format a HttpResponse object
-	res := HttpResponse{
-		Success: true,
-		Data:    repoBalance,
-		Message: "Retrieved sponsored repos successfully",
-	}
-	// send the HttpResponse
-	_ = json.NewEncoder(w).Encode(res)
-}
 /*
 	==== Payment
  */
