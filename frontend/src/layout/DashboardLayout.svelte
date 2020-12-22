@@ -10,6 +10,7 @@ import {
   faCodeBranch,
   faHandHoldingUsd,
   faCogs,
+  faShieldAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import DashboardNavigationItem from "../components/UI/DashboardNavigationItem.svelte";
 
@@ -59,6 +60,11 @@ import { Link } from "svelte-routing";
           icon="{faCogs}"
           route="{ROUTES.DASHBOARD_SETTINGS}"
           label="Settings"
+        />
+        <DashboardNavigationItem
+          icon="{faShieldAlt}"
+          route="{ROUTES.DASHBOARD_ADMIN}"
+          label="Admin"
         />
       </ul>
     </div>

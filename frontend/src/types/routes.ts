@@ -9,4 +9,5 @@ export enum ROUTES {
   DASHBOARD_PROFILE = "/dashboard/profile",
   DASHBOARD_INCOME = "/dashboard/income",
   DASHBOARD_SPONSORING = "/dashboard/sponsoring",
+  DASHBOARD_ADMIN = "/dashboard/admin",
 }
