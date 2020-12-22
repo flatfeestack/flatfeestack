@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/charge"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
-	"github.com/stripe/stripe-go/v72/charge"
 	"github.com/stripe/stripe-go/v72/sub"
 	"github.com/stripe/stripe-go/v72/webhook"
 	"io/ioutil"
@@ -18,11 +18,10 @@ import (
 func CreateStripeCustomer(user User) (*User, error) {
 	params := &stripe.CustomerParams{
 		Email: stripe.String(user.Email),
-
 	}
 	params.AddMetadata("uid", user.ID)
 	c, err := customer.New(params)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	user.StripeId.String = c.ID
@@ -31,12 +30,12 @@ func CreateStripeCustomer(user User) (*User, error) {
 	// add stripe id to DB
 	userErr := UpdateUser(&user)
 	if userErr != nil {
-		return  nil, userErr
+		return nil, userErr
 	}
 	return &user, nil
 }
 
-func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error){
+func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
 	if !user.StripeId.Valid {
 		log.Print("error in createSubscription: user has no stripeID")
 		return nil, errors.New("can not create subscription for user without stripeID")
@@ -49,7 +48,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 		log.Printf("Could not set payment method for user %s: %v", user.ID, err)
 	}
 	subParams := &stripe.SubscriptionParams{
-		Customer: stripe.String(user.StripeId.String),
+		Customer:             stripe.String(user.StripeId.String),
 		DefaultPaymentMethod: stripe.String(p.ID),
 		Items: []*stripe.SubscriptionItemsParams{
 			{
@@ -87,7 +86,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 // @Success 200
 // @Failure 400
 // @Router /api/hooks/stripe [post]
-func StripeWebhook (w http.ResponseWriter, req *http.Request) {
+func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
 	payload, err := ioutil.ReadAll(req.Body)
@@ -105,7 +104,7 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 	}
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
-	case "customer.subscription.created","customer.subscription.updated", "customer.subscription.deleted" :
+	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
 		var subscription stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
@@ -161,9 +160,9 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 		}
 		net := ch.BalanceTransaction.Net
 		paid := ch.BalanceTransaction.Amount
-		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil{
+		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil {
 			invoiceData := invoice.Lines.Data[0]
-			err = SavePayment(&Payment{Uid: cufull.Metadata["uid"], From: time.Unix(invoiceData.Period.Start,0), To: time.Unix(invoiceData.Period.End,0), Sub: invoiceData.ID, Amount: net})
+			err = SavePayment(&Payment{Uid: cufull.Metadata["uid"], From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
 
 			if err != nil {
 				log.Printf("invoice.payment_succeeded: Error saving payment %v\n", err)
@@ -175,7 +174,7 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 		log.Printf("Payment stored to database: customer %s paid %v, flatfeestack received %v \n", invoice.Customer.ID, paid, net)
 	// ... handle other event types
 	default:
-		log.Printf( "Unhandled event type: %s\n", event.Type)
+		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
 	}
 
@@ -183,7 +182,7 @@ func StripeWebhook (w http.ResponseWriter, req *http.Request) {
 
 // Helpers
 
-func checkSubscription (subscription *stripe.Subscription) int {
+func checkSubscription(subscription *stripe.Subscription) int {
 	c := subscription.Customer
 	cfull, err := customer.Get(c.ID, nil)
 	if err != nil {
@@ -196,7 +195,7 @@ func checkSubscription (subscription *stripe.Subscription) int {
 		return http.StatusBadRequest
 	}
 
-	if subscription.Status == "active"{
+	if subscription.Status == "active" {
 		user.Subscription.String = subscription.ID
 		user.Subscription.Valid = true
 		user.SubscriptionState.String = "active"
@@ -206,7 +205,7 @@ func checkSubscription (subscription *stripe.Subscription) int {
 			log.Printf("Could not update user %v\n", err)
 			return http.StatusInternalServerError
 		}
-	} else if subscription.Status == "canceled" || subscription.Status == "unpaid"{
+	} else if subscription.Status == "canceled" || subscription.Status == "unpaid" {
 		// TODO: Check stripe retry rules and deactivate subscription at some point
 		user.SubscriptionState.String = ""
 		user.SubscriptionState.Valid = false

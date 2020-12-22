@@ -44,14 +44,13 @@ create unique index if not exists gitemail_email_uindex
 
 create table if not exists pay_out_address
 (
-    id       serial  not null
-        constraint payoutaddress_pk
-            primary key,
     uid      uuid
         constraint uid
             references "user",
     address  varchar not null,
-    chain_id integer
+    chain_id varchar,
+    constraint pay_out_address_pk
+        unique (uid, chain_id)
 );
 
 create table if not exists repo
@@ -181,19 +180,6 @@ create table if not exists contribution
             on delete cascade
 );
 
-create table if not exists payouts
-(
-    id        serial not null
-        constraint payouts_pkey
-            primary key,
-    uid       uuid   not null
-        constraint payouts_uid_fkey
-            references "user"
-            on delete cascade,
-    amount    numeric,
-    fulfilled boolean default false
-);
-
 create table if not exists repo_balance_event
 (
     id           serial not null
@@ -205,6 +191,34 @@ create table if not exists repo_balance_event
             on delete cascade,
     type         repobalanceevent,
     timestamp    timestamp default now()
+);
+
+create table if not exists exchange
+(
+    id       serial  not null
+        constraint exchange_pkey
+            primary key,
+    amount   numeric not null,
+    chain_id text    not null,
+    price    numeric,
+    date     date
+);
+
+create table if not exists payouts
+(
+    id       serial                  not null
+        constraint payouts_pkey
+            primary key,
+    uid      uuid                    not null
+        constraint payouts_uid_fkey
+            references "user"
+            on delete cascade,
+    amount   numeric,
+    created  timestamp default now() not null,
+    paid     timestamp,
+    exchange integer
+        constraint payouts_exchange_fkey
+            references exchange
 );
 
 create or replace view sponsored_repos(repo_id, user_id) as
@@ -428,7 +442,7 @@ create or replace function latest_repo_balance_at(date)
 as
 $$
 SELECT drb.*
-FROM (SELECT MAX(id) as id FROM daily_repo_balance WHERE timestamp = now()::date GROUP BY repo_id) as latest
+FROM (SELECT MAX(id) as id FROM daily_repo_balance WHERE timestamp = $1::date GROUP BY repo_id) as latest
          JOIN daily_repo_balance drb ON latest.id = drb.id
 
 $$;
@@ -450,4 +464,20 @@ create trigger check_daily_repo_balance_insert
     on daily_repo_balance
     for each row
 execute procedure check_daily_repo_balance_insert();
+
+create or replace procedure create_exchange_from_payouts()
+    language plpgsql
+as
+$$
+declare
+    exchange_id int4;
+begin
+
+    INSERT INTO exchange (amount, chain_id) (SELECT sum(amount), 'ETH' FROM payouts WHERE exchange IS NULL)
+    RETURNING id INTO exchange_id;
+
+    UPDATE payouts SET exchange = exchange_id WHERE exchange IS NULL;
+
+end;
+$$;
 

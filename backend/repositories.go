@@ -39,12 +39,11 @@ func FindUserByID(ID string) (*User, error) {
 	return &user, err
 }
 
-func FindConnectedEmails(uid string) ([]string, error){
+func FindConnectedEmails(uid string) ([]string, error) {
 	if uid == "" {
 		return nil, fmt.Errorf("ID cannot be empty")
 	}
 	var emails []string
-
 
 	sqlStatement := `SELECT email FROM git_email WHERE uid=$1;`
 	rows, err := db.Query(sqlStatement, uid)
@@ -67,9 +66,9 @@ func FindConnectedEmails(uid string) ([]string, error){
 	return emails, err
 }
 
-func InsertConnectedEmail(uid string, email string)  error{
+func InsertConnectedEmail(uid string, email string) error {
 	if uid == "" {
-		return  fmt.Errorf("ID cannot be empty")
+		return fmt.Errorf("ID cannot be empty")
 	}
 	sqlStatement := `INSERT INTO git_email(email, uid) VALUES($1,$2);`
 	_, err := db.Exec(sqlStatement, email, uid)
@@ -80,9 +79,9 @@ func InsertConnectedEmail(uid string, email string)  error{
 	return nil
 }
 
-func DeleteConnectedEmail(uid string, email string)  error{
+func DeleteConnectedEmail(uid string, email string) error {
 	if uid == "" {
-		return  fmt.Errorf("ID cannot be empty")
+		return fmt.Errorf("ID cannot be empty")
 	}
 	sqlStatement := `DELETE FROM git_email WHERE email=$1 AND uid=$2`
 	_, err := db.Exec(sqlStatement, email, uid)
@@ -141,7 +140,7 @@ func SaveUser(user *User) error {
 	return nil
 }
 
-func UpdateUser(user *User) error{
+func UpdateUser(user *User) error {
 	sqlStatement := `UPDATE "user" SET (email, username, stripe_id, subscription, "subscription_state") = ($2, $3, $4, $5, $6) 
 						WHERE id=$1 RETURNING id`
 
@@ -262,9 +261,77 @@ func SavePayment(payment *Payment) error {
 	sqlStatement := `INSERT INTO "payments" ("uid", "from", "to", "sub", "amount") VALUES ($1, $2, $3, $4, $5) RETURNING id`
 	err := db.QueryRow(sqlStatement, payment.Uid, payment.From, payment.To, payment.Sub, payment.Amount).Scan(&paymentId)
 	if err != nil {
-		log.Printf("Error inserting payment %v",err)
+		log.Printf("Error inserting payment %v", err)
 		return err
 	}
 	fmt.Printf("Inserted a payment of user%v", paymentId)
 	return nil
+}
+
+func SelectExchanges() ([]ExchangeEntry, error) {
+	var exchanges []ExchangeEntry
+
+	sqlStatement := `SELECT "id", "amount", "chain_id", "price", "date" FROM exchange`
+	rows, err := db.Query(sqlStatement)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var exchange ExchangeEntry
+		err = rows.Scan(&exchange.ID, &exchange.Amount, &exchange.ChainId, &exchange.Price, &exchange.Date)
+		if err != nil {
+			fmt.Printf("could not destructure row %v", err)
+		}
+		exchanges = append(exchanges, exchange)
+	}
+	return exchanges, nil
+}
+
+func UpdateExchange(ex ExchangeEntryUpdate) error {
+	sqlStatement := `UPDATE "exchange" SET ("date", "price") = ($2, $3) 
+						WHERE id=$1 RETURNING id`
+
+	_, err := db.Exec(sqlStatement, ex.ID, ex.Date, ex.Price)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func InsertOrUpdatePayoutAddress(p PayoutAddress) error {
+	sqlStatement := `INSERT INTO pay_out_address(uid, address, chain_id) VALUES($1, $2, $3) ON CONFLICT(uid,chain_id) DO UPDATE SET address = EXCLUDED.address`
+	_, err := db.Exec(sqlStatement, p.Uid, p.Address, p.ChainId)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func SelectPayoutAddressesByUid(uid string) (addresses []PayoutAddress, err error) {
+	sqlStatement := `SELECT uid, address, chain_id FROM pay_out_address WHERE uid=$1`
+	rows, err := db.Query(sqlStatement, uid)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var address PayoutAddress
+		err = rows.Scan(&address.Uid, &address.Address, &address.ChainId)
+		if err != nil {
+			fmt.Printf("could not destructure row %v", err)
+		}
+		addresses = append(addresses, address)
+	}
+	return
 }

@@ -192,13 +192,12 @@ func GetMyConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-
 type GitEmailRequest struct {
 	Email string `json:"email"`
 }
 
 // @Summary Add new git email
-// @Tags Repos
+// @Tags Users
 // @Param repo body GitEmailRequest true "Request Body"
 // @Accept  json
 // @Produce  json
@@ -249,7 +248,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Delete git email
-// @Tags Repos
+// @Tags Users
 // @Param email path string true "Git email"
 // @Accept  json
 // @Produce  json
@@ -260,8 +259,6 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-
 
 	user, err := getUserFromContext(r)
 	if err != nil {
@@ -297,6 +294,96 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 		Message: "Removed email successfully",
 	}
 	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+type PayoutAddressRequest struct {
+	ChainId string `json:"chain_id"`
+	Address string `json:"address"`
+}
+
+// @Summary update payout address
+// @Tags Users
+// @Param user body PayoutAddressRequest true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} interface{}
+// @Failure 404 {object} HttpResponse
+// @Router /api/users/me/payout [put]
+func PutPayoutAddress(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	var body PayoutAddressRequest
+	jsonErr := json.NewDecoder(r.Body).Decode(&body)
+	if jsonErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not decode body")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	address := PayoutAddress{
+		Uid:     user.ID,
+		ChainId: body.ChainId,
+		Address: body.Address,
+	}
+
+	dbErr := InsertOrUpdatePayoutAddress(address)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not update in database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	res := HttpResponse{
+		Success: true,
+		Message: "Updated exchange successfully",
+	}
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// @Summary get payout addresses
+// @Tags Users
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} interface{}
+// @Failure 404 {object} HttpResponse
+// @Router /api/users/me/payout [get]
+func GetPayoutAddress(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	user, err := getUserFromContext(r)
+	if err != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Internal server error")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	addresses, dbErr := SelectPayoutAddressesByUid(user.ID)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not query database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	res := HttpResponse{
+		Success: true,
+		Data:    addresses,
+		Message: "Updated exchange successfully",
+	}
 	_ = json.NewEncoder(w).Encode(res)
 }
 
@@ -435,7 +522,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repo, e := FindRepoByID(repoId)
-	if e!=nil{
+	if e != nil {
 		// If repo does not exists, create the repo
 		repo, err = FetchGithubRepoById(repoId)
 		if err != nil {
@@ -477,7 +564,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 			if insertErr != nil {
 				log.Printf("Could not insert Analysis Request into DB: %v", insertErr)
 			}
-			log.Printf("Requested analysis for repo %v (requestID:%v)",repo.ID,webhookResponse.RequestId)
+			log.Printf("Requested analysis for repo %v (requestID:%v)", repo.ID, webhookResponse.RequestId)
 		}
 	}
 
@@ -517,7 +604,6 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
 
 	user, err := getUserFromContext(r)
 	if err != nil {
@@ -600,10 +686,10 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 
 /*
 	==== Payment
- */
+*/
 
 type PostSubscriptionBody struct {
-	Plan string `json:"plan"`
+	Plan          string `json:"plan"`
 	PaymentMethod string `json:"paymentMethod"`
 }
 
@@ -656,6 +742,102 @@ func PostSubscription(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Data:    s,
 		Message: "Created subscription",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+/*
+	==== Exchange ====
+*/
+
+type GetExchangesResponse struct {
+	HttpResponse
+	Data []ExchangeEntry `json:"data,omitempty"`
+}
+
+// @Summary Get exchange requests
+// @Tags Repos
+// @Param q query string true "Search String"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} interface{}
+// @Failure 404 {object} HttpResponse
+// @Router /api/exchanges [get]
+func GetExchanges(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	exchanges, dbErr := SelectExchanges()
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not read from database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Data:    exchanges,
+		Message: "Retrieved exchanges successfully",
+	}
+	// send the HttpResponse
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// @Summary update exchange with price and date
+// @Tags Repos
+// @Param user body ExchangeEntryUpdate true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} interface{}
+// @Failure 404 {object} HttpResponse
+// @Router /api/exchanges/{id} [put]
+func PutExchange(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	exchangeID, err := strconv.Atoi(params["id"])
+	if err != nil {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("Invalid exchangeID")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	var body ExchangeEntryUpdate
+
+	jsonErr := json.NewDecoder(r.Body).Decode(&body)
+	if jsonErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not decode body")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	if exchangeID != body.ID {
+		w.WriteHeader(400)
+		res := NewHttpErrorResponse("ID must be identical in body and url param")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	dbErr := UpdateExchange(body)
+
+	if dbErr != nil {
+		w.WriteHeader(500)
+		res := NewHttpErrorResponse("Could not update in database")
+		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// format a HttpResponse object
+	res := HttpResponse{
+		Success: true,
+		Message: "Updated exchange successfully",
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
