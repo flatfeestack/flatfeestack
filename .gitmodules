@@ -18,3 +18,7 @@
 	path = scheduler
 	url = git@github.com:flatfeestack/scheduler.git
 	branch = main
+[submodule "search-proj"]
+	path = search-proj
+	url = https://github.com/flatfeestack/search-proj
+	branch = master
