@@ -148,11 +148,7 @@ module.exports = {
 };
 
 // Add stylesheets to the build
-if (Array.isArray(stylesheets) || typeof stylesheets === "string") {
-  if (!Array.isArray(stylesheets)) {
-    stylesheets = [stylesheets];
-  }
-
+if (Array.isArray(stylesheets)) {
   module.exports.entry.bundle.unshift.apply(
     module.exports.entry.bundle,
     stylesheets

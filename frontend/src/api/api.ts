@@ -12,6 +12,11 @@ const apiInstance = axios.create({
   timeout: 5000,
 });
 
+const searchInstance = axios.create({
+  baseURL: "/search",
+  timeout: 5000,
+});
+
 apiInstance.interceptors.request.use((config) => {
   const t = get(token);
   console.log({ t });
@@ -49,4 +54,9 @@ export const API = {
     unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
     getSponsored: () => apiInstance.get("/users/sponsored"),
   },
+};
+
+export const SEARCH = {
+  search: (keywords: string) =>
+    searchInstance.get(`/search/${keywords}`)
 };
