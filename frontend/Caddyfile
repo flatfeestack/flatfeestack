@@ -1,0 +1,29 @@
+:80
+root * /var/www/html
+encode gzip
+
+route /auth/* {
+    uri strip_prefix /auth
+    reverse_proxy auth:8080
+}
+
+route /api/* {
+    reverse_proxy api:8080
+}
+
+route /analysis/* {
+    uri strip_prefix /analysis
+    reverse_proxy analysis-engine:8080
+}
+
+@notProxy {
+   not {
+       path /api/* /analysis/* /auth/*
+   }
+   file {
+      try_files {path} {file} /index.html
+   }
+}
+
+rewrite @notProxy {http.matchers.file.relative}
+file_server
