@@ -24,7 +24,9 @@ import Web3 from "web3";
 import { toHex, toWei } from "web3-utils";
 import { Common } from "web3-core";
 import { ABI, CONTRACT_ID } from "../types/contract";
-const web3 = new Web3("http://localhost:7545");
+const web3 = new Web3(
+  "https://ropsten.infura.io/v3/6d6c0e875d6c4becaec0e1b10d5bc3cc"
+);
 
 let metamask = null;
 const ethEnabled = () => {

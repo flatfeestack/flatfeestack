@@ -90,4 +90,4 @@ export const ABI: AbiItem[] = [
   },
 ];
 
-export const CONTRACT_ID = "0xa7a921546dB1C0Ed6bF3BA5E953D8C4f4E8dAFC0";
+export const CONTRACT_ID = "0x70103fdfb9554c8d8dd3e2f16b551f1e5ad0d0cf";
