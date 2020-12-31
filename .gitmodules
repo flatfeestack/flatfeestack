@@ -15,3 +15,6 @@
 [submodule "scheduler"]
 	path = scheduler
 	url = git@github.com:flatfeestack/scheduler.git
+[submodule "payout"]
+	path = payout
+	url = git@github.com:flatfeestack/payout.git

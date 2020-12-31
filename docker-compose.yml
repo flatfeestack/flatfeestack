@@ -3,7 +3,7 @@ version: "3"
 volumes:
   caddy_data:
   postgres_data:
-
+  
 services:
   auth:
     container_name: flatfeestack-auth
@@ -46,6 +46,13 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
       - db  
+
+  payout:
+    container_name: flatfeestack-payout
+    build: ./payout
+    environment: 
+      - ETH_PK=${ETH_PK}
+      - ETH_CONTRACT=${ETH_CONTRACT}
 
   db:
     container_name: flatfeestack-db
