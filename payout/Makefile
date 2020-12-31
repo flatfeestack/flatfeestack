@@ -1,5 +1,3 @@
-NAME:=payout
-
 all: dep build
 dep: go.mod
 	go mod tidy
