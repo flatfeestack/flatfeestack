@@ -3,7 +3,7 @@ version: "3"
 volumes:
   caddy_data:
   postgres_data:
-  
+
 services:
   auth:
     container_name: flatfeestack-auth
@@ -21,7 +21,7 @@ services:
     build: ./analysis-engine
     ports:
       - "7000:8080"
-    environment: 
+    environment:
       - WEBHOOK_CALLBACK_URL=${WEBHOOK_CALLBACK_URL}
 
   api:
@@ -45,22 +45,21 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      - db  
+      - db
 
   payout:
     container_name: flatfeestack-payout
     build: ./payout
-    environment: 
+    environment:
       - ETH_PK=${ETH_PK}
       - ETH_CONTRACT=${ETH_CONTRACT}
 
   db:
     container_name: flatfeestack-db
-    build:
-      context: ./
-      dockerfile: ./Dockerfile-Postgres
+    image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - 5432:5432
     environment:
@@ -68,11 +67,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
 
-  caddy:
+  frontend:
     container_name: "flatfeestack-caddy"
-    build: 
-      context: ./
-      dockerfile: ./Dockerfile-Caddy
+    build:
+      context: frontend
     volumes:
       - caddy_data:/root/.caddy # to save certificates on disk
     ports:
