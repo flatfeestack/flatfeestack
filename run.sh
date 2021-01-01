@@ -62,12 +62,7 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  auth=''
-  engine=''
-  api=''
-  scheduler=''
-  payout=''
-  db=''
+  compose_args=''
   hosts=''
 
   while :; do
@@ -75,13 +70,13 @@ parse_params() {
     -h | --help) usage ;;
     -v | --verbose) set -x ;;
     --no-color) NO_COLOR=1 ;;
-    -na | --no-auth) auth='--scale auth=0' hosts="${hosts} auth";;
-    -ne | --no-engine) engine='--scale analysis-engine=0' hosts="${hosts} analysis-engine";;
-    -ni | --no-api) api='--scale api=0' hosts="${hosts} api";;
-    -ns | --no-scheduler) scheduler='--scale scheduler=0' hosts="${hosts} scheduler";;
-    -np | --no-payout) payout='--scale payout=0' hosts="${hosts} payout";;
-    -nf | --no-frontend) payout='--scale frontend=0' hosts="${hosts} frontend";;
-    -db | --db-only) db='db' ;;
+    -na | --no-auth) compose_args="${compose_args} --scale auth=0"; hosts="${hosts} auth";;
+    -ne | --no-engine) compose_args="${compose_args} --scale analysis-engine=0"; hosts="${hosts} analysis-engine";;
+    -ni | --no-api) compose_args="${compose_args} --scale api=0"; hosts="${hosts} api";;
+    -ns | --no-scheduler) compose_args="${compose_args} --scale scheduler=0"; hosts="${hosts} scheduler";;
+    -np | --no-payout) compose_args="${compose_args} --scale payout=0"; hosts="${hosts} payout";;
+    -nf | --no-frontend) compose_args="${compose_args} --scale frontend=0"; hosts="${hosts} frontend";;
+    -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -99,7 +94,7 @@ setup_colors
 # script logic here
 msg "${GREEN}Build container"
 docker-compose build --parallel
-msg "${GREEN}Run container"
 [ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
 msg "${GREEN}Setting DNS hosts to ${hosts}"
-HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}
+msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${compose_args}"
+HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${compose_args}
