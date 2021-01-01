@@ -4,8 +4,6 @@
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
-
 # check what machine we are on
 case "$(uname -s)" in
     Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
@@ -17,7 +15,7 @@ esac
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] [-f] -p param_value arg1 [arg2...]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-ni] [-ns] [-np] [-nf] [-db]
 
 Build and run flatfeestack.
 
@@ -31,7 +29,7 @@ Available options:
 -ns, --no-scheduler Don't start scheduler
 -np, --no-payout    Don't start payout
 -nf, --no-frontend  Dont' start frontend
--db, --db-only      Run the DB instance only
+-db, --db-only      Run the DB instance only, this ignores all the other options
 EOF
   exit
 }
