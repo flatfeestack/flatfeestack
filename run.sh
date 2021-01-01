@@ -22,7 +22,6 @@ Build and run flatfeestack.
 Available options:
 
 -h, --help          Print this help and exit
--v, --verbose       Print script debug info
 -na, --no-auth      Don't start auth
 -ne, --no-engine    Don't start analysis-engine
 -ni, --no-api       Don't start api
@@ -66,7 +65,6 @@ parse_params() {
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
-    -v | --verbose) set -x ;;
     --no-color) NO_COLOR=1 ;;
     -na | --no-auth) compose_args="${compose_args} --scale auth=0"; hosts="${hosts} auth";;
     -ne | --no-engine) compose_args="${compose_args} --scale analysis-engine=0"; hosts="${hosts} analysis-engine";;
