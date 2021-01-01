@@ -79,7 +79,7 @@ func LookupEnvInt(key string) int {
 
 func defaultOpts(o *Opts) {
 	o.Host = setDefault(o.Host, "db")
-	opts.Port = setDefaultInt(opts.Port, 8080)
+	opts.Port = setDefaultInt(opts.Port, 9082)
 }
 
 // @title Flatfeestack API
