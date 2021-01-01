@@ -4,6 +4,7 @@ import (
 	_ "api/docs"
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -20,22 +21,57 @@ import (
 
 var (
 	db   *sql.DB
-	host string
+	opts *Opts
 )
+
+type Opts struct {
+	Host string
+}
+
+func NewOpts() *Opts {
+	o := &Opts{}
+	flag.StringVar(&o.Host, "host", LookupEnv("HOST"), "Host")
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+	return o
+}
+
+func setDefault(actualValue string, defaultValue string) string {
+	if actualValue == "" {
+		return defaultValue
+	}
+	return actualValue
+}
+
+func LookupEnv(key string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return ""
+}
+
+func defaultOpts(o *Opts) {
+	o.Host = setDefault(o.Host, "db")
+}
 
 // @title Flatfeestack API
 // @version 0.0.1
 // @host localhost:8080
 // @BasePath /
 func main() {
-	host = "db"
+	opts = NewOpts()
+	defaultOpts(opts)
 	if os.Getenv("ENV") == "local" {
 		//if run locally get environment file from above docker config file
 		err := godotenv.Load("../.env")
 		if err != nil {
 			log.Fatalf("could not find env file. Please add an .env file if you want to run it without docker.", err)
 		}
-		host = "localhost"
 	}
 
 	stripe.Key = os.Getenv("STRIPE_SECRET")
@@ -162,7 +198,7 @@ func createConnection() *sql.DB {
 	// Open the connection
 	var dbString string
 
-	dbString = fmt.Sprintf("postgresql://%v:%v@%v:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), host, os.Getenv("POSTGRES_DB"))
+	dbString = fmt.Sprintf("postgresql://%v:%v@%v:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), opts.Host, os.Getenv("POSTGRES_DB"))
 	db, err := sql.Open("postgres", dbString)
 
 	if err != nil {
