@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -26,11 +27,13 @@ var (
 
 type Opts struct {
 	Host string
+	Port int
 }
 
 func NewOpts() *Opts {
 	o := &Opts{}
 	flag.StringVar(&o.Host, "host", LookupEnv("HOST"), "Host")
+	flag.IntVar(&o.Port, "port", LookupEnvInt("PORT"), "listening HTTP port")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -55,8 +58,28 @@ func LookupEnv(key string) string {
 	return ""
 }
 
+func setDefaultInt(actualValue int, defaultValue int) int {
+	if actualValue == 0 {
+		return defaultValue
+	}
+	return actualValue
+}
+
+func LookupEnvInt(key string) int {
+	if val, ok := os.LookupEnv(key); ok {
+		v, err := strconv.Atoi(val)
+		if err != nil {
+			log.Printf("LookupEnvInt[%s]: %v", key, err)
+			return 0
+		}
+		return v
+	}
+	return 0
+}
+
 func defaultOpts(o *Opts) {
 	o.Host = setDefault(o.Host, "db")
+	opts.Port = setDefaultInt(opts.Port, 8080)
 }
 
 // @title Flatfeestack API
@@ -106,8 +129,8 @@ func main() {
 	// Swagger
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
-	fmt.Println("Starting server on the port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	fmt.Println("Starting server on port "+strconv.Itoa(opts.Port))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
 
 type authMiddlewareKey string
