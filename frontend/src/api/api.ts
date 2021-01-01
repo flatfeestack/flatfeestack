@@ -19,7 +19,7 @@ const searchInstance = axios.create({
 
 apiInstance.interceptors.request.use((config) => {
   const t = get(token);
-  console.log({ t });
+  console.log(t);
   if (t) {
     config.headers.Authorization = "Bearer " + t;
     return config;

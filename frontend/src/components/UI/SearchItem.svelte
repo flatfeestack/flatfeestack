@@ -8,12 +8,6 @@
         align-items: center;
     }
 
-    img {
-        width: 5px;
-        padding: 5px 0;
-        margin: 0 10px;
-    }
-
     .customItem_title {
         overflow: hidden;
         text-overflow: ellipsis;
