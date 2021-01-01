@@ -1,28 +1,19 @@
 #!/usr/bin/env bash
 
 # based on https://betterdev.blog/minimal-safe-bash-script-template/
-# trap? -> https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -Eeuo pipefail
+trap cleanup SIGINT SIGTERM ERR EXIT
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
 # check what machine we are on
 case "$(uname -s)" in
-    Linux*)     machine=Linux;;
-    Darwin*)    machine=Mac;;
-    CYGWIN*)    machine=Cygwin;;
-    MINGW*)     machine=MinGw;;
-    *)          machine="UNKNOWN"
+    Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
+    Darwin*)    host_ip="host.docker.internal";;
+    CYGWIN*)    host_ip="localhost";;
+    MINGW*)     host_ip="localhost";;
+    *)          host_ip="localhost"
 esac
-
-# depending on the machine extract the container host ip or use the term from docker
-if [ $machine == Linux ]
-then
-	hostip=$(ifconfig docker0 | awk '/inet / {print $2}')
-else
-	hostip="host.docker.internal"
-fi
-export HOST_IP=$hostip
 
 usage() {
   cat <<EOF
@@ -39,9 +30,15 @@ Available options:
 -ni, --no-api       Don't start api
 -ns, --no-scheduler Don't start scheduler
 -np, --no-payout    Don't start payout
--db, --database     Run the DB instance only
+-nf, --no-frontend  Dont' start frontend
+-db, --db-only      Run the DB instance only
 EOF
   exit
+}
+
+cleanup() {
+  trap - SIGINT SIGTERM ERR EXIT
+  # script cleanup here
 }
 
 setup_colors() {
@@ -71,20 +68,20 @@ parse_params() {
   scheduler=''
   payout=''
   db=''
-  hosts='localhost:127.0.0.1' #we need to define a mapping, otherwise docker-compose complains
+  hosts=''
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     -v | --verbose) set -x ;;
     --no-color) NO_COLOR=1 ;;
-    -na | --no-auth) auth='--scale auth=0' hosts="auth:${hostip}";;
-    -ne | --no-engine) engine='--scale analysis-engine=0' hosts="analysis-engine:${hostip}";;
-    -ni | --no-api) api='--scale api=0' hosts="api:${hostip}";;
-    -ns | --no-scheduler) scheduler='--scale scheduler=0' hosts="scheduler:${hostip}";;
-    -np | --no-payout) payout='--scale payout=0' hosts="payout:${hostip}";;
-    -nf | --no-frontend) payout='--scale frontend=0' hosts="frontend:${hostip}";;
-    -db | --database) db='db' ;;
+    -na | --no-auth) auth='--scale auth=0' hosts="${hosts} auth";;
+    -ne | --no-engine) engine='--scale analysis-engine=0' hosts="${hosts} analysis-engine";;
+    -ni | --no-api) api='--scale api=0' hosts="${hosts} api";;
+    -ns | --no-scheduler) scheduler='--scale scheduler=0' hosts="${hosts} scheduler";;
+    -np | --no-payout) payout='--scale payout=0' hosts="${hosts} payout";;
+    -nf | --no-frontend) payout='--scale frontend=0' hosts="${hosts} frontend";;
+    -db | --db-only) db='db' ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -100,7 +97,9 @@ parse_params "$@"
 setup_colors
 
 # script logic here
-msg "${GREEN} build container"
+msg "${GREEN}Build container"
 docker-compose build --parallel
-msg "${GREEN} run container"
-HOSTS=${hosts} docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}
+msg "${GREEN}Run container"
+[ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
+msg "${GREEN}Setting DNS hosts to ${hosts}"
+HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}
