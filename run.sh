@@ -6,6 +6,24 @@ set -Eeuo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
+# check what machine we are on
+case "$(uname -s)" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    CYGWIN*)    machine=Cygwin;;
+    MINGW*)     machine=MinGw;;
+    *)          machine="UNKNOWN"
+esac
+
+# depending on the machine extract the container host ip or use the term from docker
+if [ $machine == Linux ]
+then
+	hostip=$(ifconfig docker0 | awk '/inet / {print $2}')
+else
+	hostip="host.docker.internal"
+fi
+export HOST_IP=$hostip
+
 usage() {
   cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] [-f] -p param_value arg1 [arg2...]
@@ -53,17 +71,19 @@ parse_params() {
   scheduler=''
   payout=''
   db=''
+  hosts='localhost:127.0.0.1' #we need to define a mapping, otherwise docker-compose complains
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     -v | --verbose) set -x ;;
     --no-color) NO_COLOR=1 ;;
-    -na | --no-auth) auth='--scale auth=0' ;;
-    -ne | --no-engine) engine='--scale analysis-engine=0' ;;
-    -ni | --no-api) api='--scale api=0' ;;
-    -ns | --no-scheduler) scheduler='--scale scheduler=0' ;;
-    -np | --no-payout) payout='--scale payout=0' ;;
+    -na | --no-auth) auth='--scale auth=0' hosts="auth:${hostip}";;
+    -ne | --no-engine) engine='--scale analysis-engine=0' hosts="analysis-engine:${hostip}";;
+    -ni | --no-api) api='--scale api=0' hosts="api:${hostip}";;
+    -ns | --no-scheduler) scheduler='--scale scheduler=0' hosts="scheduler:${hostip}";;
+    -np | --no-payout) payout='--scale payout=0' hosts="payout:${hostip}";;
+    -nf | --no-frontend) payout='--scale frontend=0' hosts="frontend:${hostip}";;
     -db | --database) db='db' ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
@@ -83,4 +103,4 @@ setup_colors
 msg "${GREEN} build container"
 docker-compose build --parallel
 msg "${GREEN} run container"
-docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}
+HOSTS=${hosts} docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}
