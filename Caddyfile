@@ -3,18 +3,18 @@ encode gzip
 
 route /auth/* {
     uri strip_prefix /auth
-    reverse_proxy auth:8080
+    reverse_proxy auth:9081
 }
 
 route /api/* {
-    reverse_proxy api:8080
+    reverse_proxy api:9082
 }
 
 route /analysis/* {
     uri strip_prefix /analysis
-    reverse_proxy analysis-engine:8080
+    reverse_proxy analysis-engine:9083
 }
 
 route {
-    reverse_proxy frontend:8081
+    reverse_proxy frontend:9084
 }

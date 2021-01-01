@@ -9,13 +9,8 @@ services:
     build: ./fastauth
     environment:
       - DEV=test
-      - USERS=info@flatfeestack.io:pw1;jonas@flatfeestack.io:pw2
-
-  analysis-engine:
-    container_name: flatfeestack-analysis-engine
-    build: ./analysis-engine
-    environment:
-      - WEBHOOK_CALLBACK_URL=${WEBHOOK_CALLBACK_URL}
+      - USERS=info@flatfeestack.io:pw1;jonas@flatfeestack.io:pw2;tom:pw1
+      - PORT=9081
 
   api:
     container_name: flatfeestack-api
@@ -25,8 +20,16 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
       - STRIPE_SECRET=${STRIPE_SECRET}
+      - PORT=9082
     depends_on:
       - db
+
+  analysis-engine:
+    container_name: flatfeestack-analysis-engine
+    build: ./analysis-engine
+    environment:
+      - WEBHOOK_CALLBACK_URL=${WEBHOOK_CALLBACK_URL}
+      - PORT=9083
 
   scheduler:
     container_name: flatfeestack-scheduler
@@ -71,3 +74,4 @@ services:
   frontend:
     container_name: flatfeestack-frontend
     build: ./frontend
+    #Default port is 9084
