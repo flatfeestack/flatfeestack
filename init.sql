@@ -198,7 +198,7 @@ create table if not exists exchange
     id       serial  not null
         constraint exchange_pkey
             primary key,
-    amount   numeric not null,
+    amount   numeric,
     chain_id text    not null,
     price    numeric,
     date     date
@@ -284,6 +284,53 @@ from get_sponsored_repos_at(d)
 where user_id = uid
 $$;
 
+create or replace function get_payment_at(uuid, date)
+    returns TABLE
+            (
+                id     integer,
+                uid    uuid,
+                "from" timestamp without time zone,
+                "to"   timestamp without time zone,
+                sub    text,
+                amount integer
+            )
+    language sql
+as
+$$
+SELECT p.*
+FROM (SELECT MAX("to") as "to", uid
+      FROM payments
+      WHERE "to"::DATE >= $2
+        AND "from"::DATE <= $2
+        AND uid = $1
+      GROUP BY uid) as latest
+         JOIN payments p ON p.to = latest.to AND p.uid = latest.uid;
+$$;
+
+create or replace function get_monthly_sponsor_amount_at(uuid, timestamp without time zone) returns integer
+    language sql
+as
+$$
+SELECT amount / (EXTRACT(YEAR FROM age) * 12 + EXTRACT(MONTH FROM age))::int AS monthly_amount
+FROM (SELECT age("to", "from"), uid, amount from get_payment_at($1, $2::DATE)) as p;
+$$;
+
+create or replace function get_daily_repo_balance_at(date)
+    returns TABLE
+            (
+                repo_id integer,
+                balance double precision
+            )
+    language sql
+as
+$$
+SELECT repo_id,
+       ROUND(((get_monthly_sponsor_amount_at(user_id, $1)::FLOAT / days_in_month($1)) /
+              (countsponsoredrepos_at(user_id, $1))::FLOAT)::NUMERIC, 3) as sponsor_amounts
+FROM get_sponsored_repos_at($1)
+WHERE get_monthly_sponsor_amount_at(user_id, $1) is not NULL
+    $$;
+
 create or replace function get_monthly_repo_balance_at(date)
     returns TABLE
             (
@@ -293,7 +340,7 @@ create or replace function get_monthly_repo_balance_at(date)
     language sql
 as
 $$
-SELECT daily_balance.repo_id, SUM(daily_balance.sponsor_amounts) as sponsor_amounts
+SELECT daily_balance.repo_id, SUM(daily_balance.balance) as sponsor_amounts
 FROM generate_series(
              (SELECT date_trunc('MONTH', $1)),
              (SELECT (date_trunc('MONTH', $1) + INTERVAL '1 MONTH - 1 day')::DATE), '1 day') d,
@@ -331,36 +378,9 @@ SELECT amount / (EXTRACT(YEAR FROM age) * 12 + EXTRACT(MONTH FROM age))::int AS 
 FROM (SELECT age("to", "from"), uid, amount from get_last_payment($1)) as p;
 $$;
 
-create or replace function get_payment_at(uuid, date)
-    returns TABLE
-            (
-                id     integer,
-                uid    uuid,
-                "from" timestamp without time zone,
-                "to"   timestamp without time zone,
-                sub    text,
-                amount integer
-            )
-    language sql
-as
-$$
-SELECT p.*
-FROM (SELECT MAX("to") as "to", uid
-      FROM payments
-      WHERE "to"::DATE >= $2
-        AND "from"::DATE <= $2
-        AND uid = $1
-      GROUP BY uid) as latest
-         JOIN payments p ON p.to = latest.to AND p.uid = latest.uid;
-$$;
 
-create or replace function get_monthly_sponsor_amount_at(uuid, timestamp without time zone) returns integer
-    language sql
-as
-$$
-SELECT amount / (EXTRACT(YEAR FROM age) * 12 + EXTRACT(MONTH FROM age))::int AS monthly_amount
-FROM (SELECT age("to", "from"), uid, amount from get_payment_at($1, $2::DATE)) as p;
-$$;
+
+
 
 create or replace function get_daily_repo_balance()
     returns TABLE
@@ -414,21 +434,7 @@ $$
    AND created_at < now() - '6 MONTHS'::interval)
 $$;
 
-create or replace function get_daily_repo_balance_at(date)
-    returns TABLE
-            (
-                repo_id integer,
-                balance double precision
-            )
-    language sql
-as
-$$
-SELECT repo_id,
-       ROUND(((get_monthly_sponsor_amount_at(user_id, $1)::FLOAT / days_in_month($1)) /
-              (countsponsoredrepos_at(user_id, $1))::FLOAT)::NUMERIC, 3) as sponsor_amounts
-FROM get_sponsored_repos_at($1)
-WHERE get_monthly_sponsor_amount_at(user_id, $1) is not NULL
-$$;
+
 
 create or replace function latest_repo_balance_at(date)
     returns TABLE

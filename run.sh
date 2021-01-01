@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
 # based on https://betterdev.blog/minimal-safe-bash-script-template/
-
+# trap? -> https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -Eeuo pipefail
-trap cleanup SIGINT SIGTERM ERR EXIT
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
@@ -22,13 +21,9 @@ Available options:
 -ni, --no-api       Don't start api
 -ns, --no-scheduler Don't start scheduler
 -np, --no-payout    Don't start payout
+-db, --database     Run the DB instance only
 EOF
   exit
-}
-
-cleanup() {
-  trap - SIGINT SIGTERM ERR EXIT
-  # script cleanup here
 }
 
 setup_colors() {
@@ -57,6 +52,7 @@ parse_params() {
   api=''
   scheduler=''
   payout=''
+  db=''
 
   while :; do
     case "${1-}" in
@@ -68,6 +64,7 @@ parse_params() {
     -ni | --no-api) api='--scale api=0' ;;
     -ns | --no-scheduler) scheduler='--scale scheduler=0' ;;
     -np | --no-payout) payout='--scale payout=0' ;;
+    -db | --database) db='db' ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -86,4 +83,4 @@ setup_colors
 msg "${GREEN} build container"
 docker-compose build --parallel
 msg "${GREEN} run container"
-docker-compose up --abort-on-container-exit $auth $engine $scheduler &payout
+docker-compose up --abort-on-container-exit ${auth} ${engine} ${scheduler} ${payout} ${db}

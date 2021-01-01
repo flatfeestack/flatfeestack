@@ -68,9 +68,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
 
   frontend:
-    container_name: "flatfeestack-caddy"
-    build:
-      context: frontend
+    container_name: flatfeestack-caddy
+    build: ./frontend
     volumes:
       - caddy_data:/root/.caddy # to save certificates on disk
     ports:
