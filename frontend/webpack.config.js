@@ -125,15 +125,8 @@ module.exports = {
     stats: "minimal",
     contentBase: "public",
     watchContentBase: true,
-    proxy: {
-      "/auth": {
-        target: "http://localhost/auth",
-        pathRewrite: { "^/auth": "" },
-      },
-      "/api": {
-        target: "http://localhost:8080",
-      },
-    },
+    port: 9084,
+    host: '0.0.0.0'
   },
   mode,
   plugins: [
