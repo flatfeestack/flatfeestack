@@ -10,7 +10,7 @@ case "$(uname -s)" in
     Darwin*)    host_ip="host.docker.internal";;
     CYGWIN*)    host_ip="localhost";;
     MINGW*)     host_ip="localhost";;
-    *)          host_ip="localhost"
+    *)          host_ip="localhost";;
 esac
 
 usage() {
