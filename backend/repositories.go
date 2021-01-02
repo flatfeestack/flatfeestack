@@ -4,9 +4,58 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"time"
 )
+
+type User struct {
+	Id                uuid.UUID `json:"id" sql:",type:uuid"`
+	StripeId          *string   `json:"-"`
+	Email             *string   `json:"email"`
+	Subscription      *string   `json:"subscription"`
+	SubscriptionState *string   `json:"subscription_state"`
+	PayoutETH         *string   `json:"payout_eth"`
+}
+
+// FindByID returns a single user
+func FindUserByEmail(email string) (*User, error) {
+	var u User
+	err := db.
+		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE email=$1", email).
+		Scan(&u.Id, &u.StripeId, &u.Email, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return &u, nil
+	}
+}
+
+// Save inserts a user into the database
+func SaveUser(user *User) error {
+	stmt, err := db.Prepare("INSERT INTO users (id, email) VALUES ($1, $2)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(user.Id, user.Email)
+	return handleErr(res, err, "INSERT INTO auth", user)
+}
+
+func handleErr(res sql.Result, err error, info string, value interface{}) error {
+	if err != nil {
+		return fmt.Errorf("%v query %v failed: %v", info, value, err)
+	}
+	nr, err := res.RowsAffected()
+	if nr == 0 || err != nil {
+		return fmt.Errorf("%v %v rows %v, affected or err: %v", info, nr, value, err)
+	}
+	return nil
+}
 
 // FindByID returns a single user
 func FindUserByID(ID string) (*User, error) {
@@ -23,7 +72,7 @@ func FindUserByID(ID string) (*User, error) {
 	row := db.QueryRow(sqlStatement, ID)
 
 	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription, &user.SubscriptionState)
+	err := row.Scan(&user.Id, &user.StripeId, &user.Email, &user.Subscription, &user.SubscriptionState)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -39,10 +88,8 @@ func FindUserByID(ID string) (*User, error) {
 	return &user, err
 }
 
-func FindConnectedEmails(uid string) ([]string, error) {
-	if uid == "" {
-		return nil, fmt.Errorf("ID cannot be empty")
-	}
+func FindConnectedEmails(uid uuid.UUID) ([]string, error) {
+
 	var emails []string
 
 	sqlStatement := `SELECT email FROM git_email WHERE uid=$1;`
@@ -66,10 +113,7 @@ func FindConnectedEmails(uid string) ([]string, error) {
 	return emails, err
 }
 
-func InsertConnectedEmail(uid string, email string) error {
-	if uid == "" {
-		return fmt.Errorf("ID cannot be empty")
-	}
+func InsertConnectedEmail(uid uuid.UUID, email string) error {
 	sqlStatement := `INSERT INTO git_email(email, uid) VALUES($1,$2);`
 	_, err := db.Exec(sqlStatement, email, uid)
 	if err != nil {
@@ -79,10 +123,7 @@ func InsertConnectedEmail(uid string, email string) error {
 	return nil
 }
 
-func DeleteConnectedEmail(uid string, email string) error {
-	if uid == "" {
-		return fmt.Errorf("ID cannot be empty")
-	}
+func DeleteConnectedEmail(uid uuid.UUID, email string) error {
 	sqlStatement := `DELETE FROM git_email WHERE email=$1 AND uid=$2`
 	_, err := db.Exec(sqlStatement, email, uid)
 	if err != nil {
@@ -92,60 +133,12 @@ func DeleteConnectedEmail(uid string, email string) error {
 	return nil
 }
 
-// FindByID returns a single user
-func FindUserByEmail(ID string) (*User, error) {
-	var user User
-
-	if ID == "" {
-		return &user, fmt.Errorf("ID cannot be empty")
-	}
-
-	// create the select sql query
-	sqlStatement := `SELECT * FROM "user" WHERE email=$1`
-
-	// execute the sql statement
-	row := db.QueryRow(sqlStatement, ID)
-
-	// unmarshal the row object to user
-	err := row.Scan(&user.ID, &user.StripeId, &user.Email, &user.Username, &user.Subscription, &user.SubscriptionState)
-
-	switch err {
-	case sql.ErrNoRows:
-		log.Println("No rows were returned!")
-		return &user, nil
-	case nil:
-		return &user, nil
-	default:
-		log.Fatalf("Unable to scan the row. %v", err)
-	}
-
-	// return empty user on error
-	return &user, err
-}
-
-// Save inserts a user into the database
-func SaveUser(user *User) error {
-	sqlStatement := `INSERT INTO "user" (id, email, username) VALUES ($1, $2, $3) RETURNING id`
-
-	var id string
-	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username).Scan(&id)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	fmt.Printf("Inserted a single record %v", id)
-
-	return nil
-}
-
 func UpdateUser(user *User) error {
-	sqlStatement := `UPDATE "user" SET (email, username, stripe_id, subscription, "subscription_state") = ($2, $3, $4, $5, $6) 
+	sqlStatement := `UPDATE "user" SET (email, stripe_id, subscription, "subscription_state") = ($2, $3, $4, $5, $6) 
 						WHERE id=$1 RETURNING id`
 
 	var id string
-	err := db.QueryRow(sqlStatement, user.ID, user.Email, user.Username, user.StripeId, user.Subscription, user.SubscriptionState).Scan(&id)
+	err := db.QueryRow(sqlStatement, user.Id, user.Email, user.StripeId, user.Subscription, user.SubscriptionState).Scan(&id)
 
 	if err != nil {
 		log.Println(err)
@@ -196,7 +189,7 @@ func SaveRepo(repo *Repo) error {
 	return nil
 }
 
-func Sponsor(repoID int, uid string) (*SponsorEvent, error) {
+func Sponsor(repoID int, uid uuid.UUID) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
 	err := db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
@@ -211,7 +204,7 @@ func Sponsor(repoID int, uid string) (*SponsorEvent, error) {
 	return &event, nil
 }
 
-func Unsponsor(repoID int, uid string) (*SponsorEvent, error) {
+func Unsponsor(repoID int, uid uuid.UUID) (*SponsorEvent, error) {
 	var event SponsorEvent
 	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
 	err := db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
@@ -226,7 +219,7 @@ func Unsponsor(repoID int, uid string) (*SponsorEvent, error) {
 	return &event, nil
 }
 
-func GetSponsoredReposById(uid string) ([]Repo, error) {
+func GetSponsoredReposById(uid uuid.UUID) ([]Repo, error) {
 	var repos []Repo
 	sqlStatement := `SELECT r.* FROM 
 		(SELECT uid, repo_id, max("timestamp") as "timestamp" 
@@ -315,7 +308,7 @@ func InsertOrUpdatePayoutAddress(p PayoutAddress) error {
 	return nil
 }
 
-func SelectPayoutAddressesByUid(uid string) (addresses []PayoutAddress, err error) {
+func SelectPayoutAddressesByUid(uid uuid.UUID) (addresses []PayoutAddress, err error) {
 	sqlStatement := `SELECT uid, address, chain_id FROM pay_out_address WHERE uid=$1`
 	rows, err := db.Query(sqlStatement, uid)
 

@@ -12,7 +12,7 @@ require (
 	github.com/stripe/stripe-go/v72 v72.28.0
 	github.com/swaggo/http-swagger v1.0.0
 	github.com/swaggo/swag v1.7.0
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/tools v0.0.0-20201230224404-63754364767c // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1

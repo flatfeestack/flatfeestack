@@ -3,7 +3,9 @@ package main
 import (
 	_ "api/docs"
 	"context"
+	"crypto/rsa"
 	"database/sql"
+	"encoding/base32"
 	"flag"
 	"fmt"
 	"github.com/google/uuid"
@@ -12,28 +14,42 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stripe/stripe-go/v72"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"golang.org/x/crypto/ed25519"
+	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
-	db   *sql.DB
-	opts *Opts
+	db        *sql.DB
+	opts      *Opts
+	jwtKey    []byte
+	debug     = true
+	privRSA   *rsa.PrivateKey
+	privEdDSA *ed25519.PrivateKey
 )
 
 type Opts struct {
-	Host string
-	Port int
+	Host         string
+	Port         int
+	HS256        string
+	Env          string
+	StripeSecret string
 }
 
 func NewOpts() *Opts {
 	o := &Opts{}
+
+	flag.StringVar(&o.Env, "env", LookupEnv("ENV"), "ENV variable")
 	flag.StringVar(&o.Host, "host", LookupEnv("HOST"), "Host")
 	flag.IntVar(&o.Port, "port", LookupEnvInt("PORT"), "listening HTTP port")
+	flag.StringVar(&o.HS256, "hs256", LookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&o.StripeSecret, "string", LookupEnv("STRIPE_SECRET"), "Stripe secret")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -41,14 +57,48 @@ func NewOpts() *Opts {
 	}
 
 	flag.Parse()
+
+	//set defaults
+	if o.Env == "local" {
+		err := godotenv.Load()
+		if err != nil {
+			err = godotenv.Load("../.env")
+			if err != nil {
+				log.Printf("could not find env file in this or in the parent dir: %v", err)
+			}
+		}
+	}
+	o.Host = setDefault(o.Host, LookupEnv("HOST"), "db")
+	o.Port = setDefaultInt(o.Port, LookupEnvInt("PORT"), 9082)
+	o.HS256 = setDefault(o.HS256, LookupEnv("HS256"), "ORSXG5A=")
+
+	if o.HS256 != "" {
+		var err error
+		jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
+		if err != nil {
+			log.Fatalf("cannot decode %v", o.HS256)
+		}
+	}
+
 	return o
 }
 
-func setDefault(actualValue string, defaultValue string) string {
-	if actualValue == "" {
-		return defaultValue
+func setDefault(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
 	}
-	return actualValue
+	return ""
+}
+
+func setDefaultInt(values ...int) int {
+	for _, v := range values {
+		if v != 0 {
+			return v
+		}
+	}
+	return 0
 }
 
 func LookupEnv(key string) string {
@@ -56,13 +106,6 @@ func LookupEnv(key string) string {
 		return val
 	}
 	return ""
-}
-
-func setDefaultInt(actualValue int, defaultValue int) int {
-	if actualValue == 0 {
-		return defaultValue
-	}
-	return actualValue
 }
 
 func LookupEnvInt(key string) int {
@@ -77,25 +120,12 @@ func LookupEnvInt(key string) int {
 	return 0
 }
 
-func defaultOpts(o *Opts) {
-	o.Host = setDefault(o.Host, "db")
-	opts.Port = setDefaultInt(opts.Port, 9082)
-}
-
 // @title Flatfeestack API
 // @version 0.0.1
 // @host localhost:8080
 // @BasePath /
 func main() {
 	opts = NewOpts()
-	defaultOpts(opts)
-	if os.Getenv("ENV") == "local" {
-		//if run locally get environment file from above docker config file
-		err := godotenv.Load("../.env")
-		if err != nil {
-			log.Fatalf("could not find env file. Please add an .env file if you want to run it without docker.", err)
-		}
-	}
 
 	stripe.Key = os.Getenv("STRIPE_SECRET")
 
@@ -129,11 +159,21 @@ func main() {
 	// Swagger
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
-	fmt.Println("Starting server on port "+strconv.Itoa(opts.Port))
+	fmt.Println("Starting server on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
 
-type authMiddlewareKey string
+func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	log.Printf(msg)
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
+	w.WriteHeader(code)
+	if debug {
+		w.Write([]byte(`{"error":"` + msg + `"}`))
+	}
+}
 
 func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -143,77 +183,96 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			reqToken := r.Header.Get("Authorization")
-			if !strings.HasPrefix(reqToken, "Bearer") {
-				http.Error(w, "Forbidden", http.StatusForbidden)
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
 				return
 			}
-			splitToken := strings.Split(reqToken, "Bearer ")
-			if len(splitToken) != 2 {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-			reqToken = splitToken[1]
-			token, err := jwt.ParseSigned(reqToken)
-			out := make(map[string]interface{})
 
-			// TODO: check signature of token
-			if err := token.UnsafeClaimsWithoutVerification(&out); err != nil {
-				panic(err)
+			bearerToken := strings.Split(authHeader, " ")
+			if len(bearerToken) != 2 {
+				writeErr(w, http.StatusBadRequest, "ERR-02, could not split token: %v", bearerToken)
+				return
 			}
+
+			tok, err := jwt.ParseSigned(bearerToken[1])
 			if err != nil {
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				writeErr(w, http.StatusBadRequest, "ERR-03, could not parse token: %v", bearerToken[1])
 				return
 			}
 
-			sub := fmt.Sprintf("%v", out["sub"])
+			claims := &jwt.Claims{}
+
+			if tok.Headers[0].Algorithm == string(jose.RS256) {
+				err = tok.Claims(privRSA.Public(), claims)
+			} else if tok.Headers[0].Algorithm == string(jose.HS256) {
+				err = tok.Claims(jwtKey, claims)
+			} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
+				err = tok.Claims(privEdDSA.Public(), claims)
+			} else {
+				writeErr(w, http.StatusUnauthorized, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
+				return
+			}
+
+			if err != nil {
+				writeErr(w, http.StatusUnauthorized, "ERR-05, could not parse claims: %v", bearerToken[1])
+				return
+			}
+
+			if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
+				writeErr(w, http.StatusBadRequest, "ERR-06, expired: %v", claims.Expiry.Time())
+				return
+			}
+
+			if claims.Subject == "" {
+				writeErr(w, http.StatusBadRequest, "ERR-07, no subject: %v", claims)
+				return
+			}
 
 			// Fetch user from DB
-			user, userErr := FindUserByEmail(sub)
-			if userErr != nil {
-				log.Printf("Could not get user %s, %v\n", userErr, user)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			user, err := FindUserByEmail(claims.Subject)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
 				return
 			}
-			// User needs to be created
-			if user.ID == "" {
-				log.Printf("need to create a user")
-				var newUser User
-				uid, uuidErr := uuid.NewRandom()
-				if uuidErr != nil {
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				newUser.ID = uid.String()
-				newUser.Email = sub
-				userErr := SaveUser(&newUser)
-				if userErr != nil {
-					log.Printf("Could not create user %v", userErr)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				log.Printf("user created")
 
-				// Create Stripe user
-				userWithStripe, stripeErr := CreateStripeCustomer(newUser)
-				if stripeErr != nil {
-					log.Printf("Could not create user in stripe %v", stripeErr)
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			if user == nil {
+				user, err = createUser(claims.Subject)
+				if err != nil {
+					writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
 					return
 				}
-				user = userWithStripe
 			}
 
-			if user.ID == "" {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-			} else {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, authMiddlewareKey("user"), user)
-				log.Printf("Authenticated user %s\n", user.Email)
-				next.ServeHTTP(w, r.WithContext(ctx))
-			}
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, "user", user)
+			log.Printf("Authenticated user %s\n", user.Email)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func createUser(email string) (*User, error) {
+	log.Printf("need to create a user")
+	var user User
+	uid, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	user.Id = uid
+	user.Email = &email
+	sid := "local"
+	if opts.Env != "local" {
+		sid, err = createStripeCustomer(&user)
+	}
+	user.StripeId = &sid
+
+	err = SaveUser(&user)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("user created")
+	return &user, nil
 }
 
 // create connection with postgres db

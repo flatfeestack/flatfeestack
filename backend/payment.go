@@ -15,40 +15,32 @@ import (
 	"time"
 )
 
-func CreateStripeCustomer(user User) (*User, error) {
+func createStripeCustomer(user *User) (string, error) {
 	params := &stripe.CustomerParams{
-		Email: stripe.String(user.Email),
+		Email: stripe.String(*user.Email),
 	}
-	params.AddMetadata("uid", user.ID)
+	params.AddMetadata("uid", user.Id.String())
 	c, err := customer.New(params)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	user.StripeId.String = c.ID
-	user.StripeId.Valid = true
-
-	// add stripe id to DB
-	userErr := UpdateUser(&user)
-	if userErr != nil {
-		return nil, userErr
-	}
-	return &user, nil
+	return c.ID, nil
 }
 
 func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
-	if !user.StripeId.Valid {
+	if user.StripeId != nil {
 		log.Print("error in createSubscription: user has no stripeID")
 		return nil, errors.New("can not create subscription for user without stripeID")
 	}
 	paymentParams := &stripe.PaymentMethodAttachParams{
-		Customer: stripe.String(user.StripeId.String),
+		Customer: stripe.String(*user.StripeId),
 	}
 	p, err := paymentmethod.Attach(paymentMethod, paymentParams)
 	if err != nil {
-		log.Printf("Could not set payment method for user %s: %v", user.ID, err)
+		log.Printf("Could not set payment method for user %s: %v", user.Id, err)
 	}
 	subParams := &stripe.SubscriptionParams{
-		Customer:             stripe.String(user.StripeId.String),
+		Customer:             stripe.String(*user.StripeId),
 		DefaultPaymentMethod: stripe.String(p.ID),
 		Items: []*stripe.SubscriptionItemsParams{
 			{
@@ -68,8 +60,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 
 	if paymentIntent != nil && paymentIntent.Status == "succeeded" {
 		log.Print("in if statement status succeeded")
-		user.Subscription.String = s.ID
-		user.Subscription.Valid = true
+		user.Subscription = &s.ID
 		err := UpdateUser(&user)
 		if err != nil {
 			return nil, err
@@ -195,11 +186,11 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		return http.StatusBadRequest
 	}
 
+	active := "active"
+
 	if subscription.Status == "active" {
-		user.Subscription.String = subscription.ID
-		user.Subscription.Valid = true
-		user.SubscriptionState.String = "active"
-		user.SubscriptionState.Valid = true
+		user.Subscription = &subscription.ID
+		user.SubscriptionState = &active
 		err = UpdateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)
@@ -207,10 +198,8 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		}
 	} else if subscription.Status == "canceled" || subscription.Status == "unpaid" {
 		// TODO: Check stripe retry rules and deactivate subscription at some point
-		user.SubscriptionState.String = ""
-		user.SubscriptionState.Valid = false
-		user.Subscription.String = ""
-		user.Subscription.Valid = false
+		user.SubscriptionState = nil
+		user.Subscription = nil
 		err = UpdateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)
@@ -218,10 +207,9 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		}
 	} else {
 		// Keep subscriptionId the same, but update the status so the subscription can be reactivated later
-		user.SubscriptionState.String = string(subscription.Status)
-		user.SubscriptionState.Valid = true
-		user.Subscription.String = subscription.ID
-		user.Subscription.Valid = true
+		s := string(subscription.Status)
+		user.SubscriptionState = &s
+		user.Subscription = &subscription.ID
 		err = UpdateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"time"
 )
@@ -54,14 +55,6 @@ func (ns *NullTime) UnmarshalJSON(data []byte) error {
 }
 
 // User schema of the user table
-type User struct {
-	ID                string     `json:"id"`
-	StripeId          NullString `json:"-"`
-	Email             string     `json:"email"`
-	Username          string     `json:"username"`
-	Subscription      NullString `json:"subscription"`
-	SubscriptionState NullString `json:"subscription_state"`
-}
 
 // User schema of the user table
 type UserWithConnectedEmails struct {
@@ -151,7 +144,7 @@ type ExchangeEntryUpdate struct {
 }
 
 type PayoutAddress struct {
-	Uid     string `json:"uid"`
-	ChainId string `json:"chain_id"`
-	Address string `json:"address"`
+	Uid     uuid.UUID `json:"uid" sql:",type:uuid"`
+	ChainId string    `json:"chain_id"`
+	Address string    `json:"address"`
 }

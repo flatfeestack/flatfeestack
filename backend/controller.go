@@ -67,7 +67,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	user.ID = uid.String()
+	user.Id = uid
 	// call insert user function and pass the user
 	dbErr := SaveUser(&user)
 
@@ -176,7 +176,7 @@ func GetMyConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	emails, err := FindConnectedEmails(user.ID)
+	emails, err := FindConnectedEmails(user.Id)
 	if err != nil {
 		w.WriteHeader(500)
 		res := NewHttpErrorResponse("Not a valid user")
@@ -228,7 +228,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := InsertConnectedEmail(user.ID, body.Email)
+	dbErr := InsertConnectedEmail(user.Id, body.Email)
 
 	if dbErr != nil {
 		w.WriteHeader(400)
@@ -279,7 +279,7 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := DeleteConnectedEmail(user.ID, email)
+	dbErr := DeleteConnectedEmail(user.Id, email)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -331,7 +331,7 @@ func PutPayoutAddress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	address := PayoutAddress{
-		Uid:     user.ID,
+		Uid:     user.Id,
 		ChainId: body.ChainId,
 		Address: body.Address,
 	}
@@ -370,7 +370,7 @@ func GetPayoutAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addresses, dbErr := SelectPayoutAddressesByUid(user.ID)
+	addresses, dbErr := SelectPayoutAddressesByUid(user.Id)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -568,7 +568,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, dbErr := Sponsor(repoId, user.ID)
+	_, dbErr := Sponsor(repoId, user.Id)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -622,7 +622,7 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, dbErr := Unsponsor(repoId, user.ID)
+	event, dbErr := Unsponsor(repoId, user.Id)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -665,7 +665,7 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	repos, dbErr := GetSponsoredReposById(user.ID)
+	repos, dbErr := GetSponsoredReposById(user.Id)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -854,7 +854,7 @@ func IsValidUUID(u string) bool {
 
 func getUserFromContext(r *http.Request) (user *User, err error) {
 	ctx := r.Context()
-	user, ok := ctx.Value(authMiddlewareKey("user")).(*User)
+	user, ok := ctx.Value("user").(*User)
 	if !ok {
 		fmt.Printf("Could not get user from token %v", ok)
 		return user, errors.New("could not get user")
