@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/charge"
 	"github.com/stripe/stripe-go/v72/customer"
@@ -180,7 +181,12 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
 		return http.StatusBadRequest
 	}
-	user, err := FindUserByID(cfull.Metadata["uid"])
+	uid, err := uuid.Parse(cfull.Metadata["uid"])
+	if err != nil {
+		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
+		return http.StatusBadRequest
+	}
+	user, err := FindUserByID(uid)
 	if err != nil {
 		log.Printf("customer.subscription.created: No matching user found %v\n", err)
 		return http.StatusBadRequest

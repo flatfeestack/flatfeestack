@@ -24,13 +24,29 @@ func FindUserByEmail(email string) (*User, error) {
 	err := db.
 		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE email=$1", email).
 		Scan(&u.Id, &u.StripeId, &u.Email, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
-	switch {
-	case err == sql.ErrNoRows:
+	switch err {
+	case sql.ErrNoRows:
 		return nil, nil
-	case err != nil:
-		return nil, err
-	default:
+	case nil:
 		return &u, nil
+	default:
+		return nil, err
+	}
+}
+
+// FindByID returns a single user
+func FindUserByID(uid uuid.UUID) (*User, error) {
+	var u User
+	err := db.
+		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE id=$1", uid).
+		Scan(&u.Id, &u.StripeId, &u.Email, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &u, nil
+	default:
+		return nil, err
 	}
 }
 
@@ -55,37 +71,6 @@ func handleErr(res sql.Result, err error, info string, value interface{}) error 
 		return fmt.Errorf("%v %v rows %v, affected or err: %v", info, nr, value, err)
 	}
 	return nil
-}
-
-// FindByID returns a single user
-func FindUserByID(ID string) (*User, error) {
-	var user User
-
-	if ID == "" {
-		return &user, fmt.Errorf("ID cannot be empty")
-	}
-
-	// create the select sql query
-	sqlStatement := `SELECT * FROM "user" WHERE id=$1`
-
-	// execute the sql statement
-	row := db.QueryRow(sqlStatement, ID)
-
-	// unmarshal the row object to user
-	err := row.Scan(&user.Id, &user.StripeId, &user.Email, &user.Subscription, &user.SubscriptionState)
-
-	switch err {
-	case sql.ErrNoRows:
-		fmt.Println("No rows were returned!")
-		return &user, nil
-	case nil:
-		return &user, nil
-	default:
-		log.Fatalf("Unable to scan the row. %v", err)
-	}
-
-	// return empty user on error
-	return &user, err
 }
 
 func FindConnectedEmails(uid uuid.UUID) ([]string, error) {

@@ -111,7 +111,12 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	user, err := FindUserByID(id)
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		w.WriteHeader(403)
+		return
+	}
+	user, err := FindUserByID(uid)
 	if err != nil {
 		w.WriteHeader(404)
 		res := NewHttpErrorResponse("Could not write to database")
