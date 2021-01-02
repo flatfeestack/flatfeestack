@@ -88,9 +88,11 @@ parse_params "$@"
 setup_colors
 
 # script logic here
-msg "${GREEN}Build container"
-docker-compose build --parallel
 [ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
-msg "${GREEN}Setting DNS hosts to ${hosts}"
+msg "${GREEN}Setting DNS hosts to [${hosts}]"
+
+msg "${GREEN}Run: docker-compose build --parallel"
+HOSTS="${hosts}"  docker-compose build --parallel
+
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${compose_args}"
 HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${compose_args}

@@ -11,6 +11,8 @@ services:
       - DEV=test
       - USERS=info@flatfeestack.io:pw1;jonas@flatfeestack.io:pw2;tom:pw1
       - PORT=9081
+      - RS256=false
+      - EDDSA=false
 
   api:
     container_name: flatfeestack-api
