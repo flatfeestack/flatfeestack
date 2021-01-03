@@ -11,7 +11,7 @@ async function update(e) {
       console.log("error not valid eth address");
       error = "Invalid ethereum address";
     }
-    await API.user.updatePayoutAddress({ chain_id: "ETH", address });
+    await API.user.updatePayoutAddress(address);
     error = "";
   } catch (e) {
     error = String(e);
@@ -21,12 +21,8 @@ async function update(e) {
 
 async function fetchAddress() {
   try {
-    const res = await API.user.getPayoutAddresses();
-
-    const addr = res.data.data?.find((a) => a.chain_id === "ETH");
-    if (addr) {
-      address = addr.address;
-    }
+    const res = await API.user.get();
+    address = res.data.data.payout_eth;
   } catch (e) {
     console.log(e);
   }
