@@ -77,9 +77,9 @@ export const API = {
     unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
     getSponsored: () => apiInstance.get("/users/sponsored"),
   },
-};
 
-export const SEARCH = {
-  search: (keywords: string) =>
-    searchInstance.get(`/search/${keywords}`)
+  search: {
+    keywords: (keywords: string) =>
+      searchInstance.get(`/search/${keywords}`),
+  }
 };
