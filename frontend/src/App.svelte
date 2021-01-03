@@ -9,8 +9,6 @@ import Signup from "./routes/Signup.svelte";
 import Dashboard from "./routes/Dashboard/Dashboard.svelte";
 import CatchAll from "./routes/CatchAllRoute.svelte";
 import { user } from "./store/auth.ts";
-import { onMount } from "svelte";
-import { tryToAuthenticate } from "./store/authService";
 import Modal from "svelte-simple-modal";
 import { ROUTES } from "./types/routes";
 import Sponsoring from "./routes/Dashboard/Sponsoring.svelte";

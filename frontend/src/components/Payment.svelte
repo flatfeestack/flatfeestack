@@ -135,6 +135,7 @@ const handleSubmit = async (event) => {
     }
     error = "";
   } catch (e) {
+    console.log(e);
     error = "The payment failed. The subscription could not be created.";
   } finally {
     paymentProcessing = false;
