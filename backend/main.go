@@ -220,7 +220,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
-				writeErr(w, http.StatusBadRequest, "ERR-06, expired: %v", claims.Expiry.Time())
+				writeErr(w, http.StatusTeapot, "ERR-06, expired: %v", claims.Expiry.Time())
 				return
 			}
 

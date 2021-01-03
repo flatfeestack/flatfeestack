@@ -52,14 +52,26 @@ func FindUserByID(uid uuid.UUID) (*User, error) {
 
 // Save inserts a user into the database
 func SaveUser(user *User) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email) VALUES ($1, $2)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id) VALUES ($1, $2, $3)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(user.Id, user.Email)
+	res, err := stmt.Exec(user.Id, user.Email, user.StripeId)
 	return handleErr(res, err, "INSERT INTO auth", user)
+}
+
+func UpdateUser(user *User) error {
+
+	stmt, err := db.Prepare("UPDATE users SET (email, stripe_id, subscription, subscription_state) = ($2, $3, $4, $5) WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.Subscription, user.SubscriptionState)
+	return handleErr(res, err, "UPDATE users", user)
 }
 
 func handleErr(res sql.Result, err error, info string, value interface{}) error {
@@ -111,20 +123,6 @@ func InsertConnectedEmail(uid uuid.UUID, email string) error {
 func DeleteConnectedEmail(uid uuid.UUID, email string) error {
 	sqlStatement := `DELETE FROM git_email WHERE email=$1 AND uid=$2`
 	_, err := db.Exec(sqlStatement, email, uid)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func UpdateUser(user *User) error {
-	sqlStatement := `UPDATE "user" SET (email, stripe_id, subscription, "subscription_state") = ($2, $3, $4, $5, $6) 
-						WHERE id=$1 RETURNING id`
-
-	var id string
-	err := db.QueryRow(sqlStatement, user.Id, user.Email, user.StripeId, user.Subscription, user.SubscriptionState).Scan(&id)
-
 	if err != nil {
 		log.Println(err)
 		return err

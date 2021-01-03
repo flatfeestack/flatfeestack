@@ -29,9 +29,17 @@ func createStripeCustomer(user *User) (string, error) {
 }
 
 func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
-	if user.StripeId != nil {
+	if user.StripeId == nil {
 		log.Print("error in createSubscription: user has no stripeID")
 		return nil, errors.New("can not create subscription for user without stripeID")
+	}
+	if *user.StripeId == "local" {
+		user.Subscription = user.StripeId
+		err := UpdateUser(&user)
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	paymentParams := &stripe.PaymentMethodAttachParams{
 		Customer: stripe.String(*user.StripeId),
