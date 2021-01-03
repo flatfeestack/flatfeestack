@@ -22,8 +22,6 @@ import { initialFetchDone } from "src/store/auth";
 import Spinner from "./components/UI/Spinner.svelte";
 import Redirect from "./helpers/Redirect.svelte";
 
-onMount(() => tryToAuthenticate());
-
 export let url = "";
 </script>
 

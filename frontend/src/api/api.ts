@@ -1,5 +1,5 @@
 import axios from "axios";
-import { token } from "../store/auth";
+import { refresh, token } from "../store/auth";
 import { get } from "svelte/store";
 
 const authInstance = axios.create({
@@ -19,12 +19,33 @@ const searchInstance = axios.create({
 
 apiInstance.interceptors.request.use((config) => {
   const t = get(token);
-  console.log(t);
   if (t) {
     config.headers.Authorization = "Bearer " + t;
     return config;
   }
   return config;
+});
+
+apiInstance.interceptors.response.use((response) => {
+  return response
+}, async function (error) {
+  const originalRequest = error.config;
+  if (error.response.status === 418 && !originalRequest._retry) {
+    originalRequest._retry = true;
+    const oldR = get(refresh);
+    if (!oldR) {
+      console.log("could not refresh");
+      return;
+    }
+    const res = await API.auth.refresh(oldR)
+    const t = res.data.access_token
+    const r = res.data.refresh_token
+    token.set(t)
+    refresh.set(r)
+    axios.defaults.headers.common['Authorization'] = 'Bearer ' + t;
+    return apiInstance(originalRequest);
+  }
+  return Promise.reject(error);
 });
 
 export const API = {
@@ -39,7 +60,9 @@ export const API = {
           withCredentials: true,
         }
       ),
-    refresh: () => authInstance.post("/refresh", null),
+    refresh: (refresh: string) => {
+      return authInstance.post("/refresh", {"refresh_token":refresh})
+    },
   },
   user: {
     get: () => apiInstance.get(`/users/me`),
