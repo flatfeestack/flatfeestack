@@ -73,9 +73,8 @@ export const API = {
       apiInstance.post(`/users/me/connectedEmails`, { email }),
     removeEmail: (email: string) =>
       apiInstance.delete(`/users/me/connectedEmails/${encodeURI(email)}`),
-    updatePayoutAddress: (p: PayoutAddress) =>
-      apiInstance.put("/users/me/payout", p),
-    getPayoutAddresses: () => apiInstance.get("/users/me/payout"),
+    updatePayoutAddress: (address: string) =>
+      apiInstance.put(`/users/me/payout/${address}`),
   },
   payments: {
     createSubscription: (plan: string, paymentMethod: string) =>
