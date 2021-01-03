@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"time"
 )
@@ -125,10 +124,4 @@ type ExchangeEntryUpdate struct {
 	ID    int       `json:"id"`
 	Date  time.Time `json:"date"`
 	Price string    `json:"price"`
-}
-
-type PayoutAddress struct {
-	Uid     uuid.UUID `json:"uid" sql:",type:uuid"`
-	ChainId string    `json:"chain_id"`
-	Address string    `json:"address"`
 }

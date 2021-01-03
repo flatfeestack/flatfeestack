@@ -165,6 +165,29 @@ func TestRepo(t *testing.T) {
 	assert.NotNil(t, r3)
 }
 
+func TestGitEmail(t *testing.T) {
+	setup()
+	defer teardown()
+	uid := uuid.New()
+	err := SaveGitEmail(uuid.New(), uid, "email1")
+	assert.Nil(t, err)
+	err = SaveGitEmail(uuid.New(), uid, "email2")
+	assert.Nil(t, err)
+	emails, err := FindGitEmails(uid)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(emails))
+	err = DeleteGitEmail(uid, "email2")
+	assert.Nil(t, err)
+	emails, err = FindGitEmails(uid)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(emails))
+	err = DeleteGitEmail(uid, "email1")
+	assert.Nil(t, err)
+	emails, err = FindGitEmails(uid)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(emails))
+}
+
 func create(s string) *string {
 	return &s
 }

@@ -117,7 +117,7 @@ func GetSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
 		var repo Repo
 		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.OrigFrom, &repo.Url, &repo.Name, &repo.Description)
 		if err != nil {
-			fmt.Printf("could not destructure row %v", err)
+			return nil, err
 		}
 		repos = append(repos, repo)
 	}
@@ -150,6 +150,50 @@ func FindRepoByID(rid uuid.UUID) (*Repo, error) {
 	}
 }
 
+//connected emails
+func FindGitEmails(uid uuid.UUID) ([]string, error) {
+	var emails []string
+	sql := "SELECT email FROM git_email WHERE user_id=$1"
+	rows, err := db.Query(sql, uid)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var email string
+		err = rows.Scan(&email)
+		if err != nil {
+			return nil, err
+		}
+		emails = append(emails, email)
+	}
+	return emails, nil
+}
+
+func SaveGitEmail(id uuid.UUID, uid uuid.UUID, email string) error {
+	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email) VALUES($1, $2, $3)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(id, uid, email)
+	return handleErr(res, err, "INSERT INTO git_email", email)
+}
+
+func DeleteGitEmail(uid uuid.UUID, email string) error {
+	stmt, err := db.Prepare("DELETE FROM git_email WHERE email=$1 AND user_id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(email, uid)
+	return handleErr(res, err, "DELETE FROM git_email", email)
+}
+
 func handleErr(res sql.Result, err error, info string, value interface{}) error {
 	if err != nil {
 		return fmt.Errorf("%v query %v failed: %v", info, value, err)
@@ -161,50 +205,6 @@ func handleErr(res sql.Result, err error, info string, value interface{}) error 
 	return nil
 }
 
-func FindConnectedEmails(uid uuid.UUID) ([]string, error) {
-
-	var emails []string
-
-	sqlStatement := `SELECT email FROM git_email WHERE uid=$1;`
-	rows, err := db.Query(sqlStatement, uid)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var email string
-		err = rows.Scan(&email)
-		if err != nil {
-			fmt.Printf("could not destructure row %v", err)
-		}
-		emails = append(emails, email)
-	}
-	// return empty user on error
-	return emails, err
-}
-
-func InsertConnectedEmail(uid uuid.UUID, email string) error {
-	sqlStatement := `INSERT INTO git_email(email, uid) VALUES($1,$2);`
-	_, err := db.Exec(sqlStatement, email, uid)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func DeleteConnectedEmail(uid uuid.UUID, email string) error {
-	sqlStatement := `DELETE FROM git_email WHERE email=$1 AND uid=$2`
-	_, err := db.Exec(sqlStatement, email, uid)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
 
 func SavePayment(payment *Payment) error {
 	var paymentId int

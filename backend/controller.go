@@ -181,7 +181,7 @@ func GetMyConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	emails, err := FindConnectedEmails(user.Id)
+	emails, err := FindGitEmails(user.Id)
 	if err != nil {
 		w.WriteHeader(500)
 		res := NewHttpErrorResponse("Not a valid user")
@@ -233,7 +233,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := InsertConnectedEmail(user.Id, body.Email)
+	dbErr := SaveGitEmail(uuid.New(), user.Id, body.Email)
 
 	if dbErr != nil {
 		w.WriteHeader(400)
@@ -284,7 +284,7 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := DeleteConnectedEmail(user.Id, email)
+	dbErr := DeleteGitEmail(user.Id, email)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -404,6 +404,20 @@ type SponsorRepoDTO struct {
 type SponsorRepoResponse struct {
 	HttpResponse
 	Data RepoDTO `json:"data,omitempty"`
+}
+
+func UpdatePayout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	params := mux.Vars(r)
+	user, _ := getUserFromContext(r)
+
+	user0, _ := FindUserByID(user.Id)
+	a := params["address"]
+	user0.PayoutETH = &a
+	UpdateUser(user0)
+
 }
 
 // @Summary Sponsor a repo

@@ -144,6 +144,7 @@ func main() {
 	apiRouter.HandleFunc("/users/me/connectedEmails", GetMyConnectedEmails).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/me/connectedEmails", AddGitEmail).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", RemoveGitEmail).Methods("DELETE", "OPTIONS")
+	apiRouter.HandleFunc("/users/me/payout/{address}", UpdatePayout).Methods("PUT", "OPTIONS")
 	apiRouter.HandleFunc("/users/sponsored", GetSponsoredRepos).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/{id}", GetUserByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users", CreateUser).Methods("POST", "OPTIONS")
