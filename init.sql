@@ -10,10 +10,10 @@ CREATE TABLE users (
 CREATE TABLE repo (
     id          UUID PRIMARY KEY,
     orig_id     INTEGER,
-    orig_type   VARCHAR(255),
+    orig_from   VARCHAR(255),
     url         VARCHAR(255) UNIQUE NOT NULL,
     name        VARCHAR(255)        NOT NULL,
-    description VARCHAR(255)
+    description TEXT
 );
 
 -- if the the uid is null, there is no registered user which owns the git_email
@@ -21,39 +21,39 @@ CREATE TABLE git_user (
     id         UUID PRIMARY KEY,
     repo_id    UUID CONSTRAINT fk_repo_id_gub REFERENCES repo (id),
     user_id    UUID CONSTRAINT fk_user_id_gub REFERENCES users (id),
-    email      VARCHAR(255) UNIQUE     NOT NULL,
-    balance    NUMERIC                 NOT NULL,
-    score      NUMERIC                 NOT NULL,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    email      VARCHAR(255) UNIQUE                 NOT NULL,
+    balance    NUMERIC                             NOT NULL,
+    score      NUMERIC                             NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE git_user_event (
     id          UUID PRIMARY KEY,
     git_user_id UUID CONSTRAINT fk_git_user_id_gu REFERENCES git_user (id),
-    type        SMALLINT                NOT NULL,
-    created_at  TIMESTAMP DEFAULT now() NOT NULL
+    event_type  SMALLINT                            NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE sponsor_event (
     id         UUID PRIMARY KEY,
     repo_id    UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
     user_id    UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
-    type       SMALLINT                NOT NULL,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    event_type SMALLINT                            NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE repo_balance (
     id         UUID PRIMARY KEY,
     repo_id    UUID CONSTRAINT fk_repo_id_rb REFERENCES repo (id),
-    balance    NUMERIC                 NOT NULL,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    balance    NUMERIC                             NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE daily_repo_balance (
     id         UUID PRIMARY KEY,
     repo_id    UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
-    balance    NUMERIC                 NOT NULL,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    balance    NUMERIC                             NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE payments (
@@ -84,16 +84,16 @@ CREATE TABLE contribution (
 CREATE TABLE repo_balance_event (
     id         UUID PRIMARY KEY,
     repo_id    UUID CONSTRAINT fk_repo_id_rbe REFERENCES repo (id) ON DELETE CASCADE,
-    type       SMALLINT,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    event_type SMALLINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE exchange (
     id         UUID PRIMARY KEY,
     amount     NUMERIC,
-    chain_id   VARCHAR(255)            NOT NULL,
+    chain_id   VARCHAR(255)                        NOT NULL,
     price      NUMERIC,
-    created_at TIMESTAMP DEFAULT now() NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE payouts (
@@ -102,5 +102,5 @@ CREATE TABLE payouts (
     exchange_id UUID CONSTRAINT fk_exchange_id_pay REFERENCES exchange (id) ON DELETE CASCADE,
     amount      NUMERIC,
     paid        TIMESTAMP,
-    created_at  TIMESTAMP DEFAULT now() NOT NULL
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

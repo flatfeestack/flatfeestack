@@ -4,14 +4,22 @@
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
-# check what machine we are on
-case "$(uname -s)" in
-    Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
-    Darwin*)    host_ip="host.docker.internal";;
-    CYGWIN*)    host_ip="localhost";;
-    MINGW*)     host_ip="localhost";;
-    *)          host_ip="localhost";;
-esac
+cleanup() {
+  trap - SIGINT SIGTERM ERR EXIT
+  # script cleanup here
+}
+
+hostip() {
+  # check what machine we are on
+  host_ip="localhost"
+  case "$(uname -s)" in
+      Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
+      Darwin*)    host_ip="host.docker.internal";;
+      CYGWIN*)    host_ip="localhost";;
+      MINGW*)     host_ip="localhost";;
+      *)          host_ip="localhost";;
+  esac
+}
 
 usage() {
   cat <<EOF
@@ -31,11 +39,6 @@ Available options:
 -db, --db-only      Run the DB instance only, this ignores all the other options
 EOF
   exit
-}
-
-cleanup() {
-  trap - SIGINT SIGTERM ERR EXIT
-  # script cleanup here
 }
 
 setup_colors() {
@@ -84,6 +87,7 @@ parse_params() {
   return 0
 }
 
+hostip
 parse_params "$@"
 setup_colors
 
