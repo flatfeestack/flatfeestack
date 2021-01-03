@@ -31,10 +31,6 @@ import Popup from "../components/UI/Popup.svelte";
 import Navigation from "../components/Navigation.svelte";
 import { fade, draw, fly } from "svelte/transition";
 import Footer from "../components/Footer.svelte";
-//https://github.com/rob-balfre/svelte-select
-import Select from 'svelte-select';
-import Item from '../components/UI/SearchItem.svelte';
-import { SEARCH } from "src/api/api";
 
 const { open } = getContext("simple-modal");
 
@@ -43,16 +39,6 @@ const showWIP = () => {
 };
 
 let svgVisible = true;
-
-const optionIdentifier = 'id';
-const getOptionLabel = (option) => option.name;
-const getSelectionLabel = (option) => option.name;
-
-async function loadOptions(keywords) {
-  return SEARCH.search(keywords);
-}
-
-
 </script>
 
 <div class="bg-gradient-to-tr from-light-100 to-primary-100">
@@ -132,9 +118,6 @@ async function loadOptions(keywords) {
             For a flat fee of $10 per month (or $120 per year), you can support
             as many open source project as you like. Your developer badge shows
             which projects you are passionate about.
-          </div>
-          <div id="flex justify-center mt-5">
-            <Select {loadOptions} {optionIdentifier} {getSelectionLabel} {getOptionLabel} {Item} isMulti=true containerClasses="rounded-sm p-2 text-primary-500" placeholder="Search for Projects"></Select>
           </div>
           <div class="flex justify-center mt-5">
             <button

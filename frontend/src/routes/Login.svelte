@@ -1,8 +1,8 @@
 <style>
-:global(.sveltejs-forms) {
+.sveltejs-forms {
   @apply w-2/3 mx-auto py-10;
 }
-:global(.message) {
+.message {
   @apply text-red-500 pt-1;
 }
 </style>
@@ -61,39 +61,41 @@ let isSubmitting = false;
     </span>
   </div>
   <div class="bg-white shadow-xl flex mx-auto w-1/3">
-    <Form
-      schema="{schema}"
-      on:submit="{handleSubmit}"
-      on:reset="{handleReset}"
-      let:isSubmitting
-      let:isValid
-    >
-      <label
-        for="email-input"
-        class="block text-grey-darker text-sm font-bold mb-2 w-full"
-      >Email
-      </label>
-      <Input id="email-input" name="email" type="text" class="input" />
-      <label
-        for="password-input"
-        class="block text-grey-darker text-sm font-bold mb-2 w-full mt-5"
-      >Password
-      </label>
-      <Input
-        id="password-input"
-        name="password"
-        type="password"
-        class="input w-100"
-      />
-      <button
-        class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75"
-        disabled="{isSubmitting}"
-        type="submit"
-      >Sign in{#if isSubmitting}...{/if}</button>
+    <div class="mx-auto py-5 w-64">
+      <Form
+        schema="{schema}"
+        on:submit="{handleSubmit}"
+        on:reset="{handleReset}"
+        let:isSubmitting
+        let:isValid
+      >
+        <label
+          for="email-input"
+          class="block text-grey-darker text-sm font-bold mb-2 w-full"
+        >Email
+        </label>
+        <Input id="email-input" name="email" type="text" class="input" />
+        <label
+          for="password-input"
+          class="block text-grey-darker text-sm font-bold mb-2 w-full mt-5"
+        >Password
+        </label>
+        <Input
+          id="password-input"
+          name="password"
+          type="password"
+          class="input w-100"
+        />
+        <button
+          class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75"
+          disabled="{isSubmitting}"
+          type="submit"
+        >Sign in{#if isSubmitting}...{/if}</button>
 
-      {#if error}
-        <div class="bg-red-500 p-2 text-white mt-2">{error}</div>
-      {/if}
-    </Form>
+        {#if error}
+          <div class="bg-red-500 p-2 text-white mt-2">{error}</div>
+        {/if}
+      </Form>
+    </div>
   </div>
 </PageLayout>

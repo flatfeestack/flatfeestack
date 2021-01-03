@@ -13,8 +13,6 @@ import { ROUTER } from "svelte-routing/src/contexts";
 
 const { activeRoute } = getContext(ROUTER);
 const active = $activeRoute?.uri;
-
-console.log("active route", active, route, active === route);
 </script>
 
 <li class="mr-3 flex-1">

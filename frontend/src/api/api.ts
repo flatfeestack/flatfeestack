@@ -1,6 +1,8 @@
 import axios from "axios";
 import { refresh, token } from "../store/auth";
 import { get } from "svelte/store";
+import { Exchange } from "../types/exchange.type";
+import { PayoutAddress } from "../types/payout-address.type";
 
 const authInstance = axios.create({
   baseURL: "/auth",
@@ -66,6 +68,14 @@ export const API = {
   },
   user: {
     get: () => apiInstance.get(`/users/me`),
+    connectedEmails: () => apiInstance.get(`/users/me/connectedEmails`),
+    addEmail: (email: string) =>
+      apiInstance.post(`/users/me/connectedEmails`, { email }),
+    removeEmail: (email: string) =>
+      apiInstance.delete(`/users/me/connectedEmails/${encodeURI(email)}`),
+    updatePayoutAddress: (p: PayoutAddress) =>
+      apiInstance.put("/users/me/payout", p),
+    getPayoutAddresses: () => apiInstance.get("/users/me/payout"),
   },
   payments: {
     createSubscription: (plan: string, paymentMethod: string) =>
@@ -77,9 +87,17 @@ export const API = {
     unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
     getSponsored: () => apiInstance.get("/users/sponsored"),
   },
-
   search: {
     keywords: (keywords: string) =>
       searchInstance.get(`/search/${keywords}`),
-  }
+  },
+  exchanges: {
+    get: () => apiInstance.get(`/exchanges`),
+    update: (e: Exchange) =>
+      apiInstance.put(`/exchanges/${e.id}`, {
+        date: e.date,
+        price: e.price,
+        id: e.id,
+      }),
+  },
 };
