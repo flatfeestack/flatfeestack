@@ -16,6 +16,12 @@ CREATE TABLE repo (
     description TEXT
 );
 
+CREATE TABLE git_email (
+    id      UUID PRIMARY KEY,
+    user_id UUID CONSTRAINT fk_user_id_gub REFERENCES users (id),
+    email   VARCHAR(255) UNIQUE NOT NULL
+);
+
 -- if the the uid is null, there is no registered user which owns the git_email
 CREATE TABLE git_user (
     id         UUID PRIMARY KEY,
