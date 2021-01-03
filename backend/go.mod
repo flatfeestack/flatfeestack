@@ -9,6 +9,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.9.0
+	github.com/mattn/go-sqlite3 v1.14.6
+	github.com/stretchr/testify v1.6.1
 	github.com/stripe/stripe-go/v72 v72.28.0
 	github.com/swaggo/http-swagger v1.0.0
 	github.com/swaggo/swag v1.7.0

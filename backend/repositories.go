@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"log"
@@ -16,6 +15,23 @@ type User struct {
 	Subscription      *string   `json:"subscription"`
 	SubscriptionState *string   `json:"subscription_state"`
 	PayoutETH         *string   `json:"payout_eth"`
+}
+
+type SponsorEvent struct {
+	Id        uuid.UUID `json:"id"`
+	Uid       uuid.UUID `json:"uid"`
+	RepoId    uuid.UUID `json:"repo_id"`
+	EventType uint8     `json:"event_type"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Repo struct {
+	Id          uuid.UUID `json:"id"`
+	OrigId      int
+	OrigFrom    *string
+	Url         *string `json:"html_url"`
+	Name        *string `json:"full_name"`
+	Description *string `json:"description"`
 }
 
 // FindByID returns a single user
@@ -52,26 +68,86 @@ func FindUserByID(uid uuid.UUID) (*User, error) {
 
 // Save inserts a user into the database
 func SaveUser(user *User) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id) VALUES ($1, $2, $3)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(user.Id, user.Email, user.StripeId)
+	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH)
 	return handleErr(res, err, "INSERT INTO auth", user)
 }
 
 func UpdateUser(user *User) error {
-
-	stmt, err := db.Prepare("UPDATE users SET (email, stripe_id, subscription, subscription_state) = ($2, $3, $4, $5) WHERE id=$1")
+	stmt, err := db.Prepare("UPDATE users SET email=$1, stripe_id=$2, subscription=$3, subscription_state=$4, payout_eth=$5 WHERE id=$6")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
-
-	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.Subscription, user.SubscriptionState)
+	res, err := stmt.Exec(user.Email, user.StripeId, user.Subscription, user.SubscriptionState, user.PayoutETH, user.Id)
 	return handleErr(res, err, "UPDATE users", user)
+}
+
+//sponsor events
+func Sponsor(event *SponsorEvent) error {
+	stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, event_type, created_at) VALUES ($1, $2, $3, $4, $5)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(event.Id, event.Uid, event.RepoId, event.EventType, event.CreatedAt)
+	return handleErr(res, err, "INSERT INTO sponsor_event", event)
+}
+
+// Repositories
+func GetSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
+	var repos []Repo
+	sql := `SELECT r.id, r.orig_id, r.orig_from, r.url, r.name, r.description 
+			FROM (SELECT event_type, repo_id, max(created_at) as created_at FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) as s 
+			JOIN repo r on r.id = s.repo_id AND s.event_type=$2`
+	rows, err := db.Query(sql, uid, eventType)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var repo Repo
+		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.OrigFrom, &repo.Url, &repo.Name, &repo.Description)
+		if err != nil {
+			fmt.Printf("could not destructure row %v", err)
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
+}
+
+func SaveRepo(repo *Repo) error {
+	stmt, err := db.Prepare("INSERT INTO repo (id, orig_id, orig_from, url, name, description) VALUES ($1, $2, $3, $4, $5, $6)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(repo.Id, repo.OrigId, repo.OrigFrom, repo.Url, repo.Name, repo.Description)
+	return handleErr(res, err, "INSERT INTO repo", repo)
+}
+
+func FindRepoByID(rid uuid.UUID) (*Repo, error) {
+	var r Repo
+	err := db.
+		QueryRow("SELECT id, orig_id, orig_from, url, name, description FROM repo WHERE id=$1", rid).
+		Scan(&r.Id, &r.OrigId, &r.OrigFrom, &r.Name, &r.Url, &r.Description)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &r, nil
+	default:
+		return nil, err
+	}
 }
 
 func handleErr(res sql.Result, err error, info string, value interface{}) error {
@@ -130,108 +206,6 @@ func DeleteConnectedEmail(uid uuid.UUID, email string) error {
 	return nil
 }
 
-func FindRepoByID(ID int) (*Repo, error) {
-	var repo Repo
-
-	// create the select sql query
-	sqlStatement := `SELECT * FROM "repo" WHERE id=$1`
-
-	// execute the sql statement
-	row := db.QueryRow(sqlStatement, ID)
-
-	// unmarshal the row object to user
-	err := row.Scan(&repo.ID, &repo.Url, &repo.Name, &repo.Description)
-
-	switch err {
-	case sql.ErrNoRows:
-		fmt.Println("No rows were returned!")
-		return nil, errors.New("Not found")
-	case nil:
-		return &repo, nil
-	default:
-		log.Fatalf("Unable to scan the row. %v", err)
-	}
-
-	// return empty user on error
-	return &repo, err
-}
-
-func SaveRepo(repo *Repo) error {
-	sqlStatement := `INSERT INTO "repo" (id, url, name, description) VALUES ($1, $2, $3, $4) RETURNING id`
-
-	var id string
-	err := db.QueryRow(sqlStatement, repo.ID, repo.Url, repo.Name, repo.Description).Scan(&id)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	fmt.Printf("Inserted a single record %v", id)
-
-	return nil
-}
-
-func Sponsor(repoID int, uid uuid.UUID) (*SponsorEvent, error) {
-	var event SponsorEvent
-	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
-	err := db.QueryRow(sqlStatement, uid, repoID, "SPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
-
-	if err != nil {
-		log.Println(err)
-		return &event, err
-	}
-
-	fmt.Printf("Inserted a single record %v", &event.ID)
-
-	return &event, nil
-}
-
-func Unsponsor(repoID int, uid uuid.UUID) (*SponsorEvent, error) {
-	var event SponsorEvent
-	sqlStatement := `INSERT INTO "sponsor_event" (uid, repo_id, type, timestamp) VALUES ($1, $2, $3, $4) RETURNING id, uid, repo_id, type, timestamp`
-	err := db.QueryRow(sqlStatement, uid, repoID, "UNSPONSOR", time.Now().Unix()).Scan(&event.ID, &event.Uid, &event.RepoId, &event.Type, &event.Timestamp)
-
-	if err != nil {
-		log.Println(err)
-		return &event, err
-	}
-
-	fmt.Printf("Inserted a single record %v", &event.ID)
-
-	return &event, nil
-}
-
-func GetSponsoredReposById(uid uuid.UUID) ([]Repo, error) {
-	var repos []Repo
-	sqlStatement := `SELECT r.* FROM 
-		(SELECT uid, repo_id, max("timestamp") as "timestamp" 
-			FROM sponsor_event 
-			GROUP BY uid, repo_id) as latest 
-		JOIN sponsor_event s on latest.uid = s.uid AND latest.repo_id = s.repo_id AND latest.timestamp = s."timestamp"
-		JOIN repo r on r.id = s.repo_id
-		WHERE s."type" = 'SPONSOR' AND s.uid = $1`
-	rows, err := db.Query(sqlStatement, uid)
-
-	if err != nil {
-		log.Println(err)
-		return repos, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var repo Repo
-		err = rows.Scan(&repo.ID, &repo.Url, &repo.Name, &repo.Description)
-		if err != nil {
-			fmt.Printf("could not destructure row %v", err)
-		}
-		repos = append(repos, repo)
-	}
-	return repos, nil
-
-}
-
 func SavePayment(payment *Payment) error {
 	var paymentId int
 	sqlStatement := `INSERT INTO "payments" ("uid", "from", "to", "sub", "amount") VALUES ($1, $2, $3, $4, $5) RETURNING id`
@@ -279,35 +253,4 @@ func UpdateExchange(ex ExchangeEntryUpdate) error {
 		return err
 	}
 	return nil
-}
-
-func InsertOrUpdatePayoutAddress(p PayoutAddress) error {
-	sqlStatement := `INSERT INTO pay_out_address(uid, address, chain_id) VALUES($1, $2, $3) ON CONFLICT(uid,chain_id) DO UPDATE SET address = EXCLUDED.address`
-	_, err := db.Exec(sqlStatement, p.Uid, p.Address, p.ChainId)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func SelectPayoutAddressesByUid(uid uuid.UUID) (addresses []PayoutAddress, err error) {
-	sqlStatement := `SELECT uid, address, chain_id FROM pay_out_address WHERE uid=$1`
-	rows, err := db.Query(sqlStatement, uid)
-
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var address PayoutAddress
-		err = rows.Scan(&address.Uid, &address.Address, &address.ChainId)
-		if err != nil {
-			fmt.Printf("could not destructure row %v", err)
-		}
-		addresses = append(addresses, address)
-	}
-	return
 }

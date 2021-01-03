@@ -83,22 +83,6 @@ type RepoDTO struct {
 	Description string `json:"description"`
 }
 
-type Repo struct {
-	ID          int32      `json:"id"`
-	Url         string     `json:"html_url"`
-	Name        string     `json:"full_name"`
-	Description NullString `json:"description"`
-}
-
-// TODO: change timestampe to time.Time
-type SponsorEvent struct {
-	ID        string `json:"id"`
-	Uid       string `json:"uid"`
-	RepoId    string `json:"repo_id"`
-	Type      string `json:"type"`
-	Timestamp string `json:"timestamp"`
-}
-
 type DailyRepoBalance struct {
 	ID         int       `json:"id"`
 	RepoId     string    `json:"repo_id"`

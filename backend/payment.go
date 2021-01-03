@@ -35,11 +35,52 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	}
 	if *user.StripeId == "local" {
 		user.Subscription = user.StripeId
+		a := "active"
+		user.SubscriptionState = &a
 		err := UpdateUser(&user)
 		if err != nil {
 			return nil, err
 		}
-		return nil, nil
+		return &stripe.Subscription{
+			APIResource:                   stripe.APIResource{},
+			ApplicationFeePercent:         0,
+			BillingCycleAnchor:            0,
+			BillingThresholds:             nil,
+			CancelAt:                      0,
+			CancelAtPeriodEnd:             false,
+			CanceledAt:                    0,
+			CollectionMethod:              "",
+			Created:                       0,
+			CurrentPeriodEnd:              0,
+			CurrentPeriodStart:            0,
+			Customer:                      nil,
+			DaysUntilDue:                  0,
+			DefaultPaymentMethod:          nil,
+			DefaultSource:                 nil,
+			DefaultTaxRates:               nil,
+			Discount:                      nil,
+			EndedAt:                       0,
+			ID:                            "",
+			Items:                         nil,
+			LatestInvoice:                 nil,
+			Livemode:                      false,
+			Metadata:                      nil,
+			NextPendingInvoiceItemInvoice: 0,
+			Object:                        "",
+			OnBehalfOf:                    nil,
+			PauseCollection:               stripe.SubscriptionPauseCollection{},
+			PendingInvoiceItemInterval:    stripe.SubscriptionPendingInvoiceItemInterval{},
+			PendingSetupIntent:            nil,
+			PendingUpdate:                 nil,
+			Plan:                          nil,
+			Quantity:                      0,
+			Schedule:                      nil,
+			StartDate:                     0,
+			Status:                        "",
+			TransferData:                  nil,
+			TrialEnd:                      0,
+			TrialStart:                    0,
+		}, nil
 	}
 	paymentParams := &stripe.PaymentMethodAttachParams{
 		Customer: stripe.String(*user.StripeId),

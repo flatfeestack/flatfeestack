@@ -25,6 +25,11 @@ import (
 	"time"
 )
 
+const (
+	SPONSOR = iota
+	UNSPONSOR
+)
+
 var (
 	db        *sql.DB
 	opts      *Opts
@@ -138,8 +143,6 @@ func main() {
 	apiRouter.HandleFunc("/users/me", GetMyUser).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/me/connectedEmails", GetMyConnectedEmails).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/me/connectedEmails", AddGitEmail).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/users/me/payout", PutPayoutAddress).Methods("PUT", "OPTIONS")
-	apiRouter.HandleFunc("/users/me/payout", GetPayoutAddress).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", RemoveGitEmail).Methods("DELETE", "OPTIONS")
 	apiRouter.HandleFunc("/users/sponsored", GetSponsoredRepos).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/{id}", GetUserByID).Methods("GET", "OPTIONS")
@@ -246,7 +249,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, "user", user)
-			log.Printf("Authenticated user %s\n", user.Email)
+			log.Printf("Authenticated user %s\n", *user.Email)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

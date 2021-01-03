@@ -302,96 +302,6 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
-type PayoutAddressRequest struct {
-	ChainId string `json:"chain_id"`
-	Address string `json:"address"`
-}
-
-// @Summary update payout address
-// @Tags Users
-// @Param user body PayoutAddressRequest true "Request Body"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} interface{}
-// @Failure 404 {object} HttpResponse
-// @Router /api/users/me/payout [put]
-func PutPayoutAddress(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	user, err := getUserFromContext(r)
-	if err != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Internal server error")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	var body PayoutAddressRequest
-	jsonErr := json.NewDecoder(r.Body).Decode(&body)
-	if jsonErr != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not decode body")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	address := PayoutAddress{
-		Uid:     user.Id,
-		ChainId: body.ChainId,
-		Address: body.Address,
-	}
-
-	dbErr := InsertOrUpdatePayoutAddress(address)
-
-	if dbErr != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not update in database")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	res := HttpResponse{
-		Success: true,
-		Message: "Updated exchange successfully",
-	}
-	_ = json.NewEncoder(w).Encode(res)
-}
-
-// @Summary get payout addresses
-// @Tags Users
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} interface{}
-// @Failure 404 {object} HttpResponse
-// @Router /api/users/me/payout [get]
-func GetPayoutAddress(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	user, err := getUserFromContext(r)
-	if err != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Internal server error")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	addresses, dbErr := SelectPayoutAddressesByUid(user.Id)
-
-	if dbErr != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not query database")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	res := HttpResponse{
-		Success: true,
-		Data:    addresses,
-		Message: "Updated exchange successfully",
-	}
-	_ = json.NewEncoder(w).Encode(res)
-}
-
 /*
  *	==== REPO ====
  */
@@ -460,7 +370,7 @@ type GetRepoByIDResponse struct {
 func GetRepoByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+	id, err := uuid.Parse(params["id"])
 	if err != nil {
 		w.WriteHeader(400)
 		res := NewHttpErrorResponse("Invalid repoId")
@@ -518,7 +428,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := mux.Vars(r)
-	repoId, err := strconv.Atoi(params["id"])
+	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		w.WriteHeader(400)
 		res := NewHttpErrorResponse("Invalid repoId")
@@ -529,7 +439,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 	repo, e := FindRepoByID(repoId)
 	if e != nil {
 		// If repo does not exists, create the repo
-		repo, err = FetchGithubRepoById(repoId)
+		repo, err = FetchGithubRepoById(repo.OrigId)
 		if err != nil {
 			w.WriteHeader(400)
 			res := NewHttpErrorResponse("Could not find matching Github Repo")
@@ -546,7 +456,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		// Trigger first analysis of the repo
 
 		webhookRequest := WebhookRequest{
-			RepositoryUrl:       repo.Url,
+			RepositoryUrl:       *repo.Url,
 			Since:               time.Now().AddDate(0, -3, 0).Format(time.RFC3339),
 			Until:               time.Now().Format(time.RFC3339),
 			PlatformInformation: false,
@@ -565,15 +475,23 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 			err = json.NewDecoder(res.Body).Decode(&webhookResponse)
 			// insert request ID in DB
 			sqlInsert := `INSERT INTO "analysis_request" ("id","from", "to", "repo_id", "branch") VALUES ($1, $2, $3, $4, $5)`
-			_, insertErr := db.Exec(sqlInsert, webhookResponse.RequestId, webhookRequest.Since, webhookRequest.Until, repo.ID, webhookRequest.Branch)
+			_, insertErr := db.Exec(sqlInsert, webhookResponse.RequestId, webhookRequest.Since, webhookRequest.Until, repo.Id, webhookRequest.Branch)
 			if insertErr != nil {
 				log.Printf("Could not insert Analysis Request into DB: %v", insertErr)
 			}
-			log.Printf("Requested analysis for repo %v (requestID:%v)", repo.ID, webhookResponse.RequestId)
+			log.Printf("Requested analysis for repo %v (requestID:%v)", repo.Id, webhookResponse.RequestId)
 		}
 	}
 
-	_, dbErr := Sponsor(repoId, user.Id)
+	event := SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user.Id,
+		RepoId:    repoId,
+		EventType: SPONSOR,
+		CreatedAt: time.Now(),
+	}
+
+	dbErr := Sponsor(&event)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -619,7 +537,7 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := mux.Vars(r)
-	repoId, err := strconv.Atoi(params["id"])
+	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		w.WriteHeader(400)
 		res := NewHttpErrorResponse("Invalid repoId")
@@ -627,7 +545,14 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, dbErr := Unsponsor(repoId, user.Id)
+	event := SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user.Id,
+		RepoId:    repoId,
+		EventType: UNSPONSOR,
+		CreatedAt: time.Now(),
+	}
+	dbErr := Sponsor(&event)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -670,7 +595,7 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	repos, dbErr := GetSponsoredReposById(user.Id)
+	repos, dbErr := GetSponsoredReposById(user.Id, SPONSOR)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
