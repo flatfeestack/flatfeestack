@@ -37,7 +37,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 		user.Subscription = user.StripeId
 		a := "active"
 		user.SubscriptionState = &a
-		err := UpdateUser(&user)
+		err := updateUser(&user)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	if paymentIntent != nil && paymentIntent.Status == "succeeded" {
 		log.Print("in if statement status succeeded")
 		user.Subscription = &s.ID
-		err := UpdateUser(&user)
+		err := updateUser(&user)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,8 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 		paid := ch.BalanceTransaction.Amount
 		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil {
 			invoiceData := invoice.Lines.Data[0]
-			err = SavePayment(&Payment{Uid: cufull.Metadata["uid"], From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
+			uuid, err := uuid.Parse(cufull.Metadata["uid"])
+			err = savePayment(&Payment{Uid: uuid, From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
 
 			if err != nil {
 				log.Printf("invoice.payment_succeeded: Error saving payment %v\n", err)
@@ -235,7 +236,7 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
 		return http.StatusBadRequest
 	}
-	user, err := FindUserByID(uid)
+	user, err := findUserByID(uid)
 	if err != nil {
 		log.Printf("customer.subscription.created: No matching user found %v\n", err)
 		return http.StatusBadRequest
@@ -246,7 +247,7 @@ func checkSubscription(subscription *stripe.Subscription) int {
 	if subscription.Status == "active" {
 		user.Subscription = &subscription.ID
 		user.SubscriptionState = &active
-		err = UpdateUser(user)
+		err = updateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)
 			return http.StatusInternalServerError
@@ -255,7 +256,7 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		// TODO: Check stripe retry rules and deactivate subscription at some point
 		user.SubscriptionState = nil
 		user.Subscription = nil
-		err = UpdateUser(user)
+		err = updateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)
 			return http.StatusInternalServerError
@@ -265,7 +266,7 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		s := string(subscription.Status)
 		user.SubscriptionState = &s
 		user.Subscription = &subscription.ID
-		err = UpdateUser(user)
+		err = updateUser(user)
 		if err != nil {
 			log.Printf("Could not update user %v\n", err)
 			return http.StatusInternalServerError

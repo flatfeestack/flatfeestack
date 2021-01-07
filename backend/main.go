@@ -2,16 +2,19 @@ package main
 
 import (
 	_ "api/docs"
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/base32"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/shopspring/decimal"
 	"github.com/stripe/stripe-go/v72"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"golang.org/x/crypto/ed25519"
@@ -34,27 +37,31 @@ var (
 	db        *sql.DB
 	opts      *Opts
 	jwtKey    []byte
-	debug     = true
 	privRSA   *rsa.PrivateKey
 	privEdDSA *ed25519.PrivateKey
+	debug     bool
 )
 
 type Opts struct {
-	Host         string
 	Port         int
 	HS256        string
 	Env          string
 	StripeSecret string
+	DBPath       string
+	DBDriver     string
+	AnalysisUrl  string
 }
 
 func NewOpts() *Opts {
 	o := &Opts{}
 
 	flag.StringVar(&o.Env, "env", LookupEnv("ENV"), "ENV variable")
-	flag.StringVar(&o.Host, "host", LookupEnv("HOST"), "Host")
 	flag.IntVar(&o.Port, "port", LookupEnvInt("PORT"), "listening HTTP port")
 	flag.StringVar(&o.HS256, "hs256", LookupEnv("HS256"), "HS256 key")
 	flag.StringVar(&o.StripeSecret, "string", LookupEnv("STRIPE_SECRET"), "Stripe secret")
+	flag.StringVar(&o.DBPath, "db-path", LookupEnv("DB_PATH"), "DB path")
+	flag.StringVar(&o.DBDriver, "db-driver", LookupEnv("DB_DRIVER"), "DB driver")
+	flag.StringVar(&o.AnalysisUrl, "analysis-url", LookupEnv("ANALYSIS-URL"), "Analysis Url")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -73,16 +80,20 @@ func NewOpts() *Opts {
 			}
 		}
 	}
-	o.Host = setDefault(o.Host, LookupEnv("HOST"), "db")
+	if o.Env == "local" || o.Env == "dev" {
+		debug = true
+	}
+
 	o.Port = setDefaultInt(o.Port, LookupEnvInt("PORT"), 9082)
 	o.HS256 = setDefault(o.HS256, LookupEnv("HS256"), "ORSXG5A=")
+	o.DBDriver = setDefault(o.DBDriver, LookupEnv("DB_DRIVER"), "postgres")
+	o.DBPath = setDefault(o.DBDriver, LookupEnv("DB_PATH"), "postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable")
+	o.AnalysisUrl = setDefault(o.AnalysisUrl, LookupEnv("ANALYSIS-URL"), "http://analysis-engine:8080/webhook")
 
-	if o.HS256 != "" {
-		var err error
-		jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
-		if err != nil {
-			log.Fatalf("cannot decode %v", o.HS256)
-		}
+	var err error
+	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
+	if err != nil {
+		log.Fatalf("cannot decode %v", o.HS256)
 	}
 
 	return o
@@ -131,10 +142,9 @@ func LookupEnvInt(key string) int {
 // @BasePath /
 func main() {
 	opts = NewOpts()
+	db = initDb()
 
-	stripe.Key = os.Getenv("STRIPE_SECRET")
-
-	db = createConnection()
+	stripe.Key = opts.StripeSecret
 
 	// Routes
 	router := mux.NewRouter()
@@ -149,13 +159,12 @@ func main() {
 	apiRouter.HandleFunc("/users/{id}", GetUserByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users", CreateUser).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos", CreateRepo).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/repos/search", SearchRepo).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/repos/search", searchRepo).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}", GetRepoByID).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/sponsor", SponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", UnsponsorRepo).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/payments/subscriptions", PostSubscription).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/exchanges", GetExchanges).Methods("GET", "OPTIONS")
-	apiRouter.HandleFunc("/exchanges/{id}", PutExchange).Methods("PUT", "OPTIONS")
 
 	//webhooks
 	apiRouter.HandleFunc("/hooks/stripe", StripeWebhook).Methods("POST", "OPTIONS")
@@ -163,7 +172,7 @@ func main() {
 	// Swagger
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
-	fmt.Println("Starting server on port " + strconv.Itoa(opts.Port))
+	log.Println("Starting server on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
 
@@ -234,7 +243,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			// Fetch user from DB
-			user, err := FindUserByEmail(claims.Subject)
+			user, err := findUserByEmail(claims.Subject)
 			if err != nil {
 				writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
 				return
@@ -271,7 +280,7 @@ func createUser(email string) (*User, error) {
 	}
 	user.StripeId = &sid
 
-	err = SaveUser(&user)
+	err = saveUser(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -279,26 +288,73 @@ func createUser(email string) (*User, error) {
 	return &user, nil
 }
 
-// create connection with postgres db
-func createConnection() *sql.DB {
-	// Open the connection
-	var dbString string
+type ExchangeRate struct {
+	Ethereum struct {
+		Usd decimal.Decimal `json:"usd"`
+	} `json:"ethereum"`
+}
 
-	dbString = fmt.Sprintf("postgresql://%v:%v@%v:5432/%v?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), opts.Host, os.Getenv("POSTGRES_DB"))
-	db, err := sql.Open("postgres", dbString)
-
+//https://www.coingecko.com/en/api
+func getPriceETH() (decimal.Decimal, error) {
+	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	//curl -X GET "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd" -H  "accept: application/json"
+	r, err := client.Get("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
 	if err != nil {
-		panic(err)
+		return decimal.Zero, err
+	}
+	defer r.Body.Close()
+	rate := ExchangeRate{}
+	err = json.NewDecoder(r.Body).Decode(&rate)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	return rate.Ethereum.Usd, nil
+}
+
+type AnalysisRequest struct {
+	RepositoryUrl       string    `json:"repository_url"`
+	DateFrom            time.Time `json:"since"`
+	DateTo              time.Time `json:"until"`
+	PlatformInformation bool      `json:"platform_information"`
+	Branch              string    `json:"branch"`
+}
+
+type AnalysisResponse struct {
+	RequestId uuid.UUID `json:"request_id"`
+}
+
+func analysisRequest(repoId uuid.UUID, repoUrl string) error {
+	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	now := time.Now()
+	req := AnalysisRequest{
+		RepositoryUrl:       repoUrl,
+		DateFrom:            now.AddDate(0, -3, 0),
+		DateTo:              now,
+		PlatformInformation: false,
+		Branch:              "master",
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
 	}
 
-	// check the connection
-	err = db.Ping()
-
+	r, err := client.Post(opts.AnalysisUrl, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		panic(err)
+		return err
+	}
+	defer r.Body.Close()
+
+	var resp AnalysisResponse
+	err = json.NewDecoder(r.Body).Decode(&resp)
+	if err != nil {
+		return err
 	}
 
-	fmt.Println("Successfully connected!")
-	// return the connection
-	return db
+	return saveAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"github.com/stripe/stripe-go/v72"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -29,15 +27,6 @@ func NewHttpErrorResponse(message string) HttpResponse {
  *	==== USER ====
  */
 
-type CreateUserResponse struct {
-	HttpResponse
-	Data UserDTO `json:"data,omitempty"`
-}
-type CreateUserDTO struct {
-	Email    string `json:"email" example:"info@flatfeestack"`
-	Username string `json:"username" example:"flatfee"`
-}
-
 // @Summary Create new user
 // @Tags Users
 // @Param user body CreateUserDTO true "Request Body"
@@ -47,6 +36,7 @@ type CreateUserDTO struct {
 // @Failure 400 {object} HttpResponse
 // @Router /api/users [post]
 func CreateUser(w http.ResponseWriter, r *http.Request) {
+	//https://flaviocopes.com/golang-enable-cors/
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -69,7 +59,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Id = uid
 	// call insert user function and pass the user
-	dbErr := SaveUser(&user)
+	dbErr := saveUser(&user)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -85,11 +75,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
-}
-
-type GetUserByIDResponse struct {
-	HttpResponse
-	Data UserDTO `json:"data,omitempty"`
 }
 
 // @Summary Get User by ID
@@ -116,7 +101,7 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 		return
 	}
-	user, err := FindUserByID(uid)
+	user, err := findUserByID(uid)
 	if err != nil {
 		w.WriteHeader(404)
 		res := NewHttpErrorResponse("Could not write to database")
@@ -181,7 +166,7 @@ func GetMyConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	emails, err := FindGitEmails(user.Id)
+	emails, err := findGitEmails(user.Id)
 	if err != nil {
 		w.WriteHeader(500)
 		res := NewHttpErrorResponse("Not a valid user")
@@ -233,7 +218,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := SaveGitEmail(uuid.New(), user.Id, body.Email)
+	dbErr := saveGitEmail(uuid.New(), user.Id, body.Email)
 
 	if dbErr != nil {
 		w.WriteHeader(400)
@@ -284,7 +269,7 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: send email to user and add email after verification
 
-	dbErr := DeleteGitEmail(user.Id, email)
+	dbErr := deleteGitEmail(user.Id, email)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -305,14 +290,6 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request) {
 /*
  *	==== REPO ====
  */
-type CreateRepoResponse struct {
-	HttpResponse
-	Data RepoDTO `json:"data,omitempty"`
-}
-type CreateRepoDTO struct {
-	Url  string `json:"url"`
-	Name string `json:"name"`
-}
 
 // @Summary Create new repo
 // @Tags Repos
@@ -336,7 +313,7 @@ func CreateRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// call insert user function and pass the user
-	dbErr := SaveRepo(&repo)
+	dbErr := saveRepo(&repo)
 
 	if dbErr != nil {
 		res := NewHttpErrorResponse("Could not write to database")
@@ -352,11 +329,6 @@ func CreateRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
-}
-
-type GetRepoByIDResponse struct {
-	HttpResponse
-	Data RepoDTO `json:"data,omitempty"`
 }
 
 // @Summary Get Repo By ID
@@ -377,7 +349,7 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	repo, err := FindRepoByID(id)
+	repo, err := findRepoByID(id)
 	if err != nil {
 		log.Println(err)
 		//w.WriteHeader(404)
@@ -398,14 +370,6 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request) {
  *	==== SPONSOR EVENT ====
  */
 
-type SponsorRepoDTO struct {
-	Uid string `json:"uid"`
-}
-type SponsorRepoResponse struct {
-	HttpResponse
-	Data RepoDTO `json:"data,omitempty"`
-}
-
 func UpdatePayout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Methods", "PUT")
@@ -413,10 +377,10 @@ func UpdatePayout(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	user, _ := getUserFromContext(r)
 
-	user0, _ := FindUserByID(user.Id)
+	user0, _ := findUserByID(user.Id)
 	a := params["address"]
 	user0.PayoutETH = &a
-	UpdateUser(user0)
+	updateUser(user0)
 
 }
 
@@ -450,17 +414,26 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repo, e := FindRepoByID(repoId)
+	repo, e := findRepoByID(repoId)
 	if e != nil {
 		// If repo does not exists, create the repo
-		repo, err = FetchGithubRepoById(repo.OrigId)
+		var repoDto *RepoDTO
+		repoDto, err = fetchGithubRepoById(repo.OrigId)
+		repo = &Repo{
+			Id:          uuid.New(),
+			OrigId:      repoDto.ID,
+			Url:         &repoDto.Url,
+			Name:        &repoDto.Name,
+			Description: &repoDto.Description,
+		}
+
 		if err != nil {
 			w.WriteHeader(400)
 			res := NewHttpErrorResponse("Could not find matching Github Repo")
 			_ = json.NewEncoder(w).Encode(res)
 			return
 		}
-		err = SaveRepo(repo)
+		err = saveRepo(repo)
 		if err != nil {
 			w.WriteHeader(500)
 			res := NewHttpErrorResponse("Could not save repo")
@@ -469,31 +442,12 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		}
 		// Trigger first analysis of the repo
 
-		webhookRequest := WebhookRequest{
-			RepositoryUrl:       *repo.Url,
-			Since:               time.Now().AddDate(0, -3, 0).Format(time.RFC3339),
-			Until:               time.Now().Format(time.RFC3339),
-			PlatformInformation: false,
-			Branch:              "master",
-		}
-		body, jsonErr := json.Marshal(webhookRequest)
-		if jsonErr != nil {
-			log.Printf("Could not marshal json body: %v", jsonErr)
-		}
-
-		res, err := http.Post("http://analysis-engine:8080/webhook", "application/json", bytes.NewBuffer(body))
+		err = analysisRequest(repo.Id, *repo.Url)
 		if err != nil {
-			log.Printf("Could not send POST request to analyze repository %v", err)
-		} else {
-			var webhookResponse WebhookResponse
-			err = json.NewDecoder(res.Body).Decode(&webhookResponse)
-			// insert request ID in DB
-			sqlInsert := `INSERT INTO "analysis_request" ("id","from", "to", "repo_id", "branch") VALUES ($1, $2, $3, $4, $5)`
-			_, insertErr := db.Exec(sqlInsert, webhookResponse.RequestId, webhookRequest.Since, webhookRequest.Until, repo.Id, webhookRequest.Branch)
-			if insertErr != nil {
-				log.Printf("Could not insert Analysis Request into DB: %v", insertErr)
-			}
-			log.Printf("Requested analysis for repo %v (requestID:%v)", repo.Id, webhookResponse.RequestId)
+			w.WriteHeader(500)
+			res := NewHttpErrorResponse("Could not save repo")
+			_ = json.NewEncoder(w).Encode(res)
+			return
 		}
 	}
 
@@ -505,7 +459,7 @@ func SponsorRepo(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now(),
 	}
 
-	dbErr := Sponsor(&event)
+	dbErr := sponsor(&event)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -566,7 +520,7 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 		EventType: UNSPONSOR,
 		CreatedAt: time.Now(),
 	}
-	dbErr := Sponsor(&event)
+	dbErr := sponsor(&event)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -583,11 +537,6 @@ func UnsponsorRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	// send the HttpResponse
 	_ = json.NewEncoder(w).Encode(res)
-}
-
-type GetSponsoredReposResponse struct {
-	HttpResponse
-	Data []RepoDTO `json:"data,omitempty"`
 }
 
 // @Summary List sponsored Repos of a user
@@ -609,7 +558,7 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(res)
 		return
 	}
-	repos, dbErr := GetSponsoredReposById(user.Id, SPONSOR)
+	repos, dbErr := getSponsoredReposById(user.Id, SPONSOR)
 
 	if dbErr != nil {
 		w.WriteHeader(500)
@@ -695,11 +644,6 @@ func PostSubscription(w http.ResponseWriter, r *http.Request) {
 	==== Exchange ====
 */
 
-type GetExchangesResponse struct {
-	HttpResponse
-	Data []ExchangeEntry `json:"data,omitempty"`
-}
-
 // @Summary Get exchange requests
 // @Tags Repos
 // @Param q query string true "Search String"
@@ -713,9 +657,9 @@ func GetExchanges(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	exchanges, dbErr := SelectExchanges()
+	price, err := getUpdateExchanges("ETH")
 
-	if dbErr != nil {
+	if err != nil {
 		w.WriteHeader(500)
 		res := NewHttpErrorResponse("Could not read from database")
 		_ = json.NewEncoder(w).Encode(res)
@@ -725,66 +669,17 @@ func GetExchanges(w http.ResponseWriter, r *http.Request) {
 	// format a HttpResponse object
 	res := HttpResponse{
 		Success: true,
-		Data:    exchanges,
+		Data:    price,
 		Message: "Retrieved exchanges successfully",
 	}
 	// send the HttpResponse
-	_ = json.NewEncoder(w).Encode(res)
-}
+	err = json.NewEncoder(w).Encode(res)
 
-// @Summary update exchange with price and date
-// @Tags Repos
-// @Param user body ExchangeEntryUpdate true "Request Body"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} interface{}
-// @Failure 404 {object} HttpResponse
-// @Router /api/exchanges/{id} [put]
-func PutExchange(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	params := mux.Vars(r)
-	exchangeID, err := strconv.Atoi(params["id"])
 	if err != nil {
-		w.WriteHeader(400)
-		res := NewHttpErrorResponse("Invalid exchangeID")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	var body ExchangeEntryUpdate
-
-	jsonErr := json.NewDecoder(r.Body).Decode(&body)
-	if jsonErr != nil {
 		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not decode body")
-		_ = json.NewEncoder(w).Encode(res)
+		log.Printf("Could not transform JSON")
 		return
 	}
-
-	if exchangeID != body.ID {
-		w.WriteHeader(400)
-		res := NewHttpErrorResponse("ID must be identical in body and url param")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	dbErr := UpdateExchange(body)
-
-	if dbErr != nil {
-		w.WriteHeader(500)
-		res := NewHttpErrorResponse("Could not update in database")
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	// format a HttpResponse object
-	res := HttpResponse{
-		Success: true,
-		Message: "Updated exchange successfully",
-	}
-	// send the HttpResponse
-	_ = json.NewEncoder(w).Encode(res)
 }
 
 /*

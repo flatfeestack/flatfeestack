@@ -42,26 +42,26 @@ func TestUser(t *testing.T) {
 		PayoutETH:         create("0x123"),
 	}
 
-	err := SaveUser(&u)
+	err := saveUser(&u)
 	assert.Nil(t, err)
 
-	u2, err := FindUserByEmail("email2")
+	u2, err := findUserByEmail("email2")
 	assert.Nil(t, err)
 	assert.Nil(t, u2)
 
-	u3, err := FindUserByEmail("email")
+	u3, err := findUserByEmail("email")
 	assert.Nil(t, err)
 	assert.NotNil(t, u3)
 
 	u.Email = create("email2")
-	err = UpdateUser(&u)
+	err = updateUser(&u)
 	assert.Nil(t, err)
 
-	u4, err := FindUserByEmail("email2")
+	u4, err := findUserByEmail("email2")
 	assert.Nil(t, err)
 	assert.NotNil(t, u4)
 
-	u5, err := FindUserByID(u.Id)
+	u5, err := findUserByID(u.Id)
 	assert.Nil(t, err)
 	assert.NotNil(t, u5)
 }
@@ -82,14 +82,13 @@ func TestSponsor(t *testing.T) {
 	r := Repo{
 		Id:          uuid.New(),
 		OrigId:      0,
-		OrigFrom:    create("github"),
 		Url:         create("url"),
 		Name:        create("name"),
 		Description: create("desc"),
 	}
-	err := SaveUser(&u)
+	err := saveUser(&u)
 	assert.Nil(t, err)
-	err = SaveRepo(&r)
+	err = saveRepo(&r)
 	assert.Nil(t, err)
 
 	s1 := SponsorEvent{
@@ -116,14 +115,14 @@ func TestSponsor(t *testing.T) {
 		CreatedAt: time.Unix(3, 0),
 	}
 
-	err = Sponsor(&s1)
+	err = sponsor(&s1)
 	assert.Nil(t, err)
-	err = Sponsor(&s2)
+	err = sponsor(&s2)
 	assert.Nil(t, err)
-	err = Sponsor(&s3)
+	err = sponsor(&s3)
 	assert.Nil(t, err)
 
-	rs, err := GetSponsoredReposById(u.Id, SPONSOR)
+	rs, err := getSponsoredReposById(u.Id, SPONSOR)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 
@@ -134,10 +133,10 @@ func TestSponsor(t *testing.T) {
 		EventType: UNSPONSOR,
 		CreatedAt: time.Unix(4, 0),
 	}
-	err = Sponsor(&s4)
+	err = sponsor(&s4)
 	assert.Nil(t, err)
 
-	rs, err = GetSponsoredReposById(u.Id, SPONSOR)
+	rs, err = getSponsoredReposById(u.Id, SPONSOR)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(rs))
 }
@@ -148,19 +147,18 @@ func TestRepo(t *testing.T) {
 	r := Repo{
 		Id:          uuid.New(),
 		OrigId:      0,
-		OrigFrom:    create("github"),
 		Url:         create("url"),
 		Name:        create("name"),
 		Description: create("desc"),
 	}
-	err := SaveRepo(&r)
+	err := saveRepo(&r)
 	assert.Nil(t, err)
 
-	r2, err := FindRepoByID(uuid.New())
+	r2, err := findRepoByID(uuid.New())
 	assert.Nil(t, err)
 	assert.Nil(t, r2)
 
-	r3, err := FindRepoByID(r.Id)
+	r3, err := findRepoByID(r.Id)
 	assert.Nil(t, err)
 	assert.NotNil(t, r3)
 }
@@ -169,23 +167,32 @@ func TestGitEmail(t *testing.T) {
 	setup()
 	defer teardown()
 	uid := uuid.New()
-	err := SaveGitEmail(uuid.New(), uid, "email1")
+	err := saveGitEmail(uuid.New(), uid, "email1")
 	assert.Nil(t, err)
-	err = SaveGitEmail(uuid.New(), uid, "email2")
+	err = saveGitEmail(uuid.New(), uid, "email2")
 	assert.Nil(t, err)
-	emails, err := FindGitEmails(uid)
+	emails, err := findGitEmails(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(emails))
-	err = DeleteGitEmail(uid, "email2")
+	err = deleteGitEmail(uid, "email2")
 	assert.Nil(t, err)
-	emails, err = FindGitEmails(uid)
+	emails, err = findGitEmails(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(emails))
-	err = DeleteGitEmail(uid, "email1")
+	err = deleteGitEmail(uid, "email1")
 	assert.Nil(t, err)
-	emails, err = FindGitEmails(uid)
+	emails, err = findGitEmails(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(emails))
+}
+
+func TestGetUpdatePrice(t *testing.T) {
+	t.Skip("This is for manual testing, we are calling coingecko here")
+	setup()
+	defer teardown()
+	p, err := getUpdateExchanges("ETH")
+	assert.Nil(t, err)
+	assert.False(t, p.IsZero())
 }
 
 func create(s string) *string {
@@ -212,6 +219,5 @@ func initDB(db *sql.DB, file string) error {
 			}
 		}
 	}
-
 	return nil
 }
