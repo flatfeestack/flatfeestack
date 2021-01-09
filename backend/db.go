@@ -85,7 +85,7 @@ func saveUser(user *User) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH)
-	return handleErr(res, err, "INSERT INTO auth", user)
+	return handleErr(res, err, "INSERT INTO users", user)
 }
 
 func updateUser(user *User) error {
@@ -116,9 +116,14 @@ func sponsor(event *SponsorEvent) error {
 // Repositories
 func getSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
 	var repos []Repo
+	//sqlite can handle two nested selects, with postgres we need 3
+	//https://stackoverflow.com/questions/19601948/must-appear-in-the-group-by-clause-or-be-used-in-an-aggregate-function
 	sql := `SELECT r.id, r.orig_id, r.url, r.name, r.description 
-			FROM (SELECT event_type, repo_id, max(created_at) as created_at FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) as s 
-			JOIN repo r on r.id = s.repo_id AND s.event_type=$2`
+			FROM (SELECT s.event_type, s.repo_id 
+			      FROM (SELECT repo_id, max(created_at) as max 
+			            FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) 
+			      s1 JOIN sponsor_event s ON s1.repo_id=s.repo_id AND s1.max = s.created_at) 
+			s2 JOIN repo r ON r.id = s2.repo_id AND s2.event_type=$2`
 	rows, err := db.Query(sql, uid, eventType)
 	defer rows.Close()
 
@@ -137,16 +142,41 @@ func getSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
 	return repos, nil
 }
 
-func saveRepo(repo *Repo) error {
-	stmt, err := db.Prepare("INSERT INTO repo (id, orig_id, url, name, description) VALUES ($1, $2, $3, $4, $5, $6)")
+func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (uint8, error) {
+	var eventType uint8
+	err := db.
+		QueryRow("SELECT event_type, max(created_at) FROM sponsor_event WHERE user_id=$1 AND repo_id=$2 GROUP BY user_id, repo_id", uid, rid).
+		Scan(&eventType)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return eventType, nil
+	default:
+		return 0, err
+	}
+}
+
+func saveRepo(repo *Repo) (*uuid.UUID,error) {
+	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description) 
+									VALUES ($1, $2, $3, $4, $5)
+									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5
+									RETURNING id`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
 	defer stmt.Close()
 
-	var res sql.Result
-	res, err = stmt.Exec(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description)
-	return handleErr(res, err, "INSERT INTO repo", repo)
+	var id uuid.UUID
+	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description).Scan(&id)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &id, nil
+	default:
+		return nil, err
+	}
 }
 
 func findRepoByID(rid uuid.UUID) (*Repo, error) {

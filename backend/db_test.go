@@ -20,7 +20,7 @@ func setup() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = initDB(db, "../init.sql")
+	err = initDB(db, "init.sql")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,8 +88,9 @@ func TestSponsor(t *testing.T) {
 	}
 	err := saveUser(&u)
 	assert.Nil(t, err)
-	err = saveRepo(&r)
+	id, err := saveRepo(&r)
 	assert.Nil(t, err)
+	assert.NotNil(t, id)
 
 	s1 := SponsorEvent{
 		Id:        uuid.New(),
@@ -151,8 +152,9 @@ func TestRepo(t *testing.T) {
 		Name:        create("name"),
 		Description: create("desc"),
 	}
-	err := saveRepo(&r)
+	id, err := saveRepo(&r)
 	assert.Nil(t, err)
+	assert.NotNil(t, id)
 
 	r2, err := findRepoByID(uuid.New())
 	assert.Nil(t, err)

@@ -1,6 +1,10 @@
 NAME:=api
 
-all: swag dep build
+.PHONY: all test build clean swag
+
+all: swag dep build test
+test:
+	go test -v
 dep: go.mod
 	go mod tidy
 	go get -v -u ./...

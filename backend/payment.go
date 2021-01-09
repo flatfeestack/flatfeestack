@@ -16,6 +16,41 @@ import (
 	"time"
 )
 
+type PostSubscriptionBody struct {
+	Plan          string `json:"plan"`
+	PaymentMethod string `json:"paymentMethod"`
+}
+
+// @Summary Create a subscription
+// @Tags Repos
+// @Param body body PostSubscriptionBody true "Request Body"
+// @Accept  json
+// @Produce  json
+// @Success 200
+// @Failure 400
+// @Router /api/payments/subscriptions [post]
+func postSubscription(w http.ResponseWriter, r *http.Request, user *User) {
+	var body PostSubscriptionBody
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		return
+	}
+
+	s, err := createSubscription(*user, body.Plan, body.PaymentMethod)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Something went wrong: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(s)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+}
+
 func createStripeCustomer(user *User) (string, error) {
 	params := &stripe.CustomerParams{
 		Email: stripe.String(*user.Email),
@@ -28,7 +63,7 @@ func createStripeCustomer(user *User) (string, error) {
 	return c.ID, nil
 }
 
-func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
+func createSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
 	if user.StripeId == nil {
 		log.Print("error in createSubscription: user has no stripeID")
 		return nil, errors.New("can not create subscription for user without stripeID")
@@ -127,7 +162,7 @@ func CreateSubscription(user User, plan string, paymentMethod string) (*stripe.S
 // @Success 200
 // @Failure 400
 // @Router /api/hooks/stripe [post]
-func StripeWebhook(w http.ResponseWriter, req *http.Request) {
+func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	const MaxBodyBytes = int64(65536)
 	req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
 	payload, err := ioutil.ReadAll(req.Body)
@@ -223,7 +258,6 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 }
 
 // Helpers
-
 func checkSubscription(subscription *stripe.Subscription) int {
 	c := subscription.Customer
 	cfull, err := customer.Get(c.ID, nil)
