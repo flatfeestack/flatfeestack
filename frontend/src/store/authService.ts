@@ -13,13 +13,13 @@ export const login = async (email: string, password: string) => {
   refresh.set(r);
   const u = await API.user.get();
   console.log(u);
-  user.set(u.data.data);
+  user.set(u.data);
 };
 
 export const updateUser = async () => {
   try {
     const u = await API.user.get();
-    user.set(u.data.data);
+    user.set(u.data);
   } catch (e) {
     console.log("could not fetch user", e);
   }

@@ -22,7 +22,7 @@ onMount(async () => {
 
     if (response.data?.data?.length !== 0) {
       console.log(response.data);
-      emails = response.data.data;
+      emails = response.data;
     }
   } catch (e) {
     console.log(e);
