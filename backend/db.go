@@ -145,8 +145,11 @@ func getSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
 func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (uint8, error) {
 	var eventType uint8
 	err := db.
-		QueryRow("SELECT event_type, max(created_at) FROM sponsor_event WHERE user_id=$1 AND repo_id=$2 GROUP BY user_id, repo_id", uid, rid).
-		Scan(&eventType)
+		QueryRow(`SELECT s.event_type 
+			      		 FROM (SELECT repo_id, max(created_at) as max 
+			                   FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) 
+			             s1 JOIN sponsor_event s ON s1.repo_id=s.repo_id AND s1.max = s.created_at`,
+			uid, rid).Scan(&eventType)
 	switch err {
 	case sql.ErrNoRows:
 		return 0, nil
@@ -157,7 +160,7 @@ func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (uint8, error) {
 	}
 }
 
-func saveRepo(repo *Repo) (*uuid.UUID,error) {
+func saveRepo(repo *Repo) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description) 
 									VALUES ($1, $2, $3, $4, $5)
 									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5
