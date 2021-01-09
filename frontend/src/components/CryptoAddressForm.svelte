@@ -22,7 +22,7 @@ async function update(e) {
 async function fetchAddress() {
   try {
     const res = await API.user.get();
-    address = res.data.data.payout_eth;
+    address = res.data.payout_eth;
   } catch (e) {
     console.log(e);
   }

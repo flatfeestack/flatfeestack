@@ -9,7 +9,7 @@ let error: string;
 const fetchData = async () => {
   try {
     const res = await API.exchanges.get();
-    return res.data.data;
+    return res.data;
   } catch (e) {
     console.log(e);
     error = e;

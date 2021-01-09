@@ -21,7 +21,7 @@ export let repo: Repo;
 const onSponsor = async () => {
   try {
     const res = await API.repos.sponsor(repo.id);
-    sponsoredRepos.set([...$sponsoredRepos, res.data.data]);
+    sponsoredRepos.set([...$sponsoredRepos, res.data]);
   } catch (e) {
     console.log(e);
   }

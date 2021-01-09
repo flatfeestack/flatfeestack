@@ -19,7 +19,7 @@ const onSubmit = async (e) => {
     e.preventDefault();
     fetching = true;
     const res = await API.repos.search(search);
-    response = res.data.data;
+    response = res.data;
     console.log(response);
   } catch (e) {
     console.log("could not fetch");
@@ -30,9 +30,9 @@ const onSubmit = async (e) => {
 
 onMount(async () => {
   try {
-    const res = await API.repos.getSponsored();
-    if (res.data.data) {
-      sponsoredRepos.set(res.data.data);
+    const res = await API.user.getSponsored();
+    if (res.data) {
+      sponsoredRepos.set(res.data);
     }
   } catch (e) {
     console.log(e);

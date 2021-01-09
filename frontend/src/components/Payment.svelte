@@ -110,7 +110,7 @@ const handleSubmit = async (event) => {
       plans[selectedPlan].stripe_id,
       paymentMethod.id
     );
-    const subscription = res.data.data;
+    const subscription = res.data;
 
     // The subscription contains an invoice
     // If the invoice's payment succeeded then you're good,

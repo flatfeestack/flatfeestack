@@ -75,16 +75,16 @@ export const API = {
       apiInstance.delete(`/users/me/connectedEmails/${encodeURI(email)}`),
     updatePayoutAddress: (address: string) =>
       apiInstance.put(`/users/me/payout/${address}`),
+    getSponsored: () => apiInstance.get("/users/me/sponsored"),
   },
   payments: {
     createSubscription: (plan: string, paymentMethod: string) =>
       apiInstance.post("/payments/subscriptions", { plan, paymentMethod }),
   },
   repos: {
-    search: (q: string) => apiInstance.get(`/repos/search?q=${encodeURI(q)}`),
-    sponsor: (id: number) => apiInstance.post(`/repos/${id}/sponsor`),
+    search: (s: string) => apiInstance.get(`/repos/search/github/${encodeURI(s)}`),
+    sponsor: (id: number) => apiInstance.post(`/repos/sponsor/github/${id}`),
     unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
-    getSponsored: () => apiInstance.get("/users/sponsored"),
   },
   search: {
     keywords: (keywords: string) =>

@@ -3,7 +3,7 @@ module.exports = {
     // removeDeprecatedGapUtilities: true,
     purgeLayersByDefault: true,
   },
-  purge: ["./src/**/*.html", "./src/**/*.svelte"],
+  purge: ["./src/**/*.html", "./src/**/*.svelte", "./src/**/*.js", "./src/**/*.ts"],
   theme: {
     fontFamily: {
       openSans: ['"Open Sans"', "sans-serif"],

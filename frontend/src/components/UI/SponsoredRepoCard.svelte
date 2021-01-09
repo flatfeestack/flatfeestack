@@ -20,7 +20,7 @@ export let repo: Repo;
 const unsponsor = async () => {
   try {
     const res = await API.repos.unsponsor(repo.id);
-    const repoId = res.data.data.repo_id;
+    const repoId = res.data.repo_id;
     if (!repoId) {
       throw Error("No repo id");
     }
@@ -29,7 +29,7 @@ const unsponsor = async () => {
         return r.id !== parseInt(repoId);
       })
     );
-    console.log(res.data.data.repo_id);
+    console.log(res.data.repo_id);
   } catch (e) {
     console.log(e);
   }

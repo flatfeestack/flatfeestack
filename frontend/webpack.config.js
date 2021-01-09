@@ -3,6 +3,8 @@ const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const Preprocess = require("svelte-preprocess");
+const webpack = require('webpack');
+//const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const mode = process.env.NODE_ENV || "development";
 const prod = mode === "production";
@@ -122,7 +124,7 @@ module.exports = {
   },
   devServer: {
     hot: true,
-    stats: "minimal",
+    clientLogLevel: 'debug',
     contentBase: "public",
     watchContentBase: true,
     port: 9084,
@@ -141,11 +143,7 @@ module.exports = {
 };
 
 // Add stylesheets to the build
-if (Array.isArray(stylesheets) || typeof stylesheets === "string") {
-  if (!Array.isArray(stylesheets)) {
-    stylesheets = [stylesheets];
-  }
-
+if (Array.isArray(stylesheets)) {
   module.exports.entry.bundle.unshift.apply(
     module.exports.entry.bundle,
     stylesheets
