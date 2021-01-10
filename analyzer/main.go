@@ -65,5 +65,6 @@ func main() {
 	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
 	router.HandleFunc("/weights", getContributionWeights).Methods("GET")
 	router.HandleFunc("/webhook", analyzeRepository).Methods("POST")
+	log.Println("Starting api on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
