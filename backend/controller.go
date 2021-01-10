@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"log"
@@ -11,13 +10,31 @@ import (
 	"time"
 )
 
+type GitEmailRequest struct {
+	Email string `json:"email"`
+}
+
+type WebhookCallback struct {
+	RequestId string          `json:"request_id"`
+	Success   bool            `json:"success"`
+	Error     string          `json:"error"`
+	Result    []FlatFeeWeight `json:"result"`
+}
+
+type FlatFeeWeight struct {
+	Contributor Contributor `json:"contributor"`
+	Weight      float64     `json:"weight"`
+}
+
+type Contributor struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 /*
  *	==== USER ====
  */
 
-type GitEmailRequest struct {
-	Email string `json:"email"`
-}
 
 // @Summary Get User by sub in token
 // @Description Get details of all users
@@ -127,7 +144,7 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 // @Failure 400
 // @Router /api/users/sponsored [get]
 func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
-	repos, err := getSponsoredReposById(user.Id, SPONSOR)
+	repos, err := getSponsoredReposById(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not get repos: %v", err)
 		return
@@ -135,42 +152,6 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(repos)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
-}
-
-// @Summary Get User by ID
-// @Description Get details of all users
-// @Tags Users
-// @Param id path string true "User ID"
-// @Accept  json
-// @Produce  json
-// @Success 200
-// @Failure 404
-// @Router /api/users/{id} [get]
-func getUserByID(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id := params["id"]
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Not a valid user id: %v", err)
-		return
-	}
-	var user *User
-	user, err = findUserByID(uid)
-	if user == nil {
-		writeErr(w, http.StatusNotFound, "User with id %v not found", uid)
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not query DB: %v", err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
@@ -305,25 +286,35 @@ func sponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 // @Router /api/repos/{id}/unsponsor [post]
 func unsponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
-	id, err := uuid.Parse(params["id"])
+	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
-	sponsorRepo0(w, user, id, UNSPONSOR)
+	sponsorRepo0(w, user, repoId, UNSPONSOR)
 }
-func sponsorRepo0(w http.ResponseWriter, user *User, id uuid.UUID, newEventType uint8) {
-	eventType, err := lastEventSponsoredRepo(user.Id, id)
-	if eventType == newEventType {
-		writeErr(w, http.StatusNotModified, "We already have the current following event type %v", eventType)
+func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
+	now := time.Now()
+	event := SponsorEvent{
+		Id:          uuid.New(),
+		Uid:         user.Id,
+		RepoId:      repoId,
+		EventType:   newEventType,
+		SponsorAt:   now,
+		UnsponsorAt: now,
+	}
+	err := sponsor(&event)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save to DB %v", err)
 		return
 	}
 
-	fmt.Printf("id %v", id)
+	//no need for transaction here, repoId is very static
+	log.Printf("repoId %v", repoId)
 	var repo *Repo
-	repo, err = findRepoByID(id)
+	repo, err = findRepoByID(repoId)
 	if repo == nil {
-		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", id)
+		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", repoId)
 		return
 	}
 	if err != nil {
@@ -334,19 +325,6 @@ func sponsorRepo0(w http.ResponseWriter, user *User, id uuid.UUID, newEventType 
 	err = analysisRequest(repo.Id, *repo.Url)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
-		return
-	}
-
-	event := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    id,
-		EventType: newEventType,
-		CreatedAt: time.Now(),
-	}
-	err = sponsor(&event)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save to DB %v", err)
 		return
 	}
 
@@ -382,3 +360,32 @@ func getExchanges(w http.ResponseWriter, _ *http.Request, _ *User) {
 		return
 	}
 }
+
+func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
+	w.Header().Set("Content-Type", "application/json")
+	var data WebhookCallback
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	rid, err := uuid.Parse(data.RequestId)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "cannot parse request id: %v", err)
+		return
+	}
+	rowsAffected := 0
+	for _, wh := range data.Result {
+		err = saveContribution(rid, &wh)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "insert error: %v", err)
+			return
+		}
+		rowsAffected ++
+	}
+	log.Printf("Inserted %v contributions into DB for request %v", rowsAffected, data.RequestId)
+	w.WriteHeader(http.StatusOK)
+}
+
+

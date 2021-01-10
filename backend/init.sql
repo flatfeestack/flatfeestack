@@ -5,6 +5,7 @@ CREATE TABLE users (
     subscription       VARCHAR(255),
     subscription_state VARCHAR(255),
     payout_eth         VARCHAR(255),
+    role               VARCHAR(255) DEFAULT 'USER' NOT NULL,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -25,14 +26,13 @@ CREATE TABLE git_email (
 );
 
 CREATE TABLE sponsor_event (
-    id         UUID PRIMARY KEY,
-    repo_id    UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
-    user_id    UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
-    event_type SMALLINT                            NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    id           UUID PRIMARY KEY,
+    repo_id      UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
+    user_id      UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
+    sponsor_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    unsponsor_at TIMESTAMP DEFAULT NULL
 );
-
-CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, created_at);
+CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
 
 CREATE TABLE payments (
     id         UUID PRIMARY KEY,
@@ -67,4 +67,12 @@ CREATE TABLE payouts (
     amount      NUMERIC,
     paid        TIMESTAMP,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE contribution (
+    id                  UUID PRIMARY KEY,
+    analysis_request_id UUID CONSTRAINT fk_analysis_request_id_c REFERENCES analysis_request (id) ON DELETE CASCADE,
+    git_email           VARCHAR(255)     NOT NULL,
+    weight              DOUBLE PRECISION NOT NULL,
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

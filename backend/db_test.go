@@ -97,7 +97,8 @@ func TestSponsor(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: SPONSOR,
-		CreatedAt: time.Unix(1, 0),
+		SponsorAt: time.Unix(1, 0),
+		UnsponsorAt: time.Unix(1, 0),
 	}
 
 	s2 := SponsorEvent{
@@ -105,7 +106,8 @@ func TestSponsor(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: UNSPONSOR,
-		CreatedAt: time.Unix(2, 0),
+		SponsorAt: time.Unix(2, 0),
+		UnsponsorAt: time.Unix(2, 0),
 	}
 
 	s3 := SponsorEvent{
@@ -113,7 +115,8 @@ func TestSponsor(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: SPONSOR,
-		CreatedAt: time.Unix(3, 0),
+		SponsorAt: time.Unix(3, 0),
+		UnsponsorAt: time.Unix(3, 0),
 	}
 
 	err = sponsor(&s1)
@@ -123,7 +126,7 @@ func TestSponsor(t *testing.T) {
 	err = sponsor(&s3)
 	assert.Nil(t, err)
 
-	rs, err := getSponsoredReposById(u.Id, SPONSOR)
+	rs, err := getSponsoredReposById(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 
@@ -132,12 +135,13 @@ func TestSponsor(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: UNSPONSOR,
-		CreatedAt: time.Unix(4, 0),
+		SponsorAt: time.Unix(4, 0),
+		UnsponsorAt: time.Unix(4, 0),
 	}
 	err = sponsor(&s4)
 	assert.Nil(t, err)
 
-	rs, err = getSponsoredReposById(u.Id, SPONSOR)
+	rs, err = getSponsoredReposById(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(rs))
 }

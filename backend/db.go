@@ -16,6 +16,7 @@ type User struct {
 	Subscription      *string   `json:"subscription"`
 	SubscriptionState *string   `json:"subscription_state"`
 	PayoutETH         *string   `json:"payout_eth"`
+	Role			  *string   `json:"role"`
 }
 
 type SponsorEvent struct {
@@ -23,7 +24,8 @@ type SponsorEvent struct {
 	Uid       uuid.UUID `json:"uid"`
 	RepoId    uuid.UUID `json:"repo_id"`
 	EventType uint8     `json:"event_type"`
-	CreatedAt time.Time `json:"created_at"`
+	SponsorAt time.Time `json:"created_at"`
+	UnsponsorAt time.Time `json:"created_at"`
 }
 
 type Repo struct {
@@ -102,29 +104,55 @@ func updateUser(user *User) error {
 
 //sponsor events
 func sponsor(event *SponsorEvent) error {
-	stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, event_type, created_at) VALUES ($1, $2, $3, $4, $5)")
+	//first get last sponsored event to check if we need to sponsor or unsponsor
+	//TODO: use mutex
+	id, sponsorAt, unsponsorAt, err := lastEventSponsoredRepo(event.Uid, event.RepoId)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
+		return err
 	}
-	defer stmt.Close()
 
-	var res sql.Result
-	res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.EventType, event.CreatedAt)
-	return handleErr(res, err, "INSERT INTO sponsor_event", event)
+	if event.EventType == SPONSOR && (sponsorAt != nil && unsponsorAt == nil) {
+		return fmt.Errorf("we want to sponsor, but the current state is already in sponser")
+	}
+	if event.EventType == UNSPONSOR && unsponsorAt != nil {
+		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo")
+	}
+
+	if event.EventType == SPONSOR {
+		//insert
+		stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, sponsor_at) VALUES ($1, $2, $3, $4)")
+		if err != nil {
+			return fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
+		}
+		defer stmt.Close()
+
+		var res sql.Result
+		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.SponsorAt)
+		return handleErr(res, err, "INSERT INTO sponsor_event", event)
+	} else if event.EventType == UNSPONSOR {
+		//update
+		stmt, err := db.Prepare("UPDATE sponsor_event SET unsponsor_at=$1 WHERE id=$2")
+		if err != nil {
+			return fmt.Errorf("prepare UPDATE sponsor_event for %v statement failed: %v", id, err)
+		}
+		defer stmt.Close()
+
+		var res sql.Result
+		res, err = stmt.Exec(event.UnsponsorAt, id)
+		return handleErr(res, err, "UPDATE sponsor_event", id)
+	} else {
+		return fmt.Errorf("unknown event type %v", event.EventType)
+	}
 }
 
 // Repositories
-func getSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
+func getSponsoredReposById(uid uuid.UUID) ([]Repo, error) {
 	var repos []Repo
-	//sqlite can handle two nested selects, with postgres we need 3
-	//https://stackoverflow.com/questions/19601948/must-appear-in-the-group-by-clause-or-be-used-in-an-aggregate-function
-	sql := `SELECT r.id, r.orig_id, r.url, r.name, r.description 
-			FROM (SELECT s.event_type, s.repo_id 
-			      FROM (SELECT repo_id, max(created_at) as max 
-			            FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) 
-			      s1 JOIN sponsor_event s ON s1.repo_id=s.repo_id AND s1.max = s.created_at) 
-			s2 JOIN repo r ON r.id = s2.repo_id AND s2.event_type=$2`
-	rows, err := db.Query(sql, uid, eventType)
+	sql := `SELECT r.id, r.orig_id, r.url, name, description 
+            FROM sponsor_event s
+            JOIN repo r ON s.repo_id=r.id 
+			WHERE s.user_id=$1 AND s.unsponsor_at IS NULL`
+	rows, err := db.Query(sql, uid)
 	defer rows.Close()
 
 	if err != nil {
@@ -142,39 +170,49 @@ func getSponsoredReposById(uid uuid.UUID, eventType uint8) ([]Repo, error) {
 	return repos, nil
 }
 
-func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (uint8, error) {
-	var eventType uint8
+func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+	var sponsorAt *time.Time
+	var unsponsorAt *time.Time
+	var id *uuid.UUID
 	err := db.
-		QueryRow(`SELECT s.event_type 
-			      		 FROM (SELECT repo_id, max(created_at) as max 
-			                   FROM sponsor_event WHERE user_id=$1 GROUP BY repo_id) 
-			             s1 JOIN sponsor_event s ON s1.repo_id=s.repo_id AND s1.max = s.created_at`,
-			uid, rid).Scan(&eventType)
+		QueryRow(`SELECT id, sponsor_at, unsponsor_at
+			      		 FROM sponsor_event 
+						 WHERE user_id=$1 AND repo_id=$2 AND sponsor_at=
+						     (SELECT max(sponsor_at) FROM sponsor_event WHERE user_id=$1 AND repo_id=$2)`,
+			uid, rid).Scan(&id, &sponsorAt, &unsponsorAt)
 	switch err {
 	case sql.ErrNoRows:
-		return 0, nil
+		return nil, nil, nil, nil
 	case nil:
-		return eventType, nil
+		return id, sponsorAt, unsponsorAt, nil
 	default:
-		return 0, err
+		return nil, nil, nil, err
 	}
 }
 
 func saveRepo(repo *Repo) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description) 
 									VALUES ($1, $2, $3, $4, $5)
-									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5
-									RETURNING id`)
+									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
 	defer stmt.Close()
 
+	var res sql.Result
+	res, err = stmt.Exec(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description)
+	err = handleErr(res, err, "INSERT INTO repo", repo)
+	if err != nil {
+		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+	}
+
+	//"RETURNING" clause does not work with SQLite, so getting back with a select
+	//its not transactional, but it does not matter, once written, the url and id do not change
 	var id uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description).Scan(&id)
+	err = db.
+		QueryRow("SELECT id FROM repo WHERE repo.Url=$1", repo.Url).
+		Scan(&id)
 	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
 	case nil:
 		return &id, nil
 	default:
@@ -247,7 +285,7 @@ func getUpdateExchanges(chain string) (decimal.Decimal, error) {
 	var s string
 	var t time.Time
 	err := db.
-		QueryRow("SELECT price, MAX(created_at) FROM exchange WHERE chain=$1 GROUP BY chain", chain).
+		QueryRow("SELECT price, created_at FROM exchange WHERE chain=$1 ORDER BY created_at DESC LIMIT 1", chain).
 		Scan(&s, &t)
 	switch err {
 
@@ -322,6 +360,18 @@ func savePayment(p *Payment) error {
 	return handleErr(res, err, "INSERT INTO payments", p.Id)
 }
 
+func saveContribution(rid uuid.UUID, w *FlatFeeWeight) error {
+	stmt, err := db.Prepare("INSERT INTO contribution(id, analysis_request_id, git_email, weight) VALUES ($1, $2, $3, $4)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO contribution for %v/%v statement event: %v", rid, w, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(uuid.New(), rid, w.Contributor.Email, w.Weight)
+	return handleErr(res, err, "INSERT INTO contribution", rid)
+}
+
 func handleErr(res sql.Result, err error, info string, value interface{}) error {
 	if err != nil {
 		return fmt.Errorf("%v query %v failed: %v", info, value, err)
@@ -352,3 +402,4 @@ func initDb() *sql.DB {
 	log.Println("Successfully connected!")
 	return db
 }
+

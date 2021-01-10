@@ -45,7 +45,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	r, err := client.Post(opts.AnalysisUrl, "application/json", bytes.NewBuffer(body))
+	r, err := client.Post(opts.AnalysisUrl + "/webhook", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}

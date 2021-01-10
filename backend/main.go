@@ -84,7 +84,7 @@ func NewOpts() *Opts {
 	o.HS256 = setDefault(o.HS256, lookupEnv("HS256"), "ORSXG5A=")
 	o.DBDriver = setDefault(o.DBDriver, lookupEnv("DB_DRIVER"), "postgres")
 	o.DBPath = setDefault(o.DBPath, lookupEnv("DB_PATH"), "postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable")
-	o.AnalysisUrl = setDefault(o.AnalysisUrl, lookupEnv("ANALYSIS-URL"), "http://analysis-engine:8080/webhook")
+	o.AnalysisUrl = setDefault(o.AnalysisUrl, lookupEnv("ANALYSIS-URL"), "http://analysis-engine:8080")
 
 	var err error
 	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
@@ -146,30 +146,30 @@ func main() {
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	//user
-	apiRouter.HandleFunc("/users/me", jwtAuth(getMyUser)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuth(getMyConnectedEmails)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuth(addGitEmail)).Methods("POST")
-	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", jwtAuth(removeGitEmail)).Methods("DELETE")
-	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuth(updatePayout)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/sponsored", jwtAuth(getSponsoredRepos)).Methods("GET")
-	apiRouter.HandleFunc("/users/{id}", getUserByID).Methods("GET")
+	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
+	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
+	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuthUser(addGitEmail)).Methods("POST")
+	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
+	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	//repo github
-	apiRouter.HandleFunc("/repos/search/github/{query}", jwtAuth(searchRepoGitHub)).Methods("GET")
-	apiRouter.HandleFunc("/repos/sponsor/github/{id}", jwtAuth(sponsorRepoGitHub)).Methods("POST")
+	apiRouter.HandleFunc("/repos/search/github/{query}", jwtAuthUser(searchRepoGitHub)).Methods("GET")
+	apiRouter.HandleFunc("/repos/sponsor/github/{id}", jwtAuthUser(sponsorRepoGitHub)).Methods("POST")
 	//repo
-	apiRouter.HandleFunc("/repos/{id}", jwtAuth(getRepoByID)).Methods("GET")
-	apiRouter.HandleFunc("/repos/{id}/sponsor", jwtAuth(sponsorRepo)).Methods("POST")
-	apiRouter.HandleFunc("/repos/{id}/unsponsor", jwtAuth(unsponsorRepo)).Methods("POST")
-	apiRouter.HandleFunc("/exchanges", jwtAuth(getExchanges)).Methods("GET")
+	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
+	apiRouter.HandleFunc("/repos/{id}/sponsor", jwtAuthUser(sponsorRepo)).Methods("POST")
+	apiRouter.HandleFunc("/repos/{id}/unsponsor", jwtAuthUser(unsponsorRepo)).Methods("POST")
+	apiRouter.HandleFunc("/exchanges", jwtAuthUser(getExchanges)).Methods("GET")
 	//payment
-	apiRouter.HandleFunc("/payments/subscriptions", jwtAuth(postSubscription)).Methods("POST")
+	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
+	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, "analysis-engine@flatfeestack.io")).Methods("POST")
 
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 	}
 
-	log.Println("Starting server on port " + strconv.Itoa(opts.Port))
+	log.Println("Starting api on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
 
@@ -185,77 +185,94 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	}
 }
 
-func jwtAuth(next func(w http.ResponseWriter, r *http.Request, user *User)) func(http.ResponseWriter, *http.Request) {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/hooks") {
-				// webhook routes are not protected by middleware, but verified on an individual level
-				next(w, r, nil)
-				return
-			}
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
-				return
-			}
+func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims{
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
+		return nil
+	}
 
-			bearerToken := strings.Split(authHeader, " ")
-			if len(bearerToken) != 2 {
-				writeErr(w, http.StatusBadRequest, "ERR-02, could not split token: %v", bearerToken)
-				return
-			}
+	bearerToken := strings.Split(authHeader, " ")
+	if len(bearerToken) != 2 {
+		writeErr(w, http.StatusBadRequest, "ERR-02, could not split token: %v", bearerToken)
+		return nil
+	}
 
-			tok, err := jwt.ParseSigned(bearerToken[1])
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "ERR-03, could not parse token: %v", bearerToken[1])
-				return
-			}
+	tok, err := jwt.ParseSigned(bearerToken[1])
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "ERR-03, could not parse token: %v", bearerToken[1])
+		return nil
+	}
 
-			claims := &jwt.Claims{}
+	claims := &jwt.Claims{}
 
-			if tok.Headers[0].Algorithm == string(jose.RS256) {
-				err = tok.Claims(privRSA.Public(), claims)
-			} else if tok.Headers[0].Algorithm == string(jose.HS256) {
-				err = tok.Claims(jwtKey, claims)
-			} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
-				err = tok.Claims(privEdDSA.Public(), claims)
-			} else {
-				writeErr(w, http.StatusUnauthorized, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
-				return
-			}
+	if tok.Headers[0].Algorithm == string(jose.RS256) {
+		err = tok.Claims(privRSA.Public(), claims)
+	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
+		err = tok.Claims(jwtKey, claims)
+	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
+		err = tok.Claims(privEdDSA.Public(), claims)
+	} else {
+		writeErr(w, http.StatusUnauthorized, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
+		return nil
+	}
 
-			if err != nil {
-				writeErr(w, http.StatusUnauthorized, "ERR-05, could not parse claims: %v", bearerToken[1])
-				return
-			}
+	if err != nil {
+		writeErr(w, http.StatusUnauthorized, "ERR-05, could not parse claims: %v", bearerToken[1])
+		return nil
+	}
 
-			if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
-				writeErr(w, http.StatusTeapot, "ERR-06, expired: %v", claims.Expiry.Time())
-				return
-			}
+	if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
+		writeErr(w, http.StatusTeapot, "ERR-06, expired: %v", claims.Expiry.Time())
+		return nil
+	}
 
-			if claims.Subject == "" {
-				writeErr(w, http.StatusBadRequest, "ERR-07, no subject: %v", claims)
-				return
-			}
+	if claims.Subject == "" {
+		writeErr(w, http.StatusBadRequest, "ERR-07, no subject: %v", claims)
+		return nil
+	}
+	return claims
+}
 
-			// Fetch user from DB
-			user, err := findUserByEmail(claims.Subject)
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
-				return
-			}
-
-			if user == nil {
-				user, err = createUser(claims.Subject)
-				if err != nil {
-					writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
-					return
-				}
-			}
-
-			log.Printf("Authenticated user %s\n", *user.Email)
-			next(w, r, user)
+func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), email string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := jwtAuth(w, r)
+		if claims == nil {
+			return
 		}
+		if claims.Subject != email {
+			writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, email)
+			return
+		}
+		log.Printf("Authenticated admin %s\n", email)
+		next(w, r, email)
+	}
+}
+
+func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := jwtAuth(w,r)
+		if claims == nil {
+			return
+		}
+		// Fetch user from DB
+		user, err := findUserByEmail(claims.Subject)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
+			return
+		}
+
+		if user == nil {
+			user, err = createUser(claims.Subject)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
+				return
+			}
+		}
+
+		log.Printf("Authenticated user %s\n", *user.Email)
+		next(w, r, user)
+	}
 }
 
 func createUser(email string) (*User, error) {
