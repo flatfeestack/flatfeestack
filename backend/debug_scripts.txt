@@ -1,0 +1,44 @@
+-- this is my scratchpad, queries for testing
+
+select
+	s.user_id,
+	SUM((extract(epoch from age(least(to_date('0001-01-03', 'YYYY-MM-DD'), s.unsponsor_at), greatest(to_date('0001-01-02', 'YYYY-MM-DD'), s.sponsor_at))) / 3600)::int) as repo_hours,
+	to_date('0001-01-02', 'YYYY-MM-DD') as day
+from
+	sponsor_event s
+join users u on
+	u.id = s.user_id
+where
+	u.subscription_state = 'ACTIVE'
+	and not( (s.sponsor_at<to_date('0001-01-02', 'YYYY-MM-DD') and s.unsponsor_at<to_date('0001-01-02', 'YYYY-MM-DD'))
+	or (s.sponsor_at >= to_date('0001-01-03', 'YYYY-MM-DD') and s.unsponsor_at >= to_date('0001-01-03', 'YYYY-MM-DD')))
+group by
+	s.user_id
+
+	--$1 0001-01-01 00:00:00 +0000 to_date('0001-01-01', 'YYYY-MM-DD')
+	--$2 0001-01-02 00:00:00 +0000 to_date('0001-01-02', 'YYYY-MM-DD')
+
+**************
+
+select
+	repo_id,
+	SUM(((extract(epoch from age(least(to_date('0001-01-03', 'YYYY-MM-DD'), s.unsponsor_at), greatest(to_date('0001-01-02', 'YYYY-MM-DD'), s.sponsor_at))) / 3600)::bigint * 27500) / d.repo_hours),
+	to_date('0001-01-02', 'YYYY-MM-DD') as day
+from
+	sponsor_event s
+join users u on
+	u.id = s.user_id
+join daily_repo_hours d on
+	u.id = d.user_id
+where
+	u.subscription_state = 'ACTIVE'
+	and d.day = to_date('0001-01-02', 'YYYY-MM-DD')
+	and not( (s.sponsor_at<to_date('0001-01-02', 'YYYY-MM-DD') and s.unsponsor_at<to_date('0001-01-02', 'YYYY-MM-DD'))
+	or (s.sponsor_at >= to_date('0001-01-03', 'YYYY-MM-DD') and s.unsponsor_at >= to_date('0001-01-03', 'YYYY-MM-DD')))
+group by
+	s.repo_id
+
+	--$1 0001-01-01 00:00:00 +0000 to_date('0001-01-01', 'YYYY-MM-DD')
+	--$2 0001-01-02 00:00:00 +0000 to_date('0001-01-02', 'YYYY-MM-DD')
+
+*******
