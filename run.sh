@@ -23,7 +23,7 @@ hostip() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-ni] [-ns] [-np] [-nf] [-db]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-db]
 
 Build and run flatfeestack.
 
@@ -32,8 +32,7 @@ Available options:
 -h, --help          Print this help and exit
 -na, --no-auth      Don't start auth
 -ne, --no-engine    Don't start analysis-engine
--ni, --no-api       Don't start api
--ns, --no-scheduler Don't start scheduler
+-nb, --no-backend   Don't start backend
 -np, --no-payout    Don't start payout
 -nf, --no-frontend  Dont' start frontend
 -db, --db-only      Run the DB instance only, this ignores all the other options
@@ -71,8 +70,7 @@ parse_params() {
     --no-color) NO_COLOR=1 ;;
     -na | --no-auth) compose_args="${compose_args} --scale auth=0"; hosts="${hosts} auth";;
     -ne | --no-engine) compose_args="${compose_args} --scale analysis-engine=0"; hosts="${hosts} analysis-engine";;
-    -ni | --no-api) compose_args="${compose_args} --scale api=0"; hosts="${hosts} api";;
-    -ns | --no-scheduler) compose_args="${compose_args} --scale scheduler=0"; hosts="${hosts} scheduler";;
+    -nb | --no-backend) compose_args="${compose_args} --scale backend=0"; hosts="${hosts} backend";;
     -np | --no-payout) compose_args="${compose_args} --scale payout=0"; hosts="${hosts} payout";;
     -nf | --no-frontend) compose_args="${compose_args} --scale frontend=0"; hosts="${hosts} frontend";;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
