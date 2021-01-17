@@ -10,14 +10,10 @@
 	path = frontend
 	url = git@github.com:flatfeestack/frontend.git
 	branch = master
-[submodule "api"]
+[submodule "backend"]
 	path = api
-	url = git@github.com:flatfeestack/api.git
+	url = git@github.com:flatfeestack/backend.git
 	branch = master
-[submodule "scheduler"]
-	path = scheduler
-	url = git@github.com:flatfeestack/scheduler.git
-	branch = main
 [submodule "payout"]
 	path = payout
 	url = git@github.com:flatfeestack/payout.git
