@@ -28,7 +28,7 @@ const updateExchange = async () => {
 <DashboardLayout>
   <h1>Admin</h1>
   {#if error}
-    <p class="p-2 bg-red-500 text-white inline-block">helelhrelhla</p>
+    <p class="p-2 bg-red-500 text-white inline-block">{error}</p>
   {/if}
   {#await promise}
     <Spinner />

@@ -20,7 +20,7 @@ onMount(async () => {
   try {
     const response = await API.user.connectedEmails();
 
-    if (response.data?.data?.length !== 0) {
+    if (response?.data?.data?.length > 0) {
       console.log(response.data);
       emails = response.data;
     }
@@ -71,7 +71,7 @@ async function removeEmail(email: string) {
 <DashboardLayout>
   <h1>Income</h1>
   <hr class="mb-10 w-64" />
-  {#if emails.length === 0}
+  {#if emails && emails.length === 0}
     <div class="flex mb-5">
       <div class="bg-red-500 text-white p-5">
         Please add your git e-mail addresses to generate income
