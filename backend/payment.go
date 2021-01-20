@@ -146,6 +146,8 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	if paymentIntent != nil && paymentIntent.Status == "succeeded" {
 		log.Print("in if statement status succeeded")
 		user.Subscription = &s.ID
+		state := "active"
+		user.SubscriptionState=&state
 		err := updateUser(&user)
 		if err != nil {
 			return nil, err

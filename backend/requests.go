@@ -105,8 +105,8 @@ type RepoDTO struct {
 }
 
 func fetchGithubRepoSearch(q string) ([]RepoDTO, error) {
-	log.Print("http://backend.github.com/search/repositories?q=" + url.QueryEscape(q))
-	res, err := http.Get("http://backend.github.com/search/repositories?q=" + url.QueryEscape(q))
+	log.Print("http://api.github.com/search/repositories?q=" + url.QueryEscape(q))
+	res, err := http.Get("http://api.github.com/search/repositories?q=" + url.QueryEscape(q))
 	if err != nil {
 		log.Printf("Could not search for repos %v", err)
 		return nil, err
@@ -124,7 +124,7 @@ func fetchGithubRepoSearch(q string) ([]RepoDTO, error) {
 }
 
 func fetchGithubRepoById(id uint32) (*RepoDTO, error) {
-	res, err := http.Get("http://backend.github.com/repositories/" + strconv.Itoa(int(id)))
+	res, err := http.Get("http://api.github.com/repositories/" + strconv.Itoa(int(id)))
 	if err != nil {
 		log.Printf("Could not fetch for repo details %v", err)
 		return nil, err

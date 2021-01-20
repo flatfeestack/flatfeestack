@@ -172,9 +172,12 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 // @Failure 400
 // @Router /backend/repos/search [get]
 func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
-	params := mux.Vars(r)
-	q := params["query"]
+	q := r.URL.Query().Get("q")
 	log.Printf("query %v", q)
+	if q == ""{
+		writeErr(w, http.StatusBadRequest, "Empty search")
+		return
+	}
 	repos, err := fetchGithubRepoSearch(q)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
