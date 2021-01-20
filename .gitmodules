@@ -10,7 +10,7 @@
 	path = frontend
 	url = git@github.com:flatfeestack/frontend.git
 	branch = master
-[submodule "backend"]
+[submodule "api"]
 	path = api
 	url = git@github.com:flatfeestack/backend.git
 	branch = master
