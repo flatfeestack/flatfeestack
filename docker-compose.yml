@@ -45,8 +45,8 @@ services:
     image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./api/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./scheduler/init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
+      - ./backend/sched.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
     environment:
