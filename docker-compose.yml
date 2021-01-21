@@ -45,7 +45,7 @@ services:
     image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./api/init.sql:/docker-entrypoint-initdb.d/0-init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
       - ./scheduler/init.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
@@ -67,4 +67,11 @@ services:
   frontend:
     container_name: flatfeestack-frontend
     build: ./frontend
-    #Default port is 9084
+
+  #https://openethereum.wiki/Private-development-chain/
+  openethereum:
+    container_name: flatfeestack-openethereum
+    image: openethereum/openethereum:v3.1.1
+    ports:
+      - "8545:8545"
+    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors=all --base-path /tmp
