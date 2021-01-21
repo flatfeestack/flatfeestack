@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity >=0.7.0 <0.8.0;
 
-
-library SafeMath {
+library SafeMath64 {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
      * overflow.
@@ -12,163 +13,51 @@ library SafeMath {
      *
      * - Addition cannot overflow.
      */
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
+    function add(uint192 a, uint192 b) internal pure returns (uint192) {
+        uint192 c = a + b;
         require(c >= a, "SafeMath: addition overflow");
 
         return c;
     }
-
-    /**
-     * @dev Returns the subtraction of two unsigned integers, reverting on
-     * overflow (when the result is negative).
-     *
-     * Counterpart to Solidity's `-` operator.
-     *
-     * Requirements:
-     *
-     * - Subtraction cannot overflow.
-     */
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
-
-    /**
-     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
-     * overflow (when the result is negative).
-     *
-     * Counterpart to Solidity's `-` operator.
-     *
-     * Requirements:
-     *
-     * - Subtraction cannot overflow.
-     */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the multiplication of two unsigned integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `*` operator.
-     *
-     * Requirements:
-     *
-     * - Multiplication cannot overflow.
-     */
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
-        // benefit is lost if 'b' is also tested.
-        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the integer division of two unsigned integers. Reverts on
-     * division by zero. The result is rounded towards zero.
-     *
-     * Counterpart to Solidity's `/` operator. Note: this function uses a
-     * `revert` opcode (which leaves remaining gas untouched) while Solidity
-     * uses an invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
-    }
-
-    /**
-     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
-     * division by zero. The result is rounded towards zero.
-     *
-     * Counterpart to Solidity's `/` operator. Note: this function uses a
-     * `revert` opcode (which leaves remaining gas untouched) while Solidity
-     * uses an invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, "SafeMath: modulo by zero");
-    }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts with custom message when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b != 0, errorMessage);
-        return a % b;
-    }
 }
 
 contract Flatfeestack {
-    using SafeMath for uint256;
-    mapping(address => uint256) balances;
-    address private _owner;
+    using SafeMath64 for uint192;
+    mapping(address => Balance) private balances;
+    address private owner;
 
-    event PaymentReleased(address to, uint256 amount);
+    event PaymentReleased(address to, uint192 amount, uint64 time);
+
+    struct Balance {
+        uint192 balanceWei;
+        uint64 time;
+    }
 
     constructor () {
-        _owner = msg.sender;
+        owner = msg.sender;
     }
 
     /**
-     * @dev Fill contract with array of balances
-     * @param addresses_, balances_ payouts to update
+     * @dev Fill contract with array of balances. This needs to be optimized to cost as less gas as possible
+     * Currently, for the input, it costs 104684 gas
+     *  - ["0xd9145CCE52D386f254917e481eB44e9943F39138","0xDA0bab807633f07f013f94DD0E6A4F96F8742B53","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99"], [1234,1235,1236] wei: 3705
+     * calling hash: 158c29c7
+     * @param addresses, balancesWei payouts to update
      */
-    function fill(address[] memory addresses_, uint256[] memory balances_) public payable {
-        require(msg.sender == _owner, "Only the owner can add new payouts");
-        require(addresses_.length == balances_.length, "Addresses and balances array must have the same length");
-        uint256 sum;
+    function fill(address[] memory addresses, uint192[] memory balancesWei) public payable {
+        require(msg.sender == owner, "Only the owner can add new payouts");
+        require(addresses.length == balancesWei.length, "Addresses and balances array must have the same length");
 
-        for (uint i=0; i < addresses_.length; i++){
-            balances[addresses_[i]] = balances[addresses_[i]].add(balances_[i]);
-            sum = sum.add(balances_[i]);
+        uint256 sumWei;
+        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
+            balances[addresses[i]].balanceWei = balances[addresses[i]].balanceWei.add(balancesWei[i]);
+            if(balances[addresses[i]].time == 0) {
+                balances[addresses[i]].time = uint64(block.timestamp);
+            }
+            //impossible to overflow, no SafeMath here
+            sumWei += uint256(balancesWei[i]);
         }
-        if(sum > msg.value) {
+        if(sumWei != msg.value) {
             revert("Sum of balances is higher than paid amount");
         }
     }
@@ -177,19 +66,33 @@ contract Flatfeestack {
      * @dev Triggers a transfer of the assigned funds.
      * total shares and their previous withdrawals.
      */
-    function release() public virtual {
-        require(balances[msg.sender] > 0, "PaymentSplitter: account has no balance");
-        uint256 _balance = balances[msg.sender];
-        balances[msg.sender] = 0;
-        msg.sender.transfer(_balance);
-        emit PaymentReleased(msg.sender, _balance );
+    function release() public payable {
+        require(balances[msg.sender].balanceWei > 0, "PaymentSplitter: account has no balance");
+
+        uint192 balanceWei = balances[msg.sender].balanceWei;
+        uint64 time = balances[msg.sender].time;
+        balances[msg.sender].balanceWei = 0;
+        balances[msg.sender].time = 0;
+
+        msg.sender.transfer(balanceWei);
+        emit PaymentReleased(msg.sender, balanceWei, time);
     }
 
     /**
      * @dev Return balance
-     * @return value of 'number'
+     * @return balance and the time it was first added
      */
-    function balanceOf(address address_) public view returns (uint256){
-        return balances[address_];
+    function balanceOf(address addr) public view returns (uint192, uint64) {
+        return (balances[addr].balanceWei, balances[addr].time);
+    }
+
+    function unclaimed(address[] memory addresses) public {
+        require(msg.sender == owner, "Only the owner can collect unclaimed payouts");
+        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
+            if (balances[addresses[i]].time + 365 days < block.timestamp) {
+                balances[msg.sender].balanceWei = balances[msg.sender].balanceWei.add(balances[addresses[i]].balanceWei);
+                balances[addresses[i]].balanceWei = 0;
+            }
+        }
     }
 }
