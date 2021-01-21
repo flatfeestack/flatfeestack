@@ -11,7 +11,7 @@
 	url = git@github.com:flatfeestack/frontend.git
 	branch = master
 [submodule "backend"]
-	path = api
+	path = backend
 	url = git@github.com:flatfeestack/backend.git
 	branch = master
 [submodule "payout"]
