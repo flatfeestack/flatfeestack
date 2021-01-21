@@ -154,7 +154,7 @@ func main() {
 	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	//repo github
-	apiRouter.HandleFunc("/repos/search/github/{query}", jwtAuthUser(searchRepoGitHub)).Methods("GET")
+	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
 	apiRouter.HandleFunc("/repos/sponsor/github/{id}", jwtAuthUser(sponsorRepoGitHub)).Methods("POST")
 	//repo
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")

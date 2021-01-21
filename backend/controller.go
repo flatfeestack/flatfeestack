@@ -172,9 +172,12 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 // @Failure 400
 // @Router /backend/repos/search [get]
 func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
-	params := mux.Vars(r)
-	q := params["query"]
+	q := r.URL.Query().Get("q")
 	log.Printf("query %v", q)
+	if q == ""{
+		writeErr(w, http.StatusBadRequest, "Empty search")
+		return
+	}
 	repos, err := fetchGithubRepoSearch(q)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
@@ -250,6 +253,7 @@ func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	var repoId *uuid.UUID
+	// TODO: only if repo does not exist.
 	repoId, err = saveRepo(&repo)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could store in DB: %v", err)
@@ -321,11 +325,13 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		writeErr(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
-
-	err = analysisRequest(repo.Id, *repo.Url)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
-		return
+	// TODO: only if repo is sponsored for the first time
+	if newEventType==SPONSOR{
+		err = analysisRequest(repo.Id, *repo.Url)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
