@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "api/docs"
+	_ "backend/docs"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/base32"
@@ -175,7 +175,7 @@ func main() {
 	s1 := gocron.NewScheduler(time.Local)
 
 	j, err := s1.Every(1).Day().At("00:01").Do(dailyRunner)
-	if err !=nil {
+	if err != nil {
 		log.Printf("error during job execution: %v, runcount: %v", err, j.RunCount())
 	}
 
@@ -195,7 +195,7 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	}
 }
 
-func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims{
+func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
@@ -261,7 +261,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 
 func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := jwtAuth(w,r)
+		claims := jwtAuth(w, r)
 		if claims == nil {
 			return
 		}

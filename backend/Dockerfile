@@ -5,12 +5,13 @@ WORKDIR /app
 COPY . .
 RUN chown -R appuser:appgroup /app
 USER appuser
-RUN make
+#disable tests for now, due to dind which is not available during build
+RUN make swag dep build
 
 FROM alpine:3.13
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=builder /app/api ./
+COPY --from=builder /app/backend ./
 RUN chown -R appuser:appgroup /app
 USER appuser
-ENTRYPOINT ["./api"]
+ENTRYPOINT ["./backend"]
