@@ -6,8 +6,8 @@ route /auth/* {
     reverse_proxy auth:9081
 }
 
-route /api/* {
-    reverse_proxy api:9082
+route /backend/* {
+    reverse_proxy backend:9082
 }
 
 route /analysis/* {
