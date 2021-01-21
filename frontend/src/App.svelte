@@ -20,8 +20,11 @@ import PageLayout from "./layout/PageLayout.svelte";
 import { initialFetchDone } from "src/store/auth";
 import Spinner from "./components/UI/Spinner.svelte";
 import Redirect from "./helpers/Redirect.svelte";
+import { refreshSession } from "src/store/authService";
+import { onMount } from "svelte";
 
 export let url = "";
+onMount(() => refreshSession());
 </script>
 
 <Router url="{url}">

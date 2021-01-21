@@ -47,7 +47,7 @@ onMount(() => {
     class="flex flex-col p-5 shadow-lg mb-5 {completed ? 'bg-green-500 text-white' : ''}"
   >
     <div class="flex flex-row items-center text-lg mb-2">
-      {(parseFloat(exchange.amount) / 100).toFixed(4)}$
+      {(parseFloat(exchange.amount) / 100).toFixed(2)}$
 
       <div class="pl-5">
         <Fa icon="{faLongArrowAltRight}" />

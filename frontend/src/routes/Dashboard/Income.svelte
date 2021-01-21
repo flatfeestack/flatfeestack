@@ -20,7 +20,7 @@ onMount(async () => {
   try {
     const response = await API.user.connectedEmails();
 
-    if (response?.data?.data?.length > 0) {
+    if (response?.data && response.data.length > 0) {
       console.log(response.data);
       emails = response.data;
     }
