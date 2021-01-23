@@ -1,6 +1,12 @@
-all: dep build
-dep: go.mod
-	go mod tidy
-	go get -v -u ./...
+.PHONY: all dep build test clean
+
+all: dep build test
+
+dep:
+	go mod download
 build:
 	go build
+test:
+	go test
+clean:
+	go clean
