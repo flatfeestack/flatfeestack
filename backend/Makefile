@@ -12,3 +12,4 @@ test:
 	go test
 clean:
 	go clean
+	go mod tidy

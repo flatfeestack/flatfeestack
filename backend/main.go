@@ -51,44 +51,37 @@ type Opts struct {
 }
 
 func NewOpts() *Opts {
-	o := &Opts{}
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Could not find env file [%v], using defaults", err)
+	}
 
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT"), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
+	o := &Opts{}
+	flag.StringVar(&o.Env, "env", lookupEnv("ENV",
+		"local"), "ENV variable")
+	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
+		9082), "listening HTTP port")
+	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
+		"ORSXG5A="), "HS256 key")
 	flag.StringVar(&o.StripeSecret, "string", lookupEnv("STRIPE_SECRET"), "Stripe secret")
-	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH"), "DB path")
-	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER"), "DB driver")
-	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS-URL"), "Analysis Url")
+	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
+		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
+	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
+		"postgres"), "DB driver")
+	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS-URL",
+		"http://analysis-engine:9083"), "Analysis Url")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-
 	flag.Parse()
 
 	//set defaults
-	if o.Env == "local" {
-		err := godotenv.Load()
-		if err != nil {
-			err = godotenv.Load("../.env")
-			if err != nil {
-				log.Printf("could not find env file in this or in the parent dir: %v", err)
-			}
-		}
-	}
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
 	}
 
-	o.Port = setDefaultInt(o.Port, lookupEnvInt("PORT"), 9082)
-	o.HS256 = setDefault(o.HS256, lookupEnv("HS256"), "ORSXG5A=")
-	o.DBDriver = setDefault(o.DBDriver, lookupEnv("DB_DRIVER"), "postgres")
-	o.DBPath = setDefault(o.DBPath, lookupEnv("DB_PATH"), "postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable")
-	o.AnalysisUrl = setDefault(o.AnalysisUrl, lookupEnv("ANALYSIS-URL"), "http://analysis-engine:9083")
-
-	var err error
 	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
 	if err != nil {
 		log.Fatalf("cannot decode %v", o.HS256)
@@ -97,8 +90,11 @@ func NewOpts() *Opts {
 	return o
 }
 
-func setDefault(values ...string) string {
-	for _, v := range values {
+func lookupEnv(key string, defaultValues ...string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	for _, v := range defaultValues {
 		if v != "" {
 			return v
 		}
@@ -106,23 +102,7 @@ func setDefault(values ...string) string {
 	return ""
 }
 
-func setDefaultInt(values ...int) int {
-	for _, v := range values {
-		if v != 0 {
-			return v
-		}
-	}
-	return 0
-}
-
-func lookupEnv(key string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	return ""
-}
-
-func lookupEnvInt(key string) int {
+func lookupEnvInt(key string, defaultValues ...int) int {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.Atoi(val)
 		if err != nil {
@@ -130,6 +110,11 @@ func lookupEnvInt(key string) int {
 			return 0
 		}
 		return v
+	}
+	for _, v := range defaultValues {
+		if v != 0 {
+			return v
+		}
 	}
 	return 0
 }
