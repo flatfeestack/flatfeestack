@@ -1,18 +1,14 @@
-NAME:=api
+.PHONY: all dep build swag test clean
 
-.PHONY: all test build clean swag
-
-all: swag dep build test
-test:
-	go test -v
-dep: go.mod
-	go mod tidy
-	go get -v -u ./...
-swag:
+all: dep build swag test
+dep:
+	go mod download
 	go get -u github.com/swaggo/swag/cmd/swag
-	swag init -g main.go
 build:
 	go build
+swag:
+	swag init -g main.go
+test:
+	go test
 clean:
 	go clean
-	rm -f $(NAME)
