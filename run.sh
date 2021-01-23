@@ -15,16 +15,15 @@ hostip() {
   case "$(uname -s)" in
       Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
       Darwin*)    host_ip="host.docker.internal";;
-      CYGWIN*)    host_ip="localhost";;
-      MINGW*)     host_ip="localhost";;
       *)          host_ip="localhost";;
   esac
   export HOST_IP=$host_ip
+  msg "${GREEN}Using default ${host_ip} as host IP";
 }
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-db]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-sb] [-db] [-rmdb]
 
 Build and run flatfeestack.
 
@@ -36,7 +35,9 @@ Available options:
 -nb, --no-backend   Don't start backend
 -np, --no-payout    Don't start payout
 -nf, --no-frontend  Dont' start frontend
+-sb, --skip-build   Don't run docker-compose build (if your machine is slow)
 -db, --db-only      Run the DB instance only, this ignores all the other options
+-rmdb, --remove-db  Remove the database folder and exit
 EOF
   exit
 }
@@ -62,8 +63,7 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  compose_args=''
-  hosts=''
+  compose_args='' hosts='' include_build=true
 
   while :; do
     case "${1-}" in
@@ -74,7 +74,9 @@ parse_params() {
     -nb | --no-backend) compose_args="${compose_args} --scale backend=0"; hosts="${hosts} backend";;
     -np | --no-payout) compose_args="${compose_args} --scale payout=0"; hosts="${hosts} payout";;
     -nf | --no-frontend) compose_args="${compose_args} --scale frontend=0"; hosts="${hosts} frontend";;
+    -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
+    -rmdb | --remove-db) sudo rm -rf .data; exit 0;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -82,20 +84,23 @@ parse_params() {
   done
 
   args=("$@")
-
   return 0
 }
 
-hostip
 parse_params "$@"
 setup_colors
+hostip
 
-# script logic here
+# here we set hosts that can be used in docker-compose. For those hosts
+# that are excluded, one wants to start it locally. Since we use docker
+# DNS that resolves e.g, db to an IP, we need to resolve db to localhost
 [ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
 msg "${GREEN}Setting DNS hosts to [${hosts}]"
 
-msg "${GREEN}Run: docker-compose build --parallel"
-HOSTS="${hosts}"  docker-compose build --parallel
+if [ "$include_build" = true ]; then
+  msg "${GREEN}Run: docker-compose build --parallel"
+  HOSTS="${hosts}"  docker-compose build --parallel
+fi
 
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${compose_args}"
 HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${compose_args}
