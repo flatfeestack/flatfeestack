@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
+	github.com/joho/godotenv v1.3.0
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/xanzy/ssh-agent v0.3.0 // indirect

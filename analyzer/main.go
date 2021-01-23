@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -17,9 +18,15 @@ var (
 type Opts struct {
 	Port int
 }
+
 func NewOpts() *Opts {
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Could not find env file [%v], using defaults", err)
+	}
+
 	o := &Opts{}
-	flag.IntVar(&o.Port, "port", LookupEnvInt("PORT"), "listening HTTP port")
+	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT", 9083), "listening HTTP port")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
@@ -28,32 +35,25 @@ func NewOpts() *Opts {
 	return o
 }
 
-func setDefaultInt(actualValue int, defaultValue int) int {
-	if actualValue == 0 {
-		return defaultValue
-	}
-	return actualValue
-}
-
-func LookupEnvInt(key string) int {
+func lookupEnvInt(key string, defaultValues ...int) int {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.Atoi(val)
 		if err != nil {
-			log.Printf("LookupEnvOrInt[%s]: %v", key, err)
+			log.Printf("LookupEnvInt[%s]: %v", key, err)
 			return 0
 		}
 		return v
 	}
+	for _, v := range defaultValues {
+		if v != 0 {
+			return v
+		}
+	}
 	return 0
-}
-
-func defaultOpts(opts *Opts) {
-	opts.Port = setDefaultInt(opts.Port, 8080)
 }
 
 func main() {
 	opts = NewOpts()
-	defaultOpts(opts)
 	err := setEnvs()
 	if err != nil {
 		fmt.Println(err)
