@@ -7,6 +7,7 @@ import (
 	"encoding/base32"
 	"flag"
 	"fmt"
+	"github.com/dimiro1/banner"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -138,6 +139,13 @@ func lookupEnvInt(key string) int {
 // @host localhost:8080
 // @BasePath /
 func main() {
+	f, err := os.Open("banner.txt")
+	if err == nil {
+		banner.Init(os.Stdout, true, false, f)
+	} else {
+		log.Printf("could not display banner...")
+	}
+
 	opts = NewOpts()
 	db = initDb()
 
