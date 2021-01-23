@@ -46,6 +46,7 @@ CREATE TABLE monthly_repo_balance (
 );
 CREATE UNIQUE INDEX monthly_repo_balance_index ON monthly_repo_balance(repo_id, day);
 
+--add exchange request id
 CREATE TABLE monthly_user_payout (
     user_id    UUID CONSTRAINT fk_user_id_mup REFERENCES users (id),
     balance    BIGINT                              NOT NULL,

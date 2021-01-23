@@ -16,15 +16,15 @@ type User struct {
 	Subscription      *string   `json:"subscription"`
 	SubscriptionState *string   `json:"subscription_state"`
 	PayoutETH         *string   `json:"payout_eth"`
-	Role			  *string   `json:"role"`
+	Role              *string   `json:"role"`
 }
 
 type SponsorEvent struct {
-	Id        uuid.UUID `json:"id"`
-	Uid       uuid.UUID `json:"uid"`
-	RepoId    uuid.UUID `json:"repo_id"`
-	EventType uint8     `json:"event_type"`
-	SponsorAt time.Time `json:"created_at"`
+	Id          uuid.UUID `json:"id"`
+	Uid         uuid.UUID `json:"uid"`
+	RepoId      uuid.UUID `json:"repo_id"`
+	EventType   uint8     `json:"event_type"`
+	SponsorAt   time.Time `json:"created_at"`
 	UnsponsorAt time.Time `json:"created_at"`
 }
 
@@ -111,7 +111,7 @@ func sponsor(event *SponsorEvent) error {
 		return err
 	}
 
-	if id==nil && event.EventType == UNSPONSOR {
+	if id == nil && event.EventType == UNSPONSOR {
 		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo")
 	}
 
@@ -120,7 +120,7 @@ func sponsor(event *SponsorEvent) error {
 	}
 
 	if id != nil && event.EventType == SPONSOR && event.SponsorAt.Before(*unsponsorAt) {
-		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo: " +
+		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo: "+
 			"sponsor_at: %v, unsponsor_at: %v, %v", event.SponsorAt, unsponsorAt, event.SponsorAt.Before(*unsponsorAt))
 	}
 
@@ -394,13 +394,18 @@ func handleErr(res sql.Result, err error, info string, value interface{}) error 
 func initDb() *sql.DB {
 	// Open the connection
 	db, err := sql.Open(opts.DBDriver, opts.DBPath)
-
 	if err != nil {
 		panic(err)
 	}
 
-	// check the connection
+	//we wait for ten seconds to connect
 	err = db.Ping()
+	now := time.Now()
+	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
+		// check the connection
+		err = db.Ping()
+		time.Sleep(time.Second)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -408,4 +413,3 @@ func initDb() *sql.DB {
 	log.Println("Successfully connected!")
 	return db
 }
-

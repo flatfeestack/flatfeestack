@@ -187,6 +187,10 @@ func main() {
 		log.Printf("error during job execution: %v, runcount: %v", err, j.RunCount())
 	}
 
+	s1.Every(1).Week().At("02:01").Do(weeklyRunner)
+
+	s1.Every(1).Month(1).At("04:01").Do(monthlyRunner)
+
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
