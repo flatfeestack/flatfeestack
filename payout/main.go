@@ -42,43 +42,42 @@ var (
 )
 
 func NewOpts() *Opts {
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Could not find env file [%v], using defaults", err)
+	}
+
 	o := &Opts{}
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT"), "listening HTTP port")
-	flag.StringVar(&o.EthPrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
-	flag.StringVar(&o.EthContract, "eth-contract", lookupEnv("ETH_CONTRACT"), "Ethereum contract address")
-	flag.StringVar(&o.EthUrl, "eth-url", lookupEnv("ETH_URL"), "Ethereum URL")
+	flag.StringVar(&o.Env, "env", lookupEnv("ENV",
+		"local"), "ENV variable")
+	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
+		9084), "listening HTTP port")
+	flag.StringVar(&o.EthPrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY",
+		"4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7"), "Ethereum private key")
+	flag.StringVar(&o.EthContract, "eth-contract", lookupEnv("ETH_CONTRACT",
+		"0x731a10897d267e19b34503ad902d0a29173ba4b"), "Ethereum contract address")
+	flag.StringVar(&o.EthUrl, "eth-url", lookupEnv("ETH_URL",
+		"http://172.17.0.1:8545"), "Ethereum URL")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-
 	flag.Parse()
 
 	//set defaults
-	if o.Env == "local" {
-		err := godotenv.Load()
-		if err != nil {
-			err = godotenv.Load("../.env")
-			if err != nil {
-				log.Printf("could not find env file in this or in the parent dir: %v", err)
-			}
-		}
-		o.EthContract = setDefault(o.EthContract, lookupEnv("ETH_CONTRACT"), "0x731a10897d267e19b34503ad902d0a29173ba4b")
-		o.EthPrivateKey = setDefault(o.EthPrivateKey, lookupEnv("ETH_PRIVATE_KEY"), "4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7")
-		o.EthUrl = setDefault(o.EthUrl, lookupEnv("ETH_URL"), "http://172.17.0.1:8545")
-	}
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
 	}
-	o.Port = setDefaultInt(o.Port, lookupEnvInt("PORT"), 9084)
 
 	return o
 }
 
-func setDefault(values ...string) string {
-	for _, v := range values {
+func lookupEnv(key string, defaultValues ...string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	for _, v := range defaultValues {
 		if v != "" {
 			return v
 		}
@@ -86,23 +85,7 @@ func setDefault(values ...string) string {
 	return ""
 }
 
-func setDefaultInt(values ...int) int {
-	for _, v := range values {
-		if v != 0 {
-			return v
-		}
-	}
-	return 0
-}
-
-func lookupEnv(key string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	return ""
-}
-
-func lookupEnvInt(key string) int {
+func lookupEnvInt(key string, defaultValues ...int) int {
 	if val, ok := os.LookupEnv(key); ok {
 		v, err := strconv.Atoi(val)
 		if err != nil {
@@ -110,6 +93,11 @@ func lookupEnvInt(key string) int {
 			return 0
 		}
 		return v
+	}
+	for _, v := range defaultValues {
+		if v != 0 {
+			return v
+		}
 	}
 	return 0
 }
