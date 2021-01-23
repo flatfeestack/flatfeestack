@@ -1,18 +1,12 @@
-#Execute the following commands:
-# 'make' and it will create the binary
-# 'make clean' ant it will remove the binary
-NAME:=engine
+.PHONY: all dep build test clean
 
-.PHONY: all build clean dep
+all: dep build test
 
-all: dep build
+dep:
+	go mod download
 build:
-	go build -v ./...
-dep: go.mod
-	go mod tidy
-	go get -v -u ./...
-go.mod:
-	go mod init $(NAME)
+	go build
+test:
+	go test
 clean:
 	go clean
-	rm -f $(NAME)

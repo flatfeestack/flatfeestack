@@ -1,4 +1,4 @@
-module github.com/flatfeestack/engine
+module analysis-engine
 
 go 1.13
 
