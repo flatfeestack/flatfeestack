@@ -19,6 +19,7 @@ hostip() {
       MINGW*)     host_ip="localhost";;
       *)          host_ip="localhost";;
   esac
+  export HOST_IP=$host_ip
 }
 
 usage() {

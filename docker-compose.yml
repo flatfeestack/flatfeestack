@@ -36,9 +36,13 @@ services:
   payout:
     container_name: flatfeestack-payout
     build: ./payout
+    extra_hosts:
+      - ${HOSTS}
     environment:
-      - ETH_PK=${ETH_PK}
+      - ETH_PRIVATE_KEY=${ETH_PRIVATE_KEY}
       - ETH_CONTRACT=${ETH_CONTRACT}
+      - ETH_URL=${ETH_URL}
+      - PORT=9084
 
   db:
     container_name: flatfeestack-db
@@ -74,4 +78,5 @@ services:
     image: openethereum/openethereum:v3.1.1
     ports:
       - "8545:8545"
-    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors=all --base-path /tmp
+      - "8546:8546"
+    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp
