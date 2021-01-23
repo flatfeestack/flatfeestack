@@ -10,7 +10,7 @@ RUN make
 FROM alpine:3.13
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=builder /app/payout ./
+COPY --from=builder /app/payout  /app/banner.txt ./
 RUN chown -R appuser:appgroup /app
 USER appuser
 ENTRYPOINT ["./payout"]
