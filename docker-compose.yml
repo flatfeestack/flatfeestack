@@ -14,32 +14,22 @@ services:
   backend:
     container_name: flatfeestack-backend
     build: ./backend
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - STRIPE_SECRET=${STRIPE_SECRET}
-      - PORT=9082
+    env_file:
+      - ./backend/.env
     depends_on:
       - db
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
     build: ./analysis-engine
-    environment:
-      - WEBHOOK_CALLBACK_URL=${WEBHOOK_CALLBACK_URL}
-      - PORT=9083
 
   payout:
     container_name: flatfeestack-payout
     build: ./payout
     extra_hosts:
       - ${HOSTS}
-    environment:
-      - ETH_PRIVATE_KEY=${ETH_PRIVATE_KEY}
-      - ETH_CONTRACT=${ETH_CONTRACT}
-      - ETH_URL=${ETH_URL}
-      - PORT=9084
+    env_file:
+      - ./payout/.env
     depends_on:
       - openethereum
 
@@ -52,9 +42,9 @@ services:
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=flatfeestack
 
   reverse-proxy:
     container_name: flatfeestack-caddy

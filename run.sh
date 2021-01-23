@@ -91,11 +91,12 @@ parse_params "$@"
 setup_colors
 hostip
 
+now=`date`
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
 [ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
-msg "${GREEN}Setting DNS hosts to [${hosts}]"
+msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
 
 if [ "$include_build" = true ]; then
   msg "${GREEN}Run: docker-compose build --parallel"
