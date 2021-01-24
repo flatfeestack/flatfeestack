@@ -291,11 +291,15 @@ func createUser(email string) (*User, error) {
 	}
 	user.Id = uid
 	user.Email = &email
-	sid := "local"
 	if opts.Env != "local" {
-		sid, err = createStripeCustomer(&user)
+		sid, err := createStripeCustomer(&user)
+		if err != nil {
+			return nil, err
+		}
+		user.StripeId = &sid
+	} else {
+		user.StripeId = &opts.Env
 	}
-	user.StripeId = &sid
 
 	err = saveUser(&user)
 	if err != nil {

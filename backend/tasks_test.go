@@ -8,15 +8,15 @@ import (
 )
 
 type IDNumberDay struct {
-	Id uuid.UUID
+	Id     uuid.UUID
 	Number int
-	Day time.Time
+	Day    time.Time
 }
 
 type EmailNumberDay struct {
-	Email string
+	Email  string
 	Number int
-	Day time.Time
+	Day    time.Time
 }
 
 func TestDailyRunner1(t *testing.T) {
@@ -54,8 +54,8 @@ func TestDailyRunner2(t *testing.T) {
 
 	rb := schedSQL(t, "repo_id, balance, day", "daily_repo_balance", "balance")
 	assert.Equal(t, 4, len(rb))
-	assert.Equal(t, 8908, rb[0].Number) // 27500 * (23/71) -repo1
-	assert.Equal(t, 9295, rb[1].Number) // 27500 * (24/71) -repo4
+	assert.Equal(t, 8908, rb[0].Number)  // 27500 * (23/71) -repo1
+	assert.Equal(t, 9295, rb[1].Number)  // 27500 * (24/71) -repo4
 	assert.Equal(t, 12743, rb[2].Number) // 27500 * (19/41) -repo3
 	assert.Equal(t, 24051, rb[3].Number) // 27500 * (24/71) + 27500 * (22/41) -repo2
 }
@@ -65,7 +65,7 @@ func TestWeeklyRunner(t *testing.T) {
 	defer teardown()
 
 	repos, _ := setupContributionScenario2(t)
-	nextWeek:= time.Time{}.Add(time.Duration(24*7) * time.Hour)
+	nextWeek := time.Time{}.Add(time.Duration(24*7) * time.Hour)
 	setupContributor(t, *repos[0], time.Time{}, nextWeek, []string{"tom@tom.tom", "jon@jon.jon", "me@me.me"}, []float64{0.3, 0.5, 0.2})
 
 	err := dailyRunner(time.Time{}.Add(time.Duration(2*24) * time.Hour))
@@ -100,12 +100,12 @@ func TestMonthlyRunner1(t *testing.T) {
 	//repo0:  9'913'750 // 0.3 -> 2'974'125, 0.5 -> 4'956'875
 	//repo1: 10'505'000
 	repos, users := setupContributionScenario2(t)
-	nextMonth:= time.Time{}.Add(time.Duration(24*31) * time.Hour)
+	nextMonth := time.Time{}.Add(time.Duration(24*31) * time.Hour)
 	setupContributor(t, *repos[0], time.Time{}, nextMonth, []string{"tom@tom.tom", "jon@jon.jon", "me@me.me"}, []float64{0.3, 0.5, 0.2})
 	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon")
 	saveGitEmail(uuid.New(), *users[1], "tom@tom.tom")
 
-	for i:=1;i<31;i++ {
+	for i := 1; i < 31; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
 		assert.Nil(t, err)
 	}
@@ -125,12 +125,12 @@ func TestMonthlyRunner2(t *testing.T) {
 	defer teardown()
 
 	repos, users := setupContributionScenario2(t)
-	nextMonth:= time.Time{}.Add(time.Duration(24*31) * time.Hour)
+	nextMonth := time.Time{}.Add(time.Duration(24*31) * time.Hour)
 	setupContributor(t, *repos[0], time.Time{}, nextMonth, []string{"tom@tom.tom", "jon@jon.jon", "me@me.me"}, []float64{0.3, 0.5, 0.2})
 	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon")
 	saveGitEmail(uuid.New(), *users[0], "tom@tom.tom")
 
-	for i:=1;i<31;i++ {
+	for i := 1; i < 31; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
 		assert.Nil(t, err)
 	}
@@ -139,13 +139,13 @@ func TestMonthlyRunner2(t *testing.T) {
 	assert.Nil(t, err)
 
 	rb := schedSQL(t, "user_id, balance, day", "monthly_user_payout", "balance")
-	assert.Equal(t, 1, len(rb)) //one from last month, two from today
+	assert.Equal(t, 1, len(rb))           //one from last month, two from today
 	assert.Equal(t, 971408, rb[0].Number) //new user
 
-	nextTwoMonth:= time.Time{}.Add(time.Duration(24*59) * time.Hour)
+	nextTwoMonth := time.Time{}.Add(time.Duration(24*59) * time.Hour)
 	setupContributor(t, *repos[0], nextMonth, nextTwoMonth, []string{"tom@tom.tom", "jon@jon.jon", "sam@sam.sam"}, []float64{0.1, 0.2, 0.7})
 	saveGitEmail(uuid.New(), *users[1], "sam@sam.sam")
-	for i:=31;i<59;i++ {
+	for i := 31; i < 59; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
 		assert.Nil(t, err)
 	}
@@ -154,7 +154,7 @@ func TestMonthlyRunner2(t *testing.T) {
 	assert.Nil(t, err)
 
 	rb = schedSQL(t, "user_id, balance, day", "monthly_user_payout", "balance")
-	assert.Equal(t, 3, len(rb)) //one from last month, two from today
+	assert.Equal(t, 3, len(rb))           //one from last month, two from today
 	assert.Equal(t, 278437, rb[0].Number) //new contribution
 	assert.Equal(t, 649687, rb[1].Number) //new user, new contribution
 	assert.Equal(t, 971408, rb[2].Number) //old
@@ -165,7 +165,7 @@ func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time
 	//id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string
 	err := saveAnalysisRequest(aid, repo, from, to, "test")
 	assert.Nil(t, err)
-	for k,v :=range email {
+	for k, v := range email {
 		w1 := FlatFeeWeight{
 			Contributor: Contributor{
 				Name:  v,
@@ -183,9 +183,9 @@ func setupContributionScenario1(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
 	repos := setupRepos(t, "tomp2p", "yaml", "sql", "unreferenced-repo")
 	setupSponsor(t, users[0], repos[0], 25)
 	setupSponsor(t, users[0], repos[1], 24)
-	setupSponsor(t, users[1], repos[0], 0) //should not be counted
+	setupSponsor(t, users[1], repos[0], 0)    //should not be counted
 	setupUnsponsor(t, users[1], repos[0], 23) //should not be counted
-	setupSponsor(t, users[0], repos[2], 48) //should not be counted
+	setupSponsor(t, users[0], repos[2], 48)   //should not be counted
 	return repos, users
 }
 
@@ -194,11 +194,11 @@ func setupContributionScenario1(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
 func setupContributionScenario2(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
 	users := setupUsers(t, "tom@tom.tom", "sam@sam.sam", "unreferenced-user", "jon@jon.jon")
 	repos := setupRepos(t, "tomp2p", "yaml", "sql", "xml", "json", "unreferenced-repo")
-	setupSponsor(t, users[0], repos[0], 25)  //u0, 25, u3, 48
+	setupSponsor(t, users[0], repos[0], 25) //u0, 25, u3, 48
 	setupSponsor(t, users[0], repos[1], 24)
 	setupSponsor(t, users[1], repos[1], 26)
 	setupSponsor(t, users[1], repos[2], 29)
-	setupSponsor(t, users[0], repos[3], 1) //counted 24h in the next day
+	setupSponsor(t, users[0], repos[3], 1)  //counted 24h in the next day
 	setupSponsor(t, users[0], repos[4], 48) //not counted in daily
 	setupSponsor(t, users[3], repos[0], 48) //not counted in daily
 	return repos, users
@@ -206,7 +206,7 @@ func setupContributionScenario2(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
 
 func setupUsers(t *testing.T, userNames ...string) []*uuid.UUID {
 	var users []*uuid.UUID
-	for _,v := range userNames {
+	for _, v := range userNames {
 		userId1, err := setupUser(v)
 		assert.Nil(t, err)
 		users = append(users, userId1)
@@ -216,7 +216,7 @@ func setupUsers(t *testing.T, userNames ...string) []*uuid.UUID {
 
 func setupRepos(t *testing.T, repoNames ...string) []*uuid.UUID {
 	var repos []*uuid.UUID
-	for _,v := range repoNames {
+	for _, v := range repoNames {
 		userId1, err := setupRepo(v)
 		assert.Nil(t, err)
 		repos = append(repos, userId1)
@@ -224,10 +224,9 @@ func setupRepos(t *testing.T, repoNames ...string) []*uuid.UUID {
 	return repos
 }
 
-
 func schedSQL(t *testing.T, col string, table string, order string) []IDNumberDay {
 	//sql := "SELECT repo_hours FROM daily_repo_hours"
-	sql := "SELECT "+col+" FROM " + table + " ORDER by " + order
+	sql := "SELECT " + col + " FROM " + table + " ORDER by " + order
 	rows, err := db.Query(sql)
 	defer rows.Close()
 	assert.Nil(t, err)
@@ -267,8 +266,9 @@ func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day int) {
 		SponsorAt:   time.Time{}.Add(time.Duration(day) * time.Hour),
 		UnsponsorAt: time.Time{},
 	}
-	err := sponsor(&e)
-	assert.Nil(t, err)
+	err1, err2 := sponsor(&e)
+	assert.Nil(t, err1)
+	assert.Nil(t, err2)
 }
 
 func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day int64) {
@@ -280,8 +280,9 @@ func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day int6
 		SponsorAt:   time.Time{},
 		UnsponsorAt: time.Time{}.Add(time.Duration(day) * time.Hour),
 	}
-	err := sponsor(&e)
-	assert.Nil(t, err)
+	err1, err2 := sponsor(&e)
+	assert.Nil(t, err1)
+	assert.Nil(t, err2)
 }
 
 func setupUser(email string) (*uuid.UUID, error) {
@@ -295,7 +296,7 @@ func setupUser(email string) (*uuid.UUID, error) {
 	}
 
 	err := saveUser(&u)
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 	return &u.Id, nil
@@ -310,7 +311,7 @@ func setupRepo(url string) (*uuid.UUID, error) {
 		Description: stringPointer("desc"),
 	}
 	id, err := saveRepo(&r)
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 	return id, nil

@@ -103,51 +103,51 @@ func updateUser(user *User) error {
 }
 
 //sponsor events
-func sponsor(event *SponsorEvent) error {
+func sponsor(event *SponsorEvent) (userError error, systemError error) {
 	//first get last sponsored event to check if we need to sponsor or unsponsor
 	//TODO: use mutex
 	id, _, unsponsorAt, err := lastEventSponsoredRepo(event.Uid, event.RepoId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if id == nil && event.EventType == UNSPONSOR {
-		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo")
+		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo"), nil
 	}
 
 	if id != nil && event.EventType == UNSPONSOR && unsponsorAt.Year() != 9999 {
-		return fmt.Errorf("we want to unsponsor, but we already unsponsored it")
+		return fmt.Errorf("we want to unsponsor, but we already unsponsored it"), nil
 	}
 
 	if id != nil && event.EventType == SPONSOR && event.SponsorAt.Before(*unsponsorAt) {
-		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo: "+
-			"sponsor_at: %v, unsponsor_at: %v, %v", event.SponsorAt, unsponsorAt, event.SponsorAt.Before(*unsponsorAt))
+		return fmt.Errorf("we want to sponsor, but we are already sponsoring this repo: "+
+			"sponsor_at: %v, unsponsor_at: %v, %v", event.SponsorAt, unsponsorAt, event.SponsorAt.Before(*unsponsorAt)), nil
 	}
 
 	if event.EventType == SPONSOR {
 		//insert
 		stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, sponsor_at) VALUES ($1, $2, $3, $4)")
 		if err != nil {
-			return fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
+			return nil, fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
 		}
 		defer stmt.Close()
 
 		var res sql.Result
 		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.SponsorAt)
-		return handleErr(res, err, "INSERT INTO sponsor_event", event)
+		return nil, handleErr(res, err, "INSERT INTO sponsor_event", event)
 	} else if event.EventType == UNSPONSOR {
 		//update
 		stmt, err := db.Prepare("UPDATE sponsor_event SET unsponsor_at=$1 WHERE id=$2 AND unsponsor_at = to_date('9999', 'YYYY')")
 		if err != nil {
-			return fmt.Errorf("prepare UPDATE sponsor_event for %v statement failed: %v", id, err)
+			return nil, fmt.Errorf("prepare UPDATE sponsor_event for %v statement failed: %v", id, err)
 		}
 		defer stmt.Close()
 
 		var res sql.Result
 		res, err = stmt.Exec(event.UnsponsorAt, id)
-		return handleErr(res, err, "UPDATE sponsor_event", id)
+		return nil, handleErr(res, err, "UPDATE sponsor_event", id)
 	} else {
-		return fmt.Errorf("unknown event type %v", event.EventType)
+		return nil, fmt.Errorf("unknown event type %v", event.EventType)
 	}
 }
 

@@ -68,7 +68,7 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 		log.Print("error in createSubscription: user has no stripeID")
 		return nil, errors.New("can not stringPointer subscription for user without stripeID")
 	}
-	if *user.StripeId == "local" {
+	if opts.Env == "local" {
 		user.Subscription = user.StripeId
 		a := "active"
 		user.SubscriptionState = &a
@@ -147,7 +147,7 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 		log.Print("in if statement status succeeded")
 		user.Subscription = &s.ID
 		state := "active"
-		user.SubscriptionState=&state
+		user.SubscriptionState = &state
 		err := updateUser(&user)
 		if err != nil {
 			return nil, err

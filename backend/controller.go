@@ -35,7 +35,6 @@ type Contributor struct {
  *	==== USER ====
  */
 
-
 // @Summary Get User by sub in token
 // @Description Get details of all users
 // @Tags Users
@@ -162,7 +161,6 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
  *	==== Repo ====
  */
 
-
 // @Summary Search for Repos on github
 // @Tags Repos
 // @Param q query string true "Search String"
@@ -174,7 +172,7 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 	q := r.URL.Query().Get("q")
 	log.Printf("query %v", q)
-	if q == ""{
+	if q == "" {
 		writeErr(w, http.StatusBadRequest, "Empty search")
 		return
 	}
@@ -253,7 +251,6 @@ func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	var repoId *uuid.UUID
-	// TODO: only if repo does not exist.
 	repoId, err = saveRepo(&repo)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could store in DB: %v", err)
@@ -307,9 +304,13 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		SponsorAt:   now,
 		UnsponsorAt: now,
 	}
-	err := sponsor(&event)
+	userErr, err := sponsor(&event)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save to DB %v", err)
+		writeErr(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
+		return
+	}
+	if userErr != nil {
+		writeErr(w, http.StatusConflict, "User error: %v", userErr)
 		return
 	}
 
@@ -326,7 +327,7 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		return
 	}
 	// TODO: only if repo is sponsored for the first time
-	if newEventType==SPONSOR{
+	if newEventType == SPONSOR {
 		err = analysisRequest(repo.Id, *repo.Url)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
@@ -358,7 +359,7 @@ func getExchanges(w http.ResponseWriter, _ *http.Request, _ *User) {
 	}
 
 	e := ExchangeRate{}
-	e.Ethereum.Usd=price
+	e.Ethereum.Usd = price
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(e)
 	if err != nil {
@@ -388,7 +389,7 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 			writeErr(w, http.StatusInternalServerError, "insert error: %v", err)
 			return
 		}
-		rowsAffected ++
+		rowsAffected++
 	}
 	log.Printf("Inserted %v contributions into DB for request %v", rowsAffected, data.RequestId)
 	w.WriteHeader(http.StatusOK)
