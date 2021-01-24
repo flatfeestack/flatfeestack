@@ -228,6 +228,7 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 	log.Printf("affected: %v", nr)
+	//TODO: write email to admins if we have payouts going on
 
 	var userBalances []UserBalance
 	sql := "SELECT u.payout_eth, u.email, balance FROM monthly_user_payout m JOIN users u ON m.user_id = u.id WHERE day=$1"

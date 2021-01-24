@@ -35,10 +35,10 @@ func TestMain(m *testing.M) {
 		// set AutoRemove to true so that stopped container goes away by itself
 		config.AutoRemove = true
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
-		config.Mounts=[]docker.HostMount{docker.HostMount{
-			Target:        "/var/lib/postgresql/data",
-			Source:        tmpName,
-			Type: "bind",
+		config.Mounts = []docker.HostMount{docker.HostMount{
+			Target: "/var/lib/postgresql/data",
+			Source: tmpName,
+			Type:   "bind",
 		}}
 	})
 
@@ -81,13 +81,18 @@ func runSQL(db *sql.DB, files ...string) error {
 			}
 			requests := strings.Split(string(file), ";")
 			for _, request := range requests {
-				request = strings.Replace(request, "\n", "", -1)
-				request = strings.Replace(request, "\t", "", -1)
-				if !strings.HasPrefix(request, "#") {
-					_, err := db.Exec(request)
-					if err != nil {
-						return fmt.Errorf("[%v] %v", request, err)
+				lines := strings.Split(request, "\n")
+				cleanRequest := ""
+				for _, line := range lines {
+					line = strings.Replace(line, "\t", "", -1)
+					if !strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "--") && len(line) > 0 {
+						cleanRequest += strings.TrimSpace(line) + " "
 					}
+				}
+
+				_, err := db.Exec(cleanRequest)
+				if err != nil {
+					return fmt.Errorf("[%v] %v", request, err)
 				}
 			}
 		} else {

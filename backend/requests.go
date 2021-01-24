@@ -45,7 +45,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	r, err := client.Post(opts.AnalysisUrl + "/webhook", "application/json", bytes.NewBuffer(body))
+	r, err := client.Post(opts.AnalysisUrl+"/webhook", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -75,8 +75,13 @@ func getPriceETH() (decimal.Decimal, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
+	req, err := http.NewRequest("GET", "https://api.coingecko.com/backend/v3/simple/price?ids=ethereum&vs_currencies=usd", nil)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	req.Header.Set("accept", "application/json")
 	//curl -X GET "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd" -H  "accept: application/json"
-	r, err := client.Get("https://backend.coingecko.com/backend/v3/simple/price?ids=ethereum&vs_currencies=usd")
+	r, err := client.Do(req)
 	if err != nil {
 		return decimal.Zero, err
 	}
