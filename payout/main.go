@@ -16,7 +16,7 @@ import (
 
 type Payout struct {
 	Address      string `json:"address"`
-	Amount       int64  `json:"amount_micro_USD"`
+	Balance      int64  `json:"balance_micro_USD"`
 	ExchangeRate string `json:"exchange_rate_USD_ETH"`
 }
 
@@ -145,11 +145,11 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 	for _, v := range data {
 		var flt *big.Float
 		flt, _, err = big.ParseFloat(data[0].ExchangeRate, 10, 128, big.ToZero)
-		amount := new(big.Float)
-		amount.SetInt64(v.Amount)
-		amount = amount.Mul(amount, UsdWei)
-		amount = amount.Quo(amount, flt)
-		i, _ := amount.Int(nil)
+		balance := new(big.Float)
+		balance.SetInt64(v.Balance)
+		balance = balance.Mul(balance, UsdWei)
+		balance = balance.Quo(balance, flt)
+		i, _ := balance.Int(nil)
 		amountWei = append(amountWei, i)
 		addresses = append(addresses, v.Address)
 	}
