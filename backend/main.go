@@ -38,6 +38,7 @@ var (
 	privRSA   *rsa.PrivateKey
 	privEdDSA *ed25519.PrivateKey
 	debug     bool
+	admins    []string
 )
 
 type Opts struct {
@@ -48,6 +49,8 @@ type Opts struct {
 	DBPath       string
 	DBDriver     string
 	AnalysisUrl  string
+	PayoutUrl    string
+	Admins       string
 }
 
 func NewOpts() *Opts {
@@ -70,6 +73,9 @@ func NewOpts() *Opts {
 		"postgres"), "DB driver")
 	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS-URL",
 		"http://analysis-engine:9083"), "Analysis Url")
+	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT-URL",
+		"http://payout:9084"), "Payout Url")
+	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -85,6 +91,10 @@ func NewOpts() *Opts {
 	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
 	if err != nil {
 		log.Fatalf("cannot decode %v", o.HS256)
+	}
+
+	if opts.Admins != "" {
+		admins = strings.Split(opts.Admins, ";")
 	}
 
 	return o
@@ -158,6 +168,8 @@ func main() {
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
 	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, "analysis-engine@flatfeestack.io")).Methods("POST")
+	apiRouter.HandleFunc("/admin/pending-payout", jwtAuthAdmin(pendingPayouts, opts.Admins)).Methods("GET")
+	apiRouter.HandleFunc("/admin/payout", jwtAuthAdmin(payout, opts.Admins)).Methods("POST")
 
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
@@ -241,18 +253,20 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
 	return claims
 }
 
-func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), email string) func(http.ResponseWriter, *http.Request) {
+func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails ...string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := jwtAuth(w, r)
 		if claims == nil {
 			return
 		}
-		if claims.Subject != email {
-			writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, email)
-			return
+		for _, email := range emails {
+			if claims.Subject == email {
+				log.Printf("Authenticated admin %s\n", email)
+				next(w, r, email)
+				return
+			}
 		}
-		log.Printf("Authenticated admin %s\n", email)
-		next(w, r, email)
+		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
 	}
 }
 

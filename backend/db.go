@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"log"
+	"math/big"
 	"time"
 )
 
@@ -43,6 +44,27 @@ type Payment struct {
 	From   time.Time
 	To     time.Time
 	Sub    string
+}
+
+type UserAggBalance struct {
+	PayoutEth      string      `json:"payout_eth"`
+	Balance        int64       `json:"balance"`
+	Emails         []string    `json:"email_list"`
+	MonthlyRepoIds []uuid.UUID `json:"monthly_repo_id_list"`
+}
+
+type Payout struct {
+	MonthlyRepoBalanceId uuid.UUID `json:"monthly-repo-balance-id"`
+	BatchId              uuid.UUID `json:"batch-id"`
+	ExchangeRate         big.Float
+	CreatedAt            time.Time
+}
+
+type PayoutHash struct {
+	BatchId   uuid.UUID
+	TxHash    string
+	Error     string
+	CreatedAt time.Time
 }
 
 // FindByID returns a single user
@@ -376,6 +398,69 @@ func savePayment(p *Payment) error {
 	var res sql.Result
 	res, err = stmt.Exec(p.Id, p.Uid, p.From, p.To, p.Sub, p.Amount)
 	return handleErr(res, err, "INSERT INTO payments", p.Id)
+}
+
+func savePayout(p *Payout) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payouts(monthly_repo_balance_id, batch_id, exchange_rate, created_at) 
+				VALUES($1, $2, $3, $4)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts for %v statement event: %v", p.MonthlyRepoBalanceId, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(p.MonthlyRepoBalanceId, p.BatchId, p.ExchangeRate, p.CreatedAt)
+	return handleErr(res, err, "INSERT INTO payouts", p.MonthlyRepoBalanceId)
+}
+
+func savePayoutHash(p *PayoutHash) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payouts_hash(batch_id, tx_hash, created_at) 
+				VALUES($1, $2, $3)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_hash for %v statement event: %v", p.BatchId, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(p.BatchId, p.TxHash, p.CreatedAt)
+	return handleErr(res, err, "INSERT INTO payouts_hash", p.BatchId)
+}
+
+func getPendingPayouts() ([]UserAggBalance, error) {
+	var userAggBalances []UserAggBalance
+	//select monthly payments, but only those that do not have a payout entry
+	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
+				FROM monthly_user_payout m 
+			    JOIN users u ON m.user_id = u.id 
+				LEFT JOIN payouts p ON p.monthly_repo_balance_id = m.id
+				WHERE p.id IS NULL
+				GROUP BY u.payout_eth
+				HAVING SUM(m.balance) > 10000`
+
+	rows, err := db.Query(query)
+	defer rows.Close()
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		for rows.Next() {
+			var userAggBalance UserAggBalance
+			err = rows.Scan(&userAggBalance.PayoutEth,
+				&userAggBalance.Emails,
+				&userAggBalance.Balance,
+				&userAggBalance.MonthlyRepoIds)
+			if err != nil {
+				return nil, err
+			}
+			userAggBalances = append(userAggBalances, userAggBalance)
+		}
+		return userAggBalances, nil
+	default:
+		return nil, err
+	}
 }
 
 func handleErr(res sql.Result, err error, info string, value interface{}) error {

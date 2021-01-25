@@ -73,8 +73,15 @@ CREATE UNIQUE INDEX monthly_future_leftover_index ON monthly_future_leftover(rep
 CREATE TABLE payouts (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     monthly_repo_balance_id UUID CONSTRAINT fk_monthly_repo_balance_id_pay REFERENCES monthly_repo_balance (id),
-    exchangeRate            NUMERIC NOT NULL,
-    paid                    TIMESTAMP,
-    txHash                  VARCHAR(64),
-    created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    batch_id                UUID NOT NULL,
+    exchange_rate           NUMERIC NOT NULL,
+    created_at              TIMESTAMP NOT NULL
+);
+
+CREATE TABLE payouts_hash (
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id                UUID CONSTRAINT fk_payouts_batch_id_ph REFERENCES payouts (batch_id),
+    tx_hash                 VARCHAR(66),
+    error                   TEXT,
+    created_at              TIMESTAMP NOT NULL
 );

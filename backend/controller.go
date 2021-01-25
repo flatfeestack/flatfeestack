@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -393,4 +395,98 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	}
 	log.Printf("Inserted %v contributions into DB for request %v", rowsAffected, data.RequestId)
 	w.WriteHeader(http.StatusOK)
+}
+
+func pendingPayouts(w http.ResponseWriter, r *http.Request, email string) {
+	userAggBalances, err := getPendingPayouts()
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(userAggBalances)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
+		return
+	}
+}
+
+type PayoutToService struct {
+	Address      string    `json:"address"`
+	Balance      int64     `json:"balance_micro_USD"`
+	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
+}
+
+type UserAggBalanceExchangeRate struct {
+	UserAggBalancs []UserAggBalance `json:"user_agg_balance"`
+	ExchangeRate   big.Float        `json:"exchange_rate"`
+}
+
+func payout(w http.ResponseWriter, r *http.Request, email string) {
+	var ubes UserAggBalanceExchangeRate
+	err := json.NewDecoder(r.Body).Decode(&ubes)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode payout: %v", err)
+		return
+	}
+	var pts []PayoutToService
+	batchId := uuid.New()
+	for _, ub := range ubes.UserAggBalancs {
+		//TODO: do one SQL insert instead of many small ones
+		for _, mid := range ub.MonthlyRepoIds {
+			p := Payout{
+				MonthlyRepoBalanceId: mid,
+				BatchId:              batchId,
+				ExchangeRate:         ubes.ExchangeRate,
+				CreatedAt:            time.Now(),
+			}
+			savePayout(&p)
+		}
+
+		pt := PayoutToService{
+			Address:      ub.PayoutEth,
+			Balance:      ub.Balance,
+			ExchangeRate: ubes.ExchangeRate,
+		}
+		pts = append(pts, pt)
+
+		if len(pts) >= 50 {
+			err = payout0(pts, batchId)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "Could not send payout1: %v", err)
+				return
+			}
+
+			//clear vars
+			batchId = uuid.New()
+			pts = []PayoutToService{}
+		}
+	}
+	//save remaining batch
+	err = payout0(pts, batchId)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not send payout2: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func payout0(pts []PayoutToService, batchId uuid.UUID) error {
+	txHash, err := payoutRequest(pts)
+	if err != nil {
+		err2 := savePayoutHash(&PayoutHash{
+			BatchId:   batchId,
+			Error:     err.Error(),
+			CreatedAt: time.Now(),
+		})
+		return fmt.Errorf("error %v/%v", err, err2)
+	} else {
+		err = savePayoutHash(&PayoutHash{
+			BatchId:   batchId,
+			TxHash:    txHash,
+			CreatedAt: time.Now(),
+		})
+	}
+	return nil
 }

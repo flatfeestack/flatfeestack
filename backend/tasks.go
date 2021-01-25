@@ -14,8 +14,8 @@ var (
 
 type UserBalance struct {
 	PayoutEth string `json:"payout_eth"`
-	Email     string `json:"email"`
 	Balance   int64  `json:"balance"`
+	Email     string `json:"email"`
 }
 
 func time2Day(year int, month time.Month, day int) *time.Time {
@@ -229,33 +229,9 @@ func monthlyRunner(now time.Time) error {
 	}
 	log.Printf("affected: %v", nr)
 	//TODO: write email to admins if we have payouts going on
-
-	var userBalances []UserBalance
-	sql := "SELECT u.payout_eth, u.email, balance FROM monthly_user_payout m JOIN users u ON m.user_id = u.id WHERE day=$1"
-	rows, err := db.Query(sql, monthStart)
-	defer rows.Close()
-
-	if err != nil {
-		return err
-	}
-
-	for rows.Next() {
-		var userBalance UserBalance
-		err = rows.Scan(&userBalance.PayoutEth, &userBalance.Email, &userBalance.Balance)
-		if err != nil {
-			return err
-		}
-		userBalances = append(userBalances, userBalance)
-	}
-
-	return paymentRequest(userBalances)
-}
-
-func campaignRequest(balances []UserBalance) error {
 	return nil
 }
 
-func paymentRequest(balances []UserBalance) error {
-	//TODO store payoutevent
+func campaignRequest(balances []UserBalance) error {
 	return nil
 }

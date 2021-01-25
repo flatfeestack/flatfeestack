@@ -27,6 +27,33 @@ type AnalysisResponse struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
+type PayoutResponse struct {
+	TxHash string `json:"tx_hash"`
+}
+
+func payoutRequest(pts []PayoutToService) (string, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	body, err := json.Marshal(pts)
+	if err != nil {
+		return "", err
+	}
+
+	r, err := client.Post(opts.PayoutUrl+"/pay", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return "", err
+	}
+	defer r.Body.Close()
+
+	var resp PayoutResponse
+	err = json.NewDecoder(r.Body).Decode(&resp)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxHash, nil
+}
+
 func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
 	client := http.Client{
