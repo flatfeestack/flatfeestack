@@ -93,8 +93,8 @@ func NewOpts() *Opts {
 		log.Fatalf("cannot decode %v", o.HS256)
 	}
 
-	if opts.Admins != "" {
-		admins = strings.Split(opts.Admins, ";")
+	if o.Admins != "" {
+		admins = strings.Split(o.Admins, ";")
 	}
 
 	return o
