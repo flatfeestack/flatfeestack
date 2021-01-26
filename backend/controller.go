@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -489,4 +490,30 @@ func payout0(pts []PayoutToService, batchId uuid.UUID) error {
 		})
 	}
 	return nil
+}
+
+func serverTime(w http.ResponseWriter, r *http.Request, email string) {
+	currentTime := time.Now()
+	w.Header().Set("Content-Type", "application/json")
+	_, err := w.Write([]byte(`{"time":"` + currentTime.Format("2006-01-02 15:04:05") + `"}`))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		return
+	}
+}
+
+func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
+
+}
+
+func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
+	m := mux.Vars(r)
+	h := m["hours"]
+	if h == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+
+	os.Setenv("FAKETIME", "+"+h+"h")
+	w.WriteHeader(http.StatusOK)
 }

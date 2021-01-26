@@ -6,6 +6,6 @@
  |____/ \__,_|\___|_|\_\___|_| |_|\__,_|
 
 GoVersion: {{ .GoVersion }}, GOOS: {{ .GOOS }}, GOARCH: {{ .GOARCH }}, NumCPU: {{ .NumCPU }}
-GOPATH: {{ .GOPATH }}, GOROOT: {{ .GOROOT }}, ENV: {{ .Env "GOPATH" }}
+GOPATH: {{ .GOPATH }}, GOROOT: {{ .GOROOT }}, ENV: {{ .Env "LD_PRELOAD" }}
 Compiler: {{ .Compiler }}, Now: {{ .Now "Monday, 2 Jan 2006" }}
 ===============================================

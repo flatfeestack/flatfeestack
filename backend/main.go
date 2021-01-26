@@ -170,9 +170,13 @@ func main() {
 	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, "analysis-engine@flatfeestack.io")).Methods("POST")
 	apiRouter.HandleFunc("/admin/pending-payout", jwtAuthAdmin(pendingPayouts, opts.Admins)).Methods("GET")
 	apiRouter.HandleFunc("/admin/payout", jwtAuthAdmin(payout, opts.Admins)).Methods("POST")
+	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, opts.Admins)).Methods("GET")
 
+	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
+		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, opts.Admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, opts.Admins)).Methods("POST")
 	}
 
 	//scheduler
