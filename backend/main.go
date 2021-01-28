@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
-	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -39,6 +38,7 @@ var (
 	privEdDSA *ed25519.PrivateKey
 	debug     bool
 	admins    []string
+	hoursAdd  int
 )
 
 type Opts struct {
@@ -129,7 +129,7 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	return 0
 }
 
-// @title Flatfeestack API
+// @title To run locally, set these ENV vars=LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1;FAKETIME_NO_CACHE=1
 // @version 0.0.1
 // @host localhost:8080
 // @BasePath /
@@ -163,37 +163,28 @@ func main() {
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
 	apiRouter.HandleFunc("/repos/{id}/sponsor", jwtAuthUser(sponsorRepo)).Methods("POST")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", jwtAuthUser(unsponsorRepo)).Methods("POST")
-	apiRouter.HandleFunc("/exchanges", jwtAuthUser(getExchanges)).Methods("GET")
 	//payment
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
-	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, "analysis-engine@flatfeestack.io")).Methods("POST")
-	apiRouter.HandleFunc("/admin/pending-payout", jwtAuthAdmin(pendingPayouts, opts.Admins)).Methods("GET")
-	apiRouter.HandleFunc("/admin/payout", jwtAuthAdmin(payout, opts.Admins)).Methods("POST")
-	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, opts.Admins)).Methods("GET")
+	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods("POST")
+	apiRouter.HandleFunc("/admin/pending-payout", jwtAuthAdmin(pendingPayouts, admins)).Methods("POST")
+	apiRouter.HandleFunc("/admin/payout", jwtAuthAdmin(payout, admins)).Methods("POST")
+	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods("GET")
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
-		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, opts.Admins)).Methods("POST")
-		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, opts.Admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods("POST")
 	}
 
 	//scheduler
-
-	s1 := gocron.NewScheduler(time.Local)
-
-	j, err := s1.Every(1).Day().At("00:01").Do(dailyRunner)
-	if err != nil {
-		log.Printf("error during job execution: %v, runcount: %v", err, j.RunCount())
-	}
-
-	s1.Every(1).Week().At("02:01").Do(weeklyRunner)
-
-	s1.Every(1).Month(1).At("04:01").Do(monthlyRunner)
+	cronJob("daily", DAILY, dailyRunner)
+	cronJob("monthly", MONTHLY, monthlyRunner)
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
+	cronStop()
 }
 
 func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
@@ -245,7 +236,7 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
 		return nil
 	}
 
-	if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
+	if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {
 		writeErr(w, http.StatusTeapot, "ERR-06, expired: %v", claims.Expiry.Time())
 		return nil
 	}
@@ -257,7 +248,7 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
 	return claims
 }
 
-func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails ...string) func(http.ResponseWriter, *http.Request) {
+func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := jwtAuth(w, r)
 		if claims == nil {
@@ -309,6 +300,7 @@ func createUser(email string) (*User, error) {
 	}
 	user.Id = uid
 	user.Email = &email
+	user.CreatedAt = timeNow()
 	if opts.Env != "local" {
 		sid, err := createStripeCustomer(&user)
 		if err != nil {
@@ -325,4 +317,16 @@ func createUser(email string) (*User, error) {
 	}
 	log.Printf("user created")
 	return &user, nil
+}
+
+func stringPointer(s string) *string {
+	return &s
+}
+
+func timeNow() time.Time {
+	if opts.Env == "local" || opts.Env == "dev" {
+		return time.Now().Add(time.Duration(hoursAdd) * time.Hour)
+	} else {
+		return time.Now()
+	}
 }

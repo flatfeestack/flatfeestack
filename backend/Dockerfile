@@ -4,12 +4,7 @@
 #https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/syntax.md
 FROM golang:1.15-alpine AS builder
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN apk add make gcc musl-dev git
-#https://stackoverflow.com/questions/29556879/is-it-possible-change-date-in-docker-container
-WORKDIR /
-RUN git clone https://github.com/wolfcw/libfaketime.git
-WORKDIR /libfaketime/src
-RUN make install
+RUN apk add make gcc musl-dev
 WORKDIR /app
 RUN chown -R appuser:appgroup /app
 USER appuser
@@ -24,9 +19,7 @@ FROM alpine:3.13
 ARG env
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=builder /app/backend  /app/banner.txt /app/backend.sh ./
-COPY --from=builder /usr/local/ /usr/local/
-RUN chown -R appuser:appgroup /app && chmod u+x /app/backend.sh
+COPY --from=builder /app/backend  /app/banner.txt ./
+RUN chown -R appuser:appgroup /app
 USER appuser
-#https://stackoverflow.com/questions/29556879/is-it-possible-change-date-in-docker-container
-ENTRYPOINT ["/bin/sh", "-c", "./backend.sh"]
+ENTRYPOINT ["./backend"]

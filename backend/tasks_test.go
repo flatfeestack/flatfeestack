@@ -102,8 +102,8 @@ func TestMonthlyRunner1(t *testing.T) {
 	repos, users := setupContributionScenario2(t)
 	nextMonth := time.Time{}.Add(time.Duration(24*31) * time.Hour)
 	setupContributor(t, *repos[0], time.Time{}, nextMonth, []string{"tom@tom.tom", "jon@jon.jon", "me@me.me"}, []float64{0.3, 0.5, 0.2})
-	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon")
-	saveGitEmail(uuid.New(), *users[1], "tom@tom.tom")
+	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon", timeNow())
+	saveGitEmail(uuid.New(), *users[1], "tom@tom.tom", timeNow())
 
 	for i := 1; i < 31; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
@@ -127,8 +127,8 @@ func TestMonthlyRunner2(t *testing.T) {
 	repos, users := setupContributionScenario2(t)
 	nextMonth := time.Time{}.Add(time.Duration(24*31) * time.Hour)
 	setupContributor(t, *repos[0], time.Time{}, nextMonth, []string{"tom@tom.tom", "jon@jon.jon", "me@me.me"}, []float64{0.3, 0.5, 0.2})
-	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon")
-	saveGitEmail(uuid.New(), *users[0], "tom@tom.tom")
+	saveGitEmail(uuid.New(), *users[0], "jon@jon.jon", timeNow())
+	saveGitEmail(uuid.New(), *users[0], "tom@tom.tom", timeNow())
 
 	for i := 1; i < 31; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
@@ -144,7 +144,7 @@ func TestMonthlyRunner2(t *testing.T) {
 
 	nextTwoMonth := time.Time{}.Add(time.Duration(24*59) * time.Hour)
 	setupContributor(t, *repos[0], nextMonth, nextTwoMonth, []string{"tom@tom.tom", "jon@jon.jon", "sam@sam.sam"}, []float64{0.1, 0.2, 0.7})
-	saveGitEmail(uuid.New(), *users[1], "sam@sam.sam")
+	saveGitEmail(uuid.New(), *users[1], "sam@sam.sam", timeNow())
 	for i := 31; i < 59; i++ {
 		err := dailyRunner(time.Time{}.Add(time.Duration(i*24) * time.Hour))
 		assert.Nil(t, err)
@@ -163,17 +163,14 @@ func TestMonthlyRunner2(t *testing.T) {
 func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time, email []string, weight []float64) {
 	aid := uuid.New()
 	//id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string
-	err := saveAnalysisRequest(aid, repo, from, to, "test")
+	err := saveAnalysisRequest(aid, repo, from, to, "test", timeNow())
 	assert.Nil(t, err)
 	for k, v := range email {
 		w1 := FlatFeeWeight{
-			Contributor: Contributor{
-				Name:  v,
-				Email: v,
-			},
+			Email:  v,
 			Weight: weight[k],
 		}
-		err = saveAnalysisResponse(aid, &w1)
+		err = saveAnalysisResponse(aid, &w1, timeNow())
 		assert.Nil(t, err)
 	}
 }

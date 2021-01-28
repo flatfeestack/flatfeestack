@@ -59,7 +59,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
-	now := time.Now()
+	now := timeNow()
 	req := AnalysisRequest{
 		RepositoryUrl:       repoUrl,
 		DateFrom:            now.AddDate(0, -3, 0),
@@ -84,7 +84,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	return saveAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch)
+	return saveAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
 }
 
 /*

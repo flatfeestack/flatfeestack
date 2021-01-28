@@ -172,9 +172,9 @@ func TestGitEmail(t *testing.T) {
 
 	uid := saveTestUser(t, "email1")
 
-	err := saveGitEmail(uuid.New(), uid, "email1")
+	err := saveGitEmail(uuid.New(), uid, "email1", timeNow())
 	assert.Nil(t, err)
-	err = saveGitEmail(uuid.New(), uid, "email2")
+	err = saveGitEmail(uuid.New(), uid, "email2", timeNow())
 	assert.Nil(t, err)
 	emails, err := findGitEmails(uid)
 	assert.Nil(t, err)
@@ -189,13 +189,4 @@ func TestGitEmail(t *testing.T) {
 	emails, err = findGitEmails(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(emails))
-}
-
-func TestGetUpdatePrice(t *testing.T) {
-	t.Skip("This is for manual testing, we are calling coingecko here")
-	setup()
-	defer teardown()
-	p, err := getUpdateExchanges("ETH")
-	assert.Nil(t, err)
-	assert.False(t, p.IsZero())
 }

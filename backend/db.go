@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
+	"github.com/lib/pq"
 	"log"
 	"math/big"
 	"time"
@@ -18,6 +18,7 @@ type User struct {
 	SubscriptionState *string   `json:"subscription_state"`
 	PayoutETH         *string   `json:"payout_eth"`
 	Role              *string   `json:"role"`
+	CreatedAt         time.Time
 }
 
 type SponsorEvent struct {
@@ -35,15 +36,17 @@ type Repo struct {
 	Url         *string `json:"html_url"`
 	Name        *string `json:"full_name"`
 	Description *string `json:"description"`
+	CreatedAt   time.Time
 }
 
 type Payment struct {
-	Id     uuid.UUID `json:"id"`
-	Uid    uuid.UUID `json:"uid"`
-	Amount int64
-	From   time.Time
-	To     time.Time
-	Sub    string
+	Id        uuid.UUID `json:"id"`
+	Uid       uuid.UUID `json:"uid"`
+	Amount    int64
+	From      time.Time
+	To        time.Time
+	Sub       string
+	CreatedAt time.Time
 }
 
 type UserAggBalance struct {
@@ -51,6 +54,7 @@ type UserAggBalance struct {
 	Balance        int64       `json:"balance"`
 	Emails         []string    `json:"email_list"`
 	MonthlyRepoIds []uuid.UUID `json:"monthly_repo_id_list"`
+	CreatedAt      time.Time
 }
 
 type Payout struct {
@@ -101,14 +105,14 @@ func findUserByID(uid uuid.UUID) (*User, error) {
 
 // Save inserts a user into the database
 func saveUser(user *User) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, subscription_state) VALUES ($1, $2, $3, $4, $5)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, subscription_state, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, user.SubscriptionState)
+	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, user.SubscriptionState, user.CreatedAt)
 	return handleErr(res, err, "INSERT INTO users", user)
 }
 
@@ -219,8 +223,8 @@ func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Tim
 }
 
 func saveRepo(repo *Repo) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description) 
-									VALUES ($1, $2, $3, $4, $5)
+	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description, created_at) 
+									VALUES ($1, $2, $3, $4, $5, $6)
 									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
@@ -228,7 +232,7 @@ func saveRepo(repo *Repo) (*uuid.UUID, error) {
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description)
+	res, err = stmt.Exec(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description, repo.CreatedAt)
 	err = handleErr(res, err, "INSERT INTO repo", repo)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
@@ -236,6 +240,7 @@ func saveRepo(repo *Repo) (*uuid.UUID, error) {
 
 	//"RETURNING" clause does not work with SQLite, so getting back with a select
 	//its not transactional, but it does not matter, once written, the url and id do not change
+	//TODO: now we use postgres exclusively, do returning again
 	var id uuid.UUID
 	err = db.
 		QueryRow("SELECT id FROM repo WHERE repo.Url=$1", repo.Url).
@@ -285,19 +290,20 @@ func findGitEmails(uid uuid.UUID) ([]string, error) {
 	return emails, nil
 }
 
-func saveGitEmail(id uuid.UUID, uid uuid.UUID, email string) error {
-	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email) VALUES($1, $2, $3)")
+func saveGitEmail(id uuid.UUID, uid uuid.UUID, email string, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email, created_at) VALUES($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(id, uid, email)
+	res, err = stmt.Exec(id, uid, email, now)
 	return handleErr(res, err, "INSERT INTO git_email", email)
 }
 
 func deleteGitEmail(uid uuid.UUID, email string) error {
+	//TODO: don't delete, just mark as deleted
 	stmt, err := db.Prepare("DELETE FROM git_email WHERE email=$1 AND user_id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
@@ -309,82 +315,27 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 	return handleErr(res, err, "DELETE FROM git_email", email)
 }
 
-func getUpdateExchanges(chain string) (decimal.Decimal, error) {
-	var s string
-	var t time.Time
-	err := db.
-		QueryRow("SELECT price, created_at FROM exchange WHERE chain=$1 ORDER BY created_at DESC LIMIT 1", chain).
-		Scan(&s, &t)
-	switch err {
-
-	case sql.ErrNoRows:
-		var price decimal.Decimal
-		price, err = getPriceETH()
-		if err != nil {
-			return decimal.Zero, err
-		}
-		err = insertExchangeRate(uuid.New(), price, chain)
-		if err != nil {
-			return decimal.Zero, err
-		}
-		return price, nil
-	case nil:
-		elapsed := time.Since(t)
-		var price decimal.Decimal
-		if elapsed < time.Minute*5 {
-			price, err = decimal.NewFromString(s)
-			if err != nil {
-				return decimal.Zero, err
-			}
-			return price, nil
-		}
-		price, err = getPriceETH()
-		if err != nil {
-			return decimal.Zero, err
-		}
-		err = insertExchangeRate(uuid.New(), price, chain)
-		if err != nil {
-			return decimal.Zero, err
-		}
-		return price, nil
-	default:
-		return decimal.Zero, err
-	}
-}
-
-func insertExchangeRate(id uuid.UUID, price decimal.Decimal, chain string) error {
-	stmt, err := db.Prepare("INSERT INTO exchange(id, chain, price) VALUES($1, $2, $3)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO exchange for %v statement event: %v", price, err)
-	}
-	defer stmt.Close()
-
-	var res sql.Result
-	res, err = stmt.Exec(id, chain, price)
-	return handleErr(res, err, "INSERT INTO exchange", price)
-}
-
-func saveAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string) error {
-	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, branch) VALUES($1, $2, $3, $4, $5)")
+func saveAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, branch, created_at) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", id, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(id, repo_id, date_from, date_to, branch)
+	res, err = stmt.Exec(id, repo_id, date_from, date_to, branch, now)
 	return handleErr(res, err, "INSERT INTO exchange", id)
 }
 
-func saveAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight) error {
-	stmt, err := db.Prepare("INSERT INTO analysis_response(id, analysis_request_id, git_email, weight) VALUES ($1, $2, $3, $4)")
+func saveAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO analysis_response(id, analysis_request_id, git_email, weight, created_at) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_response for %v/%v statement event: %v", aid, w, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(uuid.New(), aid, w.Contributor.Email, w.Weight)
+	res, err = stmt.Exec(uuid.New(), aid, w.Email, w.Weight, now)
 	return handleErr(res, err, "INSERT INTO analysis_response", aid)
 }
 
@@ -449,9 +400,9 @@ func getPendingPayouts() ([]UserAggBalance, error) {
 		for rows.Next() {
 			var userAggBalance UserAggBalance
 			err = rows.Scan(&userAggBalance.PayoutEth,
-				&userAggBalance.Emails,
+				pq.Array(&userAggBalance.Emails),
 				&userAggBalance.Balance,
-				&userAggBalance.MonthlyRepoIds)
+				pq.Array(&userAggBalance.MonthlyRepoIds))
 			if err != nil {
 				return nil, err
 			}

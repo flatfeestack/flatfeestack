@@ -114,7 +114,3 @@ func teardown() {
 		log.Fatalf("Could run drop_test.sql: %s", err)
 	}
 }
-
-func stringPointer(s string) *string {
-	return &s
-}

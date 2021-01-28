@@ -18,20 +18,25 @@ type UserBalance struct {
 	Email     string `json:"email"`
 }
 
-func time2Day(year int, month time.Month, day int) *time.Time {
-	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+func time2Day(now time.Time) *time.Time {
+	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	return &t
+}
+
+func time2Month(now time.Time) *time.Time {
+	t := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	return &t
 }
 
 func dailyRunner(now time.Time) error {
-	yesterdayStop := time2Day(now.Year(), now.Month(), now.Day()) //$2
-	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)             //$1
+	yesterdayStop := time2Day(now)                    //$2
+	yesterdayStart := yesterdayStop.AddDate(0, 0, -1) //$1
 
 	//https://stackoverflow.com/questions/17833176/postgresql-days-months-years-between-two-dates
-	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day)
+	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day, created_at)
               SELECT s.user_id, 
                      SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::int) as repo_hours, 
-                     $1 as day
+                     $1 as day, $3 as created_at
                 FROM sponsor_event s 
                     JOIN users u ON u.id = s.user_id
                 WHERE u.subscription_state='ACTIVE' 
@@ -41,17 +46,17 @@ func dailyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(yesterdayStart, yesterdayStop)
+	_, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
 
 	//TODO: limit user to 10000 repos
 	//we can support up to 1000 (1h) - 27500 (24h) repos until the precision makes the distribution of 0
-	stmt, err = db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day)
+	stmt, err = db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day, created_at)
 		   SELECT repo_id, 
 				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::bigint * ` + sUSDPerHour + `) / d.repo_hours), 
-			      $1 as day
+			      $1 as day, $3 as created_at
 			 FROM sponsor_event s
 			     JOIN users u ON u.id = s.user_id 
 			     JOIN daily_repo_hours d ON u.id = d.user_id
@@ -63,7 +68,7 @@ func dailyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(yesterdayStart, yesterdayStop)
+	_, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
@@ -72,13 +77,13 @@ func dailyRunner(now time.Time) error {
 }
 
 func weeklyRunner(now time.Time) error {
-	dayStop := time2Day(now.Year(), now.Month(), now.Day()) //$2
+	dayStop := time2Day(now) //$2
 	year, week := dayStop.ISOWeek()
 	weekStop := isoweek.StartTime(year, week, time.UTC)
 	weekStart := weekStop.AddDate(0, 0, -7) //$1
 
-	stmt, err := db.Prepare(`INSERT INTO weekly_repo_balance (repo_id, balance, day)
-		SELECT repo_id, SUM(balance) as balance, $1 as day
+	stmt, err := db.Prepare(`INSERT INTO weekly_repo_balance (repo_id, balance, day, created_at)
+		SELECT repo_id, SUM(balance) as balance, $1 as day, $3 as created_at
         FROM daily_repo_balance
         WHERE day >= $1 AND day < $2
         GROUP BY repo_id`)
@@ -87,14 +92,14 @@ func weeklyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(weekStart, weekStop)
+	_, err = stmt.Exec(weekStart, weekStop, now)
 	if err != nil {
 		return err
 	}
 
 	//to stay on the safe side and don't pay more than we have, round down
-	stmt, err = db.Prepare(`INSERT INTO weekly_email_payout (email, balance, day)
-		SELECT c.git_email as email, floor(SUM(c.weight * w.balance)) as balance, $1 as day
+	stmt, err = db.Prepare(`INSERT INTO weekly_email_payout (email, balance, day, created_at)
+		SELECT c.git_email as email, floor(SUM(c.weight * w.balance)) as balance, $1 as day, $3 as created_at
         FROM analysis_response c
             JOIN analysis_request a ON c.analysis_request_id = a.id
             JOIN weekly_repo_balance w ON w.repo_id = a.repo_id
@@ -105,7 +110,7 @@ func weeklyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(weekStart, weekStop)
+	_, err = stmt.Exec(weekStart, weekStop, now)
 	if err != nil {
 		return err
 	}
@@ -134,11 +139,11 @@ func weeklyRunner(now time.Time) error {
 
 //https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/
 func monthlyRunner(now time.Time) error {
-	monthStop := time2Day(now.Year(), now.Month(), 1) //$2
-	monthStart := monthStop.AddDate(0, -1, 0)         //$1
+	monthStop := time2Month(now)              //$2
+	monthStart := monthStop.AddDate(0, -1, 0) //$1
 
-	stmt, err := db.Prepare(`INSERT INTO monthly_repo_weight (repo_id, weight, day)
-		SELECT req.repo_id, SUM(res.weight) as weight, $1 as day
+	stmt, err := db.Prepare(`INSERT INTO monthly_repo_weight (repo_id, weight, day, created_at)
+		SELECT req.repo_id, SUM(res.weight) as weight, $1 as day, $3 as created_at
         FROM analysis_response res
             JOIN analysis_request req ON res.analysis_request_id = req.id
 			JOIN git_email g ON g.email = res.git_email
@@ -149,7 +154,7 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	res, err := stmt.Exec(monthStart, monthStop)
+	res, err := stmt.Exec(monthStart, monthStop, now)
 	if err != nil {
 		return err
 	}
@@ -158,13 +163,13 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 
-	stmt, err = db.Prepare(`INSERT INTO monthly_repo_balance (repo_id, balance, day)
+	stmt, err = db.Prepare(`INSERT INTO monthly_repo_balance (repo_id, balance, day, created_at)
 		SELECT d.repo_id, 
 		       SUM(balance) + COALESCE((
 		           SELECT m.balance 
 		           FROM monthly_future_leftover m 
 		           WHERE m.repo_id = d.repo_id AND m.day = $1), 0) as balance, 
-		       $1 as day
+		       $1 as day, $3 as created_at
         FROM daily_repo_balance d
         WHERE d.day >= $1 AND d.day < $2
         GROUP BY d.repo_id`)
@@ -173,7 +178,7 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	res, err = stmt.Exec(monthStart, monthStop)
+	res, err = stmt.Exec(monthStart, monthStop, now)
 	if err != nil {
 		return err
 	}
@@ -184,8 +189,8 @@ func monthlyRunner(now time.Time) error {
 	log.Printf("affected: %v", nr)
 
 	//this is the real payout
-	stmt, err = db.Prepare(`INSERT INTO monthly_user_payout (user_id, balance, day)
-		SELECT g.user_id, floor(SUM(mb.balance * res.weight / mw.weight)) as balance, $1 as day
+	stmt, err = db.Prepare(`INSERT INTO monthly_user_payout (user_id, balance, day, created_at)
+		SELECT g.user_id, floor(SUM(mb.balance * res.weight / mw.weight)) as balance, $1 as day, $3 as created_at
         FROM analysis_response res
             JOIN analysis_request req ON res.analysis_request_id = req.id
             JOIN git_email g ON g.email = res.git_email
@@ -198,7 +203,7 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	res, err = stmt.Exec(monthStart, monthStop)
+	res, err = stmt.Exec(monthStart, monthStop, now)
 	if err != nil {
 		return err
 	}
@@ -209,8 +214,8 @@ func monthlyRunner(now time.Time) error {
 	log.Printf("affected: %v", nr)
 
 	//shift leftover to separate table. Those repos which did not claim money go into separate
-	stmt, err = db.Prepare(`INSERT INTO monthly_future_leftover (repo_id, balance, day)
-		SELECT mb.repo_id, mb.balance, $2 as day
+	stmt, err = db.Prepare(`INSERT INTO monthly_future_leftover (repo_id, balance, day, created_at)
+		SELECT mb.repo_id, mb.balance, $2 as day, $3 as created_at
         FROM monthly_repo_balance mb
             LEFT JOIN monthly_repo_weight mw ON mb.repo_id = mw.repo_id
         WHERE mw.repo_id IS NULL AND mb.day = $1`)
@@ -219,7 +224,7 @@ func monthlyRunner(now time.Time) error {
 		return err
 	}
 	defer stmt.Close()
-	res, err = stmt.Exec(monthStart, monthStop)
+	res, err = stmt.Exec(monthStart, monthStop, now)
 	if err != nil {
 		return err
 	}

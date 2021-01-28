@@ -3,9 +3,9 @@ module backend
 go 1.15
 
 require (
+	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/dimiro1/banner v1.1.0
-	github.com/go-co-op/gocron v0.5.1
 	github.com/go-openapi/spec v0.20.1 // indirect
 	github.com/go-openapi/swag v0.19.13 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect

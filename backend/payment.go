@@ -70,7 +70,7 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	}
 	if opts.Env == "local" {
 		user.Subscription = user.StripeId
-		a := "active"
+		a := "ACTIVE"
 		user.SubscriptionState = &a
 		err := updateUser(&user)
 		if err != nil {
