@@ -147,16 +147,16 @@ $: if (submitted && !error && !paymentProcessing) {
   interval = setInterval(() => updateUser(), 1000);
 }
 
-$: if ($user.subscription_state === "active" && interval) {
+$: if ($user.subscription_state === "ACTIVE" && interval) {
   clearInterval(interval);
 }
 
-$: if ($user.subscription_state === "active") {
+$: if ($user.subscription_state === "ACTIVE") {
   showSuccess = true;
 }
 
 onMount(async () => {
-  if ($user.subscription_state !== "active") {
+  if ($user.subscription_state !== "ACTIVE") {
     await createCardForm();
   }
 });
@@ -165,7 +165,7 @@ onMount(async () => {
 {#if error}
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
-{#if !submitted && $user.subscription_state !== 'active'}
+{#if !submitted && $user.subscription_state !== 'ACTIVE'}
   <div class="flex items-end mb-10">
     {#each plans as { title, price, desc }, i}
       <div
@@ -179,7 +179,7 @@ onMount(async () => {
     {/each}
   </div>
 {/if}
-{#if $user.subscription_state !== 'active'}
+{#if $user.subscription_state !== 'ACTIVE'}
   <div class="w-2/3 mx-auto {submitted ? 'hidden' : ''}">
     <div class="font-semibold mb-5">
       Selected Plan:
@@ -203,7 +203,7 @@ onMount(async () => {
   </div>
 {/if}
 
-{#if paymentProcessing || (submitted && !paymentProcessing && !error && $user.subscription_state !== 'active')}
+{#if paymentProcessing || (submitted && !paymentProcessing && !error && $user.subscription_state !== 'ACTIVE')}
   <div class="w-full flex flex-col items-center">
     <h2>One sec while we're verifying your payment.</h2>
     <Spinner />

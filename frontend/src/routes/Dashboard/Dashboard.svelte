@@ -17,7 +17,7 @@ import Payment from "../../components/Payment.svelte";
         {/if}
       </h2>
 
-      {#if $user.subscription_state !== 'active'}
+      {#if $user.subscription_state !== 'ACTIVE'}
         <div class="text-gray-700 mb-10">
           You don't have an active subscription.
           <br />Please choose a plan below to start sponsoring open source
