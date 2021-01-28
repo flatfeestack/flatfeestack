@@ -5,6 +5,7 @@ services:
     container_name: flatfeestack-auth
     build: ./fastauth
     environment:
+      - ENV=local
       - DEV=test
       - USERS=info@flatfeestack.io:pw1;jonas@flatfeestack.io:pw2;tom:pw1
       - PORT=9081
@@ -14,24 +15,26 @@ services:
   backend:
     container_name: flatfeestack-backend
     build: ./backend
-    env_file:
-      - ./backend/.env
+    environment:
+      - PORT=9082
     depends_on:
       - db
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
     build: ./analysis-engine
+    environment:
+      - PORT=9083
 
   payout:
     container_name: flatfeestack-payout
     build: ./payout
     extra_hosts:
       - ${HOSTS}
-    env_file:
-      - ./payout/.env
     depends_on:
       - openethereum
+    environment:
+      - PORT=9084
 
   db:
     container_name: flatfeestack-db

@@ -63,17 +63,17 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  compose_args='' hosts='' include_build=true
+  hosts='' include_build=true services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     --no-color) NO_COLOR=1 ;;
-    -na | --no-auth) compose_args="${compose_args} --scale auth=0"; hosts="${hosts} auth";;
-    -ne | --no-engine) compose_args="${compose_args} --scale analysis-engine=0"; hosts="${hosts} analysis-engine";;
-    -nb | --no-backend) compose_args="${compose_args} --scale backend=0"; hosts="${hosts} backend";;
-    -np | --no-payout) compose_args="${compose_args} --scale payout=0"; hosts="${hosts} payout";;
-    -nf | --no-frontend) compose_args="${compose_args} --scale frontend=0"; hosts="${hosts} frontend";;
+    -na | --no-auth) hosts="${hosts} auth"; services="${services//auth/}";;
+    -ne | --no-engine) hosts="${hosts} analysis-engine"; services="${services//analysis-engine/}";;
+    -nb | --no-backend) hosts="${hosts} backend"; services="${services//backend/}";;
+    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout/}";;
+    -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
     -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
     -rmdb | --remove-db) sudo rm -rf .data; exit 0;;
@@ -99,9 +99,9 @@ now=`date`
 msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
 
 if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker-compose build --parallel"
-  HOSTS="${hosts}"  docker-compose build --parallel
+  msg "${GREEN}Run: docker-compose build --parallel ${services}"
+  HOSTS="${hosts}"  docker-compose build --parallel ${services}
 fi
 
-msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${compose_args}"
-HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${compose_args}
+msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${services}"
+HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${services}
