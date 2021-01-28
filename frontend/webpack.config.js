@@ -128,7 +128,8 @@ module.exports = {
     contentBase: "public",
     watchContentBase: true,
     port: 9084,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    historyApiFallback: true,
   },
   mode,
   plugins: [

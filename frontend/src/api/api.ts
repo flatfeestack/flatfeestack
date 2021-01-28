@@ -35,6 +35,7 @@ apiInstance.interceptors.response.use(
   async function (error) {
     const originalRequest = error.config;
     if (error.response.status === 418 && !originalRequest._retry) {
+      console.log("referseh?")
       originalRequest._retry = true;
       const oldR = get(refresh);
       if (!oldR) {
@@ -44,9 +45,13 @@ apiInstance.interceptors.response.use(
       const res = await API.auth.refresh(oldR);
       const t = res.data.access_token;
       const r = res.data.refresh_token;
+      console.log("new toke: "+t)
       token.set(t);
       refresh.set(r);
-      axios.defaults.headers.common["Authorization"] = "Bearer " + t;
+      console.log("orig request")
+      console.log(originalRequest)
+      originalRequest.headers.Authorization = "Bearer " + t;
+      console.log(originalRequest)
       return apiInstance(originalRequest);
     }
     return Promise.reject(error);
@@ -68,6 +73,20 @@ export const API = {
     refresh: (refresh: string) => {
       return authInstance.post("/refresh", { refresh_token: refresh });
     },
+    logout: () => {
+      const t = get(token);
+      if (t) {
+        token.set(null);
+        refresh.set(null);
+        const config = {
+          headers: { Authorization: `Bearer ${t}` }
+        };
+        return authInstance.get(`/authen/logout?redirect_uri=/`, config)
+      } else {
+        throw new Error("t not found...");
+      }
+    },
+    timeWarp: (hours: number) => authInstance.post(`/timewarp/${hours}`),
   },
   user: {
     get: () => apiInstance.get(`/users/me`),
@@ -101,4 +120,10 @@ export const API = {
         id: e.id,
       }),
   },
+  payouts: {
+    pending: () => apiInstance.post(`/admin/pending-payout`),
+    time: () => apiInstance.get(`/admin/time`),
+    fakeUser: () => apiInstance.post(`/admin/fake-user`),
+    timeWarp: (hours: number) => apiInstance.post(`/admin/timewarp/${hours}`),
+  }
 };
