@@ -16,5 +16,5 @@ route /analysis/* {
 }
 
 route {
-    reverse_proxy frontend:9084
+    reverse_proxy frontend:9085
 }

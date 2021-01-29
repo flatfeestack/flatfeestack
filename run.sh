@@ -23,7 +23,7 @@ hostip() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-sb] [-db] [-rmdb]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-sb] [-db] [-rm]
 
 Build and run flatfeestack.
 
@@ -37,7 +37,7 @@ Available options:
 -nf, --no-frontend  Dont' start frontend
 -sb, --skip-build   Don't run docker-compose build (if your machine is slow)
 -db, --db-only      Run the DB instance only, this ignores all the other options
--rmdb, --remove-db  Remove the database folder and exit
+-rm, --remove-data  Remove the database and chain folder
 EOF
   exit
 }
@@ -76,8 +76,8 @@ parse_params() {
     -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
     -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
-    -rmdb | --remove-db) sudo rm -rf .data; exit 0;;
-    -?*) die "Unknown option: $1" ;;
+    -rm | --remove-data) rm -rf .db .chain;;
+    -?*) die "Unknown option: $1";;
     *) break ;;
     esac
     shift
@@ -90,6 +90,7 @@ parse_params() {
 parse_params "$@"
 setup_colors
 hostip
+mkdir -p .db .chain
 
 now=`date`
 # here we set hosts that can be used in docker-compose. For those hosts
@@ -100,8 +101,10 @@ msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
 
 if [ "$include_build" = true ]; then
   msg "${GREEN}Run: docker-compose build --parallel ${services}"
-  HOSTS="${hosts}"  docker-compose build --parallel ${services}
+  HOSTS="${hosts}" docker-compose build --parallel ${services}
 fi
 
+# https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
+# https://hub.docker.com/_/postgres
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${services}"
-HOSTS="${hosts}"  docker-compose up --abort-on-container-exit ${services}
+UID_GID="$(id -u):$(id -g)" HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}
