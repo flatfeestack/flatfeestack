@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -27,31 +28,37 @@ type AnalysisResponse struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type PayoutResponse struct {
-	TxHash string `json:"tx_hash"`
+type PayoutWei struct {
+	Address string  `json:"address"`
+	Balance big.Int `json:"balance_wei"`
 }
 
-func payoutRequest(pts []PayoutToService) (string, error) {
+type PayoutResponse struct {
+	TxHash     string      `json:"tx_hash"`
+	PayoutWeis []PayoutWei `json:"payout_weis"`
+}
+
+func payoutRequest(pts []PayoutToService) (*PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 	body, err := json.Marshal(pts)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	r, err := client.Post(opts.PayoutUrl+"/pay", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer r.Body.Close()
 
 	var resp PayoutResponse
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return resp.TxHash, nil
+	return &resp, nil
 }
 
 func analysisRequest(repoId uuid.UUID, repoUrl string) error {

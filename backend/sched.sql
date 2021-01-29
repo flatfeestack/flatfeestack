@@ -70,18 +70,27 @@ CREATE TABLE monthly_future_leftover (
 );
 CREATE UNIQUE INDEX monthly_future_leftover_index ON monthly_future_leftover(repo_id, day);
 
-CREATE TABLE payouts (
-    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    monthly_repo_balance_id UUID CONSTRAINT fk_monthly_repo_balance_id_pay REFERENCES monthly_repo_balance (id),
-    batch_id                UUID UNIQUE            NOT NULL,
-    exchange_rate           NUMERIC                NOT NULL,
-    created_at              TIMESTAMP              NOT NULL
+CREATE TABLE payouts_request (
+    id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    monthly_user_payout_id UUID CONSTRAINT fk_monthly_user_payout_id_pay REFERENCES monthly_user_payout (id),
+    batch_id               UUID                   NOT NULL,
+    exchange_rate          NUMERIC                NOT NULL,
+    created_at             TIMESTAMP              NOT NULL
+);
+CREATE INDEX payouts_index ON payouts_request(batch_id);
+
+CREATE TABLE payouts_response (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id   UUID UNIQUE NOT NULL,
+    tx_hash    VARCHAR(66),
+    error      TEXT,
+    created_at TIMESTAMP NOT NULL
 );
 
-CREATE TABLE payouts_hash (
-    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    batch_id                UUID CONSTRAINT fk_payouts_batch_id_ph REFERENCES payouts (batch_id),
-    tx_hash                 VARCHAR(66),
-    error                   TEXT,
-    created_at              TIMESTAMP              NOT NULL
+CREATE TABLE payouts_response_details (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payouts_response_id UUID CONSTRAINT fk_payouts_response_id_pres REFERENCES payouts_response (id),
+    address             VARCHAR(42),
+    balance_wei         NUMERIC NOT NULL,
+    created_at TIMESTAMP NOT NULL
 );

@@ -50,25 +50,26 @@ type Payment struct {
 }
 
 type UserAggBalance struct {
-	PayoutEth      string      `json:"payout_eth"`
-	Balance        int64       `json:"balance"`
-	Emails         []string    `json:"email_list"`
-	MonthlyRepoIds []uuid.UUID `json:"monthly_repo_id_list"`
-	CreatedAt      time.Time
-}
-
-type Payout struct {
-	MonthlyRepoBalanceId uuid.UUID `json:"monthly-repo-balance-id"`
-	BatchId              uuid.UUID `json:"batch-id"`
-	ExchangeRate         big.Float
+	PayoutEth            string      `json:"payout_eth"`
+	Balance              int64       `json:"balance"`
+	Emails               []string    `json:"email_list"`
+	MonthlyUserPayoutIds []uuid.UUID `json:"monthly_user_payout_id_list"`
 	CreatedAt            time.Time
 }
 
-type PayoutHash struct {
-	BatchId   uuid.UUID
-	TxHash    string
-	Error     string
-	CreatedAt time.Time
+type PayoutsRequest struct {
+	MonthlyUserPayoutId uuid.UUID `json:"monthly-repo-balance-id"`
+	BatchId             uuid.UUID `json:"batch-id"`
+	ExchangeRate        big.Float
+	CreatedAt           time.Time
+}
+
+type PayoutsResponse struct {
+	BatchId    uuid.UUID
+	TxHash     string
+	Error      *string
+	CreatedAt  time.Time
+	PayoutWeis []PayoutWei
 }
 
 // FindByID returns a single user
@@ -351,32 +352,57 @@ func savePayment(p *Payment) error {
 	return handleErr(res, err, "INSERT INTO payments", p.Id)
 }
 
-func savePayout(p *Payout) error {
+func savePayoutsRequest(p *PayoutsRequest) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts(monthly_repo_balance_id, batch_id, exchange_rate, created_at) 
+				INSERT INTO payouts_request(monthly_user_payout_id, batch_id, exchange_rate, created_at) 
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts for %v statement event: %v", p.MonthlyRepoBalanceId, err)
+		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.MonthlyUserPayoutId, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(p.MonthlyRepoBalanceId, p.BatchId, p.ExchangeRate, p.CreatedAt)
-	return handleErr(res, err, "INSERT INTO payouts", p.MonthlyRepoBalanceId)
+	res, err = stmt.Exec(p.MonthlyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
+	return handleErr(res, err, "INSERT INTO payouts_request", p.MonthlyUserPayoutId)
 }
 
-func savePayoutHash(p *PayoutHash) error {
+func savePayoutsResponse(p *PayoutsResponse) error {
+	pid := uuid.New()
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_hash(batch_id, tx_hash, created_at) 
-				VALUES($1, $2, $3)`)
+				INSERT INTO payouts_response(id, batch_id, tx_hash, created_at) 
+				VALUES($1, $2, $3, $4)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_hash for %v statement event: %v", p.BatchId, err)
+		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(p.BatchId, p.TxHash, p.CreatedAt)
-	return handleErr(res, err, "INSERT INTO payouts_hash", p.BatchId)
+	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.CreatedAt)
+	err = handleErr(res, err, "INSERT INTO payouts_response", p.BatchId)
+	if err != nil {
+		return err
+	}
+	for _, v := range p.PayoutWeis {
+		err = savePayoutsResponseDetails(pid, &v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func savePayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at) 
+				VALUES($1, $2, $3, $4)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
+	return handleErr(res, err, "INSERT INTO payouts_response_details", pid)
 }
 
 func getPendingPayouts() ([]UserAggBalance, error) {
@@ -385,7 +411,7 @@ func getPendingPayouts() ([]UserAggBalance, error) {
 	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
 				FROM monthly_user_payout m 
 			    JOIN users u ON m.user_id = u.id 
-				LEFT JOIN payouts p ON p.monthly_repo_balance_id = m.id
+				LEFT JOIN payouts_request p ON p.monthly_user_payout_id = m.id
 				WHERE p.id IS NULL
 				GROUP BY u.payout_eth
 				HAVING SUM(m.balance) > 10000`
@@ -402,7 +428,76 @@ func getPendingPayouts() ([]UserAggBalance, error) {
 			err = rows.Scan(&userAggBalance.PayoutEth,
 				pq.Array(&userAggBalance.Emails),
 				&userAggBalance.Balance,
-				pq.Array(&userAggBalance.MonthlyRepoIds))
+				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
+			if err != nil {
+				return nil, err
+			}
+			userAggBalances = append(userAggBalances, userAggBalance)
+		}
+		return userAggBalances, nil
+	default:
+		return nil, err
+	}
+}
+
+func getPaidPayouts() ([]UserAggBalance, error) {
+	var userAggBalances []UserAggBalance
+	//select monthly payments, but only those that do not have a payout entry
+	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
+				FROM monthly_user_payout m 
+			    JOIN users u ON m.user_id = u.id 
+				JOIN payouts_request preq ON preq.monthly_user_payout_id = m.id
+				JOIN payouts_response pres ON pres.batch_id = preq.batch_id
+				GROUP BY u.payout_eth`
+
+	rows, err := db.Query(query)
+	defer rows.Close()
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		for rows.Next() {
+			var userAggBalance UserAggBalance
+			err = rows.Scan(&userAggBalance.PayoutEth,
+				pq.Array(&userAggBalance.Emails),
+				&userAggBalance.Balance,
+				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
+			if err != nil {
+				return nil, err
+			}
+			userAggBalances = append(userAggBalances, userAggBalance)
+		}
+		return userAggBalances, nil
+	default:
+		return nil, err
+	}
+}
+
+func getLimboPayouts() ([]UserAggBalance, error) {
+	var userAggBalances []UserAggBalance
+	//select monthly payments, but only those that do not have a payout entry
+	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
+				FROM monthly_user_payout m 
+			    JOIN users u ON m.user_id = u.id 
+				JOIN payouts_request preq ON preq.monthly_user_payout_id = m.id
+				LEFT JOIN payouts_response pres ON pres.batch_id = preq.batch_id
+				WHERE pres.id IS NULL
+				GROUP BY u.payout_eth`
+
+	rows, err := db.Query(query)
+	defer rows.Close()
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		for rows.Next() {
+			var userAggBalance UserAggBalance
+			err = rows.Scan(&userAggBalance.PayoutEth,
+				pq.Array(&userAggBalance.Emails),
+				&userAggBalance.Balance,
+				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
 			if err != nil {
 				return nil, err
 			}

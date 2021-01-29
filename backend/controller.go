@@ -29,6 +29,15 @@ type FlatFeeWeight struct {
 	Weight float64 `json:"weight"`
 }
 
+const (
+	fakePubKey1  = "0x985B60456DF6db6952644Ee0C70dfa9146e4E12C"
+	fakePrivKey1 = "0xc76d23e248188840aacec04183d94cde00ce1b591a2e6610b034094f7aef5ecf"
+	//check with
+	//curl --data '{"method":"eth_call","params":[{"to": "0x731a10897d267e19b34503ad902d0a29173ba4b1", "data":"0x70a08231000000000000000000000000005759e3FDE48688AAB1d6E7B434D46F2A9E9c50"}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
+	fakePubKey2  = "0x005759e3FDE48688AAB1d6E7B434D46F2A9E9c50"
+	fakePrivKey2 = "0xd8ac01d26dc438ba2ba99529ffd46fc1e5e924ade931a256a255dc36762deab0"
+)
+
 /*
  *	==== USER ====
  */
@@ -368,8 +377,28 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func pendingPayouts(w http.ResponseWriter, r *http.Request, email string) {
-	userAggBalances, err := getPendingPayouts()
+func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
+
+	m := mux.Vars(r)
+	h := m["type"]
+	if h == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+
+	var err error
+	var userAggBalances []UserAggBalance
+	switch h {
+	case "pending":
+		userAggBalances, err = getPendingPayouts()
+	case "limbo":
+		userAggBalances, err = getLimboPayouts()
+	case "paid":
+		userAggBalances, err = getPaidPayouts()
+	default:
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
@@ -395,30 +424,46 @@ type UserAggBalanceExchangeRate struct {
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {
-	var ubes UserAggBalanceExchangeRate
-	err := json.NewDecoder(r.Body).Decode(&ubes)
+	userAggBalances, err := getPendingPayouts()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode payout: %v", err)
+		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
 	}
+
+	m := mux.Vars(r)
+	h := m["exchangeRate"]
+	if h == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+	e, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+
 	var pts []PayoutToService
 	batchId := uuid.New()
-	for _, ub := range ubes.UserAggBalancs {
+	for _, ub := range userAggBalances {
 		//TODO: do one SQL insert instead of many small ones
-		for _, mid := range ub.MonthlyRepoIds {
-			p := Payout{
-				MonthlyRepoBalanceId: mid,
-				BatchId:              batchId,
-				ExchangeRate:         ubes.ExchangeRate,
-				CreatedAt:            timeNow(),
+		for _, mid := range ub.MonthlyUserPayoutIds {
+			p := PayoutsRequest{
+				MonthlyUserPayoutId: mid,
+				BatchId:             batchId,
+				ExchangeRate:        *e,
+				CreatedAt:           timeNow(),
 			}
-			savePayout(&p)
+			err = savePayoutsRequest(&p)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "Could not send payout0: %v", err)
+				return
+			}
 		}
 
 		pt := PayoutToService{
 			Address:      ub.PayoutEth,
 			Balance:      ub.Balance,
-			ExchangeRate: ubes.ExchangeRate,
+			ExchangeRate: *e,
 		}
 		pts = append(pts, pt)
 
@@ -444,22 +489,22 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func payout0(pts []PayoutToService, batchId uuid.UUID) error {
-	txHash, err := payoutRequest(pts)
+	res, err := payoutRequest(pts)
 	if err != nil {
-		err2 := savePayoutHash(&PayoutHash{
+		err1 := err.Error()
+		err2 := savePayoutsResponse(&PayoutsResponse{
 			BatchId:   batchId,
-			Error:     err.Error(),
+			Error:     &err1,
 			CreatedAt: timeNow(),
 		})
 		return fmt.Errorf("error %v/%v", err, err2)
-	} else {
-		err = savePayoutHash(&PayoutHash{
-			BatchId:   batchId,
-			TxHash:    txHash,
-			CreatedAt: timeNow(),
-		})
 	}
-	return nil
+	return savePayoutsResponse(&PayoutsResponse{
+		BatchId:    batchId,
+		Error:      nil,
+		CreatedAt:  timeNow(),
+		PayoutWeis: res.PayoutWeis,
+	})
 }
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
@@ -474,14 +519,14 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	repo := randomdata.SillyName()
-	uid1, rid1, err := fakeRepoUser(randomdata.Email(), repo, repo)
+	uid1, rid1, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey1)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data1: %v", err)
 		return
 	}
 
 	repo = randomdata.SillyName()
-	uid2, rid2, err := fakeRepoUser(randomdata.Email(), repo, repo)
+	uid2, rid2, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey2)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
@@ -590,14 +635,14 @@ func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
 	return nil
 }
 
-func fakeRepoUser(email string, repoUrl string, repoName string) (*uuid.UUID, *uuid.UUID, error) {
+func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth string) (*uuid.UUID, *uuid.UUID, error) {
 	u := User{
 		Id:                uuid.New(),
 		StripeId:          stringPointer("strip-id"),
-		Email:             stringPointer(email),
+		Email:             &email,
 		Subscription:      stringPointer("sub"),
 		SubscriptionState: stringPointer("ACTIVE"),
-		PayoutETH:         stringPointer("0x123"),
+		PayoutETH:         &payoutEth,
 		CreatedAt:         timeNow(),
 	}
 

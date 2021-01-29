@@ -167,8 +167,8 @@ func main() {
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
 	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods("POST")
-	apiRouter.HandleFunc("/admin/pending-payout", jwtAuthAdmin(pendingPayouts, admins)).Methods("POST")
-	apiRouter.HandleFunc("/admin/payout", jwtAuthAdmin(payout, admins)).Methods("POST")
+	apiRouter.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods("POST")
+	apiRouter.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods("POST")
 	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods("GET")
 
 	//dev settings
