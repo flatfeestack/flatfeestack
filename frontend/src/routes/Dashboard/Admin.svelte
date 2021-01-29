@@ -2,45 +2,53 @@
 import DashboardLayout from "../../layout/DashboardLayout.svelte";
 import { API } from "src/api/api";
 import Spinner from "../../components/UI/Spinner.svelte";
-import ExchangeEntry from "../../components/ExchangeEntry.svelte";
+import { onMount } from 'svelte';
 
-let error: string;
-
-const pendingPayouts = async () => {
-  try {
-    const res = await API.payouts.pending()
-    console.log(res);
-    return res;
-  } catch (e) {
-    console.log(e);
-    error = e;
-  }
-}
-let promisePayouts = pendingPayouts();
-
-const time = async () => {
-  const res = await API.payouts.time()
-  return res;
-}
-let promiseTime = time();
+let promisePendingPayouts =API.payouts.pending("pending");
+let promisePaidPayouts = API.payouts.pending("paid");
+let promiseLimboPayouts= API.payouts.pending("limbo");
+let promiseTime = API.payouts.time();
 
 const handleFakeUsers = async () => {
   return await API.payouts.fakeUser()
 }
 
 const handleWarp = async (hours: number) => {
-  await API.payouts.timeWarp(hours)
-  await API.auth.timeWarp(hours)
-  promiseTime = time();
+  await API.payouts.timeWarp(hours);
+  await API.auth.timeWarp(hours);
+  await refresh();
+}
+
+const payout = async (exchangeRate: number) => {
+  await API.payouts.payout(exchangeRate)
+}
+
+let exchangeRate = 0.0;
+
+const refresh = async () => {
+  promiseTime = API.payouts.time();
+  promisePendingPayouts = API.payouts.pending("pending");
+  promisePaidPayouts = API.payouts.pending("paid");
+  promiseLimboPayouts= API.payouts.pending("limbo");
 }
 
 </script>
 
+<style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+    table {
+        background: #eee;
+        width: 50%;
+        text-align: center;
+    }
+</style>
+
+
 <DashboardLayout>
   <h1>Admin</h1>
-  {#if error}
-    <p class="p-2 bg-red-500 text-white inline-block">{error}</p>
-  {/if}
 
   <button class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={handleFakeUsers}>
     Insert 2 users and 2 repo
@@ -59,17 +67,111 @@ const handleWarp = async (hours: number) => {
   </button>
 
   {#await promiseTime}
-    <Spinner />
+    <h2>Time: ...</h2>
   {:then res}
-    Status: {res.status}, Server Datetime: {res.data.time}
+    <h2>Time: {res.data.time}</h2>
   {/await}
 
-  {#await promisePayouts}
+  <h2>Pending Payouts</h2>
+  {#await promisePendingPayouts}
     <Spinner />
   {:then res}
-    {res.status}
-    {#each res.data as pending}
-      {pending.email_list}
-    {/each}
+    <table>
+      <thead>
+      <tr>
+        <th>ETH Address</th>
+        <th>µ&nbsp;USD</th>
+        <th>Email(s)</th>
+        <th>Monthly Repo ID(s)</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#if res.data}
+        {#each res.data as row}
+          <tr>
+            <td>{row.payout_eth}</td>
+            <td>{row.balance}</td>
+            <td>{row.email_list}</td>
+            <td>{row.monthly_user_payout_id_list}</td>
+          </tr>
+        {:else}
+          <tr><td colspan="4">No Data</td></tr>
+        {/each}
+      {:else}
+        <tr><td colspan="4">No Data</td></tr>
+      {/if}
+      </tbody>
+    </table>
   {/await}
+
+  <h2>Paid Payouts</h2>
+  {#await promisePaidPayouts}
+    <Spinner />
+  {:then res}
+    <table>
+      <thead>
+      <tr>
+        <th>ETH Address</th>
+        <th>µ&nbsp;USD</th>
+        <th>Email(s)</th>
+        <th>Monthly Repo ID(s)</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#if res.data}
+        {#each res.data as row}
+          <tr>
+            <td>{row.payout_eth}</td>
+            <td>{row.balance}</td>
+            <td>{row.email_list}</td>
+            <td>{row.monthly_user_payout_id_list}</td>
+          </tr>
+        {:else}
+          <tr><td colspan="4">No Data</td></tr>
+        {/each}
+      {:else}
+        <tr><td colspan="4">No Data</td></tr>
+      {/if}
+      </tbody>
+    </table>
+  {/await}
+
+  <h2>Limbo Payouts</h2>
+  {#await promiseLimboPayouts}
+    <Spinner />
+  {:then res}
+    <table>
+      <thead>
+      <tr>
+        <th>ETH Address</th>
+        <th>µ&nbsp;USD</th>
+        <th>Email(s)</th>
+        <th>Monthly Repo ID(s)</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#if res.data}
+        {#each res.data as row}
+          <tr>
+            <td>{row.payout_eth}</td>
+            <td>{row.balance}</td>
+            <td>{row.email_list}</td>
+            <td>{row.monthly_user_payout_id_list}</td>
+          </tr>
+        {:else}
+          <tr><td colspan="4">No Data</td></tr>
+        {/each}
+      {:else}
+        <tr><td colspan="4">No Data</td></tr>
+      {/if}
+      </tbody>
+    </table>
+  {/await}
+
+  <h2>Payout Action</h2>
+  <button class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={() => payout(exchangeRate)}>
+    Payout
+  </button>
+  Exchange Rate: <input bind:value={exchangeRate}>
+
 </DashboardLayout>

@@ -127,7 +127,7 @@ module.exports = {
     clientLogLevel: 'debug',
     contentBase: "public",
     watchContentBase: true,
-    port: 9084,
+    port: 9085,
     host: '0.0.0.0',
     historyApiFallback: true,
   },

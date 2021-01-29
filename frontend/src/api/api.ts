@@ -121,9 +121,10 @@ export const API = {
       }),
   },
   payouts: {
-    pending: () => apiInstance.post(`/admin/pending-payout`),
+    pending: (type: string) => apiInstance.post(`/admin/pending-payout/${type}`),
     time: () => apiInstance.get(`/admin/time`),
     fakeUser: () => apiInstance.post(`/admin/fake-user`),
     timeWarp: (hours: number) => apiInstance.post(`/admin/timewarp/${hours}`),
+    payout: (exchangeRate: number) => apiInstance.post(`/admin/payout/${exchangeRate}`),
   }
 };
