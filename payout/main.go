@@ -14,14 +14,20 @@ import (
 	"strconv"
 )
 
-type Payout struct {
+type PayoutUsd struct {
 	Address      string `json:"address"`
 	Balance      int64  `json:"balance_micro_USD"`
 	ExchangeRate string `json:"exchange_rate_USD_ETH"`
 }
 
+type PayoutWei struct {
+	Address string  `json:"address"`
+	Balance big.Int `json:"balance_wei"`
+}
+
 type PayoutResponse struct {
-	TxHash string `json:"tx_hash"`
+	TxHash     string      `json:"tx_hash"`
+	PayoutWeis []PayoutWei `json:"payout_weis"`
 }
 
 type Opts struct {
@@ -30,6 +36,7 @@ type Opts struct {
 	EthContract   string
 	EthPrivateKey string
 	EthUrl        string
+	Deploy        bool
 }
 
 var (
@@ -48,8 +55,7 @@ func NewOpts() *Opts {
 	}
 
 	o := &Opts{}
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV",
-		"local"), "ENV variable")
+	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
 		9084), "listening HTTP port")
 	flag.StringVar(&o.EthPrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY",
@@ -58,6 +64,8 @@ func NewOpts() *Opts {
 		"0x731a10897d267e19b34503ad902d0a29173ba4b"), "Ethereum contract address")
 	flag.StringVar(&o.EthUrl, "eth-url", lookupEnv("ETH_URL",
 		"http://172.17.0.1:8545"), "Ethereum URL")
+	flag.BoolVar(&o.Deploy, "deploy", lookupEnv("DEPLOY",
+		"local") != "", "Set to true to deploy contract")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -121,6 +129,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if opts.Deploy {
+		ContractAddr, err = client.deploy(ContractCode)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Contract deployed at %v", ContractAddr)
+	}
+
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 	router.HandleFunc("/pay", PaymentRequestHandler).Methods("POST", "OPTIONS")
@@ -131,7 +147,7 @@ func main() {
 
 func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var data []Payout
+	var data []PayoutUsd
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("Could not decode Webhook Body %v", err)
@@ -141,6 +157,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	var amountWei []*big.Int
 	var addresses []string
+	var payoutWei []PayoutWei
 
 	for _, v := range data {
 		var flt *big.Float
@@ -152,9 +169,24 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		i, _ := balance.Int(nil)
 		amountWei = append(amountWei, i)
 		addresses = append(addresses, v.Address)
+		payoutWei = append(payoutWei, PayoutWei{
+			Address: v.Address,
+			Balance: *i,
+		})
 	}
 
 	log.Printf("received payout request for %v addresses", len(data))
+
+	if len(data) == 0 {
+		log.Printf("no data received, don't write on the chain")
+		return
+	}
+
+	if opts.Env == "local" || opts.Env == "dev" {
+		for k, _ := range addresses {
+			log.Printf("sending %v wei to %s", amountWei[k], addresses[k])
+		}
+	}
 
 	txHash, err := client.fill(addresses, amountWei)
 	if err != nil {
@@ -162,7 +194,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := PayoutResponse{TxHash: txHash}
+	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
