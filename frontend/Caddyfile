@@ -1,8 +1,7 @@
-:9084
+:9085
 root * /var/www/html
 
 route {
   try_files {path} {file} /index.html
   file_server
 }
-
