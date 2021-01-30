@@ -378,7 +378,6 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
-
 	m := mux.Vars(r)
 	h := m["type"]
 	if h == "" {
@@ -386,19 +385,8 @@ func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	var err error
-	var userAggBalances []UserAggBalance
-	switch h {
-	case "pending":
-		userAggBalances, err = getPendingPayouts()
-	case "limbo":
-		userAggBalances, err = getLimboPayouts()
-	case "paid":
-		userAggBalances, err = getPaidPayouts()
-	default:
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
-		return
-	}
+	userAggBalances, err := getDailyPayouts(h)
+
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
@@ -424,7 +412,7 @@ type UserAggBalanceExchangeRate struct {
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {
-	userAggBalances, err := getPendingPayouts()
+	userAggBalances, err := getDailyPayouts("pending")
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
@@ -446,12 +434,12 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 	batchId := uuid.New()
 	for _, ub := range userAggBalances {
 		//TODO: do one SQL insert instead of many small ones
-		for _, mid := range ub.MonthlyUserPayoutIds {
+		for _, mid := range ub.DailyUserPayoutIds {
 			p := PayoutsRequest{
-				MonthlyUserPayoutId: mid,
-				BatchId:             batchId,
-				ExchangeRate:        *e,
-				CreatedAt:           timeNow(),
+				DailyUserPayoutId: mid,
+				BatchId:           batchId,
+				ExchangeRate:      *e,
+				CreatedAt:         timeNow(),
 			}
 			err = savePayoutsRequest(&p)
 			if err != nil {

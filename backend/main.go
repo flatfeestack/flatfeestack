@@ -179,8 +179,8 @@ func main() {
 	}
 
 	//scheduler
-	cronJob("daily", DAILY, dailyRunner)
-	cronJob("monthly", MONTHLY, monthlyRunner)
+	cronJob("daily", 1, dailyRunner)
+	cronJob("weekly", 7, weeklyRunner)
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))

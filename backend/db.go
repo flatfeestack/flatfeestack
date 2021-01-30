@@ -50,18 +50,18 @@ type Payment struct {
 }
 
 type UserAggBalance struct {
-	PayoutEth            string      `json:"payout_eth"`
-	Balance              int64       `json:"balance"`
-	Emails               []string    `json:"email_list"`
-	MonthlyUserPayoutIds []uuid.UUID `json:"monthly_user_payout_id_list"`
-	CreatedAt            time.Time
+	PayoutEth          string      `json:"payout_eth"`
+	Balance            int64       `json:"balance"`
+	Emails             []string    `json:"email_list"`
+	DailyUserPayoutIds []uuid.UUID `json:"daily_user_payout_id_list"`
+	CreatedAt          time.Time
 }
 
 type PayoutsRequest struct {
-	MonthlyUserPayoutId uuid.UUID `json:"monthly-repo-balance-id"`
-	BatchId             uuid.UUID `json:"batch-id"`
-	ExchangeRate        big.Float
-	CreatedAt           time.Time
+	DailyUserPayoutId uuid.UUID `json:"daily-repo-balance-id"`
+	BatchId           uuid.UUID `json:"batch-id"`
+	ExchangeRate      big.Float
+	CreatedAt         time.Time
 }
 
 type PayoutsResponse struct {
@@ -186,11 +186,10 @@ func getSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
             JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.unsponsor_at = to_date('9999', 'YYYY')`
 	rows, err := db.Query(sql, userId)
-	defer rows.Close()
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var repo Repo
@@ -274,11 +273,10 @@ func findGitEmails(uid uuid.UUID) ([]string, error) {
 	var emails []string
 	sql := "SELECT email FROM git_email WHERE user_id=$1"
 	rows, err := db.Query(sql, uid)
-	defer rows.Close()
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var email string
@@ -354,30 +352,30 @@ func savePayment(p *Payment) error {
 
 func savePayoutsRequest(p *PayoutsRequest) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_request(monthly_user_payout_id, batch_id, exchange_rate, created_at) 
+				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at) 
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.MonthlyUserPayoutId, err)
+		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.DailyUserPayoutId, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(p.MonthlyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
-	return handleErr(res, err, "INSERT INTO payouts_request", p.MonthlyUserPayoutId)
+	res, err = stmt.Exec(p.DailyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
+	return handleErr(res, err, "INSERT INTO payouts_request", p.DailyUserPayoutId)
 }
 
 func savePayoutsResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response(id, batch_id, tx_hash, created_at) 
-				VALUES($1, $2, $3, $4)`)
+				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.CreatedAt)
+	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
 	err = handleErr(res, err, "INSERT INTO payouts_response", p.BatchId)
 	if err != nil {
 		return err
@@ -405,99 +403,48 @@ func savePayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 	return handleErr(res, err, "INSERT INTO payouts_response_details", pid)
 }
 
-func getPendingPayouts() ([]UserAggBalance, error) {
+func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	var userAggBalances []UserAggBalance
 	//select monthly payments, but only those that do not have a payout entry
-	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
-				FROM monthly_user_payout m 
-			    JOIN users u ON m.user_id = u.id 
-				LEFT JOIN payouts_request p ON p.monthly_user_payout_id = m.id
+	var query string
+	switch s {
+	case "pending":
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
+				FROM daily_user_payout dup 
+			    JOIN users u ON dup.user_id = u.id 
+				LEFT JOIN payouts_request p ON p.daily_user_payout_id = dup.id
 				WHERE p.id IS NULL
-				GROUP BY u.payout_eth
-				HAVING SUM(m.balance) > 10000`
-
-	rows, err := db.Query(query)
-	defer rows.Close()
-
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		for rows.Next() {
-			var userAggBalance UserAggBalance
-			err = rows.Scan(&userAggBalance.PayoutEth,
-				pq.Array(&userAggBalance.Emails),
-				&userAggBalance.Balance,
-				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
-			if err != nil {
-				return nil, err
-			}
-			userAggBalances = append(userAggBalances, userAggBalance)
-		}
-		return userAggBalances, nil
-	default:
-		return nil, err
-	}
-}
-
-func getPaidPayouts() ([]UserAggBalance, error) {
-	var userAggBalances []UserAggBalance
-	//select monthly payments, but only those that do not have a payout entry
-	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
-				FROM monthly_user_payout m 
-			    JOIN users u ON m.user_id = u.id 
-				JOIN payouts_request preq ON preq.monthly_user_payout_id = m.id
+				GROUP BY u.payout_eth`
+	case "paid":
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
+				FROM daily_user_payout dup
+			    JOIN users u ON dup.user_id = u.id 
+				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
 				JOIN payouts_response pres ON pres.batch_id = preq.batch_id
+                WHERE pres.error is NULL
 				GROUP BY u.payout_eth`
-
-	rows, err := db.Query(query)
-	defer rows.Close()
-
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		for rows.Next() {
-			var userAggBalance UserAggBalance
-			err = rows.Scan(&userAggBalance.PayoutEth,
-				pq.Array(&userAggBalance.Emails),
-				&userAggBalance.Balance,
-				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
-			if err != nil {
-				return nil, err
-			}
-			userAggBalances = append(userAggBalances, userAggBalance)
-		}
-		return userAggBalances, nil
-	default:
-		return nil, err
-	}
-}
-
-func getLimboPayouts() ([]UserAggBalance, error) {
-	var userAggBalances []UserAggBalance
-	//select monthly payments, but only those that do not have a payout entry
-	query := `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(m.balance), ARRAY_AGG(m.id) as id_list
-				FROM monthly_user_payout m 
-			    JOIN users u ON m.user_id = u.id 
-				JOIN payouts_request preq ON preq.monthly_user_payout_id = m.id
+	default: //limbo
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
+				FROM daily_user_payout dup
+			    JOIN users u ON dup.user_id = u.id 
+				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
 				LEFT JOIN payouts_response pres ON pres.batch_id = preq.batch_id
-				WHERE pres.id IS NULL
+				WHERE pres.id IS NULL OR pres.error is NOT NULL
 				GROUP BY u.payout_eth`
-
+	}
 	rows, err := db.Query(query)
-	defer rows.Close()
 
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
 	case nil:
+		defer rows.Close()
 		for rows.Next() {
 			var userAggBalance UserAggBalance
 			err = rows.Scan(&userAggBalance.PayoutEth,
 				pq.Array(&userAggBalance.Emails),
 				&userAggBalance.Balance,
-				pq.Array(&userAggBalance.MonthlyUserPayoutIds))
+				pq.Array(&userAggBalance.DailyUserPayoutIds))
 			if err != nil {
 				return nil, err
 			}

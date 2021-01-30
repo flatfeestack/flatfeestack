@@ -12,11 +12,6 @@ import (
 	"time"
 )
 
-const (
-	DAILY = iota + 1
-	MONTHLY
-)
-
 var (
 	jobs []Job
 	ctx  = context.Background()
@@ -24,7 +19,7 @@ var (
 
 type Job struct {
 	name     string
-	myTime   int
+	days     int
 	f        func(now time.Time) error
 	nextExec *time.Time
 }
@@ -45,7 +40,7 @@ func init() {
 							if err != nil {
 								log.Printf("Error in job %v run at %v: %v", job.name, job.nextExec, err)
 							}
-							next := cronNext(job.myTime, *job.nextExec)
+							next := cronNext(job.days, *job.nextExec)
 							jobs[k].nextExec = &next
 							again = true
 						}
@@ -63,24 +58,17 @@ func cronStop() {
 	ctx.Done()
 }
 
-func cronJob(name string, myTime int, f func(now time.Time) error) {
+func cronJob(name string, days int, f func(now time.Time) error) {
 	now := timeNow()
-	next := cronNext(myTime, now)
+	next := cronNext(days, now)
 	jobs = append(jobs, Job{
 		name:     name,
-		myTime:   myTime,
+		days:     days,
 		f:        f,
 		nextExec: &next,
 	})
 }
 
-func cronNext(myTime int, now time.Time) time.Time {
-	var next time.Time
-	switch myTime {
-	case MONTHLY:
-		next = time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
-	case DAILY:
-		next = time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-	}
-	return next
+func cronNext(days int, now time.Time) time.Time {
+	return time.Date(now.Year(), now.Month(), now.Day()+days, 0, 0, 0, 0, now.Location())
 }
