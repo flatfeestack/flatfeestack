@@ -52,7 +52,6 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - ./.db:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./backend/sched.sql:/docker-entrypoint-initdb.d/1-sched.sql
     ports:
       - 5432:5432
     environment:
