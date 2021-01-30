@@ -162,6 +162,10 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 	for _, v := range data {
 		var flt *big.Float
 		flt, _, err = big.ParseFloat(data[0].ExchangeRate, 10, 128, big.ToZero)
+		if flt.Cmp(big.NewFloat(0)) == 0 {
+			writeErr(w, http.StatusBadRequest, "exchange rate is zero, cannot calculate")
+			return
+		}
 		balance := new(big.Float)
 		balance.SetInt64(v.Balance)
 		balance = balance.Mul(balance, UsdWei)
