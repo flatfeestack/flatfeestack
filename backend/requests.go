@@ -91,7 +91,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	return saveAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
+	return insertAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
 }
 
 /*

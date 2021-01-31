@@ -69,7 +69,7 @@ func getMyUser(w http.ResponseWriter, _ *http.Request, user *User) {
 // @Failure 500
 // @Router /backend/users/me/connectedEmails [get]
 func getMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *User) {
-	emails, err := findGitEmails(user.Id)
+	emails, err := findGitEmailsByUserId(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not find git emails %v", err)
 		return
@@ -101,7 +101,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	//TODO: send email to user and add email after verification
-	err = saveGitEmail(uuid.New(), user.Id, body.Email, timeNow())
+	err = insertGitEmail(uuid.New(), user.Id, body.Email, timeNow())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save email: %v", err)
 		return
@@ -150,7 +150,7 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 // @Failure 400
 // @Router /backend/users/sponsored [get]
 func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
-	repos, err := getSponsoredReposById(user.Id)
+	repos, err := findSponsoredReposById(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not get repos: %v", err)
 		return
@@ -212,7 +212,7 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 		return
 	}
 
-	repo, err := findRepoByID(id)
+	repo, err := findRepoById(id)
 	if repo == nil {
 		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", id)
 		return
@@ -231,7 +231,7 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 }
 
 /*
- *	==== SPONSOR EVENT ====
+ *	==== Active EVENT ====
  */
 
 func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
@@ -258,12 +258,12 @@ func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	var repoId *uuid.UUID
-	repoId, err = saveRepo(&repo)
+	repoId, err = insertOrUpdateRepo(&repo)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could store in DB: %v", err)
 		return
 	}
-	sponsorRepo0(w, user, *repoId, SPONSOR)
+	sponsorRepo0(w, user, *repoId, Active)
 }
 
 // @Summary Sponsor a repo
@@ -273,7 +273,7 @@ func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
 // @Produce  json
 // @Success 200
 // @Failure 400
-// @Router /backend/repos/{id}/sponsor [post]
+// @Router /backend/repos/{id}/insertOrUpdateSponsor [post]
 func sponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	id, err := uuid.Parse(params["id"])
@@ -281,7 +281,7 @@ func sponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
-	sponsorRepo0(w, user, id, SPONSOR)
+	sponsorRepo0(w, user, id, Active)
 }
 
 // @Summary Unsponsor a repo
@@ -299,7 +299,7 @@ func unsponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
-	sponsorRepo0(w, user, repoId, UNSPONSOR)
+	sponsorRepo0(w, user, repoId, Inactive)
 }
 func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
 	now := timeNow()
@@ -311,7 +311,7 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		SponsorAt:   now,
 		UnsponsorAt: now,
 	}
-	userErr, err := sponsor(&event)
+	userErr, err := insertOrUpdateSponsor(&event)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
 		return
@@ -324,7 +324,7 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 	//no need for transaction here, repoId is very static
 	log.Printf("repoId %v", repoId)
 	var repo *Repo
-	repo, err = findRepoByID(repoId)
+	repo, err = findRepoById(repoId)
 	if repo == nil {
 		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", repoId)
 		return
@@ -334,7 +334,7 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		return
 	}
 	// TODO: only if repo is sponsored for the first time
-	if newEventType == SPONSOR {
+	if newEventType == Active {
 		err = analysisRequest(repo.Id, *repo.Url)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
@@ -366,7 +366,7 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	}
 	rowsAffected := 0
 	for _, wh := range data.Result {
-		err = saveAnalysisResponse(rid, &wh, timeNow())
+		err = insertAnalysisResponse(rid, &wh, timeNow())
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "insert error: %v", err)
 			return
@@ -441,7 +441,7 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 				ExchangeRate:      *e,
 				CreatedAt:         timeNow(),
 			}
-			err = savePayoutsRequest(&p)
+			err = insertPayoutsRequest(&p)
 			if err != nil {
 				writeErr(w, http.StatusBadRequest, "Could not send payout0: %v", err)
 				return
@@ -480,14 +480,14 @@ func payout0(pts []PayoutToService, batchId uuid.UUID) error {
 	res, err := payoutRequest(pts)
 	if err != nil {
 		err1 := err.Error()
-		err2 := savePayoutsResponse(&PayoutsResponse{
+		err2 := insertPayoutsResponse(&PayoutsResponse{
 			BatchId:   batchId,
 			Error:     &err1,
 			CreatedAt: timeNow(),
 		})
 		return fmt.Errorf("error %v/%v", err, err2)
 	}
-	return savePayoutsResponse(&PayoutsResponse{
+	return insertPayoutsResponse(&PayoutsResponse{
 		BatchId:    batchId,
 		Error:      nil,
 		CreatedAt:  timeNow(),
@@ -524,10 +524,10 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		Id:        uuid.New(),
 		Uid:       *uid1,
 		RepoId:    *rid1,
-		EventType: SPONSOR,
+		EventType: Active,
 		SponsorAt: timeNow(),
 	}
-	err1, err2 := sponsor(&s1)
+	err1, err2 := insertOrUpdateSponsor(&s1)
 	if err1 != nil || err2 != nil {
 		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
 		return
@@ -537,10 +537,10 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		Id:          uuid.New(),
 		Uid:         *uid1,
 		RepoId:      *rid1,
-		EventType:   UNSPONSOR,
+		EventType:   Inactive,
 		UnsponsorAt: timeNow().Add(time.Duration(24) * time.Hour),
 	}
-	err1, err2 = sponsor(&s2)
+	err1, err2 = insertOrUpdateSponsor(&s2)
 	if err1 != nil || err2 != nil {
 		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
 		return
@@ -550,10 +550,10 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		Id:        uuid.New(),
 		Uid:       *uid2,
 		RepoId:    *rid2,
-		EventType: SPONSOR,
+		EventType: Active,
 		SponsorAt: timeNow(),
 	}
-	err1, err2 = sponsor(&s3)
+	err1, err2 = insertOrUpdateSponsor(&s3)
 	if err1 != nil || err2 != nil {
 		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
 		return
@@ -563,22 +563,22 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		Id:        uuid.New(),
 		Uid:       *uid1,
 		RepoId:    *rid2,
-		EventType: SPONSOR,
+		EventType: Active,
 		SponsorAt: timeNow(),
 	}
-	err1, err2 = sponsor(&s4)
+	err1, err2 = insertOrUpdateSponsor(&s4)
 	if err1 != nil || err2 != nil {
 		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
 		return
 	}
 
 	//fake contribution
-	err = saveGitEmail(uuid.New(), *uid1, "tom@tom.tom", timeNow())
+	err = insertGitEmail(uuid.New(), *uid1, "tom@tom.tom", timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
 	}
-	err = saveGitEmail(uuid.New(), *uid2, "sam@sam.sam", timeNow())
+	err = insertGitEmail(uuid.New(), *uid2, "sam@sam.sam", timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
@@ -592,28 +592,28 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
-	monthStart := time2Month(timeNow()) //$2
-	monthStop := monthStart.AddDate(0, int(monthStart.Month()), 0)
+	monthStart := timeNow().AddDate(0, -1, 0)                      //$2
+	monthStop := monthStart.AddDate(0, int(monthStart.Month()), 0) //$1
 
 	aid1 := uuid.New()
 	aid2 := uuid.New()
-	err := saveAnalysisRequest(aid1, *rid1, *monthStart, monthStop, "master", timeNow())
+	err := insertAnalysisRequest(aid1, *rid1, monthStart, monthStop, "master", timeNow())
 	if err != nil {
 		return err
 	}
-	err = saveAnalysisRequest(aid2, *rid2, *monthStart, monthStop, "master", timeNow())
+	err = insertAnalysisRequest(aid2, *rid2, monthStart, monthStop, "master", timeNow())
 	if err != nil {
 		return err
 	}
 
-	err = saveAnalysisResponse(aid1, &FlatFeeWeight{
+	err = insertAnalysisResponse(aid1, &FlatFeeWeight{
 		Email:  "tom@tom.tom",
 		Weight: 0.55,
 	}, timeNow())
 	if err != nil {
 		return err
 	}
-	err = saveAnalysisResponse(aid2, &FlatFeeWeight{
+	err = insertAnalysisResponse(aid2, &FlatFeeWeight{
 		Email:  "sam@sam.sam",
 		Weight: 0.6,
 	}, timeNow())
@@ -629,7 +629,7 @@ func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth strin
 		StripeId:          stringPointer("strip-id"),
 		Email:             &email,
 		Subscription:      stringPointer("sub"),
-		SubscriptionState: stringPointer("ACTIVE"),
+		SubscriptionState: stringPointer("Active"),
 		PayoutETH:         &payoutEth,
 		CreatedAt:         timeNow(),
 	}
@@ -642,11 +642,11 @@ func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth strin
 		Description: stringPointer("desc"),
 		CreatedAt:   timeNow(),
 	}
-	err := saveUser(&u)
+	err := insertUser(&u)
 	if err != nil {
 		return nil, nil, err
 	}
-	id, err := saveRepo(&r)
+	id, err := insertOrUpdateRepo(&r)
 	if err != nil {
 		return nil, nil, err
 	}

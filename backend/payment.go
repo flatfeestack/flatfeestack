@@ -70,7 +70,7 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 	}
 	if opts.Env == "local" {
 		user.Subscription = user.StripeId
-		a := "ACTIVE"
+		a := "Active"
 		user.SubscriptionState = &a
 		err := updateUser(&user)
 		if err != nil {
@@ -241,7 +241,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil {
 			invoiceData := invoice.Lines.Data[0]
 			uuid, err := uuid.Parse(cufull.Metadata["uid"])
-			err = savePayment(&Payment{Uid: uuid, From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
+			err = insertPayment(&Payment{Uid: uuid, From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
 
 			if err != nil {
 				log.Printf("invoice.payment_succeeded: Error saving payment %v\n", err)
@@ -272,7 +272,7 @@ func checkSubscription(subscription *stripe.Subscription) int {
 		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
 		return http.StatusBadRequest
 	}
-	user, err := findUserByID(uid)
+	user, err := findUserById(uid)
 	if err != nil {
 		log.Printf("customer.subscription.created: No matching user found %v\n", err)
 		return http.StatusBadRequest

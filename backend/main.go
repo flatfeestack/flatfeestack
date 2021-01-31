@@ -26,8 +26,12 @@ import (
 )
 
 const (
-	SPONSOR = iota + 1
-	UNSPONSOR
+	Active = iota + 1
+	Inactive
+)
+
+const (
+	mUSDPerHour = 13750 //1.375 cents - x 10'000
 )
 
 var (
@@ -158,10 +162,10 @@ func main() {
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	//repo github
 	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
-	apiRouter.HandleFunc("/repos/sponsor/github/{id}", jwtAuthUser(sponsorRepoGitHub)).Methods("POST")
+	apiRouter.HandleFunc("/repos/insertOrUpdateSponsor/github/{id}", jwtAuthUser(sponsorRepoGitHub)).Methods("POST")
 	//repo
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
-	apiRouter.HandleFunc("/repos/{id}/sponsor", jwtAuthUser(sponsorRepo)).Methods("POST")
+	apiRouter.HandleFunc("/repos/{id}/insertOrUpdateSponsor", jwtAuthUser(sponsorRepo)).Methods("POST")
 	apiRouter.HandleFunc("/repos/{id}/unsponsor", jwtAuthUser(unsponsorRepo)).Methods("POST")
 	//payment
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
@@ -179,8 +183,7 @@ func main() {
 	}
 
 	//scheduler
-	cronJob("daily", 1, dailyRunner)
-	cronJob("weekly", 7, weeklyRunner)
+	cronJob(dailyRunner, timeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
@@ -311,7 +314,7 @@ func createUser(email string) (*User, error) {
 		user.StripeId = &opts.Env
 	}
 
-	err = saveUser(&user)
+	err = insertUser(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +327,7 @@ func stringPointer(s string) *string {
 }
 
 func timeNow() time.Time {
-	if opts.Env == "local" || opts.Env == "dev" {
+	if opts != nil && (opts.Env == "local" || opts.Env == "dev") {
 		return time.Now().Add(time.Duration(hoursAdd) * time.Hour)
 	} else {
 		return time.Now()

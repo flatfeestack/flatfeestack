@@ -48,8 +48,7 @@ func TestMain(m *testing.M) {
 	resource.Expire(3600) //1h
 	port := resource.GetPort("5432/tcp")
 	log.Printf("DB port: %v\n", port)
-	if err := pool.Retry(func() error {
-		var err error
+	if err = pool.Retry(func() error {
 		db, err = sql.Open("postgres", fmt.Sprintf("postgresql://postgres:password@localhost:%s/testdb?sslmode=disable", port))
 		if err != nil {
 			return err
@@ -103,7 +102,7 @@ func runSQL(db *sql.DB, files ...string) error {
 }
 
 func setup() {
-	err := runSQL(db, "init.sql", "sched.sql")
+	err := runSQL(db, "init.sql")
 	if err != nil {
 		log.Fatalf("Could run init scripts: %s", err)
 	}

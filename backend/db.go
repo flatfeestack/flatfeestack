@@ -1,5 +1,6 @@
 package main
 
+//https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/
 import (
 	"database/sql"
 	"fmt"
@@ -7,6 +8,7 @@ import (
 	"github.com/lib/pq"
 	"log"
 	"math/big"
+	"strconv"
 	"time"
 )
 
@@ -72,7 +74,6 @@ type PayoutsResponse struct {
 	PayoutWeis []PayoutWei
 }
 
-// FindByID returns a single user
 func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
@@ -88,8 +89,7 @@ func findUserByEmail(email string) (*User, error) {
 	}
 }
 
-// FindByID returns a single user
-func findUserByID(uid uuid.UUID) (*User, error) {
+func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
 		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE id=$1", uid).
@@ -104,8 +104,7 @@ func findUserByID(uid uuid.UUID) (*User, error) {
 	}
 }
 
-// Save inserts a user into the database
-func saveUser(user *User) error {
+func insertUser(user *User) error {
 	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, subscription_state, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
@@ -114,7 +113,10 @@ func saveUser(user *User) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, user.SubscriptionState, user.CreatedAt)
-	return handleErr(res, err, "INSERT INTO users", user)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
 func updateUser(user *User) error {
@@ -126,32 +128,37 @@ func updateUser(user *User) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(user.Email, user.StripeId, user.Subscription, user.SubscriptionState, user.PayoutETH, user.Id)
-	return handleErr(res, err, "UPDATE users", user)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-//sponsor events
-func sponsor(event *SponsorEvent) (userError error, systemError error) {
-	//first get last sponsored event to check if we need to sponsor or unsponsor
+//*********************************************************************************
+//******************************* Sponsoring **************************************
+//*********************************************************************************
+func insertOrUpdateSponsor(event *SponsorEvent) (userError error, systemError error) {
+	//first get last sponsored event to check if we need to insertOrUpdateSponsor or unsponsor
 	//TODO: use mutex
-	id, _, unsponsorAt, err := lastEventSponsoredRepo(event.Uid, event.RepoId)
+	id, _, unsponsorAt, err := findLastEventSponsoredRepo(event.Uid, event.RepoId)
 	if err != nil {
 		return nil, err
 	}
 
-	if id == nil && event.EventType == UNSPONSOR {
+	if id == nil && event.EventType == Inactive {
 		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo"), nil
 	}
 
-	if id != nil && event.EventType == UNSPONSOR && unsponsorAt.Year() != 9999 {
+	if id != nil && event.EventType == Inactive && unsponsorAt.Year() != 9999 {
 		return fmt.Errorf("we want to unsponsor, but we already unsponsored it"), nil
 	}
 
-	if id != nil && event.EventType == SPONSOR && event.SponsorAt.Before(*unsponsorAt) {
-		return fmt.Errorf("we want to sponsor, but we are already sponsoring this repo: "+
+	if id != nil && event.EventType == Active && event.SponsorAt.Before(*unsponsorAt) {
+		return fmt.Errorf("we want to insertOrUpdateSponsor, but we are already sponsoring this repo: "+
 			"sponsor_at: %v, unsponsor_at: %v, %v", event.SponsorAt, unsponsorAt, event.SponsorAt.Before(*unsponsorAt)), nil
 	}
 
-	if event.EventType == SPONSOR {
+	if event.EventType == Active {
 		//insert
 		stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, sponsor_at) VALUES ($1, $2, $3, $4)")
 		if err != nil {
@@ -161,8 +168,11 @@ func sponsor(event *SponsorEvent) (userError error, systemError error) {
 
 		var res sql.Result
 		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.SponsorAt)
-		return nil, handleErr(res, err, "INSERT INTO sponsor_event", event)
-	} else if event.EventType == UNSPONSOR {
+		if err != nil {
+			return nil, err
+		}
+		return nil, handleErrMustInsertOne(res)
+	} else if event.EventType == Inactive {
 		//update
 		stmt, err := db.Prepare("UPDATE sponsor_event SET unsponsor_at=$1 WHERE id=$2 AND unsponsor_at = to_date('9999', 'YYYY')")
 		if err != nil {
@@ -172,14 +182,37 @@ func sponsor(event *SponsorEvent) (userError error, systemError error) {
 
 		var res sql.Result
 		res, err = stmt.Exec(event.UnsponsorAt, id)
-		return nil, handleErr(res, err, "UPDATE sponsor_event", id)
+		if err != nil {
+			return nil, err
+		}
+		return nil, handleErrMustInsertOne(res)
 	} else {
 		return nil, fmt.Errorf("unknown event type %v", event.EventType)
 	}
 }
 
-// Repositories
-func getSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
+func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+	var sponsorAt *time.Time
+	var unsponsorAt *time.Time
+	var id *uuid.UUID
+	err := db.
+		QueryRow(`SELECT id, sponsor_at, unsponsor_at
+			      		 FROM sponsor_event 
+						 WHERE user_id=$1 AND repo_id=$2 AND sponsor_at=
+						     (SELECT max(sponsor_at) FROM sponsor_event WHERE user_id=$1 AND repo_id=$2)`,
+			uid, rid).Scan(&id, &sponsorAt, &unsponsorAt)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil, nil, nil
+	case nil:
+		return id, sponsorAt, unsponsorAt, nil
+	default:
+		return nil, nil, nil, err
+	}
+}
+
+// Repositories and Sponsors
+func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	var repos []Repo
 	sql := `SELECT r.id, r.orig_id, r.url, name, description 
             FROM sponsor_event s
@@ -202,61 +235,30 @@ func getSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	return repos, nil
 }
 
-func lastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
-	var sponsorAt *time.Time
-	var unsponsorAt *time.Time
-	var id *uuid.UUID
-	err := db.
-		QueryRow(`SELECT id, sponsor_at, unsponsor_at
-			      		 FROM sponsor_event 
-						 WHERE user_id=$1 AND repo_id=$2 AND sponsor_at=
-						     (SELECT max(sponsor_at) FROM sponsor_event WHERE user_id=$1 AND repo_id=$2)`,
-			uid, rid).Scan(&id, &sponsorAt, &unsponsorAt)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil, nil, nil
-	case nil:
-		return id, sponsorAt, unsponsorAt, nil
-	default:
-		return nil, nil, nil, err
-	}
-}
-
-func saveRepo(repo *Repo) (*uuid.UUID, error) {
+//*********************************************************************************
+//******************************* Repository **************************************
+//*********************************************************************************
+func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description, created_at) 
 									VALUES ($1, $2, $3, $4, $5, $6)
-									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5`)
+									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5 RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
 	defer stmt.Close()
 
-	var res sql.Result
-	res, err = stmt.Exec(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description, repo.CreatedAt)
-	err = handleErr(res, err, "INSERT INTO repo", repo)
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description, repo.CreatedAt).Scan(&lastInsertId)
 	if err != nil {
-		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
-	}
-
-	//"RETURNING" clause does not work with SQLite, so getting back with a select
-	//its not transactional, but it does not matter, once written, the url and id do not change
-	//TODO: now we use postgres exclusively, do returning again
-	var id uuid.UUID
-	err = db.
-		QueryRow("SELECT id FROM repo WHERE repo.Url=$1", repo.Url).
-		Scan(&id)
-	switch err {
-	case nil:
-		return &id, nil
-	default:
 		return nil, err
 	}
+	return &lastInsertId, nil
 }
 
-func findRepoByID(rid uuid.UUID) (*Repo, error) {
+func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	var r Repo
 	err := db.
-		QueryRow("SELECT id, orig_id, url, name, description FROM repo WHERE id=$1", rid).
+		QueryRow("SELECT id, orig_id, url, name, description FROM repo WHERE id=$1", repoId).
 		Scan(&r.Id, &r.OrigId, &r.Name, &r.Url, &r.Description)
 	switch err {
 	case sql.ErrNoRows:
@@ -268,8 +270,10 @@ func findRepoByID(rid uuid.UUID) (*Repo, error) {
 	}
 }
 
-//connected emails
-func findGitEmails(uid uuid.UUID) ([]string, error) {
+//*********************************************************************************
+//*******************************  Connected emails *******************************
+//*********************************************************************************
+func findGitEmailsByUserId(uid uuid.UUID) ([]string, error) {
 	var emails []string
 	sql := "SELECT email FROM git_email WHERE user_id=$1"
 	rows, err := db.Query(sql, uid)
@@ -289,7 +293,7 @@ func findGitEmails(uid uuid.UUID) ([]string, error) {
 	return emails, nil
 }
 
-func saveGitEmail(id uuid.UUID, uid uuid.UUID, email string, now time.Time) error {
+func insertGitEmail(id uuid.UUID, uid uuid.UUID, email string, now time.Time) error {
 	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email, created_at) VALUES($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
@@ -298,7 +302,10 @@ func saveGitEmail(id uuid.UUID, uid uuid.UUID, email string, now time.Time) erro
 
 	var res sql.Result
 	res, err = stmt.Exec(id, uid, email, now)
-	return handleErr(res, err, "INSERT INTO git_email", email)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
 func deleteGitEmail(uid uuid.UUID, email string) error {
@@ -311,10 +318,16 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(email, uid)
-	return handleErr(res, err, "DELETE FROM git_email", email)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-func saveAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string, now time.Time) error {
+//*********************************************************************************
+//******************************* Analysis Requests *******************************
+//*********************************************************************************
+func insertAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string, now time.Time) error {
 	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, branch, created_at) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", id, err)
@@ -323,10 +336,13 @@ func saveAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, d
 
 	var res sql.Result
 	res, err = stmt.Exec(id, repo_id, date_from, date_to, branch, now)
-	return handleErr(res, err, "INSERT INTO exchange", id)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-func saveAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error {
+func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error {
 	stmt, err := db.Prepare("INSERT INTO analysis_response(id, analysis_request_id, git_email, weight, created_at) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_response for %v/%v statement event: %v", aid, w, err)
@@ -335,10 +351,16 @@ func saveAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error 
 
 	var res sql.Result
 	res, err = stmt.Exec(uuid.New(), aid, w.Email, w.Weight, now)
-	return handleErr(res, err, "INSERT INTO analysis_response", aid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-func savePayment(p *Payment) error {
+//*********************************************************************************
+//******************************* Payments ****************************************
+//*********************************************************************************
+func insertPayment(p *Payment) error {
 	stmt, err := db.Prepare("INSERT INTO payments(id, user_id, date_from, date_to, sub, amount) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payments for %v statement event: %v", p.Id, err)
@@ -347,10 +369,16 @@ func savePayment(p *Payment) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(p.Id, p.Uid, p.From, p.To, p.Sub, p.Amount)
-	return handleErr(res, err, "INSERT INTO payments", p.Id)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-func savePayoutsRequest(p *PayoutsRequest) error {
+//*********************************************************************************
+//******************************* Payouts *****************************************
+//*********************************************************************************
+func insertPayoutsRequest(p *PayoutsRequest) error {
 	stmt, err := db.Prepare(`
 				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at) 
 				VALUES($1, $2, $3, $4)`)
@@ -361,10 +389,13 @@ func savePayoutsRequest(p *PayoutsRequest) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(p.DailyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
-	return handleErr(res, err, "INSERT INTO payouts_request", p.DailyUserPayoutId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
-func savePayoutsResponse(p *PayoutsResponse) error {
+func insertPayoutsResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
 				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at) 
@@ -376,12 +407,15 @@ func savePayoutsResponse(p *PayoutsResponse) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
-	err = handleErr(res, err, "INSERT INTO payouts_response", p.BatchId)
+	if err != nil {
+		return err
+	}
+	err = handleErrMustInsertOne(res)
 	if err != nil {
 		return err
 	}
 	for _, v := range p.PayoutWeis {
-		err = savePayoutsResponseDetails(pid, &v)
+		err = insertPayoutsResponseDetails(pid, &v)
 		if err != nil {
 			return err
 		}
@@ -389,7 +423,7 @@ func savePayoutsResponse(p *PayoutsResponse) error {
 	return nil
 }
 
-func savePayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
+func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 	stmt, err := db.Prepare(`
 				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at) 
 				VALUES($1, $2, $3, $4)`)
@@ -400,7 +434,202 @@ func savePayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
-	return handleErr(res, err, "INSERT INTO payouts_response_details", pid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+//*********************************************************************************
+//******************************* Daily calculations ******************************
+//*********************************************************************************
+func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	//https://stackoverflow.com/questions/17833176/postgresql-days-months-years-between-two-dates
+	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day, created_at)
+              SELECT s.user_id, 
+                     SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::int) as repo_hours, 
+                     $1 as day, $3 as created_at
+                FROM sponsor_event s 
+                    JOIN users u ON u.id = s.user_id
+                WHERE u.subscription_state='Active' 
+                    AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+                GROUP by s.user_id`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+//TODO: limit user to 10000 repos
+//we can support up to 1000 (1h) - 27500 (24h) repos until the precision makes the distribution of 0
+func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	sUSDPerHour := strconv.Itoa(mUSDPerHour)
+	stmt, err := db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day, created_at)
+		   SELECT repo_id, 
+				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * ` + sUSDPerHour + `) / drh.repo_hours) + COALESCE((
+		             SELECT dfl.balance 
+		             FROM daily_future_leftover dfl 
+		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0), 
+			      $1 as day, 
+                  $3 as created_at
+			 FROM sponsor_event s
+			     JOIN users u ON u.id = s.user_id 
+			     JOIN daily_repo_hours drh ON u.id = drh.user_id
+			 WHERE u.subscription_state='Active' AND drh.day=$1 
+			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+			 GROUP by s.repo_id`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, day, created_at)
+		SELECT res.git_email as email, 
+		       FLOOR(SUM(res.weight * drb.balance)) as balance, 
+		       $1 as day, 
+		       $3 as created_at
+        FROM analysis_response res
+            JOIN (SELECT req.id, req.repo_id FROM analysis_request req
+                JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	WHERE date_to <= $2 GROUP BY repo_id) 
+                    AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
+                AS req ON res.analysis_request_id = req.id
+            JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
+        WHERE drb.day = $1
+		GROUP BY res.git_email`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_repo_weight (repo_id, weight, day, created_at)
+		SELECT req.repo_id as repo_id, 
+		       SUM(res.weight) as weight,
+		       $1 as day, 
+		       $3 as created_at
+        FROM analysis_response res
+            JOIN (SELECT req.id, req.repo_id FROM analysis_request req
+                JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	WHERE date_to <= $2 GROUP BY repo_id) 
+                    AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
+                AS req ON res.analysis_request_id = req.id
+			JOIN git_email g ON g.email = res.git_email
+		GROUP BY req.repo_id`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_user_payout (user_id, balance, day, created_at)
+		SELECT g.user_id as user_id, 
+		       FLOOR(SUM(drb.balance * res.weight / drw.weight)) as balance, 
+		       $1 as day, 
+		       $3 as created_at
+        FROM analysis_response res
+            JOIN (SELECT req.id, req.repo_id FROM analysis_request req
+                JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	WHERE date_to <= $2 GROUP BY repo_id) 
+                    AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
+                AS req ON res.analysis_request_id = req.id
+            JOIN git_email g ON g.email = res.git_email
+            JOIN daily_repo_weight drw ON drw.repo_id = req.repo_id
+            JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
+        WHERE drw.day = $1 AND drb.day = $1
+		GROUP BY g.user_id`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_future_leftover (repo_id, balance, day, created_at)
+		SELECT drb.repo_id, drb.balance, $2 as day, $3 as created_at
+        FROM daily_repo_balance drb
+            LEFT JOIN daily_repo_weight drw ON drb.repo_id = drw.repo_id
+        WHERE drw.repo_id IS NULL AND drb.day = $1`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
+	sql := `SELECT drw.repo_id, r.url
+            FROM analysis_response res
+                JOIN (SELECT req.id, req.repo_id, req.date_to FROM analysis_request req
+                    JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	GROUP BY repo_id) 
+                        AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
+                    AS req ON res.analysis_request_id = req.id
+		        JOIN daily_repo_weight drw ON drw.repo_id=req.repo_id
+			    JOIN repo r ON drw.repo_id = r.id 
+			WHERE DATE_PART('day', AGE(req.date_to, $1)) > $2`
+	rows, err := db.Query(sql, now, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var repos []Repo
+	for rows.Next() {
+		var repo Repo
+		err = rows.Scan(&repo.Id, &repo.Url)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
 }
 
 func getDailyPayouts(s string) ([]UserAggBalance, error) {
@@ -456,16 +685,23 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	}
 }
 
-func handleErr(res sql.Result, err error, info string, value interface{}) error {
-	if err != nil {
-		return fmt.Errorf("%v query %v failed: %v", info, value, err)
-	}
-	var nr int64
-	nr, err = res.RowsAffected()
+func handleErrMustInsertOne(res sql.Result) error {
+	nr, err := res.RowsAffected()
 	if nr == 0 || err != nil {
-		return fmt.Errorf("%v %v rows %v, affected or err: %v", info, nr, value, err)
+		return err
+	}
+	if nr != 1 {
+		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
 	}
 	return nil
+}
+
+func handleErr(res sql.Result) (int64, error) {
+	nr, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return nr, nil
 }
 
 // stringPointer connection with postgres db

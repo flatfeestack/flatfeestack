@@ -18,9 +18,7 @@ var (
 )
 
 type Job struct {
-	name     string
-	days     int
-	f        func(now time.Time) error
+	job      func(now time.Time) error
 	nextExec *time.Time
 }
 
@@ -35,13 +33,13 @@ func init() {
 					again = false
 					for k, job := range jobs {
 						if job.nextExec.Before(timeNow()) {
-							log.Printf("About to execute job [%v] at %v", job.name, job.nextExec)
-							err := job.f(*job.nextExec)
+							log.Printf("About to execute job [daily] at %v", job.nextExec)
+							err := job.job(*job.nextExec)
 							if err != nil {
-								log.Printf("Error in job %v run at %v: %v", job.name, job.nextExec, err)
+								log.Printf("Error in job [daily] run at %v: %v", job.nextExec, err)
 							}
-							next := cronNext(job.days, *job.nextExec)
-							jobs[k].nextExec = &next
+							nextExec := timeDay(1, *job.nextExec)
+							jobs[k].nextExec = &nextExec
 							again = true
 						}
 					}
@@ -58,17 +56,69 @@ func cronStop() {
 	ctx.Done()
 }
 
-func cronJob(name string, days int, f func(now time.Time) error) {
-	now := timeNow()
-	next := cronNext(days, now)
-	jobs = append(jobs, Job{
-		name:     name,
-		days:     days,
-		f:        f,
-		nextExec: &next,
-	})
+func cronJob(job func(now time.Time) error, now time.Time) {
+	nextExec := timeDay(1, now)
+	jobs = append(jobs, Job{job, &nextExec})
 }
 
-func cronNext(days int, now time.Time) time.Time {
+func timeDay(days int, now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day()+days, 0, 0, 0, 0, now.Location())
+}
+
+func dailyRunner(now time.Time) error {
+	yesterdayStop := timeDay(0, now)
+	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
+
+	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+	nr, err := runDailyRepoHours(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Repo Hours inserted %v entries", nr)
+
+	nr, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Repo Balance inserted %v entries", nr)
+
+	nr, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Email Payout inserted %v entries", nr)
+
+	nr, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Repo Weight inserted %v entries", nr)
+
+	nr, err = runDailyUserPayout(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily User Payout inserted %v entries", nr)
+
+	nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Leftover inserted %v entries", nr)
+
+	repos, err := runDailyAnalysisCheck(now, 5)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Analysis Check found %v entries", len(repos))
+
+	for _, v := range repos {
+		err = analysisRequest(v.Id, *v.Url)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Daily runner finished")
+	return nil
 }

@@ -20,7 +20,7 @@ func TestUser(t *testing.T) {
 		PayoutETH:         stringPointer("0x123"),
 	}
 
-	err := saveUser(&u)
+	err := insertUser(&u)
 	assert.Nil(t, err)
 
 	u2, err := findUserByEmail("email2")
@@ -39,7 +39,7 @@ func TestUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, u4)
 
-	u5, err := findUserByID(u.Id)
+	u5, err := findUserById(u.Id)
 	assert.Nil(t, err)
 	assert.NotNil(t, u5)
 }
@@ -64,9 +64,9 @@ func TestSponsor(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	err := saveUser(&u)
+	err := insertUser(&u)
 	assert.Nil(t, err)
-	id, err := saveRepo(&r)
+	id, err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
 	assert.NotNil(t, id)
 
@@ -74,7 +74,7 @@ func TestSponsor(t *testing.T) {
 		Id:          uuid.New(),
 		Uid:         u.Id,
 		RepoId:      r.Id,
-		EventType:   SPONSOR,
+		EventType:   Active,
 		SponsorAt:   time.Time{}.Add(time.Duration(1) * time.Second),
 		UnsponsorAt: time.Time{}.Add(time.Duration(1) * time.Second),
 	}
@@ -83,7 +83,7 @@ func TestSponsor(t *testing.T) {
 		Id:          uuid.New(),
 		Uid:         u.Id,
 		RepoId:      r.Id,
-		EventType:   UNSPONSOR,
+		EventType:   Inactive,
 		SponsorAt:   time.Time{}.Add(time.Duration(2) * time.Second),
 		UnsponsorAt: time.Time{}.Add(time.Duration(2) * time.Second),
 	}
@@ -92,22 +92,22 @@ func TestSponsor(t *testing.T) {
 		Id:          uuid.New(),
 		Uid:         u.Id,
 		RepoId:      r.Id,
-		EventType:   SPONSOR,
+		EventType:   Active,
 		SponsorAt:   time.Time{}.Add(time.Duration(3) * time.Second),
 		UnsponsorAt: time.Time{}.Add(time.Duration(3) * time.Second),
 	}
 
-	err1, err2 := sponsor(&s1)
+	err1, err2 := insertOrUpdateSponsor(&s1)
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
-	err1, err2 = sponsor(&s2)
+	err1, err2 = insertOrUpdateSponsor(&s2)
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
-	err1, err2 = sponsor(&s3)
+	err1, err2 = insertOrUpdateSponsor(&s3)
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
 
-	rs, err := getSponsoredReposById(u.Id)
+	rs, err := findSponsoredReposById(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 
@@ -115,15 +115,15 @@ func TestSponsor(t *testing.T) {
 		Id:          uuid.New(),
 		Uid:         u.Id,
 		RepoId:      r.Id,
-		EventType:   UNSPONSOR,
+		EventType:   Inactive,
 		SponsorAt:   time.Unix(4, 0),
 		UnsponsorAt: time.Unix(4, 0),
 	}
-	err1, err2 = sponsor(&s4)
+	err1, err2 = insertOrUpdateSponsor(&s4)
 	assert.Nil(t, err1)
 	assert.Nil(t, err2)
 
-	rs, err = getSponsoredReposById(u.Id)
+	rs, err = findSponsoredReposById(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(rs))
 }
@@ -138,15 +138,15 @@ func TestRepo(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	id, err := saveRepo(&r)
+	id, err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
 	assert.NotNil(t, id)
 
-	r2, err := findRepoByID(uuid.New())
+	r2, err := findRepoById(uuid.New())
 	assert.Nil(t, err)
 	assert.Nil(t, r2)
 
-	r3, err := findRepoByID(r.Id)
+	r3, err := findRepoById(r.Id)
 	assert.Nil(t, err)
 	assert.NotNil(t, r3)
 }
@@ -161,7 +161,7 @@ func saveTestUser(t *testing.T, email string) uuid.UUID {
 		PayoutETH:         stringPointer("0x123"),
 	}
 
-	err := saveUser(&u)
+	err := insertUser(&u)
 	assert.Nil(t, err)
 	return u.Id
 }
@@ -172,21 +172,21 @@ func TestGitEmail(t *testing.T) {
 
 	uid := saveTestUser(t, "email1")
 
-	err := saveGitEmail(uuid.New(), uid, "email1", timeNow())
+	err := insertGitEmail(uuid.New(), uid, "email1", timeNow())
 	assert.Nil(t, err)
-	err = saveGitEmail(uuid.New(), uid, "email2", timeNow())
+	err = insertGitEmail(uuid.New(), uid, "email2", timeNow())
 	assert.Nil(t, err)
-	emails, err := findGitEmails(uid)
+	emails, err := findGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(emails))
 	err = deleteGitEmail(uid, "email2")
 	assert.Nil(t, err)
-	emails, err = findGitEmails(uid)
+	emails, err = findGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(emails))
 	err = deleteGitEmail(uid, "email1")
 	assert.Nil(t, err)
-	emails, err = findGitEmails(uid)
+	emails, err = findGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(emails))
 }
