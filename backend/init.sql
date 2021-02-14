@@ -15,9 +15,14 @@ CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     orig_id     NUMERIC,
     url         VARCHAR(255) UNIQUE NOT NULL,
+    git_url     VARCHAR(255) UNIQUE NOT NULL,
+    branch      VARCHAR(16)         NOT NULL,
     name        VARCHAR(255)        NOT NULL,
     description TEXT,
-    created_at  TIMESTAMP NOT NULL
+    tags        BYTEA,
+    score       NUMERIC,
+    source      VARCHAR(255)        NOT NULL,
+    created_at  TIMESTAMP           NOT NULL
 );
 
 CREATE TABLE git_email (

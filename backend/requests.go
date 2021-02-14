@@ -61,7 +61,7 @@ func payoutRequest(pts []PayoutToService) (*PayoutResponse, error) {
 	return &resp, nil
 }
 
-func analysisRequest(repoId uuid.UUID, repoUrl string) error {
+func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
 	client := http.Client{
 		Timeout: 10 * time.Second,
@@ -72,7 +72,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		DateFrom:            now.AddDate(0, -3, 0),
 		DateTo:              now,
 		PlatformInformation: false,
-		Branch:              "master",
+		Branch:              branch,
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -137,10 +137,13 @@ type RepoSearchResponse struct {
 }
 
 type RepoDTO struct {
-	ID          uint32 `json:"id"`
-	Url         string `json:"html_url"`
-	Name        string `json:"full_name"`
-	Description string `json:"description"`
+	Id          uint64      `json:"id,omitempty"`
+	Url         string      `json:"html_url,omitempty"`
+	GitUrl      string      `json:"clone_url,omitempty"`
+	Branch      string      `json:"default_branch"`
+	Name        string      `json:"full_name,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Score       json.Number `json:"score,omitempty"`
 }
 
 func fetchGithubRepoSearch(q string) ([]RepoDTO, error) {

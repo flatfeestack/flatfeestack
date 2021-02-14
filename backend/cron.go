@@ -113,7 +113,7 @@ func dailyRunner(now time.Time) error {
 	log.Printf("Daily Analysis Check found %v entries", len(repos))
 
 	for _, v := range repos {
-		err = analysisRequest(v.Id, *v.Url)
+		err = analysisRequest(v.Id, *v.Url, *v.Branch)
 		if err != nil {
 			return err
 		}

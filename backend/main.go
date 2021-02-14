@@ -162,11 +162,9 @@ func main() {
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	//repo github
 	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
-	apiRouter.HandleFunc("/repos/insertOrUpdateSponsor/github/{id}", jwtAuthUser(sponsorRepoGitHub)).Methods("POST")
-	//repo
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
-	apiRouter.HandleFunc("/repos/{id}/insertOrUpdateSponsor", jwtAuthUser(sponsorRepo)).Methods("POST")
-	apiRouter.HandleFunc("/repos/{id}/unsponsor", jwtAuthUser(unsponsorRepo)).Methods("POST")
+	apiRouter.HandleFunc("/repos/tag", jwtAuthUser(tagRepo)).Methods("POST")
+	apiRouter.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods("POST")
 	//payment
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
@@ -328,8 +326,8 @@ func stringPointer(s string) *string {
 
 func timeNow() time.Time {
 	if opts != nil && (opts.Env == "local" || opts.Env == "dev") {
-		return time.Now().Add(time.Duration(hoursAdd) * time.Hour)
+		return time.Now().Add(time.Duration(hoursAdd) * time.Hour).UTC()
 	} else {
-		return time.Now()
+		return time.Now().UTC()
 	}
 }

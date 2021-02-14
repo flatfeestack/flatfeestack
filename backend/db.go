@@ -2,7 +2,9 @@ package main
 
 //https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/
 import (
+	"bytes"
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -33,12 +35,17 @@ type SponsorEvent struct {
 }
 
 type Repo struct {
-	Id          uuid.UUID `json:"id"`
-	OrigId      uint32
-	Url         *string `json:"html_url"`
-	Name        *string `json:"full_name"`
-	Description *string `json:"description"`
-	CreatedAt   time.Time
+	Id          uuid.UUID         `json:"uuid"`
+	OrigId      uint64            `json:"id"`
+	Url         *string           `json:"html_url"`
+	GitUrl      *string           `json:"clone_url"`
+	Branch      *string           `json:"default_branch"`
+	Name        *string           `json:"full_name"`
+	Description *string           `json:"description"`
+	Tags        map[string]string `json:"tags"`
+	Score       uint32            `json:"score"`
+	Source      *string           `json:"source"`
+	CreatedAt   time.Time         `json:"created_at"`
 }
 
 type Payment struct {
@@ -214,7 +221,7 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 // Repositories and Sponsors
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	var repos []Repo
-	sql := `SELECT r.id, r.orig_id, r.url, name, description 
+	sql := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
             FROM sponsor_event s
             JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.unsponsor_at = to_date('9999', 'YYYY')`
@@ -226,7 +233,13 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 
 	for rows.Next() {
 		var repo Repo
-		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.Url, &repo.Name, &repo.Description)
+		var b []byte
+		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.Url, &repo.GitUrl, &repo.Branch, &repo.Name, &repo.Description, &b)
+		if err != nil {
+			return nil, err
+		}
+		d := gob.NewDecoder(bytes.NewReader(b))
+		err = d.Decode(&repo.Tags)
 		if err != nil {
 			return nil, err
 		}
@@ -239,16 +252,23 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 //******************************* Repository **************************************
 //*********************************************************************************
 func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, name, description, created_at) 
-									VALUES ($1, $2, $3, $4, $5, $6)
+	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, git_url, branch, name, description, tags, score, source, created_at) 
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5 RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
 	defer stmt.Close()
 
+	b := new(bytes.Buffer)
+	e := gob.NewEncoder(b)
+	err = e.Encode(repo.Tags)
+	if err != nil {
+		return nil, err
+	}
+
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.Name, repo.Description, repo.CreatedAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.GitUrl, repo.Branch, repo.Name, repo.Description, b.Bytes(), repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +277,17 @@ func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
 
 func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	var r Repo
+	var b []byte
 	err := db.
-		QueryRow("SELECT id, orig_id, url, name, description FROM repo WHERE id=$1", repoId).
-		Scan(&r.Id, &r.OrigId, &r.Name, &r.Url, &r.Description)
+		QueryRow("SELECT id, orig_id, url, git_url, branch, name, description, tags FROM repo WHERE id=$1", repoId).
+		Scan(&r.Id, &r.OrigId, &r.Url, &r.GitUrl, &r.Branch, &r.Name, &r.Description, &b)
+
+	d := gob.NewDecoder(bytes.NewReader(b))
+	err = d.Decode(&r.Tags)
+	if err != nil {
+		return nil, err
+	}
+
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil

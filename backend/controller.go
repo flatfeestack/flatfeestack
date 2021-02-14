@@ -230,58 +230,43 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 	}
 }
 
-/*
- *	==== Active EVENT ====
- */
-
-func sponsorRepoGitHub(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	s := params["id"]
-	id, err := strconv.Atoi(s)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
-		return
-	}
-
-	repoDto, err := fetchGithubRepoById(uint32(id))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Repo not found %v", err)
-		return
-	}
-
-	repo := Repo{
-		Id:          uuid.New(),
-		OrigId:      uint32(id),
-		Url:         &repoDto.Url,
-		Name:        &repoDto.Name,
-		Description: &repoDto.Description,
-	}
-
-	var repoId *uuid.UUID
-	repoId, err = insertOrUpdateRepo(&repo)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could store in DB: %v", err)
-		return
-	}
-	sponsorRepo0(w, user, *repoId, Active)
-}
-
-// @Summary Sponsor a repo
+// @Summary Tag a repo
 // @Tags Repos
 // @Param id path string true "Repo ID"
 // @Accept  json
 // @Produce  json
 // @Success 200
 // @Failure 400
-// @Router /backend/repos/{id}/insertOrUpdateSponsor [post]
-func sponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	id, err := uuid.Parse(params["id"])
+// @Router /backend/repos/{id}/insertOrUpdateTag [post]
+func tagRepo(w http.ResponseWriter, r *http.Request, user *User) {
+	var repo RepoDTO
+	err := json.NewDecoder(r.Body).Decode(&repo)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
+		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
-	sponsorRepo0(w, user, id, Active)
+
+	sc, err := repo.Score.Int64()
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode json/int: %v", err)
+		return
+	}
+	rp := &Repo{
+		Id:          uuid.New(),
+		OrigId:      repo.Id,
+		Url:         &repo.Url,
+		GitUrl:      &repo.GitUrl,
+		Branch:      &repo.Branch,
+		Name:        &repo.Name,
+		Description: &repo.Description,
+		Tags:        nil,
+		Score:       uint32(sc),
+		Source:      stringPointer("github"),
+		CreatedAt:   timeNow(),
+	}
+
+	repoId, err := insertOrUpdateRepo(rp)
+	tagRepo0(w, user, *repoId, Active)
 }
 
 // @Summary Unsponsor a repo
@@ -292,16 +277,16 @@ func sponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
 // @Success 200
 // @Failure 400
 // @Router /backend/repos/{id}/unsponsor [post]
-func unsponsorRepo(w http.ResponseWriter, r *http.Request, user *User) {
+func unTagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
-	sponsorRepo0(w, user, repoId, Inactive)
+	tagRepo0(w, user, repoId, Inactive)
 }
-func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
+func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
 	now := timeNow()
 	event := SponsorEvent{
 		Id:          uuid.New(),
@@ -334,13 +319,14 @@ func sponsorRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventT
 		return
 	}
 	// TODO: only if repo is sponsored for the first time
-	if newEventType == Active {
-		err = analysisRequest(repo.Id, *repo.Url)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "Could not submit analysis request %v", err)
-			return
+	go func() {
+		if newEventType == Active {
+			err = analysisRequest(repo.Id, *repo.GitUrl, *repo.Branch)
+			if err != nil {
+				log.Printf("Could not submit analysis request %v\n", err)
+			}
 		}
-	}
+	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(repo)
