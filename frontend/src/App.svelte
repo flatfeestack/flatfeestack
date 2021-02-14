@@ -1,69 +1,136 @@
-<script>
-import { Route, Router } from "svelte-routing";
-import About from "./routes/About.svelte";
-import Landing from "./routes/Landing.svelte";
-import Login from "./routes/Login.svelte";
-import Integrate from "./routes/Integrate.svelte";
-import Score from "./routes/Score.svelte";
-import Signup from "./routes/Signup.svelte";
-import Dashboard from "./routes/Dashboard/Dashboard.svelte";
-import CatchAll from "./routes/CatchAllRoute.svelte";
-import { user } from "./store/auth.ts";
-import Modal from "svelte-simple-modal";
-import { ROUTES } from "./types/routes";
-import Sponsoring from "./routes/Dashboard/Sponsoring.svelte";
-import Income from "./routes/Dashboard/Income.svelte";
-import Settings from "./routes/Dashboard/Settings.svelte";
-import Profile from "./routes/Dashboard/Profile.svelte";
-import Admin from "./routes/Dashboard/Admin.svelte";
-import PageLayout from "./layout/PageLayout.svelte";
-import { initialFetchDone } from "src/store/auth";
-import Spinner from "./components/UI/Spinner.svelte";
-import Redirect from "./helpers/Redirect.svelte";
-import { refreshSession } from "src/store/authService";
-import { onMount } from "svelte";
+<script lang="ts">
+  import { links, Route, Router } from "svelte-routing";
+  import { user, loading } from "ts/auth.ts";
+  import { refreshSession, removeSession } from "ts/authService";
+  import { onMount } from "svelte";
 
-export let url = "";
-onMount(() => refreshSession());
+  import Landing from "./routes/Landing.svelte";
+  import Signin from "./routes/Signin.svelte";
+  import Signup from "./routes/Signup.svelte";
+  import Forgot from "./routes/Forgot.svelte";
+  import ConfirmForgot from "./routes/ConfirmForgot.svelte";
+  import ConfirmSignup from "./routes/ConfirmSignup.svelte";
+  import Dashboard from "./routes/Dashboard/Dashboard.svelte";
+  import CatchAll from "./routes/CatchAllRoute.svelte";
+  import Sponsoring from "./routes/Dashboard/FindRepos.svelte";
+  import Income from "./routes/Dashboard/Income.svelte";
+  import Profile from "./routes/Dashboard/Profile.svelte";
+  import Admin from "./routes/Dashboard/Admin.svelte";
+  import Spinner from "./components/Spinner.svelte";
+
+  export let url;
+  onMount(() => refreshSession());
+
 </script>
 
-<Router url="{url}">
-  <Modal>
-    <div>
-      <Route path="{ROUTES.ABOUT}" component="{About}" />
-      <Route path="{ROUTES.LOGIN}" component="{Login}" />
-      <Route path="{ROUTES.INTEGRATE}" component="{Integrate}" />
-      <Route path="{ROUTES.SCORE}" component="{Score}" />
-      <Route path="{ROUTES.SIGNUP}" component="{Signup}" />
-      <Route path="/">
-        <Landing />
-      </Route>
-      {#if $user}
-        <Route path="{ROUTES.DASHBOARD_OVERVIEW}" component="{Dashboard}" />
-        <Route path="{ROUTES.DASHBOARD_SPONSORING}" component="{Sponsoring}" />
-        <Route path="{ROUTES.DASHBOARD_INCOME}" component="{Income}" />
-        <Route path="{ROUTES.DASHBOARD_SETTINGS}" component="{Settings}" />
-        <Route path="{ROUTES.DASHBOARD_PROFILE}" component="{Profile}" />
-        <Route path="{ROUTES.DASHBOARD_ADMIN}" component="{Admin}" />
-      {:else if !$initialFetchDone}
-        <Route path="/dashboard/*">
-          <PageLayout>
-            <Spinner />
-          </PageLayout>
-        </Route>
-      {:else}
-        <Redirect to="{ROUTES.LOGIN}" />
-      {/if}
-      <Route path="*" component="{CatchAll}" />
-    </div>
-  </Modal>
-</Router>
+<style>
+    .main {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
 
-<svelte:head>
-  <style src="styles.scss">
-  </style>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Raleway:wght@100;200;300;400;500;600;700;800;900&display=swap"
-    rel="stylesheet"
-  />
-</svelte:head>
+    header {
+        padding: 1em;
+        background-color: #000;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.75);
+        justify-content: space-between;
+        flex: 0 1 auto;
+    }
+
+    header, nav {
+        display: flex;
+        align-items: center;
+    }
+
+    main {
+        flex: 1 1 auto;
+        display: flex;
+    }
+
+    footer {
+        background-color: #000;
+        color: white;
+        height: 2em;
+        flex: 0 1 auto;
+    }
+
+    header :global(a), .header :global(a:visited), .header :global(a:active) {
+        text-decoration: none;
+        color: #ffffff;
+    }
+
+    img {
+        padding-right: 0.25em;
+    }
+
+    .main-nav :global(a), .main-nav :global(a:visited) {
+        padding: 0.5em 1em 0.5em 1em;
+    }
+
+    .main-nav :global(a:hover) {
+        color: var(--primary-500);
+        transition: color .15s;
+    }
+
+    .signup :global(a), .signup :global(a:visited) {
+        border: white 1px solid;
+        border-radius: 3px;
+    }
+
+    .signup :global(a:hover) {
+        border: var(--primary-500) 1px solid;
+        transition: border .15s;
+    }
+</style>
+
+<div class="main">
+  <header use:links>
+    <a href="/">
+      <img src="/assets/images/new-logo-4.svg" alt="Flatfeestack" />
+      <img class="hide-sx" src="/assets/images/logo-text-w.svg" alt="Flatfeestack" />
+    </a>
+    <nav>
+      {#if $user.id}
+        <div class="main-nav"><a href="/signin" on:click={removeSession}>Sign out</a></div>
+      {:else}
+        <div class="main-nav"><a href="/signin">Sign in</a></div>
+        <div class="main-nav signup"><a href="/signup">Sign up</a></div>
+      {/if}
+    </nav>
+  </header>
+
+  <main>
+    <Router url="{url}">
+
+      {#if $loading}
+        <Spinner />
+      {:else}
+
+        <Route path="/" component="{Landing}" />
+
+        <Route path="/signin" component="{Signin}" />
+        <Route path="/signup" component="{Signup}" />
+        <Route path="/forgot" component="{Forgot}" />
+
+        <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" let:params>
+          <ConfirmForgot email="{params.email}" token="{params.token}" />
+        </Route>
+        <Route path="/confirm/signup/:email/:token" let:params>
+          <ConfirmSignup email="{params.email}" token="{params.token}" />
+        </Route>
+        {#if $user.id}
+          <Route path="/dashboard" component="{Dashboard}" />
+          <Route path="/dashboard/sponsoring" component="{Sponsoring}" />
+          <Route path="/dashboard/income" component="{Income}" />
+          <Route path="/dashboard/profile" component="{Profile}" />
+          <Route path="/dashboard/admin" component="{Admin}" />
+        {/if}
+        <Route path="*" component="{CatchAll}" />
+      {/if}
+
+    </Router>
+  </main>
+
+  <footer>© flatfeestack.io</footer>
+</div>

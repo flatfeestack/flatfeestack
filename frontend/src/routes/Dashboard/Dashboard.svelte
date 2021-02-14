@@ -1,8 +1,10 @@
 <script>
-import DashboardLayout from "../../layout/DashboardLayout.svelte";
-import { user } from "src/store/auth";
+import DashboardLayout from "./DashboardLayout.svelte";
+import { user } from "ts/auth";
 import Payment from "../../components/Payment.svelte";
 </script>
+
+
 
 <DashboardLayout>
   <h1 class="text-primary-500">Dashboard</h1>

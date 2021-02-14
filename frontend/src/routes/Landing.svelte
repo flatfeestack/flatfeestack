@@ -1,4 +1,4 @@
-<style type="text/scss">
+<style>
 .section-title {
   @apply text-3xl;
 }
@@ -26,17 +26,9 @@
 
 <script lang="ts">
 import Spacer from "../components/UI/Spacer.svelte";
-import { getContext } from "svelte";
-import Popup from "../components/UI/Popup.svelte";
 import Navigation from "../components/Navigation.svelte";
-import { fade, draw, fly } from "svelte/transition";
-import Footer from "../components/Footer.svelte";
+import { draw } from "svelte/transition";
 
-const { open } = getContext("simple-modal");
-
-const showWIP = () => {
-  open(Popup, { message: "It's a modal!" });
-};
 
 let svgVisible = true;
 </script>
@@ -122,7 +114,6 @@ let svgVisible = true;
           <div class="flex justify-center mt-5">
             <button
               class="bg-white p-2 text-secondary-500 rounded-sm"
-              on:click="{showWIP}"
             >Support Open Source</button>
           </div>
         </div>
@@ -142,7 +133,6 @@ let svgVisible = true;
           <div class="flex justify-center mt-5">
             <button
               class="bg-white p-2 text-primary-500 rounded-sm"
-              on:click="{showWIP}"
             >Receive Support</button>
           </div>
         </div>

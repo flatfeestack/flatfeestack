@@ -1,5 +1,5 @@
 <script lang="ts">
-import { API } from "../api/api";
+import { API } from "ts/api";
 import { onMount } from "svelte";
 let address = "";
 let error;

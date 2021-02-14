@@ -4,19 +4,17 @@
   import Dots from "../components/Dots.svelte";
 
   let email = "";
-  let password = "";
   let error = "";
-  let info = "";
   let isSubmitting = false;
+  let info = "";
 
   async function handleSubmit() {
     try {
       error = "";
       isSubmitting = true;
-      const res = await API.auth.signup(email, password);
+      const res = await API.auth.reset(email);
       isSubmitting = false;
       email = "";
-      password = "";
       info = "Your email is on the way. To enable your account, click on the link in the email.";
       console.log(res);
     } catch (e) {
@@ -72,20 +70,18 @@
     {#if info}
       <div class="bg-green rounded p-2">{info}</div>
     {:else}
-      <form on:submit|preventDefault="{handleSubmit}">
-        <label for="email" class="py-1">Email address</label>
-        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
-        <label for="password" class="flex py-1">Password</label>
-        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-700"/>
-        <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign up
-          {#if isSubmitting}<Dots />{/if}
-        </button>
+    <form on:submit|preventDefault="{handleSubmit}">
+      <label for="email" class="py-1">Email address</label>
+      <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Reset password
+        {#if isSubmitting}<Dots />{/if}
+      </button>
 
-        {#if error}
-          <div class="bg-red rounded p-2">{error}</div>
-        {/if}
+      {#if error}
+        <div class="bg-red rounded p-2">{error}</div>
+      {/if}
 
-      </form>
+    </form>
     {/if}
 
     <div class="divider"></div>

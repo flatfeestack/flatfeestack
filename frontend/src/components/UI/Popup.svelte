@@ -4,7 +4,7 @@ import { getContext } from "svelte";
 const { close } = getContext("simple-modal");
 const sendEmail = async () => {
   console.log(email);
-  const axios = require("axios");
+  const {axios} = require("axios");
   await axios({
     url: "https://flatfeestack.com/email.php",
     method: "POST",

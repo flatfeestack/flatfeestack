@@ -1,6 +1,6 @@
-import { AbiItem } from "web3-utils";
+//import { AbiItem } from "web3-utils";
 
-export const ABI: AbiItem[] = [
+export const ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",

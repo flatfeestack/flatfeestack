@@ -1,27 +1,28 @@
 <script lang="ts">
-  import { Link } from "svelte-routing";
-  import { API } from "ts/api.ts";
+  import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
+  import { confirmReset, updateUser } from "../ts/authService";
+  import { loading } from "../ts/auth";
 
-  let email = "";
+  export let email;
+  export let token;
+
   let password = "";
   let error = "";
-  let info = "";
   let isSubmitting = false;
 
   async function handleSubmit() {
     try {
       error = "";
       isSubmitting = true;
-      const res = await API.auth.signup(email, password);
+      await confirmReset(email, password, token);
+      await updateUser();
+      navigate("/dashboard");
       isSubmitting = false;
       email = "";
       password = "";
-      info = "Your email is on the way. To enable your account, click on the link in the email.";
-      console.log(res);
     } catch (e) {
       isSubmitting = false;
-      error = "Something went wrong. Please try again.";
       console.log(e);
     }
   }
@@ -69,24 +70,20 @@
   <div class="container rounded p-5">
     <h2 class="py-5 text-center text-primary-700">Create your account</h2>
 
-    {#if info}
-      <div class="bg-green rounded p-2">{info}</div>
-    {:else}
-      <form on:submit|preventDefault="{handleSubmit}">
-        <label for="email" class="py-1">Email address</label>
-        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
-        <label for="password" class="flex py-1">Password</label>
-        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-700"/>
-        <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign up
-          {#if isSubmitting}<Dots />{/if}
-        </button>
+    <form on:submit|preventDefault="{handleSubmit}">
+      <label for="email" class="py-1">Email address</label>
+      <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
+      <label for="password" class="flex py-1">Set new password</label>
+      <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-700"/>
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Reset password
+        {#if isSubmitting}<Dots />{/if}
+      </button>
 
-        {#if error}
-          <div class="bg-red rounded p-2">{error}</div>
-        {/if}
+      {#if error}
+        <div class="bg-red rounded p-2">{error}</div>
+      {/if}
 
-      </form>
-    {/if}
+    </form>
 
     <div class="divider"></div>
     <div class="flex">

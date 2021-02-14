@@ -20,17 +20,18 @@ h1 {
 
 <script lang="ts">
 import { onMount } from "svelte";
-import Web3 from "web3";
-import { toHex, toWei } from "web3-utils";
-import { Common } from "web3-core";
+//import Web3 from "web3";
+import { Contract, providers } from 'ethers';
+//import { toHex, toWei } from "web3-utils";
+//import { Common } from "web3-core";
 import { ABI, CONTRACT_ID } from "../types/contract";
-const web3 = new Web3(
-  "https://ropsten.infura.io/v3/6d6c0e875d6c4becaec0e1b10d5bc3cc"
-);
+//const web3 = new Web3(
+//  "https://ropsten.infura.io/v3/6d6c0e875d6c4becaec0e1b10d5bc3cc"
+//);
 
 let metamask = null;
 const ethEnabled = () => {
-  if (window.ethereum) {
+/*  if (window.ethereum) {
     metamask = new Web3(window.ethereum);
     try {
       window.ethereum.enable();
@@ -39,7 +40,11 @@ const ethEnabled = () => {
       console.log("No MetaMask");
       return false;
     }
-  }
+  }*/
+  const provider = new providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const contractAddress = "0x62Db0a2161e304819f4d54d54B90A3Feae6dDc72";
+  const storageContract = new Contract(contractAddress, ABI, signer);
   return false;
 };
 

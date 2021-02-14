@@ -1,4 +1,4 @@
-<style type="text/scss">
+<style>
 .StripeElement {
   box-sizing: border-box;
   height: 40px;
@@ -28,16 +28,15 @@
 </style>
 
 <script>
-import { API } from "src/api/api";
-import format from "date-fns/format";
-import { LottiePlayer } from "@lottiefiles/svelte-lottie-player";
+import { API } from "ts/api";
+//import format from "date-fns/format";
+//import { LottiePlayer } from "@lottiefiles/svelte-lottie-player";
 
 let stripe = Stripe("pk_test_8Qs51tLVL0qbzUUgo3YEQPgL");
 
 import { onMount } from "svelte";
-import Spinner from "./UI/Spinner.svelte";
-import { updateUser } from "src/store/authService";
-import { user } from "src/store/auth";
+import Spinner from "./Spinner.svelte";
+import { user } from "ts/auth";
 
 let selectedPlan = 1;
 
@@ -142,24 +141,24 @@ const handleSubmit = async (event) => {
   }
 };
 
-$: if (submitted && !error && !paymentProcessing) {
+/*if (submitted && !error && !paymentProcessing) {
   console.log("starting to fetch");
   interval = setInterval(() => updateUser(), 1000);
 }
 
-$: if ($user.subscription_state === "ACTIVE" && interval) {
+if (user.subscription_state === "ACTIVE" && interval) {
   clearInterval(interval);
 }
 
-$: if ($user.subscription_state === "ACTIVE") {
+if (user.subscription_state === "ACTIVE") {
   showSuccess = true;
-}
+}*/
 
-onMount(async () => {
-  if ($user.subscription_state !== "ACTIVE") {
+/*onMount(async () => {
+  if (user.subscription_state !== "ACTIVE") {
     await createCardForm();
   }
-});
+});*/
 </script>
 
 {#if error}
@@ -189,7 +188,7 @@ onMount(async () => {
       Next Payment:
       {plans[selectedPlan].price}
       at
-      {format(new Date(), 'do LLLL yyyy')}
+      {new Date()}
     </div>
     <div class="StripeElement" bind:this="{card}"></div>
     <div class="flex w-full justify-end">
@@ -212,7 +211,7 @@ onMount(async () => {
 {#if showSuccess && submitted}
   <div class="w-full flex flex-col items-center">
     <h2>Success! Welcome onboard!</h2>
-    <LottiePlayer
+    <!--<lottiePlayer
       src="/assets/animations/payment-success.json"
       autoplay="{true}"
       loop="{false}"
@@ -221,6 +220,6 @@ onMount(async () => {
       background="transparent"
       height="{300}"
       width="{300}"
-    />
+    />-->
   </div>
 {/if}

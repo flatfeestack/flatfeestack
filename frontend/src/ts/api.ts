@@ -1,22 +1,24 @@
 import axios from "axios";
-import { refresh, token } from "../store/auth";
+import { token } from "./auth";
 import { get } from "svelte/store";
 import { Exchange } from "../types/exchange.type";
 import { PayoutAddress } from "../types/payout-address.type";
+import { removeSession } from "./authService";
+import { Repo } from "../types/repo.type";
 
 const authInstance = axios.create({
   baseURL: "/auth",
-  timeout: 5000,
+  timeout: 5000000
 });
 
 const apiInstance = axios.create({
   baseURL: "/backend",
-  timeout: 5000,
+  timeout: 5000000
 });
 
 const searchInstance = axios.create({
   baseURL: "/search",
-  timeout: 5000,
+  timeout: 5000000
 });
 
 apiInstance.interceptors.request.use((config) => {
@@ -35,23 +37,20 @@ apiInstance.interceptors.response.use(
   async function (error) {
     const originalRequest = error.config;
     if (error.response.status === 418 && !originalRequest._retry) {
-      console.log("referseh?")
       originalRequest._retry = true;
-      const oldR = get(refresh);
-      if (!oldR) {
+      const refresh = localStorage.getItem("ffs-refresh");
+      if (refresh) {
         console.log("could not refresh");
         return;
+      } else {
+        console.log(refresh)
       }
-      const res = await API.auth.refresh(oldR);
+      const res = await API.auth.refresh(refresh);
       const t = res.data.access_token;
       const r = res.data.refresh_token;
-      console.log("new toke: "+t)
       token.set(t);
-      refresh.set(r);
-      console.log("orig request")
-      console.log(originalRequest)
+      localStorage.setItem("ffs-refresh", r);
       originalRequest.headers.Authorization = "Bearer " + t;
-      console.log(originalRequest)
       return apiInstance(originalRequest);
     }
     return Promise.reject(error);
@@ -73,14 +72,23 @@ export const API = {
     refresh: (refresh: string) => {
       return authInstance.post("/refresh", { refresh_token: refresh });
     },
+    reset: (email: string) => {
+      return authInstance.post(`/reset/${email}`);
+    },
+    confirmEmail: (email: string, token: string) => {
+      return authInstance.post("/confirm/signup", {email, token})
+    },
+    confirmReset: (email: string, password: string, token: string) => {
+      return authInstance.post("/confirm/reset", {email, password, email_token_reset: token})
+    },
     logout: () => {
       const t = get(token);
       if (t) {
-        token.set(null);
-        refresh.set(null);
+        removeSession();
         const config = {
           headers: { Authorization: `Bearer ${t}` }
         };
+        //TODO: logout also with refreshToken
         return authInstance.get(`/authen/logout?redirect_uri=/`, config)
       } else {
         throw new Error("t not found...");
@@ -105,8 +113,9 @@ export const API = {
   },
   repos: {
     search: (s: string) => apiInstance.get(`/repos/search?q=${encodeURI(s)}`),
-    sponsor: (id: number) => apiInstance.post(`/repos/sponsor/github/${id}`),
-    unsponsor: (id: number) => apiInstance.post(`/repos/${id}/unsponsor`),
+    get: (id: number) => apiInstance.get(`/repos/${id}`),
+    tag: (repo: Repo) => apiInstance.post(`/repos/tag`, repo),
+    untag: (id: string) => apiInstance.post(`/repos/${id}/untag`),
   },
   search: {
     keywords: (keywords: string) => searchInstance.get(`/search/${keywords}`),

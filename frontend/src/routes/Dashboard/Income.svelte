@@ -5,13 +5,11 @@
 </style>
 
 <script lang="ts">
-import DashboardLayout from "../../layout/DashboardLayout.svelte";
+import DashboardLayout from "./DashboardLayout.svelte";
 import Fa from "svelte-fa";
 import { onMount } from "svelte";
-import { API } from "src/api/api";
+import { API } from "ts/api";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import * as yup from "yup";
-import { Form, Input } from "sveltejs-forms";
 import Web3 from "../../components/Web3.svelte";
 import CryptoAddressForm from "../../components/CryptoAddressForm.svelte";
 
@@ -30,9 +28,7 @@ onMount(async () => {
 });
 
 let error = "";
-const schema = yup.object().shape({
-  email: yup.string().email(),
-});
+
 
 async function handleSubmit({
   detail: {
@@ -93,8 +89,7 @@ async function removeEmail(email: string) {
     </div>
   {/each}
   <h2 class="my-5">Add Git Email</h2>
-  <Form
-    schema="{schema}"
+  <form
     on:submit="{handleSubmit}"
     let:isSubmitting
     let:isValid
@@ -107,7 +102,7 @@ async function removeEmail(email: string) {
           class="block text-grey-darker text-sm font-bold mb-2 w-full"
         >Email
         </label>
-        <Input id="email-input" name="email" type="text" class="input" />
+        <input id="email-input" name="email" type="text" class="input" />
       </div>
       <div class="ml-5">
         <button
@@ -120,7 +115,7 @@ async function removeEmail(email: string) {
         <div class="bg-red-500 p-2 text-white mt-2">{error}</div>
       {/if}
     </div>
-  </Form>
+  </form>
   <h2 class="my-5">Payout Address</h2>
   <CryptoAddressForm />
 

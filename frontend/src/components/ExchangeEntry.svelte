@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Exchange } from "../types/exchange.type";
-import { API } from "../api/api";
+import { API } from "../ts/api";
 import { faEthereum } from "@fortawesome/free-brands-svg-icons";
 import { faLongArrowAltRight } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";

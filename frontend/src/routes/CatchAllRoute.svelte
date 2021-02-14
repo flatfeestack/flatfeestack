@@ -1,8 +1,3 @@
-<script>
-import PageLayout from "../layout/PageLayout.svelte";
-</script>
+<h1 class="text-primary-500">404</h1>
+<h2>The requested ressource could not be found.</h2>
 
-<PageLayout>
-  <h1 class="text-primary-500">404</h1>
-  <h2>The requested ressource could not be found.</h2>
-</PageLayout>

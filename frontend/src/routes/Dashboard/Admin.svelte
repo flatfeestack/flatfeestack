@@ -1,7 +1,7 @@
 <script lang="ts">
-import DashboardLayout from "../../layout/DashboardLayout.svelte";
-import { API } from "src/api/api";
-import Spinner from "../../components/UI/Spinner.svelte";
+import DashboardLayout from "./DashboardLayout.svelte";
+import { API } from "ts/api";
+import Spinner from "../../components/Spinner.svelte";
 import { onMount } from 'svelte';
 
 let promisePendingPayouts =API.payouts.pending("pending");
