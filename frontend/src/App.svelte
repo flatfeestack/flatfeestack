@@ -10,7 +10,7 @@
   import Forgot from "./routes/Forgot.svelte";
   import ConfirmForgot from "./routes/ConfirmForgot.svelte";
   import ConfirmSignup from "./routes/ConfirmSignup.svelte";
-  import Dashboard from "./routes/Dashboard/Dashboard.svelte";
+  import FindRepos from "./routes/Dashboard/FindRepos.svelte";
   import CatchAll from "./routes/CatchAllRoute.svelte";
   import Sponsoring from "./routes/Dashboard/FindRepos.svelte";
   import Income from "./routes/Dashboard/Income.svelte";
@@ -120,7 +120,7 @@
           <ConfirmSignup email="{params.email}" token="{params.token}" />
         </Route>
         {#if $user.id}
-          <Route path="/dashboard" component="{Dashboard}" />
+          <Route path="/dashboard" component="{FindRepos}" />
           <Route path="/dashboard/sponsoring" component="{Sponsoring}" />
           <Route path="/dashboard/income" component="{Income}" />
           <Route path="/dashboard/profile" component="{Profile}" />

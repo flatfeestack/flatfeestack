@@ -11,12 +11,12 @@
   import Dots from "../../components/Dots.svelte";
   import { links } from "svelte-routing";
 
-  let checked = $user.mode != "ORGANIZATION";
+  let checked = $user.mode != "ORG";
   $: {
     if (checked == false) {
-      $user.mode = "ORGANIZATION";
+      $user.mode = "ORG";
     } else {
-      $user.mode = "CONTRIBUTOR";
+      $user.mode = "USR";
     }
   }
 
@@ -92,7 +92,7 @@
     </div>
     {/if}
 
-    {#if !$user.mode || $user.mode == "" || $user.mode == "CONTRIBUTOR"}
+    {#if !$user.mode || $user.mode == "" || $user.mode == "USR"}
       <h2>Find your favorite opes source projects</h2>
     {:else}
       <h2>Examples of cool opes source projects</h2>

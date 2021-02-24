@@ -1,32 +1,3 @@
-<style>
-.StripeElement {
-  box-sizing: border-box;
-  height: 40px;
-  padding: 10px 12px;
-
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background-color: white;
-
-  box-shadow: 1px 1px 7px 2px rgba(0, 0, 0, 0.1);
-  -webkit-transition: box-shadow 150ms ease;
-  transition: box-shadow 150ms ease;
-}
-
-.card {
-  @apply shadow-md p-2 mx-3 rounded-lg transition-all duration-150 bg-gray-100 p-5;
-}
-.card:hover {
-  @apply bg-gradient-to-tr from-secondary-400 to-primary-400 cursor-pointer transform scale-105 text-white;
-}
-.card:active {
-  @apply transform from-secondary-600 to-primary-600;
-}
-.price {
-  @apply text-3xl font-bold text-center my-5;
-}
-</style>
-
 <script>
 import { API } from "ts/api";
 //import format from "date-fns/format";
@@ -43,21 +14,21 @@ let selectedPlan = 1;
 const plans = [
   {
     title: "Monthly",
-    price: "$ 10.-",
+    price: 10,
     desc:
       "You wan't to support Open Source software with a monthly flat fee of.",
     stripe_id: "price_1HhheeFlT4VRPYyK2hZryC8q",
   },
   {
     title: "Yearly",
-    price: "$ 120.-",
+    price: 120,
     desc:
       "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects",
     stripe_id: "price_1HhhefFlT4VRPYyKqaH4eQuC",
   },
   {
     title: "Quarterly",
-    price: "$ 30.-",
+    price: 30,
     desc:
       " If you're not cool with paying yearly but still want us to keep payment processing costs low :)",
     stripe_id: "price_1HhhefFlT4VRPYyKuS7gWwPw",
@@ -74,6 +45,8 @@ let error = "";
 let showSuccess = false;
 
 let interval;
+
+let seats=1;
 
 async function createCardForm() {
   cardElement = elements.create("card");
@@ -154,21 +127,55 @@ if (user.subscription_state === "ACTIVE") {
   showSuccess = true;
 }*/
 
-/*onMount(async () => {
+onMount(async () => {
   if (user.subscription_state !== "ACTIVE") {
     await createCardForm();
   }
-});*/
+});
 </script>
+
+<style>
+    .StripeElement {
+        box-sizing: border-box;
+        height: 40px;
+        padding: 10px 12px;
+
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background-color: white;
+
+        box-shadow: 1px 1px 7px 2px rgba(0, 0, 0, 0.1);
+        -webkit-transition: box-shadow 150ms ease;
+        transition: box-shadow 150ms ease;
+    }
+
+    .card {
+        @apply shadow-md p-2 mx-3 rounded-lg transition-all duration-150 bg-gray-100 p-5;
+    }
+    .card:hover {
+        @apply bg-gradient-to-tr from-secondary-400 to-primary-400 cursor-pointer transform scale-105 text-white;
+    }
+    .card:active {
+        @apply transform from-secondary-600 to-primary-600;
+    }
+    .price {
+        @apply text-3xl font-bold text-center my-5;
+    }
+    .container {
+        display: flex;
+        flex-direction: row;
+        margin: 1em;
+    }
+</style>
 
 {#if error}
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
 {#if !submitted && $user.subscription_state !== 'ACTIVE'}
-  <div class="flex items-end mb-10">
+  <div class="container items-end mb-10">
     {#each plans as { title, price, desc }, i}
       <div
-        class="w-1/3 card {selectedPlan === i ? 'text-white bg-gradient-to-tr from-secondary-600 to-primary-600' : 'text-black'}"
+        class="w1-3 card {selectedPlan === i ? 'bg-green' : 'text-black'}"
         on:click="{() => (selectedPlan = i)}"
       >
         <h3 class="text-center font-bold text-lg">{title}</h3>
@@ -185,10 +192,15 @@ if (user.subscription_state === "ACTIVE") {
       {plans[selectedPlan].title}
     </div>
     <div class="font-semibold mb-5">
-      Next Payment:
-      {plans[selectedPlan].price}
+      Next Payment: $
+      {plans[selectedPlan].price * seats}
       at
       {new Date()}
+    </div>
+    <div>
+      {#if $user.mode == "ORG" }
+        How many seats? <input type="number" min="1" bind:value="{seats}">
+      {/if}
     </div>
     <div class="StripeElement" bind:this="{card}"></div>
     <div class="flex w-full justify-end">
@@ -211,6 +223,18 @@ if (user.subscription_state === "ACTIVE") {
 {#if showSuccess && submitted}
   <div class="w-full flex flex-col items-center">
     <h2>Success! Welcome onboard!</h2>
+    Cancel your support
+
+    Send out a notification with the following code/text:
+
+    <div>
+      [orgname] invites you to support awesome open source projects such as [your examples]. Simply click on the link and
+      confirm your account, which has been prepaid with [amount].
+    </div>
+
+    <div>
+      change seats add/remove (calc fraction until end of period)
+    </div>
     <!--<lottiePlayer
       src="/assets/animations/payment-success.json"
       autoplay="{true}"

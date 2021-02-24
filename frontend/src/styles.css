@@ -68,6 +68,10 @@ body, html {
   margin: 0.5rem;
 }
 
+.w1-3	{
+  width: 33.333333%;
+}
+
 .text-center	{text-align: center;}
 
 .text-primary-700 {

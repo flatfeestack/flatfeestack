@@ -258,5 +258,4 @@ let svgVisible = true;
     </div>
   </section>
 
-  <Footer />
 </div>

@@ -4,7 +4,6 @@ import { Link, links } from "svelte-routing";
 import Fa from "svelte-fa";
 import { user } from "ts/auth";
 
-
 </script>
 
 <style>
@@ -67,7 +66,7 @@ import { user } from "ts/auth";
   <a href="/dashboard/profile"><Fa icon="{faUser}" size="sm"  class="icon"/>
     <span class="hide-sx">Profile</span>
   </a>
-  {#if $user.mode != "ORGANIZATION" }
+  {#if $user.mode != "ORG" }
   <a href="/dashboard/income"><Fa icon="{faHandHoldingUsd}" size="sm"  class="icon"/>
     <span class="hide-sx">Income</span>
   </a>
