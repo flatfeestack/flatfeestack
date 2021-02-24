@@ -2,12 +2,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
     id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sponsor_id         UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
     stripe_id          VARCHAR(255),
     email              VARCHAR(255) UNIQUE NOT NULL,
+    name               VARCHAR(255),
+    image              BYTEA,
     subscription       VARCHAR(255),
     subscription_state VARCHAR(255),
     payout_eth         VARCHAR(255),
-    role               VARCHAR(255) DEFAULT 'USER' NOT NULL,
+    seats              INTEGER,
+    role               VARCHAR(3) DEFAULT 'USR' NOT NULL,
     created_at         TIMESTAMP NOT NULL
 );
 
