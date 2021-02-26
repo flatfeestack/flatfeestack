@@ -5,11 +5,12 @@ import { API } from "ts/api";
 
 let stripe = Stripe("pk_test_8Qs51tLVL0qbzUUgo3YEQPgL");
 
-import { onMount } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import Spinner from "./Spinner.svelte";
 import { user } from "ts/auth";
 
 let selectedPlan = 1;
+let seats = 1;
 
 const plans = [
   {
@@ -45,8 +46,6 @@ let error = "";
 let showSuccess = false;
 
 let interval;
-
-let seats=1;
 
 async function createCardForm() {
   cardElement = elements.create("card");
@@ -132,6 +131,7 @@ onMount(async () => {
     await createCardForm();
   }
 });
+
 </script>
 
 <style>
@@ -193,7 +193,7 @@ onMount(async () => {
     </div>
     <div class="font-semibold mb-5">
       Next Payment: $
-      {plans[selectedPlan].price * seats}
+      {plans[selectedPlan].price * ($user.mode === "ORG" ? seats:1)}
       at
       {new Date()}
     </div>

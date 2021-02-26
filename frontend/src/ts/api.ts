@@ -99,13 +99,12 @@ export const API = {
   user: {
     get: () => apiInstance.get(`/users/me`),
     connectedEmails: () => apiInstance.get(`/users/me/connectedEmails`),
-    addEmail: (email: string) =>
-      apiInstance.post(`/users/me/connectedEmails`, { email }),
-    removeEmail: (email: string) =>
-      apiInstance.delete(`/users/me/connectedEmails/${encodeURI(email)}`),
-    updatePayoutAddress: (address: string) =>
-      apiInstance.put(`/users/me/payout/${address}`),
+    addEmail: (email: string) => apiInstance.post(`/users/me/connectedEmails`, { email }),
+    removeEmail: (email: string) => apiInstance.delete(`/users/me/connectedEmails/${encodeURI(email)}`),
+    updatePayoutAddress: (address: string) => apiInstance.put(`/users/me/payout/${address}`),
     getSponsored: () => apiInstance.get("/users/me/sponsored"),
+    setName: (name: string) => apiInstance.put(`/users/me/name/${name}`),
+    setImage: (image: string) => apiInstance.post(`/users/me/image`, {image}),
   },
   payments: {
     createSubscription: (plan: string, paymentMethod: string) =>
