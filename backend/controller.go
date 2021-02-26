@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+type ImageRequest struct {
+	Image string `json:"image"`
+}
+
 type GitEmailRequest struct {
 	Email string `json:"email"`
 }
@@ -137,6 +141,33 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 	err := updateUser(user)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func updateName(w http.ResponseWriter, r *http.Request, user *User) {
+	params := mux.Vars(r)
+	a := params["name"]
+	err := updateUserName(user.Id, a)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
+	var img ImageRequest
+	err := json.NewDecoder(r.Body).Decode(&img)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		return
+	}
+
+	err = updateUserImage(user.Id, img.Image)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

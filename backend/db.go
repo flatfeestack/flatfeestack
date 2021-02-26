@@ -18,6 +18,8 @@ type User struct {
 	Id                uuid.UUID `json:"id" sql:",type:uuid"`
 	StripeId          *string   `json:"-"`
 	Email             *string   `json:"email"`
+	Name              *string   `json:"name"`
+	Image             *string   `json:"image"`
 	Subscription      *string   `json:"subscription"`
 	SubscriptionState *string   `json:"subscription_state"`
 	PayoutETH         *string   `json:"payout_eth"`
@@ -84,8 +86,8 @@ type PayoutsResponse struct {
 func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
-		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE email=$1", email).
-		Scan(&u.Id, &u.StripeId, &u.Email, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
+		QueryRow("SELECT id, stripe_id, email, name, image, subscription, subscription_state, payout_eth FROM users WHERE email=$1", email).
+		Scan(&u.Id, &u.StripeId, &u.Email, &u.Name, &u.Image, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -99,8 +101,8 @@ func findUserByEmail(email string) (*User, error) {
 func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
-		QueryRow("SELECT id, stripe_id, email, subscription, subscription_state, payout_eth FROM users WHERE id=$1", uid).
-		Scan(&u.Id, &u.StripeId, &u.Email, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
+		QueryRow("SELECT id, stripe_id, email, name, image, subscription, subscription_state, payout_eth FROM users WHERE id=$1", uid).
+		Scan(&u.Id, &u.StripeId, &u.Email, &u.Name, &u.Image, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -135,6 +137,36 @@ func updateUser(user *User) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(user.Email, user.StripeId, user.Subscription, user.SubscriptionState, user.PayoutETH, user.Id)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateUserName(uid uuid.UUID, name string) error {
+	stmt, err := db.Prepare("UPDATE users SET name=$1 WHERE id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(name, uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateUserImage(uid uuid.UUID, data string) error {
+	stmt, err := db.Prepare("UPDATE users SET image=$1 WHERE id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer stmt.Close()
+
+	var res sql.Result
+	res, err = stmt.Exec(data, uid)
 	if err != nil {
 		return err
 	}

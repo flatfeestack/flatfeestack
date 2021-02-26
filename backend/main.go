@@ -160,6 +160,8 @@ func main() {
 	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
 	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
+	apiRouter.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
 	//repo github
 	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
@@ -197,6 +199,13 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	w.WriteHeader(code)
 	if debug {
 		w.Write([]byte(`{"error":"` + msg + `"}`))
+	}
+}
+
+func maxBytesMiddleware(next func(w http.ResponseWriter, r *http.Request), size int64) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, size)
+		next(w, r)
 	}
 }
 
