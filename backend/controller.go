@@ -1,17 +1,36 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"github.com/Pallinder/go-randomdata"
+	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"golang.org/x/text/language"
 	"log"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
+
+var matcher = language.NewMatcher([]language.Tag{
+	language.English,
+	language.German,
+})
+
+type EmailRequest struct {
+	MailTo      string `json:"mail_to,omitempty"`
+	Subject     string `json:"subject"`
+	TextMessage string `json:"text_message"`
+	HtmlMessage string `json:"html_message"`
+}
 
 type ImageRequest struct {
 	Image string `json:"image"`
@@ -19,6 +38,11 @@ type ImageRequest struct {
 
 type GitEmailRequest struct {
 	Email string `json:"email"`
+}
+
+type EmailToken struct {
+	Email string `json:"email"`
+	Token string `json:"token"`
 }
 
 type WebhookCallback struct {
@@ -87,6 +111,22 @@ func getMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 }
 
+func confirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
+	var emailToken EmailToken
+	err := json.NewDecoder(r.Body).Decode(&emailToken)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		return
+	}
+
+	err = confirmGitEmail(emailToken.Email, emailToken.Token, timeNow())
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 // @Summary Add new git email
 // @Tags Users
 // @Param repo body GitEmailRequest true "Request Body"
@@ -105,11 +145,48 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	//TODO: send email to user and add email after verification
-	err = insertGitEmail(uuid.New(), user.Id, body.Email, timeNow())
+	rnd, err := genRnd(16)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "ERR-reset-email-02, RND %v err %v", err)
+		return
+	}
+	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
+	err = insertGitEmail(uuid.New(), user.Id, body.Email, addGitEmailToken, timeNow())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save email: %v", err)
 		return
 	}
+
+	var other = map[string]string{}
+	other["token"] = addGitEmailToken
+
+	subject := parseTemplate("template-subject-signup_"+lang(r)+".tmpl", other)
+	if subject == "" {
+		subject = "Validate your email"
+	}
+	textMessage := parseTemplate("template-plain-signup_"+lang(r)+".tmpl", other)
+	if textMessage == "" {
+		textMessage = "Is this your email address? " + opts.EmailLinkPrefix + "/confirm/git-email/" + url.QueryEscape(body.Email) + "/" + addGitEmailToken
+	}
+	htmlMessage := parseTemplate("template-html-signup_"+lang(r)+".tmpl", other)
+
+	e := EmailRequest{
+		MailTo:      url.QueryEscape(body.Email),
+		Subject:     subject,
+		TextMessage: textMessage,
+		HtmlMessage: htmlMessage,
+	}
+
+	url := strings.Replace(opts.EmailUrl, "{email}", url.QueryEscape(body.Email), 1)
+	url = strings.Replace(url, "{token}", addGitEmailToken, 1)
+
+	go func() {
+		err = sendEmail(url, e)
+		if err != nil {
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
+		}
+	}()
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -125,7 +202,6 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	email := params["email"]
 
-	//TODO: send email to user and add email after verification
 	err := deleteGitEmail(user.Id, email)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
@@ -166,6 +242,21 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	err = updateUserImage(user.Id, img.Image)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func updateMode(w http.ResponseWriter, r *http.Request, user *User) {
+	params := mux.Vars(r)
+	a := params["mode"]
+	if a != "USR" && a != "ORG" {
+		writeErr(w, http.StatusInternalServerError, "Can only change between USR/ORG, input: %s", a)
+		return
+	}
+	err := updateUserMode(user.Id, a)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
@@ -590,12 +681,12 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	}
 
 	//fake contribution
-	err = insertGitEmail(uuid.New(), *uid1, "tom@tom.tom", timeNow())
+	err = insertGitEmail(uuid.New(), *uid1, "tom@tom.tom", "A", timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
 	}
-	err = insertGitEmail(uuid.New(), *uid2, "sam@sam.sam", timeNow())
+	err = insertGitEmail(uuid.New(), *uid2, "sam@sam.sam", "B", timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
@@ -687,4 +778,67 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	hoursAdd += hours
 	log.Printf("time warp: %v", timeNow())
 	w.WriteHeader(http.StatusOK)
+}
+
+func genRnd(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	// Note that err == nil only if we read len(b) bytes.
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func sendEmail(url string, e EmailRequest) error {
+	c := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+	j, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(j))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+opts.EmailToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("could not update DB as status from email server: %v %v", resp.Status, resp.StatusCode)
+	}
+	return nil
+}
+
+func lang(r *http.Request) string {
+	accept := r.Header.Get("Accept-Language")
+	tag, _ := language.MatchStrings(matcher, accept)
+	b, _ := tag.Base()
+	return b.String()
+}
+
+func parseTemplate(filename string, other map[string]string) string {
+	textMessage := ""
+	tmplPlain, err := template.ParseFiles(filename)
+	if err == nil {
+		var buf bytes.Buffer
+		err = tmplPlain.Execute(&buf, other)
+		if err == nil {
+			textMessage = buf.String()
+		} else {
+			log.Printf("cannot execute template file [%v], err: %v", filename, err)
+		}
+	} else {
+		log.Printf("cannot prepare file template file [%v], err: %v", filename, err)
+	}
+	return textMessage
 }

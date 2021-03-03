@@ -30,10 +30,12 @@ CREATE TABLE repo (
 );
 
 CREATE TABLE git_email (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_gub REFERENCES users (id),
-    email      VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP NOT NULL
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id      UUID CONSTRAINT fk_user_id_gub REFERENCES users (id),
+    email        VARCHAR(255) UNIQUE NOT NULL,
+    token        VARCHAR(32),
+    confirmed_at TIMESTAMP,
+    created_at   TIMESTAMP NOT NULL
 );
 
 CREATE TABLE sponsor_event (

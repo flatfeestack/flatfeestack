@@ -172,9 +172,9 @@ func TestGitEmail(t *testing.T) {
 
 	uid := saveTestUser(t, "email1")
 
-	err := insertGitEmail(uuid.New(), uid, "email1", timeNow())
+	err := insertGitEmail(uuid.New(), uid, "email1", "A", timeNow())
 	assert.Nil(t, err)
-	err = insertGitEmail(uuid.New(), uid, "email2", timeNow())
+	err = insertGitEmail(uuid.New(), uid, "email2", "A", timeNow())
 	assert.Nil(t, err)
 	emails, err := findGitEmailsByUserId(uid)
 	assert.Nil(t, err)

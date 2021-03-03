@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "backend/docs"
 	"crypto/rsa"
 	"database/sql"
 	"encoding/base32"
@@ -46,15 +45,18 @@ var (
 )
 
 type Opts struct {
-	Port         int
-	HS256        string
-	Env          string
-	StripeSecret string
-	DBPath       string
-	DBDriver     string
-	AnalysisUrl  string
-	PayoutUrl    string
-	Admins       string
+	Port            int
+	HS256           string
+	Env             string
+	StripeSecret    string
+	DBPath          string
+	DBDriver        string
+	AnalysisUrl     string
+	PayoutUrl       string
+	Admins          string
+	EmailLinkPrefix string
+	EmailUrl        string
+	EmailToken      string
 }
 
 func NewOpts() *Opts {
@@ -80,6 +82,11 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT-URL",
 		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&o.EmailUrl, "email-url", lookupEnv("EMAIL_URL",
+		"http://localhost"), "Email service URL")
+	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
+	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
+		"http://localhost/"), "Email link prefix")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -155,13 +162,16 @@ func main() {
 	apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
 	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/connectedEmails", jwtAuthUser(addGitEmail)).Methods("POST")
-	apiRouter.HandleFunc("/users/me/connectedEmails/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
+	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
+	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods("POST")
+	apiRouter.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
 	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
+	apiRouter.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods("PUT")
+	//
+	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
 	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
 	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
@@ -181,6 +191,11 @@ func main() {
 		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
 		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods("POST")
 	}
+
+	apiRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("ERROR: Unknown path [%s]:%s", r.URL, r.Method)
+		w.WriteHeader(http.StatusNotFound)
+	})
 
 	//scheduler
 	cronJob(dailyRunner, timeNow())
@@ -296,7 +311,7 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			}
 		}
 
-		log.Printf("Authenticated user %s\n", *user.Email)
+		log.Printf("User [%s] request [%s]:%s\n", *user.Email, r.URL, r.Method)
 		next(w, r, user)
 	}
 }
