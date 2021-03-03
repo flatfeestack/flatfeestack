@@ -1,8 +1,3 @@
-<style>
-.sveltejs-forms {
-  display: flex;
-}
-</style>
 
 <script lang="ts">
 import DashboardLayout from "./DashboardLayout.svelte";
@@ -11,16 +6,18 @@ import { onMount } from "svelte";
 import { API } from "ts/api";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import Web3 from "../../components/Web3.svelte";
-import CryptoAddressForm from "../../components/CryptoAddressForm.svelte";
+import { user } from "ts/auth";
+import { GitUser } from "../../types/git-email.type";
 
-let emails = [];
+let address = "";
+let gitEmails: Array<GitUser> = [];
+let newEmail = "";
 onMount(async () => {
   try {
-    const response = await API.user.connectedEmails();
-
+    const response = await API.user.gitEmails();
     if (response?.data && response.data.length > 0) {
       console.log(response.data);
-      emails = response.data;
+      gitEmails = response.data;
     }
   } catch (e) {
     console.log(e);
@@ -29,23 +26,32 @@ onMount(async () => {
 
 let error = "";
 
+async function updatePayout(e) {
+  try {
+    if (!$user.payout_eth || !$user.payout_eth.match(/^0x[a-fA-F0-9]{40}$/g)) {
+      console.log("error not valid eth address");
+      error = "Invalid ethereum address";
+    }
+    //TODO: no button, wait 1sec
+    await API.user.updatePayoutAddress($user.payout_eth);
+    error = "";
+  } catch (e) {
+    error = String(e);
+    console.log(e);
+  }
+}
 
-async function handleSubmit({
-  detail: {
-    values: { email },
-    setSubmitting,
-    resetForm,
-  },
-}) {
+async function handleSubmit() {
   try {
     error = "";
-    await API.user.addEmail(email);
-    setSubmitting(false);
-    resetForm();
-    emails = [...emails, email];
+    await API.user.addEmail(newEmail);
+    let ge: GitUser = {
+      confirmedAt: "", createdAt: "", email: newEmail
+    }
+    gitEmails = [...gitEmails, ge];
+    newEmail = "";
   } catch (e) {
-    error = e.response?.data?.message || "Something went wrong";
-    setSubmitting(false);
+    error = e.response?.data?.message || "Something went wrong:" + e;
   }
 }
 
@@ -55,8 +61,8 @@ async function removeEmail(email: string) {
   try {
     error = "";
     console.log("remove email:", email);
-    await API.user.removeEmail(email);
-    emails = emails.filter((e) => e !== email);
+    await API.user.removeGitEmail(email);
+    gitEmails = gitEmails.filter((e) => e.email !== email);
   } catch (e) {
     console.log("in catch", e.message);
     error = e?.message || "Something went wrong";
@@ -64,10 +70,15 @@ async function removeEmail(email: string) {
 }
 </script>
 
+<style>
+
+</style>
+
+
 <DashboardLayout>
   <h1>Income</h1>
   <hr class="mb-10 w-64" />
-  {#if emails && emails.length === 0}
+  {#if gitEmails && gitEmails.length === 0}
     <div class="flex mb-5">
       <div class="bg-red-500 text-white p-5">
         Please add your git e-mail addresses to generate income
@@ -75,34 +86,26 @@ async function removeEmail(email: string) {
     </div>
   {/if}
   <h2 class="mb-5">Connected Git Emails</h2>
-  {#each emails as email}
+  {#each gitEmails as email}
     <div class="div mb-2 flex flex-row items-center">
       <div class="w-64">
-        <input type="text" class="input" value="{email}" disabled />
+        <input type="text" class="input" value="{email.email}" disabled />
       </div>
+      <input type="text" class="input" value="{email.confirmedAt}" disabled />
       <div
         class="ml-5 hover:text-red-500 cursor-pointer transform hover:scale-105 duration-200"
-        on:click="{() => removeEmail(email)}"
+        on:click="{() => removeEmail(email.email)}"
       >
         <Fa icon="{faTrash}" size="md" />
       </div>
     </div>
   {/each}
   <h2 class="my-5">Add Git Email</h2>
-  <form
-    on:submit="{handleSubmit}"
-    let:isSubmitting
-    let:isValid
-    class="sveltejs-forms"
-  >
+  <form on:submit|preventDefault="{handleSubmit}">
     <div class="flex flex-row items-end">
       <div class="w-64">
-        <label
-          for="email-input"
-          class="block text-grey-darker text-sm font-bold mb-2 w-full"
-        >Email
-        </label>
-        <input id="email-input" name="email" type="text" class="input" />
+        <label for="email-input" class="block text-grey-darker text-sm font-bold mb-2 w-full">Email</label>
+        <input id="email-input" name="email" type="text" class="input" bind:value={newEmail}/>
       </div>
       <div class="ml-5">
         <button
@@ -117,7 +120,20 @@ async function removeEmail(email: string) {
     </div>
   </form>
   <h2 class="my-5">Payout Address</h2>
-  <CryptoAddressForm />
+
+  <form on:submit|preventDefault="{updatePayout}">
+    <div class="w-64">
+      <label class="block text-grey-darker text-sm font-bold mb-2 w-full">Ethereum
+        Address</label>
+      <input type="text" class="input" bind:value="{$user.payout_eth}" />
+    </div>
+    <div><button type="submit" class="button ml-5">Update Address</button></div>
+  </form>
+  {#if error}
+    <div class="flex mt-5">
+      <p class="bg-red-500 p-2 block text-white rounded">{error}</p>
+    </div>
+  {/if}
 
   <h2 class="my-5">Request Funds</h2>
 

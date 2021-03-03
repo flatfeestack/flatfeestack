@@ -12,12 +12,26 @@
   import { links } from "svelte-routing";
 
   let checked = $user.mode != "ORG";
+  let timeoutUserMode;
+  let userModeOrig = $user.mode;
+
   $: {
     if (checked == false) {
       $user.mode = "ORG";
     } else {
       $user.mode = "USR";
     }
+
+    if(timeoutUserMode) {
+      clearTimeout(timeoutUserMode);
+    }
+    timeoutUserMode = setTimeout(() => {
+      if ($user.mode !== userModeOrig) {
+        API.user.setUserMode($user.mode);
+        userModeOrig = $user.mode;
+      }
+    }, 1000)
+
   }
 
   let search = "";
@@ -92,7 +106,7 @@
     </div>
     {/if}
 
-    {#if !$user.mode || $user.mode == "" || $user.mode == "USR"}
+    {#if checked}
       <h2>Find your favorite opes source projects</h2>
     {:else}
       <h2>Examples of cool opes source projects</h2>

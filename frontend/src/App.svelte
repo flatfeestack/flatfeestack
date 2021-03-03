@@ -17,6 +17,7 @@
   import Profile from "./routes/Dashboard/Profile.svelte";
   import Admin from "./routes/Dashboard/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
+  import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
 
   export let url;
   onMount(() => refreshSession());
@@ -118,6 +119,9 @@
         </Route>
         <Route path="/confirm/signup/:email/:token" let:params>
           <ConfirmSignup email="{params.email}" token="{params.token}" />
+        </Route>
+        <Route path="/confirm/git-email/:email/:token" let:params>
+          <ConfirmGitEmail email="{params.email}" token="{params.token}" />
         </Route>
         {#if $user.id}
           <Route path="/dashboard" component="{FindRepos}" />

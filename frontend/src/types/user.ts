@@ -6,5 +6,6 @@ export type User = {
   username: string;
   subscription: string;
   subscription_state: string;
+  payout_eth: string;
   mode: string;
 };

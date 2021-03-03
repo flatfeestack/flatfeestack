@@ -2,9 +2,9 @@ FROM node:14-alpine AS builder
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN apk add make gcc musl-dev
 WORKDIR /app
-COPY package.json webpack.config.js tailwind.config.js tsconfig.json ./
+COPY package.json webpack.config.js tsconfig.json ./
 COPY ./public/assets ./public/assets
-COPY ./public/favicon.png ./public/global.css ./public/index.html ./public/
+COPY ./public/favicon.png ./public/index.html ./public/
 RUN chown -R appuser:appgroup /app
 USER appuser
 RUN npm install

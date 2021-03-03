@@ -104,7 +104,7 @@ const handleSubmit = async (event) => {
         }
       }
     }
-    error = "";
+    showSuccess = true;
   } catch (e) {
     console.log(e);
     error = "The payment failed. The subscription could not be created.";
@@ -220,7 +220,7 @@ onMount(async () => {
     <Spinner />
   </div>
 {/if}
-{#if showSuccess && submitted}
+{#if showSuccess || $user.subscription_state !== 'ACTIVE'}
   <div class="w-full flex flex-col items-center">
     <h2>Success! Welcome onboard!</h2>
     Cancel your support
