@@ -20,7 +20,7 @@ func TestUser(t *testing.T) {
 		PayoutETH:         stringPointer("0x123"),
 	}
 
-	err := insertUser(&u)
+	err := insertUser(&u, "A")
 	assert.Nil(t, err)
 
 	u2, err := findUserByEmail("email2")
@@ -64,7 +64,7 @@ func TestSponsor(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	err := insertUser(&u)
+	err := insertUser(&u, "A")
 	assert.Nil(t, err)
 	id, err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
@@ -161,7 +161,7 @@ func saveTestUser(t *testing.T, email string) uuid.UUID {
 		PayoutETH:         stringPointer("0x123"),
 	}
 
-	err := insertUser(&u)
+	err := insertUser(&u, "A")
 	assert.Nil(t, err)
 	return u.Id
 }

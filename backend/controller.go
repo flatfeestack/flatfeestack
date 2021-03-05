@@ -750,7 +750,7 @@ func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth strin
 		Description: stringPointer("desc"),
 		CreatedAt:   timeNow(),
 	}
-	err := insertUser(&u)
+	err := insertUser(&u, "A")
 	if err != nil {
 		return nil, nil, err
 	}

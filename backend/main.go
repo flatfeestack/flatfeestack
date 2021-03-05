@@ -336,7 +336,13 @@ func createUser(email string) (*User, error) {
 		user.StripeId = &opts.Env
 	}
 
-	err = insertUser(&user)
+	rnd, err := genRnd(18)
+	if err != nil {
+		return nil, err
+	}
+	token := base32.StdEncoding.EncodeToString(rnd)
+
+	err = insertUser(&user, token)
 	if err != nil {
 		return nil, err
 	}

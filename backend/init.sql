@@ -11,6 +11,7 @@ CREATE TABLE users (
     subscription_state VARCHAR(255),
     payout_eth         VARCHAR(255),
     seats              INTEGER,
+    token              VARCHAR(64) NOT NULL,
     role               VARCHAR(3) DEFAULT 'USR' NOT NULL,
     created_at         TIMESTAMP NOT NULL
 );
