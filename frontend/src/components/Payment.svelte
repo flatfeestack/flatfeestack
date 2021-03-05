@@ -193,12 +193,12 @@ onMount(async () => {
     </div>
     <div class="font-semibold mb-5">
       Next Payment: $
-      {plans[selectedPlan].price * ($user.mode === "ORG" ? seats:1)}
+      {plans[selectedPlan].price * ($user.role === "ORG" ? seats:1)}
       at
       {new Date()}
     </div>
     <div>
-      {#if $user.mode == "ORG" }
+      {#if $user.role == "ORG" }
         How many seats? <input type="number" min="1" bind:value="{seats}">
       {/if}
     </div>
@@ -220,7 +220,7 @@ onMount(async () => {
     <Spinner />
   </div>
 {/if}
-{#if showSuccess || $user.subscription_state !== 'ACTIVE'}
+{#if showSuccess || $user.subscription_state === 'ACTIVE'}
   <div class="w-full flex flex-col items-center">
     <h2>Success! Welcome onboard!</h2>
     Cancel your support
@@ -230,6 +230,9 @@ onMount(async () => {
     <div>
       [orgname] invites you to support awesome open source projects such as [your examples]. Simply click on the link and
       confirm your account, which has been prepaid with [amount].
+
+
+
     </div>
 
     <div>

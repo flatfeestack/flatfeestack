@@ -7,5 +7,7 @@ export type User = {
   subscription: string;
   subscription_state: string;
   payout_eth: string;
-  mode: string;
+  seats: number;
+  token: string;
+  role: string;
 };

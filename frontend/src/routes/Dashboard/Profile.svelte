@@ -1,22 +1,27 @@
-<script>
+<script lang="ts">
 import DashboardLayout from "./DashboardLayout.svelte";
 import Payment from "../../components/Payment.svelte";
 import { user } from "ts/auth";
 import {faUpload} from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
 import { API } from "ts/api.ts";
-let checked = $user.mode != "ORG";
+import { onMount } from "svelte";
+import type { Invitation } from "types/invitation.type";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
+
+let checked = $user.role != "ORG";
+let nameOrig = $user.name;
+let timeoutName;
+let invites: Invitation[] = [];
+let invite_email;
 
 $: {
   if (checked === false) {
-    $user.mode = "ORG";
+    $user.role = "ORG";
   } else {
-    $user.mode = "USR";
+    $user.role = "USR";
   }
 }
-
-let nameOrig = $user.name;
-let timeoutName;
 
 $: {
   if(timeoutName) {
@@ -29,7 +34,6 @@ $: {
     }
   }, 1000)
 }
-//onDestroy(()=> clearTimeout(timeout)) -> always store
 
 let fileinput, error;
 const onFileSelected =(e)=> {
@@ -37,15 +41,60 @@ const onFileSelected =(e)=> {
   let reader = new FileReader();
   reader.readAsDataURL(image);
   reader.onload = e => {
-    if(e.target.result.length > 200 * 1024) {
+    if (typeof reader.result !== 'string') {
+      console.log("not a string?")
+      return;
+    }
+    const data: string = reader.result as string;
+    if(data.length > 200 * 1024) {
       error = "image too large, max is 200KB";
       console.log(":::::::::::::::::::::::::::")
       return;
     }
-    API.user.setImage(e.target.result)
-    $user.image = e.target.result
+    API.user.setImage(data)
+    $user.image = data
   };
 }
+
+async function removeInvite(email: string) {
+  try {
+    await API.auth.delInvite(email);
+    const response = await API.auth.invites();
+    if (response?.data && response.data.length > 0) {
+      invites = response.data;
+    }
+    console.log(invites);
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+async function invite() {
+  try {
+    await API.auth.invite(invite_email, $user.email, $user.name)
+    const response = await API.auth.invites();
+    if (response?.data && response.data.length > 0) {
+      invites = response.data;
+    }
+    console.log(invites);
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+//onDestroy(()=> clearTimeout(timeout)) -> always store
+onMount(async () => {
+  try {
+    const response = await API.auth.invites();
+    if (response?.data && response.data.length > 0) {
+      invites = response.data;
+    }
+    console.log(invites);
+  } catch (e) {
+    error = e
+    console.log(e);
+  }
+});
 
 </script>
 
@@ -144,6 +193,27 @@ const onFileSelected =(e)=> {
         </div>
       {/if}
       <Payment />
+
+    {#each invites as inv}
+      {inv.email}
+      {inv.pending}
+      {inv.createdAt}
+      <div
+        class="ml-5 hover:text-red-500 cursor-pointer transform hover:scale-105 duration-200"
+        on:click="{() => removeInvite(inv.email)}"
+      >
+        <Fa icon="{faTrash}" size="md" />
+      </div>
+    {/each}
+
+    <form on:submit|preventDefault="{invite}">
+      <div class="w-64">
+        <label class="block text-grey-darker text-sm font-bold mb-2 w-full">Invite Email</label>
+        <input type="text" class="input" bind:value="{invite_email}" />
+      </div>
+      <div><button type="submit" class="button ml-5">Invite</button></div>
+    </form>
+
     </div>
 
 

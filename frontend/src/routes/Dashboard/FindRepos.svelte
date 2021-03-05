@@ -11,24 +11,24 @@
   import Dots from "../../components/Dots.svelte";
   import { links } from "svelte-routing";
 
-  let checked = $user.mode != "ORG";
+  let checked = $user.role != "ORG";
   let timeoutUserMode;
-  let userModeOrig = $user.mode;
+  let userModeOrig = $user.role;
 
   $: {
     if (checked == false) {
-      $user.mode = "ORG";
+      $user.role = "ORG";
     } else {
-      $user.mode = "USR";
+      $user.role = "USR";
     }
 
     if(timeoutUserMode) {
       clearTimeout(timeoutUserMode);
     }
     timeoutUserMode = setTimeout(() => {
-      if ($user.mode !== userModeOrig) {
-        API.user.setUserMode($user.mode);
-        userModeOrig = $user.mode;
+      if ($user.role !== userModeOrig) {
+        API.user.setUserMode($user.role);
+        userModeOrig = $user.role;
       }
     }, 1000)
 

@@ -51,7 +51,7 @@ export const updateUser = async () => {
   }
 };
 
-export const removeSession = async () => {
+export const removeSession = () => {
   localStorage.removeItem("ffs-refresh")
   user.set(<User>{})
   token.set("");

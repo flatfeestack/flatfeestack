@@ -18,6 +18,7 @@
   import Admin from "./routes/Dashboard/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
   import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
+  import ConfirmInvite from "./routes/ConfirmInvite.svelte";
 
   export let url;
   onMount(() => refreshSession());
@@ -122,6 +123,9 @@
         </Route>
         <Route path="/confirm/git-email/:email/:token" let:params>
           <ConfirmGitEmail email="{params.email}" token="{params.token}" />
+        </Route>
+        <Route path="/confirm/invite/:email/:token/:invite_email" let:params>
+          <ConfirmInvite email="{params.email}" token="{params.token}" inviteEmail="{params.invite_email}"/>
         </Route>
         {#if $user.id}
           <Route path="/dashboard" component="{FindRepos}" />

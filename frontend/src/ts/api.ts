@@ -2,7 +2,6 @@ import axios from "axios";
 import { token } from "./auth";
 import { get } from "svelte/store";
 import { Exchange } from "../types/exchange.type";
-import { PayoutAddress } from "../types/payout-address.type";
 import { removeSession } from "./authService";
 import { Repo } from "../types/repo.type";
 
@@ -75,11 +74,41 @@ export const API = {
     reset: (email: string) => {
       return authInstance.post(`/reset/${email}`);
     },
+    invites: () => {
+      const t = get(token);
+      if (t) {
+        const config = { headers: { Authorization: `Bearer ${t}` } };
+        return authInstance.get('/invites', config);
+      } else {
+        throw new Error("t not found...");
+      }
+    },
+    invite: (email: string, inviteEmail: string, org: string) => {
+      const t = get(token);
+      if (t) {
+        const config = { headers: { Authorization: `Bearer ${t}` } };
+        return authInstance.post('/invite', {email:email, invite_email:inviteEmail, org:org}, config);
+      } else {
+        throw new Error("t not found...");
+      }
+    },
+    delInvite: (email: string) => {
+      const t = get(token);
+      if (t) {
+        const config = {headers: { Authorization: `Bearer ${t}` } };
+        return authInstance.delete(  `/invite/${email}`, config);
+      } else {
+        throw new Error("t not found...");
+      }
+    },
     confirmEmail: (email: string, token: string) => {
       return authInstance.post("/confirm/signup", {email, token})
     },
     confirmReset: (email: string, password: string, token: string) => {
-      return authInstance.post("/confirm/reset", {email, password, email_token_reset: token})
+      return authInstance.post("/confirm/reset", {email, password, email_token: token})
+    },
+    confirmInvite: (email: string, password: string, token: string) => {
+      return authInstance.post("/confirm/invite", {email, password, email_token: token})
     },
     logout: () => {
       const t = get(token);

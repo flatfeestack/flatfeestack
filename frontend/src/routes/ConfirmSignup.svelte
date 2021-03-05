@@ -2,7 +2,6 @@
   import { Link, navigate } from "svelte-routing";
   import { onMount } from 'svelte';
   import { confirmEmail, updateUser } from "ts/authService";
-  import { loading } from "../ts/auth";
 
   export let email;
   export let token;
