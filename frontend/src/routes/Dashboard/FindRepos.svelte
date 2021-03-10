@@ -53,9 +53,7 @@
   onMount(async () => {
     try {
       const res = await API.user.getSponsored();
-      if (res.data) {
-        sponsoredRepos.set(res.data);
-      }
+      sponsoredRepos.set(res.data === null ? []:res.data);
     } catch (e) {
       console.log(e);
     }

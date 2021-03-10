@@ -2,17 +2,19 @@
 import DashboardLayout from "./DashboardLayout.svelte";
 import Payment from "../../components/Payment.svelte";
 import { user } from "ts/auth";
-import {faUpload} from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
 import { API } from "ts/api.ts";
 import { onMount } from "svelte";
 import type { Invitation } from "types/invitation.type";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { Repo } from "../../types/repo.type";
+import { links } from "svelte-routing";
 
 let checked = $user.role != "ORG";
 let nameOrig = $user.name;
 let timeoutName;
 let invites: Invitation[] = [];
+let sponsoredRepos: Repo[] = [];
 let invite_email;
 
 $: {
@@ -85,11 +87,11 @@ async function invite() {
 //onDestroy(()=> clearTimeout(timeout)) -> always store
 onMount(async () => {
   try {
-    const response = await API.auth.invites();
-    if (response?.data && response.data.length > 0) {
-      invites = response.data;
-    }
-    console.log(invites);
+    const res1 = await API.auth.invites();
+    const res2 = await API.user.getSponsored();
+    invites = res1.data === null ? [] : res1.data
+    sponsoredRepos = res2.data === null ? [] : res2.data;
+
   } catch (e) {
     error = e
     console.log(e);
@@ -104,14 +106,8 @@ onMount(async () => {
         flex-direction: row;
         margin: 1em;
     }
-    .wrap {
-        display: flex;
-        flex-wrap: wrap;
-    }
     .upload{
         display:flex;
-        height:50px;
-        width:50px;
         cursor:pointer;
     }
     .image-usr {
@@ -134,8 +130,8 @@ onMount(async () => {
 <DashboardLayout>
   <h1 class = "px-2">Profile</h1>
 
-  <div class = "container px-2">
-    <label class = "">Are you an organization or an individual contributor? </label>
+  <div class = "container">
+    <label class = "px-2">Are you an organization or an individual contributor?&nbsp;</label>
     <div class="onoffswitch">
     <input type="checkbox" bind:checked={checked} name="onoffswitch" class="onoffswitch-checkbox" id="myonoffswitch" tabindex="0" >
     <label class="onoffswitch-label" for="myonoffswitch">
@@ -145,55 +141,69 @@ onMount(async () => {
   </div>
   </div>
 
-
-  <div class = "container px-2">
+  <div class = "container">
     {#if checked}
-    <label class = "">What name should appear on your badge? </label>
+      <label class="px-2">What name should appear on your badge?</label>
+      <input type="text" bind:value={$user.name} placeholder="Name on the badge">
     {:else}
-      <label class = "">What is the name of your organization? </label>
+      <label class="px-2">What is the name of your organization? </label>
+      <input type="text" bind:value={$user.name} placeholder="My organization name">
     {/if}
-    <input type="text" bind:value={$user.name}>
+  </div>
 
-    Upload your profile picture
+  <div class = "container">
+    <label class="px-2">Upload your profile picture:</label>
 
-    {#if $user.image}
-      {#if checked}
-        <img class="image-usr" src="{$user.image}" alt="d" />
-      {:else}
-        <img class="image-org" src="{$user.image}" alt="d" />
+    <div class="upload" on:click={()=>{fileinput.click();}}>
+      <Fa icon="{faUpload}" size="lg"  class="icon, px-2" />
+      <span class="px-2">Choose Image</span>
+      <input style="display:none" type="file" accept=".jpg, .jpeg, .png" on:change={(e)=>onFileSelected(e)} bind:this={fileinput} >
+      {#if $user.image}
+        {#if checked}
+          <img class="image-usr" src="{$user.image}" />
+        {:else}
+          <img class="image-org" src="{$user.image}" />
+        {/if}
       {/if}
-    {:else}
-      <img class="image" src="https://cdn4.iconfinder.com/data/icons/small-n-flat/24/user-alt-512.png" alt="" />
-    {/if}
-
-    <span class="upload" on:click={()=>{fileinput.click();}}>
-      <Fa icon="{faUpload}" size="lg"  class="icon" />
-    </span>
-
-    <div class="chan" on:click={()=>{fileinput.click();}}>Choose Image</div>
-    <input style="display:none" type="file" accept=".jpg, .jpeg, .png" on:change={(e)=>onFileSelected(e)} bind:this={fileinput} >
+    </div>
 
   </div>
 
-  <div class="flex">
-      <h2 class="Sponsoring">
-        {#if $user.subscription_state}
-          You are currently sponsoring 5 projects
+  <div class="container">
+
+        {#if $user.subscription_state === 'ACTIVE'}
+          <h2 class="Sponsoring">
+          You are currently sponsoring {sponsoredRepos.length} projects
           <span>{$user.subscription_state}</span>
+          </h2>
+        {:else if sponsoredRepos.length > 0}
+          <h2 class="Sponsoring">
+          Support {sponsoredRepos.length} projects
+          </h2>
         {:else}
-          Support these awesome 5 projects
+          <div class="container bg-green rounded p-2 my-4" use:links>
+              <p>You are not supporting any projects yet. Please go to the <a href="/dashboard/sponsoring">Find Repos</a> section
+                where you can add your favorite projects.</p>
+          </div>
         {/if}
-      </h2>
+  </div>
 
-      {#if $user.subscription_state !== 'ACTIVE'}
-        <div class="container bg-green rounded p-2 my-4">
-          You don't have an active subscription.
-          <br />Please choose a plan below to start sponsoring open source
-          projects
-        </div>
+  <div class="container">
+    {#if $user.subscription_state !== 'ACTIVE' && sponsoredRepos.length > 0}
+      <div class="container bg-green rounded p-2 my-4">
+        You don't have an active subscription. Please choose a plan below to start sponsoring open source
+        projects
+      </div>
+    {/if}
+  </div>
+
+  <div class="">
+      {#if $user.subscription_state !== 'ACTIVE' && sponsoredRepos.length > 0}
+        <Payment />
       {/if}
-      <Payment />
+  </div>
 
+  <div class="container">
     {#each invites as inv}
       {inv.email}
       {inv.pending}
@@ -208,10 +218,12 @@ onMount(async () => {
 
     <form on:submit|preventDefault="{invite}">
       <div class="w-64">
-        <label class="block text-grey-darker text-sm font-bold mb-2 w-full">Invite Email</label>
-        <input type="text" class="input" bind:value="{invite_email}" />
+        <label class="px-2">Invite Email</label>
+        <input size="24" maxlength="100" type="email" bind:value="{invite_email}" />
       </div>
-      <div><button type="submit" class="button ml-5">Invite</button></div>
+      <div>
+        <button type="submit" class="button px-2">Invite</button>
+      </div>
     </form>
 
     </div>
