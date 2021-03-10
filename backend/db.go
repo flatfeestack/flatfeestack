@@ -18,6 +18,7 @@ type User struct {
 	Id                uuid.UUID `json:"id" sql:",type:uuid"`
 	StripeId          *string   `json:"-"`
 	Email             *string   `json:"email"`
+	InviteEmail       *string   `json:"invite_email"`
 	Name              *string   `json:"name"`
 	Image             *string   `json:"image"`
 	Subscription      *string   `json:"subscription"`
@@ -56,6 +57,7 @@ type Payment struct {
 	Id        uuid.UUID `json:"id"`
 	Uid       uuid.UUID `json:"uid"`
 	Amount    int64
+	Seats     int64
 	From      time.Time
 	To        time.Time
 	Sub       string
@@ -459,18 +461,53 @@ func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) erro
 //******************************* Payments ****************************************
 //*********************************************************************************
 func insertPayment(p *Payment) error {
-	stmt, err := db.Prepare("INSERT INTO payments(id, user_id, date_from, date_to, sub, amount) VALUES($1, $2, $3, $4, $5, $6)")
+	stmt, err := db.Prepare("INSERT INTO payments(id, user_id, date_from, date_to, sub, amount, seats) VALUES($1, $2, $3, $4, $5, $6, $7)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payments for %v statement event: %v", p.Id, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(p.Id, p.Uid, p.From, p.To, p.Sub, p.Amount)
+	res, err = stmt.Exec(p.Id, p.Uid, p.From, p.To, p.Sub, p.Amount, p.Seats)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
+}
+
+func getActivePayments(uid uuid.UUID, now time.Time) ([]Payment, error) {
+	var payments []Payment
+	rows, err := db.Query("SELECT id, date_from, date_to, sub, amount, seats FROM payments WHERE user_id=$1 AND DATE_TO > $2", uid, now)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var payment Payment
+		err = rows.Scan(&payment.Id, &payment.From, &payment.To, &payment.Sub, &payment.Amount, &payment.Seats)
+		if err != nil {
+			return nil, err
+		}
+		payments = append(payments, payment)
+	}
+	return payments, nil
+}
+
+func getPaidUsers(pid uuid.UUID, invitedAt time.Time) (int64, error) {
+	var count int64
+	err := db.
+		QueryRow("SELECT count(*) WHERE sponsor_id = $1 and invited_at <= $2", pid, invitedAt).
+		Scan(&count)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return count, nil
+	default:
+		return 0, err
+	}
 }
 
 //*********************************************************************************

@@ -64,10 +64,6 @@ func createStripeCustomer(user *User) (string, error) {
 }
 
 func createSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
-	if user.StripeId == nil {
-		log.Print("error in createSubscription: user has no stripeID")
-		return nil, errors.New("can not stringPointer subscription for user without stripeID")
-	}
 	if opts.Env == "local" {
 		user.Subscription = user.StripeId
 		a := "ACTIVE"
@@ -76,46 +72,11 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 		if err != nil {
 			return nil, err
 		}
-		return &stripe.Subscription{
-			APIResource:                   stripe.APIResource{},
-			ApplicationFeePercent:         0,
-			BillingCycleAnchor:            0,
-			BillingThresholds:             nil,
-			CancelAt:                      0,
-			CancelAtPeriodEnd:             false,
-			CanceledAt:                    0,
-			CollectionMethod:              "",
-			Created:                       0,
-			CurrentPeriodEnd:              0,
-			CurrentPeriodStart:            0,
-			Customer:                      nil,
-			DaysUntilDue:                  0,
-			DefaultPaymentMethod:          nil,
-			DefaultSource:                 nil,
-			DefaultTaxRates:               nil,
-			Discount:                      nil,
-			EndedAt:                       0,
-			ID:                            "",
-			Items:                         nil,
-			LatestInvoice:                 nil,
-			Livemode:                      false,
-			Metadata:                      nil,
-			NextPendingInvoiceItemInvoice: 0,
-			Object:                        "",
-			OnBehalfOf:                    nil,
-			PauseCollection:               stripe.SubscriptionPauseCollection{},
-			PendingInvoiceItemInterval:    stripe.SubscriptionPendingInvoiceItemInterval{},
-			PendingSetupIntent:            nil,
-			PendingUpdate:                 nil,
-			Plan:                          nil,
-			Quantity:                      0,
-			Schedule:                      nil,
-			StartDate:                     0,
-			Status:                        "",
-			TransferData:                  nil,
-			TrialEnd:                      0,
-			TrialStart:                    0,
-		}, nil
+		return &stripe.Subscription{}, nil
+	}
+	if user.StripeId == nil {
+		log.Print("error in createSubscription: user has no stripeID")
+		return nil, errors.New("can not stringPointer subscription for user without stripeID")
 	}
 	paymentParams := &stripe.PaymentMethodAttachParams{
 		Customer: stripe.String(*user.StripeId),
@@ -165,8 +126,6 @@ func createSubscription(user User, plan string, paymentMethod string) (*stripe.S
 // @Failure 400
 // @Router /backend/hooks/stripe [post]
 func stripeWebhook(w http.ResponseWriter, req *http.Request) {
-	const MaxBodyBytes = int64(65536)
-	req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		log.Printf("Error reading request body: %v\n", err)

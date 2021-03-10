@@ -13,6 +13,7 @@ CREATE TABLE users (
     seats              INTEGER,
     token              VARCHAR(64) NOT NULL,
     role               VARCHAR(3) DEFAULT 'USR' NOT NULL,
+    invited_at         TIMESTAMP,
     created_at         TIMESTAMP NOT NULL
 );
 

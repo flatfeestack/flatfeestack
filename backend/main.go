@@ -179,7 +179,7 @@ func main() {
 	apiRouter.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods("POST")
 	//payment
 	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
-	apiRouter.HandleFunc("/hooks/stripe", stripeWebhook).Methods("POST")
+	apiRouter.HandleFunc("/hooks/stripe", maxBytesMiddleware(stripeWebhook, 65536)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods("POST")
 	apiRouter.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods("POST")
 	apiRouter.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods("POST")
