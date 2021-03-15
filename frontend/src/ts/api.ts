@@ -4,6 +4,7 @@ import { get } from "svelte/store";
 import { Exchange } from "../types/exchange.type";
 import { removeSession } from "./authService";
 import { Repo } from "../types/repo.type";
+import { ClientSecret, User } from "../types/user";
 
 const authInstance = axios.create({
   baseURL: "/auth",
@@ -132,10 +133,13 @@ export const API = {
     addEmail: (email: string) => apiInstance.post(`/users/me/git-email`, { email }),
     removeGitEmail: (email: string) => apiInstance.delete(`/users/me/git-email/${encodeURI(email)}`),
     updatePayoutAddress: (address: string) => apiInstance.put(`/users/me/payout/${address}`),
+    updatePaymentMethod: (method: string) => apiInstance.put(`/users/me/method/${method}`),
     getSponsored: () => apiInstance.get("/users/me/sponsored"),
     setName: (name: string) => apiInstance.put(`/users/me/name/${name}`),
     setImage: (image: string) => apiInstance.post(`/users/me/image`, {image}),
     setUserMode: (mode: string) => apiInstance.put(`/users/me/mode/${mode}`),
+    setupStripe: () => apiInstance.post<ClientSecret>(`/users/me/stripe`),
+    stripePayment: (freq: string, seats: number) => apiInstance.put(`/users/me/stripe/${freq}/${seats}`),
   },
   payments: {
     createSubscription: (plan: string, paymentMethod: string) =>

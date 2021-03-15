@@ -1,42 +1,30 @@
-<script>
+<script lang="ts">
 import { API } from "ts/api";
-//import format from "date-fns/format";
-//import { LottiePlayer } from "@lottiefiles/svelte-lottie-player";
-
-let stripe = Stripe("pk_test_8Qs51tLVL0qbzUUgo3YEQPgL");
-
-import { onDestroy, onMount } from "svelte";
-import Spinner from "./Spinner.svelte";
+import { onMount } from "svelte";
 import { user } from "ts/auth";
+import {ClientSecret} from "../types/user";
+import {loadStripe} from '@stripe/stripe-js/pure';
 
+import Spinner from "./Spinner.svelte";
+
+let stripe;
 let selectedPlan = 1;
 let seats = 1;
 
+let isSubmitting = false;
+
 const plans = [
-  {
-    title: "Monthly",
+  { title: "Monthly",
     price: 10,
-    desc:
-      "You wan't to support Open Source software with a monthly flat fee of.",
-    stripe_id: "price_1HhheeFlT4VRPYyK2hZryC8q",
-  },
-  {
-    title: "Yearly",
+    desc: "You wan't to support Open Source software with a monthly flat fee of."},
+  { title: "Yearly",
     price: 120,
-    desc:
-      "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects",
-    stripe_id: "price_1HhhefFlT4VRPYyKqaH4eQuC",
-  },
-  {
-    title: "Quarterly",
+    desc: "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects"},
+  { title: "Quarterly",
     price: 30,
-    desc:
-      " If you're not cool with paying yearly but still want us to keep payment processing costs low :)",
-    stripe_id: "price_1HhhefFlT4VRPYyKuS7gWwPw",
-  },
+    desc: " If you're not cool with paying yearly but still want us to keep payment processing costs low :)"},
 ];
 
-let elements = stripe.elements();
 let card; // HTML div to mount card
 let cardElement;
 let complete = false;
@@ -45,65 +33,83 @@ let submitted = false;
 let error = "";
 let showSuccess = false;
 
-let interval;
-
-async function createCardForm() {
+function createCardForm() {
+  let elements = stripe.elements();
   cardElement = elements.create("card");
   cardElement.mount(card);
   cardElement.on("change", (e) => {
     if (e.complete) {
       complete = e.complete;
+      finishSetup();
     }
   });
+}
+
+$: {
+  if (card) {
+    if ($user.payment_method) {
+      card.style.display = "none";
+    } else {
+      card.style.display = "block";
+    }
+  }
+}
+
+const finishSetup = async () => {
+  const cs = await API.user.setupStripe();
+  if(!cs) {
+    error = "could not setup stripe";
+    return;
+  }
+  console.log(cs.data)
+  console.log(cs.data.client_secret)
+  stripe.confirmCardSetup(
+    cs.data.client_secret,
+    {
+      payment_method: {
+        card: cardElement
+      },
+    }
+  ).then(function(result) {
+    if (result.error) {
+      console.log(result.error);
+    } else {
+      $user.payment_method = result.setupIntent.payment_method;
+      console.log(cardElement)
+      console.log("test")
+      console.log(result.setupIntent)
+      console.log(result.setupIntent.payment_method.card)
+      API.user.updatePaymentMethod(result.setupIntent.payment_method);
+      console.log("OOKKK");
+    }
+  });
+}
+
+const deletePaymentMethod= async () => {
+  console.log(card)
+  $user.payment_method = null;
+  createCardForm();
 }
 
 // Handle the submission of card details
 const handleSubmit = async (event) => {
   try {
-    event.preventDefault();
-    paymentProcessing = true;
-    submitted = true;
+    console.log("HERE");
+    const res = await API.user.stripePayment("yearly", 1)
 
-    // Create Payment Method
-    const { paymentMethod, err } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardElement,
-    });
-
-    if (err) {
-      error = error.message;
-      paymentProcessing = false;
-      return;
-    }
-
-    // Create Subscription on the Server
-    const res = await API.payments.createSubscription(
-      plans[selectedPlan].stripe_id,
-      paymentMethod.id
-    );
-    const subscription = res.data;
-
-    // The subscription contains an invoice
-    // If the invoice's payment succeeded then you're good,
-    // otherwise, the payment intent must be confirmed
-
-    const { latest_invoice } = subscription;
-
-    if (latest_invoice && latest_invoice.payment_intent) {
-      const { client_secret, status } = latest_invoice.payment_intent;
-
-      if (status === "requires_action") {
-        const { error: confirmationError } = await stripe.confirmCardPayment(
-          client_secret
-        );
-        if (confirmationError) {
-          console.error(confirmationError);
-          error =
-            "Unable to confirm card. The subscription could not be created.";
-          return;
+    stripe.confirmCardPayment(res.data.client_secret, {
+      payment_method: $user.payment_method
+    }).then(function(result) {
+      if (result.error) {
+        // Show error to your customer
+        console.log(result.error.message);
+      } else {
+        if (result.paymentIntent.status === 'succeeded') {
+          console.log("yesssss")
         }
       }
-    }
+    });
+
     showSuccess = true;
   } catch (e) {
     console.log(e);
@@ -127,8 +133,9 @@ if (user.subscription_state === "ACTIVE") {
 }*/
 
 onMount(async () => {
-  if (user.subscription_state !== "ACTIVE") {
-    await createCardForm();
+  stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
+  if(!$user.payment_method) {
+    createCardForm();
   }
 });
 
@@ -167,7 +174,7 @@ onMount(async () => {
         margin: 1em;
     }
 </style>
-
+{$user.client_secret}
 {#if error}
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
@@ -202,14 +209,22 @@ onMount(async () => {
         How many seats? <input type="number" min="1" bind:value="{seats}">
       {/if}
     </div>
+    {#if $user.payment_method}
+      <form on:submit|preventDefault="{deletePaymentMethod}">
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Delete
+        {#if isSubmitting}<Dots />{/if}
+      </button>
+    </form>
+    {/if}
     <div class="StripeElement" bind:this="{card}"></div>
+
     <div class="flex w-full justify-end">
-      <button
-        class="bg-primary-500 p-2 text-white disabled:opacity-75 transition-all duration-150 mt-2"
-        type="submit"
-        on:click="{handleSubmit}"
-        disabled="{!complete}"
-      >Create Subscription</button>
+      <form on:submit|preventDefault="{handleSubmit}">
+        <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign in
+          {#if isSubmitting}<Dots />{/if}
+        </button>
+      </form>
+
     </div>
   </div>
 {/if}
