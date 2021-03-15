@@ -15,19 +15,21 @@ import (
 )
 
 type User struct {
-	Id                uuid.UUID `json:"id" sql:",type:uuid"`
-	StripeId          *string   `json:"-"`
-	Email             *string   `json:"email"`
-	InviteEmail       *string   `json:"invite_email"`
-	Name              *string   `json:"name"`
-	Image             *string   `json:"image"`
-	Subscription      *string   `json:"subscription"`
-	SubscriptionState *string   `json:"subscription_state"`
-	PayoutETH         *string   `json:"payout_eth"`
-	Seats             int       `json:"seats"`
-	Token             *string   `json:"token"`
-	Role              *string   `json:"role"`
-	CreatedAt         time.Time
+	Id            uuid.UUID `json:"id" sql:",type:uuid"`
+	StripeId      *string   `json:"-"`
+	Balance       *int64    `json:"balance"`
+	Email         *string   `json:"email"`
+	InviteEmail   *string   `json:"invite_email"`
+	Name          *string   `json:"name"`
+	Image         *string   `json:"image"`
+	PayoutETH     *string   `json:"payout_eth"`
+	PaymentMethod *string   `json:"payment_method"`
+	Last4         *string   `json:"last4"`
+	Seats         int       `json:"seats"`
+	Freq          int       `json:"freq"`
+	Token         *string   `json:"token"`
+	Role          *string   `json:"role"`
+	CreatedAt     time.Time
 }
 
 type SponsorEvent struct {
@@ -96,8 +98,13 @@ type GitEmail struct {
 func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
-		QueryRow("SELECT id, stripe_id, email, name, image, subscription, subscription_state, payout_eth, role FROM users WHERE email=$1", email).
-		Scan(&u.Id, &u.StripeId, &u.Email, &u.Name, &u.Image, &u.Subscription, &u.SubscriptionState, &u.PayoutETH, &u.Role)
+		QueryRow(`SELECT id, stripe_id, 
+                                stripe_payment_method, stripe_balance, seats, freq,
+                                stripe_last4, email, name, image, payout_eth, role 
+                         FROM users WHERE email=$1`, email).
+		Scan(&u.Id, &u.StripeId,
+			&u.PaymentMethod, &u.Balance, &u.Seats, &u.Freq, &u.Last4, &u.Email, &u.Name,
+			&u.Image, &u.PayoutETH, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -111,8 +118,13 @@ func findUserByEmail(email string) (*User, error) {
 func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
-		QueryRow("SELECT id, stripe_id, email, name, image, subscription, subscription_state, payout_eth FROM users WHERE id=$1", uid).
-		Scan(&u.Id, &u.StripeId, &u.Email, &u.Name, &u.Image, &u.Subscription, &u.SubscriptionState, &u.PayoutETH)
+		QueryRow(`SELECT id, stripe_id, 
+                                stripe_payment_method, stripe_balance, seats, freq, 
+                                stripe_last4, email, name, image, payout_eth, role 
+                         FROM users WHERE id=$1`, uid).
+		Scan(&u.Id, &u.StripeId,
+			&u.PaymentMethod, &u.Balance, &u.Seats, &u.Freq, &u.Last4, &u.Email, &u.Name,
+			&u.Image, &u.PayoutETH, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -124,14 +136,14 @@ func findUserById(uid uuid.UUID) (*User, error) {
 }
 
 func insertUser(user *User, token string) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, subscription_state, token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, token, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, user.SubscriptionState, token, user.CreatedAt)
+	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, token, user.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -139,14 +151,17 @@ func insertUser(user *User, token string) error {
 }
 
 func updateUser(user *User) error {
-	stmt, err := db.Prepare("UPDATE users SET stripe_id=$1, subscription=$2, subscription_state=$3, payout_eth=$4 WHERE id=$5")
+	stmt, err := db.Prepare(`UPDATE users SET 
+                                           stripe_id=$1, payout_eth=$2,  
+                                           stripe_payment_method=$3, stripe_balance=$4, stripe_last4=$5, seats=$6, freq=$7,
+                                    WHERE id=$8`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
 	defer stmt.Close()
 
 	var res sql.Result
-	res, err = stmt.Exec(user.StripeId, user.Subscription, user.SubscriptionState, user.PayoutETH, user.Id)
+	res, err = stmt.Exec(user.StripeId, user.PayoutETH, user.PaymentMethod, user.Balance, user.Last4, user.Seats, user.Freq, user.Id)
 	if err != nil {
 		return err
 	}

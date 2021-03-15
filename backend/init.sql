@@ -1,20 +1,22 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
-    id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sponsor_id         UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
-    stripe_id          VARCHAR(255),
-    email              VARCHAR(255) UNIQUE NOT NULL,
-    name               VARCHAR(255),
-    image              BYTEA,
-    subscription       VARCHAR(255),
-    subscription_state VARCHAR(255),
-    payout_eth         VARCHAR(255),
-    seats              INTEGER,
-    token              VARCHAR(64) NOT NULL,
-    role               VARCHAR(3) DEFAULT 'USR' NOT NULL,
-    invited_at         TIMESTAMP,
-    created_at         TIMESTAMP NOT NULL
+    id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sponsor_id            UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
+    stripe_id             VARCHAR(255),
+    stripe_payment_method VARCHAR(255),
+    stripe_balance        BIGINT,
+    stripe_last4          VARCHAR(4),
+    email                 VARCHAR(255) UNIQUE NOT NULL,
+    name                  VARCHAR(255),
+    image                 BYTEA,
+    payout_eth            VARCHAR(255),
+    seats                 INTEGER,
+    freq                  INTEGER,
+    token                 VARCHAR(32) NOT NULL,
+    role                  VARCHAR(3) DEFAULT 'USR' NOT NULL,
+    invited_at            TIMESTAMP,
+    created_at            TIMESTAMP NOT NULL
 );
 
 CREATE TABLE repo (
@@ -49,13 +51,10 @@ CREATE TABLE sponsor_event (
 );
 CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
 
-CREATE TABLE payments (
+CREATE TABLE balances (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_p REFERENCES users (id),
-    date_from  DATE NOT NULL,
-    date_to    DATE,
-    sub        TEXT,
-    amount     BIGINT,
+    user_id    UUID CONSTRAINT fk_user_id_b REFERENCES users (id),
+    paid_hours BIGINT,
     created_at TIMESTAMP NOT NULL
 );
 

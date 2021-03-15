@@ -2,129 +2,129 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/charge"
 	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/paymentmethod"
-	"github.com/stripe/stripe-go/v72/sub"
+	"github.com/stripe/stripe-go/v72/paymentintent"
+	"github.com/stripe/stripe-go/v72/setupintent"
 	"github.com/stripe/stripe-go/v72/webhook"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
+	"strconv"
 )
 
-type PostSubscriptionBody struct {
-	Plan          string `json:"plan"`
-	PaymentMethod string `json:"paymentMethod"`
+type ClientSecretBody struct {
+	ClientSecret string `json:"client_secret"`
 }
 
-// @Summary Create a subscription
-// @Tags Repos
-// @Param body body PostSubscriptionBody true "Request Body"
-// @Accept  json
-// @Produce  json
-// @Success 200
-// @Failure 400
-// @Router /backend/payments/subscriptions [post]
-func postSubscription(w http.ResponseWriter, r *http.Request, user *User) {
-	var body PostSubscriptionBody
-	err := json.NewDecoder(r.Body).Decode(&body)
+//https://stripe.com/docs/payments/save-and-reuse
+func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
+	//create a user at stripe if the user does not exist yet
+	if user.StripeId == nil || opts.StripeSecret != "" {
+		stripe.Key = opts.StripeSecret
+		params := &stripe.CustomerParams{}
+		c, err := customer.New(params)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			return
+		}
+		user.StripeId = &c.ID
+		err = updateUser(user)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			return
+		}
+	}
+
+	usage := string(stripe.SetupIntentUsageOnSession)
+	params := &stripe.SetupIntentParams{
+		Customer: user.StripeId,
+		Usage:    &usage,
+	}
+	intent, err := setupintent.New(params)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
-	s, err := createSubscription(*user, body.Plan, body.PaymentMethod)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Something went wrong: %v", err)
-		return
-	}
-
+	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(s)
+	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
 
-func createStripeCustomer(user *User) (string, error) {
-	params := &stripe.CustomerParams{
-		Email: stripe.String(*user.Email),
-	}
-	params.AddMetadata("uid", user.Id.String())
-	c, err := customer.New(params)
+func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
+	p := mux.Vars(r)
+	f := p["freq"]
+	s := p["seats"]
+	seats, err := strconv.Atoi(s)
 	if err != nil {
-		return "", err
+		writeErr(w, http.StatusInternalServerError, "Cannot convert number seats: %v", seats)
+		return
 	}
-	return c.ID, nil
+
+	freq := 0
+	if f == "quarterly" {
+		freq = 30 //3 month
+	} else if f == "yearly" {
+		freq = 120 //1 year
+	} else {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", f)
+		return
+	}
+
+	params := &stripe.PaymentIntentParams{
+		Amount:        stripe.Int64(int64(seats * freq * 100)),
+		Currency:      stripe.String(string(stripe.CurrencyUSD)),
+		Customer:      user.StripeId,
+		PaymentMethod: user.PaymentMethod,
+		Confirm:       stripe.Bool(false),
+		OffSession:    stripe.Bool(false),
+	}
+	params.Params.Metadata = map[string]string{}
+	params.Params.Metadata["seats"] = s
+	params.Params.Metadata["freq"] = strconv.Itoa(freq)
+	params.Params.Metadata["uid"] = user.Id.String()
+
+	intent, err := paymentintent.New(params)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
+	err = json.NewEncoder(w).Encode(cs)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
 }
 
-func createSubscription(user User, plan string, paymentMethod string) (*stripe.Subscription, error) {
-	if opts.Env == "local" {
-		user.Subscription = user.StripeId
-		a := "ACTIVE"
-		user.SubscriptionState = &a
-		err := updateUser(&user)
-		if err != nil {
-			return nil, err
-		}
-		return &stripe.Subscription{}, nil
+func stripePaymentRecurring(user *User, noConfirm bool) (*ClientSecretBody, error) {
+	params := &stripe.PaymentIntentParams{
+		Amount:        stripe.Int64(int64(user.Seats * user.Freq * 100)),
+		Currency:      stripe.String(string(stripe.CurrencyUSD)),
+		Customer:      user.StripeId,
+		PaymentMethod: user.PaymentMethod,
+		Confirm:       stripe.Bool(noConfirm),
+		OffSession:    stripe.Bool(noConfirm),
 	}
-	if user.StripeId == nil {
-		log.Print("error in createSubscription: user has no stripeID")
-		return nil, errors.New("can not stringPointer subscription for user without stripeID")
-	}
-	paymentParams := &stripe.PaymentMethodAttachParams{
-		Customer: stripe.String(*user.StripeId),
-	}
-	p, err := paymentmethod.Attach(paymentMethod, paymentParams)
-	if err != nil {
-		log.Printf("Could not set payment method for user %s: %v", user.Id, err)
-	}
-	subParams := &stripe.SubscriptionParams{
-		Customer:             stripe.String(*user.StripeId),
-		DefaultPaymentMethod: stripe.String(p.ID),
-		Items: []*stripe.SubscriptionItemsParams{
-			{
-				Price: stripe.String(plan),
-			},
-		},
-	}
-	subParams.AddExpand("latest_invoice.payment_intent")
-	s, sErr := sub.New(subParams)
-	if sErr != nil {
-		log.Printf("could not stringPointer subscription: %v", sErr)
-		return nil, sErr
-	}
-	log.Print("sub created")
-	invoice := s.LatestInvoice
-	paymentIntent := invoice.PaymentIntent
 
-	if paymentIntent != nil && paymentIntent.Status == "succeeded" {
-		log.Print("in if statement status succeeded")
-		user.Subscription = &s.ID
-		state := "active"
-		user.SubscriptionState = &state
-		err := updateUser(&user)
-		if err != nil {
-			return nil, err
-		}
+	intent, err := paymentintent.New(params)
+	if err != nil {
+		return nil, err
 	}
-	return s, nil
+
+	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
+	return &cs, nil
 }
 
-// @Summary Stripe Webhook handler
-// @Tags Webhooks
-// @Param user body interface{} true "Request Body"
-// @Accept  json
-// @Produce  json
-// @Success 200
-// @Failure 400
-// @Router /backend/hooks/stripe [post]
 func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -133,7 +133,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), "whsec_kWkkVF7yCS3n2SoWf7XLJe3TbKEpN5f1")
+	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 		log.Printf("Error evaluating signed webhook request: %v", err)
@@ -141,131 +141,71 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
-	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
-		var subscription stripe.Subscription
-		err := json.Unmarshal(event.Data.Raw, &subscription)
+	case "payment_intent.succeeded":
+		var pi stripe.PaymentIntent
+		err := json.Unmarshal(event.Data.Raw, &pi)
 		if err != nil {
 			log.Printf("Error parsing webhook JSON: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		// With 3D secure, the subscription may also be created with status incomplete,
-		// because the user first has to verify the payment. In this case, the subscription
-		// will be activated in the customer.subscription.updated hook.
-		w.WriteHeader(checkSubscription(&subscription))
+		uidRaw := pi.Metadata["uid"]
+		if uidRaw == "" {
+			log.Printf("Error parsing webhook, no uid: %v\n", uidRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		uid, err := uuid.Parse(uidRaw)
+		if err != nil {
+			log.Printf("Error parsing uid: %v\n", uidRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		seatRaw := pi.Metadata["seats"]
+		if seatRaw == "" {
+			log.Printf("Error parsing webhook, no uid: %v\n", uidRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		seats, err := strconv.Atoi(seatRaw)
+		if err != nil {
+			log.Printf("Error parsing seats: %v\n", uidRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		freqRaw := pi.Metadata["freq"]
+		if freqRaw == "" {
+			log.Printf("Error parsing freq, no uid: %v\n", freqRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		freq, err := strconv.Atoi(freqRaw)
+		if err != nil {
+			log.Printf("Error parsing freq: %v\n", freqRaw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u, err := findUserById(uid)
+		if err != nil {
+			log.Printf("User does not exist: %v\n", uid)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u.Freq = freq
+		u.Seats = seats
+		b := *u.Balance
+		amount := b + (pi.Amount * 10000) //in microUSD
+		u.Balance = &amount
+		updateUser(u)
 
-	case "invoice.payment_failed":
-		var invoice stripe.Invoice
-		err := json.Unmarshal(event.Data.Raw, &invoice)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		c := invoice.Customer
-		cfull, err := customer.Get(c.ID, nil)
-		if err != nil {
-			log.Printf("invoice.payment_failed: Could not retrieve stripe customer %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		log.Printf("invoice failed for user %s", cfull.Metadata["uid"])
-		// TODO: notify user that he needs to update CC
-	case "invoice.payment_succeeded":
-		var invoice stripe.Invoice
-		err := json.Unmarshal(event.Data.Raw, &invoice)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		cu := invoice.Customer
-		cufull, err := customer.Get(cu.ID, nil)
-		if err != nil {
-			log.Printf("invoice.payment_succeeded: Could not retrieve stripe customer %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		params := &stripe.ChargeParams{}
-		params.AddExpand("balance_transaction")
-		ch, ch_err := charge.Get(invoice.Charge.ID, params)
-		if ch_err != nil {
-			log.Printf("Error retrieving charge %v\n", ch_err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		net := ch.BalanceTransaction.Net
-		paid := ch.BalanceTransaction.Amount
-		if len(invoice.Lines.Data) != 0 && invoice.Lines.Data[0].Period != nil {
-			invoiceData := invoice.Lines.Data[0]
-			uuid, err := uuid.Parse(cufull.Metadata["uid"])
-			err = insertPayment(&Payment{Uid: uuid, From: time.Unix(invoiceData.Period.Start, 0), To: time.Unix(invoiceData.Period.End, 0), Sub: invoiceData.ID, Amount: net})
-
-			if err != nil {
-				log.Printf("invoice.payment_succeeded: Error saving payment %v\n", err)
-				// return OK to stripe, as the error is on our side
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-		}
-		log.Printf("Payment stored to database: customer %s paid %v, flatfeestack received %v \n", invoice.Customer.ID, paid, net)
 	// ... handle other event types
+	case "payment_intent.authentication_required":
+
+	case "payment_intent.insufficient_funds":
+
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
 	}
 
-}
-
-// Helpers
-func checkSubscription(subscription *stripe.Subscription) int {
-	c := subscription.Customer
-	cfull, err := customer.Get(c.ID, nil)
-	if err != nil {
-		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
-		return http.StatusBadRequest
-	}
-	uid, err := uuid.Parse(cfull.Metadata["uid"])
-	if err != nil {
-		log.Printf("customer.subscription.created: Could not retrieve stripe customer %v\n", err)
-		return http.StatusBadRequest
-	}
-	user, err := findUserById(uid)
-	if err != nil {
-		log.Printf("customer.subscription.created: No matching user found %v\n", err)
-		return http.StatusBadRequest
-	}
-
-	active := "active"
-
-	if subscription.Status == "active" {
-		user.Subscription = &subscription.ID
-		user.SubscriptionState = &active
-		err = updateUser(user)
-		if err != nil {
-			log.Printf("Could not update user %v\n", err)
-			return http.StatusInternalServerError
-		}
-	} else if subscription.Status == "canceled" || subscription.Status == "unpaid" {
-		// TODO: Check stripe retry rules and deactivate subscription at some point
-		user.SubscriptionState = nil
-		user.Subscription = nil
-		err = updateUser(user)
-		if err != nil {
-			log.Printf("Could not update user %v\n", err)
-			return http.StatusInternalServerError
-		}
-	} else {
-		// Keep subscriptionId the same, but update the status so the subscription can be reactivated later
-		s := string(subscription.Status)
-		user.SubscriptionState = &s
-		user.Subscription = &subscription.ID
-		err = updateUser(user)
-		if err != nil {
-			log.Printf("Could not update user %v\n", err)
-			return http.StatusInternalServerError
-		}
-	}
-	return http.StatusOK
 }

@@ -15,7 +15,6 @@ require (
 	github.com/lib/pq v1.9.0
 	github.com/ory/dockertest/v3 v3.6.3
 	github.com/shopspring/decimal v1.2.0
-	github.com/snabb/isoweek v1.0.0
 	github.com/stretchr/testify v1.6.1
 	github.com/stripe/stripe-go/v72 v72.30.0
 	github.com/swaggo/http-swagger v1.0.0

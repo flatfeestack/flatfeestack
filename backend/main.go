@@ -31,6 +31,7 @@ const (
 
 const (
 	mUSDPerHour = 13750 //1.375 cents - x 10'000
+	mUSDPerDay  = mUSDPerHour * 24
 )
 
 var (
@@ -166,10 +167,13 @@ func main() {
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
 	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods("POST")
+	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
@@ -178,7 +182,7 @@ func main() {
 	apiRouter.HandleFunc("/repos/tag", jwtAuthUser(tagRepo)).Methods("POST")
 	apiRouter.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods("POST")
 	//payment
-	apiRouter.HandleFunc("/payments/subscriptions", jwtAuthUser(postSubscription)).Methods("POST")
+
 	apiRouter.HandleFunc("/hooks/stripe", maxBytesMiddleware(stripeWebhook, 65536)).Methods("POST")
 	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods("POST")
 	apiRouter.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods("POST")
@@ -326,15 +330,6 @@ func createUser(email string) (*User, error) {
 	user.Id = uid
 	user.Email = &email
 	user.CreatedAt = timeNow()
-	if opts.Env != "local" {
-		sid, err := createStripeCustomer(&user)
-		if err != nil {
-			return nil, err
-		}
-		user.StripeId = &sid
-	} else {
-		user.StripeId = &opts.Env
-	}
 
 	rnd, err := genRnd(18)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/stripe/stripe-go/v72/paymentmethod"
 	"golang.org/x/text/language"
 	"log"
 	"math/big"
@@ -222,6 +223,29 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 	a := params["address"]
 	user.PayoutETH = &a
 	err := updateUser(user)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
+	params := mux.Vars(r)
+	a := params["method"]
+	user.PaymentMethod = &a
+
+	pm, err := paymentmethod.Get(
+		*user.PaymentMethod,
+		nil,
+	)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
+		return
+	}
+
+	user.Last4 = &pm.Card.Last4
+	err = updateUser(user)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
 		return
@@ -795,14 +819,14 @@ func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
 }
 
 func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth string) (*uuid.UUID, *uuid.UUID, error) {
+	b := int64(mUSDPerDay * 3)
 	u := User{
-		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
-		Email:             &email,
-		Subscription:      stringPointer("sub"),
-		SubscriptionState: stringPointer("Active"),
-		PayoutETH:         &payoutEth,
-		CreatedAt:         timeNow(),
+		Id:        uuid.New(),
+		StripeId:  stringPointer("strip-id"),
+		Email:     &email,
+		Balance:   &b,
+		PayoutETH: &payoutEth,
+		CreatedAt: timeNow(),
 	}
 
 	r := Repo{

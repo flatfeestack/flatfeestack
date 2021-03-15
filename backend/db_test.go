@@ -12,12 +12,10 @@ func TestUser(t *testing.T) {
 	defer teardown()
 
 	u := User{
-		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
-		Email:             stringPointer("email"),
-		Subscription:      stringPointer("sub"),
-		SubscriptionState: stringPointer("state"),
-		PayoutETH:         stringPointer("0x123"),
+		Id:        uuid.New(),
+		StripeId:  stringPointer("strip-id"),
+		Email:     stringPointer("email"),
+		PayoutETH: stringPointer("0x123"),
 	}
 
 	err := insertUser(&u, "A")
@@ -49,12 +47,10 @@ func TestSponsor(t *testing.T) {
 	defer teardown()
 
 	u := User{
-		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
-		Email:             stringPointer("email"),
-		Subscription:      stringPointer("sub"),
-		SubscriptionState: stringPointer("state"),
-		PayoutETH:         stringPointer("0x123"),
+		Id:        uuid.New(),
+		StripeId:  stringPointer("strip-id"),
+		Email:     stringPointer("email"),
+		PayoutETH: stringPointer("0x123"),
 	}
 
 	r := Repo{
@@ -153,12 +149,10 @@ func TestRepo(t *testing.T) {
 
 func saveTestUser(t *testing.T, email string) uuid.UUID {
 	u := User{
-		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
-		Email:             stringPointer(email),
-		Subscription:      stringPointer("sub"),
-		SubscriptionState: stringPointer("state"),
-		PayoutETH:         stringPointer("0x123"),
+		Id:        uuid.New(),
+		StripeId:  stringPointer("strip-id"),
+		Email:     stringPointer(email),
+		PayoutETH: stringPointer("0x123"),
 	}
 
 	err := insertUser(&u, "A")

@@ -2,7 +2,7 @@
 
 #https://www.docker.com/blog/containerize-your-go-developer-environment-part-2/
 #https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/syntax.md
-FROM golang:1.15-alpine AS builder
+FROM golang:1.16-alpine AS builder
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN apk add make gcc musl-dev
 WORKDIR /app
