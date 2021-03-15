@@ -9,7 +9,7 @@ cleanup() {
   # script cleanup here
 }
 
-hostip() {
+host_ip() {
   # check what machine we are on
   host_ip="localhost"
   case "$(uname -s)" in
@@ -63,7 +63,9 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  hosts='' include_build=true services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
+  hosts=''
+  include_build=true
+  services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
 
   while :; do
     case "${1-}" in
@@ -89,10 +91,10 @@ parse_params() {
 
 parse_params "$@"
 setup_colors
-hostip
-mkdir -p .db .chain
 
-now=`date`
+host_ip
+mkdir -p .db .chain
+now=$(date)
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
