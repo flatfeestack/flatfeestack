@@ -1,7 +1,7 @@
-import { initialFetchDone, loading, token, user } from "./auth";
+import { token, user } from "./auth";
 import { API } from "./api";
 import { User } from "../types/user";
-import { get } from "svelte/store";
+import { AxiosResponse } from "axios";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const res = await API.auth.confirmReset(email, password, emailToken);
@@ -29,50 +29,45 @@ export const confirmEmail = async(email: string, emailToken: string) => {
 
 export const login = async (email: string, password: string) => {
   const res = await API.auth.login(email, password);
-  const t = res.data.access_token;
-  const r = res.data.refresh_token;
-  if (!t || !r) {
-    console.log("could not login");
-    return;
-  }
-  token.set(t);
-  localStorage.setItem("ffs-refresh", r);
+  storeToken(res);
   const u = await API.user.get();
-  console.log(u);
   user.set(u.data);
 };
 
 export const updateUser = async () => {
-  try {
-    const u = await API.user.get();
-    user.set(u.data);
-  } catch (e) {
-    console.log("could not fetch user", e);
-  }
-};
-
-export const removeSession = () => {
-  localStorage.removeItem("ffs-refresh")
-  user.set(<User>{})
-  token.set("");
+  const u = await API.user.get();
+  user.set(u.data);
 }
 
-export const refreshSession = async () => {
+export const removeSession = async () => {
   try {
-    loading.set(true);
-    const r = localStorage.getItem("ffs-refresh");
-    const res = await API.auth.refresh(r);
-    const t = res.data.access_token;
-    const new_r = res.data.refresh_token;
-    token.set(t);
-    localStorage.setItem("ffs-refresh", new_r);
-    await updateUser();
-  } catch (e) {
-    console.log("could not refresh session");
+    await API.authToken.logout();
   } finally {
-    loading.set(false);
+    localStorage.removeItem("ffs-refresh")
+    user.set(<User>{})
+    token.set("");
   }
-};
+}
+
+export const refresh = async ():Promise<string> => {
+  const refresh = localStorage.getItem("ffs-refresh");
+  if (refresh === null) {
+    throw 'No refresh token not in local storage';
+  }
+  const res = await API.auth.refresh(refresh);
+  storeToken(res);
+  return res.data.access_token;
+}
+
+const storeToken = (res: AxiosResponse) => {
+  const t = res.data.access_token;
+  const r = res.data.refresh_token;
+  if (!t || !r) {
+    throw "No token in the request";
+  }
+  token.set(t);
+  localStorage.setItem("ffs-refresh", r);
+}
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
 /*const parseJwt = (token) => {

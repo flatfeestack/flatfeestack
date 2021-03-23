@@ -2,7 +2,6 @@ export type User = {
   id: string;
   payment_method: string;
   last4: string;
-  balance: number
   email: string;
   name: string;
   image: string;

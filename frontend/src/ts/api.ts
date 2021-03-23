@@ -1,173 +1,100 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosStatic } from "axios";
 import { token } from "./auth";
 import { get } from "svelte/store";
-import { Exchange } from "../types/exchange.type";
-import { removeSession } from "./authService";
+import { refresh, removeSession } from "./authService";
 import { Repo } from "../types/repo.type";
 import { ClientSecret, User } from "../types/user";
 
-const authInstance = axios.create({
+const auth = axios.create({
   baseURL: "/auth",
   timeout: 5000000
 });
 
-const apiInstance = axios.create({
+const authToken = axios.create({
+  baseURL: "/auth",
+  timeout: 5000000
+});
+
+const backend = axios.create({
   baseURL: "/backend",
   timeout: 5000000
 });
 
-const searchInstance = axios.create({
+const search = axios.create({
   baseURL: "/search",
   timeout: 5000000
 });
 
-apiInstance.interceptors.request.use((config) => {
+function addToken(config:AxiosRequestConfig) {
   const t = get(token);
   if (t) {
     config.headers.Authorization = "Bearer " + t;
-    return config;
   }
   return config;
-});
+}
 
-apiInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async function (error) {
-    const originalRequest = error.config;
-    if (error.response.status === 418 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const refresh = localStorage.getItem("ffs-refresh");
-      if (refresh) {
-        console.log("could not refresh");
-        return;
-      } else {
-        console.log(refresh)
-      }
-      const res = await API.auth.refresh(refresh);
-      const t = res.data.access_token;
-      const r = res.data.refresh_token;
-      token.set(t);
-      localStorage.setItem("ffs-refresh", r);
-      originalRequest.headers.Authorization = "Bearer " + t;
-      return apiInstance(originalRequest);
-    }
-    return Promise.reject(error);
+async function refreshSession(error: AxiosError, call: AxiosInstance) {
+  const originalRequest = error.config;
+  if (error.response.status === 418 && originalRequest.headers.Retry !== "true") {
+    originalRequest.headers.Retry = "true";
+    const t = await refresh();
+    originalRequest.headers.Authorization = "Bearer " + t;
+    return call(originalRequest);
   }
-);
+  return Promise.reject(error);
+}
+
+backend.interceptors.request.use(config => addToken(config), error => {return Promise.reject(error)});
+backend.interceptors.response.use(response => {return response;}, error => {return refreshSession(error, backend)});
+authToken.interceptors.request.use(config => addToken(config), error => {return Promise.reject(error)});
+authToken.interceptors.request.use(response => {return response;}, error => {return refreshSession(error, authToken)});
 
 export const API = {
+  authToken: {
+    invites: () => authToken.get('/invites'),
+    invite: (email: string, inviteEmail: string, org: string) => authToken.post('/invite', { email, invite_email: inviteEmail, org }),
+    delInvite: (email: string) => authToken.delete(`/invite/${email}`),
+    logout: () => authToken.get(`/authen/logout?redirect_uri=/`),
+  },
   auth: {
-    signup: (email: string, password: string) =>
-      authInstance.post("/signup", { email, password }),
-    login: (email: string, password: string) =>
-      authInstance.post(
-        "/login",
-        { email, password },
-        {
-          withCredentials: true,
-        }
-      ),
-    refresh: (refresh: string) => {
-      return authInstance.post("/refresh", { refresh_token: refresh });
-    },
-    reset: (email: string) => {
-      return authInstance.post(`/reset/${email}`);
-    },
-    invites: () => {
-      const t = get(token);
-      if (t) {
-        const config = { headers: { Authorization: `Bearer ${t}` } };
-        return authInstance.get('/invites', config);
-      } else {
-        throw new Error("t not found...");
-      }
-    },
-    invite: (email: string, inviteEmail: string, org: string) => {
-      const t = get(token);
-      if (t) {
-        const config = { headers: { Authorization: `Bearer ${t}` } };
-        return authInstance.post('/invite', {email:email, invite_email:inviteEmail, org:org}, config);
-      } else {
-        throw new Error("t not found...");
-      }
-    },
-    delInvite: (email: string) => {
-      const t = get(token);
-      if (t) {
-        const config = {headers: { Authorization: `Bearer ${t}` } };
-        return authInstance.delete(  `/invite/${email}`, config);
-      } else {
-        throw new Error("t not found...");
-      }
-    },
-    confirmEmail: (email: string, token: string) => {
-      return authInstance.post("/confirm/signup", {email, token})
-    },
-    confirmReset: (email: string, password: string, token: string) => {
-      return authInstance.post("/confirm/reset", {email, password, email_token: token})
-    },
-    confirmInvite: (email: string, password: string, token: string) => {
-      return authInstance.post("/confirm/invite", {email, password, email_token: token})
-    },
-    logout: () => {
-      const t = get(token);
-      if (t) {
-        removeSession();
-        const config = {
-          headers: { Authorization: `Bearer ${t}` }
-        };
-        //TODO: logout also with refreshToken
-        return authInstance.get(`/authen/logout?redirect_uri=/`, config)
-      } else {
-        throw new Error("t not found...");
-      }
-    },
-    timeWarp: (hours: number) => authInstance.post(`/timewarp/${hours}`),
+    signup: (email: string, password: string) => auth.post("/signup", { email, password }),
+    login: (email: string, password: string) => auth.post("/login", { email, password }),
+    refresh: (refresh: string) =>  auth.post("/refresh", { refresh_token: refresh }),
+    reset: (email: string) => auth.post(`/reset/${email}`),
+    confirmEmail: (email: string, token: string) => auth.post("/confirm/signup", {email, token}),
+    confirmReset: (email: string, password: string, token: string) => auth.post("/confirm/reset", {email, password, email_token: token}),
+    confirmInvite: (email: string, password: string, token: string) => auth.post("/confirm/invite", {email, password, email_token: token}),
+    timeWarp: (hours: number) => auth.post(`/timewarp/${hours}`),
   },
   user: {
-    get: () => apiInstance.get(`/users/me`),
-    gitEmails: () => apiInstance.get(`/users/me/git-email`),
-    confirmGitEmail: (email: string, token: string) => apiInstance.post("/users/git-email", {email, token}),
-    addEmail: (email: string) => apiInstance.post(`/users/me/git-email`, { email }),
-    removeGitEmail: (email: string) => apiInstance.delete(`/users/me/git-email/${encodeURI(email)}`),
-    updatePayoutAddress: (address: string) => apiInstance.put(`/users/me/payout/${address}`),
-    updatePaymentMethod: (method: string) => apiInstance.put(`/users/me/method/${method}`),
-    getSponsored: () => apiInstance.get("/users/me/sponsored"),
-    setName: (name: string) => apiInstance.put(`/users/me/name/${name}`),
-    setImage: (image: string) => apiInstance.post(`/users/me/image`, {image}),
-    setUserMode: (mode: string) => apiInstance.put(`/users/me/mode/${mode}`),
-    setupStripe: () => apiInstance.post<ClientSecret>(`/users/me/stripe`),
-    stripePayment: (freq: string, seats: number) => apiInstance.put(`/users/me/stripe/${freq}/${seats}`),
-  },
-  payments: {
-    createSubscription: (plan: string, paymentMethod: string) =>
-      apiInstance.post("/payments/subscriptions", { plan, paymentMethod }),
+    get: () => backend.get(`/users/me`),
+    gitEmails: () => backend.get(`/users/me/git-email`),
+    confirmGitEmail: (email: string, token: string) => backend.post("/users/git-email", {email, token}),
+    addEmail: (email: string) => backend.post(`/users/me/git-email`, { email }),
+    removeGitEmail: (email: string) => backend.delete(`/users/me/git-email/${encodeURI(email)}`),
+    updatePayoutAddress: (address: string) => backend.put(`/users/me/payout/${address}`),
+    updatePaymentMethod: (method: string) => backend.put(`/users/me/method/${method}`),
+    getSponsored: () => backend.get("/users/me/sponsored"),
+    setName: (name: string) => backend.put(`/users/me/name/${name}`),
+    setImage: (image: string) => backend.post(`/users/me/image`, {image}),
+    setUserMode: (mode: string) => backend.put(`/users/me/mode/${mode}`),
+    setupStripe: () => backend.post<ClientSecret>(`/users/me/stripe`),
+    stripePayment: (freq: string, seats: number) => backend.put(`/users/me/stripe/${freq}/${seats}`),
   },
   repos: {
-    search: (s: string) => apiInstance.get(`/repos/search?q=${encodeURI(s)}`),
-    get: (id: number) => apiInstance.get(`/repos/${id}`),
-    tag: (repo: Repo) => apiInstance.post(`/repos/tag`, repo),
-    untag: (id: string) => apiInstance.post(`/repos/${id}/untag`),
+    search: (s: string) => backend.get(`/repos/search?q=${encodeURI(s)}`),
+    get: (id: number) => backend.get(`/repos/${id}`),
+    tag: (repo: Repo) => backend.post(`/repos/tag`, repo),
+    untag: (id: string) => backend.post(`/repos/${id}/untag`),
   },
   search: {
-    keywords: (keywords: string) => searchInstance.get(`/search/${keywords}`),
-  },
-  exchanges: {
-    get: () => apiInstance.get(`/exchanges`),
-    update: (e: Exchange) =>
-      apiInstance.put(`/exchanges/${e.id}`, {
-        date: e.date,
-        price: e.price,
-        id: e.id,
-      }),
+    keywords: (keywords: string) => search.get(`/search/${keywords}`),
   },
   payouts: {
-    pending: (type: string) => apiInstance.post(`/admin/pending-payout/${type}`),
-    time: () => apiInstance.get(`/admin/time`),
-    fakeUser: () => apiInstance.post(`/admin/fake-user`),
-    timeWarp: (hours: number) => apiInstance.post(`/admin/timewarp/${hours}`),
-    payout: (exchangeRate: number) => apiInstance.post(`/admin/payout/${exchangeRate}`),
+    pending: (type: string) => backend.post(`/admin/pending-payout/${type}`),
+    time: () => backend.get(`/admin/time`),
+    fakeUser: () => backend.post(`/admin/fake-user`),
+    timeWarp: (hours: number) => backend.post(`/admin/timewarp/${hours}`),
+    payout: (exchangeRate: number) => backend.post(`/admin/payout/${exchangeRate}`),
   }
 };

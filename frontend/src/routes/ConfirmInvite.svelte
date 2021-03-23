@@ -16,7 +16,7 @@
     try {
       error = "";
       isSubmitting = true;
-      await API.auth.confirmInvite(email, password, token);
+      const res = await API.auth.confirmInvite(email, password, token);
       await updateUser();
       email = "";
       password = "";

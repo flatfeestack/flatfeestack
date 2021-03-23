@@ -1,125 +1,131 @@
 <script lang="ts">
-import { API } from "ts/api";
-import { onMount } from "svelte";
-import { user } from "ts/auth";
-import {ClientSecret} from "../types/user";
-import {loadStripe} from '@stripe/stripe-js/pure';
+  import { API } from "ts/api";
+  import { onMount } from "svelte";
+  import { user } from "ts/auth";
+  import { loadStripe } from "@stripe/stripe-js/pure";
 
-import Spinner from "./Spinner.svelte";
+  import Spinner from "./Spinner.svelte";
+  import Dots from "./Dots.svelte";
 
-let stripe;
-let selectedPlan = 1;
-let seats = 1;
+  let stripe;
+  let selectedPlan = 1;
+  let seats = 1;
 
-let isSubmitting = false;
+  let isSubmitting = false;
 
-const plans = [
-  { title: "Monthly",
-    price: 10,
-    desc: "You wan't to support Open Source software with a monthly flat fee of."},
-  { title: "Yearly",
-    price: 120,
-    desc: "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects"},
-  { title: "Quarterly",
-    price: 30,
-    desc: " If you're not cool with paying yearly but still want us to keep payment processing costs low :)"},
-];
-
-let card; // HTML div to mount card
-let cardElement;
-let complete = false;
-let paymentProcessing = false;
-let submitted = false;
-let error = "";
-let showSuccess = false;
-
-function createCardForm() {
-  let elements = stripe.elements();
-  cardElement = elements.create("card");
-  cardElement.mount(card);
-  cardElement.on("change", (e) => {
-    if (e.complete) {
-      complete = e.complete;
-      finishSetup();
-    }
-  });
-}
-
-$: {
-  if (card) {
-    if ($user.payment_method) {
-      card.style.display = "none";
-    } else {
-      card.style.display = "block";
-    }
-  }
-}
-
-const finishSetup = async () => {
-  const cs = await API.user.setupStripe();
-  if(!cs) {
-    error = "could not setup stripe";
-    return;
-  }
-  console.log(cs.data)
-  console.log(cs.data.client_secret)
-  stripe.confirmCardSetup(
-    cs.data.client_secret,
+  const plans = [
     {
-      payment_method: {
-        card: cardElement
-      },
+      title: "Monthly",
+      price: 10,
+      desc: "You wan't to support Open Source software with a monthly flat fee of."
+    },
+    {
+      title: "Yearly",
+      price: 120,
+      desc: "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects"
+    },
+    {
+      title: "Quarterly",
+      price: 30,
+      desc: " If you're not cool with paying yearly but still want us to keep payment processing costs low :)"
     }
-  ).then(function(result) {
-    if (result.error) {
-      console.log(result.error);
-    } else {
-      $user.payment_method = result.setupIntent.payment_method;
-      console.log(cardElement)
-      console.log("test")
-      console.log(result.setupIntent)
-      console.log(result.setupIntent.payment_method.card)
-      API.user.updatePaymentMethod(result.setupIntent.payment_method);
-      console.log("OOKKK");
-    }
-  });
-}
+  ];
 
-const deletePaymentMethod= async () => {
-  console.log(card)
-  $user.payment_method = null;
-  createCardForm();
-}
+  let card; // HTML div to mount card
+  let cardElement;
+  let complete = false;
+  let paymentProcessing = false;
+  let submitted = false;
+  let error = "";
+  let showSuccess = false;
 
-// Handle the submission of card details
-const handleSubmit = async (event) => {
-  try {
-    console.log("HERE");
-    const res = await API.user.stripePayment("yearly", 1)
-
-    stripe.confirmCardPayment(res.data.client_secret, {
-      payment_method: $user.payment_method
-    }).then(function(result) {
-      if (result.error) {
-        // Show error to your customer
-        console.log(result.error.message);
-      } else {
-        if (result.paymentIntent.status === 'succeeded') {
-          console.log("yesssss")
-        }
+  function createCardForm() {
+    let elements = stripe.elements();
+    cardElement = elements.create("card");
+    cardElement.mount(card);
+    cardElement.on("change", (e) => {
+      if (e.complete) {
+        complete = e.complete;
+        finishSetup();
       }
     });
-
-    showSuccess = true;
-  } catch (e) {
-    console.log(e);
-    error = "The payment failed. The subscription could not be created.";
-  } finally {
-    paymentProcessing = false;
   }
-};
 
-/*if (submitted && !error && !paymentProcessing) {
+  $: {
+    if (card) {
+      if ($user.payment_method) {
+        card.style.display = "none";
+      } else {
+        card.style.display = "block";
+      }
+    }
+  }
+
+  const finishSetup = async () => {
+    const cs = await API.user.setupStripe();
+    if (!cs) {
+      error = "could not setup stripe";
+      return;
+    }
+    console.log(cs.data);
+    console.log(cs.data.client_secret);
+    stripe.confirmCardSetup(
+      cs.data.client_secret,
+      {
+        payment_method: {
+          card: cardElement
+        }
+      }
+    ).then(function(result) {
+      if (result.error) {
+        console.log(result.error);
+      } else {
+        $user.payment_method = result.setupIntent.payment_method;
+        console.log(cardElement);
+        console.log("test");
+        console.log(result.setupIntent);
+        console.log(result.setupIntent.payment_method.card);
+        API.user.updatePaymentMethod(result.setupIntent.payment_method);
+        console.log("OOKKK");
+      }
+    });
+  };
+
+  const deletePaymentMethod = async () => {
+    console.log(card);
+    $user.payment_method = null;
+    createCardForm();
+  };
+
+  // Handle the submission of card details
+  const handleSubmit = async (event) => {
+    try {
+      console.log("HERE");
+      const res = await API.user.stripePayment("yearly", 1);
+
+      stripe.confirmCardPayment(res.data.client_secret, {
+        payment_method: $user.payment_method
+      }).then(function(result) {
+        if (result.error) {
+          // Show error to your customer
+          console.log(result.error.message);
+        } else {
+          if (result.paymentIntent.status === "succeeded") {
+            console.log("yesssss");
+          }
+        }
+      });
+
+      showSuccess = true;
+    } catch (e) {
+      console.log(e);
+      error = "The payment failed. The subscription could not be created.";
+    } finally {
+      paymentProcessing = false;
+    }
+  };
+
+  /*if (submitted && !error && !paymentProcessing) {
   console.log("starting to fetch");
   interval = setInterval(() => updateUser(), 1000);
 }
@@ -132,12 +138,12 @@ if (user.subscription_state === "ACTIVE") {
   showSuccess = true;
 }*/
 
-onMount(async () => {
-  stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
-  if(!$user.payment_method) {
-    createCardForm();
-  }
-});
+  onMount(async () => {
+    stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
+    if (!$user.payment_method) {
+      createCardForm();
+    }
+  });
 
 </script>
 

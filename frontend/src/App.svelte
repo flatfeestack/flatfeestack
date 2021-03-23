@@ -1,7 +1,7 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import { user, loading } from "ts/auth.ts";
-  import { refreshSession, removeSession } from "ts/authService";
+  import { removeSession, updateUser } from "ts/authService";
   import { onMount } from "svelte";
 
   import Landing from "./routes/Landing.svelte";
@@ -21,7 +21,7 @@
   import ConfirmInvite from "./routes/ConfirmInvite.svelte";
 
   export let url;
-  onMount(() => refreshSession());
+  onMount(() => updateUser());
 
 </script>
 
