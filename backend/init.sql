@@ -5,7 +5,7 @@ CREATE TABLE users (
     sponsor_id            UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
-    stripe_balance        BIGINT,
+    payment_cycle_id      UUID CONSTRAINT fk_user_balances_id_uid REFERENCES user_balances (payment_cycle_id),
     stripe_last4          VARCHAR(4),
     email                 VARCHAR(255) UNIQUE NOT NULL,
     name                  VARCHAR(255),
@@ -18,6 +18,18 @@ CREATE TABLE users (
     invited_at            TIMESTAMP,
     created_at            TIMESTAMP NOT NULL
 );
+
+CREATE TABLE user_balances (
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_cycle_id UUID NOT NULL,
+    user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    balance          BIGINT,
+    balance_type     VARCHAR(4) NOT NULL,
+    day              DATE NOT NULL,
+    created_at       TIMESTAMP NOT NULL
+);
+CREATE UNIQUE INDEX user_balances_index ON user_balances(payment_cycle_id, user_id, day, type);
+
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -131,11 +143,11 @@ CREATE TABLE daily_future_leftover (
 CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day);
 
 CREATE TABLE payouts_request (
-    id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    daily_user_payout_id   UUID CONSTRAINT fk_daily_user_payout_id_pay REFERENCES daily_user_payout (id),
-    batch_id               UUID                   NOT NULL,
-    exchange_rate          NUMERIC                NOT NULL,
-    created_at             TIMESTAMP              NOT NULL
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    daily_user_payout_id UUID CONSTRAINT fk_daily_user_payout_id_pay REFERENCES daily_user_payout (id),
+    batch_id             UUID                   NOT NULL,
+    exchange_rate        NUMERIC                NOT NULL,
+    created_at           TIMESTAMP              NOT NULL
 );
 CREATE INDEX payouts_index ON payouts_request(batch_id);
 

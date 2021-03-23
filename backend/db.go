@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"io"
 	"log"
 	"math/big"
 	"strconv"
@@ -15,21 +16,22 @@ import (
 )
 
 type User struct {
-	Id            uuid.UUID `json:"id" sql:",type:uuid"`
-	StripeId      *string   `json:"-"`
-	Balance       *int64    `json:"balance"`
-	Email         *string   `json:"email"`
-	InviteEmail   *string   `json:"invite_email"`
-	Name          *string   `json:"name"`
-	Image         *string   `json:"image"`
-	PayoutETH     *string   `json:"payout_eth"`
-	PaymentMethod *string   `json:"payment_method"`
-	Last4         *string   `json:"last4"`
-	Seats         int       `json:"seats"`
-	Freq          int       `json:"freq"`
-	Token         *string   `json:"token"`
-	Role          *string   `json:"role"`
-	CreatedAt     time.Time
+	Id             uuid.UUID `json:"id" sql:",type:uuid"`
+	StripeId       *string   `json:"-"`
+	PaymentCycleId uuid.UUID
+	Balance        *int64  `json:"balance"`
+	Email          *string `json:"email"`
+	InviteEmail    *string `json:"invite_email"`
+	Name           *string `json:"name"`
+	Image          *string `json:"image"`
+	PayoutETH      *string `json:"payout_eth"`
+	PaymentMethod  *string `json:"payment_method"`
+	Last4          *string `json:"last4"`
+	Seats          int     `json:"seats"`
+	Freq           int     `json:"freq"`
+	Token          *string `json:"token"`
+	Role           *string `json:"role"`
+	CreatedAt      time.Time
 }
 
 type SponsorEvent struct {
@@ -37,8 +39,8 @@ type SponsorEvent struct {
 	Uid         uuid.UUID `json:"uid"`
 	RepoId      uuid.UUID `json:"repo_id"`
 	EventType   uint8     `json:"event_type"`
-	SponsorAt   time.Time `json:"created_at"`
-	UnsponsorAt time.Time `json:"created_at"`
+	SponsorAt   time.Time `json:"sponsor_at"`
+	UnsponsorAt time.Time `json:"unsponsor_at"`
 }
 
 type Repo struct {
@@ -95,6 +97,15 @@ type GitEmail struct {
 	CreatedAt   *time.Time `json:"createdAt"`
 }
 
+type UserBalance struct {
+	paymentCycleId uuid.UUID
+	userId         uuid.UUID
+	balance        int64
+	day            time.Time
+	balanceType    string
+	createdAt      time.Time
+}
+
 func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
@@ -140,7 +151,7 @@ func insertUser(user *User, token string) error {
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, token, user.CreatedAt)
@@ -153,12 +164,13 @@ func insertUser(user *User, token string) error {
 func updateUser(user *User) error {
 	stmt, err := db.Prepare(`UPDATE users SET 
                                            stripe_id=$1, payout_eth=$2,  
-                                           stripe_payment_method=$3, stripe_balance=$4, stripe_last4=$5, seats=$6, freq=$7,
+                                           stripe_payment_method=$3, stripe_balance=$4, 
+                                           stripe_last4=$5, seats=$6, freq=$7
                                     WHERE id=$8`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(user.StripeId, user.PayoutETH, user.PaymentMethod, user.Balance, user.Last4, user.Seats, user.Freq, user.Id)
@@ -173,7 +185,7 @@ func updateUserName(uid uuid.UUID, name string) error {
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(name, uid)
@@ -188,7 +200,7 @@ func updateUserImage(uid uuid.UUID, data string) error {
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(data, uid)
@@ -203,7 +215,7 @@ func updateUserMode(uid uuid.UUID, mode string) error {
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(mode, uid)
@@ -243,7 +255,7 @@ func insertOrUpdateSponsor(event *SponsorEvent) (userError error, systemError er
 		if err != nil {
 			return nil, fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
 		}
-		defer stmt.Close()
+		defer closeAndLog(stmt)
 
 		var res sql.Result
 		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.SponsorAt)
@@ -257,7 +269,7 @@ func insertOrUpdateSponsor(event *SponsorEvent) (userError error, systemError er
 		if err != nil {
 			return nil, fmt.Errorf("prepare UPDATE sponsor_event for %v statement failed: %v", id, err)
 		}
-		defer stmt.Close()
+		defer closeAndLog(stmt)
 
 		var res sql.Result
 		res, err = stmt.Exec(event.UnsponsorAt, id)
@@ -293,15 +305,15 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 // Repositories and Sponsors
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	var repos []Repo
-	sql := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
+	s := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
             FROM sponsor_event s
             JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.unsponsor_at = to_date('9999', 'YYYY')`
-	rows, err := db.Query(sql, userId)
+	rows, err := db.Query(s, userId)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeAndLog(rows)
 
 	for rows.Next() {
 		var repo Repo
@@ -330,7 +342,7 @@ func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	b := new(bytes.Buffer)
 	e := gob.NewEncoder(b)
@@ -375,12 +387,12 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 //*********************************************************************************
 func findGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	var gitEmails []GitEmail
-	sql := "SELECT email, confirmed_at, created_at FROM git_email WHERE user_id=$1"
-	rows, err := db.Query(sql, uid)
+	s := "SELECT email, confirmed_at, created_at FROM git_email WHERE user_id=$1"
+	rows, err := db.Query(s, uid)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeAndLog(rows)
 
 	for rows.Next() {
 		var gitEmail GitEmail
@@ -398,7 +410,7 @@ func insertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token string, now
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(id, uid, email, token, now)
@@ -413,7 +425,7 @@ func confirmGitEmail(email string, token string, now time.Time) error {
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(now, email, token)
@@ -429,7 +441,7 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(email, uid)
@@ -447,7 +459,7 @@ func insertAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time,
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", id, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(id, repo_id, date_from, date_to, branch, now)
@@ -462,7 +474,7 @@ func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) erro
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_response for %v/%v statement event: %v", aid, w, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(uuid.New(), aid, w.Email, w.Weight, now)
@@ -475,51 +487,49 @@ func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) erro
 //*********************************************************************************
 //******************************* Payments ****************************************
 //*********************************************************************************
-func insertPayment(p *Payment) error {
-	stmt, err := db.Prepare("INSERT INTO payments(id, user_id, date_from, date_to, sub, amount, seats) VALUES($1, $2, $3, $4, $5, $6, $7)")
+func insertUserBalance(ub UserBalance) error {
+	stmt, err := db.Prepare(`INSERT INTO user_balances(
+                                           payment_cycle_id, user_id, balance, balance_type, day, created_at) 
+                                    VALUES($1, $2, $3, $4, $5, $6)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payments for %v statement event: %v", p.Id, err)
+		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.userId, ub.paymentCycleId, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(p.Id, p.Uid, p.From, p.To, p.Sub, p.Amount, p.Seats)
+	res, err = stmt.Exec(ub.paymentCycleId, ub.userId, ub.balance, ub.balanceType, ub.day, ub.createdAt)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
 }
 
-func getActivePayments(uid uuid.UUID, now time.Time) ([]Payment, error) {
-	var payments []Payment
-	rows, err := db.Query("SELECT id, date_from, date_to, sub, amount, seats FROM payments WHERE user_id=$1 AND DATE_TO > $2", uid, now)
-
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var payment Payment
-		err = rows.Scan(&payment.Id, &payment.From, &payment.To, &payment.Sub, &payment.Amount, &payment.Seats)
-		if err != nil {
-			return nil, err
-		}
-		payments = append(payments, payment)
-	}
-	return payments, nil
-}
-
-func getPaidUsers(pid uuid.UUID, invitedAt time.Time) (int64, error) {
-	var count int64
+func findSumUsersBalance(paymentCycleId uuid.UUID) (int64, error) {
+	var sum int64
 	err := db.
-		QueryRow("SELECT count(*) WHERE sponsor_id = $1 and invited_at <= $2", pid, invitedAt).
-		Scan(&count)
+		QueryRow(`SELECT sum(balance) FROM user_balances
+             WHERE u.payment_cycle_id = $1`, paymentCycleId).
+		Scan(&sum)
 	switch err {
 	case sql.ErrNoRows:
 		return 0, nil
 	case nil:
-		return count, nil
+		return sum, nil
+	default:
+		return 0, err
+	}
+}
+
+func findSumUserBalance(paymentCycleId uuid.UUID, userId uuid.UUID) (int64, error) {
+	var sum int64
+	err := db.
+		QueryRow(`SELECT sum(balance) FROM user_balances WHERE payment_cycle_id = $1 and user_id = $2`, paymentCycleId, userId).
+		Scan(&sum)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return sum, nil
 	default:
 		return 0, err
 	}
@@ -535,7 +545,7 @@ func insertPayoutsRequest(p *PayoutsRequest) error {
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.DailyUserPayoutId, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(p.DailyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
@@ -553,7 +563,7 @@ func insertPayoutsResponse(p *PayoutsResponse) error {
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
@@ -580,7 +590,7 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
@@ -593,6 +603,7 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 //*********************************************************************************
 //******************************* Daily calculations ******************************
 //*********************************************************************************
+
 func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	//https://stackoverflow.com/questions/17833176/postgresql-days-months-years-between-two-dates
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day, created_at)
@@ -601,13 +612,47 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
                      $1 as day, $3 as created_at
                 FROM sponsor_event s 
                     JOIN users u ON u.id = s.user_id
-                WHERE u.subscription_state='Active' 
+                    LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
+                WHERE u.sponsor_id IS NULL
                     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+                HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
                 GROUP by s.user_id`)
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+func runDailyUserBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	sUSDPerHour := strconv.Itoa(-mUSDPerHour) //we deduct
+	stmt, err := db.Prepare(`INSERT INTO user_balances (user_id, balance, day, created_at)
+		   SELECT user_id, 
+				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * ` + sUSDPerHour + `) / drh.repo_hours) + COALESCE((
+		             SELECT dfl.balance 
+		             FROM daily_future_leftover dfl 
+		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0) as balance, 
+			      $1 as day, 
+                  $3 as created_at
+			 FROM sponsor_event s
+			     JOIN users u ON u.id = s.user_id 
+			     JOIN daily_repo_hours drh ON u.id = drh.user_id
+                 LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
+			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
+			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+             HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
+			 GROUP by s.user_id`)
+
+	if err != nil {
+		return 0, err
+	}
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -626,20 +671,22 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * ` + sUSDPerHour + `) / drh.repo_hours) + COALESCE((
 		             SELECT dfl.balance 
 		             FROM daily_future_leftover dfl 
-		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0), 
+		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0) as balance, 
 			      $1 as day, 
                   $3 as created_at
 			 FROM sponsor_event s
 			     JOIN users u ON u.id = s.user_id 
 			     JOIN daily_repo_hours drh ON u.id = drh.user_id
-			 WHERE u.subscription_state='Active' AND drh.day=$1 
+                 LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
+			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
 			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+             HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
 			 GROUP by s.repo_id`)
 
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -667,7 +714,7 @@ func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -694,7 +741,7 @@ func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now t
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -724,7 +771,7 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -734,6 +781,8 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
 	return handleErr(res)
 }
 
+//if a repo gets funds, but no user is in our system, it goes to the leftover table and can be claimed later on
+//by the first user that registers in our system.
 func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_future_leftover (repo_id, balance, day, created_at)
 		SELECT drb.repo_id, drb.balance, $2 as day, $3 as created_at
@@ -744,7 +793,7 @@ func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, n
 	if err != nil {
 		return 0, err
 	}
-	defer stmt.Close()
+	defer closeAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
@@ -754,21 +803,20 @@ func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, n
 	return handleErr(res)
 }
 
+//return repos where the data_to is older than 5 days. This are repos where we can run the analysis again.
 func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
-	sql := `SELECT drw.repo_id, r.url
-            FROM analysis_response res
+	s := `SELECT r.id, r.url
+            FROM repo r
                 JOIN (SELECT req.id, req.repo_id, req.date_to FROM analysis_request req
                     JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	GROUP BY repo_id) 
                         AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
-                    AS req ON res.analysis_request_id = req.id
-		        JOIN daily_repo_weight drw ON drw.repo_id=req.repo_id
-			    JOIN repo r ON drw.repo_id = r.id 
+                    AS req ON req.repo_id = r.id
 			WHERE DATE_PART('day', AGE(req.date_to, $1)) > $2`
-	rows, err := db.Query(sql, now, days)
+	rows, err := db.Query(s, now, days)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeAndLog(rows)
 
 	var repos []Repo
 	for rows.Next() {
@@ -817,7 +865,7 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	case sql.ErrNoRows:
 		return nil, nil
 	case nil:
-		defer rows.Close()
+		defer closeAndLog(rows)
 		for rows.Next() {
 			var userAggBalance UserAggBalance
 			err = rows.Scan(&userAggBalance.PayoutEth,
@@ -876,4 +924,11 @@ func initDb() *sql.DB {
 
 	log.Println("Successfully connected!")
 	return db
+}
+
+func closeAndLog(c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		log.Printf("could not close: %v", err)
+	}
 }

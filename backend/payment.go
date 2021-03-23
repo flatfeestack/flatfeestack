@@ -194,14 +194,54 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		u.Freq = freq
 		u.Seats = seats
 		b := *u.Balance
-		amount := b + (pi.Amount * 10000) //in microUSD
-		u.Balance = &amount
-		updateUser(u)
+		amount := b + (pi.Amount * 10000) //pi.Amount is in cent, we need in microUSD
+
+		oldSum, err := findSumUserBalance(u.PaymentCycleId, u.Id)
+		if err != nil {
+			log.Printf("User does not exist: %v\n", uid)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		newPaymentCycleId := uuid.New()
+		ubNew := UserBalance{
+			paymentCycleId: newPaymentCycleId,
+			userId:         u.Id,
+			balance:        oldSum,
+			day:            timeNow(),
+			balanceType:    "REM",
+			createdAt:      timeNow(),
+		}
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("User does not exist: %v\n", uid)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		ubNew.balanceType = "PAY"
+		ubNew.balance = amount
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("User does not exist: %v\n", uid)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		u.PaymentCycleId = newPaymentCycleId
+		err = updateUser(u)
+		if err != nil {
+			log.Printf("User does not exist: %v\n", uid)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
+		//TODO: send email
 
 	case "payment_intent.insufficient_funds":
+		//TODO: send email
 
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)

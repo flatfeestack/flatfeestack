@@ -58,13 +58,6 @@ type FlatFeeWeight struct {
 	Weight float64 `json:"weight"`
 }
 
-type Payments struct {
-	ParentPayment []Payment `json:"parent_payment"`
-	Seats         int64     `json:"seats"`
-	Status        string    `json:"status"`
-	MyPayment     []Payment `json:"my_payment"`
-}
-
 const (
 	fakePubKey1  = "0x985B60456DF6db6952644Ee0C70dfa9146e4E12C"
 	fakePrivKey1 = "0xc76d23e248188840aacec04183d94cde00ce1b591a2e6610b034094f7aef5ecf"
@@ -483,62 +476,6 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(repo)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-}
-
-func getPayments(w http.ResponseWriter, r *http.Request, user *User) {
-	var p Payments
-	now := timeNow()
-	myPayments, err := getActivePayments(user.Id, now)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-	p.MyPayment = myPayments
-	for _, myPayment := range myPayments {
-		if !now.Before(myPayment.From) && now.Before(myPayment.To) {
-			p.Seats += myPayment.Seats
-		}
-	}
-
-	if user.InviteEmail != nil && *user.Role == "USR" {
-		//check if already payed
-		parent, err := findUserByEmail(*user.InviteEmail)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-			return
-		}
-
-		parentPayments, err := getActivePayments(parent.Id, now)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-			return
-		}
-		p.ParentPayment = parentPayments
-
-		//check if enough seats
-		paidSeats, err := getPaidUsers(parent.Id, user.CreatedAt)
-
-		parentSeats := int64(0)
-		for _, parentPayment := range parentPayments {
-			if !now.Before(parentPayment.From) && now.Before(parentPayment.To) {
-				parentSeats += parentPayment.Seats
-			}
-		}
-
-		if parentSeats >= paidSeats {
-			p.Seats++
-			p.Status = "INVITED_SEAT"
-		} else {
-			p.Status = "NO_SEAT_LEFT"
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
