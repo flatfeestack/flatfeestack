@@ -5,31 +5,37 @@ CREATE TABLE users (
     sponsor_id            UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
-    payment_cycle_id      UUID CONSTRAINT fk_user_balances_id_uid REFERENCES user_balances (payment_cycle_id),
+    payment_cycle_id      UUID, --CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)--
     stripe_last4          VARCHAR(4),
-    email                 VARCHAR(255) UNIQUE NOT NULL,
+    email                 VARCHAR(64) UNIQUE NOT NULL,
+    inviteEmail           VARCHAR(64) UNIQUE NOT NULL,
     name                  VARCHAR(255),
     image                 BYTEA,
     payout_eth            VARCHAR(255),
-    seats                 INTEGER,
-    freq                  INTEGER,
+    seats                 INTEGER DEFAULT 0,
+    freq                  INTEGER DEFAULT 365,
     token                 VARCHAR(32) NOT NULL,
     role                  VARCHAR(3) DEFAULT 'USR' NOT NULL,
-    invited_at            TIMESTAMP,
     created_at            TIMESTAMP NOT NULL
 );
 
+CREATE TABLE payment_cycle (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    created_at TIMESTAMP NOT NULL
+);
+ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
+
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    payment_cycle_id UUID NOT NULL,
+    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
     balance          BIGINT,
     balance_type     VARCHAR(4) NOT NULL,
     day              DATE NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index ON user_balances(payment_cycle_id, user_id, day, type);
-
+CREATE UNIQUE INDEX user_balances_index ON user_balances(payment_cycle_id, user_id, day, balance_type);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -62,13 +68,6 @@ CREATE TABLE sponsor_event (
     unsponsor_at TIMESTAMP DEFAULT to_date('9999', 'YYYY') NOT NULL
 );
 CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
-
-CREATE TABLE balances (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_b REFERENCES users (id),
-    paid_hours BIGINT,
-    created_at TIMESTAMP NOT NULL
-);
 
 CREATE TABLE analysis_request (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

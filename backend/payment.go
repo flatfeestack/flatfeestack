@@ -193,19 +193,29 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 		u.Freq = freq
 		u.Seats = seats
-		b := *u.Balance
-		amount := b + (pi.Amount * 10000) //pi.Amount is in cent, we need in microUSD
 
-		oldSum, err := findSumUserBalance(u.PaymentCycleId, u.Id)
+		amount := pi.Amount * 10000 //pi.Amount is in cent, we need in microUSD
+
+		oldSum := int64(0)
+		//uuid.Nil does not work: https://github.com/google/uuid/issues/45
+		if !isUUIDZero(u.PaymentCycleId) {
+			oldSum, err = findSumUserBalance(u.PaymentCycleId, u.Id)
+			if err != nil {
+				log.Printf("User does not exist: %v\n", uid)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		newPaymentCycleId, err := insertNewPaymentCycle(u.Id, timeNow())
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		newPaymentCycleId := uuid.New()
 		ubNew := UserBalance{
-			paymentCycleId: newPaymentCycleId,
+			paymentCycleId: *newPaymentCycleId,
 			userId:         u.Id,
 			balance:        oldSum,
 			day:            timeNow(),
@@ -228,7 +238,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		u.PaymentCycleId = newPaymentCycleId
+		u.PaymentCycleId = *newPaymentCycleId
 		err = updateUser(u)
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
@@ -247,5 +257,4 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
 	}
-
 }

@@ -211,6 +211,19 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func sponsorMe(w http.ResponseWriter, _ *http.Request, user *User) {
+	if *user.Role == "USR" && *user.InviteEmail != *user.InviteEmailClaim {
+		unlock := km.Lock(*user.InviteEmail)
+		defer unlock()
+		//we have a new sponsor!
+		err := takeSponsorship(*user.InviteEmail, user.Id)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
+			return
+		}
+	}
+}
+
 func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	a := params["address"]
@@ -756,12 +769,10 @@ func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
 }
 
 func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth string) (*uuid.UUID, *uuid.UUID, error) {
-	b := int64(mUSDPerDay * 3)
+
 	u := User{
 		Id:        uuid.New(),
 		StripeId:  stringPointer("strip-id"),
-		Email:     &email,
-		Balance:   &b,
 		PayoutETH: &payoutEth,
 		CreatedAt: timeNow(),
 	}

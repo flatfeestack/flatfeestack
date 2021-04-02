@@ -18,13 +18,14 @@ var (
 )
 
 type Job struct {
-	job      func(now time.Time) error
-	nextExec *time.Time
+	job        func(now time.Time) error
+	nextExecAt time.Time
+	nextExec   func(addTime int, now time.Time) time.Time
 }
 
 func init() {
 	go func() {
-		t := time.NewTicker(time.Second)
+		t := time.NewTicker(5 * time.Second)
 		for {
 			select {
 			case <-t.C:
@@ -32,14 +33,14 @@ func init() {
 				for again {
 					again = false
 					for k, job := range jobs {
-						if job.nextExec.Before(timeNow()) {
-							log.Printf("About to execute job [daily] at %v", job.nextExec)
-							err := job.job(*job.nextExec)
+						if job.nextExecAt.Before(timeNow()) {
+							log.Printf("About to execute job [daily] at %v", job.nextExecAt)
+							err := job.job(job.nextExecAt)
 							if err != nil {
-								log.Printf("Error in job [daily] run at %v: %v", job.nextExec, err)
+								log.Printf("Error in job [daily] run at %v: %v", job.nextExecAt, err)
 							}
-							nextExec := timeDay(1, *job.nextExec)
-							jobs[k].nextExec = &nextExec
+							nextExecAt := job.nextExec(1, job.nextExecAt)
+							jobs[k].nextExecAt = nextExecAt
 							again = true
 						}
 					}
@@ -56,13 +57,32 @@ func cronStop() {
 	ctx.Done()
 }
 
-func cronJob(job func(now time.Time) error, now time.Time) {
-	nextExec := timeDay(1, now)
-	jobs = append(jobs, Job{job, &nextExec})
+func cronJobDay(job func(now time.Time) error, now time.Time) {
+	jobs = append(jobs, Job{
+		job:        job,
+		nextExec:   timeDay,
+		nextExecAt: timeDay(1, now)})
 }
 
 func timeDay(days int, now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day()+days, 0, 0, 0, 0, now.Location())
+}
+
+func cronJobHour(job func(now time.Time) error, now time.Time) {
+	jobs = append(jobs, Job{
+		job:        job,
+		nextExec:   timeHour,
+		nextExecAt: timeHour(1, now)})
+}
+
+func timeHour(days int, now time.Time) time.Time {
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+days, 0, 0, 0, now.Location())
+}
+
+func hourlyRunner(now time.Time) error {
+
+	log.Printf("Hourly runner finished")
+	return nil
 }
 
 func dailyRunner(now time.Time) error {

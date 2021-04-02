@@ -21,6 +21,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -43,6 +44,7 @@ var (
 	debug     bool
 	admins    []string
 	hoursAdd  int
+	km        = KeyedMutex{}
 )
 
 type Opts struct {
@@ -58,6 +60,15 @@ type Opts struct {
 	EmailLinkPrefix string
 	EmailUrl        string
 	EmailToken      string
+}
+
+type TokenClaims struct {
+	Meta        *string   `json:"meta,omitempty"`
+	Scope       string    `json:"scope,omitempty"`
+	InviteToken string    `json:"invite_token,omitempty"`
+	InviteEmail *string   `json:"invite_email,omitempty"`
+	InvitedAt   time.Time `json:"invited_at,omitempty"`
+	jwt.Claims
 }
 
 func NewOpts() *Opts {
@@ -174,6 +185,7 @@ func main() {
 	apiRouter.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/sponsor", jwtAuthUser(sponsorMe)).Methods("PUT")
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
@@ -202,7 +214,8 @@ func main() {
 	})
 
 	//scheduler
-	cronJob(dailyRunner, timeNow())
+	cronJobDay(dailyRunner, timeNow())
+	cronJobHour(hourlyRunner, timeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
@@ -228,7 +241,7 @@ func maxBytesMiddleware(next func(w http.ResponseWriter, r *http.Request), size 
 	}
 }
 
-func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
+func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
@@ -247,7 +260,7 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *jwt.Claims {
 		return nil
 	}
 
-	claims := &jwt.Claims{}
+	claims := &TokenClaims{}
 
 	if tok.Headers[0].Algorithm == string(jose.RS256) {
 		err = tok.Claims(privRSA.Public(), claims)
@@ -301,6 +314,7 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			return
 		}
 		// Fetch user from DB
+
 		user, err := findUserByEmail(claims.Subject)
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
@@ -314,10 +328,51 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 				return
 			}
 		}
+		user.InviteEmailClaim = claims.InviteEmail
 
-		log.Printf("User [%s] request [%s]:%s\n", *user.Email, r.URL, r.Method)
+		if claims.InviteEmail != nil && *user.Role == "USR" && user.InviteEmail == nil {
+			unlock := km.Lock(*claims.InviteEmail)
+			defer unlock()
+			//we have a new sponsor!
+			err := takeSponsorship(*claims.InviteEmail, user.Id)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
+				return
+			}
+		}
+
+		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
 		next(w, r, user)
 	}
+}
+
+func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
+	//check if we have an inviteEmail that changed
+	sponsor, err := findUserByEmail(inviteEmail)
+	if err != nil {
+		return err
+	}
+
+	updateSponsor(userId, inviteEmail, sponsor.Id)
+	currentSeats, err := findSeats(sponsor.Id)
+	if err != nil {
+		return err
+	}
+	if int64(sponsor.Seats) > currentSeats {
+		//parent has enough seats go for it!
+		sum, err := findSumUserBalance(sponsor.PaymentCycleId, sponsor.Id)
+		if err != nil {
+			return err
+		}
+		if sum > mUSDPerDay {
+			transferBalance(sponsor.PaymentCycleId, userId, sponsor.Id, sponsor.Freq*mUSDPerDay, "SPON", timeNow())
+		} else {
+			log.Printf("parent has not enough funding")
+		}
+	} else {
+		log.Printf("parent has not enough seats")
+	}
+	return nil
 }
 
 func createUser(email string) (*User, error) {
@@ -355,4 +410,16 @@ func timeNow() time.Time {
 	} else {
 		return time.Now().UTC()
 	}
+}
+
+type KeyedMutex struct {
+	mutexes sync.Map // Zero value is empty and ready for use
+}
+
+func (m *KeyedMutex) Lock(key string) func() {
+	value, _ := m.mutexes.LoadOrStore(key, &sync.Mutex{})
+	mtx := value.(*sync.Mutex)
+	mtx.Lock()
+
+	return func() { mtx.Unlock() }
 }
