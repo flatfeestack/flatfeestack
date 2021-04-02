@@ -30,6 +30,7 @@ function addToken(config:AxiosRequestConfig) {
   if (t) {
     config.headers.Authorization = "Bearer " + t;
   }
+  //TODO: refresh session if we see that the token expired, no need to do a request
   return config;
 }
 
@@ -51,7 +52,7 @@ authToken.interceptors.request.use(response => {return response;}, error => {ret
 
 export const API = {
   authToken: {
-    invites: () => authToken.get('/invites'),
+    invites: () => authToken.get('/invite'),
     invite: (email: string, inviteEmail: string, org: string) => authToken.post('/invite', { email, invite_email: inviteEmail, org }),
     delInvite: (email: string) => authToken.delete(`/invite/${email}`),
     logout: () => authToken.get(`/authen/logout?redirect_uri=/`),

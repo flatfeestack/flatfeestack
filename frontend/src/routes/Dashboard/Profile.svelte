@@ -60,8 +60,8 @@ const onFileSelected =(e)=> {
 
 async function removeInvite(email: string) {
   try {
-    await API.auth.delInvite(email);
-    const response = await API.auth.invites();
+    await API.authToken.delInvite(email);
+    const response = await API.authToken.invites();
     if (response?.data && response.data.length > 0) {
       invites = response.data;
     }
@@ -73,8 +73,8 @@ async function removeInvite(email: string) {
 
 async function invite() {
   try {
-    await API.auth.invite(invite_email, $user.email, $user.name)
-    const response = await API.auth.invites();
+    await API.authToken.invite(invite_email, $user.email, $user.name)
+    const response = await API.authToken.invites();
     if (response?.data && response.data.length > 0) {
       invites = response.data;
     }
@@ -87,7 +87,7 @@ async function invite() {
 //onDestroy(()=> clearTimeout(timeout)) -> always store
 onMount(async () => {
   try {
-    const res1 = await API.auth.invites();
+    const res1 = await API.authToken.invites();
     const res2 = await API.user.getSponsored();
     invites = res1.data === null ? [] : res1.data
     sponsoredRepos = res2.data === null ? [] : res2.data;
