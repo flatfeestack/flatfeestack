@@ -19,6 +19,7 @@ var (
 
 type Job struct {
 	job        func(now time.Time) error
+	addTime    int
 	nextExecAt time.Time
 	nextExec   func(addTime int, now time.Time) time.Time
 }
@@ -26,6 +27,7 @@ type Job struct {
 func init() {
 	go func() {
 		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
 		for {
 			select {
 			case <-t.C:
@@ -39,14 +41,13 @@ func init() {
 							if err != nil {
 								log.Printf("Error in job [daily] run at %v: %v", job.nextExecAt, err)
 							}
-							nextExecAt := job.nextExec(1, job.nextExecAt)
+							nextExecAt := job.nextExec(job.addTime, job.nextExecAt)
 							jobs[k].nextExecAt = nextExecAt
 							again = true
 						}
 					}
 				}
 			case <-ctx.Done():
-				t.Stop()
 				return
 			}
 		}
@@ -60,6 +61,7 @@ func cronStop() {
 func cronJobDay(job func(now time.Time) error, now time.Time) {
 	jobs = append(jobs, Job{
 		job:        job,
+		addTime:    1,
 		nextExec:   timeDay,
 		nextExecAt: timeDay(1, now)})
 }
@@ -68,22 +70,21 @@ func timeDay(days int, now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day()+days, 0, 0, 0, 0, now.Location())
 }
 
-func cronJobHour(job func(now time.Time) error, now time.Time) {
-	jobs = append(jobs, Job{
-		job:        job,
-		nextExec:   timeHour,
-		nextExecAt: timeHour(1, now)})
-}
+//func cronJobHour(job func(now time.Time) error, now time.Time) {
+//	jobs = append(jobs, Job{
+//		job:        job,
+//		nextExec:   timeHour,
+//		nextExecAt: timeHour(1, now)})
+//}
 
-func timeHour(days int, now time.Time) time.Time {
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+days, 0, 0, 0, now.Location())
-}
+//func timeHour(hours int, now time.Time) time.Time {
+//	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+hours, 0, 0, 0, now.Location())
+//}
 
-func hourlyRunner(now time.Time) error {
-
-	log.Printf("Hourly runner finished")
-	return nil
-}
+//func hourlyRunner(now time.Time) error {
+//	log.Printf("Hourly runner finished")
+//	return nil
+//}
 
 func dailyRunner(now time.Time) error {
 	yesterdayStop := timeDay(0, now)
@@ -96,7 +97,13 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily Repo Hours inserted %v entries", nr)
 
-	nr, err = runDailyUserBalance(yesterdayStart, yesterdayStop, now)
+	nr, err = runDailyUserBalance(yesterdayStart, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily User Balance inserted %v entries", nr)
+
+	nr, err = runDailyDaysLeft(yesterdayStart)
 	if err != nil {
 		return err
 	}

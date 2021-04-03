@@ -207,7 +207,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		newPaymentCycleId, err := insertNewPaymentCycle(u.Id, timeNow())
+		newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, timeNow())
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
 			w.WriteHeader(http.StatusBadRequest)

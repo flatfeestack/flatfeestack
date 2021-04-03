@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"math/big"
-	"strconv"
 	"time"
 )
 
@@ -520,16 +519,16 @@ func insertUserBalance(ub UserBalance) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertNewPaymentCycle(uid uuid.UUID, createdAt time.Time) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, created_at) 
-                                    VALUES($1, $2)  RETURNING id`)
+func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, createdAt time.Time) (*uuid.UUID, error) {
+	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, days_left, created_at) 
+                                    VALUES($1, $2, $3)  RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", uid, err)
 	}
 	defer closeAndLog(stmt)
 
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(uid, createdAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(uid, daysLeft, createdAt).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -658,19 +657,28 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 //******************************* Daily calculations ******************************
 //*********************************************************************************
 
+//Here we calculate the total time (repo hours) a user has supported per day. If the user supported
+//2 repositories for 24h, then the repo hour is 48h. If the user supported 3 repos for 2h each, then
+//the repo hour for the user at this day is 6h. The result is stored in daily_repo_hours.
+//
+//Only users with the role "USR" and who have balance left are considered. If a user supports at least
+//1h then the full day (mUSDPerDay) should be deducted.
+//
+//Running this twice won't work as we have a unique index on: user_id, day
 func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	//https://stackoverflow.com/questions/17833176/postgresql-days-months-years-between-two-dates
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day, created_at)
               SELECT s.user_id, 
-                     SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::int) as repo_hours, 
+                     SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::bigint) as repo_hours, 
                      $1 as day, $3 as created_at
                 FROM sponsor_event s 
-                    JOIN users u ON u.id = s.user_id
-                    LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
+                    INNER JOIN users u ON u.id = s.user_id
+                    INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
                 WHERE u.sponsor_id IS NULL
                     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
-                GROUP by s.user_id`)
+                    AND pc.days_left > 0
+                    AND u.role = "USR"
+                GROUP BY s.user_id`)
 	if err != nil {
 		return 0, err
 	}
@@ -684,32 +692,55 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
 	return handleErr(res)
 }
 
-func runDailyUserBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	sUSDPerHour := strconv.Itoa(-mUSDPerHour) //we deduct
-	stmt, err := db.Prepare(`INSERT INTO user_balances (user_id, balance, day, created_at)
-		   SELECT user_id, 
-				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * ` + sUSDPerHour + `) / drh.repo_hours) + COALESCE((
-		             SELECT dfl.balance 
-		             FROM daily_future_leftover dfl 
-		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0) as balance, 
+//This inserts a balance deduction for the user, than has the role "USR", has funds, and at least 1h of supported
+//repo. The balance is negative, thus deducted.
+//
+//Running this twice wont work as we have a unique index on: user_id, day, balance_type
+func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO user_balances (payment_cycle_id, user_id, balance, balance_type, day, created_at)
+		   SELECT u.payment_cycle_id as payment_cycle_id,
+		          u.id as user_id, 
+				  $2 as balance,
+		          'DAY' as balance_type,
 			      $1 as day, 
                   $3 as created_at
-			 FROM sponsor_event s
-			     JOIN users u ON u.id = s.user_id 
-			     JOIN daily_repo_hours drh ON u.id = drh.user_id
-                 LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
-			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
-			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-             HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
-			 GROUP by s.user_id`)
-
+			 FROM users u
+			     INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
+			 WHERE drh.day=$1`)
 	if err != nil {
 		return 0, err
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	res, err = stmt.Exec(yesterdayStart, -mUSDPerDay, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}
+
+//Here we update the days left of the user. This calculates as the remaining balance divided by mUSDPerDay
+//
+//Running this twice is ok, as it will give a more accurate state
+func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
+	stmt, err := db.Prepare(`UPDATE payment_cycle SET 
+		     pc.days_left = sum / $2
+			 FROM payment_cycle pc
+			     INNER JOIN daily_repo_hours drh ON pc.user_id = drh.user_id
+                 INNER JOIN users u ON pc.user_id = u.id
+                 INNER JOIN (SELECT user_id, SUM(balance) as sum 
+                             FROM user_balances 
+                             WHERE payment_cycle_id = pc.id 
+                             GROUP BY user_id) AS ub ON ub.user_id = u.id
+			 WHERE u.payment_cycle_id=pc.id AND drh.day=$1`)
+	if err != nil {
+		return 0, err
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, mUSDPerDay)
 	if err != nil {
 		return 0, err
 	}
@@ -718,32 +749,37 @@ func runDailyUserBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 
 //TODO: limit user to 10000 repos
 //we can support up to 1000 (1h) - 27500 (24h) repos until the precision makes the distribution of 0
+//
+//Here we calculate how much balance a repository gets. The calculation is based on the daily_repo_hours. So if
+//a user has 3 repos with 72 repo hours, and supports repo X, then we calculate how much repo X gets from that user,
+//which is 24h (the user supported for 24h) x 24/72 = 8h, which is 1/3 of his repo hours.
+//
+//Running this twice does not work as we have a unique index on: repo_id, day
 func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	sUSDPerHour := strconv.Itoa(mUSDPerHour)
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day, created_at)
 		   SELECT repo_id, 
-				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * ` + sUSDPerHour + `) / drh.repo_hours) + COALESCE((
+				  SUM(((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * $4) * 24 / drh.repo_hours) + COALESCE((
 		             SELECT dfl.balance 
 		             FROM daily_future_leftover dfl 
 		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0) as balance, 
 			      $1 as day, 
                   $3 as created_at
 			 FROM sponsor_event s
-			     JOIN users u ON u.id = s.user_id 
-			     JOIN daily_repo_hours drh ON u.id = drh.user_id
-                 LEFT JOIN user_balances ub ON u.payment_cycle_id = ub.payment_cycle_id
+			     INNER JOIN users u ON u.id = s.user_id 
+			     INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
+                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
 			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
 			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-             HAVING SUM(ub.balance) >= ` + strconv.Itoa(mUSDPerDay) + `
-			 GROUP by s.repo_id`)
-
+                 AND pc.days_left > 0
+                 AND u.role = "USR"
+             GROUP BY s.repo_id`)
 	if err != nil {
 		return 0, err
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now, mUSDPerHour)
 	if err != nil {
 		return 0, err
 	}

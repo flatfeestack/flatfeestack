@@ -22,6 +22,7 @@ CREATE TABLE users (
 CREATE TABLE payment_cycle (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    days_left  INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
@@ -35,7 +36,7 @@ CREATE TABLE user_balances (
     day              DATE NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index ON user_balances(payment_cycle_id, user_id, day, balance_type);
+CREATE UNIQUE INDEX user_balances_index ON user_balances(user_id, day, balance_type);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
