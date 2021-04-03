@@ -920,6 +920,37 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 	return repos, nil
 }
 
+func runDailyTopupReminderUser() ([]User, error) {
+	s := `SELECT u.id, u.role
+            FROM users u
+                INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
+			WHERE u.role="USR" AND pc.days_left <= 1
+          UNION
+          SELECT u.id, u.role
+            FROM users u
+                INNER JOIN users c ON c.sponsor_id = u.id
+                INNER JOIN payment_cycle pc ON c.payment_cycle_id = pc.id
+			WHERE u.role="ORG"
+			GROUP BY u.id
+			HAVING MIN(pc.days_left) <= 1`
+	rows, err := db.Query(s)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var repos []User
+	for rows.Next() {
+		var user User
+		err = rows.Scan(&user.Id)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, user)
+	}
+	return repos, nil
+}
+
 func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	var userAggBalances []UserAggBalance
 	//select monthly payments, but only those that do not have a payout entry

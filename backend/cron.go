@@ -152,6 +152,25 @@ func dailyRunner(now time.Time) error {
 		}
 	}
 
+	users, err := runDailyTopupReminderUser()
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Topup Reminder found %v entries", len(users))
+
+	for _, u := range users {
+		err = reminderTopup(u)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Printf("Daily runner finished")
+	return nil
+}
+
+func reminderTopup(u User) error {
+	//TODO: send out email
+	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil
 }
