@@ -345,6 +345,7 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 	}
 }
 
+//TODO: make sure a invite bounce cannot decrease funds
 func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
 	//check if we have an inviteEmail that changed
 	sponsor, err := findUserByEmail(inviteEmail)
