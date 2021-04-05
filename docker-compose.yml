@@ -11,14 +11,15 @@ services:
       - DEV=test
       - USERS=tom@tom.tom:12345678
       - PORT=9081
-      - RS256=false
-      - EDDSA=false
       - EMAIL_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtYWlsX2Zyb20iOiJuby1yZXBseUBmbGF0ZmVlc3RhY2suaW8iLCJtYWlsX3RvIjoidG9tQGJvY2VrLmNoIiwic3ViIjoiYmFja2VuZCJ9.T8tvPLHx6NSonGgmE11MSumUlZ2RSQx5dULrX4E1PcY
       - EMAIL_URL=https://flatfeestack.io/mailer
       - EMAIL_PREFIX=http://localhost
       - DB_PATH=postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
       - DB_DRIVER=postgres
       - DB_SCRIPTS=
+    depends_on:
+      db:
+        condition: service_healthy
 
   backend:
     container_name: flatfeestack-backend
@@ -28,7 +29,8 @@ services:
     environment:
       - PORT=9082
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
@@ -61,6 +63,13 @@ services:
       - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
+    #https://docs.docker.com/engine/reference/builder/#healthcheck
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 1s
+      timeout: 5s
+      start_period: 1s
+      retries: 3
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=postgres
