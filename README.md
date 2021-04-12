@@ -1,8 +1,19 @@
 # Flatfeestack Docker
 This repo combines all Flatfeestack packages using `docker-compose`.
 
-## Build / Start
-`docker-compose up -d --build`
+## Build / Start / Stop
+
+```shell script
+git clone --recurse-submodules https://github.com/flatfeestack/flatfeestack.git
+cd flatfeestack
+docker-compose up -d --build
+```
+
+if you want to stop, and clean everything up:
+
+```shell script
+docker-compose down -v
+```
 
 ## Networking
 
