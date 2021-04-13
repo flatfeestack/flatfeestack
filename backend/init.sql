@@ -8,7 +8,7 @@ CREATE TABLE users (
     payment_cycle_id      UUID, --CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)--
     stripe_last4          VARCHAR(4),
     email                 VARCHAR(64) UNIQUE NOT NULL,
-    inviteEmail           VARCHAR(64) UNIQUE NOT NULL,
+    inviteEmail           VARCHAR(64),
     name                  VARCHAR(255),
     image                 BYTEA,
     payout_eth            VARCHAR(255),

@@ -1,13 +1,10 @@
-.PHONY: all dep build swag test clean
+.PHONY: all dep build test clean
 
-all: dep build swag test
+all: dep build test
 dep:
 	go mod download
-	go get -u github.com/swaggo/swag/cmd/swag
 build:
-	go build
-swag:
-	swag init -g main.go
+	go build -ldflags "-linkmode external -extldflags -static"
 test:
 	go test
 clean:
