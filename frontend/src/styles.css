@@ -72,6 +72,10 @@ body, html {
   width: 33.333333%;
 }
 
+.w1-2	{
+  width: 50%;
+}
+
 .text-center	{text-align: center;}
 
 .text-primary-700 {
@@ -79,9 +83,14 @@ body, html {
 }
 .w-33	{width: 33.333333%;}
 .w-100  {width: 100%}
+.h-100 {height: 100%}
 
 .rounded {
   border-radius: 4px;
+}
+
+.border-primary-500 {
+  border: var(--primary-500) 1px solid;
 }
 
 .border-primary-700 {

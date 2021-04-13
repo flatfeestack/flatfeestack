@@ -25,7 +25,6 @@
 </style>
 
 <script lang="ts">
-import Spacer from "../components/UI/Spacer.svelte";
 import Navigation from "../components/Navigation.svelte";
 import { draw } from "svelte/transition";
 
@@ -81,8 +80,7 @@ let svgVisible = true;
         />
       </div>
     </div>
-    <Spacer x5 />
-    <Spacer x5 />
+
   </div>
 
   <section class="bg-white">
@@ -91,7 +89,7 @@ let svgVisible = true;
         &#171;Software Engineers should be able to make a living with open
         source software&#187;
       </div>
-      <Spacer x5 />
+
       <div class="subtitle">
         Some individuals already live their dream of developing open source
         software and manage to make a decent living. However, those are
@@ -147,7 +145,7 @@ let svgVisible = true;
         <div class="w-full md:w-1/2">
           <div class="container">
             <div class="subtitle">Agony of choice</div>
-            <Spacer x3 />
+
             <div>
               Donation services such as Open Collective, Patreon, or Github
               Sponsors support project or person based contributions: e.g.,
@@ -182,7 +180,7 @@ let svgVisible = true;
             <div class="subtitle">
               Flatfeestack is compatible with your accounting department
             </div>
-            <Spacer x3 />
+
             <div>
               Sponsoring open source projects is difficult for a company. Try to
               convince your accounting department to sponsor
@@ -199,7 +197,7 @@ let svgVisible = true;
         <div class="w-full md:w-1/2">
           <div class="container">
             <div class="subtitle">Simplified flat-fee approach</div>
-            <Spacer x3 />
+
             <div>
               Each project receives your donation equally divided. Simply donate
               and don't worry about how many projects you want to support, it is
@@ -219,8 +217,7 @@ let svgVisible = true;
           />
         </div>
       </div>
-      <Spacer x5 />
-      <Spacer x5 />
+
     </div>
   </section>
 

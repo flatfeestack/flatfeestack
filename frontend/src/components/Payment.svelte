@@ -8,26 +8,21 @@
   import Dots from "./Dots.svelte";
 
   let stripe;
-  let selectedPlan = 1;
+  let selectedPlan = 0;
   let seats = 1;
 
   let isSubmitting = false;
 
   const plans = [
     {
-      title: "Monthly",
-      price: 10,
-      desc: "You wan't to support Open Source software with a monthly flat fee of."
-    },
-    {
       title: "Yearly",
       price: 120,
-      desc: "By paying yearly, you help us to keep payment processing costs low and more money will reach your sponsored projects"
+      desc: "By paying yearly <b>120&nbsp;USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects"
     },
     {
       title: "Quarterly",
       price: 30,
-      desc: " If you're not cool with paying yearly but still want us to keep payment processing costs low :)"
+      desc: "You want to support Open Source software with a quarterly flat fee of <b>30&nbsp;USD</b>"
     }
   ];
 
@@ -76,7 +71,7 @@
           card: cardElement
         }
       }
-    ).then(function(result) {
+    ).then(async function(result) {
       if (result.error) {
         console.log(result.error);
       } else {
@@ -85,7 +80,12 @@
         console.log("test");
         console.log(result.setupIntent);
         console.log(result.setupIntent.payment_method.card);
-        API.user.updatePaymentMethod(result.setupIntent.payment_method);
+        const res = await API.user.updatePaymentMethod(result.setupIntent.payment_method);
+        if (!res.data) {
+          console.log("could not verify in email");
+          return;
+        }
+        $user = res.data;
         console.log("OOKKK");
       }
     });
@@ -163,7 +163,7 @@ if (user.subscription_state === "ACTIVE") {
     }
 
     .card {
-        @apply shadow-md p-2 mx-3 rounded-lg transition-all duration-150 bg-gray-100 p-5;
+        cursor:pointer;
     }
     .card:hover {
         @apply bg-gradient-to-tr from-secondary-400 to-primary-400 cursor-pointer transform scale-105 text-white;
@@ -177,63 +177,63 @@ if (user.subscription_state === "ACTIVE") {
     .container {
         display: flex;
         flex-direction: row;
-        margin: 1em;
+        margin-left: 1em;
+        margin-right: 1em;
+        align-items: center;
     }
 </style>
-{$user.client_secret}
 {#if error}
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
-{#if !submitted && $user.subscription_state !== 'ACTIVE'}
-  <div class="container items-end mb-10">
-    {#each plans as { title, price, desc }, i}
-      <div
-        class="w1-3 card {selectedPlan === i ? 'bg-green' : 'text-black'}"
-        on:click="{() => (selectedPlan = i)}"
-      >
+
+{#if !submitted}
+  <div class="container">
+    {#each plans as { title, desc }, i}
+      <div class="h-100 p-2 m-2 w1-2 card border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
+        on:click="{() => (selectedPlan = i)}">
         <h3 class="text-center font-bold text-lg">{title}</h3>
-        <div class="price">{price}</div>
-        <div class="opacity-50 text-sm text-center">{desc}</div>
+        <div class="text-center">{@html desc}</div>
       </div>
     {/each}
   </div>
 {/if}
-{#if $user.subscription_state !== 'ACTIVE'}
-  <div class="w-2/3 mx-auto {submitted ? 'hidden' : ''}">
-    <div class="font-semibold mb-5">
-      Selected Plan:
-      {plans[selectedPlan].title}
-    </div>
-    <div class="font-semibold mb-5">
-      Next Payment: $
-      {plans[selectedPlan].price * ($user.role === "ORG" ? seats:1)}
-      at
-      {new Date()}
-    </div>
-    <div>
-      {#if $user.role == "ORG" }
-        How many seats? <input type="number" min="1" bind:value="{seats}">
-      {/if}
-    </div>
-    {#if $user.payment_method}
-      <form on:submit|preventDefault="{deletePaymentMethod}">
-      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Delete
-        {#if isSubmitting}<Dots />{/if}
+
+<div class="container">
+  <div class="p-2 m-2 w-100 StripeElement" bind:this="{card}"></div>
+  {#if $user.payment_method}
+    <p class="p-2">Credit card: xxxx xxxx xxxx {$user.last4}</p>
+    <form on:submit|preventDefault="{deletePaymentMethod}">
+      <button disabled="{isSubmitting}" type="submit">Remove card{#if isSubmitting}<Dots />{/if}
       </button>
     </form>
+  {/if}
+</div>
+
+<div class="container">
+  <div class="p-2">
+    {#if $user.role == "ORG" }
+      How many seats? <input size="5" type="number" min="1" bind:value="{seats}">
     {/if}
-    <div class="StripeElement" bind:this="{card}"></div>
-
-    <div class="flex w-full justify-end">
-      <form on:submit|preventDefault="{handleSubmit}">
-        <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign in
-          {#if isSubmitting}<Dots />{/if}
-        </button>
-      </form>
-
-    </div>
   </div>
-{/if}
+  <div class="p-2">
+    Total Donation: $
+    {plans[selectedPlan].price * ($user.role === "ORG" ? seats : 1)}
+  </div>
+  <div class="flex w-full justify-end">
+    <form on:submit|preventDefault="{handleSubmit}">
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Donate
+        {#if isSubmitting}
+          <Dots />
+        {/if}
+      </button>
+    </form>
+
+  </div>
+
+</div>
+
+
+
 
 {#if paymentProcessing || (submitted && !paymentProcessing && !error && $user.subscription_state !== 'ACTIVE')}
   <div class="w-full flex flex-col items-center">

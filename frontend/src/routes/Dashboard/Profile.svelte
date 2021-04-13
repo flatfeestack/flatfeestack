@@ -73,7 +73,8 @@ async function removeInvite(email: string) {
 
 async function invite() {
   try {
-    await API.authToken.invite(invite_email, $user.email, $user.name)
+    const d = new Date();
+    await API.authToken.invite(invite_email, $user.email, $user.name, new Date().toISOString())
     const response = await API.authToken.invites();
     if (response?.data && response.data.length > 0) {
       invites = response.data;
@@ -105,8 +106,9 @@ onMount(async () => {
         display: flex;
         flex-direction: row;
         margin: 1em;
+        align-items: center;
     }
-    .upload{
+    .upload {
         display:flex;
         cursor:pointer;
     }
@@ -128,7 +130,12 @@ onMount(async () => {
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
 <DashboardLayout>
-  <h1 class = "px-2">Profile</h1>
+  <h1 class="px-2">Profile</h1>
+
+  <div class="container">
+    <label class = "px-2">Email:&nbsp;</label>
+    <input type="email" disabled="true" value="{$user.email}">
+  </div>
 
   <div class = "container">
     <label class = "px-2">Are you an organization or an individual contributor?&nbsp;</label>
@@ -143,20 +150,18 @@ onMount(async () => {
 
   <div class = "container">
     {#if checked}
-      <label class="px-2">What name should appear on your badge?</label>
+      <label class="px-2">User name: </label>
       <input type="text" bind:value={$user.name} placeholder="Name on the badge">
     {:else}
-      <label class="px-2">What is the name of your organization? </label>
+      <label class="px-2">Organization name: </label>
       <input type="text" bind:value={$user.name} placeholder="My organization name">
     {/if}
   </div>
 
   <div class = "container">
     <label class="px-2">Upload your profile picture:</label>
-
     <div class="upload" on:click={()=>{fileinput.click();}}>
       <Fa icon="{faUpload}" size="lg"  class="icon, px-2" />
-      <span class="px-2">Choose Image</span>
       <input style="display:none" type="file" accept=".jpg, .jpeg, .png" on:change={(e)=>onFileSelected(e)} bind:this={fileinput} >
       {#if $user.image}
         {#if checked}
@@ -166,43 +171,30 @@ onMount(async () => {
         {/if}
       {/if}
     </div>
-
   </div>
 
-  <div class="container">
-
-        {#if $user.subscription_state === 'ACTIVE'}
-          <h2 class="Sponsoring">
-          You are currently sponsoring {sponsoredRepos.length} projects
-          <span>{$user.subscription_state}</span>
-          </h2>
-        {:else if sponsoredRepos.length > 0}
+  {#if checked}
+    <div class="container">
+        {#if sponsoredRepos.length > 0}
           <h2 class="Sponsoring">
           Support {sponsoredRepos.length} projects
           </h2>
         {:else}
-          <div class="container bg-green rounded p-2 my-4" use:links>
+          <div class="bg-green rounded p-2 my-4" use:links>
               <p>You are not supporting any projects yet. Please go to the <a href="/dashboard/sponsoring">Find Repos</a> section
                 where you can add your favorite projects.</p>
           </div>
         {/if}
-  </div>
+    </div>
+  {/if}
 
-  <div class="container">
-    {#if $user.subscription_state !== 'ACTIVE' && sponsoredRepos.length > 0}
-      <div class="container bg-green rounded p-2 my-4">
-        You don't have an active subscription. Please choose a plan below to start sponsoring open source
-        projects
-      </div>
-    {/if}
-  </div>
+  {#if sponsoredRepos.length > 0 || !checked}
+    <h2 class="px-2">Donation</h2>
+    <Payment />
+  {/if}
 
-  <div class="">
-      {#if $user.subscription_state !== 'ACTIVE' && sponsoredRepos.length > 0}
-        <Payment />
-      {/if}
-  </div>
 
+  {#if !checked}
   <div class="container">
     {#each invites as inv}
       {inv.email}
@@ -222,11 +214,11 @@ onMount(async () => {
         <input size="24" maxlength="100" type="email" bind:value="{invite_email}" />
       </div>
       <div>
-        <button type="submit" class="button px-2">Invite</button>
+        <button type="submit" class="button px-2">Invite to your org</button>
       </div>
     </form>
 
     </div>
-
+  {/if}
 
 </DashboardLayout>

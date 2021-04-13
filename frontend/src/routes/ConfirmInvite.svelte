@@ -2,11 +2,13 @@
   import { Link, navigate } from "svelte-routing";
   import { API } from "ts/api.ts";
   import Dots from "../components/Dots.svelte";
-  import { updateUser } from "../ts/authService";
+  import { confirmInvite, updateUser } from "../ts/authService";
 
   export let email;
-  export let token;
+  export let emailToken;
   export let inviteEmail;
+  export let inviteDate;
+  export let inviteToken;
 
   let password = "";
   let error = "";
@@ -16,7 +18,7 @@
     try {
       error = "";
       isSubmitting = true;
-      const res = await API.auth.confirmInvite(email, password, token);
+      await confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
       await updateUser();
       email = "";
       password = "";

@@ -36,7 +36,7 @@ function addToken(config:AxiosRequestConfig) {
 
 async function refreshSession(error: AxiosError, call: AxiosInstance) {
   const originalRequest = error.config;
-  if (error.response.status === 418 && originalRequest.headers.Retry !== "true") {
+  if (error.response.status === 401 && originalRequest.headers.Retry !== "true") {
     originalRequest.headers.Retry = "true";
     const t = await refresh();
     originalRequest.headers.Authorization = "Bearer " + t;
@@ -53,7 +53,7 @@ authToken.interceptors.request.use(response => {return response;}, error => {ret
 export const API = {
   authToken: {
     invites: () => authToken.get('/invite'),
-    invite: (email: string, inviteEmail: string, org: string) => authToken.post('/invite', { email, invite_email: inviteEmail, org }),
+    invite: (email: string, inviteEmail: string, name: string, invitedAt: string) => authToken.post('/invite', { email, invite_email: inviteEmail, name, invitedAt }),
     delInvite: (email: string) => authToken.delete(`/invite/${email}`),
     logout: () => authToken.get(`/authen/logout?redirect_uri=/`),
   },
@@ -64,7 +64,8 @@ export const API = {
     reset: (email: string) => auth.post(`/reset/${email}`),
     confirmEmail: (email: string, token: string) => auth.post("/confirm/signup", {email, token}),
     confirmReset: (email: string, password: string, token: string) => auth.post("/confirm/reset", {email, password, email_token: token}),
-    confirmInvite: (email: string, password: string, token: string) => auth.post("/confirm/invite", {email, password, email_token: token}),
+    confirmInvite: (email: string, password: string, emailToken: string, inviteEmail: string, inviteDate:string, inviteToken: string) =>
+      auth.post("/confirm/invite", {email, password, email_token: emailToken, invite_email: inviteEmail, invite_date: inviteDate, invite_token: inviteToken}),
     timeWarp: (hours: number) => auth.post(`/timewarp/${hours}`),
   },
   user: {

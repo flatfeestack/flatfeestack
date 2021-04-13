@@ -53,7 +53,7 @@
     footer {
         background-color: #000;
         color: white;
-        height: 2em;
+        height: 100%;
         flex: 0 1 auto;
     }
 
@@ -94,6 +94,7 @@
     </a>
     <nav>
       {#if $user.id}
+        <span>{$user.email}</span>
         <div class="main-nav"><a href="/signin" on:click={removeSession}>Sign out</a></div>
       {:else}
         <div class="main-nav"><a href="/signin">Sign in</a></div>
@@ -124,8 +125,12 @@
         <Route path="/confirm/git-email/:email/:token" let:params>
           <ConfirmGitEmail email="{params.email}" token="{params.token}" />
         </Route>
-        <Route path="/confirm/invite/:email/:token/:invite_email" let:params>
-          <ConfirmInvite email="{params.email}" token="{params.token}" inviteEmail="{params.invite_email}"/>
+        <Route path="/confirm/invite/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" let:params>
+          <ConfirmInvite email="{params.email}"
+                         emailToken="{params.emailToken}"
+                         inviteEmail="{params.inviteEmail}"
+                         inviteDate="{params.inviteDate}"
+                         inviteToken="{params.inviteToken}"/>
         </Route>
         {#if $user.id}
           <Route path="/dashboard" component="{FindRepos}" />

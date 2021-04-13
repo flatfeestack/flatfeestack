@@ -8,7 +8,7 @@ export const confirmReset = async(email: string, password: string, emailToken: s
   const t = res.data.access_token;
   const r = res.data.refresh_token;
   if (!t || !r) {
-    console.log("could not verify");
+    console.log("could not verify in reset");
     return;
   }
   token.set(t);
@@ -20,12 +20,26 @@ export const confirmEmail = async(email: string, emailToken: string) => {
   const t = res.data.access_token;
   const r = res.data.refresh_token;
   if (!t || !r) {
-    console.log("could not verify");
+    console.log("could not verify in email");
     return;
   }
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
 };
+
+export const confirmInvite = async(email: string, password: string,
+                                   emailToken: string, inviteEmail: string,
+                                   inviteDate: string, inviteToken: string) => {
+  const res = await API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
+  const t = res.data.access_token;
+  const r = res.data.refresh_token;
+  if (!t || !r) {
+    console.log("could not verify in invite");
+    return;
+  }
+  token.set(t);
+  localStorage.setItem("ffs-refresh", r);
+}
 
 export const login = async (email: string, password: string) => {
   const res = await API.auth.login(email, password);
