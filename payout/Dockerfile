@@ -1,20 +1,14 @@
-FROM golang:1.15-alpine AS builder
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN apk add make gcc musl-dev linux-headers
+FROM golang:1.16 AS base
 WORKDIR /app
-RUN chown -R appuser:appgroup /app
-USER appuser
-# User from here
-COPY --chown=appuser:appgroup go.* Makefile ./
-RUN --mount=type=cache,target=/root/.cache/go-build make dep
-COPY --chown=appuser:appgroup . .
-#disable tests for now, due to dind which is not available during build
-RUN --mount=type=cache,target=/root/.cache/go-build make build
+COPY go.* Makefile ./
+RUN make dep
 
-FROM alpine:3.13
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-WORKDIR /app
-COPY --from=builder /app/payout  /app/banner.txt ./
-RUN chown -R appuser:appgroup /app
-USER appuser
-ENTRYPOINT ["./payout"]
+FROM base as builder
+COPY *.go banner.txt ./
+RUN make build
+
+FROM gcr.io/distroless/static
+WORKDIR /home/nonroot
+COPY --from=builder /app/banner.txt /app/payout ./
+USER nonroot
+ENTRYPOINT ["/home/nonroot/payout"]
