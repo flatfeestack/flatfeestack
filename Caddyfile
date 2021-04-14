@@ -7,6 +7,12 @@ route /auth/* {
 }
 
 route /backend/* {
+    uri strip_prefix /backend
+    reverse_proxy backend:9082
+}
+
+route /ws/* {
+    uri strip_prefix /ws
     reverse_proxy backend:9082
 }
 
