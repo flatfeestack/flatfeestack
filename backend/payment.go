@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/paymentintent"
@@ -13,10 +15,21 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 )
 
 type ClientSecretBody struct {
 	ClientSecret string `json:"client_secret"`
+}
+
+func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
+	user.Freq = 0
+	err := updateUser(user)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
+		return
+	}
 }
 
 //https://stripe.com/docs/payments/save-and-reuse
@@ -215,22 +228,25 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			paymentCycleId: *newPaymentCycleId,
-			userId:         u.Id,
-			balance:        oldSum,
-			day:            timeNow(),
-			balanceType:    "REM",
-			createdAt:      timeNow(),
-		}
-		err = insertUserBalance(ubNew)
-		if err != nil {
-			log.Printf("User does not exist: %v\n", uid)
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			PaymentCycleId: *newPaymentCycleId,
+			UserId:         u.Id,
+			Balance:        oldSum,
+			Day:            timeNow(),
+			BalanceType:    "REM",
+			CreatedAt:      timeNow(),
 		}
 
-		ubNew.balanceType = "PAY"
-		ubNew.balance = amount
+		if oldSum > 0 {
+			err = insertUserBalance(ubNew)
+			if err != nil {
+				log.Printf("User does not exist: %v\n", uid)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		ubNew.BalanceType = "PAY"
+		ubNew.Balance = amount
 		err = insertUserBalance(ubNew)
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
@@ -245,6 +261,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		sendToBrowser(u.Id)
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
@@ -257,4 +274,65 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+var clients = make(map[uuid.UUID]*websocket.Conn)
+var lock = sync.Mutex{}
+
+// serveWs handles websocket requests from the peer.
+func ws(w http.ResponseWriter, r *http.Request, user *User) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		log.Printf("could not upgrade connection: %v\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	lock.Lock()
+	clients[user.Id] = conn
+	lock.Unlock()
+	conn.SetCloseHandler(func(code int, text string) error {
+		lock.Lock()
+		defer lock.Unlock()
+		delete(clients, user.Id)
+		return nil
+	})
+	sendToBrowser(user.Id)
+}
+
+func sendToBrowser(userId uuid.UUID) error {
+	lock.Lock()
+	defer lock.Unlock()
+
+	conn := clients[userId]
+
+	if conn == nil {
+		return fmt.Errorf("cannot get websockt for client %v", userId)
+	}
+
+	err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		delete(clients, userId)
+		return err
+	}
+
+	userBalances, err := findUserBalances(userId)
+	if err != nil {
+		delete(clients, userId)
+		return err
+	}
+
+	err = conn.WriteJSON(userBalances)
+	if err != nil {
+		delete(clients, userId)
+		return err
+	}
+
+	return nil
 }

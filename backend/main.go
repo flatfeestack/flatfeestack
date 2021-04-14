@@ -12,7 +12,6 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/stripe/stripe-go/v72"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"golang.org/x/crypto/ed25519"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -170,8 +169,8 @@ func main() {
 	stripe.Key = opts.StripeSecret
 
 	// Routes
-	router := mux.NewRouter()
-	apiRouter := router.PathPrefix("/backend").Subrouter()
+	apiRouter := mux.NewRouter()
+	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
 	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
@@ -184,8 +183,10 @@ func main() {
 	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods("POST")
+	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/sponsor", jwtAuthUser(sponsorMe)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
@@ -203,7 +204,6 @@ func main() {
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
-		router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
 		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods("POST")
 	}
@@ -217,7 +217,7 @@ func main() {
 	cronJobDay(dailyRunner, timeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), apiRouter))
 	cronStop()
 }
 
@@ -242,18 +242,23 @@ func maxBytesMiddleware(next func(w http.ResponseWriter, r *http.Request), size 
 
 func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
 	authHeader := r.Header.Get("Authorization")
+	var bearerToken = ""
 	if authHeader == "" {
-		writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
-		return nil
+		authHeader = r.Header.Get("Sec-WebSocket-Protocol")
+		if authHeader == "" {
+			writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
+			return nil
+		}
+		w.Header().Set("Sec-WebSocket-Protocol", "access_token")
 	}
-
-	bearerToken := strings.Split(authHeader, " ")
-	if len(bearerToken) != 2 {
+	split := strings.Split(authHeader, " ")
+	if len(split) != 2 {
 		writeErr(w, http.StatusBadRequest, "ERR-02, could not split token: %v", bearerToken)
 		return nil
 	}
+	bearerToken = split[1]
 
-	tok, err := jwt.ParseSigned(bearerToken[1])
+	tok, err := jwt.ParseSigned(bearerToken)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "ERR-03, could not parse token: %v", bearerToken[1])
 		return nil
@@ -268,17 +273,17 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
 	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
 		err = tok.Claims(privEdDSA.Public(), claims)
 	} else {
-		writeErr(w, http.StatusUnauthorized, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
+		writeErr(w, http.StatusBadRequest, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
 		return nil
 	}
 
 	if err != nil {
-		writeErr(w, http.StatusUnauthorized, "ERR-05, could not parse claims: %v", bearerToken[1])
+		writeErr(w, http.StatusBadRequest, "ERR-05, could not parse claims: %v", bearerToken)
 		return nil
 	}
 
 	if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {
-		writeErr(w, http.StatusTeapot, "ERR-06, expired: %v", claims.Expiry.Time())
+		writeErr(w, http.StatusUnauthorized, "ERR-06, expired: %v", claims.Expiry.Time())
 		return nil
 	}
 
@@ -310,6 +315,7 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := jwtAuth(w, r)
 		if claims == nil {
+			writeErr(w, http.StatusBadRequest, "ERR-08a, no claims provided: %v", r.URL)
 			return
 		}
 		// Fetch user from DB

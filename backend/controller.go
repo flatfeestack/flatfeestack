@@ -256,7 +256,12 @@ func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
 }
 
 func updateName(w http.ResponseWriter, r *http.Request, user *User) {

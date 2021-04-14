@@ -98,12 +98,12 @@ type GitEmail struct {
 }
 
 type UserBalance struct {
-	paymentCycleId uuid.UUID
-	userId         uuid.UUID
-	balance        int64
-	day            time.Time
-	balanceType    string
-	createdAt      time.Time
+	PaymentCycleId uuid.UUID `json:"paymentCycleId"`
+	UserId         uuid.UUID `json:"userId"`
+	Balance        int64     `json:"balance"`
+	BalanceType    string    `json:"balanceType"`
+	Day            time.Time `json:"day"`
+	CreatedAt      time.Time `json:"createdAt"`
 }
 
 func findUserByEmail(email string) (*User, error) {
@@ -507,12 +507,12 @@ func insertUserBalance(ub UserBalance) error {
                                            payment_cycle_id, user_id, balance, balance_type, day, created_at) 
                                     VALUES($1, $2, $3, $4, $5, $6)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.userId, ub.paymentCycleId, err)
+		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.paymentCycleId, ub.userId, ub.balance, ub.balanceType, ub.day, ub.createdAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.Balance, ub.BalanceType, ub.Day, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -569,6 +569,26 @@ func findSumUserBalance(paymentCycleId uuid.UUID, userId uuid.UUID) (int64, erro
 	default:
 		return 0, err
 	}
+}
+
+func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
+	s := `SELECT payment_cycle_id, user_id, balance, balance_type, day FROM user_balances WHERE user_id = $1`
+	rows, err := db.Query(s, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalance
+	for rows.Next() {
+		var userBalance UserBalance
+		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &userBalance.Balance, &userBalance.BalanceType, &userBalance.Day)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
 }
 
 func transferBalance(paymentCycleId uuid.UUID, userId uuid.UUID, sponsorId uuid.UUID, balance int, balanceType string, now time.Time) error {
