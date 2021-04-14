@@ -82,6 +82,7 @@ export const API = {
     setUserMode: (mode: string) => backend.put(`/users/me/mode/${mode}`),
     setupStripe: () => backend.post<ClientSecret>(`/users/me/stripe`),
     stripePayment: (freq: string, seats: number) => backend.put(`/users/me/stripe/${freq}/${seats}`),
+    cancelSub: () => backend.delete(`/users/me/stripe`)
   },
   repos: {
     search: (s: string) => backend.get(`/repos/search?q=${encodeURI(s)}`),

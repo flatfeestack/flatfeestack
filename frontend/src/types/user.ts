@@ -16,3 +16,11 @@ export type User = {
 export type ClientSecret = {
   client_secret: string;
 }
+
+export type UserBalance = {
+  paymentCycleId: string;
+  userId: string;
+  balance: number;
+  balanceType: string;
+  day: string;
+}

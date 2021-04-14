@@ -1,16 +1,14 @@
-FROM node:14-alpine AS builder
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN apk add make gcc musl-dev
+FROM node:15 AS base
 WORKDIR /app
 COPY package.json webpack.config.js tsconfig.json ./
 COPY ./public/assets ./public/assets
-COPY ./public/favicon.png ./public/index.html ./public/
-RUN chown -R appuser:appgroup /app
-USER appuser
+COPY ./public/index.html ./public/
 RUN npm install
-COPY --chown=appuser:appgroup ./src ./src
+
+FROM base as builder
+COPY ./src ./src
 RUN npm run build
 
-FROM caddy:2-alpine
+FROM caddy:2
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/public /var/www/html

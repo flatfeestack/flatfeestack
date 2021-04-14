@@ -1,17 +1,20 @@
 <script lang="ts">
   import { API } from "ts/api";
   import { onMount } from "svelte";
-  import { user } from "ts/auth";
+  import { token, user } from "ts/auth";
   import { loadStripe } from "@stripe/stripe-js/pure";
 
   import Spinner from "./Spinner.svelte";
   import Dots from "./Dots.svelte";
+  import { get } from "svelte/store";
+  import { UserBalance } from "../types/user";
 
   let stripe;
   let selectedPlan = 0;
   let seats = 1;
 
   let isSubmitting = false;
+  let payments: UserBalance[];
 
   const plans = [
     {
@@ -97,8 +100,20 @@
     createCardForm();
   };
 
+  const handleCancel = async (event) => {
+    try {
+      const res = await API.user.cancelSub();
+      if (res.status === 200) {
+        $user.freq=0;
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   // Handle the submission of card details
   const handleSubmit = async (event) => {
+    paymentProcessing = true;
     try {
       console.log("HERE");
       const res = await API.user.stripePayment("yearly", 1);
@@ -139,11 +154,35 @@ if (user.subscription_state === "ACTIVE") {
 }*/
 
   onMount(async () => {
+    connectWs();
     stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
     if (!$user.payment_method) {
       createCardForm();
     }
   });
+
+  const connectWs = () => {
+    const t = get(token);
+    if (!t) {
+      console.log("bump")
+    }
+
+    const ws = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
+    ws.onmessage = function (event) {
+      console.log(event.data);
+      payments = JSON.parse(event.data);
+    };
+    ws.onclose = function(e) {
+      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+      setTimeout(function() {
+        connectWs();
+      }, 1000);
+    };
+    ws.onerror = function(err) {
+      console.error('Socket encountered error: ', err, 'Closing socket');
+      ws.close();
+    };
+  }
 
 </script>
 
@@ -202,10 +241,21 @@ if (user.subscription_state === "ACTIVE") {
   <div class="p-2 m-2 w-100 StripeElement" bind:this="{card}"></div>
   {#if $user.payment_method}
     <p class="p-2">Credit card: xxxx xxxx xxxx {$user.last4}</p>
-    <form on:submit|preventDefault="{deletePaymentMethod}">
+    <form class="p-2" on:submit|preventDefault="{deletePaymentMethod}">
       <button disabled="{isSubmitting}" type="submit">Remove card{#if isSubmitting}<Dots />{/if}
       </button>
     </form>
+    {#if $user.freq > 0}
+    <form class="p-2" on:submit|preventDefault="{handleCancel}">
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Cancel current support
+        {#if isSubmitting}
+          <Dots />
+        {/if}
+      </button>
+    </form>
+    {:else}
+     (currently not supporting)
+    {/if}
   {/if}
 </div>
 
@@ -221,53 +271,58 @@ if (user.subscription_state === "ACTIVE") {
   </div>
   <div class="flex w-full justify-end">
     <form on:submit|preventDefault="{handleSubmit}">
-      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Donate
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">❤ Support
         {#if isSubmitting}
           <Dots />
         {/if}
       </button>
     </form>
-
   </div>
+</div>
 
+<div class="container">
+  <h2 class="p-2">
+    Payment History
+  </h2>
+</div>
+<div class="container">
+<table>
+  <thead>
+  <tr>
+    <th>Payment Cycle</th>
+    <th>Balance</th>
+    <th>Type</th>
+    <th>Day</th>
+  </tr>
+  </thead>
+  <tbody>
+  {#if payments}
+    {#each payments as row}
+      <tr>
+        <td>{row.paymentCycleId}</td>
+        <td>{row.balance / 1000000} USD</td>
+        <td>{row.balanceType}</td>
+        <td>{row.day}</td>
+      </tr>
+    {:else}
+      <tr><td colspan="5">No Data</td></tr>
+    {/each}
+  {:else}
+    <tr><td colspan="5">No Data</td></tr>
+  {/if}
+  </tbody>
+</table>
 </div>
 
 
-
-
-{#if paymentProcessing || (submitted && !paymentProcessing && !error && $user.subscription_state !== 'ACTIVE')}
-  <div class="w-full flex flex-col items-center">
-    <h2>One sec while we're verifying your payment.</h2>
+{#if paymentProcessing}
+  <div class="container">
+    <h2 class="p-2">One sec while we're verifying your payment.</h2>
     <Spinner />
   </div>
 {/if}
-{#if showSuccess || $user.subscription_state === 'ACTIVE'}
-  <div class="w-full flex flex-col items-center">
-    <h2>Success! Welcome onboard!</h2>
-    Cancel your support
-
-    Send out a notification with the following code/text:
-
-    <div>
-      [orgname] invites you to support awesome open source projects such as [your examples]. Simply click on the link and
-      confirm your account, which has been prepaid with [amount].
-
-
-
-    </div>
-
-    <div>
-      change seats add/remove (calc fraction until end of period)
-    </div>
-    <!--<lottiePlayer
-      src="/assets/animations/payment-success.json"
-      autoplay="{true}"
-      loop="{false}"
-      controls="{false}"
-      renderer="svg"
-      background="transparent"
-      height="{300}"
-      width="{300}"
-    />-->
+{#if showSuccess}
+  <div class="container">
+    <h2 class="p-2">Payment Successful!</h2>
   </div>
 {/if}
