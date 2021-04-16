@@ -71,17 +71,23 @@ const (
  *	==== USER ====
  */
 
-// @Summary Get User by sub in token
-// @Description Get details of all users
-// @Tags Users
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} User
-// @Failure 403
-// @Router /backend/users/me [get]
 func getMyUser(w http.ResponseWriter, _ *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(user)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+}
+
+func getPaymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
+	w.Header().Set("Content-Type", "application/json")
+	pc, err := findPaymentCycle(user.PaymentCycleId)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+	err = json.NewEncoder(w).Encode(pc)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
@@ -234,6 +240,10 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func deleteMethod(w http.ResponseWriter, r *http.Request, user *User) {
+
 }
 
 func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
@@ -554,11 +564,6 @@ type PayoutToService struct {
 	Address      string    `json:"address"`
 	Balance      int64     `json:"balance_micro_USD"`
 	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
-}
-
-type UserAggBalanceExchangeRate struct {
-	UserAggBalancs []UserAggBalance `json:"user_agg_balance"`
-	ExchangeRate   big.Float        `json:"exchange_rate"`
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {

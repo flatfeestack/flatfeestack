@@ -23,15 +23,6 @@ type ClientSecretBody struct {
 	ClientSecret string `json:"client_secret"`
 }
 
-func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
-	user.Freq = 0
-	err := updateUser(user)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
-		return
-	}
-}
-
 //https://stripe.com/docs/payments/save-and-reuse
 func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 	//create a user at stripe if the user does not exist yet
@@ -91,6 +82,13 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
+	if err != nil {
+		log.Printf("User does not exist: %v\n", user.Id)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	params := &stripe.PaymentIntentParams{
 		Amount:        stripe.Int64(int64(seats * freq * 100)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
@@ -100,9 +98,8 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		OffSession:    stripe.Bool(false),
 	}
 	params.Params.Metadata = map[string]string{}
-	params.Params.Metadata["seats"] = s
-	params.Params.Metadata["freq"] = strconv.Itoa(freq)
-	params.Params.Metadata["uid"] = user.Id.String()
+	params.Params.Metadata["userId"] = user.Id.String()
+	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -119,7 +116,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func stripePaymentRecurring(user *User, noConfirm bool) (*ClientSecretBody, error) {
+/*func stripePaymentRecurring(user *User, noConfirm bool) (*ClientSecretBody, error) {
 	params := &stripe.PaymentIntentParams{
 		Amount:        stripe.Int64(int64(user.Seats * user.Freq * 100)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
@@ -136,7 +133,7 @@ func stripePaymentRecurring(user *User, noConfirm bool) (*ClientSecretBody, erro
 
 	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
 	return &cs, nil
-}
+}*/
 
 func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
@@ -162,50 +159,27 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		uidRaw := pi.Metadata["uid"]
-		if uidRaw == "" {
-			log.Printf("Error parsing webhook, no uid: %v\n", uidRaw)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+		uidRaw := pi.Metadata["userId"]
 		uid, err := uuid.Parse(uidRaw)
 		if err != nil {
 			log.Printf("Error parsing uid: %v\n", uidRaw)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		seatRaw := pi.Metadata["seats"]
-		if seatRaw == "" {
-			log.Printf("Error parsing webhook, no uid: %v\n", uidRaw)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		seats, err := strconv.Atoi(seatRaw)
+		newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
+		newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
 		if err != nil {
-			log.Printf("Error parsing seats: %v\n", uidRaw)
+			log.Printf("Error parsing uid: %v\n", newPaymentCycleIdRaw)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		freqRaw := pi.Metadata["freq"]
-		if freqRaw == "" {
-			log.Printf("Error parsing freq, no uid: %v\n", freqRaw)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		freq, err := strconv.Atoi(freqRaw)
-		if err != nil {
-			log.Printf("Error parsing freq: %v\n", freqRaw)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+
 		u, err := findUserById(uid)
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		u.Freq = freq
-		u.Seats = seats
 
 		amount := pi.Amount * 10000 //pi.Amount is in cent, we need in microUSD
 
@@ -220,15 +194,8 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, timeNow())
-		if err != nil {
-			log.Printf("User does not exist: %v\n", uid)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
 		ubNew := UserBalance{
-			PaymentCycleId: *newPaymentCycleId,
+			PaymentCycleId: newPaymentCycleId,
 			UserId:         u.Id,
 			Balance:        oldSum,
 			Day:            timeNow(),
@@ -254,14 +221,13 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		u.PaymentCycleId = *newPaymentCycleId
-		err = updateUser(u)
+		err = updatePaymentCycleId(uid, &newPaymentCycleId)
 		if err != nil {
 			log.Printf("User does not exist: %v\n", uid)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		sendToBrowser(u.Id)
+		sendToBrowser(uid)
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
@@ -335,4 +301,12 @@ func sendToBrowser(userId uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
+	err := updatePaymentCycleId(user.Id, nil)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
+		return
+	}
 }

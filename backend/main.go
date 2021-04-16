@@ -173,11 +173,13 @@ func main() {
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
 	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
+	apiRouter.HandleFunc("/users/me/payment-cycle", jwtAuthUser(getPaymentCycle)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
 	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods("PUT")
+	apiRouter.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
 	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
@@ -359,19 +361,24 @@ func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
 		return err
 	}
 
+	pc, err := findPaymentCycle(sponsor.Id)
+	if err != nil {
+		return err
+	}
+
 	updateSponsor(userId, inviteEmail, sponsor.Id)
 	currentSeats, err := findSeats(sponsor.Id)
 	if err != nil {
 		return err
 	}
-	if int64(sponsor.Seats) > currentSeats {
+	if int64(pc.Seats) > currentSeats {
 		//parent has enough seats go for it!
 		sum, err := findSumUserBalance(sponsor.PaymentCycleId, sponsor.Id)
 		if err != nil {
 			return err
 		}
 		if sum > mUSDPerDay {
-			transferBalance(sponsor.PaymentCycleId, userId, sponsor.Id, sponsor.Freq*mUSDPerDay, "SPON", timeNow())
+			transferBalance(sponsor.PaymentCycleId, userId, sponsor.Id, pc.Freq*mUSDPerDay, "SPON", timeNow())
 		} else {
 			log.Printf("parent has not enough funding")
 		}
@@ -391,6 +398,7 @@ func createUser(email string) (*User, error) {
 	user.Id = uid
 	user.Email = &email
 	user.CreatedAt = timeNow()
+	user.Role = stringPointer("USR")
 
 	rnd, err := genRnd(18)
 	if err != nil {
@@ -402,7 +410,7 @@ func createUser(email string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("user created")
+	log.Printf("user %v created", user)
 	return &user, nil
 }
 

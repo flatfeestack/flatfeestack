@@ -5,15 +5,13 @@ CREATE TABLE users (
     sponsor_id            UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
-    payment_cycle_id      UUID, --CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)--
     stripe_last4          VARCHAR(4),
+    payment_cycle_id      UUID, --CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)--
     email                 VARCHAR(64) UNIQUE NOT NULL,
     inviteEmail           VARCHAR(64),
     name                  VARCHAR(255),
     image                 BYTEA,
     payout_eth            VARCHAR(255),
-    seats                 INTEGER DEFAULT 0,
-    freq                  INTEGER DEFAULT 365,
     token                 VARCHAR(32) NOT NULL,
     role                  VARCHAR(3) DEFAULT 'USR' NOT NULL,
     created_at            TIMESTAMP NOT NULL
@@ -22,6 +20,8 @@ CREATE TABLE users (
 CREATE TABLE payment_cycle (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    seats      INTEGER DEFAULT 0,
+    freq       INTEGER DEFAULT 365,
     days_left  INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
