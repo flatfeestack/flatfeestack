@@ -1,0 +1,13 @@
+####################
+# /webhook
+####################
+POST http://localhost:9083/webhook
+Content-Type: application/javascript'
+
+{
+ "repository_url": "https://github.com/neow3j/neow3j",
+ "since": "2021-01-01T00:00:00+00:00",
+ "until": "2021-04-16T00:00:00+00:00",
+ "platform_information": false,
+ "branch": "master-3.x"
+}
