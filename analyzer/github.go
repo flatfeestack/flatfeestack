@@ -188,10 +188,10 @@ func fetchPaginationIssues(response RequestGQLRepositoryInformation, repositoryO
 // fetchPaginationIssues fetch missing issue comments repeatedly until github indicates no further pages
 func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repositoryOwner string, repositoryName string, pageLength int) (RequestGQLRepositoryInformation, error) {
 	issueCommentsAfter := ""
-	var issueToRefech int
+	var issueToRefetch int
 
 	for index := range response.Data.Repository.Issues.Nodes {
-		issueToRefech = response.Data.Repository.Issues.Nodes[index].Number
+		issueToRefetch = response.Data.Repository.Issues.Nodes[index].Number
 		for ok1 := true; ok1; ok1 = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
 			if response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.HasNextPage {
 				issueCommentsAfter = response.Data.Repository.Issues.Nodes[index].Comments.PageInfo.EndCursor
@@ -219,7 +219,7 @@ func fetchPaginationIssueComments(response RequestGQLRepositoryInformation, repo
 							updatedAt
 						}
 					}
-				}`, repositoryOwner, repositoryName, issueToRefech, pageLength, issueCommentsAfter)
+				}`, repositoryOwner, repositoryName, issueToRefetch, pageLength, issueCommentsAfter)
 				resp, err := GClientWrapper.Query(specificIssueQuery)
 				if err != nil {
 					return response, nil
