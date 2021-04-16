@@ -358,7 +358,7 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 	if len(request.Branch) > 0 {
 		branch = request.Branch
 	} else {
-		branch = os.Getenv("GO_GIT_DEFAULT_BRANCH")
+		branch = getGoGitDefaultBranchEnv()
 	}
 
 	var commitsSince time.Time
@@ -393,6 +393,13 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 func analyzeForWebhookInBackground(requestId string, request WebhookRequest, branch string, commitsSince time.Time, commitsUntil time.Time) {
 	fmt.Printf("\n\n---> webhook request for repository %s on branch %s \n", request.RepositoryUrl, branch)
 	fmt.Printf("Request id: %s\n", requestId)
+
+	if entry, err := cache.Get(request.RepositoryUrl); err == nil {
+		fmt.Printf("\n\n---> Cached result for repository: %s\n", request.RepositoryUrl)
+		data := WebhookCallback{}
+		json.Unmarshal([]byte(entry), &data)
+		callbackToWebhook(request.RepositoryUrl, data)
+	}
 
 	// make the channels for both go routines (analyze repo / platform information)
 	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
@@ -444,11 +451,13 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 				chanel1Open = false
 			} else if msg1.Reason != nil {
 				// error handling
-				callbackToWebhook(WebhookCallback{
-					RequestId: requestId,
-					Success:   false,
-					Error:     msg1.Reason.Error(),
-				})
+				callbackToWebhook(
+					request.RepositoryUrl,
+					WebhookCallback{
+						RequestId: requestId,
+						Success:   false,
+						Error:     msg1.Reason.Error(),
+					})
 				return
 			} else {
 				// save the return value to the initialized variable
@@ -460,11 +469,13 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 				chanel2Open = false
 			} else if msg2.Reason != nil {
 				// error handling
-				callbackToWebhook(WebhookCallback{
-					RequestId: requestId,
-					Success:   false,
-					Error:     msg2.Reason.Error(),
-				})
+				callbackToWebhook(
+					request.RepositoryUrl,
+					WebhookCallback{
+						RequestId: requestId,
+						Success:   false,
+						Error:     msg2.Reason.Error(),
+					})
 				return
 			} else {
 				// save the return value to the initialized variable
@@ -508,29 +519,8 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
 
 		if err != nil {
-			callbackToWebhook(WebhookCallback{
-				RequestId: requestId,
-				Success:   false,
-				Error:     err.Error(),
-			})
-			return
-		}
-
-		var contributionWeights []FlatFeeWeight
-		for _, v := range weightsMap {
-			contributionWeights = append(contributionWeights, v)
-		}
-
-		callbackToWebhook(WebhookCallback{
-			RequestId: requestId,
-			Success:   true,
-			Result:    contributionWeights,
-		})
-	} else {
-		weightsMap, err := weightContributions(contributionMap)
-
-		if err != nil {
 			callbackToWebhook(
+				request.RepositoryUrl,
 				WebhookCallback{
 					RequestId: requestId,
 					Success:   false,
@@ -543,7 +533,33 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 		for _, v := range weightsMap {
 			contributionWeights = append(contributionWeights, v)
 		}
-		callbackToWebhook(WebhookCallback{
+
+		callbackToWebhook(
+			request.RepositoryUrl,
+			WebhookCallback{
+				RequestId: requestId,
+				Success:   true,
+				Result:    contributionWeights,
+			})
+	} else {
+		weightsMap, err := weightContributions(contributionMap)
+
+		if err != nil {
+			callbackToWebhook(
+				request.RepositoryUrl,
+				WebhookCallback{
+					RequestId: requestId,
+					Success:   false,
+					Error:     err.Error(),
+				})
+			return
+		}
+
+		var contributionWeights []FlatFeeWeight
+		for _, v := range weightsMap {
+			contributionWeights = append(contributionWeights, v)
+		}
+		callbackToWebhook(request.RepositoryUrl, WebhookCallback{
 			RequestId: requestId,
 			Success:   true,
 			Result:    contributionWeights,
@@ -597,12 +613,15 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 	}
 }
 
-func callbackToWebhook(body WebhookCallback) {
+func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 	reqBody, _ := json.Marshal(body)
-	log.Printf("Call to %s with success %v",os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
+	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
 	_, err := http.Post(os.Getenv("WEBHOOK_CALLBACK_URL"), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		log.Printf("Could not call webhook %v",err)
+		log.Printf("Could not call webhook %v", err)
+	}
+	if _, err := cache.Get(repositoryUrl); err != nil {
+		cache.Set(repositoryUrl, reqBody)
 	}
 }
 
@@ -619,7 +638,7 @@ func getBranchToAnalyze(r *http.Request) string {
 	if len(branchUrlParam) > 0 {
 		return branchUrlParam[0]
 	} else {
-		return os.Getenv("GO_GIT_DEFAULT_BRANCH")
+		return getGoGitDefaultBranchEnv()
 	}
 }
 

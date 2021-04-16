@@ -24,7 +24,7 @@ func CloneOrUpdateRepository(src string, branch string) (*git.Repository, error)
 func CloneRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
 	// clone just one branch
-	return git.PlainClone(os.Getenv("GO_GIT_BASE_PATH")+"/"+folderName, false, &git.CloneOptions{
+	return git.PlainClone(getGoGitBasePathEnv()+"/"+folderName, false, &git.CloneOptions{
 		URL:           src,
 		Progress:      os.Stdout,
 		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
@@ -35,7 +35,7 @@ func CloneRepository(src string, branch string) (*git.Repository, error) {
 // CloneRepository updates the repository and checks out the desired branch
 func UpdateRepository(src string, branch string) (*git.Repository, error) {
 	folderName := src[8 : len(src)-4]
-	repo, err := git.PlainOpen(os.Getenv("GO_GIT_BASE_PATH") + "/" + folderName)
+	repo, err := git.PlainOpen(getGoGitBasePathEnv() + "/" + folderName)
 	if err != nil {
 		return nil, err
 	}

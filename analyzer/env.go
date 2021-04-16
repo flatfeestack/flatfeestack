@@ -4,15 +4,26 @@ import (
 	"os"
 )
 
-func setEnvs() error {
-	err := os.Setenv("GO_GIT_BASE_PATH", "/tmp")
-	if err != nil {
-		return err
+func getGoGitBasePathEnv() string {
+	return GetEnvVar("GO_GIT_BASE_PATH", "/tmp")
+}
+
+func getGoGitDefaultBranchEnv() string {
+	return GetEnvVar("GO_GIT_DEFAULT_BRANCH", "master")
+}
+
+// GetEnvVar get an environment variable value, or returns a fallback value
+func GetEnvVar(key, fallback string) string {
+	value, _ := GetEnvVarAndIfExists(key, fallback)
+	return value
+}
+
+// GetEnvVarAndIfExists Retrieves an environment variable value, or returns a default (fallback) value
+// It also returns true or false if the env variable exists or not
+func GetEnvVarAndIfExists(key, fallback string) (string, bool) {
+	value, exists := os.LookupEnv(key)
+	if len(value) == 0 {
+		return fallback, exists
 	}
-	err = os.Setenv("GO_GIT_DEFAULT_BRANCH", "master")
-	if err != nil {
-		return err
-	}
-	//err = os.Setenv("WEBHOOK_CALLBACK_URL","https://webhook.site/f6f2c48c-03d2-4f28-a82e-10a970f22aa0")
-	return err
+	return value, exists
 }

@@ -6,6 +6,8 @@ replace github.com/go-git/go-git/v5 v5.2.0 => github.com/flatfeestack/go-git/v5 
 
 require (
 	github.com/Microsoft/go-winio v0.4.15 // indirect
+	github.com/allegro/bigcache/v2 v2.2.5 // indirect
+	github.com/allegro/bigcache/v3 v3.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
