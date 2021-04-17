@@ -9,7 +9,7 @@ func getGoGitBasePathEnv() string {
 }
 
 func getGoGitDefaultBranchEnv() string {
-	return GetEnvVar("GO_GIT_DEFAULT_BRANCH", "master")
+	return GetEnvVar("GO_GIT_DEFAULT_BRANCH", "main")
 }
 
 // GetEnvVar get an environment variable value, or returns a fallback value
