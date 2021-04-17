@@ -16,7 +16,7 @@ Now:
 
 Future plans:
 - [ ] Automatic conversion from fiat (stripe) to ETH
-- [ ] Additional blockchains? (NEO, Tezos, ...)
+- [ ] Additional blockchains? (NEO, ...)
 - [ ] Monitoring dashboard (Guil)
 - [ ] Front-end Design
 - [ ] Migration DB engine for backend + fastauth
