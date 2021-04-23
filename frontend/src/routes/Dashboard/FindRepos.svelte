@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardLayout from "./DashboardLayout.svelte";
   import RepoCard from "../../components/UI/RepoCard.svelte";
-  import type { Repo } from "../../types/user";
+  import type { Repo } from "../../types/types";
   import { API } from "ts/api";
   import SearchRepoCard from "../../components/UI/SearchRepoCard.svelte";
   import Spinner from "../../components/Spinner.svelte";

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
-  import { user, loading } from "ts/auth.ts";
+  import {globalHistory} from 'svelte-routing/src/history';
+  import { user, loading, route } from "ts/auth.ts";
   import { removeSession, updateUser } from "ts/authService";
   import { onMount } from "svelte";
 
@@ -20,11 +21,18 @@
   import Spinner from "./components/Spinner.svelte";
   import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
   import ConfirmInvite from "./routes/ConfirmInvite.svelte";
-  import { RouteLocation } from "svelte-routing";
 
   export let url;
+
   let pathname = window.location.pathname;
   onMount(() => updateUser());
+
+  //https://github.com/EmilTholin/svelte-routing/issues/41
+  //https://github.com/EmilTholin/svelte-routing/issues/62
+  $route = globalHistory.location;
+  globalHistory.listen(history => {
+    $route = history.location;
+  });
 
 </script>
 
@@ -107,7 +115,7 @@
   </header>
 
   <main>
-    <Router url="{url}">
+    <Router url="{url}" let:basepath>
 
       {#if $loading}
         <Spinner />
@@ -135,7 +143,7 @@
                          inviteDate="{params.inviteDate}"
                          inviteToken="{params.inviteToken}"/>
         </Route>
-        {#if pathname.startsWith("/dashboard")}
+        {#if $route.pathname.startsWith("/dashboard") || pathname.startsWith("/dashboard")}
           {#if $user.id}
             <Route path="/dashboard" component="{FindRepos}" />
             <Route path="/dashboard/sponsoring" component="{Sponsoring}" />

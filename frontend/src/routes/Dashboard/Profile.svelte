@@ -5,9 +5,9 @@
   import Fa from "svelte-fa";
   import { API } from "ts/api.ts";
   import { onMount } from "svelte";
-  import type { Invitation } from "types/invitation.type";
+  import type { Invitation } from "src/types/types.ts";
   import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
-  import { Repo, UserBalances } from "../../types/user";
+  import { Repo, UserBalances } from "../../types/types";
   import { links } from "svelte-routing";
   import { get } from "svelte/store";
 
@@ -190,7 +190,7 @@
 
   <div class="container">
     {#if checked}
-      <label class="px-2">User name: </label>
+      <label class="px-2">Types name: </label>
       <input type="text" bind:value={$user.name} placeholder="Name on the badge">
     {:else}
       <label class="px-2">Organization name: </label>
@@ -222,7 +222,7 @@
   {#if checked}
     <div class="container">
       {#if sponsoredRepos.length > 0}
-        {#if userBalances.total > 0}
+        {#if userBalances && userBalances.total > 0}
           <label class="px-2">Supporting:</label>
           <span class="bold">{sponsoredRepos.length} projects</span>
         {:else}
@@ -238,7 +238,7 @@
     </div>
   {/if}
 
-  {#if (sponsoredRepos.length > 0 && userBalances.total === 0) || !checked}
+  {#if (sponsoredRepos.length > 0 && userBalances && userBalances.total === 0) || !checked}
     <h2 class="px-2">Donation</h2>
     <Payment />
   {/if}

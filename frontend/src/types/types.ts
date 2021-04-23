@@ -1,4 +1,4 @@
-export type User = {
+export type Types = {
   id: string;
   payment_method: string;
   last4: string;
@@ -48,4 +48,21 @@ export type Repo = {
   tags: string;
   score: number;
   source: string;
+};
+
+export type Token = {
+  accessToken: string
+  expire: string
+}
+
+export type GitUser = {
+  email: string;
+  confirmedAt: string;
+  createdAt: string;
+};
+
+export type Invitation = {
+  email: string;
+  pending: boolean;
+  createdAt: string;
 };

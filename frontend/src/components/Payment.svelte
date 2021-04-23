@@ -3,8 +3,6 @@
   import { onMount } from "svelte";
   import { user, paymentCycle } from "ts/auth";
   import { loadStripe } from "@stripe/stripe-js/pure";
-  import { User, PaymentCycle, Repo } from "../types/user";
-
 
   import Spinner from "./Spinner.svelte";
   import Dots from "./Dots.svelte";

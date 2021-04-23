@@ -1,6 +1,6 @@
 import { token, user } from "./auth";
 import { API } from "./api";
-import { User } from "../types/user";
+import { Types } from "../types/types";
 import { AxiosResponse } from "axios";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
@@ -58,7 +58,7 @@ export const removeSession = async () => {
     await API.authToken.logout();
   } finally {
     localStorage.removeItem("ffs-refresh")
-    user.set(<User>{})
+    user.set(<Types>{})
     token.set("");
   }
 }

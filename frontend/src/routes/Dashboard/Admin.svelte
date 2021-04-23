@@ -2,7 +2,6 @@
 import DashboardLayout from "./DashboardLayout.svelte";
 import { API } from "ts/api";
 import Spinner from "../../components/Spinner.svelte";
-import { onMount } from 'svelte';
 
 let promisePendingPayouts =API.payouts.pending("pending");
 let promisePaidPayouts = API.payouts.pending("paid");

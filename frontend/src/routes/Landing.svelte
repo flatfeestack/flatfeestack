@@ -25,7 +25,6 @@
 </style>
 
 <script lang="ts">
-import Navigation from "../components/Navigation.svelte";
 import { draw } from "svelte/transition";
 
 
@@ -33,7 +32,7 @@ let svgVisible = true;
 </script>
 
 <div class="bg-gradient-to-tr from-light-100 to-primary-100">
-  <Navigation />
+
   <div class="container mx-auto px-3 lg:px-0 pt-20">
     <div class="flex flex-wrap pb-10">
       <div

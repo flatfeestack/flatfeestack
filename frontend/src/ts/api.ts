@@ -2,8 +2,8 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, Ax
 import { token } from "./auth";
 import { get } from "svelte/store";
 import { refresh, removeSession } from "./authService";
-import { Repo } from "../types/user";
-import { ClientSecret, User } from "../types/user";
+import { Repo } from "../types/types";
+import { ClientSecret, Types } from "../types/types";
 
 const auth = axios.create({
   baseURL: "/auth",
@@ -43,9 +43,10 @@ async function addToken(config:AxiosRequestConfig) {
 }
 
 async function refreshSession(error: AxiosError, call: AxiosInstance) {
-  console.log("need to refresh due to:" + error);
+  console.log("some error:" + error);
   const originalRequest = error.config;
-  if (error.response.status === 401 && originalRequest.headers.Retry !== "true") {
+  if (error.response && error.response.status === 401 && originalRequest.headers.Retry !== "true") {
+    console.log("need to refresh due to:" + error.response);
     originalRequest.headers.Retry = "true";
     const t = await refresh();
     originalRequest.headers.Authorization = "Bearer " + t;
@@ -57,7 +58,7 @@ async function refreshSession(error: AxiosError, call: AxiosInstance) {
 backend.interceptors.request.use(config => addToken(config), error => {return Promise.reject(error)});
 backend.interceptors.response.use(response => {return response;}, error => {return refreshSession(error, backend)});
 authToken.interceptors.request.use(config => addToken(config), error => {return Promise.reject(error)});
-authToken.interceptors.request.use(response => {return response;}, error => {return refreshSession(error, authToken)});
+authToken.interceptors.response.use(response => {return response;}, error => {return refreshSession(error, authToken)});
 
 export const API = {
   authToken: {
