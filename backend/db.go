@@ -732,7 +732,7 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
                     INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
                 WHERE u.sponsor_id IS NULL
                     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                    AND pc.days_left >= `+mUSDPerDay+`
+                    AND pc.days_left >= $4
                     AND u.role = 'USR'
                 GROUP BY s.user_id`)
 	if err != nil {
@@ -741,7 +741,7 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now, mUSDPerDay)
 	if err != nil {
 		return 0, err
 	}
