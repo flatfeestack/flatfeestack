@@ -41,8 +41,6 @@ services:
     image: ghcr.io/flatfeestack/flatfeestack/payout:latest
     ports:
       - 9084:9084
-    extra_hosts:
-      - ${HOSTS}
     env_file:
       - .beta.payout.env
 
