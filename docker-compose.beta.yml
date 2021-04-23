@@ -61,7 +61,6 @@ services:
   db:
     container_name: flatfeestack-db
     image: postgres:13-alpine
-    user: "${UID_GID}"
     volumes:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
@@ -84,8 +83,6 @@ services:
     image: caddy:2-alpine
     volumes:
       - ./Caddyfile.beta:/etc/caddy/Caddyfile
-    extra_hosts:
-      - ${HOSTS}
     ports:
       - 80:80
       - 443:443
