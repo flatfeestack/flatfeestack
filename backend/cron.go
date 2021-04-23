@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"log"
 	"net/url"
 	"strings"
@@ -173,10 +174,19 @@ func dailyRunner(now time.Time) error {
 
 func reminderTopup(u User) error {
 
+	c, err := countEmailSent(u.Id, "pc_"+u.PaymentCycleId.String())
+	if err != nil {
+		return err
+	}
+
 	var other = map[string]string{}
 	subject := parseTemplate("template-subject-signup_"+"en"+".tmpl", other)
 	if subject == "" {
-		subject = "Please top up your account"
+		if c == 1 {
+			subject = "Last reminder (we know you are busy and we won't bother you again) Please top up your account"
+		} else {
+			subject = "Please top up your account"
+		}
 	}
 	textMessage := parseTemplate("template-plain-signup_"+"en"+".tmpl", other)
 	if textMessage == "" {
@@ -193,12 +203,15 @@ func reminderTopup(u User) error {
 
 	url := strings.Replace(opts.EmailUrl, "{email}", url.QueryEscape(*u.Email), 1)
 
-	go func() {
-		err := sendEmail(url, e)
-		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
-		}
-	}()
+	if c < 2 {
+		insertEmailSent(u.Id, "pc_"+u.PaymentCycleId.String(), timeNow())
+		go func(userId uuid.UUID, emailType string) {
+			err := sendEmail(url, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
+			}
+		}(u.Id, "pc_"+u.PaymentCycleId.String())
+	}
 
 	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil

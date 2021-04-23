@@ -37,6 +37,13 @@ CREATE TABLE user_balances (
     created_at       TIMESTAMP NOT NULL
 );
 
+CREATE TABLE user_emails_sent (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    email_type VARCHAR(64),
+    created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     orig_id     NUMERIC,

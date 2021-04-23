@@ -977,12 +977,12 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 }
 
 func runDailyTopupReminderUser() ([]User, error) {
-	s := `SELECT u.id, u.email
+	s := `SELECT u.id, u.email, u.payment_cycle_id
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
 			WHERE u.role='USR' AND pc.days_left <= 1
           UNION
-          SELECT u.id, u.email
+          SELECT u.id, u.email, u.payment_cycle_id
             FROM users u
                 INNER JOIN users c ON c.sponsor_id = u.id
                 INNER JOIN payment_cycle pc ON c.payment_cycle_id = pc.id
@@ -998,7 +998,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	repos := []User{}
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id, &user.Email)
+		err = rows.Scan(&user.Id, &user.Email, &user.PaymentCycleId)
 		if err != nil {
 			return nil, err
 		}
@@ -1057,6 +1057,38 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 		return userAggBalances, nil
 	default:
 		return nil, err
+	}
+}
+
+func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {
+	stmt, err := db.Prepare(`
+			INSERT INTO user_emails_sent(user_id, email_type, created_at) 
+			VALUES($1, $2, $3)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO user_emails_sent for %v statement event: %v", userId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(userId, emailType, now)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func countEmailSent(userId uuid.UUID, emailType string) (int, error) {
+	var c int
+	err := db.
+		QueryRow(`SELECT count(*) AS c FROM user_emails_sent WHERE user_id=$1 and email_type=$2`, userId, emailType).
+		Scan(&c)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return c, nil
+	default:
+		return 0, err
 	}
 }
 
