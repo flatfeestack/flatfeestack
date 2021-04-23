@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardLayout from "./DashboardLayout.svelte";
   import Payment from "../../components/Payment.svelte";
-  import { token, user } from "ts/auth";
+  import { token, user, userBalances } from "ts/auth";
   import Fa from "svelte-fa";
   import { API } from "ts/api.ts";
   import { onMount } from "svelte";
@@ -10,14 +10,18 @@
   import { Repo, UserBalances } from "../../types/users";
   import { links } from "svelte-routing";
   import { get } from "svelte/store";
+  import { connectWs, refresh } from "../../ts/authService";
 
   let checked = $user.role != "ORG";
   let nameOrig = $user.name;
   let timeoutName;
+  let userModeOrig = $user.role;
+  let timeoutUserMode;
+
+
   let invites: Invitation[] = [];
   let sponsoredRepos: Repo[] = [];
   let invite_email;
-  let userBalances: UserBalances;
 
   $: {
     if (checked === false) {
@@ -25,6 +29,22 @@
     } else {
       $user.role = "USR";
     }
+  }
+
+  $: {
+    $user.paymentCycleId = $userBalances.paymentCycleId;
+  }
+
+  $: {
+    if(timeoutUserMode) {
+      clearTimeout(timeoutUserMode);
+    }
+    timeoutUserMode = setTimeout(() => {
+      if ($user.role !== userModeOrig) {
+        API.user.setUserMode($user.role);
+        userModeOrig = $user.role;
+      }
+    }, 1000)
   }
 
   $: {
@@ -38,6 +58,8 @@
       }
     }, 1000);
   }
+
+
 
   let fileinput, error;
   const onFileSelected = (e) => {
@@ -85,36 +107,6 @@
     } catch (e) {
       console.log(e);
     }
-  }
-
-  const connectWs = () => {
-    const t = get(token);
-    if (!t) {
-      console.log("bump")
-    }
-
-    const ws = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
-    ws.onmessage = function (event) {
-      console.log(event.data);
-      try {
-        userBalances = JSON.parse(event.data);
-        $user.paymentCycleId = userBalances.paymentCycleId
-        console.log("current paymentCycleId: " + userBalances.paymentCycleId);
-      }  catch (e) {
-        console.log(e);
-        error = "The payment failed. The subscription could not be created.";
-      }
-    };
-    ws.onclose = function(e) {
-      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
-      setTimeout(function() {
-        connectWs();
-      }, 1000);
-    };
-    ws.onerror = function(err) {
-      console.error('Socket encountered error: ', err, 'Closing socket');
-      ws.close();
-    };
   }
 
   //onDestroy(()=> clearTimeout(timeout)) -> always store
@@ -200,7 +192,7 @@
 
   <div class="container">
     <label class="px-2">Balance: </label>
-    <span class="bold">{userBalances? userBalances.total / 1000000: 0} USD</span>
+    <span class="bold">{$userBalances? $userBalances.total / 1000000: 0} USD</span>
   </div>
 
   <div class="container">
@@ -222,7 +214,7 @@
   {#if checked}
     <div class="container">
       {#if sponsoredRepos.length > 0}
-        {#if userBalances && userBalances.total > 0}
+        {#if $userBalances && $userBalances.total > 0}
           <label class="px-2">Supporting:</label>
           <span class="bold">{sponsoredRepos.length} projects</span>
         {:else}
@@ -238,7 +230,7 @@
     </div>
   {/if}
 
-  {#if (sponsoredRepos.length > 0 && userBalances && userBalances.total === 0) || !checked}
+  {#if (sponsoredRepos.length > 0 && $userBalances && $userBalances.total === 0) || !checked}
     <h2 class="px-2">Donation</h2>
     <Payment />
   {/if}
@@ -282,8 +274,8 @@
       </tr>
       </thead>
       <tbody>
-      {#if userBalances && userBalances.userBalances}
-        {#each userBalances.userBalances as row}
+      {#if $userBalances && $userBalances.userBalances}
+        {#each $userBalances.userBalances as row}
           <tr>
             <td>{row.paymentCycleId}</td>
             <td>{row.balance / 1000000} USD</td>

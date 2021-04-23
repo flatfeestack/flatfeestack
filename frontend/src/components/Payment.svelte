@@ -47,15 +47,17 @@
   let showSuccess = false;
 
   function createCardForm() {
-    let elements = stripe.elements();
-    cardElement = elements.create("card");
-    cardElement.mount(card);
-    cardElement.on("change", (e) => {
-      if (e.complete) {
-        complete = e.complete;
-        finishSetup();
-      }
-    });
+    if (!card || card.style.display !== "none") {
+      let elements = stripe.elements();
+      cardElement = elements.create("card");
+      cardElement.mount(card);
+      cardElement.on("change", (e) => {
+        if (e.complete) {
+          complete = e.complete;
+          finishSetup();
+        }
+      });
+    }
   }
 
   const finishSetup = async () => {
@@ -234,7 +236,7 @@
 
 <div class="container">
   <div class="p-2">
-    {#if $user.role == "ORG" }
+    {#if $user.role === "ORG" }
       How many seats? <input size="5" type="number" min="1" bind:value="{seats}">
     {/if}
   </div>

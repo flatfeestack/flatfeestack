@@ -1,7 +1,7 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
-  import { user, loading, route, loginFailed } from "ts/auth.ts";
+  import { user, loading, route, showSignin } from "ts/auth.ts";
   import { removeSession, updateUser } from "ts/authService";
   import { onMount } from "svelte";
 
@@ -29,7 +29,7 @@
     try {
       updateUser()
     } catch (e) {
-      $loginFailed = true;
+      $showSignin = true;
     }
     }
   );
@@ -159,7 +159,7 @@
             <Route path="/dashboard/badges" component="{Badges}" />
             <Route path="/dashboard/admin" component="{Admin}" />
           {:else}
-            {#if $loginFailed}
+            {#if $showSignin}
               <Route path="*" component="{Signin}" />
             {:else}
               <Spinner/>

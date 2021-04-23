@@ -1,7 +1,8 @@
-import { token, user, loginFailed } from "./auth";
+import { token, user, showSignin, userBalances} from "./auth";
 import { API } from "./api";
-import { Users } from "../types/users";
+import { UserBalances, Users } from "../types/users";
 import { AxiosResponse } from "axios";
+import { get } from "svelte/store";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const res = await API.auth.confirmReset(email, password, emailToken);
@@ -39,7 +40,7 @@ export const removeSession = async () => {
     localStorage.removeItem("ffs-refresh")
     user.set(<Users>{})
     token.set("");
-    loginFailed.set(true);
+    showSignin.set(true);
   }
 }
 
@@ -57,12 +58,54 @@ const storeToken = (res: AxiosResponse) => {
   const t = res.data.access_token;
   const r = res.data.refresh_token;
   if (!t || !r) {
-    loginFailed.set(true);
+    showSignin.set(true);
     throw "No token in the request";
   }
-  loginFailed.set(false);
+  showSignin.set(false);
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
+}
+
+function connect():Promise<WebSocket> {
+  return new Promise(function(resolve, reject) {
+    const t = get(token);
+    const server = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
+    server.onopen = function() {
+      resolve(server);
+    };
+    server.onerror = function(err) {
+      reject(err);
+    };
+
+  });
+}
+
+export const connectWs = async () => {
+  const ws = await connect();
+
+  ws.onmessage = function (event) {
+    console.log(event.data);
+    try {
+      userBalances.set(JSON.parse(event.data));
+      console.log("current paymentCycleId: " + JSON.parse(event.data));
+    }  catch (e) {
+      console.log(e);
+    }
+  };
+  ws.onclose = function(e) {
+    console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+    setTimeout(function() {
+      connectWs();
+    }, 1000);
+  };
+  ws.onerror = function(err) {
+    console.error('Socket encountered error: ', err, 'Closing socket');
+    ws.close();
+    setTimeout(async function() {
+      await refresh();
+      connectWs();
+    }, 3000);
+  };
 }
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
