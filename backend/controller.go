@@ -662,6 +662,17 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
+	repo = randomdata.SillyName()
+	uid3, _, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey2)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
+		return
+	}
+
+	err = fakePayment(uid1, mUSDPerDay*90)
+	err = fakePayment(uid2, mUSDPerDay*90)
+	err = fakePayment(uid3, mUSDPerDay*90)
+
 	s1 := SponsorEvent{
 		Id:        uuid.New(),
 		Uid:       *uid1,
@@ -733,9 +744,36 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	}
 }
 
+func fakePayment(uid1 *uuid.UUID, amount int64) error {
+	paymentCycleId, err := insertNewPaymentCycle(*uid1, 90, 1, 90, timeNow())
+	if err != nil {
+		return err
+	}
+
+	ubNew := UserBalance{
+		PaymentCycleId: *paymentCycleId,
+		UserId:         *uid1,
+		Balance:        amount,
+		Day:            timeNow(),
+		BalanceType:    "PAY",
+		CreatedAt:      timeNow(),
+	}
+
+	err = insertUserBalance(ubNew)
+	if err != nil {
+		return err
+	}
+
+	err = updatePaymentCycleId(*uid1, paymentCycleId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
-	monthStart := timeNow().AddDate(0, -1, 0)                      //$2
-	monthStop := monthStart.AddDate(0, int(monthStart.Month()), 0) //$1
+	monthStart := timeNow().AddDate(0, -1, 0) //$2
+	monthStop := monthStart.AddDate(0, 1, 0)  //$1
 
 	aid1 := uuid.New()
 	aid2 := uuid.New()
@@ -762,14 +800,21 @@ func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
 	if err != nil {
 		return err
 	}
+	err = insertAnalysisResponse(aid2, &FlatFeeWeight{
+		Email:  "max@max.max",
+		Weight: 0.1,
+	}, timeNow())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth string) (*uuid.UUID, *uuid.UUID, error) {
 
 	u := User{
+		Email:     stringPointer(email),
 		Id:        uuid.New(),
-		StripeId:  stringPointer("strip-id"),
 		PayoutETH: &payoutEth,
 		CreatedAt: timeNow(),
 	}
@@ -780,6 +825,9 @@ func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth strin
 		Url:         stringPointer(repoUrl),
 		Name:        stringPointer(repoName),
 		Description: stringPointer("desc"),
+		GitUrl:      stringPointer("git-url" + randomdata.SillyName()),
+		Branch:      stringPointer("branch"),
+		Source:      stringPointer("gitlab"),
 		CreatedAt:   timeNow(),
 	}
 	err := insertUser(&u, "A")
