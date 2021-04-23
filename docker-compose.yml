@@ -1,8 +1,14 @@
 version: "3"
 
 services:
+
+  #######################
+  # Applications:
+  #######################
+
   auth:
     container_name: flatfeestack-auth
+    image: ghcr.io/flatfeestack/flatfeestack/fastauth:latest
     build: ./fastauth
     ports:
       - 9081:9081
@@ -23,6 +29,7 @@ services:
 
   backend:
     container_name: flatfeestack-backend
+    image: ghcr.io/flatfeestack/flatfeestack/backend:latest
     build: ./backend
     ports:
       - 9082:9082
@@ -34,6 +41,7 @@ services:
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
+    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:latest
     build: ./analysis-engine
     ports:
       - 9083:9083
@@ -42,6 +50,7 @@ services:
 
   payout:
     container_name: flatfeestack-payout
+    image: ghcr.io/flatfeestack/flatfeestack/payout:latest
     build: ./payout
     ports:
       - 9084:9084
@@ -51,6 +60,19 @@ services:
       - openethereum
     environment:
       - PORT=9084
+
+  frontend:
+    container_name: flatfeestack-frontend
+    image: ghcr.io/flatfeestack/flatfeestack/frontend:latest
+    build: ./frontend
+    ports:
+      - 9085:9085
+    environment:
+      - PORT=9085
+
+  #######################
+  # Infrastructure:
+  #######################
 
   db:
     container_name: flatfeestack-db
@@ -83,14 +105,6 @@ services:
       - ${HOSTS}
     ports:
       - 80:80
-
-  frontend:
-    container_name: flatfeestack-frontend
-    build: ./frontend
-    ports:
-      - 9085:9085
-    environment:
-      - PORT=9085
 
   #https://openethereum.wiki/Private-development-chain/
   openethereum:
