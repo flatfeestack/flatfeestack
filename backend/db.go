@@ -977,12 +977,12 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 }
 
 func runDailyTopupReminderUser() ([]User, error) {
-	s := `SELECT u.id
+	s := `SELECT u.id, u.email
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
 			WHERE u.role='USR' AND pc.days_left <= 1
           UNION
-          SELECT u.id
+          SELECT u.id, u.email
             FROM users u
                 INNER JOIN users c ON c.sponsor_id = u.id
                 INNER JOIN payment_cycle pc ON c.payment_cycle_id = pc.id
@@ -998,7 +998,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	repos := []User{}
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id)
+		err = rows.Scan(&user.Id, &user.Email)
 		if err != nil {
 			return nil, err
 		}

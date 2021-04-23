@@ -649,29 +649,41 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	repo := randomdata.SillyName()
-	uid1, rid1, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey1)
+	uid1, rid1, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey1)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data1: %v", err)
 		return
 	}
 
 	repo = randomdata.SillyName()
-	uid2, rid2, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey2)
+	uid2, rid2, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey2)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
 	}
 
 	repo = randomdata.SillyName()
-	uid3, _, err := fakeRepoUser(randomdata.Email(), repo, repo, fakePubKey2)
+	uid3, _, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey2)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
+		writeErr(w, http.StatusBadRequest, "Could create random data3: %v", err)
 		return
 	}
 
 	err = fakePayment(uid1, mUSDPerDay*90)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could create fake payment 1: %v", err)
+		return
+	}
 	err = fakePayment(uid2, mUSDPerDay*90)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could create fake payment 2: %v", err)
+		return
+	}
 	err = fakePayment(uid3, mUSDPerDay*90)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could create fake payment 3: %v", err)
+		return
+	}
 
 	s1 := SponsorEvent{
 		Id:        uuid.New(),
@@ -737,7 +749,11 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	err = fakeContribution(rid1, rid2)
+	repoMap := map[uuid.UUID][]FlatFeeWeight{}
+	repoMap[*rid1] = []FlatFeeWeight{{Email: "tom@tom.tom", Weight: 0.5}}
+	repoMap[*rid2] = []FlatFeeWeight{{Email: "sam@sam.sam", Weight: 0.6},
+		{Email: "max@max.max", Weight: 0.1}}
+	err = fakeContribution(repoMap)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
 		return
@@ -771,41 +787,22 @@ func fakePayment(uid1 *uuid.UUID, amount int64) error {
 	return nil
 }
 
-func fakeContribution(rid1 *uuid.UUID, rid2 *uuid.UUID) error {
+func fakeContribution(repoMap map[uuid.UUID][]FlatFeeWeight) error {
 	monthStart := timeNow().AddDate(0, -1, 0) //$2
 	monthStop := monthStart.AddDate(0, 1, 0)  //$1
 
-	aid1 := uuid.New()
-	aid2 := uuid.New()
-	err := insertAnalysisRequest(aid1, *rid1, monthStart, monthStop, "master", timeNow())
-	if err != nil {
-		return err
-	}
-	err = insertAnalysisRequest(aid2, *rid2, monthStart, monthStop, "master", timeNow())
-	if err != nil {
-		return err
-	}
-
-	err = insertAnalysisResponse(aid1, &FlatFeeWeight{
-		Email:  "tom@tom.tom",
-		Weight: 0.55,
-	}, timeNow())
-	if err != nil {
-		return err
-	}
-	err = insertAnalysisResponse(aid2, &FlatFeeWeight{
-		Email:  "sam@sam.sam",
-		Weight: 0.6,
-	}, timeNow())
-	if err != nil {
-		return err
-	}
-	err = insertAnalysisResponse(aid2, &FlatFeeWeight{
-		Email:  "max@max.max",
-		Weight: 0.1,
-	}, timeNow())
-	if err != nil {
-		return err
+	for k, v := range repoMap {
+		aid := uuid.New()
+		err := insertAnalysisRequest(aid, k, monthStart, monthStop, "master", timeNow())
+		if err != nil {
+			return err
+		}
+		for _, v2 := range v {
+			err = insertAnalysisResponse(aid, &v2, timeNow())
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

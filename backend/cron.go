@@ -9,6 +9,8 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -170,7 +172,34 @@ func dailyRunner(now time.Time) error {
 }
 
 func reminderTopup(u User) error {
-	//TODO: send out email
+
+	var other = map[string]string{}
+	subject := parseTemplate("template-subject-signup_"+"en"+".tmpl", other)
+	if subject == "" {
+		subject = "Please top up your account"
+	}
+	textMessage := parseTemplate("template-plain-signup_"+"en"+".tmpl", other)
+	if textMessage == "" {
+		textMessage = "Please go to your profile and topup: " + opts.EmailLinkPrefix + "/dashboard/profile"
+	}
+	htmlMessage := parseTemplate("template-html-signup_"+"en"+".tmpl", other)
+
+	e := EmailRequest{
+		MailTo:      *u.Email,
+		Subject:     subject,
+		TextMessage: textMessage,
+		HtmlMessage: htmlMessage,
+	}
+
+	url := strings.Replace(opts.EmailUrl, "{email}", url.QueryEscape(*u.Email), 1)
+
+	go func() {
+		err := sendEmail(url, e)
+		if err != nil {
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
+		}
+	}()
+
 	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil
 }
