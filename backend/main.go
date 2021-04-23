@@ -187,8 +187,8 @@ func main() {
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/sponsor", jwtAuthUser(sponsorMe)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/users/me/current-payment", jwtAuthUser(getPaymentCycle)).Methods(http.MethodGet)
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
@@ -248,7 +248,7 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
 	if authHeader == "" {
 		authHeader = r.Header.Get("Sec-WebSocket-Protocol")
 		if authHeader == "" {
-			writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set")
+			writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set for %v", r.URL)
 			return nil
 		}
 		w.Header().Set("Sec-WebSocket-Protocol", "access_token")
@@ -320,8 +320,10 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			writeErr(w, http.StatusBadRequest, "ERR-08a, no claims provided: %v", r.URL)
 			return
 		}
-		// Fetch user from DB
+		unlock := km.Lock(claims.Subject)
+		defer unlock()
 
+		// Fetch user from DB
 		user, err := findUserByEmail(claims.Subject)
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
@@ -334,17 +336,13 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 				writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
 				return
 			}
-		}
-		user.InviteEmailClaim = claims.InviteEmail
-
-		if claims.InviteEmail != nil && *user.Role == "USR" && user.InviteEmail == nil {
-			unlock := km.Lock(*claims.InviteEmail)
-			defer unlock()
-			//we have a new sponsor!
-			err := takeSponsorship(*claims.InviteEmail, user.Id)
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
-				return
+			if claims.InviteEmail != nil {
+				//we have a new sponsor!
+				err := takeSponsorship(*claims.InviteEmail, user.Id)
+				if err != nil {
+					writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
+					return
+				}
 			}
 		}
 
@@ -353,7 +351,6 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 	}
 }
 
-//TODO: make sure a invite bounce cannot decrease funds
 func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
 	//check if we have an inviteEmail that changed
 	sponsor, err := findUserByEmail(inviteEmail)
@@ -361,7 +358,7 @@ func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
 		return err
 	}
 
-	pc, err := findPaymentCycle(sponsor.Id)
+	pc, err := findPaymentCycle(sponsor.PaymentCycleId)
 	if err != nil {
 		return err
 	}
@@ -373,7 +370,7 @@ func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
 	}
 	if int64(pc.Seats) > currentSeats {
 		//parent has enough seats go for it!
-		sum, err := findSumUserBalance(sponsor.PaymentCycleId, sponsor.Id)
+		sum, err := findSumUserBalance(sponsor.Id)
 		if err != nil {
 			return err
 		}
