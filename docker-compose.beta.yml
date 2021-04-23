@@ -12,7 +12,7 @@ services:
     ports:
       - 9081:9081
     env_file:
-      - .beta.auth.env
+      - .beta.fastauth.env
     depends_on:
       db:
         condition: service_healthy
