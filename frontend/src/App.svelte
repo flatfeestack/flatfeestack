@@ -5,6 +5,7 @@
   import { onMount } from "svelte";
 
   import Landing from "./routes/Landing.svelte";
+  import Badges from "./routes/Dashboard/Badges.svelte";
   import Signin from "./routes/Signin.svelte";
   import Signup from "./routes/Signup.svelte";
   import Forgot from "./routes/Forgot.svelte";
@@ -19,8 +20,10 @@
   import Spinner from "./components/Spinner.svelte";
   import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
   import ConfirmInvite from "./routes/ConfirmInvite.svelte";
+  import { RouteLocation } from "svelte-routing";
 
   export let url;
+  let pathname = window.location.pathname;
   onMount(() => updateUser());
 
 </script>
@@ -132,14 +135,21 @@
                          inviteDate="{params.inviteDate}"
                          inviteToken="{params.inviteToken}"/>
         </Route>
-        {#if $user.id}
-          <Route path="/dashboard" component="{FindRepos}" />
-          <Route path="/dashboard/sponsoring" component="{Sponsoring}" />
-          <Route path="/dashboard/income" component="{Income}" />
-          <Route path="/dashboard/profile" component="{Profile}" />
-          <Route path="/dashboard/admin" component="{Admin}" />
+        {#if pathname.startsWith("/dashboard")}
+          {#if $user.id}
+            <Route path="/dashboard" component="{FindRepos}" />
+            <Route path="/dashboard/sponsoring" component="{Sponsoring}" />
+            <Route path="/dashboard/income" component="{Income}" />
+            <Route path="/dashboard/profile" component="{Profile}" />
+            <Route path="/dashboard/badges" component="{Badges}" />
+            <Route path="/dashboard/admin" component="{Admin}" />
+          {:else}
+            <Spinner/>
+          {/if}
+        {:else}
+          <Route path="*" component="{CatchAll}" />
         {/if}
-        <Route path="*" component="{CatchAll}" />
+
       {/if}
 
     </Router>

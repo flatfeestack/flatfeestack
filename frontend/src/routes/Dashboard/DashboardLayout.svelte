@@ -63,7 +63,7 @@ import { user } from "ts/auth";
   <a href="/dashboard/sponsoring" disabled="true"><Fa icon="{faSearch}" size="sm" class="icon"/>
     <span class="hide-sx">Find Repos</span>
   </a>
-  <a href="/dashboard/profile"><Fa icon="{faUser}" size="sm"  class="icon"/>
+  <a href="/dashboard/profile"><Fa icon="{faUser}" size="sm" class="icon"/>
     <span class="hide-sx">Profile</span>
   </a>
   {#if $user.role != "ORG" }
@@ -75,7 +75,7 @@ import { user } from "ts/auth";
       <span class="hide-sx">Income</span>
     </div>
   {/if}
-  <a href="#"><Fa icon="{faMedal}" size="sm"  class="icon"/>
+  <a href="/dashboard/badges"><Fa icon="{faMedal}" size="sm" class="icon"/>
     <span class="hide-sx">Badges</span>
   </a>
   <a href="/dashboard/admin"><Fa icon="{faShieldAlt}" size="sm"  class="icon"/>

@@ -1,12 +1,12 @@
 <script lang="ts">
   import DashboardLayout from "./DashboardLayout.svelte";
   import RepoCard from "../../components/UI/RepoCard.svelte";
-  import type { Repo } from "../../types/repo.type";
+  import type { Repo } from "../../types/user";
   import { API } from "ts/api";
   import SearchRepoCard from "../../components/UI/SearchRepoCard.svelte";
   import Spinner from "../../components/Spinner.svelte";
   import { onMount } from "svelte";
-  import { sponsoredRepos } from "ts/repos";
+  import { sponsoredRepos } from "ts/auth";
   import { user } from "ts/auth";
   import Dots from "../../components/Dots.svelte";
   import { links } from "svelte-routing";

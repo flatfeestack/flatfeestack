@@ -1,14 +1,15 @@
 <script lang="ts">
   import DashboardLayout from "./DashboardLayout.svelte";
   import Payment from "../../components/Payment.svelte";
-  import { user } from "ts/auth";
+  import { token, user } from "ts/auth";
   import Fa from "svelte-fa";
   import { API } from "ts/api.ts";
   import { onMount } from "svelte";
   import type { Invitation } from "types/invitation.type";
   import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
-  import { Repo } from "../../types/repo.type";
+  import { Repo, UserBalances } from "../../types/user";
   import { links } from "svelte-routing";
+  import { get } from "svelte/store";
 
   let checked = $user.role != "ORG";
   let nameOrig = $user.name;
@@ -16,6 +17,7 @@
   let invites: Invitation[] = [];
   let sponsoredRepos: Repo[] = [];
   let invite_email;
+  let userBalances: UserBalances;
 
   $: {
     if (checked === false) {
@@ -85,14 +87,44 @@
     }
   }
 
+  const connectWs = () => {
+    const t = get(token);
+    if (!t) {
+      console.log("bump")
+    }
+
+    const ws = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
+    ws.onmessage = function (event) {
+      console.log(event.data);
+      try {
+        userBalances = JSON.parse(event.data);
+        $user.paymentCycleId = userBalances.paymentCycleId
+        console.log("current paymentCycleId: " + userBalances.paymentCycleId);
+      }  catch (e) {
+        console.log(e);
+        error = "The payment failed. The subscription could not be created.";
+      }
+    };
+    ws.onclose = function(e) {
+      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+      setTimeout(function() {
+        connectWs();
+      }, 1000);
+    };
+    ws.onerror = function(err) {
+      console.error('Socket encountered error: ', err, 'Closing socket');
+      ws.close();
+    };
+  }
+
   //onDestroy(()=> clearTimeout(timeout)) -> always store
   onMount(async () => {
+    connectWs();
     try {
       const res1 = await API.authToken.invites();
       const res2 = await API.user.getSponsored();
       invites = res1.data === null ? [] : res1.data;
       sponsoredRepos = res2.data === null ? [] : res2.data;
-
     } catch (e) {
       error = e;
       console.log(e);
@@ -126,6 +158,10 @@
         max-height: 10em;
         max-width: 10em;
         width: auto;
+    }
+
+    .bold {
+        font-weight: bold;
     }
 </style>
 
@@ -163,6 +199,11 @@
   </div>
 
   <div class="container">
+    <label class="px-2">Balance: </label>
+    <span class="bold">{userBalances? userBalances.total / 1000000: 0} USD</span>
+  </div>
+
+  <div class="container">
     <label class="px-2">Upload your profile picture:</label>
     <div class="upload" on:click={()=>{fileinput.click();}}>
       <Fa icon="{faUpload}" size="lg" class="icon, px-2" />
@@ -181,9 +222,12 @@
   {#if checked}
     <div class="container">
       {#if sponsoredRepos.length > 0}
-        <h2 class="Sponsoring">
-          Support {sponsoredRepos.length} projects
-        </h2>
+        {#if userBalances.total > 0}
+          <label class="px-2">Supporting:</label>
+          <span class="bold">{sponsoredRepos.length} projects</span>
+        {:else}
+          <label class="px-2">No active support</label>
+        {/if}
       {:else}
         <div class="bg-green rounded p-2 my-4" use:links>
           <p>You are not supporting any projects yet. Please go to the <a href="/dashboard/sponsoring">Find Repos</a>
@@ -194,7 +238,7 @@
     </div>
   {/if}
 
-  {#if sponsoredRepos.length > 0 || !checked}
+  {#if (sponsoredRepos.length > 0 && userBalances.total === 0) || !checked}
     <h2 class="px-2">Donation</h2>
     <Payment />
   {/if}
@@ -219,5 +263,41 @@
     </form>
 
   {/if}
+
+
+
+  <div class="container">
+    <h2 class="p-2">
+      Payment History
+    </h2>
+  </div>
+  <div class="container">
+    <table>
+      <thead>
+      <tr>
+        <th>Payment Cycle</th>
+        <th>Balance</th>
+        <th>Type</th>
+        <th>Day</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#if userBalances && userBalances.userBalances}
+        {#each userBalances.userBalances as row}
+          <tr>
+            <td>{row.paymentCycleId}</td>
+            <td>{row.balance / 1000000} USD</td>
+            <td>{row.balanceType}</td>
+            <td>{row.day}</td>
+          </tr>
+        {:else}
+          <tr><td colspan="5">No Data</td></tr>
+        {/each}
+      {:else}
+        <tr><td colspan="5">No Data</td></tr>
+      {/if}
+      </tbody>
+    </table>
+  </div>
 
 </DashboardLayout>

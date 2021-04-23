@@ -14,6 +14,7 @@ const handleFakeUsers = async () => {
 }
 
 const handleWarp = async (hours: number) => {
+  await API.user.timeWarp(hours);
   await API.payouts.timeWarp(hours);
   await API.auth.timeWarp(hours);
   await refresh();

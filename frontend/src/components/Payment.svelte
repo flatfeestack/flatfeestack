@@ -1,30 +1,41 @@
 <script lang="ts">
   import { API } from "ts/api";
   import { onMount } from "svelte";
-  import { token, user } from "ts/auth";
+  import { user, paymentCycle } from "ts/auth";
   import { loadStripe } from "@stripe/stripe-js/pure";
+  import { User, PaymentCycle, Repo } from "../types/user";
+
 
   import Spinner from "./Spinner.svelte";
   import Dots from "./Dots.svelte";
-  import { get } from "svelte/store";
-  import { UserBalance } from "../types/user";
 
   let stripe;
   let selectedPlan = 0;
   let seats = 1;
 
   let isSubmitting = false;
-  let payments: UserBalance[];
+
+  $: {
+    if (card) {
+      if ($user.payment_method) {
+        card.style.display = "none";
+      } else {
+        card.style.display = "block";
+      }
+    }
+  }
 
   const plans = [
     {
       title: "Yearly",
       price: 120,
+      freq: 365,
       desc: "By paying yearly <b>120&nbsp;USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects"
     },
     {
       title: "Quarterly",
       price: 30,
+      freq: 90,
       desc: "You want to support Open Source software with a quarterly flat fee of <b>30&nbsp;USD</b>"
     }
   ];
@@ -49,16 +60,6 @@
     });
   }
 
-  $: {
-    if (card) {
-      if ($user.payment_method) {
-        card.style.display = "none";
-      } else {
-        card.style.display = "block";
-      }
-    }
-  }
-
   const finishSetup = async () => {
     const cs = await API.user.setupStripe();
     if (!cs) {
@@ -79,32 +80,30 @@
         console.log(result.error);
       } else {
         $user.payment_method = result.setupIntent.payment_method;
-        console.log(cardElement);
-        console.log("test");
-        console.log(result.setupIntent);
-        console.log(result.setupIntent.payment_method.card);
         const res = await API.user.updatePaymentMethod(result.setupIntent.payment_method);
         if (!res.data) {
           console.log("could not verify in email");
           return;
         }
         $user = res.data;
-        console.log("OOKKK");
+        console.log("OOKKK" + $user.payment_method);
       }
     });
   };
 
   const deletePaymentMethod = async () => {
-    console.log(card);
-    $user.payment_method = null;
-    createCardForm();
+    const res = await API.user.deletePaymentMethod()
+    if (res.status === 200) {
+      $user.payment_method = null;
+      createCardForm();
+    }
   };
 
   const handleCancel = async (event) => {
     try {
       const res = await API.user.cancelSub();
       if (res.status === 200) {
-        $user.freq=0;
+        $paymentCycle.seats = 0;
       }
     } catch (e) {
       console.log(e);
@@ -115,8 +114,7 @@
   const handleSubmit = async (event) => {
     paymentProcessing = true;
     try {
-      console.log("HERE");
-      const res = await API.user.stripePayment("yearly", 1);
+      const res = await API.user.stripePayment(plans[selectedPlan].freq, seats);
 
       stripe.confirmCardPayment(res.data.client_secret, {
         payment_method: $user.payment_method
@@ -140,49 +138,25 @@
     }
   };
 
-  /*if (submitted && !error && !paymentProcessing) {
-  console.log("starting to fetch");
-  interval = setInterval(() => updateUser(), 1000);
-}
-
-if (user.subscription_state === "ACTIVE" && interval) {
-  clearInterval(interval);
-}
-
-if (user.subscription_state === "ACTIVE") {
-  showSuccess = true;
-}*/
-
   onMount(async () => {
-    connectWs();
+
     stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
-    if (!$user.payment_method) {
-      createCardForm();
+    createCardForm();
+    const res = await API.user.getCurrentPayment();
+    if (res.status === 200) {
+      console.log("setting payment cycle: "+res.data);
+      if (res.data) {
+        $paymentCycle = res.data;
+        selectedPlan = $paymentCycle.freq === 365? 0:1
+        seats = $paymentCycle.seats
+      } else {
+        console.log("empty paymentcily")
+      }
+    } else {
+      console.log(res.data);
+      console.log(res.status);
     }
   });
-
-  const connectWs = () => {
-    const t = get(token);
-    if (!t) {
-      console.log("bump")
-    }
-
-    const ws = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
-    ws.onmessage = function (event) {
-      console.log(event.data);
-      payments = JSON.parse(event.data);
-    };
-    ws.onclose = function(e) {
-      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
-      setTimeout(function() {
-        connectWs();
-      }, 1000);
-    };
-    ws.onerror = function(err) {
-      console.error('Socket encountered error: ', err, 'Closing socket');
-      ws.close();
-    };
-  }
 
 </script>
 
@@ -245,18 +219,19 @@ if (user.subscription_state === "ACTIVE") {
       <button disabled="{isSubmitting}" type="submit">Remove card{#if isSubmitting}<Dots />{/if}
       </button>
     </form>
-    {#if $user.freq > 0}
+  {/if}
+  {#if $paymentCycle != null && $paymentCycle.seats > 0}
     <form class="p-2" on:submit|preventDefault="{handleCancel}">
-      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Cancel current support
+      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Cancel&nbsp;support
         {#if isSubmitting}
           <Dots />
         {/if}
       </button>
     </form>
-    {:else}
-     (currently not supporting)
-    {/if}
+  {:else}
+    (currently not supporting)
   {/if}
+
 </div>
 
 <div class="container">
@@ -279,41 +254,6 @@ if (user.subscription_state === "ACTIVE") {
     </form>
   </div>
 </div>
-
-<div class="container">
-  <h2 class="p-2">
-    Payment History
-  </h2>
-</div>
-<div class="container">
-<table>
-  <thead>
-  <tr>
-    <th>Payment Cycle</th>
-    <th>Balance</th>
-    <th>Type</th>
-    <th>Day</th>
-  </tr>
-  </thead>
-  <tbody>
-  {#if payments}
-    {#each payments as row}
-      <tr>
-        <td>{row.paymentCycleId}</td>
-        <td>{row.balance / 1000000} USD</td>
-        <td>{row.balanceType}</td>
-        <td>{row.day}</td>
-      </tr>
-    {:else}
-      <tr><td colspan="5">No Data</td></tr>
-    {/each}
-  {:else}
-    <tr><td colspan="5">No Data</td></tr>
-  {/if}
-  </tbody>
-</table>
-</div>
-
 
 {#if paymentProcessing}
   <div class="container">

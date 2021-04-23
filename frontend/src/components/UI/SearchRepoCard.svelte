@@ -22,9 +22,9 @@
 </style>
 
 <script lang="ts">
-  import type { Repo } from "../../types/repo.type";
+  import type { Repo } from "../../types/user";
   import { API } from "../../ts/api";
-  import { sponsoredRepos } from "../../ts/repos";
+  import { sponsoredRepos } from "../../ts/auth";
 
   export let repo: Repo;
   let star = false;

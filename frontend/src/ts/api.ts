@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, Ax
 import { token } from "./auth";
 import { get } from "svelte/store";
 import { refresh, removeSession } from "./authService";
-import { Repo } from "../types/repo.type";
+import { Repo } from "../types/user";
 import { ClientSecret, User } from "../types/user";
 
 const auth = axios.create({
@@ -25,16 +25,25 @@ const search = axios.create({
   timeout: 5000000
 });
 
-function addToken(config:AxiosRequestConfig) {
+async function addToken(config:AxiosRequestConfig) {
   const t = get(token);
+  console.log("add token ["+t+"]");
   if (t) {
     config.headers.Authorization = "Bearer " + t;
+  } else {
+    const t = await refresh()
+    if (t) {
+      config.headers.Authorization = "Bearer " + t;
+    } else {
+      console.log("could not set access token")
+    }
   }
   //TODO: refresh session if we see that the token expired, no need to do a request
   return config;
 }
 
 async function refreshSession(error: AxiosError, call: AxiosInstance) {
+  console.log("need to refresh due to:" + error);
   const originalRequest = error.config;
   if (error.response.status === 401 && originalRequest.headers.Retry !== "true") {
     originalRequest.headers.Retry = "true";
@@ -76,13 +85,16 @@ export const API = {
     removeGitEmail: (email: string) => backend.delete(`/users/me/git-email/${encodeURI(email)}`),
     updatePayoutAddress: (address: string) => backend.put(`/users/me/payout/${address}`),
     updatePaymentMethod: (method: string) => backend.put(`/users/me/method/${method}`),
+    deletePaymentMethod: () => backend.delete(`/users/me/method`),
     getSponsored: () => backend.get("/users/me/sponsored"),
     setName: (name: string) => backend.put(`/users/me/name/${name}`),
     setImage: (image: string) => backend.post(`/users/me/image`, {image}),
     setUserMode: (mode: string) => backend.put(`/users/me/mode/${mode}`),
     setupStripe: () => backend.post<ClientSecret>(`/users/me/stripe`),
-    stripePayment: (freq: string, seats: number) => backend.put(`/users/me/stripe/${freq}/${seats}`),
-    cancelSub: () => backend.delete(`/users/me/stripe`)
+    stripePayment: (freq: number, seats: number) => backend.put(`/users/me/stripe/${freq}/${seats}`),
+    cancelSub: () => backend.delete(`/users/me/stripe`),
+    getCurrentPayment: () => backend.get(`/users/me/current-payment`),
+    timeWarp: (hours: number) => auth.post(`/timewarp/${hours}`)
   },
   repos: {
     search: (s: string) => backend.get(`/repos/search?q=${encodeURI(s)}`),
