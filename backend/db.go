@@ -718,7 +718,7 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
                     INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
                 WHERE u.sponsor_id IS NULL
                     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                    AND pc.days_left > 0
+                    AND pc.days_left >= 24*13750
                     AND u.role = "USR"
                 GROUP BY s.user_id`)
 	if err != nil {
@@ -793,7 +793,7 @@ func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
 //we can support up to 1000 (1h) - 27500 (24h) repos until the precision makes the distribution of 0
 //
 //Here we calculate how much balance a repository gets. The calculation is based on the daily_repo_hours. So if
-//a user has 3 repos with 72 repo hours, and supports repo X, then we calculate how much repo X gets from that user,
+//a user sponsors 3 repos with 72 repo hours, and supports repo X, then we calculate how much repo X gets from that user,
 //which is 24h (the user supported for 24h) x 24/72 = 8h, which is 1/3 of his repo hours.
 //
 //Running this twice does not work as we have a unique index on: repo_id, day
@@ -856,6 +856,7 @@ func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	return handleErr(res)
 }
 
+// for users that has git_email in our registered in our system, we calculate the daily repo weight
 func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_weight (repo_id, weight, day, created_at)
 		SELECT req.repo_id as repo_id, 
@@ -935,7 +936,8 @@ func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, n
 	return handleErr(res)
 }
 
-//return repos where the data_to is older than 5 days. This are repos where we can run the analysis again.
+//return repos where the data_to is older than 'n' days. This are repos where we can run the analysis again.
+// TODO: repos that are not in the drb table doesn't need any checks!
 func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 	s := `SELECT r.id, r.url
             FROM repo r
