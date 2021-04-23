@@ -15,21 +15,20 @@ import (
 )
 
 type User struct {
-	Id               uuid.UUID `json:"id" sql:",type:uuid"`
-	StripeId         *string   `json:"-"`
-	PaymentCycleId   uuid.UUID
-	SponsorId        uuid.UUID
-	Email            *string `json:"email"`
-	InviteEmail      *string `json:"invite_email"`
-	InviteEmailClaim *string
-	Name             *string `json:"name"`
-	Image            *string `json:"image"`
-	PayoutETH        *string `json:"payout_eth"`
-	PaymentMethod    *string `json:"payment_method"`
-	Last4            *string `json:"last4"`
-	Token            *string `json:"token"`
-	Role             *string `json:"role"`
-	CreatedAt        time.Time
+	Id             uuid.UUID `json:"id" sql:",type:uuid"`
+	StripeId       *string   `json:"-"`
+	PaymentCycleId uuid.UUID
+	SponsorId      uuid.UUID
+	Email          *string `json:"email"`
+	InviteEmail    *string `json:"invite_email"`
+	Name           *string `json:"name"`
+	Image          *string `json:"image"`
+	PayoutETH      *string `json:"payout_eth"`
+	PaymentMethod  *string `json:"payment_method"`
+	Last4          *string `json:"last4"`
+	Token          *string `json:"token"`
+	Role           *string `json:"role"`
+	CreatedAt      time.Time
 }
 
 type SponsorEvent struct {
@@ -563,10 +562,25 @@ func findSeats(userId uuid.UUID) (int64, error) {
 	}
 }
 
-func findSumUserBalance(paymentCycleId uuid.UUID, userId uuid.UUID) (int64, error) {
+func updateSeats(paymentCycleId uuid.UUID, seats int) error {
+	stmt, err := db.Prepare(`UPDATE payment_cycle SET seats = $1 WHERE id=$2`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", seats, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(seats, paymentCycleId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findSumUserBalance(userId uuid.UUID) (int64, error) {
 	var sum int64
 	err := db.
-		QueryRow(`SELECT sum(balance) FROM user_balances WHERE payment_cycle_id = $1 and user_id = $2`, paymentCycleId, userId).
+		QueryRow(`SELECT COALESCE(sum(balance), 0) FROM user_balances WHERE user_id = $1`, userId).
 		Scan(&sum)
 	switch err {
 	case sql.ErrNoRows:

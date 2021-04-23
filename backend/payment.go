@@ -72,19 +72,19 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	freq := 0
-	if f == "quarterly" {
-		freq = 30 //3 month
-	} else if f == "yearly" {
-		freq = 120 //1 year
-	} else {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", f)
+	freq, err := strconv.Atoi(f)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
+		return
+	}
+	if freq != 90 && freq != 365 {
+		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
 
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
 	if err != nil {
-		log.Printf("User does not exist: %v\n", user.Id)
+		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -175,29 +175,25 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 
 		u, err := findUserById(uid)
-		if err != nil {
-			log.Printf("User does not exist: %v\n", uid)
+		if err != nil || u == nil {
+			log.Printf("User does not exist: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		amount := pi.Amount * 10000 //pi.Amount is in cent, we need in microUSD
 
-		oldSum := int64(0)
-		//uuid.Nil does not work: https://github.com/google/uuid/issues/45
-		if !isUUIDZero(u.PaymentCycleId) {
-			oldSum, err = findSumUserBalance(u.PaymentCycleId, u.Id)
-			if err != nil {
-				log.Printf("User does not exist: %v\n", uid)
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
+		oldSum, err := findSumUserBalance(u.Id)
+		if err != nil {
+			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: newPaymentCycleId,
+			PaymentCycleId: u.PaymentCycleId,
 			UserId:         u.Id,
-			Balance:        oldSum,
+			Balance:        -oldSum,
 			Day:            timeNow(),
 			BalanceType:    "REM",
 			CreatedAt:      timeNow(),
@@ -206,28 +202,37 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		if oldSum > 0 {
 			err = insertUserBalance(ubNew)
 			if err != nil {
-				log.Printf("User does not exist: %v\n", uid)
+				log.Printf("Insert user balance1 for %v: %v\n", uid, err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			ubNew.Balance = oldSum
+			ubNew.PaymentCycleId = newPaymentCycleId
+			err = insertUserBalance(ubNew)
+			if err != nil {
+				log.Printf("Insert user balance2 for %v: %v\n", uid, err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
+		ubNew.PaymentCycleId = newPaymentCycleId
 		ubNew.BalanceType = "PAY"
 		ubNew.Balance = amount
 		err = insertUserBalance(ubNew)
 		if err != nil {
-			log.Printf("User does not exist: %v\n", uid)
+			log.Printf("Insert user balance3 for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		err = updatePaymentCycleId(uid, &newPaymentCycleId)
 		if err != nil {
-			log.Printf("User does not exist: %v\n", uid)
+			log.Printf("Update payment cycle for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		sendToBrowser(uid)
+		sendToBrowser(uid, newPaymentCycleId)
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
@@ -269,10 +274,16 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 		delete(clients, user.Id)
 		return nil
 	})
-	sendToBrowser(user.Id)
+	sendToBrowser(user.Id, user.PaymentCycleId)
 }
 
-func sendToBrowser(userId uuid.UUID) error {
+type UserBalances struct {
+	PaymentCycleId uuid.UUID     `json:"paymentCycleId"`
+	UserBalances   []UserBalance `json:"userBalances"`
+	Total          int64         `json:"total"`
+}
+
+func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -294,7 +305,12 @@ func sendToBrowser(userId uuid.UUID) error {
 		return err
 	}
 
-	err = conn.WriteJSON(userBalances)
+	total := int64(0)
+	for _, v := range userBalances {
+		total += v.Balance
+	}
+
+	err = conn.WriteJSON(UserBalances{PaymentCycleId: paymentCycleId, UserBalances: userBalances, Total: total})
 	if err != nil {
 		delete(clients, userId)
 		return err
@@ -304,7 +320,7 @@ func sendToBrowser(userId uuid.UUID) error {
 }
 
 func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
-	err := updatePaymentCycleId(user.Id, nil)
+	err := updateSeats(user.PaymentCycleId, 0)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
 		return

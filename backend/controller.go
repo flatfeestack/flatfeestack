@@ -217,19 +217,6 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func sponsorMe(w http.ResponseWriter, _ *http.Request, user *User) {
-	if *user.Role == "USR" && *user.InviteEmail != *user.InviteEmailClaim {
-		unlock := km.Lock(*user.InviteEmail)
-		defer unlock()
-		//we have a new sponsor!
-		err := takeSponsorship(*user.InviteEmail, user.Id)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
-			return
-		}
-	}
-}
-
 func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	a := params["address"]

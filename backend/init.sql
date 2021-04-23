@@ -21,7 +21,7 @@ CREATE TABLE payment_cycle (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
     seats      INTEGER DEFAULT 0,
-    freq       INTEGER DEFAULT 365,
+    freq       INTEGER DEFAULT 120,
     days_left  INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -36,7 +36,6 @@ CREATE TABLE user_balances (
     day              DATE NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index ON user_balances(user_id, day, balance_type);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
