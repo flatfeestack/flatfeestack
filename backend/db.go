@@ -732,7 +732,7 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
                     INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
                 WHERE u.sponsor_id IS NULL
                     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                    AND pc.days_left > 0
+                    AND pc.days_left >= `+mUSDPerDay+`
                     AND u.role = 'USR'
                 GROUP BY s.user_id`)
 	if err != nil {
@@ -780,16 +780,16 @@ func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error)
 //
 //Running this twice is ok, as it will give a more accurate state
 func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
-	stmt, err := db.Prepare(`UPDATE payment_cycle set
-	                                days_left = q.sum / $2
-                                    FROM (
-                                        SELECT ub.user_id, ub.payment_cycle_id, SUM(balance) as sum
-                                        FROM user_balances ub
-                                        INNER JOIN daily_repo_hours drh ON ub.user_id = drh.user_id
-                                        INNER JOIN users u ON ub.user_id = u.id AND ub.payment_cycle_id = u.payment_cycle_id
-                                        WHERE drh.day=$1 
-                                        GROUP BY ub.user_id, ub.payment_cycle_id) as q
-                                    WHERE payment_cycle.id = q.payment_cycle_id AND payment_cycle.user_id = q.user_id`)
+	stmt, err := db.Prepare(`UPDATE payment_cycle SET 
+		     pc.days_left = sum / $2
+			 FROM payment_cycle pc
+			     INNER JOIN daily_repo_hours drh ON pc.user_id = drh.user_id
+                 INNER JOIN users u ON pc.user_id = u.id
+                 INNER JOIN (SELECT user_id, SUM(balance) as sum 
+                             FROM user_balances 
+                             WHERE payment_cycle_id = pc.id 
+                             GROUP BY user_id) AS ub ON ub.user_id = u.id
+			 WHERE u.payment_cycle_id=pc.id AND drh.day=$1`)
 	if err != nil {
 		return 0, err
 	}
@@ -827,7 +827,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
 			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
                  AND pc.days_left > 0
-                 AND u.role = 'USR'
+                 AND u.role = "USR"
              GROUP BY s.repo_id`)
 	if err != nil {
 		return 0, err
@@ -977,16 +977,16 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 }
 
 func runDailyTopupReminderUser() ([]User, error) {
-	s := `SELECT u.id
+	s := `SELECT u.id, u.role
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-			WHERE u.role='USR' AND pc.days_left <= 1
+			WHERE u.role="USR" AND pc.days_left <= 1
           UNION
-          SELECT u.id
+          SELECT u.id, u.role
             FROM users u
                 INNER JOIN users c ON c.sponsor_id = u.id
                 INNER JOIN payment_cycle pc ON c.payment_cycle_id = pc.id
-			WHERE u.role='ORG'
+			WHERE u.role="ORG"
 			GROUP BY u.id
 			HAVING MIN(pc.days_left) <= 1`
 	rows, err := db.Query(s)
@@ -1013,14 +1013,14 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	var query string
 	switch s {
 	case "pending":
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
 				FROM daily_user_payout dup 
 			    JOIN users u ON dup.user_id = u.id 
 				LEFT JOIN payouts_request p ON p.daily_user_payout_id = dup.id
 				WHERE p.id IS NULL
 				GROUP BY u.payout_eth`
 	case "paid":
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
 				FROM daily_user_payout dup
 			    JOIN users u ON dup.user_id = u.id 
 				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
@@ -1028,7 +1028,7 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
                 WHERE pres.error is NULL
 				GROUP BY u.payout_eth`
 	default: //limbo
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.payout_eth, ARRAY_AGG(u.email) email_list, SUM(dup.balance), ARRAY_AGG(dup.id) as id_list
 				FROM daily_user_payout dup
 			    JOIN users u ON dup.user_id = u.id 
 				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
