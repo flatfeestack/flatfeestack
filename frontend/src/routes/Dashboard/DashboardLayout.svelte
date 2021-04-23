@@ -1,6 +1,6 @@
 <script type="ts">
 import {faMedal, faSearch, faUser, faCodeBranch, faHandHoldingUsd, faCogs, faShieldAlt, } from "@fortawesome/free-solid-svg-icons";
-import { Link, links } from "svelte-routing";
+import { links } from "svelte-routing";
 import Fa from "svelte-fa";
 import { user } from "ts/auth";
 
@@ -78,9 +78,11 @@ import { user } from "ts/auth";
   <a href="/dashboard/badges"><Fa icon="{faMedal}" size="sm" class="icon"/>
     <span class="hide-sx">Badges</span>
   </a>
+  {#if $user.email.endsWith("@flatfeestack.io") || $user.email.endsWith("@bocek.ch") }
   <a href="/dashboard/admin"><Fa icon="{faShieldAlt}" size="sm"  class="icon"/>
     <span class="hide-sx">Admin</span>
   </a>
+  {/if}
 </nav>
   <div>
     <slot />
