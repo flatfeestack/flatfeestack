@@ -13,6 +13,8 @@ Now:
 - [ ] Create GitHub users
 - [ ] Create SendGrid account
 - [ ] Integrate / configure sendgrid to backend
+- [ ] Evaluate whether the "scheduler" should be deleted for good or not; If yes, delete.
+-  
 
 Future plans:
 - [ ] Automatic conversion from fiat (stripe) to ETH
