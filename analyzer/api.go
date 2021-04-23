@@ -616,10 +616,32 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 	reqBody, _ := json.Marshal(body)
 	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
-	_, err := http.Post(os.Getenv("WEBHOOK_CALLBACK_URL"), "application/json", bytes.NewBuffer(reqBody))
+
+	c := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	hs256 := os.Getenv("HS256")
+	url := os.Getenv("WEBHOOK_CALLBACK_URL")
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Printf("Could not create a HTTP request to call the webhook %v", err)
+	}
+
+	if len(hs256) > 0 {
+		req.Header.Add("Authorization", "Bearer "+hs256)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Do(req)
+	defer resp.Body.Close()
+
 	if err != nil {
 		log.Printf("Could not call webhook %v", err)
 	}
+
 	if _, err := cache.Get(repositoryUrl); err != nil {
 		cache.Set(repositoryUrl, reqBody)
 	}
