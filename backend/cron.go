@@ -91,20 +91,19 @@ func dailyRunner(now time.Time) error {
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
-
-	nr, err := runDailyDaysLeft(yesterdayStart)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily User Balance inserted %v entries", nr)
-
-	nr, err = runDailyRepoHours(yesterdayStart, yesterdayStop, now)
+	nr, err := runDailyRepoHours(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
 	log.Printf("Daily Repo Hours inserted %v entries", nr)
 
 	nr, err = runDailyUserBalance(yesterdayStart, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily User Balance inserted %v entries", nr)
+
+	nr, err = runDailyDaysLeft(yesterdayStart)
 	if err != nil {
 		return err
 	}
@@ -146,12 +145,10 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily Analysis Check found %v entries", len(repos))
 
-	if repos != nil {
-		for _, v := range repos {
-			err = analysisRequest(v.Id, *v.Url, *v.Branch)
-			if err != nil {
-				return err
-			}
+	for _, v := range repos {
+		err = analysisRequest(v.Id, *v.Url, *v.Branch)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -161,12 +158,10 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily Topup Reminder found %v entries", len(users))
 
-	if users != nil {
-		for _, u := range users {
-			err = reminderTopup(u)
-			if err != nil {
-				return err
-			}
+	for _, u := range users {
+		err = reminderTopup(u)
+		if err != nil {
+			return err
 		}
 	}
 
