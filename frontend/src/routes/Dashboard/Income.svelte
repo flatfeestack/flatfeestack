@@ -76,7 +76,8 @@ async function removeEmail(email: string) {
 
 
 <DashboardLayout>
-  <h1>Income</h1>
+  <h1 class="px-2">Income</h1>
+
   <hr class="mb-10 w-64" />
   {#if gitEmails && gitEmails.length === 0}
     <div class="flex mb-5">

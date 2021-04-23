@@ -48,7 +48,7 @@ const refresh = async () => {
 
 
 <DashboardLayout>
-  <h1>Admin</h1>
+  <h1 class="px-2">Admin</h1>
 
   <button class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={handleFakeUsers}>
     Insert 2 users and 2 repo
