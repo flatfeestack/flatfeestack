@@ -2,8 +2,8 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, Ax
 import { token } from "./auth";
 import { get } from "svelte/store";
 import { refresh, removeSession } from "./authService";
-import { Repo } from "../types/types";
-import { ClientSecret, Types } from "../types/types";
+import { Repo } from "../types/users";
+import { ClientSecret, Users } from "../types/users";
 
 const auth = axios.create({
   baseURL: "/auth",

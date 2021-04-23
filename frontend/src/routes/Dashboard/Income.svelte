@@ -7,7 +7,7 @@ import { API } from "ts/api";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import Web3 from "../../components/Web3.svelte";
 import { user } from "ts/auth";
-import { GitUser } from "../../types/types.ts";
+import { GitUser } from "../../types/users.ts";
 
 let address = "";
 let gitEmails: Array<GitUser> = [];

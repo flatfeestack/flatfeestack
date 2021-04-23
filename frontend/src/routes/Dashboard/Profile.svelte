@@ -5,9 +5,9 @@
   import Fa from "svelte-fa";
   import { API } from "ts/api.ts";
   import { onMount } from "svelte";
-  import type { Invitation } from "src/types/types.ts";
+  import type { Invitation } from "src/types/users.ts";
   import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
-  import { Repo, UserBalances } from "../../types/types";
+  import { Repo, UserBalances } from "../../types/users";
   import { links } from "svelte-routing";
   import { get } from "svelte/store";
 

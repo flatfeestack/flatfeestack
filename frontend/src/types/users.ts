@@ -1,4 +1,4 @@
-export type Types = {
+export type Users = {
   id: string;
   payment_method: string;
   last4: string;
@@ -10,6 +10,7 @@ export type Types = {
   payout_eth: string;
   token: string;
   role: string;
+  login: boolean;
 };
 
 export type ClientSecret = {

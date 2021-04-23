@@ -1,8 +1,9 @@
 import { writable } from "svelte/store";
-import { Types, PaymentCycle, Repo } from "../types/types";
+import { Users, PaymentCycle, Repo } from "../types/users";
 
+export const loginFailed = writable(false);
 export const loading = writable(false);
-export const user = writable<Types>(<Types>{});
+export const user = writable<Users>(<Users>{});
 export const paymentCycle = writable<PaymentCycle>(<PaymentCycle>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
-  import { user, loading, route } from "ts/auth.ts";
+  import { user, loading, route, loginFailed } from "ts/auth.ts";
   import { removeSession, updateUser } from "ts/authService";
   import { onMount } from "svelte";
 
@@ -25,7 +25,14 @@
   export let url;
 
   let pathname = window.location.pathname;
-  onMount(() => updateUser());
+  onMount(() => {
+    try {
+      updateUser()
+    } catch (e) {
+      $loginFailed = true;
+    }
+    }
+  );
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   //https://github.com/EmilTholin/svelte-routing/issues/62
@@ -152,7 +159,11 @@
             <Route path="/dashboard/badges" component="{Badges}" />
             <Route path="/dashboard/admin" component="{Admin}" />
           {:else}
-            <Spinner/>
+            {#if $loginFailed}
+              <Route path="*" component="{Signin}" />
+            {:else}
+              <Spinner/>
+            {/if}
           {/if}
         {:else}
           <Route path="*" component="{CatchAll}" />

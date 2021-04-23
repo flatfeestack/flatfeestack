@@ -1,44 +1,23 @@
-import { token, user } from "./auth";
+import { token, user, loginFailed } from "./auth";
 import { API } from "./api";
-import { Types } from "../types/types";
+import { Users } from "../types/users";
 import { AxiosResponse } from "axios";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const res = await API.auth.confirmReset(email, password, emailToken);
-  const t = res.data.access_token;
-  const r = res.data.refresh_token;
-  if (!t || !r) {
-    console.log("could not verify in reset");
-    return;
-  }
-  token.set(t);
-  localStorage.setItem("ffs-refresh", r);
+  storeToken(res);
 };
 
 export const confirmEmail = async(email: string, emailToken: string) => {
   const res = await API.auth.confirmEmail(email, emailToken);
-  const t = res.data.access_token;
-  const r = res.data.refresh_token;
-  if (!t || !r) {
-    console.log("could not verify in email");
-    return;
-  }
-  token.set(t);
-  localStorage.setItem("ffs-refresh", r);
+  storeToken(res);
 };
 
 export const confirmInvite = async(email: string, password: string,
                                    emailToken: string, inviteEmail: string,
                                    inviteDate: string, inviteToken: string) => {
   const res = await API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
-  const t = res.data.access_token;
-  const r = res.data.refresh_token;
-  if (!t || !r) {
-    console.log("could not verify in invite");
-    return;
-  }
-  token.set(t);
-  localStorage.setItem("ffs-refresh", r);
+  storeToken(res);
 }
 
 export const login = async (email: string, password: string) => {
@@ -58,8 +37,9 @@ export const removeSession = async () => {
     await API.authToken.logout();
   } finally {
     localStorage.removeItem("ffs-refresh")
-    user.set(<Types>{})
+    user.set(<Users>{})
     token.set("");
+    loginFailed.set(true);
   }
 }
 
@@ -77,8 +57,10 @@ const storeToken = (res: AxiosResponse) => {
   const t = res.data.access_token;
   const r = res.data.refresh_token;
   if (!t || !r) {
+    loginFailed.set(true);
     throw "No token in the request";
   }
+  loginFailed.set(false);
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
 }
