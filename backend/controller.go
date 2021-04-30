@@ -171,7 +171,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	other["lang"] = lang(r)
 
 	defaultMessage := "Is this your email address? Please confirm: " + other["url"]
-	e := prepareEmail(email, other,
+	e := prepareEmail(body.Email, other,
 		"template-subject-addgitemail_", "Validate your git email",
 		"template-plain-addgitemail_", defaultMessage,
 		"template-html-addgitemail_", other["lang"])
