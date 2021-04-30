@@ -57,6 +57,8 @@ type Opts struct {
 	PayoutUrl       string
 	Admins          string
 	EmailLinkPrefix string
+	EmailFrom       string
+	EmailFromName   string
 	EmailUrl        string
 	EmailToken      string
 }
@@ -93,6 +95,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT-URL",
 		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&o.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&o.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
 	flag.StringVar(&o.EmailUrl, "email-url", lookupEnv("EMAIL_URL",
 		"http://localhost"), "Email service URL")
 	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
@@ -117,6 +121,14 @@ func NewOpts() *Opts {
 
 	if o.Admins != "" {
 		admins = strings.Split(o.Admins, ";")
+	}
+
+	if o.EmailFrom == "" {
+		o.EmailFrom = "info@flatfeestack.io"
+	}
+
+	if o.EmailFromName == "" {
+		o.EmailFromName = ""
 	}
 
 	return o
