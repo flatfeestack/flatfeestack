@@ -82,20 +82,19 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	params := &stripe.PaymentIntentParams{
+		Amount:           stripe.Int64(int64(seats * freq * 100)),
+		Currency:         stripe.String(string(stripe.CurrencyUSD)),
+		Customer:         user.StripeId,
+		PaymentMethod:    user.PaymentMethod,
+		SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)),
+	}
+
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	params := &stripe.PaymentIntentParams{
-		Amount:        stripe.Int64(int64(seats * freq * 100)),
-		Currency:      stripe.String(string(stripe.CurrencyUSD)),
-		Customer:      user.StripeId,
-		PaymentMethod: user.PaymentMethod,
-		Confirm:       stripe.Bool(false),
-		OffSession:    stripe.Bool(false),
 	}
 	params.Params.Metadata = map[string]string{}
 	params.Params.Metadata["userId"] = user.Id.String()
@@ -116,15 +115,28 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-/*func stripePaymentRecurring(user *User, noConfirm bool) (*ClientSecretBody, error) {
+func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
+	pc, err := findPaymentCycle(user.PaymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+
 	params := &stripe.PaymentIntentParams{
-		Amount:        stripe.Int64(int64(user.Seats * user.Freq * 100)),
+		Amount:        stripe.Int64(int64(pc.Seats * pc.Freq * 100)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
 		Customer:      user.StripeId,
 		PaymentMethod: user.PaymentMethod,
-		Confirm:       stripe.Bool(noConfirm),
-		OffSession:    stripe.Bool(noConfirm),
+		Confirm:       stripe.Bool(true),
+		OffSession:    stripe.Bool(true),
 	}
+
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Freq, pc.Seats, pc.Freq, timeNow())
+	if err != nil {
+		return nil, err
+	}
+	params.Params.Metadata = map[string]string{}
+	params.Params.Metadata["userId"] = user.Id.String()
+	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -133,7 +145,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 
 	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
 	return &cs, nil
-}*/
+}
 
 func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
@@ -222,9 +234,58 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	case "payment_intent.authentication_required":
 	case "payment_intent.requires_payment_method":
 		//again
+		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
+		if err != nil {
+			log.Printf("Parer err from stripe: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-	case "payment_intent.requires_action":
-		//3d secure
+		u, err := findUserById(uid)
+		if err != nil || u == nil {
+			log.Printf("User does not exist: %v, %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		ubNew := UserBalance{
+			PaymentCycleId: u.PaymentCycleId,
+			UserId:         uid,
+			Balance:        0,
+			Day:            timeNow(),
+			BalanceType:    "AUTHREQ",
+			CreatedAt:      timeNow(),
+		}
+
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("Insert user balance for %v: %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		email := *u.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+		other["lang"] = "en"
+
+		defaultMessage := "Authentication is required, please go to the following site to continue: " + other["url"]
+		e := prepareEmail(email, other,
+			"template-subject-authreq_", "Authentication requested",
+			"template-plain-authreq_", defaultMessage,
+			"template-html-authreq_", other["lang"])
+
+		go func() {
+			insertEmailSent(u.Id, "authreq-"+newPaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
+	//case "payment_intent.requires_action":
+	//3d secure - this is handled by strip, we just get notified
+	//	log.Printf("stripe handles 3d secure for %v", event.Data)
 	case "payment_intent.insufficient_funds":
 		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
@@ -251,7 +312,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 		err = insertUserBalance(ubNew)
 		if err != nil {
-			log.Printf("Insert user balance3 for %v: %v\n", uid, err)
+			log.Printf("Insert user balance for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

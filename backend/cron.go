@@ -171,6 +171,7 @@ func dailyRunner(now time.Time) error {
 }
 
 func reminderTopup(u User) error {
+	_, err := stripePaymentRecurring(u)
 
 	emailCountId := "topup-" + u.PaymentCycleId.String()
 	c, err := countEmailSent(u.Id, emailCountId)
@@ -178,27 +179,18 @@ func reminderTopup(u User) error {
 		return err
 	}
 
-	email := *u.Email
-	var other = map[string]string{}
-	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
-	other["lang"] = "en"
-
-	var e EmailRequest
-	defaultMessage := "Please go to your profile and topup: " + other["url"]
-	if c == 1 {
-		e = prepareEmail(email, other,
-			"template-subject-topup-last_", "Last reminder (we know you are busy and we won't bother you again) Please top up your account",
-			"template-plain-topup-last_", defaultMessage,
-			"template-html-topup-last_", other["lang"])
-	} else {
-		e = prepareEmail(email, other,
-			"template-subject-topup_", "Please top up your account",
-			"template-plain-topup_", defaultMessage,
-			"template-html-topup_", other["lang"])
-	}
-
 	if c < 2 {
+		email := *u.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+		other["lang"] = "en"
+
+		e := prepareEmail(email, other,
+			"template-subject-topup_", "We are about to top up your account",
+			"template-plain-topup_", "Thanks for supporting with flatfeestack: "+other["url"],
+			"template-html-topup_", other["lang"])
+
 		insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
 		go func(userId uuid.UUID, emailType string) {
 			err := sendEmail(opts.EmailUrl, e)
