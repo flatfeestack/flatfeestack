@@ -78,7 +78,7 @@ import { user } from "ts/auth";
   <a href="/dashboard/badges"><Fa icon="{faMedal}" size="sm" class="icon"/>
     <span class="hide-sx">Badges</span>
   </a>
-  {#if $user.email.endsWith("@flatfeestack.io") || $user.email.endsWith("@bocek.ch") }
+  {#if $user.email.endsWith("@flatfeestack.io") || $user.email.endsWith("@bocek.ch") || $user.email.endsWith("@machados.org") }
   <a href="/dashboard/admin"><Fa icon="{faShieldAlt}" size="sm"  class="icon"/>
     <span class="hide-sx">Admin</span>
   </a>
