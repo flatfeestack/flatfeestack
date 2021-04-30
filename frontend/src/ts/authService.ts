@@ -69,7 +69,9 @@ const storeToken = (res: AxiosResponse) => {
 function connect():Promise<WebSocket> {
   return new Promise(function(resolve, reject) {
     const t = get(token);
-    const server = new WebSocket('ws://localhost/ws/users/me/payment', ["access_token", t]);
+    const host = window.location.host
+    const proto = host.indexOf("localhost") === 0 ? "ws" : "wss";
+    const server = new WebSocket(`${proto}://${host}/ws/users/me/payment`, ["access_token", t]);
     server.onopen = function() {
       resolve(server);
     };
