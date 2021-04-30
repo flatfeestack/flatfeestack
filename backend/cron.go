@@ -177,7 +177,7 @@ func reminderTopup(u User) error {
 		return err
 	}
 
-	if c < 2 {
+	if c == 0 {
 		err = insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
 		if err != nil {
 			return err

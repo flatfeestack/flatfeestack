@@ -781,13 +781,10 @@ func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error)
 //Running this twice is ok, as it will give a more accurate state
 func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
 	stmt, err := db.Prepare(`
-           UPDATE payment_cycle set days_left = q.sum / $2
+           UPDATE payment_cycle set days_left = q.sum / $1
            FROM (
                  SELECT ub.user_id, ub.payment_cycle_id, SUM(balance) as sum
                  FROM user_balances ub
-                 INNER JOIN daily_repo_hours drh ON ub.user_id = drh.user_id
-                 INNER JOIN users u ON ub.user_id = u.id AND ub.payment_cycle_id = u.payment_cycle_id
-                 WHERE drh.day=$1 
                  GROUP BY ub.user_id, ub.payment_cycle_id) as q
            WHERE payment_cycle.id = q.payment_cycle_id AND payment_cycle.user_id = q.user_id`)
 	if err != nil {
@@ -796,7 +793,7 @@ func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, mUSDPerDay)
+	res, err = stmt.Exec(mUSDPerDay)
 	if err != nil {
 		return 0, err
 	}
@@ -977,12 +974,12 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 }
 
 func runDailyTopupReminderUser() ([]User, error) {
-	s := `SELECT u.id, u.email, u.payment_cycle_id
+	s := `SELECT u.id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
 			WHERE u.role='USR' AND pc.days_left <= 1
           UNION
-          SELECT u.id, u.email, u.payment_cycle_id
+          SELECT u.id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
                 INNER JOIN users c ON c.sponsor_id = u.id
                 INNER JOIN payment_cycle pc ON c.payment_cycle_id = pc.id
@@ -998,7 +995,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	repos := []User{}
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id, &user.Email, &user.PaymentCycleId)
+		err = rows.Scan(&user.Id, &user.Email, &user.PaymentCycleId, &user.StripeId, &user.PaymentMethod)
 		if err != nil {
 			return nil, err
 		}
