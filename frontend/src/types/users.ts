@@ -18,7 +18,7 @@ export type ClientSecret = {
 }
 
 export type UserBalances = {
-  paymentCycleId: string
+  paymentCycle: PaymentCycle
   userBalances: UserBalance[]
   total: number
 }

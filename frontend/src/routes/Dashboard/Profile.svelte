@@ -32,7 +32,9 @@
   }
 
   $: {
-    $user.paymentCycleId = $userBalances.paymentCycleId;
+    if ($userBalances.paymentCycle) {
+      $user.paymentCycleId = $userBalances.paymentCycle.id;
+    }
   }
 
   $: {
@@ -230,7 +232,7 @@
     </div>
   {/if}
 
-  {#if (sponsoredRepos.length > 0 && $userBalances && $userBalances.total === 0) || !checked}
+  {#if (sponsoredRepos.length > 0) || !checked}
     <h2 class="px-2">Donation</h2>
     <Payment />
   {/if}

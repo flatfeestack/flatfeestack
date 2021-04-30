@@ -94,7 +94,6 @@ export const API = {
     setupStripe: () => backend.post<ClientSecret>(`/users/me/stripe`),
     stripePayment: (freq: number, seats: number) => backend.put(`/users/me/stripe/${freq}/${seats}`),
     cancelSub: () => backend.delete(`/users/me/stripe`),
-    getCurrentPayment: () => backend.get(`/users/me/current-payment`),
     timeWarp: (hours: number) => auth.post(`/timewarp/${hours}`)
   },
   repos: {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { API } from "ts/api";
   import { onMount } from "svelte";
-  import { user, paymentCycle } from "ts/auth";
+  import { user, userBalances } from "ts/auth";
   import { loadStripe } from "@stripe/stripe-js/pure";
 
   import Spinner from "./Spinner.svelte";
@@ -10,6 +10,13 @@
   let stripe;
   let selectedPlan = 0;
   let seats = 1;
+
+  $: {
+    if($userBalances.paymentCycle) {
+      selectedPlan = $userBalances.paymentCycle.freq == 365 ? 0 : 1;
+      seats = $userBalances.paymentCycle.seats;
+    }
+  }
 
   let isSubmitting = false;
 
@@ -70,11 +77,8 @@
     console.log(cs.data.client_secret);
     stripe.confirmCardSetup(
       cs.data.client_secret,
-      {
-        payment_method: {
-          card: cardElement
-        }
-      }
+      {payment_method: {card: cardElement}},
+      {handleActions: false}
     ).then(async function(result) {
       if (result.error) {
         console.log(result.error);
@@ -95,7 +99,7 @@
     const res = await API.user.deletePaymentMethod()
     if (res.status === 200) {
       $user.payment_method = null;
-      createCardForm();
+      $user.last4 = null;
     }
   };
 
@@ -103,7 +107,7 @@
     try {
       const res = await API.user.cancelSub();
       if (res.status === 200) {
-        $paymentCycle.seats = 0;
+        $userBalances.paymentCycle.seats = 0;
       }
     } catch (e) {
       console.log(e);
@@ -114,6 +118,9 @@
   const handleSubmit = async (event) => {
     paymentProcessing = true;
     try {
+      if($user.role === "USR" && seats ===0) {
+        seats = 1;
+      }
       const res = await API.user.stripePayment(plans[selectedPlan].freq, seats);
 
       stripe.confirmCardPayment(res.data.client_secret, {
@@ -139,23 +146,8 @@
   };
 
   onMount(async () => {
-
     stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
     createCardForm();
-    const res = await API.user.getCurrentPayment();
-    if (res.status === 200) {
-      console.log("setting payment cycle: "+res.data);
-      if (res.data) {
-        $paymentCycle = res.data;
-        selectedPlan = $paymentCycle.freq === 365? 0:1
-        seats = $paymentCycle.seats
-      } else {
-        console.log("empty paymentcily")
-      }
-    } else {
-      console.log(res.data);
-      console.log(res.status);
-    }
   });
 
 </script>
@@ -184,8 +176,8 @@
     .card:active {
         @apply transform from-secondary-600 to-primary-600;
     }
-    .price {
-        @apply text-3xl font-bold text-center my-5;
+    .small {
+        font-size: x-small;
     }
     .container {
         display: flex;
@@ -219,8 +211,11 @@
       <button disabled="{isSubmitting}" type="submit">Remove card{#if isSubmitting}<Dots />{/if}
       </button>
     </form>
+    {#if !$userBalances || !$userBalances.paymentCycle || $userBalances.paymentCycle.seats === 0}
+      (currently not supporting)
+    {/if}
   {/if}
-  {#if $paymentCycle != null && $paymentCycle.seats > 0}
+  {#if $userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0}
     <form class="p-2" on:submit|preventDefault="{handleCancel}">
       <button class="btn my-4" disabled="{isSubmitting}" type="submit">Cancel&nbsp;support
         {#if isSubmitting}
@@ -228,10 +223,7 @@
         {/if}
       </button>
     </form>
-  {:else}
-    (currently not supporting)
   {/if}
-
 </div>
 
 <div class="container">
@@ -252,6 +244,12 @@
         {/if}
       </button>
     </form>
+  </div>
+  <div class="container border-primary-500 rounded small p-1">
+      We request your permission that we initiate a payment or a series of {plans[selectedPlan].title.toLowerCase()} payments on your behalf of
+      {plans[selectedPlan].price * ($user.role === "ORG" ? seats : 1)} USD.<br/>
+      By continuing, I authorize flatfeestack.io to send instructions to the financial institution that issued my card to
+      take payments from my card account in accordance with the terms of my agreement with you.
   </div>
 </div>
 
