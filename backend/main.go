@@ -173,7 +173,6 @@ func main() {
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
 	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/payment-cycle", jwtAuthUser(getPaymentCycle)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
 	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods("POST")
 	apiRouter.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
@@ -188,7 +187,6 @@ func main() {
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/users/me/current-payment", jwtAuthUser(getPaymentCycle)).Methods(http.MethodGet)
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github

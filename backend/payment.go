@@ -220,8 +220,11 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
-		//TODO: send email
+	case "payment_intent.requires_payment_method":
+		//again
 
+	case "payment_intent.requires_action":
+		//3d secure
 	case "payment_intent.insufficient_funds":
 		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
@@ -325,13 +328,14 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 		delete(clients, user.Id)
 		return nil
 	})
+
 	sendToBrowser(user.Id, user.PaymentCycleId)
 }
 
 type UserBalances struct {
-	PaymentCycleId uuid.UUID     `json:"paymentCycleId"`
-	UserBalances   []UserBalance `json:"userBalances"`
-	Total          int64         `json:"total"`
+	PaymentCycle PaymentCycle  `json:"paymentCycle"`
+	UserBalances []UserBalance `json:"userBalances"`
+	Total        int64         `json:"total"`
 }
 
 func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
@@ -361,7 +365,13 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		total += v.Balance
 	}
 
-	err = conn.WriteJSON(UserBalances{PaymentCycleId: paymentCycleId, UserBalances: userBalances, Total: total})
+	pc, err := findPaymentCycle(paymentCycleId)
+	if err != nil || pc == nil {
+		delete(clients, userId)
+		return err
+	}
+
+	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalances, Total: total})
 	if err != nil {
 		delete(clients, userId)
 		return err

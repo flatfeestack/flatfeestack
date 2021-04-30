@@ -79,20 +79,6 @@ func getMyUser(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 }
 
-func getPaymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
-	w.Header().Set("Content-Type", "application/json")
-	pc, err := findPaymentCycle(user.PaymentCycleId)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
-	err = json.NewEncoder(w).Encode(pc)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
-}
-
 // @Summary Get connected Git Email addresses
 // @Description Get details of all users
 // @Tags Users
@@ -220,27 +206,33 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 }
 
 func deleteMethod(w http.ResponseWriter, r *http.Request, user *User) {
-
+	user.PaymentMethod = nil
+	user.Last4 = nil
+	err := updateUser(user)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could update user: %v", err)
+		return
+	}
 }
 
 func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	a := params["method"]
-	user.PaymentMethod = &a
 
+	user.PaymentMethod = &a
 	pm, err := paymentmethod.Get(
 		*user.PaymentMethod,
 		nil,
 	)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
+		writeErr(w, http.StatusInternalServerError, "Could update method: %v", err)
 		return
 	}
 
 	user.Last4 = &pm.Card.Last4
 	err = updateUser(user)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
+		writeErr(w, http.StatusInternalServerError, "Could update user: %v", err)
 		return
 	}
 
@@ -249,6 +241,11 @@ func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
+}
+
+func updateMethod0(user *User, method *string) (*User, error) {
+
+	return user, nil
 }
 
 func updateName(w http.ResponseWriter, r *http.Request, user *User) {
