@@ -22,7 +22,6 @@ export const confirmInvite = async(email: string, password: string,
 }
 
 export const login = async (email: string, password: string) => {
-  console.log("MAOUOEMUOEMUSONEUOEu");
   const res = await API.auth.login(email, password);
   storeToken(res);
   const u = await API.user.get();
