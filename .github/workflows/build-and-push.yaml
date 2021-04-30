@@ -6,7 +6,6 @@ on:
       push:
         description: 'Push Images?'
         default: 'false'
-  push:
 
 jobs:
   build-and-push:
