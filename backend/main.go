@@ -109,7 +109,7 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
-		"ws://localhost/"), "Websocket base URL")
+		"ws://localhost"), "Websocket base URL")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
