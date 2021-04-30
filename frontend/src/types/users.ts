@@ -13,6 +13,11 @@ export type Users = {
   login: boolean;
 };
 
+export type Config = {
+  stripePublicApi: string;
+  wsBaseUrl: string
+}
+
 export type ClientSecret = {
   client_secret: string;
 }

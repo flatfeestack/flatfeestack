@@ -1,4 +1,4 @@
-import { token, user, showSignin, userBalances} from "./auth";
+import { token, user, showSignin, userBalances, config } from "./auth";
 import { API } from "./api";
 import { UserBalances, Users } from "../types/users";
 import { AxiosResponse } from "axios";
@@ -22,10 +22,13 @@ export const confirmInvite = async(email: string, password: string,
 }
 
 export const login = async (email: string, password: string) => {
+  console.log("MAOUOEMUOEMUSONEUOEu");
   const res = await API.auth.login(email, password);
   storeToken(res);
   const u = await API.user.get();
   user.set(u.data);
+  const c = await API.user.config();
+  config.set(c.data);
 };
 
 export const updateUser = async () => {
@@ -69,9 +72,8 @@ const storeToken = (res: AxiosResponse) => {
 function connect():Promise<WebSocket> {
   return new Promise(function(resolve, reject) {
     const t = get(token);
-    const host = window.location.host
-    const proto = host.indexOf("localhost") === 0 ? "ws" : "wss";
-    const server = new WebSocket(`${proto}://${host}/ws/users/me/payment`, ["access_token", t]);
+    const c = get(config)
+    const server = new WebSocket(`${c.wsBaseUrl}/ws/users/me/payment`, ["access_token", t]);
     server.onopen = function() {
       resolve(server);
     };

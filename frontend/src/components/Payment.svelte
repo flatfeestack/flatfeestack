@@ -1,7 +1,7 @@
 <script lang="ts">
   import { API } from "ts/api";
   import { onMount } from "svelte";
-  import { user, userBalances } from "ts/auth";
+  import { config, user, userBalances } from "ts/auth";
   import { loadStripe } from "@stripe/stripe-js/pure";
 
   import Spinner from "./Spinner.svelte";
@@ -146,7 +146,7 @@
   };
 
   onMount(async () => {
-    stripe = await loadStripe("pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb");
+    stripe = await loadStripe($config.stripePublicApi);
     createCardForm();
   });
 
