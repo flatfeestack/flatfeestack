@@ -51,6 +51,7 @@ type Opts struct {
 	HS256                  string
 	Env                    string
 	StripeAPISecretKey     string
+	StripeAPIPublicKey     string
 	StripeWebhookSecretKey string
 	DBPath                 string
 	DBDriver               string
@@ -62,6 +63,7 @@ type Opts struct {
 	EmailFromName          string
 	EmailUrl               string
 	EmailToken             string
+	WebSocketBaseUrl       string
 }
 
 type TokenClaims struct {
@@ -87,6 +89,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
 		"ORSXG5A="), "HS256 key")
 	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
+	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", lookupEnv("STRIPE_PUBLIC_API",
+		"pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb"), "Public Key for localhost")
 	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
 	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
@@ -104,6 +108,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
 	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
+	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
+		"ws://localhost/"), "Websocket base URL")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -219,6 +225,8 @@ func main() {
 	apiRouter.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods("POST")
 	apiRouter.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods("POST")
 	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods("GET")
+
+	apiRouter.HandleFunc("/config", jwtAuthUser(config)).Methods(http.MethodGet)
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
