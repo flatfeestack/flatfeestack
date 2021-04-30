@@ -47,20 +47,21 @@ var (
 )
 
 type Opts struct {
-	Port            int
-	HS256           string
-	Env             string
-	StripeSecret    string
-	DBPath          string
-	DBDriver        string
-	AnalysisUrl     string
-	PayoutUrl       string
-	Admins          string
-	EmailLinkPrefix string
-	EmailFrom       string
-	EmailFromName   string
-	EmailUrl        string
-	EmailToken      string
+	Port                   int
+	HS256                  string
+	Env                    string
+	StripeAPISecretKey     string
+	StripeWebhookSecretKey string
+	DBPath                 string
+	DBDriver               string
+	AnalysisUrl            string
+	PayoutUrl              string
+	Admins                 string
+	EmailLinkPrefix        string
+	EmailFrom              string
+	EmailFromName          string
+	EmailUrl               string
+	EmailToken             string
 }
 
 type TokenClaims struct {
@@ -85,7 +86,8 @@ func NewOpts() *Opts {
 		9082), "listening HTTP port")
 	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
 		"ORSXG5A="), "HS256 key")
-	flag.StringVar(&o.StripeSecret, "string", lookupEnv("STRIPE_SECRET"), "Stripe secret")
+	flag.StringVar(&o.StripeAPISecretKey, "string", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
+	flag.StringVar(&o.StripeWebhookSecretKey, "string", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
 	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
@@ -129,6 +131,10 @@ func NewOpts() *Opts {
 
 	if o.EmailFromName == "" {
 		o.EmailFromName = ""
+	}
+
+	if o.StripeWebhookSecretKey == "" {
+		o.StripeWebhookSecretKey = "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL"
 	}
 
 	return o
@@ -178,7 +184,7 @@ func main() {
 	opts = NewOpts()
 	db = initDb()
 
-	stripe.Key = opts.StripeSecret
+	stripe.Key = opts.StripeAPISecretKey
 
 	// Routes
 	apiRouter := mux.NewRouter()

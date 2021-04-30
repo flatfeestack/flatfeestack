@@ -26,8 +26,8 @@ type ClientSecretBody struct {
 //https://stripe.com/docs/payments/save-and-reuse
 func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 	//create a user at stripe if the user does not exist yet
-	if user.StripeId == nil || opts.StripeSecret != "" {
-		stripe.Key = opts.StripeSecret
+	if user.StripeId == nil || opts.StripeAPISecretKey != "" {
+		stripe.Key = opts.StripeAPISecretKey
 		params := &stripe.CustomerParams{}
 		c, err := customer.New(params)
 		if err != nil {
@@ -155,7 +155,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL")
+	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), opts.StripeWebhookSecretKey)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 		log.Printf("Error evaluating signed webhook request: %v", err)
