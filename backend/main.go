@@ -95,8 +95,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT-URL",
 		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
-	flag.StringVar(&opts.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
-	flag.StringVar(&opts.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
+	flag.StringVar(&o.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&o.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
 	flag.StringVar(&o.EmailUrl, "email-url", lookupEnv("EMAIL_URL",
 		"http://localhost"), "Email service URL")
 	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
