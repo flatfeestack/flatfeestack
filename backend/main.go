@@ -123,12 +123,12 @@ func NewOpts() *Opts {
 		admins = strings.Split(o.Admins, ";")
 	}
 
-	if opts.EmailFrom == "" {
-		opts.EmailFrom = "info@flatfeestack.io"
+	if o.EmailFrom == "" {
+		o.EmailFrom = "info@flatfeestack.io"
 	}
 
-	if opts.EmailFromName == "" {
-		opts.EmailFromName = ""
+	if o.EmailFromName == "" {
+		o.EmailFromName = ""
 	}
 
 	return o
