@@ -86,8 +86,8 @@ func NewOpts() *Opts {
 		9082), "listening HTTP port")
 	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
 		"ORSXG5A="), "HS256 key")
-	flag.StringVar(&o.StripeAPISecretKey, "string", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
-	flag.StringVar(&o.StripeWebhookSecretKey, "string", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
+	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
+	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
 	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
