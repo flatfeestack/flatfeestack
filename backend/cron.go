@@ -171,8 +171,6 @@ func dailyRunner(now time.Time) error {
 }
 
 func reminderTopup(u User) error {
-	_, err := stripePaymentRecurring(u)
-
 	emailCountId := "topup-" + u.PaymentCycleId.String()
 	c, err := countEmailSent(u.Id, emailCountId)
 	if err != nil {
@@ -180,6 +178,16 @@ func reminderTopup(u User) error {
 	}
 
 	if c < 2 {
+		err = insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
+		if err != nil {
+			return err
+		}
+
+		_, err = stripePaymentRecurring(u)
+		if err != nil {
+			return err
+		}
+
 		email := *u.Email
 		var other = map[string]string{}
 		other["email"] = email
@@ -191,7 +199,6 @@ func reminderTopup(u User) error {
 			"template-plain-topup_", "Thanks for supporting with flatfeestack: "+other["url"],
 			"template-html-topup_", other["lang"])
 
-		insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
 		go func(userId uuid.UUID, emailType string) {
 			err := sendEmail(opts.EmailUrl, e)
 			if err != nil {
