@@ -152,24 +152,10 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
-		var pi stripe.PaymentIntent
-		err := json.Unmarshal(event.Data.Raw, &pi)
+
+		uid, newPaymentCycleId, amount, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		uidRaw := pi.Metadata["userId"]
-		uid, err := uuid.Parse(uidRaw)
-		if err != nil {
-			log.Printf("Error parsing uid: %v\n", uidRaw)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
-		newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
-		if err != nil {
-			log.Printf("Error parsing uid: %v\n", newPaymentCycleIdRaw)
+			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -181,9 +167,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		amount := pi.Amount * 10000 //pi.Amount is in cent, we need in microUSD
-
-		oldSum, err := findSumUserBalance(u.Id)
+		oldSum, err := findSumUserBalance(uid)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -195,7 +179,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			UserId:         u.Id,
 			Balance:        -oldSum,
 			Day:            timeNow(),
-			BalanceType:    "REM",
+			BalanceType:    "REMAINING",
 			CreatedAt:      timeNow(),
 		}
 
@@ -217,7 +201,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 
 		ubNew.PaymentCycleId = newPaymentCycleId
-		ubNew.BalanceType = "PAY"
+		ubNew.BalanceType = "PAYMENT"
 		ubNew.Balance = amount
 		err = insertUserBalance(ubNew)
 		if err != nil {
@@ -239,12 +223,79 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		//TODO: send email
 
 	case "payment_intent.insufficient_funds":
-		//TODO: send email
+		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
+		if err != nil {
+			log.Printf("Parer err from stripe: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		u, err := findUserById(uid)
+		if err != nil || u == nil {
+			log.Printf("User does not exist: %v, %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		ubNew := UserBalance{
+			PaymentCycleId: u.PaymentCycleId,
+			UserId:         uid,
+			Balance:        0,
+			Day:            timeNow(),
+			BalanceType:    "NOFUNDS",
+			CreatedAt:      timeNow(),
+		}
+
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("Insert user balance3 for %v: %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		email := *u.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+		other["lang"] = "en"
+
+		defaultMessage := "Your credit card does not have sufficient funds. If you have enough funds, please go to: " + other["url"]
+		e := prepareEmail(email, other,
+			"template-subject-nofund_", "Insufficient funds",
+			"template-plain-nofund_", defaultMessage,
+			"template-html-nofund_", other["lang"])
+
+		go func() {
+			insertEmailSent(u.Id, "nofund-"+newPaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
 
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, error) {
+	var pi stripe.PaymentIntent
+	err := json.Unmarshal(data, &pi)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+	}
+	uidRaw := pi.Metadata["userId"]
+	uid, err := uuid.Parse(uidRaw)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing uid: %v\n", err)
+	}
+	newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
+	newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v\n", err)
+	}
+	return uid, newPaymentCycleId, pi.Amount * 10000, nil
 }
 
 var upgrader = websocket.Upgrader{

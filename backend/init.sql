@@ -32,7 +32,7 @@ CREATE TABLE user_balances (
     payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
     balance          BIGINT,
-    balance_type     VARCHAR(4) NOT NULL,
+    balance_type     VARCHAR(16) NOT NULL,
     day              DATE NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );

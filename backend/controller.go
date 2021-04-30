@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -164,33 +163,24 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	email := url.QueryEscape(body.Email)
 	var other = map[string]string{}
 	other["token"] = addGitEmailToken
+	other["email"] = email
+	other["url"] = opts.EmailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
+	other["lang"] = lang(r)
 
-	subject := parseTemplate("template-subject-signup_"+lang(r)+".tmpl", other)
-	if subject == "" {
-		subject = "Validate your email"
-	}
-	textMessage := parseTemplate("template-plain-signup_"+lang(r)+".tmpl", other)
-	if textMessage == "" {
-		textMessage = "Is this your email address? " + opts.EmailLinkPrefix + "/confirm/git-email/" + url.QueryEscape(body.Email) + "/" + addGitEmailToken
-	}
-	htmlMessage := parseTemplate("template-html-signup_"+lang(r)+".tmpl", other)
-
-	e := EmailRequest{
-		MailTo:      url.QueryEscape(body.Email),
-		Subject:     subject,
-		TextMessage: textMessage,
-		HtmlMessage: htmlMessage,
-	}
-
-	url := strings.Replace(opts.EmailUrl, "{email}", url.QueryEscape(body.Email), 1)
-	url = strings.Replace(url, "{token}", addGitEmailToken, 1)
+	defaultMessage := "Is this your email address? Please confirm: " + other["url"]
+	e := prepareEmail(email, other,
+		"template-subject-addgitemail_", "Validate your git email",
+		"template-plain-addgitemail_", defaultMessage,
+		"template-html-addgitemail_", other["lang"])
 
 	go func() {
-		err = sendEmail(url, e)
+		insertEmailSent(user.Id, "gitemail-"+email, timeNow())
+		err = sendEmail(opts.EmailUrl, e)
 		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 		}
 	}()
 
@@ -866,47 +856,6 @@ func genRnd(n int) ([]byte, error) {
 	}
 
 	return b, nil
-}
-
-func sendEmail(url string, e EmailRequest) error {
-	c := &http.Client{
-		Timeout: 15 * time.Second,
-	}
-
-	var jsonData []byte
-	var err error
-	if strings.Contains(url, "sendgrid") {
-		sendGridReq := NewSingleEmailPlainText(
-			NewEmail("Flatfeestack", "info@flatfeestack.io"),
-			e.Subject,
-			NewEmail("", e.MailTo),
-			e.TextMessage)
-		jsonData, err = json.Marshal(sendGridReq)
-	} else {
-		jsonData, err = json.Marshal(e)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+opts.EmailToken)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("could not send the email: %v %v", resp.Status, resp.StatusCode)
-	}
-	return nil
 }
 
 func lang(r *http.Request) string {

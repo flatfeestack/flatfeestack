@@ -10,8 +10,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"log"
-	"net/url"
-	"strings"
 	"time"
 )
 
@@ -174,43 +172,40 @@ func dailyRunner(now time.Time) error {
 
 func reminderTopup(u User) error {
 
-	c, err := countEmailSent(u.Id, "pc_"+u.PaymentCycleId.String())
+	emailCountId := "topup-" + u.PaymentCycleId.String()
+	c, err := countEmailSent(u.Id, emailCountId)
 	if err != nil {
 		return err
 	}
 
+	email := *u.Email
 	var other = map[string]string{}
-	subject := parseTemplate("template-subject-signup_"+"en"+".tmpl", other)
-	if subject == "" {
-		if c == 1 {
-			subject = "Last reminder (we know you are busy and we won't bother you again) Please top up your account"
-		} else {
-			subject = "Please top up your account"
-		}
-	}
-	textMessage := parseTemplate("template-plain-signup_"+"en"+".tmpl", other)
-	if textMessage == "" {
-		textMessage = "Please go to your profile and topup: " + opts.EmailLinkPrefix + "/dashboard/profile"
-	}
-	htmlMessage := parseTemplate("template-html-signup_"+"en"+".tmpl", other)
+	other["email"] = email
+	other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+	other["lang"] = "en"
 
-	e := EmailRequest{
-		MailTo:      *u.Email,
-		Subject:     subject,
-		TextMessage: textMessage,
-		HtmlMessage: htmlMessage,
+	var e EmailRequest
+	defaultMessage := "Please go to your profile and topup: " + other["url"]
+	if c == 1 {
+		e = prepareEmail(email, other,
+			"template-subject-topup-last_", "Last reminder (we know you are busy and we won't bother you again) Please top up your account",
+			"template-plain-topup-last_", defaultMessage,
+			"template-html-topup-last_", other["lang"])
+	} else {
+		e = prepareEmail(email, other,
+			"template-subject-topup_", "Please top up your account",
+			"template-plain-topup_", defaultMessage,
+			"template-html-topup_", other["lang"])
 	}
-
-	url := strings.Replace(opts.EmailUrl, "{email}", url.QueryEscape(*u.Email), 1)
 
 	if c < 2 {
-		insertEmailSent(u.Id, "pc_"+u.PaymentCycleId.String(), timeNow())
+		insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
 		go func(userId uuid.UUID, emailType string) {
-			err := sendEmail(url, e)
+			err := sendEmail(opts.EmailUrl, e)
 			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", url, err)
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
-		}(u.Id, "pc_"+u.PaymentCycleId.String())
+		}(u.Id, emailCountId)
 	}
 
 	log.Printf("TOPUP, you are running out of credit %v", u)
