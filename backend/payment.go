@@ -88,8 +88,9 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	cents := stripe.Int64(int64(seats * freq * mUSDPerDay / 10000))
 	params := &stripe.PaymentIntentParams{
-		Amount:           stripe.Int64(int64(seats * freq * 100)),
+		Amount:           cents,
 		Currency:         stripe.String(string(stripe.CurrencyUSD)),
 		Customer:         user.StripeId,
 		PaymentMethod:    user.PaymentMethod,
