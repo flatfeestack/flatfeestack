@@ -63,6 +63,12 @@ func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 }
 
 func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
+
+	if user.PaymentMethod == nil {
+		writeErr(w, http.StatusInternalServerError, "No payment method defined for user: %v", user.Id)
+		return
+	}
+
 	p := mux.Vars(r)
 	f := p["freq"]
 	s := p["seats"]
