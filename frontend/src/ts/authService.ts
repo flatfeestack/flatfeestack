@@ -6,28 +6,26 @@ import { get } from "svelte/store";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const res = await API.auth.confirmReset(email, password, emailToken);
-  storeToken(res);
+  await storeToken(res);
 };
 
 export const confirmEmail = async(email: string, emailToken: string) => {
   const res = await API.auth.confirmEmail(email, emailToken);
-  storeToken(res);
+  await storeToken(res);
 };
 
 export const confirmInvite = async(email: string, password: string,
                                    emailToken: string, inviteEmail: string,
                                    inviteDate: string, inviteToken: string) => {
   const res = await API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
-  storeToken(res);
+  await storeToken(res);
 }
 
 export const login = async (email: string, password: string) => {
   const res = await API.auth.login(email, password);
-  storeToken(res);
+  await storeToken(res);
   const u = await API.user.get();
   user.set(u.data);
-  const c = await API.user.config();
-  config.set(c.data);
 };
 
 export const updateUser = async () => {
@@ -52,11 +50,11 @@ export const refresh = async ():Promise<string> => {
     throw 'No refresh token not in local storage';
   }
   const res = await API.auth.refresh(refresh);
-  storeToken(res);
+  await storeToken(res);
   return res.data.access_token;
 }
 
-const storeToken = (res: AxiosResponse) => {
+const storeToken = async (res: AxiosResponse) => {
   const t = res.data.access_token;
   const r = res.data.refresh_token;
   if (!t || !r) {
@@ -66,6 +64,9 @@ const storeToken = (res: AxiosResponse) => {
   showSignin.set(false);
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
+
+  const c = await API.user.config();
+  config.set(c.data);
 }
 
 function connect():Promise<WebSocket> {
