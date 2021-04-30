@@ -398,6 +398,8 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	})
 
 	sendToBrowser(user.Id, user.PaymentCycleId)
+	w.Header().Set("Sec-WebSocket-Protocol", "access_token")
+	w.WriteHeader(http.StatusOK)
 }
 
 type UserBalances struct {
