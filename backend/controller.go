@@ -636,7 +636,11 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 
 func config(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	_, err := w.Write([]byte(`{"stripePublicApi":"` + opts.StripeAPIPublicKey + `", "wsBaseUrl":"` + opts.WebSocketBaseUrl + `"}`))
+	_, err := w.Write([]byte(`{
+			"stripePublicApi":"` + opts.StripeAPIPublicKey + `", 
+			"wsBaseUrl":"` + opts.WebSocketBaseUrl + `",
+			"restTimeout":"` + strconv.Itoa(opts.RestTimeout) + `"
+	}`))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
