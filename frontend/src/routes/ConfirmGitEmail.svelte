@@ -1,9 +1,7 @@
 <script lang="ts">
   import { Link, navigate } from "svelte-routing";
   import { onMount } from 'svelte';
-  import { confirmEmail, updateUser } from "ts/authService";
-  import { loading } from "../ts/auth";
-  import { API } from "../ts/api";
+  import { API } from "./../ts/api";
 
   export let email;
   export let token;

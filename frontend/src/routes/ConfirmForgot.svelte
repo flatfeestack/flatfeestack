@@ -1,8 +1,7 @@
 <script lang="ts">
   import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
-  import { confirmReset, updateUser } from "../ts/authService";
-  import { loading } from "../ts/auth";
+  import { confirmReset, updateUser } from "./../ts/authService";
 
   export let email;
   export let token;

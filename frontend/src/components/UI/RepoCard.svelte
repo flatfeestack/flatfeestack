@@ -43,11 +43,10 @@ svg {
 </style>
 
 <script lang="ts">
-import type { Repo } from "../../types/user";
-import { API } from "../../ts/api";
-import { sponsoredRepos } from "../../ts/auth";
+import type { Repo } from "types/users";
+import { API } from "./../../ts/api";
+import { sponsoredRepos } from "./../../ts/store";
 import { fade } from 'svelte/transition';
-import { onDestroy } from "svelte";
 
 export let repo: Repo;
 let star = true;

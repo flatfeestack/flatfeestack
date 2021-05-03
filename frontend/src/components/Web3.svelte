@@ -20,14 +20,13 @@ h1 {
 
 <script lang="ts">
 import { ethers, providers } from "ethers";
-import { ABI, CONTRACT_ID } from "../types/contract";
+import { ABI } from "./../types/contract";
 
 window.ethereum.enable();
 const provider = new providers.Web3Provider(window.ethereum);
 const signer = provider.getSigner();
 const contractAddress = "0x62Db0a2161e304819f4d54d54B90A3Feae6dDc72";
 const storageContract = new ethers.Contract(contractAddress, ABI, signer);
-
 
 const requestFunds = async () => {
   storageContract.release();

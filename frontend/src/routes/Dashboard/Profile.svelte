@@ -1,16 +1,15 @@
 <script lang="ts">
   import DashboardLayout from "./DashboardLayout.svelte";
   import Payment from "../../components/Payment.svelte";
-  import { token, user, userBalances } from "ts/auth";
+  import { user, userBalances } from "./../../ts/store";
   import Fa from "svelte-fa";
-  import { API } from "ts/api.ts";
+  import { API } from "./../../ts/api";
   import { onMount } from "svelte";
   import type { Invitation } from "src/types/users.ts";
   import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
-  import { Repo, UserBalances } from "../../types/users";
+  import type { Repo } from "types/users";
   import { links } from "svelte-routing";
-  import { get } from "svelte/store";
-  import { connectWs, refresh } from "../../ts/authService";
+  import { connectWs } from "./../../ts/authService";
 
   let checked = $user.role != "ORG";
   let nameOrig = $user.name;
@@ -88,8 +87,8 @@
     try {
       await API.authToken.delInvite(email);
       const response = await API.authToken.invites();
-      if (response?.data && response.data.length > 0) {
-        invites = response.data;
+      if (response && response.length > 0) {
+        invites = response;
       }
       console.log(invites);
     } catch (e) {
@@ -102,8 +101,8 @@
       const d = new Date();
       await API.authToken.invite(invite_email, $user.email, $user.name, new Date().toISOString());
       const response = await API.authToken.invites();
-      if (response?.data && response.data.length > 0) {
-        invites = response.data;
+      if (response && response.length > 0) {
+        invites = response;
       }
       console.log(invites);
     } catch (e) {
@@ -117,8 +116,8 @@
     try {
       const res1 = await API.authToken.invites();
       const res2 = await API.user.getSponsored();
-      invites = res1.data === null ? [] : res1.data;
-      sponsoredRepos = res2.data === null ? [] : res2.data;
+      invites = res1 === null ? [] : res1;
+      sponsoredRepos = res2 === null ? [] : res2;
     } catch (e) {
       error = e;
       console.log(e);

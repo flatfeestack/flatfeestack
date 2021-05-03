@@ -1,8 +1,8 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
-  import { user, loading, route, showSignin } from "ts/auth.ts";
-  import { removeSession, updateUser } from "ts/authService";
+  import { user, loading, route, showSignin } from "./ts/store";
+  import { removeSession, updateUser } from "./ts/authService";
   import { onMount } from "svelte";
 
   import Landing from "./routes/Landing.svelte";

@@ -1,8 +1,8 @@
 <script type="ts">
-import {faMedal, faSearch, faUser, faCodeBranch, faHandHoldingUsd, faCogs, faShieldAlt, } from "@fortawesome/free-solid-svg-icons";
+import {faMedal, faSearch, faUser, faHandHoldingUsd, faShieldAlt, } from "@fortawesome/free-solid-svg-icons";
 import { links } from "svelte-routing";
 import Fa from "svelte-fa";
-import { user } from "ts/auth";
+import { user } from "./../../ts/store";
 
 </script>
 

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Link } from "svelte-routing";
   import { navigate } from "svelte-routing";
-  import { login } from "ts/authService";
-  import Dots from "components/Dots.svelte";
+  import { login } from "./../ts/authService";
+  import Dots from "../components/Dots.svelte";
 
   let email = "";
   let password = "";

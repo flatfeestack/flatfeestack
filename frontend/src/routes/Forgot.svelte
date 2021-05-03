@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Link } from "svelte-routing";
-  import { API } from "ts/api.ts";
+  import { API } from "./../ts/api";
   import Dots from "../components/Dots.svelte";
 
   let email = "";

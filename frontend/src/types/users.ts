@@ -15,7 +15,8 @@ export type Users = {
 
 export type Config = {
   stripePublicApi: string;
-  wsBaseUrl: string
+  wsBaseUrl: string;
+  restTemplate: number;
 }
 
 export type ClientSecret = {
@@ -57,7 +58,8 @@ export type Repo = {
 };
 
 export type Token = {
-  accessToken: string
+  access_token: string
+  refresh_token: string
   expire: string
 }
 

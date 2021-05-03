@@ -1,6 +1,4 @@
-//import { AbiItem } from "web3-utils";
-
-export const ABI = [
+export const ABI:string = `[
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -69,6 +67,4 @@ export const ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-];
-
-export const CONTRACT_ID = "0x7b47e162dB804d0290766de876e6EdCe4EbEc05A";
+]`;

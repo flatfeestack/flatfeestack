@@ -1,6 +1,6 @@
 <script lang="ts">
 import DashboardLayout from "./DashboardLayout.svelte";
-import { API } from "ts/api";
+import { API } from "./../../ts/api";
 import Spinner from "../../components/Spinner.svelte";
 
 let promisePendingPayouts =API.payouts.pending("pending");
@@ -14,8 +14,7 @@ const handleFakeUsers = async () => {
 
 const handleWarp = async (hours: number) => {
   await API.user.timeWarp(hours);
-  await API.payouts.timeWarp(hours);
-  await API.auth.timeWarp(hours);
+  await API.authToken.timeWarp(hours);
   await refresh();
 }
 

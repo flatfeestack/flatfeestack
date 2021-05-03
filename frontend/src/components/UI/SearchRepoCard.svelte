@@ -22,9 +22,9 @@
 </style>
 
 <script lang="ts">
-  import type { Repo } from "../../types/user";
-  import { API } from "../../ts/api";
-  import { sponsoredRepos } from "../../ts/auth";
+  import type { Repo } from "./../../types/users";
+  import { API } from "./../../ts/api";
+  import { sponsoredRepos } from "./../../ts/store";
 
   export let repo: Repo;
   let star = false;
@@ -33,7 +33,7 @@
     try {
       star = true;
       const res = await API.repos.tag(repo);
-      $sponsoredRepos = [...$sponsoredRepos, res.data];
+      $sponsoredRepos = [...$sponsoredRepos, res];
     } catch (e) {
       star = false;
       console.log(e);

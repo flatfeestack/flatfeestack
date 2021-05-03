@@ -2,12 +2,11 @@
   import DashboardLayout from "./DashboardLayout.svelte";
   import RepoCard from "../../components/UI/RepoCard.svelte";
   import type { Repo } from "../../types/users";
-  import { API } from "ts/api";
+  import { API } from "./../../ts/api";
   import SearchRepoCard from "../../components/UI/SearchRepoCard.svelte";
   import Spinner from "../../components/Spinner.svelte";
   import { onMount } from "svelte";
-  import { sponsoredRepos } from "ts/auth";
-  import { user } from "ts/auth";
+  import { sponsoredRepos, user } from "./../../ts/store";
   import Dots from "../../components/Dots.svelte";
   import { links } from "svelte-routing";
 
@@ -41,7 +40,7 @@
     try {
       isSubmitting = true;
       const res = await API.repos.search(search);
-      response = res.data;
+      response = res;
       console.log(response);
     } catch (e) {
       console.log("could not fetch");
@@ -53,7 +52,7 @@
   onMount(async () => {
     try {
       const res = await API.user.getSponsored();
-      sponsoredRepos.set(res.data === null ? []:res.data);
+      sponsoredRepos.set(res === null ? []:res);
     } catch (e) {
       console.log(e);
     }

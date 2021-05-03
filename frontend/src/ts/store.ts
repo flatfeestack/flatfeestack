@@ -9,4 +9,3 @@ export const userBalances = writable<UserBalances>(<UserBalances>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
 export const route = writable("")
-

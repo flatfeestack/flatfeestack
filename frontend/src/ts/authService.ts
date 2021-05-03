@@ -1,36 +1,65 @@
-import { token, user, showSignin, userBalances, config } from "./auth";
+import { token, user, showSignin, userBalances, config } from "./store";
 import { API } from "./api";
-import { UserBalances, Users } from "../types/users";
-import { AxiosResponse } from "axios";
+import { Config, Token, UserBalances, Users } from "../types/users";
 import { get } from "svelte/store";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
-  const res = await API.auth.confirmReset(email, password, emailToken);
-  await storeToken(res);
+  const p1 = API.auth.confirmReset(email, password, emailToken);
+  const p2 = API.config.config();
+
+  const res = await p1;
+  const conf = await p2;
+  storeToken(res, conf);
 };
 
 export const confirmEmail = async(email: string, emailToken: string) => {
-  const res = await API.auth.confirmEmail(email, emailToken);
-  await storeToken(res);
+  const p1 = API.auth.confirmEmail(email, emailToken);
+  const p2 = API.config.config();
+
+  const res = await p1;
+  const conf = await p2;
+  storeToken(res, conf);
 };
 
 export const confirmInvite = async(email: string, password: string,
                                    emailToken: string, inviteEmail: string,
                                    inviteDate: string, inviteToken: string) => {
-  const res = await API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
-  await storeToken(res);
+  const p1 = API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
+  const p2 = API.config.config();
+
+  const res = await p1;
+  const conf = await p2;
+  storeToken(res, conf);
 }
 
 export const login = async (email: string, password: string) => {
-  const res = await API.auth.login(email, password);
-  await storeToken(res);
+  const p1 = API.auth.login(email, password);
+  const p2 = API.config.config();
+
+  const res = await p1;
+  const conf = await p2;
+  storeToken(res, conf);
   const u = await API.user.get();
-  user.set(u.data);
+  user.set(u);
 };
+
+export const refresh = async ():Promise<string> => {
+  const refresh = localStorage.getItem("ffs-refresh");
+  if (refresh === null) {
+    throw 'No refresh token not in local storage';
+  }
+  const p1 = API.auth.refresh(refresh);
+  const p2 = API.config.config();
+
+  const tok = await p1;
+  const conf = await p2;
+  storeToken(tok, conf);
+  return tok.access_token;
+}
 
 export const updateUser = async () => {
   const u = await API.user.get();
-  user.set(u.data);
+  user.set(u);
 }
 
 export const removeSession = async () => {
@@ -44,19 +73,10 @@ export const removeSession = async () => {
   }
 }
 
-export const refresh = async ():Promise<string> => {
-  const refresh = localStorage.getItem("ffs-refresh");
-  if (refresh === null) {
-    throw 'No refresh token not in local storage';
-  }
-  const res = await API.auth.refresh(refresh);
-  await storeToken(res);
-  return res.data.access_token;
-}
-
-const storeToken = async (res: AxiosResponse) => {
-  const t = res.data.access_token;
-  const r = res.data.refresh_token;
+const storeToken = (tok: Token, conf:Config) => {
+  config.set(conf);
+  const t = tok.access_token;
+  const r = tok.refresh_token;
   if (!t || !r) {
     showSignin.set(true);
     throw "No token in the request";
@@ -64,12 +84,9 @@ const storeToken = async (res: AxiosResponse) => {
   showSignin.set(false);
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
-
-  const c = await API.user.config();
-  config.set(c.data);
 }
 
-function connect():Promise<WebSocket> {
+const connect = ():Promise<WebSocket> => {
   return new Promise(function(resolve, reject) {
     const t = get(token);
     const c = get(config)
@@ -126,3 +143,5 @@ export const connectWs = async () => {
 
   return JSON.parse(jsonPayload);
 };*/
+
+

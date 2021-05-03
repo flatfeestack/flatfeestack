@@ -1,12 +1,9 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
-  "include": ["src/**/*", "src/node_modules/**/*"],
-  "exclude": ["node_modules/*", "__sapper__/*", "static/*"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules/*", "public/*"],
   "compilerOptions": {
     "importsNotUsedAsValues": "remove",
-    "baseUrl": ".",
-    "paths": {
-      "src": ["src"]
-    }
+    "allowSyntheticDefaultImports": true,
   }
 }

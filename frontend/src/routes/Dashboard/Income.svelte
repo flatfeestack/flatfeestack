@@ -3,11 +3,11 @@
 import DashboardLayout from "./DashboardLayout.svelte";
 import Fa from "svelte-fa";
 import { onMount } from "svelte";
-import { API } from "ts/api";
+import { API } from "./../../ts/api";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import Web3 from "../../components/Web3.svelte";
-import { user } from "ts/auth";
-import { GitUser } from "../../types/users.ts";
+import { user } from "./../../ts/store";
+import type { GitUser } from "../../types/users.ts";
 
 let address = "";
 let gitEmails: Array<GitUser> = [];
@@ -15,9 +15,9 @@ let newEmail = "";
 onMount(async () => {
   try {
     const response = await API.user.gitEmails();
-    if (response?.data && response.data.length > 0) {
-      console.log(response.data);
-      gitEmails = response.data;
+    if (response && response.length > 0) {
+      console.log(response);
+      gitEmails = response;
     }
   } catch (e) {
     console.log(e);

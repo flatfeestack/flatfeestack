@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { API } from "ts/api";
+  import { API } from "./../ts/api";
   import { onMount } from "svelte";
-  import { config, user, userBalances } from "ts/auth";
+  import { config, user, userBalances } from "./../ts/store";
   import { loadStripe } from "@stripe/stripe-js/pure";
 
   import Spinner from "./Spinner.svelte";
@@ -73,10 +73,10 @@
       error = "could not setup stripe";
       return;
     }
-    console.log(cs.data);
-    console.log(cs.data.client_secret);
+    console.log(cs);
+    console.log(cs.client_secret);
     stripe.confirmCardSetup(
-      cs.data.client_secret,
+      cs.client_secret,
       {payment_method: {card: cardElement}},
       {handleActions: false}
     ).then(async function(result) {
@@ -85,11 +85,11 @@
       } else {
         $user.payment_method = result.setupIntent.payment_method;
         const res = await API.user.updatePaymentMethod(result.setupIntent.payment_method);
-        if (!res.data) {
+        if (!res) {
           console.log("could not verify in email");
           return;
         }
-        $user = res.data;
+        $user = res;
         console.log("OOKKK" + $user.payment_method);
       }
     });
@@ -123,7 +123,7 @@
       }
       const res = await API.user.stripePayment(plans[selectedPlan].freq, seats);
 
-      stripe.confirmCardPayment(res.data.client_secret, {
+      stripe.confirmCardPayment(res.client_secret, {
         payment_method: $user.payment_method
       }).then(function(result) {
         if (result.error) {
