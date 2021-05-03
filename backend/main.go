@@ -226,7 +226,7 @@ func main() {
 	apiRouter.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods("POST")
 	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods("GET")
 
-	apiRouter.HandleFunc("/config", jwtAuthUser(config)).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/config", config).Methods(http.MethodGet)
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {

@@ -634,7 +634,7 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	}
 }
 
-func config(w http.ResponseWriter, _ *http.Request, _ *User) {
+func config(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write([]byte(`{"stripePublicApi":"` + opts.StripeAPIPublicKey + `", "wsBaseUrl":"` + opts.WebSocketBaseUrl + `"}`))
 	if err != nil {

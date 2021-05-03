@@ -372,6 +372,7 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, error) 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	Subprotocols:    []string{"access_token"},
 }
 
 var clients = make(map[uuid.UUID]*websocket.Conn)
@@ -398,8 +399,6 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	})
 
 	sendToBrowser(user.Id, user.PaymentCycleId)
-	w.Header().Set("Sec-WebSocket-Protocol", "access_token")
-	w.WriteHeader(http.StatusOK)
 }
 
 type UserBalances struct {
