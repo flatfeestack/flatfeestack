@@ -1,7 +1,7 @@
-beta.flatfeestack.io:443, beta.flatfeestack.io:80
+test.flatfeestack.io:443
 encode gzip
 
-tls devops@flatfeestack.io
+tls info@flatfeestack.io
 
 route /auth/* {
     uri strip_prefix /auth

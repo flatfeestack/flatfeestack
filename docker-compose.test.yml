@@ -13,7 +13,7 @@ services:
     ports:
       - 9081:9081
     env_file:
-      - .beta.fastauth.env
+      - .test.fastauth.env
     depends_on:
       db:
         condition: service_healthy
@@ -25,7 +25,7 @@ services:
     ports:
       - 9082:9082
     env_file:
-      - .beta.backend.env
+      - .test.backend.env
     depends_on:
       db:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
     ports:
       - 9083:9083
     env_file:
-      - .beta.analysis-engine.env
+      - .test.analysis-engine.env
 
   payout:
     container_name: flatfeestack-payout
@@ -46,7 +46,7 @@ services:
     ports:
       - 9084:9084
     env_file:
-      - .beta.payout.env
+      - .test.payout.env
 
   frontend:
     container_name: flatfeestack-frontend
@@ -86,7 +86,7 @@ services:
     container_name: flatfeestack-caddy
     image: caddy:2-alpine
     volumes:
-      - ./Caddyfile.beta:/etc/caddy/Caddyfile
+      - ./Caddyfile.test:/etc/caddy/Caddyfile
       - ${CADDY_DATA_LOCAL_DIR}:/data
     ports:
       - 80:80
