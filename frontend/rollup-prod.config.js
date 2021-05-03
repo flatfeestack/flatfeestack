@@ -4,12 +4,14 @@ import sveltePreprocess from 'svelte-preprocess';
 import typescript from 'rollup-plugin-typescript2';
 import css from 'rollup-plugin-css-only';
 import commonjs from '@rollup/plugin-commonjs';
-import serve from 'rollup-plugin-serve'
+import { terser } from "rollup-plugin-terser";
+import license from 'rollup-plugin-license';
+import brotli from "rollup-plugin-brotli";
+import gzipPlugin from 'rollup-plugin-gzip'
 
 module.exports = {
   input: './src/main.ts',
   output: {
-    name: 'ffs',
     format: 'iife',
     file: 'public/build/bundle.js',
     sourcemap: false
@@ -20,6 +22,9 @@ module.exports = {
     typescript({ sourceMap: false,}),
     css({ output: 'bundle.css' }),
     commonjs(),
-    serve({contentBase:'public', port:9085, host: '0.0.0.0'})
+    terser({format: {comments: false}}),
+    license({thirdParty: {output: 'public/dependencies.txt' }}),
+    brotli(),
+    gzipPlugin()
   ]
 }
