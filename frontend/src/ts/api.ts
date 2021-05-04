@@ -10,12 +10,13 @@ async function addToken(request: Request) {
   if (t) {
     request.headers.set('Authorization', "Bearer " + t);
   } else {
-    const t = await refresh()
-    if (t) {
-      request.headers.set('Authorization', "Bearer " + t);
-    } else {
-      throw "could not set access token";
-    }
+      const t = await refresh()
+      if (t) {
+        request.headers.set('Retry', "true");
+        request.headers.set('Authorization', "Bearer " + t);
+      } else {
+        throw "could not set access token";
+      }
   }
 }
 

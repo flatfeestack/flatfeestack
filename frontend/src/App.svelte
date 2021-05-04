@@ -25,9 +25,9 @@
   export let url;
 
   let pathname = window.location.pathname;
-  onMount(() => {
+  onMount(async () => {
     try {
-      updateUser()
+      await updateUser()
     } catch (e) {
       $showSignin = true;
     }

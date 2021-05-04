@@ -12,14 +12,14 @@ module.exports = {
     name: 'ffs',
     format: 'iife',
     file: 'public/build/bundle.js',
-    sourcemap: false
+    sourcemap: true
   },
   plugins: [
-    svelte({ emitCss: false, preprocess: sveltePreprocess(), include: ['src/**/*.svelte', 'node_modules/svelte-*/src/**/*.svelte'],}),
+    svelte({ emitCss: false, preprocess: sveltePreprocess()}),
     resolve({ browser: true, dedupe: ['svelte'], extensions: ['.ts', '.js'] }),
-    typescript({ sourceMap: false,}),
+    typescript({ sourceMap: true,}),
     css({ output: 'bundle.css' }),
     commonjs(),
-    serve({contentBase:'public', port:9085, host: '0.0.0.0'})
+    serve({contentBase:'public', port:9085, host: '0.0.0.0', historyApiFallback: true})
   ]
 }
