@@ -20,7 +20,7 @@ export default [{
     }
   },
   plugins: [
-    svelte({ emitCss: false, preprocess: sveltePreprocess()}),
+    svelte({ emitCss: false, preprocess: sveltePreprocess(), compilerOptions: { hydratable: true }}),
     resolve({ browser: true, dedupe: ['svelte'], extensions: ['.ts', '.js'] }),
     typescript({ sourceMap: false,}),
     css({ output: 'bundle.css' }),
@@ -40,7 +40,7 @@ export default [{
       sourcemap: true
     },
     plugins: [
-      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { immutable: true, generate: "ssr" } }),
+      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
       resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
       typescript({ sourceMap: true }),
       css({ output: "ssr.css" }),
