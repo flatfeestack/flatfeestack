@@ -2,8 +2,18 @@ import ky, { NormalizedOptions } from "ky";
 import { config, token } from "./store";
 import { get } from "svelte/store";
 import { refresh } from "./authService";
-import type { ClientSecret, Config, Invitation, Repo, Token, Users } from "../types/users";
-import { GitUser } from "../types/users";
+import type {
+  ClientSecret,
+  Config,
+  Invitation,
+  Repo,
+  Token,
+  Users,
+  Time,
+  UserAggBalance,
+  GitUser,
+  RepoMapping
+} from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -110,9 +120,11 @@ export const API = {
     keywords: (keywords: string) => search.get(`search/${keywords}`),
   },
   payouts: {
-    pending: (type: string) => backendToken.post(`admin/pending-payout/${type}`),
-    time: () => backendToken.get(`admin/time`),
-    fakeUser: () => backendToken.post(`admin/fake-user`),
+    pending: (type: string) => backendToken.post(`admin/pending-payout/${type}`).json<UserAggBalance[]>(),
+    time: () => backendToken.get(`admin/time`).json<Time>(),
+    fakeUser: (email: string) => backendToken.post(`admin/fake/user/${email}`),
+    fakePayment: (email: string, seats: number) => backendToken.post(`admin/fake/payment/${email}/${seats}`),
+    fakeContribution: (repo: RepoMapping) => backendToken.post(`admin/fake/contribution`, {json: repo}),
     payout: (exchangeRate: number) => backendToken.post(`admin/payout/${exchangeRate}`),
   },
   config: {

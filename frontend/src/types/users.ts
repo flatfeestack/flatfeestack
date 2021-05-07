@@ -1,3 +1,5 @@
+import { string_literal } from "svelte/types/compiler/compile/utils/stringify";
+
 export type Users = {
   id: string;
   payment_method: string;
@@ -24,9 +26,9 @@ export type ClientSecret = {
 }
 
 export type UserBalances = {
-  paymentCycle: PaymentCycle
-  userBalances: UserBalance[]
-  total: number
+  paymentCycle: PaymentCycle;
+  userBalances: UserBalance[];
+  total: number;
 }
 
 export type UserBalance = {
@@ -74,3 +76,26 @@ export type Invitation = {
   pending: boolean;
   createdAt: string;
 };
+
+export type Time = {
+  time: string;
+}
+
+export type UserAggBalance = {
+  payout_eth: string;
+  balance: number;
+  email_list: string[];
+  daily_user_payout_id_list: string[];
+}
+
+export type RepoMapping = {
+  startDate: string;
+  endDate: string;
+  name: string;
+  weights: FlatFeeWeight;
+}
+
+export type FlatFeeWeight = {
+  email: string;
+  weight: number;
+}

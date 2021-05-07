@@ -2,9 +2,9 @@
   "name": "flatfeestack",
   "version": "1.0.0",
   "scripts": {
-    "prod": "rm -f public/build/* && rm -f public/server/* && rollup -c rollup-prod.config.js && node ssr.js",
-    "dev": "rm -f public/build/* && rm -f public/server/* && rollup -c rollup.config.js && node ssr.js",
-    "serve": "npx browser-sync start --ss public --server --single --host 0.0.0.0 --port 9085"
+    "prod": "rm -f public/build/* public/server/* && rollup -c rollup-prod.config.js && node ssr.js",
+    "dev": "rm -f public/build/* public/server/* && rollup -c rollup.config.js -w",
+    "serve": "node ssr.js && npx browser-sync start --ss public --server --single --host 0.0.0.0 --port 9085"
   },
   "devDependencies": {
     "@fortawesome/free-brands-svg-icons": "^5.15.2",
