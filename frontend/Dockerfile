@@ -1,8 +1,7 @@
 FROM node:15 AS base
 WORKDIR /app
-COPY package.json webpack.config.js tsconfig.json ./
+COPY package.json webpack.config.js tsconfig.json rollup-prod.config.js ssr.js ./
 COPY ./public/assets ./public/assets
-COPY ./public/index.html ./public/
 RUN npm install
 
 FROM base as builder
