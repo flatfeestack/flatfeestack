@@ -3,8 +3,8 @@ name: build-and-push
 on:
   workflow_dispatch:
     inputs:
-      push:
-        description: 'Push Images?'
+      deploy:
+        description: 'Deploy?'
         default: 'false'
 
 jobs:
@@ -26,5 +26,13 @@ jobs:
       - name: Build Images
         run: docker-compose build
       - name: Push Images
-        if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/master') && github.event.inputs.push == 'true'
+        if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true'
         run: docker-compose push
+      - name: Deploy
+        uses: garygrossgarten/github-action-ssh@release
+        if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true'
+        with:
+          command: sh docker_login.sh && cd flatfeestack && docker-compose -f docker-compose.test.yml pull && docker-compose -f docker-compose.test.yml --env-file .test.env up -d
+          host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
+          username: ubuntu
+          privateKey: ${{ secrets.FLATFEESTACK1_NODE_PRIVATE_KEY}}
