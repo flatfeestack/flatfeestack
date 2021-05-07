@@ -902,7 +902,7 @@ func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now t
                     AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
                 AS req ON res.analysis_request_id = req.id
 			JOIN git_email g ON g.email = res.git_email
-		WHERE g.token == NULL
+		WHERE g.token IS NULL
         GROUP BY req.repo_id`)
 
 	if err != nil {
@@ -932,7 +932,7 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
             JOIN git_email g ON g.email = res.git_email
             JOIN daily_repo_weight drw ON drw.repo_id = req.repo_id
             JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
-        WHERE drw.day = $1 AND drb.day = $1 AND g.token == NULL
+        WHERE drw.day = $1 AND drb.day = $1 AND g.token IS NULL
 		GROUP BY g.user_id`)
 
 	if err != nil {
