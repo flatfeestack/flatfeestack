@@ -9,7 +9,7 @@ import license from 'rollup-plugin-license';
 import brotli from "rollup-plugin-brotli";
 import gzipPlugin from 'rollup-plugin-gzip'
 
-module.exports = {
+export default [{
   input: './src/main.ts',
   output: {
     format: 'esm',
@@ -30,4 +30,20 @@ module.exports = {
     brotli(),
     gzipPlugin()
   ]
-}
+},
+  {
+    input: "./src/App.svelte",
+    output: {
+      name: "app",
+      format: "umd",
+      file: "public/server/ssr.js",
+      sourcemap: true
+    },
+    plugins: [
+      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { immutable: true, generate: "ssr" } }),
+      resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
+      typescript({ sourceMap: true }),
+      css({ output: "ssr.css" }),
+      commonjs()
+    ]
+  }]

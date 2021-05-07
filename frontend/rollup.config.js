@@ -4,7 +4,6 @@ import sveltePreprocess from "svelte-preprocess";
 import typescript from "rollup-plugin-typescript2";
 import css from "rollup-plugin-css-only";
 import commonjs from "@rollup/plugin-commonjs";
-import serve from "rollup-plugin-serve";
 
 export default [{
   input: "./src/main.ts",
