@@ -233,7 +233,9 @@ func main() {
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
-		apiRouter.HandleFunc("/admin/fake-user", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(fakePayment, admins)).Methods("POST")
+		apiRouter.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(fakeContribution, admins)).Methods("POST")
 		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods("POST")
 	}
 

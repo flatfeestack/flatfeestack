@@ -6,7 +6,6 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
-	"github.com/Pallinder/go-randomdata"
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -50,6 +49,13 @@ type WebhookCallback struct {
 	Success   bool            `json:"success"`
 	Error     string          `json:"error"`
 	Result    []FlatFeeWeight `json:"result"`
+}
+
+type RepoMapping struct {
+	StartData string          `json:"startDate"`
+	EndData   string          `json:"endDate"`
+	Name      string          `json:"name"`
+	Weights   []FlatFeeWeight `json:"weights"`
 }
 
 type FlatFeeWeight struct {
@@ -143,7 +149,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
-	err = insertGitEmail(uuid.New(), user.Id, body.Email, addGitEmailToken, timeNow())
+	err = insertGitEmail(user.Id, body.Email, &addGitEmailToken, timeNow())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not save email: %v", err)
 		return
@@ -541,6 +547,7 @@ type PayoutToService struct {
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {
+	log.Printf("papout")
 	userAggBalances, err := getDailyPayouts("pending")
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
@@ -648,128 +655,104 @@ func config(w http.ResponseWriter, _ *http.Request) {
 }
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
-	repo := randomdata.SillyName()
-	uid1, rid1, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey1)
+	log.Printf("fake user")
+	m := mux.Vars(r)
+	n := m["email"]
+
+	uid := uuid.New()
+
+	u := User{
+		Email:     stringPointer(n),
+		Id:        uid,
+		PayoutETH: stringPointer(fakePubKey1),
+		CreatedAt: timeNow(),
+	}
+
+	err := insertUser(&u, "A")
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data1: %v", err)
+		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 
-	repo = randomdata.SillyName()
-	uid2, rid2, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey2)
+	err = insertGitEmail(uid, n, nil, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
-		return
-	}
-
-	repo = randomdata.SillyName()
-	uid3, _, err := fakeRepoUser("tom."+randomdata.SillyName()+"@bocek.ch", repo, repo, fakePubKey2)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data3: %v", err)
-		return
-	}
-
-	err = fakePayment(uid1, mUSDPerDay*90)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create fake payment 1: %v", err)
-		return
-	}
-	err = fakePayment(uid2, mUSDPerDay*90)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create fake payment 2: %v", err)
-		return
-	}
-	err = fakePayment(uid3, mUSDPerDay*90)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create fake payment 3: %v", err)
-		return
-	}
-
-	s1 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       *uid1,
-		RepoId:    *rid1,
-		EventType: Active,
-		SponsorAt: timeNow(),
-	}
-	err1, err2 := insertOrUpdateSponsor(&s1)
-	if err1 != nil || err2 != nil {
-		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
-		return
-	}
-
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         *uid1,
-		RepoId:      *rid1,
-		EventType:   Inactive,
-		UnsponsorAt: timeNow().Add(time.Duration(24) * time.Hour),
-	}
-	err1, err2 = insertOrUpdateSponsor(&s2)
-	if err1 != nil || err2 != nil {
-		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
-		return
-	}
-
-	s3 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       *uid2,
-		RepoId:    *rid2,
-		EventType: Active,
-		SponsorAt: timeNow(),
-	}
-	err1, err2 = insertOrUpdateSponsor(&s3)
-	if err1 != nil || err2 != nil {
-		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
-		return
-	}
-
-	s4 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       *uid1,
-		RepoId:    *rid2,
-		EventType: Active,
-		SponsorAt: timeNow(),
-	}
-	err1, err2 = insertOrUpdateSponsor(&s4)
-	if err1 != nil || err2 != nil {
-		writeErr(w, http.StatusBadRequest, "Could create sponsor1: %v, %v", err1, err2)
-		return
-	}
-
-	//fake contribution
-	err = insertGitEmail(uuid.New(), *uid1, "tom@tom.tom", "A", timeNow())
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
-		return
-	}
-	err = insertGitEmail(uuid.New(), *uid2, "sam@sam.sam", "B", timeNow())
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
-		return
-	}
-
-	repoMap := map[uuid.UUID][]FlatFeeWeight{}
-	repoMap[*rid1] = []FlatFeeWeight{{Email: "tom@tom.tom", Weight: 0.5}}
-	repoMap[*rid2] = []FlatFeeWeight{{Email: "sam@sam.sam", Weight: 0.6},
-		{Email: "max@max.max", Weight: 0.1}}
-	err = fakeContribution(repoMap)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could create random data2: %v", err)
+		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 }
 
-func fakePayment(uid1 *uuid.UUID, amount int64) error {
-	paymentCycleId, err := insertNewPaymentCycle(*uid1, 90, 1, 90, timeNow())
+func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
+	var repoMap RepoMapping
+	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
-		return err
+		writeErr(w, http.StatusBadRequest, "Could not decode fakeContribution body: %v", err)
+		return
+	}
+
+	monthStart, err := time.Parse("2006-01-02 15:04", repoMap.StartData)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+	monthStop, err := time.Parse("2006-01-02 15:04", repoMap.EndData)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	repo, err := findRepoByName(repoMap.Name)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	aid := uuid.New()
+	err = insertAnalysisRequest(aid, repo.Id, monthStart, monthStop, "master", timeNow())
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	for _, v := range repoMap.Weights {
+
+		err = insertAnalysisResponse(aid, &v, timeNow())
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+			return
+		}
+
+	}
+	return
+}
+
+func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
+	log.Printf("fake payment")
+	m := mux.Vars(r)
+	n := m["email"]
+	s := m["seats"]
+
+	u, err := findUserByEmail(n)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	seats, err := strconv.Atoi(s)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
+	}
+
+	paymentCycleId, err := insertNewPaymentCycle(u.Id, 90, seats, 90, timeNow())
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
 	}
 
 	ubNew := UserBalance{
 		PaymentCycleId: *paymentCycleId,
-		UserId:         *uid1,
-		Balance:        amount,
+		UserId:         u.Id,
+		Balance:        2970,
 		Day:            timeNow(),
 		BalanceType:    "PAY",
 		CreatedAt:      timeNow(),
@@ -777,66 +760,16 @@ func fakePayment(uid1 *uuid.UUID, amount int64) error {
 
 	err = insertUserBalance(ubNew)
 	if err != nil {
-		return err
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
 	}
 
-	err = updatePaymentCycleId(*uid1, paymentCycleId)
+	err = updatePaymentCycleId(u.Id, paymentCycleId)
 	if err != nil {
-		return err
+		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		return
 	}
-	return nil
-}
-
-func fakeContribution(repoMap map[uuid.UUID][]FlatFeeWeight) error {
-	monthStart := timeNow().AddDate(0, -1, 0) //$2
-	monthStop := monthStart.AddDate(0, 1, 0)  //$1
-
-	for k, v := range repoMap {
-		aid := uuid.New()
-		err := insertAnalysisRequest(aid, k, monthStart, monthStop, "master", timeNow())
-		if err != nil {
-			return err
-		}
-		for _, v2 := range v {
-			err = insertAnalysisResponse(aid, &v2, timeNow())
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func fakeRepoUser(email string, repoUrl string, repoName string, payoutEth string) (*uuid.UUID, *uuid.UUID, error) {
-
-	u := User{
-		Email:     stringPointer(email),
-		Id:        uuid.New(),
-		PayoutETH: &payoutEth,
-		CreatedAt: timeNow(),
-	}
-
-	r := Repo{
-		Id:          uuid.New(),
-		OrigId:      0,
-		Url:         stringPointer(repoUrl),
-		Name:        stringPointer(repoName),
-		Description: stringPointer("desc"),
-		GitUrl:      stringPointer("git-url" + randomdata.SillyName()),
-		Branch:      stringPointer("branch"),
-		Source:      stringPointer("gitlab"),
-		CreatedAt:   timeNow(),
-	}
-	err := insertUser(&u, "A")
-	if err != nil {
-		return nil, nil, err
-	}
-	id, err := insertOrUpdateRepo(&r)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &u.Id, id, nil
+	return
 }
 
 func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {

@@ -403,6 +403,29 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	}
 }
 
+func findRepoByName(name string) (*Repo, error) {
+	var r Repo
+	var b []byte
+	err := db.
+		QueryRow("SELECT id, orig_id, url, git_url, branch, name, description, tags FROM repo WHERE name=$1", name).
+		Scan(&r.Id, &r.OrigId, &r.Url, &r.GitUrl, &r.Branch, &r.Name, &r.Description, &b)
+
+	d := gob.NewDecoder(bytes.NewReader(b))
+	err = d.Decode(&r.Tags)
+	if err != nil {
+		return nil, err
+	}
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &r, nil
+	default:
+		return nil, err
+	}
+}
+
 //*********************************************************************************
 //*******************************  Connected emails *******************************
 //*********************************************************************************
@@ -426,15 +449,15 @@ func findGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	return gitEmails, nil
 }
 
-func insertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token string, now time.Time) error {
-	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
+func insertGitEmail(uid uuid.UUID, email string, token *string, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO git_email(user_id, email, token, created_at) VALUES($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(id, uid, email, token, now)
+	res, err = stmt.Exec(uid, email, token, now)
 	if err != nil {
 		return err
 	}
@@ -879,7 +902,8 @@ func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now t
                     AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
                 AS req ON res.analysis_request_id = req.id
 			JOIN git_email g ON g.email = res.git_email
-		GROUP BY req.repo_id`)
+		WHERE g.token == NULL
+        GROUP BY req.repo_id`)
 
 	if err != nil {
 		return 0, err
@@ -908,7 +932,7 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
             JOIN git_email g ON g.email = res.git_email
             JOIN daily_repo_weight drw ON drw.repo_id = req.repo_id
             JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
-        WHERE drw.day = $1 AND drb.day = $1
+        WHERE drw.day = $1 AND drb.day = $1 AND g.token == NULL
 		GROUP BY g.user_id`)
 
 	if err != nil {

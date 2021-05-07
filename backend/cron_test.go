@@ -125,8 +125,7 @@ func TestDailyRunner3(t *testing.T) {
 }
 
 func setupGitEmail(t *testing.T, user uuid.UUID, email string, now time.Time) {
-	id := uuid.New()
-	err := insertGitEmail(id, user, email, "A", now)
+	err := insertGitEmail(user, email, nil, now)
 	assert.Nil(t, err)
 }
 
