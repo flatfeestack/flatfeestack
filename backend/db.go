@@ -359,7 +359,7 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, git_url, branch, name, description, tags, score, source, created_at) 
 									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-									ON CONFLICT(url) DO UPDATE SET name=$4, description=$5 RETURNING id`)
+									ON CONFLICT(url) DO UPDATE SET name=$6, description=$7 RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
