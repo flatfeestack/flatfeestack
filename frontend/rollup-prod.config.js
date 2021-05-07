@@ -12,12 +12,15 @@ import gzipPlugin from 'rollup-plugin-gzip'
 module.exports = {
   input: './src/main.ts',
   output: {
-    format: 'iife',
-    file: 'public/build/bundle.js',
-    sourcemap: false
+    format: 'esm',
+    dir: 'public/build',
+    sourcemap: false,
+    manualChunks: {
+      deps: ['ethers', 'ky', 'svelte-routing', '@stripe/stripe-js'],
+    }
   },
   plugins: [
-    svelte({ emitCss: false, preprocess: sveltePreprocess(), include: ['src/**/*.svelte', 'node_modules/svelte-*/src/**/*.svelte'],}),
+    svelte({ emitCss: false, preprocess: sveltePreprocess()}),
     resolve({ browser: true, dedupe: ['svelte'], extensions: ['.ts', '.js'] }),
     typescript({ sourceMap: false,}),
     css({ output: 'bundle.css' }),

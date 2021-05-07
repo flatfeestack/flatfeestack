@@ -7,7 +7,7 @@ RUN npm install
 
 FROM base as builder
 COPY ./src ./src
-RUN npm run build
+RUN npm run prod
 
 FROM caddy:2
 COPY Caddyfile /etc/caddy/Caddyfile

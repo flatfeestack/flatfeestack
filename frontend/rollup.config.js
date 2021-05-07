@@ -1,25 +1,43 @@
-import svelte from 'rollup-plugin-svelte';
-import resolve from '@rollup/plugin-node-resolve';
-import sveltePreprocess from 'svelte-preprocess';
-import typescript from 'rollup-plugin-typescript2';
-import css from 'rollup-plugin-css-only';
-import commonjs from '@rollup/plugin-commonjs';
-import serve from 'rollup-plugin-serve'
+import svelte from "rollup-plugin-svelte";
+import resolve from "@rollup/plugin-node-resolve";
+import sveltePreprocess from "svelte-preprocess";
+import typescript from "rollup-plugin-typescript2";
+import css from "rollup-plugin-css-only";
+import commonjs from "@rollup/plugin-commonjs";
+import serve from "rollup-plugin-serve";
 
-module.exports = {
-  input: './src/main.ts',
+export default [{
+  input: "./src/main.ts",
   output: {
-    name: 'ffs',
-    format: 'iife',
-    file: 'public/build/bundle.js',
-    sourcemap: true
+    format: "esm",
+    dir: "public/build",
+    sourcemap: true,
+    manualChunks: {
+      deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js"]
+    }
   },
   plugins: [
-    svelte({ emitCss: false, preprocess: sveltePreprocess()}),
-    resolve({ browser: true, dedupe: ['svelte'], extensions: ['.ts', '.js'] }),
-    typescript({ sourceMap: true,}),
-    css({ output: 'bundle.css' }),
+    svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { immutable: true, hydratable: true } }),
+    resolve({ browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
+    typescript({ sourceMap: true }),
+    css({ output: "bundle.css" }),
     commonjs(),
-    serve({contentBase:'public', port:9085, host: '0.0.0.0', historyApiFallback: true})
   ]
-}
+},
+  {
+    input: "./src/App.svelte",
+    output: {
+      name: "app",
+      format: "umd",
+      file: "public/server/ssr.js",
+      sourcemap: true
+    },
+    plugins: [
+      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { immutable: true, generate: "ssr" } }),
+      resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
+      typescript({ sourceMap: true }),
+      css({ output: "ssr.css" }),
+      commonjs()
+    ]
+  }
+];

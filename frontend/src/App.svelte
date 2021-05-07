@@ -24,7 +24,10 @@
 
   export let url;
 
-  let pathname = window.location.pathname;
+  let pathname="/";
+  if (typeof window !== "undefined") {
+    pathname = window.location.pathname;
+  }
   onMount(async () => {
     try {
       await updateUser()
