@@ -32,7 +32,7 @@ jobs:
         uses: garygrossgarten/github-action-ssh@release
         if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true'
         with:
-          command: sh docker_login.sh && cd flatfeestack && docker-compose -f docker-compose.test.yml --env-file .test.env up -d
+          command: sh docker_login.sh && cd flatfeestack && docker-compose -f docker-compose.test.yml pull && docker-compose -f docker-compose.test.yml --env-file .test.env up -d
           host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
           username: ubuntu
           privateKey: ${{ secrets.FLATFEESTACK1_NODE_PRIVATE_KEY}}
