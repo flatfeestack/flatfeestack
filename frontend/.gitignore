@@ -1,5 +1,8 @@
-/node_modules/
-/public/build/
+/node_modules
+/public/build
+/public/server
+/public/dependencies.txt
+/public/index.html
 /.vscode
 
 .DS_Store
