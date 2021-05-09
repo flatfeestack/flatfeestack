@@ -21,3 +21,4 @@ const htmlEnd = `</body>
 </html>`;
 
 fs.writeFileSync('public/index.html', htmlStart+html+htmlEnd);
+console.log("created index.html")

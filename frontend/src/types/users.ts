@@ -1,5 +1,3 @@
-import { string_literal } from "svelte/types/compiler/compile/utils/stringify";
-
 export type Users = {
   id: string;
   payment_method: string;

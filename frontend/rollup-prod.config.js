@@ -1,32 +1,34 @@
-import svelte from 'rollup-plugin-svelte';
-import resolve from '@rollup/plugin-node-resolve';
-import sveltePreprocess from 'svelte-preprocess';
-import typescript from 'rollup-plugin-typescript2';
-import css from 'rollup-plugin-css-only';
-import commonjs from '@rollup/plugin-commonjs';
+import svelte from "rollup-plugin-svelte";
+import resolve from "@rollup/plugin-node-resolve";
+import sveltePreprocess from "svelte-preprocess";
+import typescript from "rollup-plugin-typescript2";
+import css from "rollup-plugin-css-only";
+import commonjs from "@rollup/plugin-commonjs";
+import execute from "rollup-plugin-execute";
+
 import { terser } from "rollup-plugin-terser";
-import license from 'rollup-plugin-license';
+import license from "rollup-plugin-license";
 import brotli from "rollup-plugin-brotli";
-import gzipPlugin from 'rollup-plugin-gzip'
+import gzipPlugin from "rollup-plugin-gzip";
 
 export default [{
-  input: './src/main.ts',
+  input: "./src/main.ts",
   output: {
-    format: 'esm',
-    dir: 'public/build',
+    format: "esm",
+    dir: "public/build",
     sourcemap: false,
     manualChunks: {
-      deps: ['ethers', 'ky', 'svelte-routing', '@stripe/stripe-js'],
+      deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js"]
     }
   },
   plugins: [
-    svelte({ emitCss: false, preprocess: sveltePreprocess(), compilerOptions: { hydratable: true }}),
-    resolve({ browser: true, dedupe: ['svelte'], extensions: ['.ts', '.js'] }),
-    typescript({ sourceMap: false,}),
-    css({ output: 'bundle.css' }),
+    svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { hydratable: true } }),
+    resolve({ browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
+    typescript({ sourceMap: false }),
+    css({ output: "bundle.css" }),
     commonjs(),
-    terser({format: {comments: false}}),
-    license({thirdParty: {output: 'public/dependencies.txt' }}),
+    terser({ format: { comments: false } }),
+    license({ thirdParty: { output: "public/dependencies.txt" } }),
     brotli(),
     gzipPlugin()
   ]
@@ -40,10 +42,11 @@ export default [{
       sourcemap: true
     },
     plugins: [
-      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
+      svelte({ emitCss: false, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
       resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
       typescript({ sourceMap: true }),
-      css({ output: "ssr.css" }),
-      commonjs()
+      commonjs(),
+      execute("node ssr.js"),
     ]
-  }]
+  }
+];

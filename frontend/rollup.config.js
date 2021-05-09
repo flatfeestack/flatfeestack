@@ -4,6 +4,9 @@ import sveltePreprocess from "svelte-preprocess";
 import typescript from "rollup-plugin-typescript2";
 import css from "rollup-plugin-css-only";
 import commonjs from "@rollup/plugin-commonjs";
+import execute from "rollup-plugin-execute";
+
+import serve from "rollup-plugin-serve";
 
 export default [{
   input: "./src/main.ts",
@@ -32,11 +35,12 @@ export default [{
       sourcemap: true
     },
     plugins: [
-      svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
+      svelte({ emitCss: false, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
       resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
       typescript({ sourceMap: true }),
-      css({ output: "ssr.css" }),
-      commonjs()
+      commonjs(),
+      execute("node ssr.js"),
+      serve({ contentBase: "public", port: 9085, host: "0.0.0.0", historyApiFallback: true })
     ]
   }
 ];
