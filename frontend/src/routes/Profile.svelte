@@ -1,15 +1,15 @@
 <script lang="ts">
-  import DashboardLayout from "./DashboardLayout.svelte";
-  import Payment from "../../components/Payment.svelte";
-  import { user, userBalances } from "./../../ts/store";
+  import Navigation from "../components/Navigation.svelte";
+  import Payment from "../components/Payment.svelte";
+  import { user, userBalances } from "../ts/store";
   import Fa from "svelte-fa";
-  import { API } from "./../../ts/api";
+  import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type { Invitation } from "src/types/users.ts";
   import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
-  import type { Repo } from "types/users";
+  import type { Repo } from "src/types/users";
   import { links } from "svelte-routing";
-  import { connectWs } from "./../../ts/authService";
+  import { connectWs } from "../ts/services";
 
   let checked = $user.role != "ORG";
   let nameOrig = $user.name;
@@ -161,7 +161,7 @@
 {#if error}
   <div class="bg-red-500 text-white p-3 my-5">{error}</div>
 {/if}
-<DashboardLayout>
+<Navigation>
   <h1 class="px-2">Profile</h1>
 
   <div class="container">
@@ -223,7 +223,7 @@
         {/if}
       {:else}
         <div class="bg-green rounded p-2 my-4" use:links>
-          <p>You are not supporting any projects yet. Please go to the <a href="/dashboard/sponsoring">Find Repos</a>
+          <p>You are not supporting any projects yet. Please go to the <a href="/dashboard/search">Find Repos</a>
             section
             where you can add your favorite projects.</p>
         </div>
@@ -293,4 +293,4 @@
     </table>
   </div>
 
-</DashboardLayout>
+</Navigation>

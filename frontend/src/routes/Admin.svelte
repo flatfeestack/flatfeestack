@@ -1,7 +1,7 @@
 <script lang="ts">
-import DashboardLayout from "./DashboardLayout.svelte";
-import { API } from "./../../ts/api";
-import Spinner from "../../components/Spinner.svelte";
+import Navigation from "../components/Navigation.svelte";
+import { API } from "../ts/api";
+import Spinner from "../components/Spinner.svelte";
 
 let promisePendingPayouts =API.payouts.pending("pending");
 let promisePaidPayouts = API.payouts.pending("paid");
@@ -76,7 +76,7 @@ const refresh = async () => {
 </style>
 
 
-<DashboardLayout>
+<Navigation>
   <h1 class="px-2">Admin</h1>
   <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleWarp(1)}>
     Timewarp 1 hour
@@ -211,4 +211,4 @@ const refresh = async () => {
   </button>
   Exchange Rate: <input bind:value={exchangeRate}>
 
-</DashboardLayout>
+</Navigation>

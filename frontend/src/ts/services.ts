@@ -1,6 +1,6 @@
-import { token, user, showSignin, userBalances, config } from "./store";
+import { token, user, loginFailed, userBalances, config } from "./store";
 import { API } from "./api";
-import { Config, Token, UserBalances, Users } from "../types/users";
+import { Config, Token, Users } from "../types/users";
 import { get } from "svelte/store";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
@@ -8,8 +8,13 @@ export const confirmReset = async(email: string, password: string, emailToken: s
   const p2 = API.config.config();
 
   const res = await p1;
+  const p3 = API.user.get();
+
   const conf = await p2;
   storeToken(res, conf);
+
+  const u = await p3;
+  user.set(u);
 };
 
 export const confirmEmail = async(email: string, emailToken: string) => {
@@ -17,8 +22,13 @@ export const confirmEmail = async(email: string, emailToken: string) => {
   const p2 = API.config.config();
 
   const res = await p1;
+  const p3 = API.user.get();
+
   const conf = await p2;
   storeToken(res, conf);
+
+  const u = await p3;
+  user.set(u);
 };
 
 export const confirmInvite = async(email: string, password: string,
@@ -28,8 +38,13 @@ export const confirmInvite = async(email: string, password: string,
   const p2 = API.config.config();
 
   const res = await p1;
+  const p3 = API.user.get();
+
   const conf = await p2;
   storeToken(res, conf);
+
+  const u = await p3;
+  user.set(u);
 }
 
 export const login = async (email: string, password: string) => {
@@ -57,11 +72,6 @@ export const refresh = async ():Promise<string> => {
   return tok.access_token;
 }
 
-export const updateUser = async () => {
-  const u = await API.user.get();
-  user.set(u);
-}
-
 export const removeSession = async () => {
   try {
     await API.authToken.logout();
@@ -69,7 +79,7 @@ export const removeSession = async () => {
     localStorage.removeItem("ffs-refresh")
     user.set(<Users>{})
     token.set("");
-    showSignin.set(true);
+    loginFailed.set(true);
   }
 }
 
@@ -78,10 +88,10 @@ const storeToken = (tok: Token, conf:Config) => {
   const t = tok.access_token;
   const r = tok.refresh_token;
   if (!t || !r) {
-    showSignin.set(true);
+    loginFailed.set(true);
     throw "No token in the request";
   }
-  showSignin.set(false);
+  loginFailed.set(false);
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
 }
@@ -95,9 +105,9 @@ const connect = ():Promise<WebSocket> => {
       resolve(server);
     };
     server.onerror = function(err) {
+      console.log(err)
       reject(err);
     };
-
   });
 }
 
@@ -105,31 +115,29 @@ export const connectWs = async () => {
   try {
     const ws = await connect();
 
-    ws.onmessage = function(event) {
-      console.log(event.data);
+    ws.onmessage = function(event:MessageEvent) {
       try {
         userBalances.set(JSON.parse(event.data));
-        console.log("current paymentCycleId: " + JSON.parse(event.data));
       } catch (e) {
         console.log(e);
       }
     };
-    ws.onclose = function(e) {
-      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
-      setTimeout(function() {
-        connectWs();
-      }, 1000);
-    };
-    ws.onerror = function(err) {
-      console.error('Socket encountered error: ', err, 'Closing socket');
-      ws.close();
-      setTimeout(async function() {
+    ws.onclose = async function(e:CloseEvent) {
+      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e);
+      if (e.code === 4001) {
         await refresh();
-        connectWs();
-      }, 3000);
+        await connectWs();
+      } else {
+        setTimeout(function(e) {
+          connectWs();
+        }, 3000);
+      }
     };
   } catch (e) {
     console.log(e);
+    setTimeout(async function() {
+      await connectWs();
+    }, 5000);
   }
 }
 

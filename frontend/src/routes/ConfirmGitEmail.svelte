@@ -33,7 +33,7 @@
     }
 
     label {
-        color: var(--primary-700);
+        color: var(--primary-900);
     }
 
     form {
@@ -58,7 +58,7 @@
 
 <div class="max">
   <div class="container rounded p-5">
-    <h2 class="py-5 text-center text-primary-700">Confirm your email</h2>
+    <h2 class="py-5 text-center text-primary-900">Confirm your email</h2>
 
     {#if error}
       <div class="bg-red rounded p-2">{error}</div>

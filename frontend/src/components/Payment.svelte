@@ -174,7 +174,7 @@
         @apply bg-gradient-to-tr from-secondary-400 to-primary-400 cursor-pointer transform scale-105 text-white;
     }
     .card:active {
-        @apply transform from-secondary-600 to-primary-600;
+        @apply transform from-secondary-700 to-primary-700;
     }
     .small {
         font-size: x-small;

@@ -1,41 +1,40 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
-  import { user, loading, route, showSignin } from "./ts/store";
-  import { removeSession, updateUser } from "./ts/authService";
+  import { user, route, loginFailed } from "./ts/store";
+  import { removeSession } from "./ts/services";
   import { onMount } from "svelte";
+  import { API } from "./ts/api";
 
   import Landing from "./routes/Landing.svelte";
-  import Badges from "./routes/Dashboard/Badges.svelte";
-  import Signin from "./routes/Signin.svelte";
+  import Badges from "./routes/Badges.svelte";
+  import Login from "./routes/Login.svelte";
   import Signup from "./routes/Signup.svelte";
   import Forgot from "./routes/Forgot.svelte";
   import ConfirmForgot from "./routes/ConfirmForgot.svelte";
   import ConfirmSignup from "./routes/ConfirmSignup.svelte";
-  import FindRepos from "./routes/Dashboard/FindRepos.svelte";
+  import Search from "./routes/Search.svelte";
   import CatchAll from "./routes/CatchAllRoute.svelte";
-  import Sponsoring from "./routes/Dashboard/FindRepos.svelte";
-  import Income from "./routes/Dashboard/Income.svelte";
-  import Profile from "./routes/Dashboard/Profile.svelte";
-  import Admin from "./routes/Dashboard/Admin.svelte";
+  import Income from "./routes/Income.svelte";
+  import Profile from "./routes/Profile.svelte";
+  import Admin from "./routes/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
   import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
   import ConfirmInvite from "./routes/ConfirmInvite.svelte";
 
   export let url;
+  let loading = true;
 
-  let pathname="/";
-  if (typeof window !== "undefined") {
-    pathname = window.location.pathname;
-  }
   onMount(async () => {
     try {
-      await updateUser()
+      loading = true;
+      $user = await API.user.get();
     } catch (e) {
-      $showSignin = true;
+      $loginFailed = true;
+    } finally {
+      loading = false;
     }
-    }
-  );
+  });
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   //https://github.com/EmilTholin/svelte-routing/issues/62
@@ -43,6 +42,11 @@
   globalHistory.listen(history => {
     $route = history.location;
   });
+
+  let pathname="/";
+  if (typeof window !== "undefined") {
+    pathname = window.location.pathname;
+  }
 
 </script>
 
@@ -115,63 +119,40 @@
     </a>
     <nav>
       {#if $user.id}
-        <span>{$user.email}</span>
-        <div class="main-nav"><a href="/signin" on:click={removeSession}>Sign out</a></div>
+        <span class="text-primary-500">{$user.email}</span>
+        <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
       {:else}
-        <div class="main-nav"><a href="/signin">Sign in</a></div>
+        <div class="main-nav"><a href="/login">Login</a></div>
         <div class="main-nav signup"><a href="/signup">Sign up</a></div>
       {/if}
     </nav>
   </header>
 
   <main>
-    <Router url="{url}" let:basepath>
+    <Router url="{url}">
 
-      {#if $loading}
+      {#if loading}
         <Spinner />
       {:else}
-
         <Route path="/" component="{Landing}" />
 
-        <Route path="/signin" component="{Signin}" />
+        <Route path="/login" component="{Login}" />
         <Route path="/signup" component="{Signup}" />
         <Route path="/forgot" component="{Forgot}" />
 
-        <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" let:params>
-          <ConfirmForgot email="{params.email}" token="{params.token}" />
-        </Route>
-        <Route path="/confirm/signup/:email/:token" let:params>
-          <ConfirmSignup email="{params.email}" token="{params.token}" />
-        </Route>
-        <Route path="/confirm/git-email/:email/:token" let:params>
-          <ConfirmGitEmail email="{params.email}" token="{params.token}" />
-        </Route>
-        <Route path="/confirm/invite/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" let:params>
-          <ConfirmInvite email="{params.email}"
-                         emailToken="{params.emailToken}"
-                         inviteEmail="{params.inviteEmail}"
-                         inviteDate="{params.inviteDate}"
-                         inviteToken="{params.inviteToken}"/>
-        </Route>
-        {#if $route.pathname.startsWith("/dashboard") || pathname.startsWith("/dashboard")}
-          {#if $user.id}
-            <Route path="/dashboard" component="{FindRepos}" />
-            <Route path="/dashboard/sponsoring" component="{Sponsoring}" />
-            <Route path="/dashboard/income" component="{Income}" />
-            <Route path="/dashboard/profile" component="{Profile}" />
-            <Route path="/dashboard/badges" component="{Badges}" />
-            <Route path="/dashboard/admin" component="{Admin}" />
-          {:else}
-            {#if $showSignin}
-              <Route path="*" component="{Signin}" />
-            {:else}
-              <Spinner/>
-            {/if}
-          {/if}
-        {:else}
-          <Route path="*" component="{CatchAll}" />
-        {/if}
+        <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
+        <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
+        <Route path="/confirm/git-email/:email/:token" component="{ConfirmGitEmail}" />
+        <Route path="/confirm/invite/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInvite}" />
 
+        {#if $user.id && ($route.pathname.startsWith("/dashboard") || pathname.startsWith("/dashboard"))}
+          <Route path="/dashboard/search" component="{Search}" />
+          <Route path="/dashboard/income" component="{Income}" />
+          <Route path="/dashboard/profile" component="{Profile}" />
+          <Route path="/dashboard/badges" component="{Badges}" />
+          <Route path="/dashboard/admin" component="{Admin}" />
+        {/if}
+        <Route path="*" component="{CatchAll}" />
       {/if}
 
     </Router>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Link, navigate } from "svelte-routing";
   import { onMount } from 'svelte';
-  import { confirmEmail, updateUser } from "./../ts/authService";
+  import { confirmEmail } from "../ts/services";
 
   export let email;
   export let token;
@@ -10,8 +10,7 @@
   onMount(async () => {
     try {
       await confirmEmail(email, token);
-      await updateUser();
-      navigate("/dashboard");
+      navigate("/dashboard/search");
     } catch (e) {
       error = e
       console.log(e);
@@ -34,7 +33,7 @@
     }
 
     label {
-        color: var(--primary-700);
+        color: var(--primary-900);
     }
 
     form {
@@ -59,7 +58,7 @@
 
 <div class="max">
   <div class="container rounded p-5">
-    <h2 class="py-5 text-center text-primary-700">Confirm your email</h2>
+    <h2 class="py-5 text-center text-primary-900">Confirm your email</h2>
 
     {#if error}
       <div class="bg-red rounded p-2">{error}</div>

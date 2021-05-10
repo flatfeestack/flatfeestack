@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
-  import { confirmInvite, updateUser } from "./../ts/authService";
+  import { confirmInvite } from "../ts/services";
 
   export let email;
   export let emailToken;
@@ -18,7 +18,6 @@
       error = "";
       isSubmitting = true;
       await confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
-      await updateUser();
       email = "";
       password = "";
       isSubmitting = false;
@@ -46,7 +45,7 @@
     }
 
     label {
-        color: var(--primary-700);
+        color: var(--primary-900);
     }
 
     form {
@@ -71,12 +70,12 @@
 
 <div class="max">
   <div class="container rounded p-5">
-    <h2 class="py-5 text-center text-primary-700">{inviteEmail} invited you</h2>
+    <h2 class="py-5 text-center text-primary-900">{inviteEmail} invited you</h2>
       <form on:submit|preventDefault="{handleSubmit}">
         <label for="email" class="py-1">Email address</label>
-        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
+        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />
         <label for="password" class="flex py-1">Password</label>
-        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-700"/>
+        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-900"/>
         <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign up
           {#if isSubmitting}<Dots />{/if}
         </button>

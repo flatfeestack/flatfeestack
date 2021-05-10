@@ -1,7 +1,7 @@
 import ky, { NormalizedOptions } from "ky";
 import { config, token } from "./store";
 import { get } from "svelte/store";
-import { refresh } from "./authService";
+import { refresh } from "./services";
 import type {
   ClientSecret,
   Config,
@@ -49,15 +49,18 @@ const authToken = ky.create({
   }
 });
 
-const auth = ky.create({
-  prefixUrl: "/auth",
-  timeout: get(config) ? get(config).restTemplate : 5000,
-});
-
 const backendToken = ky.create({
   prefixUrl: "/backend",
   timeout: get(config) ? get(config).restTemplate : 5000,
-  hooks: { beforeRequest: [async request => addToken(request)] }
+  hooks: {
+    beforeRequest: [async request => addToken(request)],
+    afterResponse: [async (request: Request, options: NormalizedOptions, response: Response) => refreshToken(request, options, response)]
+  }
+});
+
+const auth = ky.create({
+  prefixUrl: "/auth",
+  timeout: get(config) ? get(config).restTemplate : 5000,
 });
 
 const backend = ky.create({

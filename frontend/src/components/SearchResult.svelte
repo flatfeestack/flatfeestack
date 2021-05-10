@@ -1,30 +1,8 @@
-<style>
-    .container {
-        display: flex;
-        flex-direction: row;
-        margin-bottom: 2em;
-
-    }
-
-    svg {
-        padding: 0.25em;
-        height: 1em;
-        width: 1em;
-    }
-    .url {
-        font-size: 0.8em;
-    }
-
-    .container :global(a:hover) {
-        filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .7));
-    }
-
-</style>
-
 <script lang="ts">
-  import type { Repo } from "./../../types/users";
-  import { API } from "./../../ts/api";
-  import { sponsoredRepos } from "./../../ts/store";
+  import type { Repo } from "../types/users";
+  import { API } from "../ts/api";
+  import { errorSearch, sponsoredRepos } from "../ts/store";
+  import { getColor1 } from "../ts/utils";
 
   export let repo: Repo;
   let star = false;
@@ -35,8 +13,9 @@
       const res = await API.repos.tag(repo);
       $sponsoredRepos = [...$sponsoredRepos, res];
     } catch (e) {
+      $errorSearch=e;
+    } finally {
       star = false;
-      console.log(e);
     }
   };
 
@@ -47,30 +26,30 @@
 
     star = tmp !== undefined;
   })
-
-  const getColor = function(input: string) {
-    return "hsl(" + 360 * cyrb53(input+"a") + ',' +
-      (25 + 60 * cyrb53(input+"b")) + '%,' +
-      (60 + 20 * cyrb53(input+"c")) + '%)'
-  }
-
-  //https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript?rq=1
-  const cyrb53 = function(str, seed = 0) {
-    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
-    for (let i = 0, ch; i < str.length; i++) {
-      ch = str.charCodeAt(i);
-      h1 = Math.imul(h1 ^ ch, 2654435761);
-      h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
-    let hash = 4294967296 * (2097151 & h2) + (h1>>>0);
-    return hash / Number.MAX_SAFE_INTEGER;
-  };
-
 </script>
 
-<div class="container rounded p-2 m-2" style="border-left: solid 4px {getColor(repo.html_url)}">
+<style>
+    .container {
+        display: flex;
+        flex-direction: row;
+        margin-bottom: 2em;
+        max-width: 40rem;
+    }
+
+    svg {
+        padding: 0.25em;
+        height: 1em;
+        width: 1em;
+    }
+    .url {
+        font-size: small;
+    }
+    .title{
+        font-weight: bold;
+    }
+</style>
+
+<div class="container rounded p-2 m-2" style="border-left: solid 6px {getColor1(repo.html_url)}">
   <div>
     {#if !star}
       <a href="#" on:click|preventDefault="{onSponsor}">
@@ -88,11 +67,9 @@
       </svg>
     {/if}
   </div>
-  <div class="">
-    <div><b>{repo.full_name}</b></div>
+  <div>
+    <div class="title">{repo.full_name}</div>
     <div>{repo.description}</div>
     <div class="url"><a href="{repo.html_url}">{repo.html_url}</a></div>
   </div>
-
-
 </div>

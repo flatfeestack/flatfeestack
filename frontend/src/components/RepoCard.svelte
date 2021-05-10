@@ -1,22 +1,46 @@
+<script lang="ts">
+  import type { Repo } from "src/types/users";
+  import { API } from "../ts/api";
+  import { errorSearch, sponsoredRepos } from "../ts/store";
+  import { getColor1, getColor2 } from "../ts/utils";
+
+  export let repo: Repo;
+  let star = true;
+
+  async function unTag () {
+    star = false;
+    try {
+      await API.repos.untag(repo.uuid);
+      $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {return r.uuid !== repo.uuid;});
+    } catch (e) {
+      $errorSearch = e;
+    } finally {
+      star = true;
+    }
+  }
+
+</script>
+
 <style>
 .child {
     flex: 1 0;
     margin: 0.5em;
-    max-width: 16em;
-    min-width: 16em;
-    box-shadow:  0.5em 0.5em 0.5em #e1e1e3, -0.5em -0.5em 0.5em #ffffff;
+    max-width: 18em;
+    min-width: 18em;
+    box-shadow:  0.25em 0.25em 0.25em #e1e1e3;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-
 }
 .color {
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    height: 4em;
+    height: 3.5em;
+    box-shadow: 0 3px 2px -2px black;
 }
 .center{
     text-align: center;
     font-weight: bold;
+    text-overflow: ellipsis;
 }
 .body {
     text-align: center;
@@ -24,7 +48,7 @@
 }
 .url {
     text-align: center;
-    font-size: medium;
+    font-size: small;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -42,51 +66,8 @@ svg {
 
 </style>
 
-<script lang="ts">
-import type { Repo } from "types/users";
-import { API } from "./../../ts/api";
-import { sponsoredRepos } from "./../../ts/store";
-import { fade } from 'svelte/transition';
-
-export let repo: Repo;
-let star = true;
-
-const getColor = function(input: string) {
-  return "hsl(" + 360 * cyrb53(input+"a") + ',' +
-    (25 + 60 * cyrb53(input+"b")) + '%,' +
-    (60 + 20 * cyrb53(input+"c")) + '%)'
-}
-
-//https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript?rq=1
-const cyrb53 = function(str, seed = 0) {
-  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
-  for (let i = 0, ch; i < str.length; i++) {
-    ch = str.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
-  let hash = 4294967296 * (2097151 & h2) + (h1>>>0);
-  return hash / Number.MAX_SAFE_INTEGER;
-};
-
-const unTag = async () => {
-  try {
-    star = false;
-    $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {return r.uuid !== repo.uuid;});
-    await API.repos.untag(repo.uuid);
-    star = true;
-  } catch (e) {
-    star = true;
-    console.log(e);
-  }
-};
-
-</script>
-
-<div class="child rounded" out:fade="{{ duration: 350 }}">
-  <div class="color" style="background-color: {getColor(repo.html_url)}">
+<div class="child rounded">
+  <div class="color" style="background-image:radial-gradient(circle at top right,{getColor2(repo.html_url)},{getColor1(repo.html_url)});">
 
     <div>
       {#if star}

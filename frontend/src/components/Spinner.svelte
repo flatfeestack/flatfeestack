@@ -1,7 +1,7 @@
 <style>
     .loader {
-        border: 0.25rem solid var(--primary-300); /* Light grey */
-        border-top: 0.25rem solid var(--primary-700); /* Blue */
+        border: 0.3rem solid var(--secondary-100);
+        border-top: 0.3rem solid var(--primary-900);
         border-radius: 50%;
         width: 2rem;
         height: 2rem;

@@ -1,13 +1,13 @@
 
 <script lang="ts">
-import DashboardLayout from "./DashboardLayout.svelte";
+import Navigation from "../components/Navigation.svelte";
 import Fa from "svelte-fa";
 import { onMount } from "svelte";
-import { API } from "./../../ts/api";
+import { API } from "../ts/api";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import Web3 from "../../components/Web3.svelte";
-import { user } from "./../../ts/store";
-import type { GitUser } from "../../types/users.ts";
+import Web3 from "../components/Web3.svelte";
+import { user } from "../ts/store";
+import type { GitUser } from "../types/users.ts";
 
 let address = "";
 let gitEmails: Array<GitUser> = [];
@@ -75,7 +75,7 @@ async function removeEmail(email: string) {
 </style>
 
 
-<DashboardLayout>
+<Navigation>
   <h1 class="px-2">Income</h1>
 
   <hr class="mb-10 w-64" />
@@ -139,4 +139,4 @@ async function removeEmail(email: string) {
   <h2 class="my-5">Request Funds</h2>
 
   <Web3 />
-</DashboardLayout>
+</Navigation>

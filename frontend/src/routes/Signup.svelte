@@ -42,7 +42,7 @@
     }
 
     label {
-        color: var(--primary-700);
+        color: var(--primary-900);
     }
 
     form {
@@ -67,16 +67,16 @@
 
 <div class="max">
   <div class="container rounded p-5">
-    <h2 class="py-5 text-center text-primary-700">Create your account</h2>
+    <h2 class="py-5 text-center text-primary-900">Create your account</h2>
 
     {#if info}
       <div class="bg-green rounded p-2">{info}</div>
     {:else}
       <form on:submit|preventDefault="{handleSubmit}">
         <label for="email" class="py-1">Email address</label>
-        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-700" />
+        <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />
         <label for="password" class="flex py-1">Password</label>
-        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-700"/>
+        <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-900"/>
         <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign up
           {#if isSubmitting}<Dots />{/if}
         </button>
