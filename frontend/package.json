@@ -2,7 +2,7 @@
   "name": "flatfeestack",
   "version": "1.0.0",
   "scripts": {
-    "prod": "rm -f public/build/* public/server/* && rollup -c rollup-prod.config.js -w",
+    "prod": "rm -f public/build/* public/server/* && rollup -c rollup-prod.config.js",
     "dev": "rm -f public/build/* public/server/* && rollup -c rollup.config.js -w"
   },
   "devDependencies": {
