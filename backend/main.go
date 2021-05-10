@@ -271,28 +271,24 @@ func maxBytesMiddleware(next func(w http.ResponseWriter, r *http.Request), size 
 	}
 }
 
-func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
+func jwtAuth(r *http.Request) (*TokenClaims, error) {
 	authHeader := r.Header.Get("Authorization")
 	var bearerToken = ""
 	if authHeader == "" {
 		authHeader = r.Header.Get("Sec-WebSocket-Protocol")
 		if authHeader == "" {
-			writeErr(w, http.StatusBadRequest, "ERR-01, authorization header not set for %v", r.URL)
-			return nil
+			return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
 		}
-		w.Header().Set("Sec-WebSocket-Protocol", "access_token")
 	}
 	split := strings.Split(authHeader, " ")
 	if len(split) != 2 {
-		writeErr(w, http.StatusBadRequest, "ERR-02, could not split token: %v", bearerToken)
-		return nil
+		return nil, fmt.Errorf("ERR-02, could not split token: %v", bearerToken)
 	}
 	bearerToken = split[1]
 
 	tok, err := jwt.ParseSigned(bearerToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "ERR-03, could not parse token: %v", bearerToken[1])
-		return nil
+		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
 	}
 
 	claims := &TokenClaims{}
@@ -304,31 +300,31 @@ func jwtAuth(w http.ResponseWriter, r *http.Request) *TokenClaims {
 	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
 		err = tok.Claims(privEdDSA.Public(), claims)
 	} else {
-		writeErr(w, http.StatusBadRequest, "ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
-		return nil
+		return nil, fmt.Errorf("ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
 	}
 
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "ERR-05, could not parse claims: %v", bearerToken)
-		return nil
+		return nil, fmt.Errorf("ERR-05, could not parse claims: %v", bearerToken)
 	}
 
 	if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {
-		writeErr(w, http.StatusUnauthorized, "ERR-06, expired: %v", claims.Expiry.Time())
-		return nil
+		return claims, fmt.Errorf("ERR-06, unauthorized: %v", bearerToken)
 	}
 
 	if claims.Subject == "" {
-		writeErr(w, http.StatusBadRequest, "ERR-07, no subject: %v", claims)
-		return nil
+		return nil, fmt.Errorf("ERR-07, no subject: %v", claims)
 	}
-	return claims
+	return claims, nil
 }
 
 func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := jwtAuth(w, r)
-		if claims == nil {
+		claims, err := jwtAuth(r)
+		if claims != nil && err != nil {
+			writeErr(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
+			return
+		} else if claims == nil && err != nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
 		for _, email := range emails {
@@ -344,11 +340,22 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 
 func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims := jwtAuth(w, r)
-		if claims == nil {
-			writeErr(w, http.StatusBadRequest, "ERR-08a, no claims provided: %v", r.URL)
+		claims, err := jwtAuth(r)
+
+		if claims != nil && err != nil {
+			if r.Header.Get("Sec-WebSocket-Protocol") == "" {
+				//no websocket
+				writeErr(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
+			} else {
+				//we use websocket
+				wsNoAuth(w, r)
+			}
+			return
+		} else if claims == nil && err != nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
+
 		unlock := km.Lock(claims.Subject)
 		defer unlock()
 

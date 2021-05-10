@@ -325,7 +325,8 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 
 // Repositories and Sponsors
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
-	var repos []Repo
+	//we want to send back an empty array, don't change
+	repos := []Repo{}
 	s := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
             FROM sponsor_event s
             JOIN repo r ON s.repo_id=r.id 

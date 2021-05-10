@@ -378,6 +378,16 @@ var upgrader = websocket.Upgrader{
 var clients = make(map[uuid.UUID]*websocket.Conn)
 var lock = sync.Mutex{}
 
+func wsNoAuth(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("could not upgrade connection: %v\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	conn.CloseHandler()(4001, "Unauthorized")
+}
+
 // serveWs handles websocket requests from the peer.
 func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	conn, err := upgrader.Upgrade(w, r, nil)
