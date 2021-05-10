@@ -9,12 +9,11 @@
 
   const onSponsor = async () => {
     try {
-      star = true;
       const res = await API.repos.tag(repo);
       $sponsoredRepos = [...$sponsoredRepos, res];
+      star = true;
     } catch (e) {
       $errorSearch=e;
-    } finally {
       star = false;
     }
   };
