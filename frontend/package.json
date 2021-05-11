@@ -6,19 +6,10 @@
     "dev": "rm -f public/build/* public/server/* && rollup -c rollup.config.js -w"
   },
   "devDependencies": {
-    "@fortawesome/free-brands-svg-icons": "^5.15.3",
     "@fortawesome/free-solid-svg-icons": "^5.15.3",
     "@rollup/plugin-commonjs": "^19.0.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@tsconfig/svelte": "^1.0.10",
-    "@types/node": "^15.0.2",
-    "assert": "^2.0.0",
-    "crypto-browserify": "^3.12.0",
-    "css-loader": "^5.2.4",
-    "https-browserify": "^1.0.0",
-    "mini-css-extract-plugin": "^1.6.0",
-    "os-browserify": "^0.3.0",
-    "process": "^0.11.10",
     "rollup": "^2.47.0",
     "rollup-plugin-brotli": "^3.1.0",
     "rollup-plugin-css-only": "^3.1.0",
@@ -30,24 +21,17 @@
     "rollup-plugin-svelte": "^7.1.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
-    "stream-browserify": "^3.0.0",
-    "stream-http": "^3.2.0",
     "svelte": "^3.38.2",
     "svelte-check": "^1.5.2",
     "svelte-fa": "^2.2.0",
     "svelte-loader": "^3.1.1",
     "svelte-preprocess": "^4.7.3",
-    "svelte-register": "^0.1.0",
-    "terser-webpack-plugin": "^5.1.1",
-    "to-regex": "^3.0.2",
-    "ts-loader": "^8.2.0",
-    "tslib": "^2.2.0",
     "typescript": "^4.2.4"
   },
   "dependencies": {
     "@stripe/stripe-js": "^1.14.0",
     "ethers": "^5.1.4",
-    "ky": "^0.27.0",
+    "ky": "^0.28.0",
     "svelte-routing": "^1.6.0"
   }
 }

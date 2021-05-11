@@ -1,4 +1,4 @@
-import ky, { NormalizedOptions } from "ky";
+import ky from "ky";
 import { config, token } from "./store";
 import { get } from "svelte/store";
 import { refresh } from "./services";
@@ -30,7 +30,7 @@ async function addToken(request: Request) {
   }
 }
 
-async function refreshToken(request: Request, options: NormalizedOptions, response: Response) {
+async function refreshToken(request: Request, options: any, response: Response) {
   if (response.status === 401 && request.headers.get('Retry') !== "true") {
     console.log("need to refresh due to:" + response);
     const t = await refresh();
@@ -45,7 +45,7 @@ const authToken = ky.create({
   timeout: get(config) ? get(config).restTemplate : 5000,
   hooks: {
     beforeRequest: [async request => addToken(request)],
-    afterResponse: [async (request: Request, options: NormalizedOptions, response: Response) => refreshToken(request, options, response)]
+    afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
   }
 });
 
@@ -54,7 +54,7 @@ const backendToken = ky.create({
   timeout: get(config) ? get(config).restTemplate : 5000,
   hooks: {
     beforeRequest: [async request => addToken(request)],
-    afterResponse: [async (request: Request, options: NormalizedOptions, response: Response) => refreshToken(request, options, response)]
+    afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
   }
 });
 
