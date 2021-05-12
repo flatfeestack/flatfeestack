@@ -15,7 +15,7 @@
       error = "";
       isSubmitting = true;
       await confirmReset(email, password, token);
-      navigate("/dashboard");
+      navigate("/user/search");
       isSubmitting = false;
       email = "";
       password = "";

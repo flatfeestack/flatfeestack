@@ -2,7 +2,7 @@
   import type { Repo } from "../types/users";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import { error, isSubmitting, sponsoredRepos } from "../ts/store";
+  import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
 
   import Navigation from "../components/Navigation.svelte";
   import RepoCard from "../components/RepoCard.svelte";
@@ -25,13 +25,16 @@
   };
 
   onMount(async () => {
-    try {
-      $isSubmitting = true;
-      $sponsoredRepos = await API.user.getSponsored();
-    } catch (e) {
-      $error = e;
-    } finally {
-      $isSubmitting = false;
+    if(!$loadedSponsoredRepos) {
+      try {
+        $isSubmitting = true;
+        $sponsoredRepos = await API.user.getSponsored();
+        $loadedSponsoredRepos = true;
+      } catch (e) {
+        $error = e;
+      } finally {
+        $isSubmitting = false;
+      }
     }
   });
 </script>
@@ -48,7 +51,7 @@
 </style>
 
 <Navigation>
-  <h1 class = "px-2">Search Repositories</h1>
+  <h1 class="px-2">Search Repositories</h1>
 
   {#if $sponsoredRepos.length === 0}
     <div class="container bg-green rounded p-2 m-2">

@@ -1,5 +1,5 @@
 <script type="ts">
-  import { faMedal, faSearch, faUser, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
+  import { faSearch, faMedal, faUserCog, faCreditCard, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
   import { links } from "svelte-routing";
   import Fa from "svelte-fa";
   import { error, isSubmitting, user } from "../ts/store";
@@ -70,16 +70,20 @@
 
 <div class="page">
   <nav class="sideBar" use:links>
-    <a href="/dashboard/search">
+    <a href="/user/search">
       <Fa icon="{faSearch}" size="sm" class="icon" />
       <span class="hide-sx">Search</span>
     </a>
-    <a href="/dashboard/profile">
-      <Fa icon="{faUser}" size="sm" class="icon" />
-      <span class="hide-sx">Profile</span>
+    <a href="/user/settings">
+      <Fa icon="{faUserCog}" size="sm" class="icon" />
+      <span class="hide-sx">Settings</span>
+    </a>
+    <a href="/user/payments">
+      <Fa icon="{faCreditCard}" size="sm" class="icon" />
+      <span class="hide-sx">Payments</span>
     </a>
     {#if $user.role != "ORG" }
-      <a href="/dashboard/income">
+      <a href="/user/income">
         <Fa icon="{faHandHoldingUsd}" size="sm" class="icon" />
         <span class="hide-sx">Income</span>
       </a>
@@ -89,12 +93,12 @@
         <span class="hide-sx">Income</span>
       </div>
     {/if}
-    <a href="/dashboard/badges">
+    <a href="/user/badges">
       <Fa icon="{faMedal}" size="sm" class="icon" />
       <span class="hide-sx">Badges</span>
     </a>
     {#if $user.email.endsWith("@flatfeestack.io") || $user.email.endsWith("@bocek.ch") || $user.email.endsWith("@machados.org") }
-      <a href="/dashboard/admin">
+      <a href="/user/admin">
         <Fa icon="{faShieldAlt}" size="sm" class="icon" />
         <span class="hide-sx">Admin</span>
       </a>

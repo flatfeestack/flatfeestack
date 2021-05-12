@@ -10,7 +10,7 @@
   onMount(async () => {
     try {
       await confirmEmail(email, token);
-      navigate("/dashboard/search");
+      navigate("/user/search");
     } catch (e) {
       error = e
       console.log(e);

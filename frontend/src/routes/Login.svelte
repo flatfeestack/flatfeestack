@@ -15,7 +15,7 @@
       isSubmitting = true;
       await login(email, password);
       isSubmitting = false;
-      navigate("/dashboard/search");
+      navigate("/user/search");
       email = "";
       password = "";
     } catch (e) {

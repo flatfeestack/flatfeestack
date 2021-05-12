@@ -16,11 +16,13 @@
   import Search from "./routes/Search.svelte";
   import CatchAll from "./routes/CatchAllRoute.svelte";
   import Income from "./routes/Income.svelte";
-  import Profile from "./routes/Profile.svelte";
+  import Payments from "./routes/Payments.svelte";
   import Admin from "./routes/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
   import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
   import ConfirmInvite from "./routes/ConfirmInvite.svelte";
+  import Settings from "./routes/Settings.svelte";
+  import ConfirmInviteNew from "./routes/ConfirmInviteNew.svelte";
 
   export let url;
   let loading = true;
@@ -119,6 +121,11 @@
     </a>
     <nav>
       {#if $user.id}
+        {#if $user.role === "USR" && $user.image}
+          <img class="image-usr-sx" src="{$user.image}" />
+        {:else if $user.image}
+          <img class="image-org-sx" src="{$user.image}" />
+        {/if}
         <span class="text-primary-500">{$user.email}</span>
         <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
       {:else}
@@ -143,14 +150,16 @@
         <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
         <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
         <Route path="/confirm/git-email/:email/:token" component="{ConfirmGitEmail}" />
-        <Route path="/confirm/invite/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInvite}" />
+        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInviteNew}" />
+        <Route path="/confirm/invite/:email/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInvite}" />
 
-        {#if $user.id && ($route.pathname.startsWith("/dashboard") || pathname.startsWith("/dashboard"))}
-          <Route path="/dashboard/search" component="{Search}" />
-          <Route path="/dashboard/income" component="{Income}" />
-          <Route path="/dashboard/profile" component="{Profile}" />
-          <Route path="/dashboard/badges" component="{Badges}" />
-          <Route path="/dashboard/admin" component="{Admin}" />
+        {#if $user.id && ($route.pathname.startsWith("/user") || pathname.startsWith("/user"))}
+          <Route path="/user/search" component="{Search}" />
+          <Route path="/user/payments" component="{Payments}" />
+          <Route path="/user/settings" component="{Settings}" />
+          <Route path="/user/income" component="{Income}" />
+          <Route path="/user/badges" component="{Badges}" />
+          <Route path="/user/admin" component="{Admin}" />
         {/if}
         <Route path="*" component="{CatchAll}" />
       {/if}

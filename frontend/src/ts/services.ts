@@ -31,10 +31,10 @@ export const confirmEmail = async(email: string, emailToken: string) => {
   user.set(u);
 };
 
-export const confirmInvite = async(email: string, password: string,
-                                   emailToken: string, inviteEmail: string,
-                                   inviteDate: string, inviteToken: string) => {
-  const p1 = API.auth.confirmInvite(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
+export const confirmInviteNew = async(email: string, password: string,
+                                      emailToken: string, inviteEmail: string,
+                                      inviteDate: string, inviteToken: string) => {
+  const p1 = API.auth.confirmInviteNew(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
   const p2 = API.config.config();
 
   const res = await p1;

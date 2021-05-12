@@ -146,6 +146,7 @@
   };
 
   onMount(async () => {
+    console.log($config.stripePublicApi)
     stripe = await loadStripe($config.stripePublicApi);
     createCardForm();
   });
@@ -184,17 +185,18 @@
         flex-direction: row;
         margin-left: 1em;
         margin-right: 1em;
-        align-items: center;
+    }
+    .child {
+        margin: 0.5em;
+        box-shadow:  0.25em 0.25em 0.25em #e1e1e3;
     }
 </style>
-{#if error}
-  <div class="bg-red-500 text-white p-3 my-5">{error}</div>
-{/if}
+<h2 class="px-2">Donation</h2>
 
 {#if !submitted}
   <div class="container">
     {#each plans as { title, desc }, i}
-      <div class="h-100 p-2 m-2 w1-2 card border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
+      <div class="child p-2 m-2 w1-2 card border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
         on:click="{() => (selectedPlan = i)}">
         <h3 class="text-center font-bold text-lg">{title}</h3>
         <div class="text-center">{@html desc}</div>

@@ -10,4 +10,5 @@ export const config = writable<Config>(<Config>{});
 export const userBalances = writable<UserBalances>(<UserBalances>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
+export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("")
