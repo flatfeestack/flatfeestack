@@ -393,7 +393,7 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 // @Failure 400
 // @Router /backend/repos/{id}/insertOrUpdateTag [post]
 func tagRepo(w http.ResponseWriter, r *http.Request, user *User) {
-	var repo RepoDTO
+	var repo RepoSearch
 	err := json.NewDecoder(r.Body).Decode(&repo)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)

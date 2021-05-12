@@ -132,11 +132,11 @@ func getPriceETH() (decimal.Decimal, error) {
  *	==== GitHub ====
  */
 type RepoSearchResponse struct {
-	TotalCount uint32    `json:"total_count"`
-	Items      []RepoDTO `json:"items"`
+	TotalCount uint32       `json:"total_count"`
+	Items      []RepoSearch `json:"items"`
 }
 
-type RepoDTO struct {
+type RepoSearch struct {
 	Id          uint64      `json:"id,omitempty"`
 	Url         string      `json:"html_url,omitempty"`
 	GitUrl      string      `json:"clone_url,omitempty"`
@@ -146,9 +146,9 @@ type RepoDTO struct {
 	Score       json.Number `json:"score,omitempty"`
 }
 
-func fetchGithubRepoSearch(q string) ([]RepoDTO, error) {
-	log.Print("http://api.github.com/search/repositories?q=" + url.QueryEscape(q))
-	res, err := http.Get("http://api.github.com/search/repositories?q=" + url.QueryEscape(q))
+func fetchGithubRepoSearch(q string) ([]RepoSearch, error) {
+	log.Print("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
+	res, err := http.Get("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
 	if err != nil {
 		log.Printf("Could not search for repos %v", err)
 		return nil, err
@@ -162,17 +162,17 @@ func fetchGithubRepoSearch(q string) ([]RepoDTO, error) {
 	if result.TotalCount > 0 {
 		return result.Items, nil
 	}
-	return []RepoDTO{}, nil
+	return []RepoSearch{}, nil
 }
 
-func fetchGithubRepoById(id uint32) (*RepoDTO, error) {
+func fetchGithubRepoById(id uint32) (*RepoSearch, error) {
 	res, err := http.Get("http://api.github.com/repositories/" + strconv.Itoa(int(id)))
 	if err != nil {
 		log.Printf("Could not fetch for repo details %v", err)
 		return nil, err
 	}
 
-	var result RepoDTO
+	var result RepoSearch
 	err = json.NewDecoder(res.Body).Decode(&result)
 	if err != nil {
 		log.Printf("cant decode json %v", err)
