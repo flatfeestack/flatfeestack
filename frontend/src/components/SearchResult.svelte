@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Repo } from "../types/users";
   import { API } from "../ts/api";
-  import { errorSearch, sponsoredRepos } from "../ts/store";
+  import { error, sponsoredRepos } from "../ts/store";
   import { getColor1 } from "../ts/utils";
 
   export let repo: Repo;
@@ -13,7 +13,7 @@
       $sponsoredRepos = [...$sponsoredRepos, res];
       star = true;
     } catch (e) {
-      $errorSearch=e;
+      $error=e;
       star = false;
     }
   };

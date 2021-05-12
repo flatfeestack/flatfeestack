@@ -1,8 +1,9 @@
 <script type="ts">
-import {faMedal, faSearch, faUser, faHandHoldingUsd, faShieldAlt, } from "@fortawesome/free-solid-svg-icons";
-import { links } from "svelte-routing";
-import Fa from "svelte-fa";
-import { user } from "../ts/store";
+  import { faMedal, faSearch, faUser, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
+  import { links } from "svelte-routing";
+  import Fa from "svelte-fa";
+  import { error, isSubmitting, user } from "../ts/store";
+  import Spinner from "./Spinner.svelte";
 </script>
 
 <style>
@@ -34,6 +35,16 @@ import { user } from "../ts/store";
         color: lightgray;
         padding: 1em;
         text-decoration: none;
+    }
+
+    .close {
+        cursor: pointer;
+        text-align: right;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: row;
     }
 
     @media (max-width: 36rem) {
@@ -90,6 +101,8 @@ import { user } from "../ts/store";
     {/if}
   </nav>
   <div>
+    {#if $error}<div class="bg-red p-2 parent container"><div class="w-100">{$error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
+    {#if $isSubmitting}<Spinner />{/if}
     <slot />
   </div>
 </div>

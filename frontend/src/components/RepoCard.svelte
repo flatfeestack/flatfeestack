@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Repo } from "src/types/users";
   import { API } from "../ts/api";
-  import { errorSearch, sponsoredRepos } from "../ts/store";
+  import { error, sponsoredRepos } from "../ts/store";
   import { getColor1, getColor2 } from "../ts/utils";
 
   export let repo: Repo;
@@ -13,9 +13,7 @@
       await API.repos.untag(repo.uuid);
       $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {return r.uuid !== repo.uuid;});
     } catch (e) {
-      $errorSearch = e;
-    } finally {
-      star = true;
+      $error = e;
     }
   }
 

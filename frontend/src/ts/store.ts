@@ -1,7 +1,9 @@
 import { writable } from "svelte/store";
 import { Users, Repo, UserBalances, Config } from "../types/users";
 
-export const errorSearch = writable("");
+export const error = writable("");
+export const isSubmitting = writable(false);
+
 export const loginFailed = writable(false);
 export const user = writable<Users>(<Users>{});
 export const config = writable<Config>(<Config>{});
