@@ -90,8 +90,7 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
 		"ORSXG5A="), "HS256 key")
 	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
-	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", lookupEnv("STRIPE_PUBLIC_API",
-		"pk_test_51ITqIGItjdVuh2paNpnIUSWtsHJCLwY9fBYtiH2leQh2BvaMWB4de40Ea0ntC14nnmYcUyBD21LKO9ldlaXL6DJJ00Qm1toLdb"), "Public Key for localhost")
+	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", lookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
 	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
 	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")

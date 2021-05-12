@@ -198,7 +198,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			UserId:         u.Id,
 			Balance:        -oldSum,
 			Day:            timeNow(),
-			BalanceType:    "REMAINING",
+			BalanceType:    "CLOSE_CYCLE",
 			CreatedAt:      timeNow(),
 		}
 
@@ -211,6 +211,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			}
 			ubNew.Balance = oldSum
 			ubNew.PaymentCycleId = newPaymentCycleId
+			ubNew.BalanceType = "CARRY_OVER"
 			err = insertUserBalance(ubNew)
 			if err != nil {
 				log.Printf("Insert user balance2 for %v: %v\n", uid, err)
@@ -235,7 +236,10 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		sendToBrowser(uid, newPaymentCycleId)
+		err = sendToBrowser(uid, newPaymentCycleId)
+		if err != nil {
+			log.Printf("could not notify client %v", uid)
+		}
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
@@ -408,7 +412,10 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 		return nil
 	})
 
-	sendToBrowser(user.Id, user.PaymentCycleId)
+	err = sendToBrowser(user.Id, user.PaymentCycleId)
+	if err != nil {
+		log.Printf("could not notify client %v", user.Id)
+	}
 }
 
 type UserBalances struct {
