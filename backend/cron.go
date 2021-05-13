@@ -183,6 +183,7 @@ func reminderTopup(u User) error {
 			return err
 		}
 
+		//TODO: test this
 		_, err = stripePaymentRecurring(u)
 		if err != nil {
 			return err
@@ -191,7 +192,7 @@ func reminderTopup(u User) error {
 		email := *u.Email
 		var other = map[string]string{}
 		other["email"] = email
-		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+		other["url"] = opts.EmailLinkPrefix + "/user/payments"
 		other["lang"] = "en"
 
 		e := prepareEmail(email, other,

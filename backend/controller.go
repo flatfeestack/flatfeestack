@@ -249,11 +249,6 @@ func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func updateMethod0(user *User, method *string) (*User, error) {
-
-	return user, nil
-}
-
 func updateName(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	a := params["name"]
@@ -294,6 +289,23 @@ func updateMode(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
+	params := mux.Vars(r)
+	a := params["seats"]
+	seats, err := strconv.Atoi(a)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		return
+	}
+	err = updateDbSeats(user.PaymentCycleId, seats)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
 }
 
 // @Summary List sponsored Repos of a user
@@ -753,7 +765,6 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		PaymentCycleId: *paymentCycleId,
 		UserId:         u.Id,
 		Balance:        2970,
-		Day:            timeNow(),
 		BalanceType:    "PAY",
 		CreatedAt:      timeNow(),
 	}

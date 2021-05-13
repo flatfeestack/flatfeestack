@@ -68,11 +68,10 @@ type Opts struct {
 }
 
 type TokenClaims struct {
-	Meta        *string   `json:"meta,omitempty"`
-	Scope       string    `json:"scope,omitempty"`
-	InviteToken string    `json:"invite_token,omitempty"`
-	InviteEmail *string   `json:"invite_email,omitempty"`
-	InvitedAt   time.Time `json:"invited_at,omitempty"`
+	Meta         *string  `json:"meta,omitempty"`
+	Scope        string   `json:"scope,omitempty"`
+	InviteToken  string   `json:"inviteToken,omitempty"`
+	InviteEmails []string `json:"inviteEmails,omitempty"`
 	jwt.Claims
 }
 
@@ -213,6 +212,10 @@ func main() {
 	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
 	apiRouter.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
+
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
@@ -371,53 +374,12 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 				writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
 				return
 			}
-			if claims.InviteEmail != nil {
-				//we have a new sponsor!
-				err := takeSponsorship(*claims.InviteEmail, user.Id)
-				if err != nil {
-					writeErr(w, http.StatusBadRequest, "ERR-08, taking sponsorship failed: %v", err)
-					return
-				}
-			}
 		}
 
+		user.Claims = claims
 		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
 		next(w, r, user)
 	}
-}
-
-func takeSponsorship(inviteEmail string, userId uuid.UUID) error {
-	//check if we have an inviteEmail that changed
-	sponsor, err := findUserByEmail(inviteEmail)
-	if err != nil {
-		return err
-	}
-
-	pc, err := findPaymentCycle(sponsor.PaymentCycleId)
-	if err != nil {
-		return err
-	}
-
-	updateSponsor(userId, inviteEmail, sponsor.Id)
-	currentSeats, err := findSeats(sponsor.Id)
-	if err != nil {
-		return err
-	}
-	if int64(pc.Seats) > currentSeats {
-		//parent has enough seats go for it!
-		sum, err := findSumUserBalance(sponsor.Id)
-		if err != nil {
-			return err
-		}
-		if sum > mUSDPerDay {
-			transferBalance(sponsor.PaymentCycleId, userId, sponsor.Id, pc.Freq*mUSDPerDay, "SPON", timeNow())
-		} else {
-			log.Printf("parent has not enough funding")
-		}
-	} else {
-		log.Printf("parent has not enough seats")
-	}
-	return nil
 }
 
 func createUser(email string) (*User, error) {

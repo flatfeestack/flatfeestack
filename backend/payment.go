@@ -16,11 +16,122 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 )
 
 type ClientSecretBody struct {
 	ClientSecret string `json:"client_secret"`
+}
+
+func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
+	pc, err := findPaymentCycle(user.PaymentCycleId)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not find user balance: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(pc)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+}
+
+func topup(w http.ResponseWriter, r *http.Request, user *User) {
+	if len(user.Claims.InviteEmails) == 0 {
+		log.Printf("no invitations")
+		return
+	}
+
+	balance, err := findSumUserBalance(user.Id, user.PaymentCycleId, nil)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could not find user balance: %v", err)
+		return
+	}
+	if balance >= mUSDPerDay {
+		log.Printf("enough funds")
+		return
+	}
+
+	for _, inviteEmail := range user.Claims.InviteEmails {
+		sponsor, err := findUserByEmail(inviteEmail)
+		if err != nil {
+			log.Printf("findUserByEmail: %v", err)
+			continue
+		}
+		pc, err := findPaymentCycle(sponsor.PaymentCycleId)
+		if err != nil || pc == nil {
+			log.Printf("findPaymentCycle: %v", err)
+			continue
+		}
+
+		currentSeats, err := findSeats(sponsor.Id, pc.Id)
+		if err != nil {
+			log.Printf("findSeats: %v", err)
+			continue
+		}
+		if int64(pc.Seats) > currentSeats {
+			//parent has enough seats go for it!
+			sum, err := findSumUserBalance(sponsor.Id, pc.Id, nil)
+			if err != nil {
+				log.Printf("findSumUserBalance: %v", err)
+				continue
+			}
+			balance := int64(pc.Freq * mUSDPerDay)
+			if sum < balance {
+				log.Printf("parent has not enough funding")
+				//TODO: notify parent
+				continue
+			}
+
+			sum, err = findSumUserBalance(user.Id, pc.Id, &sponsor.Id)
+			if err != nil {
+				log.Printf("findSumUserBalance: %v", err)
+				continue
+			}
+			if sum > 0 {
+				log.Printf("already sponsored: %v", err)
+				continue
+			}
+
+			ub := UserBalance{
+				PaymentCycleId: pc.Id,
+				UserId:         sponsor.Id,
+				FromUserId:     nil,
+				Balance:        -balance,
+				BalanceType:    "SPONSOR",
+				CreatedAt:      timeNow(),
+			}
+			err = insertUserBalance(ub)
+			if err != nil {
+				log.Printf("transferBalance: %v", err)
+				continue
+			}
+			ub.UserId = user.Id
+			ub.FromUserId = &sponsor.Id
+			ub.Balance = balance
+			err = insertUserBalance(ub)
+			if err != nil {
+				log.Printf("transferBalance: %v", err)
+				continue
+			}
+			err = updatePaymentCycleId(user.Id, &pc.Id)
+			if err != nil {
+				log.Printf("transferBalance: %v", err)
+				continue
+			}
+
+			go func() {
+				err = sendToBrowser(user.Id, pc.Id)
+				if err != nil {
+					log.Printf("could not notify client %v", user.Id)
+				}
+			}()
+		} else {
+			log.Printf("parent has not enough seats")
+			continue
+		}
+	}
 }
 
 //https://stripe.com/docs/payments/save-and-reuse
@@ -186,7 +297,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		oldSum, err := findSumUserBalance(uid)
+		oldSum, err := findSumUserBalance(uid, u.PaymentCycleId, nil)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -197,7 +308,6 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			PaymentCycleId: u.PaymentCycleId,
 			UserId:         u.Id,
 			Balance:        -oldSum,
-			Day:            timeNow(),
 			BalanceType:    "CLOSE_CYCLE",
 			CreatedAt:      timeNow(),
 		}
@@ -236,15 +346,19 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err = sendToBrowser(uid, newPaymentCycleId)
-		if err != nil {
-			log.Printf("could not notify client %v", uid)
-		}
+
+		go func() {
+			err = sendToBrowser(uid, newPaymentCycleId)
+			if err != nil {
+				log.Printf("could not notify client %v", uid)
+			}
+		}()
 
 	// ... handle other event types
 	case "payment_intent.authentication_required":
 	case "payment_intent.requires_payment_method":
 		//again
+		fmt.Printf("CASE-STRIP: %v", event)
 		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
@@ -263,7 +377,6 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			PaymentCycleId: u.PaymentCycleId,
 			UserId:         uid,
 			Balance:        0,
-			Day:            timeNow(),
 			BalanceType:    "AUTHREQ",
 			CreatedAt:      timeNow(),
 		}
@@ -278,7 +391,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		email := *u.Email
 		var other = map[string]string{}
 		other["email"] = email
-		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"
+		other["url"] = opts.EmailLinkPrefix + "/user/payments"
 		other["lang"] = "en"
 
 		defaultMessage := "Authentication is required, please go to the following site to continue: " + other["url"]
@@ -316,7 +429,6 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			PaymentCycleId: u.PaymentCycleId,
 			UserId:         uid,
 			Balance:        0,
-			Day:            timeNow(),
 			BalanceType:    "NOFUNDS",
 			CreatedAt:      timeNow(),
 		}
@@ -406,43 +518,45 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	clients[user.Id] = conn
 	lock.Unlock()
 	conn.SetCloseHandler(func(code int, text string) error {
+		log.Printf("closing")
 		lock.Lock()
-		defer lock.Unlock()
 		delete(clients, user.Id)
+		lock.Unlock()
 		return nil
 	})
 
-	err = sendToBrowser(user.Id, user.PaymentCycleId)
-	if err != nil {
-		log.Printf("could not notify client %v", user.Id)
-	}
+	conn.SetPongHandler(func(appData string) error {
+		log.Printf(appData)
+		return nil
+	})
+
+	go func() {
+		err = sendToBrowser(user.Id, user.PaymentCycleId)
+		if err != nil {
+			log.Printf("could not notify client %v", user.Id)
+		}
+	}()
 }
 
 type UserBalances struct {
 	PaymentCycle PaymentCycle  `json:"paymentCycle"`
 	UserBalances []UserBalance `json:"userBalances"`
 	Total        int64         `json:"total"`
+	DaysLeft     int           `json:"daysLeft"`
 }
 
 func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	lock.Lock()
-	defer lock.Unlock()
-
 	conn := clients[userId]
+	lock.Unlock()
 
 	if conn == nil {
 		return fmt.Errorf("cannot get websockt for client %v", userId)
 	}
 
-	err := conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	if err != nil {
-		delete(clients, userId)
-		return err
-	}
-
 	userBalances, err := findUserBalances(userId)
 	if err != nil {
-		delete(clients, userId)
+		conn.Close()
 		return err
 	}
 
@@ -452,14 +566,18 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	}
 
 	pc, err := findPaymentCycle(paymentCycleId)
-	if err != nil || pc == nil {
-		delete(clients, userId)
+	if err != nil {
+		conn.Close()
 		return err
 	}
 
-	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalances, Total: total})
+	if pc == nil {
+		return nil //nothing to do
+	}
+
+	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalances, Total: total, DaysLeft: pc.DaysLeft})
 	if err != nil {
-		delete(clients, userId)
+		conn.Close()
 		return err
 	}
 
@@ -467,7 +585,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 }
 
 func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
-	err := updateSeats(user.PaymentCycleId, 0)
+	err := updateFreq(user.PaymentCycleId, 0)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
 		return
