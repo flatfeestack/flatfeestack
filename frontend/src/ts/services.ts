@@ -1,7 +1,8 @@
-import { token, user, loginFailed, userBalances, config } from "./store";
+import { token, user, loginFailed, userBalances, config, error } from "./store";
 import { API } from "./api";
 import { Config, Token, Users } from "../types/users";
 import { get } from "svelte/store";
+import { loadStripe } from "@stripe/stripe-js/pure";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const p1 = API.auth.confirmReset(email, password, emailToken);
@@ -33,8 +34,8 @@ export const confirmEmail = async(email: string, emailToken: string) => {
 
 export const confirmInviteNew = async(email: string, password: string,
                                       emailToken: string, inviteEmail: string,
-                                      inviteDate: string, inviteToken: string) => {
-  const p1 = API.auth.confirmInviteNew(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
+                                      expireAt: string, inviteToken: string) => {
+  const p1 = API.auth.confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken);
   const p2 = API.config.config();
 
   const res = await p1;
@@ -98,6 +99,7 @@ const storeToken = (tok: Token, conf:Config) => {
 
 const connect = ():Promise<WebSocket> => {
   return new Promise(function(resolve, reject) {
+    console.log("connect")
     const t = get(token);
     const c = get(config)
     const server = new WebSocket(`${c.wsBaseUrl}/ws/users/me/payment`, ["access_token", t]);
@@ -111,10 +113,20 @@ const connect = ():Promise<WebSocket> => {
   });
 }
 
+let timeoutOnclose;
+let timeoutOnerror;
+
 export const connectWs = async () => {
+  if(timeoutOnclose) {
+    clearTimeout(timeoutOnclose);
+    timeoutOnclose = undefined;
+  }
+  if(timeoutOnerror) {
+    clearTimeout(timeoutOnerror);
+    timeoutOnerror = undefined;
+  }
   try {
     const ws = await connect();
-
     ws.onmessage = function(event:MessageEvent) {
       try {
         userBalances.set(JSON.parse(event.data));
@@ -123,26 +135,26 @@ export const connectWs = async () => {
       }
     };
     ws.onclose = async function(e:CloseEvent) {
-      console.log('Socket is closed. Reconnect will be attempted in 1 second.', e);
+      console.log('Socket is closed. Reconnect will be attempted in 3 second.', e);
       if (e.code === 4001) {
         await refresh();
         await connectWs();
       } else {
-        setTimeout(function(e) {
-          connectWs();
+        timeoutOnclose = setTimeout(async function() {
+          await connectWs();
         }, 3000);
       }
     };
   } catch (e) {
     console.log(e);
-    setTimeout(async function() {
+    timeoutOnerror = setTimeout(async function() {
       await connectWs();
     }, 5000);
   }
 }
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
-/*const parseJwt = (token) => {
+export const parseJwt = (token) => {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
@@ -150,6 +162,51 @@ export const connectWs = async () => {
   }).join(''));
 
   return JSON.parse(jsonPayload);
-};*/
+};
 
+//https://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
+export const formatDate = (d: Date):string => {
+  return d.getFullYear()  + "-" + ("0"+(d.getMonth())).slice(-2) + "-" +
+    ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
 
+//https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site
+export const timeSince = (d: Date, now:Date):string => {
+  const seconds = Math.floor((now.getTime() - d.getTime()) / 1000);
+  let interval = seconds / 31536000;
+
+  if (interval > 1) {
+    return Math.floor(interval) + " years";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " months";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " days";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " hours";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " minutes";
+  }
+  return Math.floor(seconds) + " seconds";
+}
+
+export const stripePaymentMethod = async (stripe, cardElement) => {
+  const cs = await API.user.setupStripe();
+  const result = await stripe.confirmCardSetup(
+    cs.client_secret,
+    { payment_method: { card: cardElement } },
+    { handleActions: false });
+  user.set(await API.user.updatePaymentMethod(result.setupIntent.payment_method));
+};
+
+export const stripePayment = async (stripe, freq: number, seats: number, payment_method: string) => {
+  const res = await API.user.stripePayment(freq, seats);
+  await stripe.confirmCardPayment(res.client_secret, {payment_method })
+};

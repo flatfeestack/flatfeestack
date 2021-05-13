@@ -1,7 +1,7 @@
 <script lang="ts">
   import { links, Route, Router } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
-  import { user, route, loginFailed } from "./ts/store";
+  import { user, route, loginFailed, error } from "./ts/store";
   import { removeSession } from "./ts/services";
   import { onMount } from "svelte";
   import { API } from "./ts/api";
@@ -19,10 +19,11 @@
   import Payments from "./routes/Payments.svelte";
   import Admin from "./routes/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
-  import ConfirmGitEmail from "./routes/ConfirmGitEmail.svelte";
-  import ConfirmInvite from "./routes/ConfirmInvite.svelte";
+  import ForwardGitEmail from "./routes/ForwardGitEmail.svelte";
+  import ForwardInvite from "./routes/ForwardInvite.svelte";
   import Settings from "./routes/Settings.svelte";
   import ConfirmInviteNew from "./routes/ConfirmInviteNew.svelte";
+  import Invitations from "./routes/Invitations.svelte";
 
   export let url;
   let loading = true;
@@ -111,6 +112,16 @@
         border: var(--primary-500) 1px solid;
         transition: border .15s;
     }
+
+    .close {
+        cursor: pointer;
+        text-align: right;
+    }
+
+    .err-container {
+        display: flex;
+        flex-direction: row;
+    }
 </style>
 
 <div class="main">
@@ -135,6 +146,8 @@
     </nav>
   </header>
 
+  {#if $error}<div class="bg-red p-2 parent err-container"><div class="w-100">{$error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
+
   <main>
     <Router url="{url}">
 
@@ -149,9 +162,9 @@
 
         <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
         <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
-        <Route path="/confirm/git-email/:email/:token" component="{ConfirmGitEmail}" />
-        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInviteNew}" />
-        <Route path="/confirm/invite/:email/:inviteEmail/:inviteDate/:inviteToken" component="{ConfirmInvite}" />
+        <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
+        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:expireAt/:inviteToken" component="{ConfirmInviteNew}" />
+        <Route path="/confirm/invite/:email/:inviteEmail/:expireAt/:inviteToken" component="{ForwardInvite}" />
 
         {#if $user.id && ($route.pathname.startsWith("/user") || pathname.startsWith("/user"))}
           <Route path="/user/search" component="{Search}" />
@@ -160,6 +173,7 @@
           <Route path="/user/income" component="{Income}" />
           <Route path="/user/badges" component="{Badges}" />
           <Route path="/user/admin" component="{Admin}" />
+          <Route path="/user/invitations" component="{Invitations}" />
         {/if}
         <Route path="*" component="{CatchAll}" />
       {/if}

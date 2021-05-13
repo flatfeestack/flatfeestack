@@ -27,12 +27,6 @@
 </script>
 
 <style>
-    .container {
-        margin-top: 2em;
-        max-width: 20rem;
-        background-color: var(--primary-100);
-    }
-
     button, input:focus{
         outline: none;
     }
@@ -65,7 +59,7 @@
 </style>
 
 <div class="max">
-  <div class="container rounded p-5">
+  <div class="box-container rounded p-5">
     <h2 class="py-5 text-center text-primary-900">Create your account</h2>
 
     <form on:submit|preventDefault="{handleSubmit}">

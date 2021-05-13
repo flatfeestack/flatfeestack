@@ -6,16 +6,16 @@
 
   export let email;
   export let inviteEmail;
-  export let inviteDate;
+  export let expireAt;
   export let inviteToken;
 
   onMount(async () => {
     try {
-      await  API.auth.confirmInvite(email, inviteEmail, inviteDate, inviteToken);
-      navigate("/user/payments");
+      await API.auth.confirmInvite(email, inviteEmail, expireAt, inviteToken);
+      await API.user.topup();
+      navigate("/user/invitations");
     } catch (e) {
       $error = e
-      console.log(e);
     }
   });
 </script>

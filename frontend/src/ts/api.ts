@@ -14,6 +14,7 @@ import type {
   GitUser,
   RepoMapping
 } from "../types/users";
+import { PaymentCycle } from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -77,8 +78,8 @@ const search = ky.create({
 export const API = {
   authToken: {
     invites: () => authToken.get('invite').json<Invitation[]>(),
-    invite: (email: string, inviteEmail: string, name: string, invitedAt: string) => authToken.post('invite', {
-      json: { email, invite_email: inviteEmail, name, invitedAt } }),
+    invite: (email: string, inviteEmail: string, name: string, expireAt: string) => authToken.post('invite', {
+      json: { email, invite_email: inviteEmail, name, expireAt } }),
     delInvite: (email: string) => authToken.delete(`invite/${email}`),
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
@@ -91,10 +92,10 @@ export const API = {
     confirmEmail: (email: string, token: string) => auth.post("confirm/signup", { json: { email, token } }).json<Token>(),
     confirmReset: (email: string, password: string, token: string) => auth.post("confirm/reset", {
       json: { email, password, email_token: token } }).json<Token>(),
-    confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, inviteDate: string, inviteToken: string) =>
-      auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, invite_email: inviteEmail, invite_date: inviteDate, invite_token: inviteToken }}).json<Token>(),
-    confirmInvite: (email: string, inviteEmail: string, inviteDate: string, inviteToken: string) =>
-      auth.post("confirm/invite", { json: { email, invite_email: inviteEmail, invite_date: inviteDate, invite_token: inviteToken }}).json<Token>(),
+    confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string) =>
+      auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, inviteEmail, expireAt, inviteToken }}).json<Token>(),
+    confirmInvite: (email: string, inviteEmails: string, expireAt: string, inviteToken: string) =>
+      auth.post("confirm/invite", { json: { email, inviteEmails, expireAt, inviteToken }}),
   },
   user: {
     get: () => backendToken.get(`users/me`).json<Users>(),
@@ -114,6 +115,9 @@ export const API = {
     stripePayment: (freq: number, seats: number) => backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
+    topup: () => backendToken.post(`users/me/topup`),
+    paymentCycle: () => backendToken.post(`users/me/payment-cycle`).json<PaymentCycle>(),
+    updateSeats: (seats: number)=> backendToken.post(`users/me/seats/${seats}`),
   },
   repos: {
     search: (s: string) => backendToken.get(`repos/search?q=${encodeURI(s)}`).json<Repo[]>(),

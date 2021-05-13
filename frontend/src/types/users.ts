@@ -27,6 +27,7 @@ export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
   total: number;
+  daysLeft: number;
 }
 
 export type UserBalance = {
@@ -34,7 +35,7 @@ export type UserBalance = {
   userId: string;
   balance: number;
   balanceType: string;
-  day: string;
+  createdAt: string;
 }
 
 export type PaymentCycle = {
@@ -71,7 +72,7 @@ export type GitUser = {
 
 export type Invitation = {
   email: string;
-  pending: boolean;
+  confirmedAt: string|null;
   createdAt: string;
 };
 

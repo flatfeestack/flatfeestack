@@ -2,11 +2,12 @@
   import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
   import { confirmInviteNew } from "../ts/services";
+  import { API } from "../ts/api";
 
   export let email;
   export let emailToken;
   export let inviteEmail;
-  export let inviteDate;
+  export let expireAt;
   export let inviteToken;
 
   let password = "";
@@ -17,7 +18,8 @@
     try {
       error = "";
       isSubmitting = true;
-      await confirmInviteNew(email, password, emailToken, inviteEmail, inviteDate, inviteToken);
+      await confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken);
+      await API.user.topup();
       email = "";
       password = "";
       isSubmitting = false;
@@ -31,12 +33,6 @@
 </script>
 
 <style>
-    .container {
-        margin-top: 2em;
-        max-width: 20rem;
-        background-color: var(--primary-100);
-    }
-
     button, input:focus{
         outline: none;
     }
@@ -69,7 +65,7 @@
 </style>
 
 <div class="max">
-  <div class="container rounded p-5">
+  <div class="box-container rounded p-5">
     <h2 class="py-5 text-center text-primary-900">{inviteEmail} invited you</h2>
       <form on:submit|preventDefault="{handleSubmit}">
         <label for="email" class="py-1">Email address</label>

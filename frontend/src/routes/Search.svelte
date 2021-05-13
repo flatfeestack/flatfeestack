@@ -76,7 +76,7 @@
 
     <div class="py-3">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
-        <input type="text" class="rounded py-2 border-primary-900" bind:value="{search}" />
+        <input type="text" bind:value="{search}" />
         <button type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
       </form>
     </div>

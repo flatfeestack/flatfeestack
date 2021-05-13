@@ -1,8 +1,8 @@
 <script type="ts">
-  import { faSearch, faMedal, faUserCog, faCreditCard, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
+  import { faUserFriends, faSearch, faMedal, faUserCog, faCreditCard, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
   import { links } from "svelte-routing";
   import Fa from "svelte-fa";
-  import { error, isSubmitting, user } from "../ts/store";
+  import { isSubmitting, user } from "../ts/store";
   import Spinner from "./Spinner.svelte";
 </script>
 
@@ -30,22 +30,6 @@
         background-color: var(--primary-500);
         color: var(--secondary-100);
     }
-    nav .ac {
-        display: block;
-        color: lightgray;
-        padding: 1em;
-        text-decoration: none;
-    }
-
-    .close {
-        cursor: pointer;
-        text-align: right;
-    }
-
-    .container {
-        display: flex;
-        flex-direction: row;
-    }
 
     @media (max-width: 36rem) {
         .page {
@@ -69,7 +53,7 @@
 </style>
 
 <div class="page">
-  <nav class="sideBar" use:links>
+  <nav use:links>
     <a href="/user/search">
       <Fa icon="{faSearch}" size="sm" class="icon" />
       <span class="hide-sx">Search</span>
@@ -88,10 +72,10 @@
         <span class="hide-sx">Income</span>
       </a>
     {:else}
-      <div class="ac">
-        <Fa icon="{faHandHoldingUsd}" size="sm" class="icon" />
-        <span class="hide-sx">Income</span>
-      </div>
+      <a href="/user/invitations">
+        <Fa icon="{faUserFriends}" size="sm" class="icon" />
+        <span class="hide-sx">Invitations</span>
+      </a>
     {/if}
     <a href="/user/badges">
       <Fa icon="{faMedal}" size="sm" class="icon" />
@@ -105,7 +89,6 @@
     {/if}
   </nav>
   <div>
-    {#if $error}<div class="bg-red p-2 parent container"><div class="w-100">{$error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
     {#if $isSubmitting}<Spinner />{/if}
     <slot />
   </div>

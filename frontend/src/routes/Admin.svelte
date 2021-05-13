@@ -2,6 +2,7 @@
 import Navigation from "../components/Navigation.svelte";
 import { API } from "../ts/api";
 import Spinner from "../components/Spinner.svelte";
+import { formatDate } from "../ts/services";
 
 let promisePendingPayouts =API.payouts.pending("pending");
 let promisePaidPayouts = API.payouts.pending("paid");
@@ -35,15 +36,10 @@ let userEmail = ""
 let exchangeRate = 0.0;
 let seats = 1;
 
-//https://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
 const d = new Date();
-const datestring1 = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" +
-  ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
-
-
-const datestring2 = d.getFullYear()  + "-" + ("0"+(d.getMonth())).slice(-2) + "-" +
-  ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
-
+const datestring1 = formatDate(d);
+d.setMonth(d.getMonth() -1)
+const datestring2 = formatDate(d);
 
 let json = `{
 "startDate":"`+datestring2+`",

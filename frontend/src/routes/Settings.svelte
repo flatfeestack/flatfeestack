@@ -59,12 +59,6 @@
 </script>
 
 <style>
-    .container {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        margin: 1rem 1rem 3rem;
-    }
 
     .upload {
         display: flex;

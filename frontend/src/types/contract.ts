@@ -1,4 +1,4 @@
-export const ABI:string = `[
+export const ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -67,4 +67,4 @@ export const ABI:string = `[
     stateMutability: "nonpayable",
     type: "function",
   },
-]`;
+];

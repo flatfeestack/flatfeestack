@@ -33,4 +33,7 @@ const requestFunds = async () => {
 };
 </script>
 
-<button class="button" on:click="{requestFunds}">Request funds</button>
+<div class="container">
+  <label class="px-2">Request funds:</label>
+  <button class="button" on:click="{requestFunds}">Request funds</button>
+</div>

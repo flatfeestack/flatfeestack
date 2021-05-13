@@ -142,6 +142,11 @@ button {
   cursor: pointer;
 }
 
+input[type=email], input[type=text]{
+  border: 1px solid var(--primary-700);
+  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+}
+
 button:hover {
   background: var(--primary-700);
   text-decoration: none;
@@ -210,4 +215,59 @@ button:active {
   margin-left: 1rem;
   margin-right: 1rem;
   border: 2px solid var(--primary-100);
+}
+
+thead tr {
+  background-color: var(--primary-500);
+  color: #ffffff;
+  text-align: left;
+}
+
+th, td {
+  padding: 0.5rem;
+}
+
+tbody tr:nth-of-type(even) {
+  background-color: var(--primary-300);
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid var(--primary-500);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  margin: 1rem 1rem 3rem;
+}
+
+.container-stretch {
+  display: flex;
+  flex-direction: row;
+  margin: 1rem 1rem 3rem;
+}
+
+.container-col {
+  display: flex;
+  flex-direction: column;
+  margin: 1rem 1rem 3rem;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.box-container {
+  margin-top: 2em;
+  max-width: 20rem;
+  background-color: var(--primary-100);
+}
+
+.nobreak {
+  white-space: nowrap;
 }
