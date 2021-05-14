@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       push-images:
-        description: 'Push Images?'
+        description: 'Push Images? ["true","false"]'
         default: 'true'
       env:
-        description: 'Env?'
+        description: 'Env? ["test","prod"]'
         default: 'test'
       deploy:
-        description: 'Deploy?'
+        description: 'Deploy? ["true","false"]'
         default: 'true'
 
 jobs:
