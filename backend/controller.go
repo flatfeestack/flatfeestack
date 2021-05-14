@@ -63,6 +63,47 @@ type FlatFeeWeight struct {
 	Weight float64 `json:"weight"`
 }
 
+type Plan struct {
+	Title       string    `json:"title"`
+	Price       big.Float `json:"price"`
+	Freq        int       `json:"freq"`
+	Description string    `json:"desc"`
+}
+
+var plans = []Plan{}
+
+func init() {
+	py := new(big.Float)
+	py.SetString("120.45")
+	plan := Plan{
+		Title:       "Yearly",
+		Price:       *py,
+		Freq:        365,
+		Description: "By paying yearly <b>" + py.String() + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects",
+	}
+	plans = append(plans, plan)
+
+	py = new(big.Float)
+	py.SetString("29.7")
+	plan = Plan{
+		Title:       "Quarterly",
+		Price:       *py,
+		Freq:        90,
+		Description: "You want to support Open Source software with a quarterly flat fee of <b>" + py.String() + " USD</b>",
+	}
+	plans = append(plans, plan)
+
+	py = new(big.Float)
+	py.SetString("0.66")
+	plan = Plan{
+		Title:       "Beta",
+		Price:       *py,
+		Freq:        2,
+		Description: "Beta testing: <b>" + py.String() + " USD</b>",
+	}
+	plans = append(plans, plan)
+}
+
 const (
 	fakePubKey1  = "0x985B60456DF6db6952644Ee0C70dfa9146e4E12C"
 	fakePrivKey1 = "0xc76d23e248188840aacec04183d94cde00ce1b591a2e6610b034094f7aef5ecf"
@@ -654,11 +695,18 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func config(w http.ResponseWriter, _ *http.Request) {
+	b, err := json.Marshal(plans)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_, err := w.Write([]byte(`{
+	_, err = w.Write([]byte(`{
 			"stripePublicApi":"` + opts.StripeAPIPublicKey + `", 
 			"wsBaseUrl":"` + opts.WebSocketBaseUrl + `",
-			"restTimeout":"` + strconv.Itoa(opts.RestTimeout) + `"
+			"restTimeout":"` + strconv.Itoa(opts.RestTimeout) + `",
+            "plans": ` + string(b) + `
 	}`))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)

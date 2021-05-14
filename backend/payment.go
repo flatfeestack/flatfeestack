@@ -177,7 +177,14 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
-	if freq != 90 && freq != 365 && freq != 2 {
+	match := false
+	for _, v := range plans {
+		if v.Freq == freq {
+			match = true
+			break
+		}
+	}
+	if !match {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
