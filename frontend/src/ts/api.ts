@@ -79,7 +79,7 @@ export const API = {
   authToken: {
     invites: () => authToken.get('invite').json<Invitation[]>(),
     invite: (email: string, name: string, expireAt: string, meta: string) => authToken.post('invite', {
-      json: { email, name, expireAt, meta } }),
+      json: { email, name, expireAt, meta: meta.toString() } }),
     delInvite: (email: string) => authToken.delete(`invite/${email}`),
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
