@@ -279,11 +279,11 @@ func runDailyTopupReminderUser() ([]User, error) {
           UNION
           SELECT u.id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
-                INNER JOIN user_balances ub ON ub.from_user_id = u.id
-                INNER JOIN payment_cycle pc ON c.payment_cycle_id = ub.payment_cycle_id
+                INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
 			WHERE u.role='ORG'
-			GROUP BY u.id
+			GROUP BY u.sponsor_id
 			HAVING MIN(pc.days_left) <= 1`
+
 	rows, err := db.Query(s)
 	if err != nil {
 		return nil, err

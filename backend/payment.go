@@ -43,7 +43,7 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	balance, err := findSumUserBalance(user.Id, user.PaymentCycleId, nil)
+	balance, err := findSumUserBalance(user.Id, user.PaymentCycleId)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not find user balance: %v", err)
 		return
@@ -61,7 +61,7 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 		}
 
 		//parent has enough funds go for it!
-		sum, err := findSumUserBalance(sponsor.Id, sponsor.PaymentCycleId, nil)
+		sum, err := findSumUserBalance(sponsor.Id, sponsor.PaymentCycleId)
 		if err != nil {
 			log.Printf("findSumUserBalance: %v", err)
 			continue
@@ -79,10 +79,16 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 			continue
 		}
 
+		paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, 1, freq, timeNow())
+		if err != nil {
+			log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		ub := UserBalance{
 			PaymentCycleId: sponsor.PaymentCycleId,
 			UserId:         sponsor.Id,
-			FromUserId:     nil,
 			Balance:        -balance,
 			BalanceType:    "SPONSOR",
 			CreatedAt:      timeNow(),
@@ -95,14 +101,14 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 		}
 
 		ub.UserId = user.Id
-		ub.FromUserId = &sponsor.Id
 		ub.Balance = balance
+		ub.PaymentCycleId = *paymentCycleId
 		err = insertUserBalance(ub)
 		if err != nil {
 			log.Printf("transferBalance: %v", err)
 			continue
 		}
-		err = updatePaymentCycleId(user.Id, &sponsor.PaymentCycleId)
+		err = updatePaymentCycleId(user.Id, paymentCycleId, &sponsor.Id)
 		if err != nil {
 			log.Printf("transferBalance: %v", err)
 			continue
@@ -287,7 +293,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		oldSum, err := findSumUserBalance(uid, u.PaymentCycleId, nil)
+		oldSum, err := findSumUserBalance(uid, u.PaymentCycleId)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -330,7 +336,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = updatePaymentCycleId(uid, &newPaymentCycleId)
+		err = updatePaymentCycleId(uid, &newPaymentCycleId, nil)
 		if err != nil {
 			log.Printf("Update payment cycle for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -578,6 +584,20 @@ func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
 	err := updateFreq(user.PaymentCycleId, 0)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
+		return
+	}
+}
+
+func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
+	userStatus, err := findSponsoredUserBalances(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(userStatus)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }

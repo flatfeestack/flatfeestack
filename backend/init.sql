@@ -2,6 +2,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
     id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sponsor_id            UUID CONSTRAINT fk_user_id_uid REFERENCES users (id),
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
     stripe_last4          VARCHAR(4),
@@ -29,7 +30,6 @@ CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
-    from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          BIGINT,
     balance_type     VARCHAR(16) NOT NULL,
     created_at       TIMESTAMP NOT NULL

@@ -823,7 +823,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	err = updatePaymentCycleId(u.Id, paymentCycleId)
+	err = updatePaymentCycleId(u.Id, paymentCycleId, nil)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return

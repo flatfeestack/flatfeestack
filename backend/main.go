@@ -216,7 +216,7 @@ func main() {
 	apiRouter.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
-
+	apiRouter.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
 	//
 	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
 	//repo github
