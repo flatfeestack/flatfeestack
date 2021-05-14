@@ -1,7 +1,7 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
   import Payment from "../components/Payment.svelte";
-  import { error, user, userBalances, token } from "../ts/store";
+  import { error, user, userBalances, token, config } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
@@ -9,7 +9,6 @@
   import type { Repo } from "src/types/users";
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
-  import { plans } from "../types/contract";
 
   let checked = $user.role != "ORG";
   let sponsoredRepos: Repo[] = [];
@@ -89,9 +88,8 @@
     {#if $userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0}
       <span class="bold">
         <input size="5" type="number" min="1" bind:value={$userBalances.paymentCycle.seats}> seats,
-        {plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).title.toLocaleLowerCase()} recurring payments
+        {$config.plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).title.toLocaleLowerCase()} recurring payments
         (${$userBalances.paymentCycle.seats * $userBalances.paymentCycle.freq * 330000 / 1000000})</span>
-
       <form class="p-2" on:submit|preventDefault="{updateSeats}">
         <button disabled="{isSubmitting}" type="submit">Update Seats
           {#if isSubmitting}

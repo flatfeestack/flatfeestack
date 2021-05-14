@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, isSubmitting, user } from "../ts/store";
+  import { error, isSubmitting, user, config } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
@@ -8,7 +8,6 @@
   import { faTrash, faSync, faClock, faCheck } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
-  import { plans } from "../types/contract";
 
   let invites: Invitation[] = [];
   let inviteEmail;
@@ -75,7 +74,7 @@
     <label class="p-2">Invite this email:</label>
     <input size="24" maxlength="100" type="email" bind:value="{inviteEmail}" />&nbsp;
     <select bind:value={selected}>
-      {#each plans as plan, i}
+      {#each $config.plans as plan, i}
         <option value="{plan.freq}">{plan.title}</option>
       {/each}
     </select>
@@ -112,7 +111,7 @@
           <td title="{formatDate(new Date(inv.createdAt))}">
             {timeSince(new Date(inv.createdAt), new Date())} ago
           </td>
-          <td>{plans.find(plan => plan.freq == inv.meta).title}</td>
+          <td>{$config.plans.find(plan => plan.freq == inv.meta).title}</td>
           <td class="text-center">
             <span class="cursor-pointer" on:click="{() => removeInvite(inv.email)}"><Fa icon="{faTrash}" size="md" /></span>
           </td>

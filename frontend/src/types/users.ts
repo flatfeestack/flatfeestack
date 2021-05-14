@@ -17,6 +17,14 @@ export type Config = {
   stripePublicApi: string;
   wsBaseUrl: string;
   restTemplate: number;
+  plans: Plan[];
+}
+
+export type Plan = {
+  title: string;
+  price: number;
+  freq: number;
+  desc: string;
 }
 
 export type ClientSecret = {
