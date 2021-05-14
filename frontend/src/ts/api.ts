@@ -12,9 +12,10 @@ import type {
   Time,
   UserAggBalance,
   GitUser,
-  RepoMapping
+  RepoMapping,
+  UserBalance
 } from "../types/users";
-import { PaymentCycle } from "../types/users";
+import { PaymentCycle, UserStatus } from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -118,6 +119,7 @@ export const API = {
     topup: () => backendToken.post(`users/me/topup`),
     paymentCycle: () => backendToken.post(`users/me/payment-cycle`).json<PaymentCycle>(),
     updateSeats: (seats: number)=> backendToken.post(`users/me/seats/${seats}`),
+    statusSponsoredUsers: () => backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
   },
   repos: {
     search: (s: string) => backendToken.get(`repos/search?q=${encodeURI(s)}`).json<Repo[]>(),

@@ -46,6 +46,13 @@ export type UserBalance = {
   createdAt: string;
 }
 
+export type UserStatus = {
+  userId: string;
+  name: string;
+  email: string;
+  daysLeft: number;
+}
+
 export type PaymentCycle = {
   id: string;
   seats: number;

@@ -6,7 +6,7 @@
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import { faSync } from "@fortawesome/free-solid-svg-icons";
-  import type { Repo } from "src/types/users";
+  import type { Repo, UserStatus } from "src/types/users";
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
 
@@ -14,6 +14,7 @@
   let sponsoredRepos: Repo[] = [];
   let invite_email;
   let isSubmitting = false;
+  let statusSponsoredUsers: UserStatus[] = [];
 
   $: $user.role = checked === false ? "ORG" : "USR";
 
@@ -69,6 +70,8 @@
       await connectWs();
       const res2 = await API.user.getSponsored();
       sponsoredRepos = res2 === null ? [] : res2;
+      const res3 = await API.user.statusSponsoredUsers();
+      statusSponsoredUsers = res3 === null ? [] : res3;
     } catch (e) {
       $error = e;
     }
@@ -138,6 +141,42 @@
       <span class="bold">{sponsoredRepos.length} projects</span>
     </div>
   {/if}
+
+
+  {#if !checked}
+  <div class="container">
+    <h2 class="p-2">
+     Users using your seats
+    </h2>
+  </div>
+  <div class="container">
+    <table>
+      <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Days Left</th>
+      </tr>
+      </thead>
+      <tbody>
+      {#each statusSponsoredUsers as row, i}
+        <tr>
+          <td>{row.name}</td>
+          <td>{row.email}</td>
+          <td>{row.daysLeft}</td>
+        </tr>
+      {:else}
+        <tr>
+          <td colspan="5">No Data</td>
+        </tr>
+      {/each}
+      </tbody>
+    </table>
+  </div>
+  {/if}
+
+
+
 
   {#if !($userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0)|| !checked}
     {#if !($userBalances && $userBalances.daysLeft>1) || !checked}
