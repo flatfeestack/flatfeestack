@@ -6,57 +6,57 @@ services:
   # Applications:
   #######################
 
-  test-auth:
-    hostname: test-auth
+  prod-auth:
+    hostname: prod-auth
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:latest
     networks:
-      - test
+      - prod
     ports:
       - 9081:9081
     env_file:
-      - .test.fastauth.env
+      - .prod.fastauth.env
     depends_on:
       db:
         condition: service_healthy
 
-  test-backend:
-    hostname: test-backend
+  prod-backend:
+    hostname: prod-backend
     image: ghcr.io/flatfeestack/flatfeestack/backend:latest
     networks:
-      - test
+      - prod
     ports:
       - 9082:9082
     env_file:
-      - .test.backend.env
+      - .prod.backend.env
     depends_on:
       db:
         condition: service_healthy
 
-  test-analysis-engine:
+  prod-analysis-engine:
     hostname: test-analysis-engine
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:latest
     networks:
-      - test
+      - prod
     ports:
       - 9083:9083
     env_file:
-      - .test.analysis-engine.env
+      - .prod.analysis-engine.env
 
-  test-payout:
-    hostname: test-payout
+  prod-payout:
+    hostname: prod-payout
     image: ghcr.io/flatfeestack/flatfeestack/payout:latest
     networks:
-      - test
+      - prod
     ports:
       - 9084:9084
     env_file:
-      - .test.payout.env
+      - .prod.payout.env
 
-  test-frontend:
-    hostname: test-frontend
+  prod-frontend:
+    hostname: prod-frontend
     image: ghcr.io/flatfeestack/flatfeestack/frontend:latest
     networks:
-      - test
+      - prod
     ports:
       - 9085:9085
     environment:
@@ -66,8 +66,8 @@ services:
   # Infrastructure:
   #######################
 
-  test-db:
-    hostname: test-db
+  prod-db:
+    hostname: prod-db
     image: postgres:13-alpine
     volumes:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
@@ -80,9 +80,9 @@ services:
       timeout: 5s
       retries: 15
     networks:
-      - test
+      - prod
     env_file:
-      - .test.db.env
+      - .prod.db.env
 
 networks:
-  test:
+  prod:
