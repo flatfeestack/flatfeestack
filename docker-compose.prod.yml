@@ -16,7 +16,7 @@ services:
     env_file:
       - .prod.fastauth.env
     depends_on:
-      db:
+      prod-db:
         condition: service_healthy
 
   prod-backend:
@@ -29,7 +29,7 @@ services:
     env_file:
       - .prod.backend.env
     depends_on:
-      db:
+      prod-db:
         condition: service_healthy
 
   prod-analysis-engine:

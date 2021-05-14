@@ -16,7 +16,7 @@ services:
     env_file:
       - .test.fastauth.env
     depends_on:
-      db:
+      test-db:
         condition: service_healthy
 
   test-backend:
@@ -29,7 +29,7 @@ services:
     env_file:
       - .test.backend.env
     depends_on:
-      db:
+      test-db:
         condition: service_healthy
 
   test-analysis-engine:
