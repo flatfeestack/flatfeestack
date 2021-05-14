@@ -32,10 +32,10 @@ jobs:
       - name: Pull Current Images
         run: docker-compose pull || true
       - name: Build Images
-        run: docker-compose build
+        run: docker-compose -f docker-compose.build.yml build
       - name: Push Images
         if: (github.ref == 'refs/heads/master') && github.event.inputs.push == 'true'
-        run: docker-compose push
+        run: docker-compose -f docker-compose.build.yml push
       - name: Deploy - TEST
         uses: garygrossgarten/github-action-ssh@release
         if: (github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true' && github.event.inputs.env == 'test'
