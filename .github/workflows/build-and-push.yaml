@@ -30,7 +30,7 @@ jobs:
           username: ${{ secrets.CR_PAT_USERNAME }}
           password: ${{ secrets.CR_PAT_TOKEN }}
       - name: Pull Current Images
-        run: docker-compose pull || true
+        run: docker-compose -f docker-compose.build.yml pull || true
       - name: Build Images
         run: docker-compose -f docker-compose.build.yml build
       - name: Push Images
