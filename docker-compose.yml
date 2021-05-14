@@ -8,7 +8,7 @@ services:
 
   auth:
     container_name: flatfeestack-auth
-    image: ghcr.io/flatfeestack/flatfeestack/fastauth:latest
+    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
     ports:
       - 9081:9081
@@ -29,7 +29,7 @@ services:
 
   backend:
     container_name: flatfeestack-backend
-    image: ghcr.io/flatfeestack/flatfeestack/backend:latest
+    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-latest}
     build: ./backend
     ports:
       - 9082:9082
@@ -41,7 +41,7 @@ services:
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
-    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:latest
+    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
     build: ./analysis-engine
     ports:
       - 9083:9083
@@ -50,7 +50,7 @@ services:
 
   payout:
     container_name: flatfeestack-payout
-    image: ghcr.io/flatfeestack/flatfeestack/payout:latest
+    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
     ports:
       - 9084:9084
@@ -63,7 +63,7 @@ services:
 
   frontend:
     container_name: flatfeestack-frontend
-    image: ghcr.io/flatfeestack/flatfeestack/frontend:latest
+    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-latest}
     build: ./frontend
     ports:
       - 9085:9085

@@ -8,7 +8,7 @@ services:
 
   prod-auth:
     hostname: prod-auth
-    image: ghcr.io/flatfeestack/flatfeestack/fastauth:latest
+    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-"latest-prod"}
     networks:
       - prod
     ports:
@@ -21,7 +21,7 @@ services:
 
   prod-backend:
     hostname: prod-backend
-    image: ghcr.io/flatfeestack/flatfeestack/backend:latest
+    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-"latest-prod"}
     networks:
       - prod
     ports:
@@ -34,7 +34,7 @@ services:
 
   prod-analysis-engine:
     hostname: test-analysis-engine
-    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:latest
+    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-"latest-prod"}
     networks:
       - prod
     ports:
@@ -44,7 +44,7 @@ services:
 
   prod-payout:
     hostname: prod-payout
-    image: ghcr.io/flatfeestack/flatfeestack/payout:latest
+    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-"latest-prod"}
     networks:
       - prod
     ports:
@@ -54,7 +54,7 @@ services:
 
   prod-frontend:
     hostname: prod-frontend
-    image: ghcr.io/flatfeestack/flatfeestack/frontend:latest
+    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-"latest-prod"}
     networks:
       - prod
     ports:
