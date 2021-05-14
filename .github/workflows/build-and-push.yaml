@@ -3,7 +3,7 @@ name: build-and-push
 on:
   workflow_dispatch:
     inputs:
-      push-images:
+      push:
         description: 'Push Images? ["true","false"]'
         default: 'true'
       env:
