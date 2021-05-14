@@ -8,7 +8,7 @@ services:
 
   prod-auth:
     hostname: prod-auth
-    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-"latest-prod"}
+    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE}
     networks:
       - prod
     env_file:
@@ -19,7 +19,7 @@ services:
 
   prod-backend:
     hostname: prod-backend
-    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-"latest-prod"}
+    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE}
     networks:
       - prod
     env_file:
@@ -30,7 +30,7 @@ services:
 
   prod-analysis-engine:
     hostname: test-analysis-engine
-    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-"latest-prod"}
+    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE}
     networks:
       - prod
     env_file:
@@ -38,7 +38,7 @@ services:
 
   prod-payout:
     hostname: prod-payout
-    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-"latest-prod"}
+    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE}
     networks:
       - prod
     env_file:
@@ -46,7 +46,7 @@ services:
 
   prod-frontend:
     hostname: prod-frontend
-    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-"latest-prod"}
+    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE}
     networks:
       - prod
     environment:
