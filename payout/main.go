@@ -64,8 +64,14 @@ func NewOpts() *Opts {
 		"0x731a10897d267e19b34503ad902d0a29173ba4b"), "Ethereum contract address")
 	flag.StringVar(&o.EthUrl, "eth-url", lookupEnv("ETH_URL",
 		"http://172.17.0.1:8545"), "Ethereum URL")
-	flag.BoolVar(&o.Deploy, "deploy", lookupEnv("DEPLOY",
-		"local") != "", "Set to true to deploy contract")
+
+	var deployOptValue bool
+	if lookupEnv("DEPLOY") == "true" {
+		deployOptValue = true
+	} else {
+		deployOptValue = false
+	}
+	flag.BoolVar(&o.Deploy, "deploy", deployOptValue, "Set to true to deploy contract")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
