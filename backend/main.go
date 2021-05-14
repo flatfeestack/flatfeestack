@@ -72,6 +72,7 @@ type TokenClaims struct {
 	Scope        string   `json:"scope,omitempty"`
 	InviteToken  string   `json:"inviteToken,omitempty"`
 	InviteEmails []string `json:"inviteEmails,omitempty"`
+	InviteMeta   []string `json:"inviteMeta,omitempty"`
 	jwt.Claims
 }
 

@@ -53,84 +53,67 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	for _, inviteEmail := range user.Claims.InviteEmails {
+	for k, inviteEmail := range user.Claims.InviteEmails {
 		sponsor, err := findUserByEmail(inviteEmail)
 		if err != nil {
 			log.Printf("findUserByEmail: %v", err)
 			continue
 		}
-		pc, err := findPaymentCycle(sponsor.PaymentCycleId)
-		if err != nil || pc == nil {
-			log.Printf("findPaymentCycle: %v", err)
-			continue
-		}
 
-		currentSeats, err := findSeats(sponsor.Id, pc.Id)
+		//parent has enough funds go for it!
+		sum, err := findSumUserBalance(sponsor.Id, sponsor.PaymentCycleId, nil)
 		if err != nil {
-			log.Printf("findSeats: %v", err)
+			log.Printf("findSumUserBalance: %v", err)
 			continue
 		}
-		if int64(pc.Seats) > currentSeats {
-			//parent has enough seats go for it!
-			sum, err := findSumUserBalance(sponsor.Id, pc.Id, nil)
-			if err != nil {
-				log.Printf("findSumUserBalance: %v", err)
-				continue
-			}
-			balance := int64(pc.Freq * mUSDPerDay)
-			if sum < balance {
-				log.Printf("parent has not enough funding")
-				//TODO: notify parent
-				continue
-			}
-
-			sum, err = findSumUserBalance(user.Id, pc.Id, &sponsor.Id)
-			if err != nil {
-				log.Printf("findSumUserBalance: %v", err)
-				continue
-			}
-			if sum > 0 {
-				log.Printf("already sponsored: %v", err)
-				continue
-			}
-
-			ub := UserBalance{
-				PaymentCycleId: pc.Id,
-				UserId:         sponsor.Id,
-				FromUserId:     nil,
-				Balance:        -balance,
-				BalanceType:    "SPONSOR",
-				CreatedAt:      timeNow(),
-			}
-			err = insertUserBalance(ub)
-			if err != nil {
-				log.Printf("transferBalance: %v", err)
-				continue
-			}
-			ub.UserId = user.Id
-			ub.FromUserId = &sponsor.Id
-			ub.Balance = balance
-			err = insertUserBalance(ub)
-			if err != nil {
-				log.Printf("transferBalance: %v", err)
-				continue
-			}
-			err = updatePaymentCycleId(user.Id, &pc.Id)
-			if err != nil {
-				log.Printf("transferBalance: %v", err)
-				continue
-			}
-
-			go func() {
-				err = sendToBrowser(user.Id, pc.Id)
-				if err != nil {
-					log.Printf("could not notify client %v", user.Id)
-				}
-			}()
-		} else {
-			log.Printf("parent has not enough seats")
+		freq, err := strconv.Atoi(user.Claims.InviteMeta[k])
+		if err != nil {
+			log.Printf("findSumUserBalance: %v", err)
 			continue
 		}
+
+		balance := int64(freq * mUSDPerDay)
+		if sum < balance {
+			log.Printf("parent has not enough funding")
+			//TODO: notify parent
+			continue
+		}
+
+		ub := UserBalance{
+			PaymentCycleId: sponsor.PaymentCycleId,
+			UserId:         sponsor.Id,
+			FromUserId:     nil,
+			Balance:        -balance,
+			BalanceType:    "SPONSOR",
+			CreatedAt:      timeNow(),
+		}
+
+		err = insertUserBalance(ub)
+		if err != nil {
+			log.Printf("transferBalance: %v", err)
+			continue
+		}
+
+		ub.UserId = user.Id
+		ub.FromUserId = &sponsor.Id
+		ub.Balance = balance
+		err = insertUserBalance(ub)
+		if err != nil {
+			log.Printf("transferBalance: %v", err)
+			continue
+		}
+		err = updatePaymentCycleId(user.Id, &sponsor.PaymentCycleId)
+		if err != nil {
+			log.Printf("transferBalance: %v", err)
+			continue
+		}
+
+		go func() {
+			err = sendToBrowser(user.Id, sponsor.PaymentCycleId)
+			if err != nil {
+				log.Printf("could not notify client %v", user.Id)
+			}
+		}()
 	}
 }
 
@@ -194,7 +177,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
-	if freq != 90 && freq != 365 {
+	if freq != 90 && freq != 365 && freq != 2 {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
