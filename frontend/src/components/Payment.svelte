@@ -5,21 +5,7 @@
   import { stripePayment, stripePaymentMethod } from "../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
   import { API } from "../ts/api";
-
-  const plans = [
-    {
-      title: "Yearly",
-      price: 365 * 330000 / 1000000,
-      freq: 365,
-      desc: "By paying yearly <b>" + (365 * 330000 / 1000000) + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects"
-    },
-    {
-      title: "Quarterly",
-      price: 90 * 330000 / 1000000,
-      freq: 90,
-      desc: "You want to support Open Source software with a quarterly flat fee of <b>" + (90 * 330000 / 1000000) + " USD</b>"
-    }
-  ];
+  import { plans } from "../types/contract";
 
   let stripe;
   let selectedPlan = 0;

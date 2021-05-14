@@ -9,6 +9,7 @@
   export let inviteEmail;
   export let expireAt;
   export let inviteToken;
+  export let inviteMeta;
 
   let password = "";
   let error = "";
@@ -18,7 +19,7 @@
     try {
       error = "";
       isSubmitting = true;
-      await confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken);
+      await confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken, inviteMeta);
       await API.user.topup();
       email = "";
       password = "";

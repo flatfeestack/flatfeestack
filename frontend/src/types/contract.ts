@@ -68,3 +68,24 @@ export const ABI = [
     type: "function",
   },
 ];
+
+export const plans = [
+  {
+    title: "Yearly",
+    price: 365 * 330000 / 1000000,
+    freq: 365,
+    desc: "By paying yearly <b>" + (365 * 330000 / 1000000) + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects"
+  },
+  {
+    title: "Quarterly",
+    price: 90 * 330000 / 1000000,
+    freq: 90,
+    desc: "You want to support Open Source software with a quarterly flat fee of <b>" + (90 * 330000 / 1000000) + " USD</b>"
+  },
+  {
+    title: "Beta",
+    price: 2 * 330000 / 1000000,
+    freq: 2,
+    desc: "You want to support Open Source software with a quarterly flat fee of <b>" + (2 * 330000 / 1000000) + " USD</b>"
+  }
+];

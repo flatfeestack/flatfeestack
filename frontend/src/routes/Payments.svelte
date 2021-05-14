@@ -7,9 +7,9 @@
   import { onMount } from "svelte";
   import { faSync } from "@fortawesome/free-solid-svg-icons";
   import type { Repo } from "src/types/users";
-  import { links } from "svelte-routing";
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import { plans } from "../types/contract";
 
   let checked = $user.role != "ORG";
   let sponsoredRepos: Repo[] = [];
@@ -87,9 +87,18 @@
   <div class="container">
     <label class="px-2">Current Support: </label>
     {#if $userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0}
-      <span class="bold">{$userBalances.paymentCycle.seats}
-        seats, {$userBalances.paymentCycle.freq == 90 ? "quarterly" : "yearly"} payments
+      <span class="bold">
+        <input size="5" type="number" min="1" bind:value={$userBalances.paymentCycle.seats}> seats,
+        {plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).title.toLocaleLowerCase()} recurring payments
         (${$userBalances.paymentCycle.seats * $userBalances.paymentCycle.freq * 330000 / 1000000})</span>
+
+      <form class="p-2" on:submit|preventDefault="{updateSeats}">
+        <button disabled="{isSubmitting}" type="submit">Update Seats
+          {#if isSubmitting}
+            <Dots />
+          {/if}
+        </button>
+      </form>
       <form class="p-2" on:submit|preventDefault="{handleCancel}">
         <button disabled="{isSubmitting}" type="submit">Cancel&nbsp;Support
           {#if isSubmitting}
@@ -131,21 +140,6 @@
       <span class="bold">{sponsoredRepos.length} projects</span>
     </div>
   {/if}
-
-  <div class="container">
-    <label class="px-2">Current Seats:</label>
-    {#if $userBalances && $userBalances.paymentCycle}
-      <input size="5" type="number" min="1" bind:value={$userBalances.paymentCycle.seats}>
-      <form class="p-2" on:submit|preventDefault="{updateSeats}">
-        <button disabled="{isSubmitting}" type="submit">Update Seats
-          {#if isSubmitting}
-            <Dots />
-          {/if}
-        </button>
-      </form>
-    {/if}
-  </div>
-
 
   {#if !($userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0)|| !checked}
     {#if !($userBalances && $userBalances.daysLeft>1) || !checked}

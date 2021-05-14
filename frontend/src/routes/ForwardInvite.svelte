@@ -8,6 +8,7 @@
   export let inviteEmail;
   export let expireAt;
   export let inviteToken;
+  export let inviteMeta;
 
   onMount(async () => {
     try {

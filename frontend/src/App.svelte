@@ -163,8 +163,8 @@
         <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
         <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
         <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
-        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:expireAt/:inviteToken" component="{ConfirmInviteNew}" />
-        <Route path="/confirm/invite/:email/:inviteEmail/:expireAt/:inviteToken" component="{ForwardInvite}" />
+        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:expireAt/:inviteToken/:inviteMeta" component="{ConfirmInviteNew}" />
+        <Route path="/confirm/invite/:email/:inviteEmail/:expireAt/:inviteToken/:inviteMeta" component="{ForwardInvite}" />
 
         {#if $user.id && ($route.pathname.startsWith("/user") || pathname.startsWith("/user"))}
           <Route path="/user/search" component="{Search}" />

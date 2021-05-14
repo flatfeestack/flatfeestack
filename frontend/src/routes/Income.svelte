@@ -105,10 +105,6 @@
     </div>
   {/if}
 
-
-
-
-
   <div class="container">
     <label class="px-2">Payout Address:</label>
     <input type="text" bind:value="{$user.payout_eth}" placeholder="Ethereum Address" />

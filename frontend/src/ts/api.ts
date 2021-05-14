@@ -78,8 +78,8 @@ const search = ky.create({
 export const API = {
   authToken: {
     invites: () => authToken.get('invite').json<Invitation[]>(),
-    invite: (email: string, inviteEmail: string, name: string, expireAt: string) => authToken.post('invite', {
-      json: { email, invite_email: inviteEmail, name, expireAt } }),
+    invite: (email: string, name: string, expireAt: string, meta: string) => authToken.post('invite', {
+      json: { email, name, expireAt, meta } }),
     delInvite: (email: string) => authToken.delete(`invite/${email}`),
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
@@ -92,10 +92,10 @@ export const API = {
     confirmEmail: (email: string, token: string) => auth.post("confirm/signup", { json: { email, token } }).json<Token>(),
     confirmReset: (email: string, password: string, token: string) => auth.post("confirm/reset", {
       json: { email, password, email_token: token } }).json<Token>(),
-    confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string) =>
-      auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, inviteEmail, expireAt, inviteToken }}).json<Token>(),
-    confirmInvite: (email: string, inviteEmails: string, expireAt: string, inviteToken: string) =>
-      auth.post("confirm/invite", { json: { email, inviteEmails, expireAt, inviteToken }}),
+    confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
+      auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, inviteEmail, expireAt, inviteToken, inviteMeta }}).json<Token>(),
+    confirmInvite: (email: string, inviteEmails: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
+      auth.post("confirm/invite", { json: { email, inviteEmails, expireAt, inviteToken, inviteMeta }}),
   },
   user: {
     get: () => backendToken.get(`users/me`).json<Users>(),

@@ -8,10 +8,12 @@
   import { faTrash, faSync, faClock, faCheck } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import { plans } from "../types/contract";
 
   let invites: Invitation[] = [];
-  let invite_email;
+  let inviteEmail;
   let isAddInviteSubmitting = false;
+  let selected;
 
   async function removeInvite(email: string) {
     try {
@@ -41,8 +43,8 @@
       isAddInviteSubmitting = true;
       const d = new Date();
       d.setTime(d.getTime() + (1000 * 60 * 60 * 24 * 7));
-      await API.authToken.invite(invite_email, $user.email, $user.name, d.toISOString());
-      const inv: Invitation = { email: invite_email, createdAt: new Date().toISOString(), confirmedAt: null };
+      await API.authToken.invite(inviteEmail, $user.name, d.toISOString(), selected);
+      const inv: Invitation = { email: inviteEmail, meta: selected, createdAt: new Date().toISOString(), confirmedAt: null };
       invites = [...invites, inv];
     } catch (e) {
       $error = e;
@@ -71,7 +73,12 @@
   <h2 class="px-2">Invite users to {$user.name ? $user.name : "your org"}</h2>
   <form on:submit|preventDefault="{addInvite}" class="container">
     <label class="p-2">Invite this email:</label>
-    <input size="24" maxlength="100" type="email" bind:value="{invite_email}" />&nbsp;
+    <input size="24" maxlength="100" type="email" bind:value="{inviteEmail}" />&nbsp;
+    <select bind:value={selected}>
+      {#each plans as plan, i}
+        <option value="{plan.freq}">{plan.title}</option>
+      {/each}
+    </select>
     <button type="submit" disabled="{isAddInviteSubmitting}">Invite to {$user.name ? $user.name : "your org"}
       {#if isAddInviteSubmitting}
         <Dots />
@@ -86,6 +93,7 @@
         <th>Email</th>
         <th>Status</th>
         <th>Date</th>
+        <th>Plan</th>
         <th>Remove</th>
         <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
       </tr>
@@ -104,6 +112,7 @@
           <td title="{formatDate(new Date(inv.createdAt))}">
             {timeSince(new Date(inv.createdAt), new Date())} ago
           </td>
+          <td>{plans.find(plan => plan.freq == inv.meta).title}</td>
           <td class="text-center">
             <span class="cursor-pointer" on:click="{() => removeInvite(inv.email)}"><Fa icon="{faTrash}" size="md" /></span>
           </td>
