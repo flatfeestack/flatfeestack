@@ -14,8 +14,9 @@ import (
 )
 
 type User struct {
-	Id             uuid.UUID `json:"id" sql:",type:uuid"`
-	StripeId       *string   `json:"-"`
+	Id             uuid.UUID  `json:"id" sql:",type:uuid"`
+	SponsorId      *uuid.UUID `json:"sponsor_id" sql:",type:uuid"`
+	StripeId       *string    `json:"-"`
 	PaymentCycleId uuid.UUID
 	Email          *string `json:"email"`
 	Name           *string `json:"name"`
@@ -82,12 +83,13 @@ type GitEmail struct {
 }
 
 type UserBalance struct {
-	PaymentCycleId uuid.UUID `json:"paymentCycleId"`
-	UserId         uuid.UUID `json:"userId"`
-	Balance        int64     `json:"balance"`
-	BalanceType    string    `json:"balanceType"`
-	CreatedAt      time.Time `json:"createdAt"`
-	DaysLeft       int       `json:"daysLeft,omitempty"`
+	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
+	UserId         uuid.UUID  `json:"userId"`
+	FromUserId     *uuid.UUID `json:"fromUserId"`
+	Balance        int64      `json:"balance"`
+	BalanceType    string     `json:"balanceType"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	DaysLeft       int        `json:"daysLeft,omitempty"`
 }
 
 type UserStatus struct {
@@ -102,6 +104,26 @@ type PaymentCycle struct {
 	Seats    int       `json:"seats"`
 	Freq     int       `json:"freq"`
 	DaysLeft int       `json:"daysLeft"`
+}
+
+func findAllUsers() ([]User, error) {
+	users := []User{}
+	s := `SELECT email from users`
+	rows, err := db.Query(s)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var user User
+		err = rows.Scan(&user.Email)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
 }
 
 func findUserByEmail(email string) (*User, error) {
@@ -541,17 +563,18 @@ func insertUserBalance(ub UserBalance) error {
 	stmt, err := db.Prepare(`INSERT INTO user_balances(
                                             payment_cycle_id, 
                           	                user_id,
+                                            from_user_id,
                                             balance, 
                                             balance_type, 
                                             created_at) 
-                                    VALUES($1, $2, $3, $4, $5)`)
+                                    VALUES($1, $2, $3, $4, $5, $6)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.Balance, ub.BalanceType, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -617,6 +640,26 @@ func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, erro
 func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
 	s := `SELECT payment_cycle_id, user_id, balance, balance_type, created_at FROM user_balances WHERE user_id = $1`
 	rows, err := db.Query(s, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalance
+	for rows.Next() {
+		var userBalance UserBalance
+		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &userBalance.Balance, &userBalance.BalanceType, &userBalance.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
+}
+
+func findUserBalancesAndType(userId uuid.UUID, balanceType string) ([]UserBalance, error) {
+	s := `SELECT payment_cycle_id, user_id, balance, balance_type, created_at FROM user_balances WHERE user_id = $1 and balance_type = $2`
+	rows, err := db.Query(s, userId, balanceType)
 	if err != nil {
 		return nil, err
 	}

@@ -68,28 +68,37 @@ type Plan struct {
 	Price       big.Float `json:"price"`
 	Freq        int       `json:"freq"`
 	Description string    `json:"desc"`
+	Disclaimer  string    `json:"disclaimer"`
+	FeePrm      int       `json:"feePrm"`
 }
 
 var plans = []Plan{}
 
 func init() {
 	py := new(big.Float)
-	py.SetString("120.45")
+
+	//365 * 330000 / 1-(0.04)
+	py.SetString("125.47")
 	plan := Plan{
 		Title:       "Yearly",
 		Price:       *py,
 		Freq:        365,
+		FeePrm:      40,
 		Description: "By paying yearly <b>" + py.String() + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects",
+		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 4%",
 	}
 	plans = append(plans, plan)
 
+	//91 * 330000 / 1-(0.05)
 	py = new(big.Float)
-	py.SetString("29.7")
+	py.SetString("31.61")
 	plan = Plan{
 		Title:       "Quarterly",
 		Price:       *py,
-		Freq:        90,
+		Freq:        91,
+		FeePrm:      50,
 		Description: "You want to support Open Source software with a quarterly flat fee of <b>" + py.String() + " USD</b>",
+		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 5%",
 	}
 	plans = append(plans, plan)
 
@@ -100,6 +109,7 @@ func init() {
 		Price:       *py,
 		Freq:        2,
 		Description: "Beta testing: <b>" + py.String() + " USD</b>",
+		Disclaimer:  "",
 	}
 	plans = append(plans, plan)
 }
@@ -118,12 +128,7 @@ const (
  */
 
 func getMyUser(w http.ResponseWriter, _ *http.Request, user *User) {
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(user)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
+	writeJson(w, user)
 }
 
 // @Summary Get connected Git Email addresses
@@ -141,13 +146,7 @@ func getMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not find git emails %v", err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(emails)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
+	writeJson(w, emails)
 }
 
 func confirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +162,6 @@ func confirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 // @Summary Add new git email
@@ -216,8 +214,6 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 		}
 	}()
-
-	w.WriteHeader(http.StatusOK)
 }
 
 // @Summary Delete git email
@@ -237,7 +233,6 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
@@ -249,7 +244,6 @@ func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func deleteMethod(w http.ResponseWriter, r *http.Request, user *User) {
@@ -283,11 +277,7 @@ func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(user)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
+	writeJson(w, user)
 }
 
 func updateName(w http.ResponseWriter, r *http.Request, user *User) {
@@ -298,7 +288,6 @@ func updateName(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
@@ -314,7 +303,6 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func updateMode(w http.ResponseWriter, r *http.Request, user *User) {
@@ -329,7 +317,6 @@ func updateMode(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
@@ -345,8 +332,6 @@ func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-
 }
 
 // @Summary List sponsored Repos of a user
@@ -362,13 +347,7 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not get repos: %v", err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(repos)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
-		return
-	}
+	writeJson(w, repos)
 }
 
 /*
@@ -395,12 +374,7 @@ func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 		writeErr(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(repos)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
+	writeJson(w, repos)
 }
 
 // @Summary Get Repo By ID
@@ -428,13 +402,7 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 		writeErr(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(repo)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
+	writeJson(w, repo)
 }
 
 // @Summary Tag a repo
@@ -534,13 +502,7 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 			}
 		}
 	}()
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(repo)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
+	writeJson(w, repo)
 }
 
 func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
@@ -662,7 +624,6 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 		writeErr(w, http.StatusBadRequest, "Could not send payout2: %v", err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func payout0(pts []PayoutToService, batchId uuid.UUID) error {
@@ -686,12 +647,16 @@ func payout0(pts []PayoutToService, batchId uuid.UUID) error {
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()
-	w.Header().Set("Content-Type", "application/json")
-	_, err := w.Write([]byte(`{"time":"` + currentTime.Format("2006-01-02 15:04:05") + `"}`))
+	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`"}`)
+}
+
+func users(w http.ResponseWriter, r *http.Request, email string) {
+	u, err := findAllUsers()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		writeErr(w, http.StatusBadRequest, "Could fetch users: %v", err)
 		return
 	}
+	writeJson(w, u)
 }
 
 func config(w http.ResponseWriter, _ *http.Request) {
@@ -701,17 +666,12 @@ func config(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write([]byte(`{
-			"stripePublicApi":"` + opts.StripeAPIPublicKey + `", 
-			"wsBaseUrl":"` + opts.WebSocketBaseUrl + `",
-			"restTimeout":"` + strconv.Itoa(opts.RestTimeout) + `",
-            "plans": ` + string(b) + `
-	}`))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
-		return
-	}
+	writeJsonStr(w, `{
+			"stripePublicApi":"`+opts.StripeAPIPublicKey+`", 
+			"wsBaseUrl":"`+opts.WebSocketBaseUrl+`",
+			"restTimeout":"`+strconv.Itoa(opts.RestTimeout)+`",
+            "plans": `+string(b)+`,
+			"env":"`+opts.Env+`"}`)
 }
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
@@ -846,7 +806,6 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 
 	hoursAdd += hours
 	log.Printf("time warp: %v", timeNow())
-	w.WriteHeader(http.StatusOK)
 }
 
 func genRnd(n int) ([]byte, error) {

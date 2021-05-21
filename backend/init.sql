@@ -30,9 +30,17 @@ CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          BIGINT,
     balance_type     VARCHAR(16) NOT NULL,
+    day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
+);
+CREATE INDEX user_balances_index ON user_balances (
+    payment_cycle_id,
+    user_id,
+    balance_type,
+    day
 );
 
 CREATE TABLE user_emails_sent (

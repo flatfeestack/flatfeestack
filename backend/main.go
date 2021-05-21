@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/kjk/dailyrotate"
 	_ "github.com/lib/pq"
 	"github.com/stripe/stripe-go/v72"
 	"golang.org/x/crypto/ed25519"
@@ -18,6 +19,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,6 +46,7 @@ var (
 	admins    []string
 	hoursAdd  int
 	km        = KeyedMutex{}
+	logFile   *dailyrotate.File
 )
 
 type Opts struct {
@@ -65,6 +68,7 @@ type Opts struct {
 	EmailToken             string
 	WebSocketBaseUrl       string
 	RestTimeout            int
+	LogPath                string
 }
 
 type TokenClaims struct {
@@ -112,6 +116,8 @@ func NewOpts() *Opts {
 		"ws://localhost"), "Websocket base URL")
 	flag.IntVar(&o.RestTimeout, "rest-timeout", lookupEnvInt("REST_TIMEOUT",
 		5000), "Rest timeout, default 5s")
+	flag.StringVar(&o.LogPath, "log", lookupEnv("LOG",
+		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -144,6 +150,13 @@ func NewOpts() *Opts {
 	if o.StripeWebhookSecretKey == "" {
 		o.StripeWebhookSecretKey = "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL"
 	}
+
+	pathFormat := filepath.Join(o.LogPath, "backend_2006-01-02.txt")
+	w, err := dailyrotate.NewFile(pathFormat, func(string, bool) {})
+	if err != nil {
+		log.Fatalf("cannot log")
+	}
+	logFile = w
 
 	return o
 }
@@ -195,55 +208,59 @@ func main() {
 	stripe.Key = opts.StripeAPISecretKey
 
 	// Routes
-	apiRouter := mux.NewRouter()
+	router := mux.NewRouter()
+	router.Use(func(next http.Handler) http.Handler {
+		return logRequestHandler(next)
+	})
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
-	apiRouter.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods("POST")
-	apiRouter.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods("DELETE")
-	apiRouter.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
-	apiRouter.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods("GET")
-	apiRouter.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/image", maxBytesMiddleware(jwtAuthUser(updateImage), 200*1024)).Methods("POST")
-	apiRouter.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
-	apiRouter.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods("PUT")
-	apiRouter.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(updateImage), 200*1024)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
 	//
-	apiRouter.HandleFunc("/users/git-email", confirmConnectedEmails).Methods("POST")
+	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
 	//repo github
-	apiRouter.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods("GET")
-	apiRouter.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods("GET")
-	apiRouter.HandleFunc("/repos/tag", jwtAuthUser(tagRepo)).Methods("POST")
-	apiRouter.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods("POST")
+	router.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
 	//payment
 
-	apiRouter.HandleFunc("/hooks/stripe", maxBytesMiddleware(stripeWebhook, 65536)).Methods("POST")
-	apiRouter.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods("POST")
-	apiRouter.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods("POST")
-	apiRouter.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods("POST")
-	apiRouter.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods("GET")
+	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
+	router.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
+	router.HandleFunc("/admin/users", jwtAuthAdmin(users, admins)).Methods(http.MethodPost)
 
-	apiRouter.HandleFunc("/config", config).Methods(http.MethodGet)
+	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
-		apiRouter.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods("POST")
-		apiRouter.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(fakePayment, admins)).Methods("POST")
-		apiRouter.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(fakeContribution, admins)).Methods("POST")
-		apiRouter.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods("POST")
+		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(fakePayment, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(fakeContribution, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods(http.MethodPost)
 	}
 
-	apiRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("ERROR: Unknown path [%s]:%s", r.URL, r.Method)
+	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[404] no route matched for: %s, %s", r.URL, r.Method)
 		w.WriteHeader(http.StatusNotFound)
 	})
 
@@ -251,7 +268,7 @@ func main() {
 	cronJobDay(dailyRunner, timeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), apiRouter))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 	cronStop()
 }
 
@@ -267,7 +284,7 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	}
 }
 
-func maxBytesMiddleware(next func(w http.ResponseWriter, r *http.Request), size int64) func(http.ResponseWriter, *http.Request) {
+func maxBytes(next func(w http.ResponseWriter, r *http.Request), size int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, size)
 		next(w, r)

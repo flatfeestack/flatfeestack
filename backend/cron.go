@@ -160,6 +160,25 @@ func dailyRunner(now time.Time) error {
 	log.Printf("Daily Topup Reminder found %v entries", len(users))
 
 	for _, u := range users {
+
+		if u.SponsorId != nil {
+			//topup user
+			pc, err := findPaymentCycle(u.PaymentCycleId)
+			if err != nil {
+				log.Printf("error1 %v", err)
+				continue
+			}
+			sponsor, err := findUserById(*u.SponsorId)
+			if err != nil {
+				log.Printf("error2 %v", err)
+				continue
+			}
+			ok, _ := topupWithSponsor(&u, pc.Freq, *sponsor.Email)
+			if ok {
+				continue
+			}
+		}
+
 		err = reminderTopup(u)
 		if err != nil {
 			return err
@@ -177,36 +196,38 @@ func reminderTopup(u User) error {
 		return err
 	}
 
-	if c == 0 {
-		err = insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
-		if err != nil {
-			return err
-		}
-
-		//TODO: test this
-		_, err = stripePaymentRecurring(u)
-		if err != nil {
-			return err
-		}
-
-		email := *u.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["url"] = opts.EmailLinkPrefix + "/user/payments"
-		other["lang"] = "en"
-
-		e := prepareEmail(email, other,
-			"template-subject-topup_", "We are about to top up your account",
-			"template-plain-topup_", "Thanks for supporting with flatfeestack: "+other["url"],
-			"template-html-topup_", other["lang"])
-
-		go func(userId uuid.UUID, emailType string) {
-			err := sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}(u.Id, emailCountId)
+	if c > 0 {
+		log.Printf("TOPUP, but we already sent a notification %v", u)
+		return nil
 	}
+
+	err = insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
+	if err != nil {
+		return err
+	}
+
+	_, err = stripePaymentRecurring(u)
+	if err != nil {
+		return err
+	}
+
+	email := *u.Email
+	var other = map[string]string{}
+	other["email"] = email
+	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["lang"] = "en"
+
+	e := prepareEmail(email, other,
+		"template-subject-topup_", "We are about to top up your account",
+		"template-plain-topup_", "Thanks for supporting with flatfeestack: "+other["url"],
+		"template-html-topup_", other["lang"])
+
+	go func(userId uuid.UUID, emailType string) {
+		err := sendEmail(opts.EmailUrl, e)
+		if err != nil {
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+		}
+	}(u.Id, emailCountId)
 
 	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil

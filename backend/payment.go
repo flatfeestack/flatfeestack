@@ -13,6 +13,7 @@ import (
 	"github.com/stripe/stripe-go/v72/webhook"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 	"sync"
@@ -54,73 +55,84 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	for k, inviteEmail := range user.Claims.InviteEmails {
-		sponsor, err := findUserByEmail(inviteEmail)
-		if err != nil {
-			log.Printf("findUserByEmail: %v", err)
-			continue
-		}
-
-		//parent has enough funds go for it!
-		sum, err := findSumUserBalance(sponsor.Id, sponsor.PaymentCycleId)
-		if err != nil {
-			log.Printf("findSumUserBalance: %v", err)
-			continue
-		}
 		freq, err := strconv.Atoi(user.Claims.InviteMeta[k])
 		if err != nil {
 			log.Printf("findSumUserBalance: %v", err)
 			continue
 		}
-
-		balance := int64(freq * mUSDPerDay)
-		if sum < balance {
-			log.Printf("parent has not enough funding")
-			//TODO: notify parent
-			continue
-		}
-
-		paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, 1, freq, timeNow())
-		if err != nil {
-			log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		ub := UserBalance{
-			PaymentCycleId: sponsor.PaymentCycleId,
-			UserId:         sponsor.Id,
-			Balance:        -balance,
-			BalanceType:    "SPONSOR",
-			CreatedAt:      timeNow(),
-		}
-
-		err = insertUserBalance(ub)
-		if err != nil {
-			log.Printf("transferBalance: %v", err)
-			continue
-		}
-
-		ub.UserId = user.Id
-		ub.Balance = balance
-		ub.PaymentCycleId = *paymentCycleId
-		err = insertUserBalance(ub)
-		if err != nil {
-			log.Printf("transferBalance: %v", err)
-			continue
-		}
-		err = updatePaymentCycleId(user.Id, paymentCycleId, &sponsor.Id)
-		if err != nil {
-			log.Printf("transferBalance: %v", err)
+		ok, paymentCycleId := topupWithSponsor(user, freq, inviteEmail)
+		if !ok {
 			continue
 		}
 
 		go func() {
-			err = sendToBrowser(user.Id, sponsor.PaymentCycleId)
+			err = sendToBrowser(user.Id, *paymentCycleId)
 			if err != nil {
 				log.Printf("could not notify client %v", user.Id)
 			}
 		}()
+
+		break
 	}
+}
+
+func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) {
+	sponsor, err := findUserByEmail(inviteEmail)
+	if err != nil {
+		log.Printf("findUserByEmail: %v", err)
+		return false, nil
+	}
+
+	//parent has enough funds go for it!
+	sum, err := findSumUserBalance(sponsor.Id, sponsor.PaymentCycleId)
+	if err != nil {
+		log.Printf("findSumUserBalance: %v", err)
+		return false, nil
+	}
+
+	balance := int64(freq * mUSDPerDay)
+	if sum < balance {
+		log.Printf("parent has not enough funding")
+		//TODO: notify parent
+		return false, nil
+	}
+
+	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, 1, freq, timeNow())
+	if err != nil {
+		log.Printf("Cannot insert payment for %v: %v\n", u.Id, err)
+		return false, nil
+	}
+
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, *newPaymentCycleId)
+	if err != nil {
+		return false, nil
+	}
+
+	ubNew.PaymentCycleId = sponsor.PaymentCycleId
+	ubNew.UserId = sponsor.Id
+	ubNew.Balance = -balance
+	ubNew.BalanceType = "SPONSOR"
+	err = insertUserBalance(*ubNew)
+	if err != nil {
+		log.Printf("transferBalance: %v", err)
+		return false, nil
+	}
+
+	ubNew.UserId = u.Id
+	ubNew.Balance = balance
+	ubNew.PaymentCycleId = *newPaymentCycleId
+	ubNew.FromUserId = &sponsor.Id
+	err = insertUserBalance(*ubNew)
+	if err != nil {
+		log.Printf("transferBalance: %v", err)
+		return false, nil
+	}
+	err = updatePaymentCycleId(u.Id, newPaymentCycleId, &sponsor.Id)
+	if err != nil {
+		log.Printf("transferBalance: %v", err)
+		return false, nil
+	}
+	return true, newPaymentCycleId
 }
 
 //https://stripe.com/docs/payments/save-and-reuse
@@ -183,21 +195,39 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
 	}
-	match := false
+	var plan *Plan
 	for _, v := range plans {
 		if v.Freq == freq {
-			match = true
+			plan = &v
 			break
 		}
 	}
-	if !match {
-		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
+	if plan == nil {
+		writeErr(w, http.StatusInternalServerError, "No matching plan found: %v, available: %v", freq, plans)
 		return
 	}
 
-	cents := stripe.Int64(int64(seats * freq * mUSDPerDay / 10000))
+	var f1 big.Float
+	f1.SetString("100")
+	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
+	cents = cents * int64(seats)
+
+	oldSum, err := findSumUserBalance(user.Id, user.PaymentCycleId)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Cannot find sum: %v", err)
+		return
+	}
+	if oldSum > 0 {
+		cents = cents - (oldSum / 10000)
+	}
+	if cents <= 0 {
+		writeErr(w, http.StatusInternalServerError, "Cannot be lower: %v", cents)
+		return
+	}
+
+	//cents := stripe.Int64(int64(plan.Price.Int64()))
 	params := &stripe.PaymentIntentParams{
-		Amount:           cents,
+		Amount:           stripe.Int64(cents),
 		Currency:         stripe.String(string(stripe.CurrencyUSD)),
 		Customer:         user.StripeId,
 		PaymentMethod:    user.PaymentMethod,
@@ -213,6 +243,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	params.Params.Metadata = map[string]string{}
 	params.Params.Metadata["userId"] = user.Id.String()
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
+	params.Params.Metadata["fee"] = strconv.Itoa(plan.FeePrm)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -235,8 +266,22 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		return nil, err
 	}
 
+	var plan *Plan
+	for _, v := range plans {
+		if v.Freq == pc.Freq {
+			plan = &v
+			break
+		}
+	}
+	if plan == nil {
+		return nil, fmt.Errorf("no matching plan found: %v, available: %v", pc.Freq, plans)
+	}
+
+	var f1 big.Float
+	f1.SetString("100")
+	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
 	params := &stripe.PaymentIntentParams{
-		Amount:        stripe.Int64(int64(pc.Seats * pc.Freq * 100)),
+		Amount:        stripe.Int64(cents * int64(pc.Seats)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
 		Customer:      user.StripeId,
 		PaymentMethod: user.PaymentMethod,
@@ -251,6 +296,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	params.Params.Metadata = map[string]string{}
 	params.Params.Metadata["userId"] = user.Id.String()
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
+	params.Params.Metadata["fee"] = strconv.Itoa(plan.FeePrm)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -279,7 +325,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	switch event.Type {
 	case "payment_intent.succeeded":
 
-		uid, newPaymentCycleId, amount, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, amount, feePrm, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -293,69 +339,22 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		oldSum, err := findSumUserBalance(uid, u.PaymentCycleId)
+		// amount(cent) * 10000(mUSD) * feePrm / 1000
+		fee := (amount * int64(feePrm) / 1000) + 1 //round up
+
+		err = stripeSuccess(u, newPaymentCycleId, amount*10000, fee*10000)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		ubNew := UserBalance{
-			PaymentCycleId: u.PaymentCycleId,
-			UserId:         u.Id,
-			Balance:        -oldSum,
-			BalanceType:    "CLOSE_CYCLE",
-			CreatedAt:      timeNow(),
-		}
-
-		if oldSum > 0 {
-			err = insertUserBalance(ubNew)
-			if err != nil {
-				log.Printf("Insert user balance1 for %v: %v\n", uid, err)
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			ubNew.Balance = oldSum
-			ubNew.PaymentCycleId = newPaymentCycleId
-			ubNew.BalanceType = "CARRY_OVER"
-			err = insertUserBalance(ubNew)
-			if err != nil {
-				log.Printf("Insert user balance2 for %v: %v\n", uid, err)
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		ubNew.PaymentCycleId = newPaymentCycleId
-		ubNew.BalanceType = "PAYMENT"
-		ubNew.Balance = amount
-		err = insertUserBalance(ubNew)
-		if err != nil {
-			log.Printf("Insert user balance3 for %v: %v\n", uid, err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		err = updatePaymentCycleId(uid, &newPaymentCycleId, nil)
-		if err != nil {
-			log.Printf("Update payment cycle for %v: %v\n", uid, err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		go func() {
-			err = sendToBrowser(uid, newPaymentCycleId)
-			if err != nil {
-				log.Printf("could not notify client %v", uid)
-			}
-		}()
-
 	// ... handle other event types
 	case "payment_intent.authentication_required":
 	case "payment_intent.requires_payment_method":
 		//again
 		fmt.Printf("CASE-STRIP: %v", event)
-		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -369,8 +368,19 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ")
+		if err != nil {
+			log.Printf("Error find user balance: %v, %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if ub != nil {
+			log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+			return
+		}
+
 		ubNew := UserBalance{
-			PaymentCycleId: u.PaymentCycleId,
+			PaymentCycleId: newPaymentCycleId,
 			UserId:         uid,
 			Balance:        0,
 			BalanceType:    "AUTHREQ",
@@ -407,7 +417,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	//3d secure - this is handled by strip, we just get notified
 	//	log.Printf("stripe handles 3d secure for %v", event.Data)
 	case "payment_intent.insufficient_funds":
-		uid, newPaymentCycleId, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -421,8 +431,19 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS")
+		if err != nil {
+			log.Printf("Error find user balance: %v, %v\n", uid, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if ub != nil {
+			log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+			return
+		}
+
 		ubNew := UserBalance{
-			PaymentCycleId: u.PaymentCycleId,
+			PaymentCycleId: newPaymentCycleId,
 			UserId:         uid,
 			Balance:        0,
 			BalanceType:    "NOFUNDS",
@@ -462,23 +483,104 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, error) {
+func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64) error {
+
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT")
+	if err != nil {
+		return err
+	}
+	if ub != nil {
+		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+		return nil
+	}
+
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
+	if err != nil {
+		return err
+	}
+
+	ubNew.PaymentCycleId = newPaymentCycleId
+	ubNew.BalanceType = "PAYMENT"
+	ubNew.Balance = amount
+	err = insertUserBalance(*ubNew)
+	if err != nil {
+		return err
+	}
+
+	ubNew.BalanceType = "FEE"
+	ubNew.Balance = -fee
+	err = insertUserBalance(*ubNew)
+	if err != nil {
+		return err
+	}
+
+	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
+	if err != nil {
+		return err
+	}
+
+	go func(uid uuid.UUID) {
+		err = sendToBrowser(uid, newPaymentCycleId)
+		if err != nil {
+			log.Printf("could not notify client %v", uid)
+		}
+	}(u.Id)
+	return nil
+}
+
+func closeCycle(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) (*UserBalance, error) {
+
+	oldSum, err := findSumUserBalance(uid, oldPaymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+
+	ubNew := &UserBalance{
+		PaymentCycleId: oldPaymentCycleId,
+		UserId:         uid,
+		Balance:        -oldSum,
+		BalanceType:    "CLOSE_CYCLE",
+		CreatedAt:      timeNow(),
+	}
+
+	if oldSum > 0 {
+		err := insertUserBalance(*ubNew)
+		if err != nil {
+			return nil, err
+		}
+		ubNew.Balance = oldSum
+		ubNew.PaymentCycleId = newPaymentCycleId
+		ubNew.BalanceType = "CARRY_OVER"
+		err = insertUserBalance(*ubNew)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ubNew, nil
+}
+
+func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int, error) {
 	var pi stripe.PaymentIntent
 	err := json.Unmarshal(data, &pi)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+		return uuid.Nil, uuid.Nil, 0, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
 	}
 	uidRaw := pi.Metadata["userId"]
 	uid, err := uuid.Parse(uidRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing uid: %v\n", err)
+		return uuid.Nil, uuid.Nil, 0, 0, fmt.Errorf("Error parsing uid: %v, available %v\n", err, pi.Metadata)
 	}
 	newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
 	newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v\n", err)
+		return uuid.Nil, uuid.Nil, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
 	}
-	return uid, newPaymentCycleId, pi.Amount * 10000, nil
+	feePrm, err := strconv.Atoi(pi.Metadata["fee"])
+	if err != nil {
+		return uuid.Nil, uuid.Nil, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
+	}
+
+	return uid, newPaymentCycleId, pi.Amount, feePrm, nil
 }
 
 var upgrader = websocket.Upgrader{

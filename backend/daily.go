@@ -27,9 +27,8 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
                 FROM sponsor_event s 
                     INNER JOIN users u ON u.id = s.user_id
                     INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-                WHERE u.sponsor_id IS NULL
-                    AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                    AND pc.days_left > 1
+                WHERE NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+                    AND pc.days_left > 0
                     AND u.role = 'USR'
                 GROUP BY s.user_id`)
 	if err != nil {
@@ -118,7 +117,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 			     INNER JOIN users u ON u.id = s.user_id 
 			     INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
                  INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-			 WHERE u.sponsor_id IS NULL AND drh.day=$1 
+			 WHERE drh.day=$1 
 			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
                  AND pc.days_left > 0
                  AND u.role = 'USR'
@@ -272,17 +271,10 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 }
 
 func runDailyTopupReminderUser() ([]User, error) {
-	s := `SELECT u.id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
+	s := `SELECT u.id, u.sponsor_id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-			WHERE u.role='USR' AND pc.days_left <= 1
-          UNION
-          SELECT u.id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
-            FROM users u
-                INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-			WHERE u.role='ORG'
-			GROUP BY u.sponsor_id
-			HAVING MIN(pc.days_left) <= 1`
+			WHERE u.role='USR' AND pc.days_left <= 1 AND pc.freq != 0 AND (u.stripe_payment_method IS NOT NULL OR u.sponsor_id IS NOT NULL)`
 
 	rows, err := db.Query(s)
 	if err != nil {
@@ -293,7 +285,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	repos := []User{}
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id, &user.Email, &user.PaymentCycleId, &user.StripeId, &user.PaymentMethod)
+		err = rows.Scan(&user.Id, &user.SponsorId, &user.Email, &user.PaymentCycleId, &user.StripeId, &user.PaymentMethod)
 		if err != nil {
 			return nil, err
 		}
