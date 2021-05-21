@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@stripe/stripe-js": "^1.14.0",
-    "ethers": "^5.1.4",
+    "ethers": "^5.2.0",
     "ky": "^0.28.0",
     "svelte-routing": "^1.6.0"
   }

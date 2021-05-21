@@ -44,7 +44,7 @@ async function refreshToken(request: Request, options: any, response: Response) 
 
 const authToken = ky.create({
   prefixUrl: "/auth",
-  timeout: get(config) ? get(config).restTemplate : 5000,
+  timeout: get(config) ? get(config).restTimeout : 5000,
   hooks: {
     beforeRequest: [async request => addToken(request)],
     afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
@@ -53,7 +53,7 @@ const authToken = ky.create({
 
 const backendToken = ky.create({
   prefixUrl: "/backend",
-  timeout: get(config) ? get(config).restTemplate : 5000,
+  timeout: get(config) ? get(config).restTimeout : 5000,
   hooks: {
     beforeRequest: [async request => addToken(request)],
     afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
@@ -62,17 +62,17 @@ const backendToken = ky.create({
 
 const auth = ky.create({
   prefixUrl: "/auth",
-  timeout: get(config) ? get(config).restTemplate : 5000,
+  timeout: get(config) ? get(config).restTimeout : 5000,
 });
 
 const backend = ky.create({
   prefixUrl: "/backend",
-  timeout: get(config) ? get(config).restTemplate : 5000,
+  timeout: get(config) ? get(config).restTimeout : 5000,
 })
 
 const search = ky.create({
   prefixUrl: "/search",
-  timeout: get(config) ? get(config).restTemplate : 5000,
+  timeout: get(config) ? get(config).restTimeout : 5000,
 });
 
 
@@ -84,6 +84,7 @@ export const API = {
     delInvite: (email: string) => authToken.delete(`invite/${email}`),
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
+    loginAs: (email: string) => authToken.post(`admin/login-as/${email}`).json<Token>()
   },
   auth: {
     signup: (email: string, password: string) => auth.post("signup", { json: { email, password } }),
@@ -140,5 +141,8 @@ export const API = {
   },
   config: {
     config: () => backend.get(`config`).json<Config>()
+  },
+  admin: {
+    users: () => backendToken.post(`admin/users`).json<Users[]>()
   }
 };

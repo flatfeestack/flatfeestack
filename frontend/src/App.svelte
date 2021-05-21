@@ -146,7 +146,7 @@
     </nav>
   </header>
 
-  {#if $error}<div class="bg-red p-2 parent err-container"><div class="w-100">{$error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
+  {#if $error}<div class="bg-red p-2 parent err-container"><div class="w-100">{@html $error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
 
   <main>
     <Router url="{url}">

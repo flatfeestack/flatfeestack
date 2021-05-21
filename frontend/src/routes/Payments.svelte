@@ -10,13 +10,13 @@
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
 
-  let checked = $user.role != "ORG";
+  let isUser = $user.role != "ORG";
   let sponsoredRepos: Repo[] = [];
   let invite_email;
   let isSubmitting = false;
   let statusSponsoredUsers: UserStatus[] = [];
 
-  $: $user.role = checked === false ? "ORG" : "USR";
+  $: $user.role = isUser === false ? "ORG" : "USR";
 
   async function topupInvite() {
     isSubmitting = true;
@@ -87,12 +87,16 @@
   </div>
 
   <div class="container">
-    <label class="px-2">Current Support: </label>
-    {#if $userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0}
+    <label class="px-2">Current Recurring Support: </label>
+    {#if $userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0 && $userBalances.paymentCycle.freq > 0}
       <span class="bold">
-        <input size="5" type="number" min="1" bind:value={$userBalances.paymentCycle.seats}> seats,
+        {#if !isUser}
+          <input size="5" type="number" min="1" bind:value={$userBalances.paymentCycle.seats}> seats,
+        {/if}
+
         {$config.plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).title.toLocaleLowerCase()} recurring payments
-        (${$userBalances.paymentCycle.seats * $userBalances.paymentCycle.freq * 330000 / 1000000})</span>
+        (${$userBalances.paymentCycle.seats * $config.plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).price})</span>
+      {#if !isUser}
       <form class="p-2" on:submit|preventDefault="{updateSeats}">
         <button disabled="{isSubmitting}" type="submit">Update Seats
           {#if isSubmitting}
@@ -100,6 +104,7 @@
           {/if}
         </button>
       </form>
+      {/if}
       <form class="p-2" on:submit|preventDefault="{handleCancel}">
         <button disabled="{isSubmitting}" type="submit">Cancel&nbsp;Support
           {#if isSubmitting}
@@ -128,14 +133,14 @@
     {/if}
   </div>
 
-  {#if checked && parseJwt($token).inviteEmails}
+  {#if isUser && parseJwt($token).inviteEmails}
     <div class="container">
       <label class="px-2">Topup from invites: </label>
       <span class="cursor-pointer" on:click="{topupInvite}"><Fa icon="{faSync}" size="md" /></span>
     </div>
   {/if}
 
-  {#if checked}
+  {#if isUser}
     <div class="container">
       <label class="px-2">Selected Projects:</label>
       <span class="bold">{sponsoredRepos.length} projects</span>
@@ -143,7 +148,7 @@
   {/if}
 
 
-  {#if !checked}
+  {#if !isUser}
   <div class="container">
     <h2 class="p-2">
      Users using your seats
@@ -178,10 +183,8 @@
 
 
 
-  {#if !($userBalances && $userBalances.paymentCycle && $userBalances.paymentCycle.seats > 0)|| !checked}
-    {#if !($userBalances && $userBalances.daysLeft>1) || !checked}
+  {#if !$userBalances || !$userBalances.paymentCycle || $userBalances.paymentCycle.freq === 0 || !isUser}
       <Payment />
-    {/if}
   {/if}
 
   {#if $userBalances && $userBalances.userBalances}

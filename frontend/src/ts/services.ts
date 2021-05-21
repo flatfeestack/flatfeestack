@@ -12,7 +12,8 @@ export const confirmReset = async(email: string, password: string, emailToken: s
   const p3 = API.user.get();
 
   const conf = await p2;
-  storeToken(res, conf);
+  config.set(conf);
+  storeToken(res);
 
   const u = await p3;
   user.set(u);
@@ -26,7 +27,9 @@ export const confirmEmail = async(email: string, emailToken: string) => {
   const p3 = API.user.get();
 
   const conf = await p2;
-  storeToken(res, conf);
+
+  config.set(conf);
+  storeToken(res);
 
   const u = await p3;
   user.set(u);
@@ -42,7 +45,8 @@ export const confirmInviteNew = async(email: string, password: string,
   const p3 = API.user.get();
 
   const conf = await p2;
-  storeToken(res, conf);
+  config.set(conf);
+  storeToken(res);
 
   const u = await p3;
   user.set(u);
@@ -54,7 +58,9 @@ export const login = async (email: string, password: string) => {
 
   const res = await p1;
   const conf = await p2;
-  storeToken(res, conf);
+  config.set(conf);
+  storeToken(res);
+
   const u = await API.user.get();
   user.set(u);
 };
@@ -69,7 +75,8 @@ export const refresh = async ():Promise<string> => {
 
   const tok = await p1;
   const conf = await p2;
-  storeToken(tok, conf);
+  config.set(conf);
+  storeToken(tok);
   return tok.access_token;
 }
 
@@ -77,15 +84,18 @@ export const removeSession = async () => {
   try {
     await API.authToken.logout();
   } finally {
-    localStorage.removeItem("ffs-refresh")
-    user.set(<Users>{})
-    token.set("");
-    loginFailed.set(true);
+    removeToken();
   }
 }
 
-const storeToken = (tok: Token, conf:Config) => {
-  config.set(conf);
+export const removeToken = () => {
+  localStorage.removeItem("ffs-refresh")
+  user.set(<Users>{})
+  token.set("");
+  loginFailed.set(true);
+}
+
+export const storeToken = (tok: Token) => {
   const t = tok.access_token;
   const r = tok.refresh_token;
   if (!t || !r) {

@@ -2,6 +2,7 @@
   import { Link } from "svelte-routing";
   import { API } from "./../ts/api";
   import Dots from "../components/Dots.svelte";
+  import { removeToken } from "../ts/services";
 
   let email = "";
   let password = "";
@@ -14,6 +15,7 @@
       error = "";
       isSubmittingSignup = true;
       await API.auth.signup(email, password);
+      removeToken();
       email = "";
       password = "";
       info = "Your email is on the way. To enable your account, click on the link in the email.";

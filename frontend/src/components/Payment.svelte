@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { error, user, config } from "./../ts/store";
+  import { error, user, config, userBalances } from "./../ts/store";
   import Dots from "./Dots.svelte";
   import { stripePayment, stripePaymentMethod } from "../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
@@ -26,6 +26,22 @@
     }
   }
 
+  let total;
+  $: {
+    total = $config.plans[selectedPlan].price * ($user.role === "ORG" ? seats : 1);
+  }
+
+  let current;
+  $: {
+    current = $userBalances && $userBalances.total > 0 ? $userBalances.total / 1000000 : 0
+  }
+
+  let remaining;
+  $: {
+    const rem = total - current;
+    remaining = rem > 0 ? rem:0;
+  }
+
   function createCardForm() {
     if(!cardElement) {
       console.log("called create");
@@ -44,12 +60,10 @@
     paymentProcessing = true;
     isSubmitting = true;
     try {
-      if ($user.payment_method) {
-        await stripePayment(stripe, $config.plans[selectedPlan].freq, seats, $user.payment_method);
-      } else {
+      if (!$user.payment_method) {
         await stripePaymentMethod(stripe, cardElement);
-        await stripePayment(stripe, $config.plans[selectedPlan].freq, seats, $user.payment_method);
       }
+      await stripePayment(stripe, $config.plans[selectedPlan].freq, seats, $user.payment_method);
       showSuccess = true;
     } catch (e) {
       $error = e;
@@ -79,6 +93,9 @@
     .child {
         margin: 0.5em;
         box-shadow: 0.25em 0.25em 0.25em #e1e1e3;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .w25 {
@@ -100,12 +117,13 @@
 <h2 class="px-2">Credit Card</h2>
 
 <div class="container-stretch">
-  {#each $config.plans as { title, desc }, i}
+  {#each $config.plans as { title, desc, disclaimer }, i}
     <div
       class="child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
       on:click="{() => (selectedPlan = i)}">
       <h3 class="text-center font-bold text-lg">{title}</h3>
       <div class="text-center">{@html desc}</div>
+      <div class="small text-center">{@html disclaimer}</div>
     </div>
   {/each}
 </div>
@@ -122,7 +140,7 @@
 
   <div class="p-2">
     <form on:submit|preventDefault="{handleSubmit}">
-      <button disabled="{isSubmitting}" type="submit">❤&nbsp;Support
+      <button disabled="{isSubmitting || remaining < 5}" type="submit">❤&nbsp;Support
         {#if isSubmitting}
           <Dots />
         {/if}
@@ -143,14 +161,15 @@
 
 <div class="container-col">
   <div class="p-2">
-    Total&nbsp;Donation:<span
-    class="bold">$&nbsp;{$config.plans[selectedPlan].price * ($user.role === "ORG" ? seats : 1)}</span>
+    {#if remaining >= 5}
+    Total&nbsp;Donation:<span class="bold">${total} - ${current} (current balance) = ${remaining} (remaining payment)</span>
+      {/if}
   </div>
 
   <div class="border-primary-500 rounded small p-2 m-2">
     We request your permission that we initiate a payment or a series of {$config.plans[selectedPlan].title.toLowerCase()}
     payments on your behalf of
-    {$config.plans[selectedPlan].price * ($user.role === "ORG" ? seats : 1)} USD.<br />
+    {total} USD.<br />
     By continuing, I authorize flatfeestack.io to send instructions to the financial institution that issued my card to
     take payments from my card account in accordance with the terms of my agreement with you.
   </div>

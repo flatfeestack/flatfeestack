@@ -21,12 +21,18 @@ h1 {
 <script lang="ts">
 import { ethers, providers } from "ethers";
 import { ABI } from "./../types/contract";
+import { error } from "../ts/store";
 
-window.ethereum.enable();
-const provider = new providers.Web3Provider(window.ethereum);
-const signer = provider.getSigner();
-const contractAddress = "0x62Db0a2161e304819f4d54d54B90A3Feae6dDc72";
-const storageContract = new ethers.Contract(contractAddress, ABI, signer);
+let storageContract
+if (window.ethereum) {
+  window.ethereum.enable();
+  const provider = new providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const contractAddress = "0x62Db0a2161e304819f4d54d54B90A3Feae6dDc72";
+  storageContract = new ethers.Contract(contractAddress, ABI, signer);
+} else {
+  $error = 'Please install <a href="https://metamask.io/download.html">MetaMask</a>'
+}
 
 const requestFunds = async () => {
   storageContract.release();
@@ -35,5 +41,5 @@ const requestFunds = async () => {
 
 <div class="container">
   <label class="px-2">Request funds:</label>
-  <button class="button" on:click="{requestFunds}">Request funds</button>
+  <button class="button" disabled={storageContract?"false":"true"} on:click="{requestFunds}">Request funds</button>
 </div>

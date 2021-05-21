@@ -2,12 +2,16 @@
 import Navigation from "../components/Navigation.svelte";
 import { API } from "../ts/api";
 import Spinner from "../components/Spinner.svelte";
-import { formatDate } from "../ts/services";
+import { formatDate, storeToken } from "../ts/services";
+import { config, error, loadedSponsoredRepos, user } from "../ts/store";
+import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
+import Fa from "svelte-fa";
 
 let promisePendingPayouts =API.payouts.pending("pending");
 let promisePaidPayouts = API.payouts.pending("paid");
 let promiseLimboPayouts= API.payouts.pending("limbo");
 let promiseTime = API.payouts.time();
+let promiseUsers = API.admin.users();
 
 const handleFakeUsers = async (email: string) => {
   return API.payouts.fakeUser(email)
@@ -28,7 +32,6 @@ const handleWarp = async (hours: number) => {
 }
 
 const payout = async (exchangeRate: number) => {
-  console.log("PPPPPAAAYYYY")
   await API.payouts.payout(exchangeRate)
 }
 
@@ -55,6 +58,19 @@ const refresh = async () => {
   promisePendingPayouts = API.payouts.pending("pending");
   promisePaidPayouts = API.payouts.pending("paid");
   promiseLimboPayouts= API.payouts.pending("limbo");
+  promiseUsers = API.admin.users();
+}
+
+async function loginAs(email: string) {
+  try {
+    const res = await API.authToken.loginAs(email)
+    storeToken(res);
+    const u = await API.user.get();
+    user.set(u);
+    loadedSponsoredRepos.set(false);
+  } catch (e) {
+    $error = e;
+  }
 }
 
 </script>
@@ -74,18 +90,75 @@ const refresh = async () => {
 
 <Navigation>
   <h1 class="px-2">Admin</h1>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleWarp(1)}>
-    Timewarp 1 hour
-  </button>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleWarp(24)}>
-    Timewarp 1 day
-  </button>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleWarp(160)}>
-    Timewarp 1 week
-  </button>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleWarp(600)}>
-    Timewarp 25 days
-  </button>
+  <div class="container">
+  {#await promiseTime}
+    Time on the backend / UTC: ...
+  {:then res}
+    Time on the backend / UTC: {res.time}
+  {/await}
+  </div>
+
+  {#if $config.env == "local"}
+    <h2 class="px-2">Timewarp</h2>
+    <div class="container">
+      <button class="m-2" on:click={() => handleWarp(1)}>
+        Timewarp 1 hour
+      </button>
+      <button class="m-2" on:click={() => handleWarp(24)}>
+        Timewarp 1 day
+      </button>
+      <button class="m-2" on:click={() => handleWarp(160)}>
+        Timewarp 1 week
+      </button>
+      <button class="m-2" on:click={() => handleWarp(600)}>
+        Timewarp 25 days
+      </button>
+      <button class="m-2" on:click={() => handleWarp(8640)}>
+        Timewarp 360 days year
+      </button>
+    </div>
+  {/if}
+
+  <h2 class="px-2">Login as User</h2>
+  <div class="container">
+    {#await promiseUsers}
+      <Spinner />
+    {:then users}
+      <table>
+        <thead>
+        <tr>
+          <th>Email</th>
+          <th>Enter</th>
+        </tr>
+        </thead>
+        <tbody>
+        {#if users && users.length > 1}
+          {#each users as row}
+            {#if $user.email !== row.email}
+              <tr>
+                <td>{row.email}</td>
+                <td><span class="cursor-pointer" on:click="{() => loginAs(row.email)}">
+                  <Fa icon="{faSignInAlt}" size="md" /></span>
+                </td>
+              </tr>
+            {/if}
+          {/each}
+        {:else}
+          <tr>
+            <td colspan="2">No Data</td>
+          </tr>
+        {/if}
+        </tbody>
+      </table>
+    {:catch err}
+      {error.set(err)}
+    {/await}
+  </div>
+
+
+
+
+
 
   <h2>Fake User</h2>
   <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeUsers(userEmail)}>Add Fake User</button>
@@ -97,11 +170,7 @@ const refresh = async () => {
   <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button>
   Email: <textarea bind:value={json} rows="10" cols="50"></textarea>
 
-  {#await promiseTime}
-    <h2>Time: ...</h2>
-  {:then res}
-    <h2>Time: {res.time}</h2>
-  {/await}
+
 
   <h2>Pending Payouts</h2>
   {#await promisePendingPayouts}

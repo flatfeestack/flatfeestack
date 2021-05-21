@@ -16,15 +16,18 @@ export type Users = {
 export type Config = {
   stripePublicApi: string;
   wsBaseUrl: string;
-  restTemplate: number;
+  restTimeout: number;
   plans: Plan[];
+  env: string;
 }
 
 export type Plan = {
-  title: string;
-  price: number;
-  freq: number;
-  desc: string;
+  title:      string;
+  price:      number;
+  freq:       number;
+  desc:       string;
+  disclaimer: string;
+  feePRm:     number;
 }
 
 export type ClientSecret = {
