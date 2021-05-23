@@ -5,6 +5,8 @@
   import { removeSession } from "./ts/services";
   import { onMount } from "svelte";
   import { API } from "./ts/api";
+  import { faHome } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
 
   import Landing from "./routes/Landing.svelte";
   import Badges from "./routes/Badges.svelte";
@@ -132,12 +134,13 @@
     </a>
     <nav>
       {#if $user.id}
+        <div class="main-nav signup"><a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a></div>
         {#if $user.role === "USR" && $user.image}
           <img class="image-usr-sx" src="{$user.image}" />
         {:else if $user.image}
           <img class="image-org-sx" src="{$user.image}" />
         {/if}
-        <span class="text-primary-500">{$user.email}</span>
+        <div class="main-nav"><a href="/user/settings">{$user.email}</a></div>
         <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
       {:else}
         <div class="main-nav"><a href="/login">Login</a></div>
