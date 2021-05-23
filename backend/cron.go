@@ -134,6 +134,12 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily User Payout inserted %v entries", nr)
 
+	nr, err = runDailyUserContribution(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily User Contribution inserted %v entries", nr)
+
 	nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err

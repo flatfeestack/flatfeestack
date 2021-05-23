@@ -808,6 +808,15 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("time warp: %v", timeNow())
 }
 
+func contributions(w http.ResponseWriter, r *http.Request, user *User) {
+	cs, err := findUserContributions(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+	writeJson(w, cs)
+}
+
 func genRnd(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)

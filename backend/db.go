@@ -106,6 +106,19 @@ type PaymentCycle struct {
 	DaysLeft int       `json:"daysLeft"`
 }
 
+type Contribution struct {
+	UserId            uuid.UUID  `json:"userId"`
+	UserEmail         string     `json:"userEmail"`
+	RepoId            uuid.UUID  `json:"repoId"`
+	RepoName          string     `json:"repoName"`
+	ContributorEmail  *string    `json:"contributorEmail"`
+	ContributorWeight *float64   `json:"contributorWeight"`
+	ContributorUserId *uuid.UUID `json:"contributorUserId"`
+	Balance           *int64     `json:"balance"`
+	BalanceRepo       int64      `json:"balanceRepo"`
+	Day               time.Time  `json:"day"`
+}
+
 func findAllUsers() ([]User, error) {
 	users := []User{}
 	s := `SELECT email from users`
@@ -379,6 +392,38 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 		repos = append(repos, repo)
 	}
 	return repos, nil
+}
+
+func findUserContributions(userId uuid.UUID) ([]Contribution, error) {
+	cs := []Contribution{}
+	s := `SELECT d.user_id, d.repo_id, r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
+            FROM daily_user_contribution d
+            JOIN repo r ON d.repo_id=r.id 
+			WHERE d.user_id=$1`
+	rows, err := db.Query(s, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var c Contribution
+		err = rows.Scan(
+			&c.UserId,
+			&c.RepoId,
+			&c.RepoName,
+			&c.ContributorEmail,
+			&c.ContributorWeight,
+			&c.ContributorUserId,
+			&c.Balance,
+			&c.BalanceRepo,
+			&c.Day)
+		if err != nil {
+			return nil, err
+		}
+		cs = append(cs, c)
+	}
+	return cs, nil
 }
 
 //*********************************************************************************

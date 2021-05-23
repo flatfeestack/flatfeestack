@@ -346,3 +346,55 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 		return nil, err
 	}
 }
+
+func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_user_contribution(
+                                    user_id, 
+                                    repo_id, 
+                                    contributor_email, 
+                                    contributor_weight, 
+                                    contributor_user_id, 
+                                    balance,
+                                    balance_repo,
+                                    day, 
+                                    created_at)
+		   SELECT s.user_id as user_id,
+		          s.repo_id as repo_id, 
+		          res.git_email as contributor_email,
+	              AVG(res.weight) as contributor_weight,
+	              g.user_id as contributor_user_id,
+		          CASE WHEN g.user_id IS NULL THEN 
+		              	  FLOOR(SUM(drb.balance * res.weight / (drw.weight + res.weight))) 
+		              ELSE
+		                  FLOOR(SUM(drb.balance * res.weight / drw.weight)) 
+		              END as balance,
+		          SUM(drb.balance) as balance_repo,
+			      $1 as day, 
+                  $3 as created_at
+			 FROM sponsor_event s
+			     INNER JOIN daily_repo_balance drb ON drb.repo_id = s.repo_id
+			     LEFT JOIN daily_repo_weight drw ON drw.repo_id = s.repo_id
+                 LEFT JOIN (SELECT req.id, req.repo_id FROM analysis_request req
+                     INNER JOIN (SELECT MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id 
+                                 FROM analysis_request
+                                 WHERE date_to <= $2
+                                 GROUP BY repo_id) 
+                         AS tmp ON tmp.date_to = req.date_to AND tmp.dates_from[1] = req.date_from AND tmp.repo_id = req.repo_id)
+                     AS req ON s.repo_id = req.repo_id
+			     LEFT JOIN analysis_response res ON res.analysis_request_id = req.id
+                 LEFT JOIN git_email g ON g.email = res.git_email
+			 WHERE drb.day=$1
+			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
+             GROUP BY s.user_id, s.repo_id, res.git_email, g.user_id`)
+	if err != nil {
+		return 0, err
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return 0, err
+	}
+	return handleErr(res)
+}

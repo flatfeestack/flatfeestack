@@ -135,16 +135,10 @@ func NewOpts() *Opts {
 		log.Fatalf("cannot decode %v", o.HS256)
 	}
 
-	if o.Admins != "" {
-		admins = strings.Split(o.Admins, ";")
-	}
+	admins = strings.Split(o.Admins, ";")
 
 	if o.EmailFrom == "" {
 		o.EmailFrom = "info@flatfeestack.io"
-	}
-
-	if o.EmailFromName == "" {
-		o.EmailFromName = ""
 	}
 
 	if o.StripeWebhookSecretKey == "" {
@@ -233,6 +227,7 @@ func main() {
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions", jwtAuthUser(contributions)).Methods(http.MethodPost)
 	//
 	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
 	//repo github
