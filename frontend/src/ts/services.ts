@@ -180,6 +180,19 @@ export const formatDate = (d: Date):string => {
     ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
 }
 
+export const formatDay = (d: Date):string => {
+  return d.getFullYear()  + "-" + ("0"+(d.getMonth())).slice(-2) + "-" +
+    ("0" + d.getDate()).slice(-2);
+}
+
+export const formatMUSD= (n: number):string => {
+  if(n > 1000000) {
+    return (n/1000000).toFixed(2);
+  } else {
+    return (n/10000).toFixed(2)+'¢';
+  }
+}
+
 //https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site
 export const timeSince = (d: Date, now:Date):string => {
   const seconds = Math.floor((now.getTime() - d.getTime()) / 1000);

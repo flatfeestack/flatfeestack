@@ -3,14 +3,14 @@
   import Fa from "svelte-fa";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { faTrash } from "@fortawesome/free-solid-svg-icons";
+  import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
   import Web3 from "../components/Web3.svelte";
   import { error, user } from "../ts/store";
   import type { GitUser } from "../types/users.ts";
   import { formatDate } from "../ts/services";
 
   let address = "";
-  let gitEmails: Array<GitUser> = [];
+  let gitEmails: GitUser[] = [];
   let newEmail = "";
   let isSubmitting = false;
 
@@ -30,7 +30,7 @@
     try {
       await API.user.addEmail(newEmail);
       let ge: GitUser = {
-        confirmedAt: "", createdAt: "", email: newEmail
+        confirmedAt: null, createdAt: null, email: newEmail
       };
       gitEmails = [...gitEmails, ge];
       newEmail = "";
@@ -50,7 +50,8 @@
 
   onMount(async () => {
     try {
-      gitEmails = await API.user.gitEmails();
+      const res = await API.user.gitEmails();
+      gitEmails = res ? res:gitEmails;
     } catch (e) {
       $error = e;
     }
@@ -75,14 +76,14 @@
     </form>
   </div>
 
-  {#if gitEmails}
+  {#if gitEmails && gitEmails.length > 0}
 
     <div class="container">
       <table>
         <thead>
         <tr>
           <th>Email</th>
-          <th>Date</th>
+          <th>Confirm Date</th>
           <th>Delete</th>
         </tr>
         </thead>
@@ -90,7 +91,13 @@
         {#each gitEmails as email, key (email.email)}
           <tr>
             <td>{email.email}</td>
-            <td>{formatDate(new Date(email.confirmedAt))}</td>
+            <td>
+              {#if email.confirmedAt}
+                {formatDate(new Date(email.confirmedAt))}
+              {:else }
+                <Fa icon="{faClock}" size="md" />
+              {/if}
+            </td>
             <td class="cursor-pointer" on:click="{() => removeEmail(email.email)}">
               <Fa icon="{faTrash}" size="md" />
             </td>

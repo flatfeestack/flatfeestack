@@ -161,9 +161,13 @@
 
 <div class="container-col">
   <div class="p-2">
-    {#if remaining >= 5}
-    Total&nbsp;Donation:<span class="bold">${total} - ${current} (current balance) = ${remaining} (remaining payment)</span>
+    {#if $user.role === "ORG" }
+      {#if remaining >= 5}
+        Total&nbsp;Donation:<span class="bold">${total} - ${current} (current balance) = ${remaining} (remaining payment)</span>
       {/if}
+    {:else}
+      Donation:<span class="bold">${total}</span>
+    {/if}
   </div>
 
   <div class="border-primary-500 rounded small p-2 m-2">

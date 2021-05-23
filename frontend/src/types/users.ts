@@ -84,8 +84,8 @@ export type Token = {
 
 export type GitUser = {
   email: string;
-  confirmedAt: string;
-  createdAt: string;
+  confirmedAt: string|null;
+  createdAt: string|null;
 };
 
 export type Invitation = {
@@ -116,4 +116,17 @@ export type RepoMapping = {
 export type FlatFeeWeight = {
   email: string;
   weight: number;
+}
+
+export type Contributions = {
+  userId: string;
+  userEmail: string;
+  repoId: string;
+  repoName: string;
+  contributorEmail: string;
+  contributorWeight: number;
+  contributorUserId: string|null;
+  balance: number;
+  balanceRepo: number;
+  day: string;
 }
