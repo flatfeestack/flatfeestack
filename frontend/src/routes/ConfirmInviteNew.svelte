@@ -3,6 +3,7 @@
   import Dots from "../components/Dots.svelte";
   import { confirmInviteNew } from "../ts/services";
   import { API } from "../ts/api";
+  import { firstTime } from "../ts/store";
 
   export let email;
   export let emailToken;
@@ -24,11 +25,11 @@
       email = "";
       password = "";
       isSubmitting = false;
+      $firstTime = true;
       navigate("/user/payments");
     } catch (e) {
       isSubmitting = false;
-      error = "Something went wrong. Please try again.";
-      console.log(e);
+      error = e;
     }
   }
 </script>
@@ -73,7 +74,7 @@
         <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />
         <label for="password" class="flex py-1">Password</label>
         <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-900"/>
-        <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign up
+        <button class="button1 my-4" disabled="{isSubmitting}" type="submit">Sign up
           {#if isSubmitting}<Dots />{/if}
         </button>
         {#if error}

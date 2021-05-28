@@ -12,3 +12,5 @@ export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
 export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("")
+//first time is set to true, when the user has opened the app via ConfirmInviteNew or ConfirmSignup
+export const firstTime = writable(false);

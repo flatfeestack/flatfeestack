@@ -1,9 +1,10 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, user } from "../ts/store";
+  import { error, user, firstTime } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";
+  import { navigate } from "svelte-routing";
 
   let checked = $user.role != "ORG";
   let nameOrig = $user.name;
@@ -121,7 +122,7 @@
 
   <div class="container">
     {#if checked}
-      <label class="px-2">Name: </label>
+      <label class="px-2">Your name: </label>
       <input type="text" bind:value={$user.name} placeholder="Name on the badge">
     {:else}
       <label class="px-2">Organization name: </label>
@@ -153,7 +154,7 @@
       <input style="display:none" type="file" accept=".jpg, .jpeg, .png" on:change={(e)=>onFileSelected(e)}
              bind:this={fileInput}>
       {#if $user.image}
-        {#if checked}
+        {#if $user.role != "ORG"}
           <img class="image-usr" src="{$user.image}" />
         {:else}
           <img class="image-org" src="{$user.image}" />
@@ -161,5 +162,15 @@
       {/if}
     </div>
   </div>
+
+  {#if $firstTime}
+    <div class="container">
+      {#if $user.role != "ORG"}
+        <button class="button1 px-2" on:click="{() => {navigate(`/user/search`)}}">Next: Search repositories to sponsor</button>
+      {:else}
+        <button class="button1 px-2" on:click="{() => {navigate(`/user/payments`)}}">Next: Setup payment</button>
+      {/if}
+    </div>
+  {/if}
 
 </Navigation>

@@ -78,7 +78,7 @@
       </div>
 
       <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-900"/>
-      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Sign in
+      <button class="button1 btn my-4" disabled="{isSubmitting}" type="submit">Sign in
         {#if isSubmitting}<Dots />{/if}
       </button>
 

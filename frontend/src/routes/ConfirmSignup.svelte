@@ -2,6 +2,7 @@
   import { Link, navigate } from "svelte-routing";
   import { onMount } from 'svelte';
   import { confirmEmail } from "../ts/services";
+  import { firstTime } from "../ts/store";
 
   export let email;
   export let token;
@@ -10,31 +11,15 @@
   onMount(async () => {
     try {
       await confirmEmail(email, token);
-      navigate("/user/search");
+      $firstTime = true;
+      navigate("/user/settings");
     } catch (e) {
-      error = e
-      console.log(e);
+      error = e;
     }
   });
 </script>
 
 <style>
-    button, input:focus{
-        outline: none;
-    }
-    input:required {
-        box-shadow: none;
-    }
-
-    label {
-        color: var(--primary-900);
-    }
-
-    form {
-        display: flex;
-        flex-direction: column;
-    }
-
     .max {
         width: 100%;
         display: flex;

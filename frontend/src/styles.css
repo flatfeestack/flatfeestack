@@ -131,32 +131,47 @@ body, html {
 }
 
 button {
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button1 {
   border: 1px solid var(--primary-700);
   border-top: 2px solid var(--primary-900);
   background-image: linear-gradient(to bottom, var(--primary-900), var(--primary-700));
-  border-radius: 3px;
   color: #ffffff;
-  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
-  text-decoration: none;
   text-shadow: rgba(0,0,0,1) 0 1px 0;
-  cursor: pointer;
+}
+
+.button1:hover {
+  background: var(--primary-500);
+}
+
+.button1:active {
+  background: var(--primary-700);
+}
+
+.button2 {
+  border: 1px solid var(--secondary-100);
+  border-top: 2px solid var(--secondary-300);
+  background-image: linear-gradient(to bottom, var(--secondary-300), var(--secondary-100));
+  color: #000;
+  text-shadow: rgba(255,255,255,1) 0 1px 0;
+}
+
+.button2:hover {
+  background: var(--secondary-300);
+}
+
+.button2:active {
+  background: var(--secondary-500);
 }
 
 input[type=email], input[type=text]{
   border: 1px solid var(--primary-700);
   padding: 0.5rem 0.75rem 0.5rem 0.75rem;
-}
-
-button:hover {
-  background: var(--primary-700);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-button:active {
-  background: var(--primary-700);
-  text-decoration: none;
-  cursor: pointer;
 }
 
 :root {

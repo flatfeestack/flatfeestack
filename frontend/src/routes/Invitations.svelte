@@ -1,18 +1,20 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, isSubmitting, user, config } from "../ts/store";
+  import { error, isSubmitting, user, config, firstTime } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type { Invitation } from "src/types/users.ts";
+  import type { Invitation, UserStatus } from "../types/users.ts";
   import { faTrash, faSync, faClock, faCheck } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import { navigate } from "svelte-routing";
 
   let invites: Invitation[] = [];
   let inviteEmail;
   let isAddInviteSubmitting = false;
   let selected;
+  let statusSponsoredUsers: UserStatus[] = [];
 
   async function removeInvite(email: string) {
     try {
@@ -53,8 +55,11 @@
   }
 
   onMount(async () => {
-
-    await refreshInvite();
+    const pr1 = refreshInvite();
+    const pr2 = API.user.statusSponsoredUsers();
+    const res2 = await pr2;
+    statusSponsoredUsers = res2 === null ? [] : res2;
+    await pr1;
   });
 
 </script>
@@ -78,12 +83,18 @@
         <option value="{plan.freq}">{plan.title}</option>
       {/each}
     </select>
-    <button type="submit" disabled="{isAddInviteSubmitting}">Invite to {$user.name ? $user.name : "your org"}
+    <button class="{!$firstTime || invites.length === 0 ?`button1`:`button2`}" type="submit" disabled="{isAddInviteSubmitting}">Invite to {$user.name ? $user.name : "your org"}
       {#if isAddInviteSubmitting}
         <Dots />
       {/if}
     </button>
   </form>
+
+  {#if $firstTime}
+    <div class="container">
+      <button class="{invites.length === 0 ?`button2`:`button1`} px-2" on:click="{() => {navigate(`/user/badges`)}}">Last step: View your track record</button>
+    </div>
+  {/if}
 
   <div class="container">
     <table>
@@ -121,5 +132,37 @@
       </tbody>
     </table>
   </div>
+
+  {#if $user.role === "ORG"}
+    <div class="container">
+      <h2 class="p-2">
+        Users using your seats
+      </h2>
+    </div>
+    <div class="container">
+      <table>
+        <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Days Left</th>
+        </tr>
+        </thead>
+        <tbody>
+        {#each statusSponsoredUsers as row, i}
+          <tr>
+            <td>{row.name}</td>
+            <td>{row.email}</td>
+            <td>{row.daysLeft}</td>
+          </tr>
+        {:else}
+          <tr>
+            <td colspan="5">No Data</td>
+          </tr>
+        {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
 
 </Navigation>

@@ -5,9 +5,10 @@
   import { API } from "../ts/api";
   import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
   import Web3 from "../components/Web3.svelte";
-  import { error, user } from "../ts/store";
+  import { error, user, firstTime } from "../ts/store";
   import type { GitUser } from "../types/users.ts";
   import { formatDate } from "../ts/services";
+  import { navigate } from "svelte-routing";
 
   let address = "";
   let gitEmails: GitUser[] = [];
@@ -72,7 +73,7 @@
     <label class="px-2">Add Git Email:</label>
     <input id="email-input" name="email" type="text" bind:value={newEmail} placeholder="Email" />
     <form class="p-2" on:submit|preventDefault="{handleSubmit}">
-      <button type="submit">Add Email</button>
+      <button class="button2" type="submit">Add Email</button>
     </form>
   </div>
 
@@ -116,9 +117,15 @@
     <label class="px-2">Payout Address:</label>
     <input type="text" bind:value="{$user.payout_eth}" placeholder="Ethereum Address" />
     <form class="p-2" on:submit|preventDefault="{updatePayout}">
-      <button type="submit">Update Address</button>
+      <button class="button2" type="submit">Update Address</button>
     </form>
   </div>
 
   <Web3 />
+
+  {#if $firstTime}
+    <div class="container">
+      <button class="button1 px-2" on:click="{() => {navigate(`/user/badges`)}}">Last step: View your track record</button>
+    </div>
+  {/if}
 </Navigation>

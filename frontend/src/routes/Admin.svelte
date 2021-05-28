@@ -101,19 +101,19 @@ async function loginAs(email: string) {
   {#if $config.env == "local"}
     <h2 class="px-2">Timewarp</h2>
     <div class="container">
-      <button class="m-2" on:click={() => handleWarp(1)}>
+      <button class="button2 m-2" on:click={() => handleWarp(1)}>
         Timewarp 1 hour
       </button>
-      <button class="m-2" on:click={() => handleWarp(24)}>
+      <button class="button2 m-2" on:click={() => handleWarp(24)}>
         Timewarp 1 day
       </button>
-      <button class="m-2" on:click={() => handleWarp(160)}>
+      <button class="button2 m-2" on:click={() => handleWarp(160)}>
         Timewarp 1 week
       </button>
-      <button class="m-2" on:click={() => handleWarp(600)}>
+      <button class="button2 m-2" on:click={() => handleWarp(600)}>
         Timewarp 25 days
       </button>
-      <button class="m-2" on:click={() => handleWarp(8640)}>
+      <button class="button2 m-2" on:click={() => handleWarp(8640)}>
         Timewarp 360 days year
       </button>
     </div>
@@ -161,13 +161,13 @@ async function loginAs(email: string) {
 
 
   <h2>Fake User</h2>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeUsers(userEmail)}>Add Fake User</button>
+  <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeUsers(userEmail)}>Add Fake User</button>
   Email: <input bind:value={userEmail}>
   <h2>Fake Payment</h2>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakePayment(userEmail, seats)}>Add Fake Payment</button>
+  <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakePayment(userEmail, seats)}>Add Fake Payment</button>
   Email: <input bind:value={userEmail}> Seats: <input bind:value={seats}>
   <h2>Fake Contribution</h2>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button>
+  <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button>
   Email: <textarea bind:value={json} rows="10" cols="50"></textarea>
 
 
@@ -271,7 +271,7 @@ async function loginAs(email: string) {
   {/await}
 
   <h2>Payout Action</h2>
-  <button class="py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={() => payout(exchangeRate)}>
+  <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={() => payout(exchangeRate)}>
     Payout
   </button>
   Exchange Rate: <input bind:value={exchangeRate}>

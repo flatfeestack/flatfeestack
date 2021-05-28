@@ -2,16 +2,32 @@
   import Navigation from "../components/Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { error } from "../ts/store";
-  import { Contributions } from "../types/users";
+  import { error, firstTime} from "../ts/store";
+  import type { Contributions } from "../types/users";
   import { formatDay, formatMUSD } from "../ts/services";
+  import confetti from "canvas-confetti";
+
+
 
   let contributions: Contributions[] = [];
+  let canvas;
 
   onMount(async () => {
     try {
-      const res = await API.user.contributions();
-      contributions = res ? res : contributions;
+      let pr1;
+      if ($firstTime) {
+        pr1 = confetti.create(<HTMLCanvasElement>canvas, {
+          resize: true,
+          useWorker: true,
+        })({ particleCount: 200, spread: 500 });
+      }
+      firstTime.set(false);
+      const pr2 = API.user.contributions();
+      const res2 = await pr2;
+      contributions = res2 ? res2 : contributions;
+      if (pr1) {
+        await pr1;
+      }
     } catch (e) {
       $error = e;
     }
@@ -19,12 +35,20 @@
 
 </script>
 
-<style></style>
+<style>
+  canvas {
+      position: absolute;
+      width: 80%;
+      height: 70%;
+  }
+</style>
+
 <Navigation>
   <h1 class="px-2">Badges</h1>
-
+  {#if firstTime}
+    <canvas bind:this="{canvas}"></canvas>
+  {/if}
   {#if contributions && contributions.length > 0}
-
     <div class="container">
       <table>
         <thead>

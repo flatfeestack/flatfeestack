@@ -2,9 +2,10 @@
   import type { Repo } from "../types/users";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
+  import { user, firstTime, error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
 
   import Navigation from "../components/Navigation.svelte";
+  import { navigate } from "svelte-routing";
   import RepoCard from "../components/RepoCard.svelte";
   import SearchResult from "../components/SearchResult.svelte";
   import Dots from "../components/Dots.svelte";
@@ -77,9 +78,15 @@
     <div class="py-3">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
         <input type="text" bind:value="{search}" />
-        <button type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
+        <button class="{!$firstTime || $sponsoredRepos.length == 0 ?`button1`:`button2`}" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
       </form>
     </div>
+
+    {#if $firstTime}
+      <div class="container">
+        <button class="{$sponsoredRepos.length == 0 ?`button2`:`button1`} px-2" on:click="{() => {navigate(`/user/payments`)}}">Next: Setup payment</button>
+      </div>
+    {/if}
 
     {#if repos.length > 0}
       <h2>Results</h2>

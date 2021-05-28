@@ -64,7 +64,7 @@
 </style>
 
 <div class="max">
-  <div class="container rounded p-5">
+  <div class="box-container rounded p-5">
     <h2 class="py-5 text-center text-primary-900">Create your account</h2>
 
     {#if info}
@@ -73,7 +73,7 @@
     <form on:submit|preventDefault="{handleSubmit}">
       <label for="email" class="py-1">Email address</label>
       <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />
-      <button class="btn my-4" disabled="{isSubmitting}" type="submit">Reset password
+      <button class="button1 my-4" disabled="{isSubmitting}" type="submit">Reset password
         {#if isSubmitting}<Dots />{/if}
       </button>
 

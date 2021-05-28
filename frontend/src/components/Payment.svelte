@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { error, user, config, userBalances } from "./../ts/store";
+  import { error, user, config, userBalances, firstTime } from "./../ts/store";
   import Dots from "./Dots.svelte";
   import { stripePayment, stripePaymentMethod } from "../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
@@ -140,7 +140,7 @@
 
   <div class="p-2">
     <form on:submit|preventDefault="{handleSubmit}">
-      <button disabled="{isSubmitting || remaining < 5}" type="submit">❤&nbsp;Support
+      <button class="{!$firstTime || current === 0?`button1`:`button2`}" disabled="{isSubmitting || remaining < 10}" type="submit">❤&nbsp;Support
         {#if isSubmitting}
           <Dots />
         {/if}
@@ -156,13 +156,12 @@
       <Dots />
     </div>
   {/if}
-
 </div>
 
 <div class="container-col">
   <div class="p-2">
     {#if $user.role === "ORG" }
-      {#if remaining >= 5}
+      {#if remaining >= 10}
         Total&nbsp;Donation:<span class="bold">${total} - ${current} (current balance) = ${remaining} (remaining payment)</span>
       {/if}
     {:else}

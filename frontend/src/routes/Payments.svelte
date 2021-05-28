@@ -1,20 +1,26 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
   import Payment from "../components/Payment.svelte";
-  import { error, user, userBalances, token, config } from "../ts/store";
+  import { error, user, userBalances, token, config, firstTime } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import { faSync } from "@fortawesome/free-solid-svg-icons";
-  import type { Repo, UserStatus } from "src/types/users";
+  import type {Repo} from "../types/users";
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import { navigate } from "svelte-routing";
 
   let isUser = $user.role != "ORG";
   let sponsoredRepos: Repo[] = [];
   let invite_email;
   let isSubmitting = false;
-  let statusSponsoredUsers: UserStatus[] = [];
+
+  let current;
+  $: {
+    current = $userBalances && $userBalances.total > 0 ? $userBalances.total / 1000000 : 0
+  }
+
 
   $: $user.role = isUser === false ? "ORG" : "USR";
 
@@ -63,15 +69,15 @@
     } finally {
       isSubmitting = false;
     }
-  };
+  }
 
   onMount(async () => {
     try {
-      await connectWs();
-      const res2 = await API.user.getSponsored();
+      const pr1 = connectWs();
+      const pr2 = API.user.getSponsored();
+      const res2 = await pr2;
       sponsoredRepos = res2 === null ? [] : res2;
-      const res3 = await API.user.statusSponsoredUsers();
-      statusSponsoredUsers = res3 === null ? [] : res3;
+      await pr1;
     } catch (e) {
       $error = e;
     }
@@ -98,7 +104,7 @@
         (${$userBalances.paymentCycle.seats * $config.plans.find(plan => plan.freq == $userBalances.paymentCycle.freq).price})</span>
       {#if !isUser}
       <form class="p-2" on:submit|preventDefault="{updateSeats}">
-        <button disabled="{isSubmitting}" type="submit">Update Seats
+        <button class="button2" disabled="{isSubmitting}" type="submit">Update Seats
           {#if isSubmitting}
             <Dots />
           {/if}
@@ -106,7 +112,7 @@
       </form>
       {/if}
       <form class="p-2" on:submit|preventDefault="{handleCancel}">
-        <button disabled="{isSubmitting}" type="submit">Cancel&nbsp;Support
+        <button class="button2" disabled="{isSubmitting}" type="submit">Cancel&nbsp;Support
           {#if isSubmitting}
             <Dots />
           {/if}
@@ -122,7 +128,7 @@
     {#if $user.payment_method}
       <span>*** {$user.last4}</span>
       <form class="p-2" on:submit|preventDefault="{deletePaymentMethod}">
-        <button disabled="{isSubmitting}" type="submit">Remove card
+        <button class="button2" disabled="{isSubmitting}" type="submit">Remove card
           {#if isSubmitting}
             <Dots />
           {/if}
@@ -147,44 +153,18 @@
     </div>
   {/if}
 
-
-  {#if !isUser}
-  <div class="container">
-    <h2 class="p-2">
-     Users using your seats
-    </h2>
-  </div>
-  <div class="container">
-    <table>
-      <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Days Left</th>
-      </tr>
-      </thead>
-      <tbody>
-      {#each statusSponsoredUsers as row, i}
-        <tr>
-          <td>{row.name}</td>
-          <td>{row.email}</td>
-          <td>{row.daysLeft}</td>
-        </tr>
-      {:else}
-        <tr>
-          <td colspan="5">No Data</td>
-        </tr>
-      {/each}
-      </tbody>
-    </table>
-  </div>
-  {/if}
-
-
-
-
   {#if !$userBalances || !$userBalances.paymentCycle || $userBalances.paymentCycle.freq === 0 || !isUser}
       <Payment />
+  {/if}
+
+  {#if $firstTime}
+    <div class="container">
+      {#if $user.role != "ORG"}
+        <button class="{current === 0 ?`button2`:`button1`} px-2" on:click="{() => {navigate(`/user/income`)}}">Next: Setup income</button>
+      {:else}
+        <button class="{current === 0 ?`button2`:`button1`} px-2" on:click="{() => {navigate(`/user/invitations`)}}">Next: Invite coworkers</button>
+      {/if}
+    </div>
   {/if}
 
   {#if $userBalances && $userBalances.userBalances}

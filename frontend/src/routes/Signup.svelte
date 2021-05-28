@@ -71,7 +71,7 @@
         <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />
         <label for="password" class="flex py-1">Password</label>
         <input required size="100" maxlength="100" type="password" id="password" minlength="8" bind:value={password} class="rounded py-2 border-primary-900"/>
-        <button class="btn my-4" disabled="{isSubmittingSignup}" type="submit">Sign up
+        <button class="button1 my-4" disabled="{isSubmittingSignup}" type="submit">Sign up
           {#if isSubmittingSignup}<Dots />{/if}
         </button>
 
@@ -84,7 +84,7 @@
 
     <div class="divider"></div>
     <div class="flex">
-      Already have an account?&nbsp;<Link to="/signin">Log in</Link>
+      Already have an account?&nbsp;<Link to="/login">Log in</Link>
     </div>
 
   </div>

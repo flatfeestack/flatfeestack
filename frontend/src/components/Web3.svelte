@@ -41,5 +41,5 @@ const requestFunds = async () => {
 
 <div class="container">
   <label class="px-2">Request funds:</label>
-  <button class="button" disabled={storageContract?"false":"true"} on:click="{requestFunds}">Request funds</button>
+  <button class="button2" disabled={storageContract?"false":"true"} on:click="{requestFunds}">Request funds</button>
 </div>
