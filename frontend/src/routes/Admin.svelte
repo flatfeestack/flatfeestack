@@ -202,8 +202,8 @@ async function loginAs(email: string) {
       {/if}
       </tbody>
     </table>
-  {:catch error}
-    {error}
+  {:catch err}
+    {error.set(err)}
   {/await}
 
   <h2>Paid Payouts</h2>
@@ -236,6 +236,8 @@ async function loginAs(email: string) {
       {/if}
       </tbody>
     </table>
+  {:catch err}
+    {error.set(err)}
   {/await}
 
   <h2>Limbo Payouts</h2>
@@ -268,6 +270,8 @@ async function loginAs(email: string) {
       {/if}
       </tbody>
     </table>
+  {:catch err}
+    {error.set(err)}
   {/await}
 
   <h2>Payout Action</h2>

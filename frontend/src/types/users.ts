@@ -19,6 +19,7 @@ export type Config = {
   restTimeout: number;
   plans: Plan[];
   env: string;
+  contractAddr: string;
 }
 
 export type Plan = {
@@ -39,6 +40,11 @@ export type UserBalances = {
   userBalances: UserBalance[];
   total: number;
   daysLeft: number;
+}
+
+export type UserBalanceCore = {
+  userId: string;
+  balance: number;
 }
 
 export type UserBalance = {
@@ -119,13 +125,12 @@ export type FlatFeeWeight = {
 }
 
 export type Contributions = {
-  userId: string;
   userEmail: string;
-  repoId: string;
+  userName: string;
   repoName: string;
   contributorEmail: string;
   contributorWeight: number;
-  contributorUserId: string|null;
+  isFlatFeeStackUser: boolean;
   balance: number;
   balanceRepo: number;
   day: string;

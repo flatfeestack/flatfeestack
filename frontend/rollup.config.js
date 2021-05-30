@@ -15,7 +15,7 @@ export default [{
     dir: "public/build",
     sourcemap: true,
     manualChunks: {
-      deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js"]
+      deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js", "canvas-confetti"]
     }
   },
   plugins: [

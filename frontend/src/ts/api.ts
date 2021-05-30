@@ -13,7 +13,7 @@ import type {
   UserAggBalance,
   GitUser,
   RepoMapping,
-  UserBalance, Contributions
+  UserBalance, Contributions, UserBalanceCore
 } from "../types/users";
 import { PaymentCycle, UserStatus } from "../types/users";
 
@@ -121,7 +121,9 @@ export const API = {
     paymentCycle: () => backendToken.post(`users/me/payment-cycle`).json<PaymentCycle>(),
     updateSeats: (seats: number)=> backendToken.post(`users/me/seats/${seats}`),
     statusSponsoredUsers: () => backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
-    contributions: () => backendToken.post(`users/me/contributions`).json<Contributions[]>(),
+    contributionsSend: () => backendToken.post(`users/me/contributions-send`).json<Contributions[]>(),
+    contributionsRcv: () => backendToken.post(`users/me/contributions-receive`).json<Contributions[]>(),
+    pendingDailyUserPayouts: () => backendToken.post(`users/me/payout-pending`).json<UserBalanceCore>(),
   },
   repos: {
     search: (s: string) => backendToken.get(`repos/search?q=${encodeURI(s)}`).json<Repo[]>(),

@@ -22,7 +22,7 @@
         })({ particleCount: 200, spread: 500 });
       }
       firstTime.set(false);
-      const pr2 = API.user.contributions();
+      const pr2 = API.user.contributionsSend();
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
       if (pr1) {
