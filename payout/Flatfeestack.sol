@@ -1,28 +1,6 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity >=0.7.0 <0.8.0;
-
-library SafeMath64 {
-    /**
-     * @dev Returns the addition of two unsigned integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `+` operator.
-     *
-     * Requirements:
-     *
-     * - Addition cannot overflow.
-     */
-    function add(uint192 a, uint192 b) internal pure returns (uint192) {
-        uint192 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-}
+pragma solidity ~0.8.4;
 
 contract Flatfeestack {
-    using SafeMath64 for uint192;
     mapping(address => Balance) private balances;
     address private owner;
 
@@ -50,7 +28,7 @@ contract Flatfeestack {
 
         uint256 sumWei;
         for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
-            balances[addresses[i]].balanceWei = balances[addresses[i]].balanceWei.add(balancesWei[i]);
+            balances[addresses[i]].balanceWei += balancesWei[i];
             if(balances[addresses[i]].time == 0) {
                 balances[addresses[i]].time = uint64(block.timestamp);
             }
@@ -62,10 +40,10 @@ contract Flatfeestack {
         }
     }
 
-     /**
-     * @dev Triggers a transfer of the assigned funds.
-     * total shares and their previous withdrawals.
-     */
+    /**
+    * @dev Triggers a transfer of the assigned funds.
+    * total shares and their previous withdrawals.
+    */
     function release() public payable {
         require(balances[msg.sender].balanceWei > 0, "PaymentSplitter: account has no balance");
 
@@ -74,7 +52,7 @@ contract Flatfeestack {
         balances[msg.sender].balanceWei = 0;
         balances[msg.sender].time = 0;
 
-        msg.sender.transfer(balanceWei);
+        payable(msg.sender).transfer(balanceWei);
         emit PaymentReleased(msg.sender, balanceWei, time);
     }
 
@@ -82,15 +60,19 @@ contract Flatfeestack {
      * @dev Return balance
      * @return balance and the time it was first added
      */
-    function balanceOf(address addr) public view returns (uint192, uint64) {
-        return (balances[addr].balanceWei, balances[addr].time);
+    function balanceOf(address addr) public view returns (uint192) {
+        return balances[addr].balanceWei;
+    }
+
+    function timeOf(address addr) public view returns (uint64) {
+        return balances[addr].time;
     }
 
     function unclaimed(address[] memory addresses) public {
         require(msg.sender == owner, "Only the owner can collect unclaimed payouts");
         for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
             if (balances[addresses[i]].time + 365 days < block.timestamp) {
-                balances[msg.sender].balanceWei = balances[msg.sender].balanceWei.add(balances[addresses[i]].balanceWei);
+                balances[msg.sender].balanceWei += balances[addresses[i]].balanceWei;
                 balances[addresses[i]].balanceWei = 0;
             }
         }
