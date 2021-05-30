@@ -585,6 +585,30 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 	batchId := uuid.New()
 	for _, ub := range userAggBalances {
 		//TODO: do one SQL insert instead of many small ones
+
+		//only transfer if amount is larger than 25$
+		if ub.Balance < 25*1000000 {
+			continue
+		}
+		u2, err := findUserById(ub.UserId)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "find user: %v", err)
+			return
+		}
+		u3 := UserBalance{
+			PaymentCycleId: u2.PaymentCycleId,
+			FromUserId:     nil,
+			BalanceType:    "INCOME_REQUEST",
+			CreatedAt:      timeNow(),
+			UserId:         ub.UserId,
+			Balance:        ub.Balance,
+		}
+		err = insertUserBalance(u3)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "user balance: %v", err)
+			return
+		}
+
 		for _, mid := range ub.DailyUserPayoutIds {
 			p := PayoutsRequest{
 				DailyUserPayoutId: mid,
@@ -618,11 +642,13 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 			pts = []PayoutToService{}
 		}
 	}
-	//save remaining batch
-	err = payout0(pts, batchId)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not send payout2: %v", err)
-		return
+	if pts != nil {
+		//save remaining batch
+		err = payout0(pts, batchId)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could not send payout2: %v", err)
+			return
+		}
 	}
 }
 
@@ -671,7 +697,8 @@ func config(w http.ResponseWriter, _ *http.Request) {
 			"wsBaseUrl":"`+opts.WebSocketBaseUrl+`",
 			"restTimeout":"`+strconv.Itoa(opts.RestTimeout)+`",
             "plans": `+string(b)+`,
-			"env":"`+opts.Env+`"}`)
+			"env":"`+opts.Env+`",
+			"contractAddr":"`+opts.ContractAddr+`"}`)
 }
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
@@ -808,13 +835,31 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("time warp: %v", timeNow())
 }
 
-func contributions(w http.ResponseWriter, r *http.Request, user *User) {
+func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
 	cs, err := findUserContributions(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	writeJson(w, cs)
+}
+
+func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
+	cs, err := findMyContributions(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+	writeJson(w, cs)
+}
+
+func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User) {
+	ub, err := getPendingDailyUserPayouts(user.Id, timeNow())
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+	writeJson(w, ub)
 }
 
 func genRnd(n int) ([]byte, error) {

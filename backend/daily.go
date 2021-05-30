@@ -135,15 +135,15 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	return handleErr(res)
 }
 
-func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+/*func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, day, created_at)
-		SELECT res.git_email as email, 
-		       FLOOR(SUM(res.weight * drb.balance)) as balance, 
-		       $1 as day, 
+		SELECT res.git_email as email,
+		       FLOOR(SUM(res.weight * drb.balance)) as balance,
+		       $1 as day,
 		       $3 as created_at
         FROM analysis_response res
             JOIN (SELECT req.id, req.repo_id FROM analysis_request req
-                JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	WHERE date_to <= $2 GROUP BY repo_id) 
+                JOIN (SELECT MAX(date_to) as date_to, repo_id FROM analysis_request	WHERE date_to <= $2 GROUP BY repo_id)
                     AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
                 AS req ON res.analysis_request_id = req.id
             JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
@@ -161,7 +161,7 @@ func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now 
 		return 0, err
 	}
 	return handleErr(res)
-}
+}*/
 
 func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_weight (repo_id, weight, day, created_at)
@@ -294,36 +294,69 @@ func runDailyTopupReminderUser() ([]User, error) {
 	return repos, nil
 }
 
+func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
+	cs := []Contribution{}
+	s := `SELECT STRING_AGG(r.name, ','), d.contributor_email, SUM(d.balance) as balance
+            FROM daily_user_contribution d
+            	INNER JOIN repo r ON d.repo_id=r.id 
+			WHERE d.day = $1 AND d.contributor_user_id IS NULL
+			GROUP BY d.contributor_email`
+	rows, err := db.Query(s, yesterdayStart)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var c Contribution
+		err = rows.Scan(
+			&c.RepoName,
+			&c.ContributorEmail,
+			&c.Balance,
+			yesterdayStart)
+		if err != nil {
+			return nil, err
+		}
+		cs = append(cs, c)
+	}
+	return cs, nil
+}
+
 func getDailyPayouts(s string) ([]UserAggBalance, error) {
+	day := timeDay(-60, timeNow()) //day -2 month
 	var userAggBalances []UserAggBalance
 	//select monthly payments, but only those that do not have a payout entry
 	var query string
+	var rows *sql.Rows
+	var err error
 	switch s {
 	case "pending":
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
 				FROM daily_user_payout dup 
 			    JOIN users u ON dup.user_id = u.id 
 				LEFT JOIN payouts_request p ON p.daily_user_payout_id = dup.id
-				WHERE p.id IS NULL
-				GROUP BY u.payout_eth`
+				WHERE p.id IS NULL AND dup.day < $1
+				GROUP BY u.id, u.payout_eth`
+		rows, err = db.Query(query, day)
 	case "paid":
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
 				FROM daily_user_payout dup
 			    JOIN users u ON dup.user_id = u.id 
 				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
 				JOIN payouts_response pres ON pres.batch_id = preq.batch_id
                 WHERE pres.error is NULL
-				GROUP BY u.payout_eth`
+				GROUP BY u.id, u.payout_eth`
+		rows, err = db.Query(query)
 	default: //limbo
-		query = `SELECT u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
+		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
 				FROM daily_user_payout dup
 			    JOIN users u ON dup.user_id = u.id 
 				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
 				LEFT JOIN payouts_response pres ON pres.batch_id = preq.batch_id
 				WHERE pres.id IS NULL OR pres.error is NOT NULL
-				GROUP BY u.payout_eth`
+				GROUP BY u.id, u.payout_eth`
+		rows, err = db.Query(query)
 	}
-	rows, err := db.Query(query)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -332,7 +365,9 @@ func getDailyPayouts(s string) ([]UserAggBalance, error) {
 		defer closeAndLog(rows)
 		for rows.Next() {
 			var userAggBalance UserAggBalance
-			err = rows.Scan(&userAggBalance.PayoutEth,
+			err = rows.Scan(
+				&userAggBalance.UserId,
+				&userAggBalance.PayoutEth,
 				pq.Array(&userAggBalance.Emails),
 				&userAggBalance.Balance,
 				pq.Array(&userAggBalance.DailyUserPayoutIds))
@@ -383,7 +418,7 @@ func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time,
                      AS req ON s.repo_id = req.repo_id
 			     LEFT JOIN analysis_response res ON res.analysis_request_id = req.id
                  LEFT JOIN git_email g ON g.email = res.git_email
-			 WHERE drb.day=$1
+			 WHERE drb.day=$1 AND drw.day=$1
 			     AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
              GROUP BY s.user_id, s.repo_id, res.git_email, g.user_id`)
 	if err != nil {

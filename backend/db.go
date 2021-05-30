@@ -54,6 +54,7 @@ type Repo struct {
 }
 
 type UserAggBalance struct {
+	UserId             uuid.UUID   `json:"userId"`
 	PayoutEth          string      `json:"payout_eth"`
 	Balance            int64       `json:"balance"`
 	Emails             []string    `json:"email_list"`
@@ -82,14 +83,18 @@ type GitEmail struct {
 	CreatedAt   *time.Time `json:"createdAt"`
 }
 
+type UserBalanceCore struct {
+	UserId  uuid.UUID `json:"userId"`
+	Balance int64     `json:"balance"`
+}
+
 type UserBalance struct {
-	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
 	UserId         uuid.UUID  `json:"userId"`
-	FromUserId     *uuid.UUID `json:"fromUserId"`
 	Balance        int64      `json:"balance"`
+	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
+	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
 	CreatedAt      time.Time  `json:"createdAt"`
-	DaysLeft       int        `json:"daysLeft,omitempty"`
 }
 
 type UserStatus struct {
@@ -107,16 +112,15 @@ type PaymentCycle struct {
 }
 
 type Contribution struct {
-	UserId            uuid.UUID  `json:"userId"`
-	UserEmail         string     `json:"userEmail"`
-	RepoId            uuid.UUID  `json:"repoId"`
-	RepoName          string     `json:"repoName"`
-	ContributorEmail  *string    `json:"contributorEmail"`
-	ContributorWeight *float64   `json:"contributorWeight"`
-	ContributorUserId *uuid.UUID `json:"contributorUserId"`
-	Balance           *int64     `json:"balance"`
-	BalanceRepo       int64      `json:"balanceRepo"`
-	Day               time.Time  `json:"day"`
+	UserEmail         string    `json:"userEmail"`
+	UserName          string    `json:"userName"`
+	RepoName          string    `json:"repoName"`
+	ContributorEmail  *string   `json:"contributorEmail"`
+	ContributorWeight *float64  `json:"contributorWeight"`
+	FlatFeeStackUser  bool      `json:"isFlatFeeStackUser"`
+	Balance           *int64    `json:"balance"`
+	BalanceRepo       int64     `json:"balanceRepo"`
+	Day               time.Time `json:"day"`
 }
 
 func findAllUsers() ([]User, error) {
@@ -394,9 +398,47 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	return repos, nil
 }
 
+func findMyContributions(contributorUserId uuid.UUID) ([]Contribution, error) {
+	cs := []Contribution{}
+	s := `SELECT u.name, r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
+            FROM daily_user_contribution d
+                INNER JOIN users u ON d.user_id = u.id
+                INNER JOIN repo r ON d.repo_id=r.id 
+			WHERE d.contributor_user_id=$1`
+	rows, err := db.Query(s, contributorUserId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var c Contribution
+		var cUuid *uuid.UUID
+		err = rows.Scan(
+			&c.UserName,
+			&c.RepoName,
+			&c.ContributorEmail,
+			&c.ContributorWeight,
+			&cUuid,
+			&c.Balance,
+			&c.BalanceRepo,
+			&c.Day)
+		if cUuid == nil {
+			c.FlatFeeStackUser = false
+		} else {
+			c.FlatFeeStackUser = true
+		}
+		if err != nil {
+			return nil, err
+		}
+		cs = append(cs, c)
+	}
+	return cs, nil
+}
+
 func findUserContributions(userId uuid.UUID) ([]Contribution, error) {
 	cs := []Contribution{}
-	s := `SELECT d.user_id, d.repo_id, r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
+	s := `SELECT r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
             FROM daily_user_contribution d
             JOIN repo r ON d.repo_id=r.id 
 			WHERE d.user_id=$1`
@@ -408,16 +450,20 @@ func findUserContributions(userId uuid.UUID) ([]Contribution, error) {
 
 	for rows.Next() {
 		var c Contribution
+		var cUuid *uuid.UUID
 		err = rows.Scan(
-			&c.UserId,
-			&c.RepoId,
 			&c.RepoName,
 			&c.ContributorEmail,
 			&c.ContributorWeight,
-			&c.ContributorUserId,
+			&cUuid,
 			&c.Balance,
 			&c.BalanceRepo,
 			&c.Day)
+		if cUuid == nil {
+			c.FlatFeeStackUser = false
+		} else {
+			c.FlatFeeStackUser = true
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -823,6 +869,45 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 		return err
 	}
 	return handleErrMustInsertOne(res)
+}
+
+func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore, error) {
+	day = timeDay(-60, day) //day -2 month
+	var ub UserBalanceCore
+	err := db.
+		QueryRow(`SELECT COALESCE(SUM(balance),0) as balance from daily_user_payout where user_id = $1 AND day >= $2`, uid, day).
+		Scan(&ub.Balance)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		ub.UserId = uid
+		return &ub, nil
+	default:
+		return nil, err
+	}
+}
+
+func getDailyUserPayouts(day time.Time) ([]UserBalanceCore, error) {
+	//day -2 month
+	day = timeDay(-60, day)
+	q := `SELECT user_id, balance from daily_user_payout where day=$1`
+	rows, err := db.Query(q, day)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalanceCore
+	for rows.Next() {
+		var userBalance UserBalanceCore
+		err = rows.Scan(&userBalance.UserId, &userBalance.Balance)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
 }
 
 func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {

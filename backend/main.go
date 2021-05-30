@@ -69,6 +69,7 @@ type Opts struct {
 	WebSocketBaseUrl       string
 	RestTimeout            int
 	LogPath                string
+	ContractAddr           string
 }
 
 type TokenClaims struct {
@@ -118,6 +119,8 @@ func NewOpts() *Opts {
 		5000), "Rest timeout, default 5s")
 	flag.StringVar(&o.LogPath, "log", lookupEnv("LOG",
 		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
+	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
+		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -227,7 +230,9 @@ func main() {
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions", jwtAuthUser(contributions)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-send", jwtAuthUser(contributionsSend)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-receive", jwtAuthUser(contributionsRcv)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payout-pending", jwtAuthUser(pendingDailyUserPayouts)).Methods(http.MethodPost)
 	//
 	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
 	//repo github

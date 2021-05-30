@@ -116,11 +116,11 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily Repo Balance inserted %v entries", nr)
 
-	nr, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Email Payout inserted %v entries", nr)
+	//nr, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, now)
+	//if err != nil {
+	//	return err
+	//}
+	//log.Printf("Daily Email Payout inserted %v entries", nr)
 
 	nr, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, now)
 	if err != nil {
@@ -153,6 +153,14 @@ func dailyRunner(now time.Time) error {
 	log.Printf("Daily Analysis Check found %v entries", len(repos))
 
 	for _, v := range repos {
+		if v.Url == nil {
+			log.Printf("URL is nil of %v", v.Id)
+			continue
+		}
+		if v.Branch == nil {
+			log.Printf("Branch is nil of %v", v.Id)
+			continue
+		}
 		err = analysisRequest(v.Id, *v.Url, *v.Branch)
 		if err != nil {
 			return err
@@ -191,6 +199,40 @@ func dailyRunner(now time.Time) error {
 		}
 	}
 
+	userRepo, err := runDailyMarketing(yesterdayStart)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Marketing candidates found %v entries", len(users))
+	for _, u := range userRepo {
+		//
+		log.Printf("send mail to %v", u)
+	}
+
+	ubc, err := getDailyUserPayouts(yesterdayStart)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily payout found %v entries", len(users))
+	for _, u := range ubc {
+		u2, err := findUserById(u.UserId)
+		if err != nil {
+			return err
+		}
+		ub := UserBalance{
+			PaymentCycleId: u2.PaymentCycleId,
+			FromUserId:     nil,
+			BalanceType:    "INCOME",
+			CreatedAt:      timeNow(),
+			UserId:         u.UserId,
+			Balance:        u.Balance,
+		}
+		err = insertUserBalance(ub)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Printf("Daily runner finished")
 	return nil
 }
@@ -207,7 +249,7 @@ func reminderTopup(u User) error {
 		return nil
 	}
 
-	err = insertEmailSent(u.Id, "topup-"+u.PaymentCycleId.String(), timeNow())
+	err = insertEmailSent(u.Id, emailCountId, timeNow())
 	if err != nil {
 		return err
 	}
