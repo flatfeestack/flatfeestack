@@ -6,7 +6,7 @@ RUN make dep
 
 FROM base as builder
 COPY *.go ./
-RUN make build
+RUN make clean build
 
 FROM gcr.io/distroless/static
 WORKDIR /home/nonroot
