@@ -124,6 +124,10 @@
         display: flex;
         flex-direction: row;
     }
+
+    footer > :global(a) {
+        color: white;
+    }
 </style>
 
 <div class="main">
@@ -184,5 +188,5 @@
     </Router>
   </main>
 
-  <footer>© flatfeestack.io</footer>
+  <footer>© flatfeestack.io. We used the following <a href="dependencies.txt">dependencies</a></footer>
 </div>

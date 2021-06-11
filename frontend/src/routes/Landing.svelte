@@ -180,7 +180,7 @@
 
     <div class="small w1-3 container-col2">
       <p>
-        For a flat fee of $34 per quarter (or $125 per year), you can support
+        For a flat fee of $32 per quarter (or $125 per year), you can support
         as many open source project as you like. Your developer badge shows
         which projects you support.
       </p>
@@ -218,7 +218,7 @@
         <p>
           Each project receives your donation equally divided. Simply donate
           and don't worry about how many projects you want to support, it is
-          always $34 per quarter (or $125 per year). It is a similar concept to Flattr for open
+          always $32 per quarter (or $125 per year). It is a similar concept to Flattr for open
           source projects, where git metrics decide how much each
           contributor earns.
         </p>
