@@ -10,6 +10,7 @@ body, html {
   text-rendering: optimizeLegibility;
   font-size: 1.1rem;
   height: 100%;
+  font-weight: 300;
 }
 
 .px-2 {

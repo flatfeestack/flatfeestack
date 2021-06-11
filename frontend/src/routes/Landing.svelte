@@ -1,37 +1,76 @@
-<style>
-.section-title {
-  @apply text-3xl;
-}
-@screen md {
-  .section-title {
-    @apply text-4xl;
-  }
-  .subtitle {
-    @apply font-normal;
-  }
-}
-
-.subtitle {
-  @apply text-primary-400 text-lg font-bold;
-}
-.grey img {
-  filter: grayscale(100%);
-  transform: scale(0.5);
-}
-.grey2 img {
-  filter: grayscale(100%);
-  transform: scale(0.25);
-}
-</style>
-
 <script lang="ts">
 import { draw } from "svelte/transition";
+import { fly, fade } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
+import P5 from 'p5-svelte';
 
+const sketch = (p5) => {
+  let earthAngle = 0;
+  let earthTexture;
+  p5.setup = () => {
+    p5.createCanvas(400, 400, p5.WEBGL);
+    p5.noStroke();
+  };
+
+  p5.preload = () => {
+    earthTexture = p5.loadImage("assets/images/earth.png");
+  };
+
+  p5.draw = () => {
+    //p5.background(220);
+    p5.orbitControl();
+    p5.texture(earthTexture);
+    p5.rotateY(earthAngle);
+    earthAngle += 0.001;
+    p5.sphere(100);
+  };
+};
 
 let svgVisible = true;
 </script>
 
-Landing page
+<style>
+    .section-title {
+        @apply text-3xl;
+    }
+    @screen md {
+        .section-title {
+            @apply text-4xl;
+        }
+        .subtitle {
+            @apply font-normal;
+        }
+    }
+
+    .subtitle {
+        @apply text-primary-400 text-lg font-bold;
+    }
+    .grey img {
+        filter: grayscale(100%);
+        transform: scale(0.5);
+    }
+    .grey2 img {
+        filter: grayscale(100%);
+        transform: scale(0.25);
+    }
+
+    .big{
+        font-size: 500%;
+        text-align: center;
+        position: absolute;
+    }
+
+</style>
+
+<p class = "big" transition:fly="{{ y: 100, duration: 1000, easing: cubicOut }}">
+  On the Shoulders of Giants
+</p>
+<P5 {sketch} />
+<img src="assets/images/atlas.svg">
+<!--https://github.com/aholmes/webgl-sphere-->
+
+
+
 <!--<div class="bg-gradient-to-tr from-light-100 to-primary-100">
 
   <div class="container mx-auto px-3 lg:px-0 pt-20">
