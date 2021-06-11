@@ -3,18 +3,19 @@
 ### Tech:
 
 Now:
-- [ ] Automatic release deployment (Guil)
+- [x] Automatic release deployment (Guil)
   - [x] DNS
-  - [ ] Tag-based auto deployment (GitHub Actions, only master branch, tag)
+  - [x] Tag-based auto deployment (GitHub Actions, only master branch, tag)
   - [x] Infura node (Alchemy)
-  - [ ] Volume for analysis-engine
+  - [x] Volume for analysis-engine
 - [ ] Test containers: the goal is to execute tests BEFORE build
 - [ ] Check if we can use podman?
 - [ ] Create GitHub users
 - [x] Create SendGrid account
 - [x] Integrate / configure sendgrid to backend
-- [ ] Evaluate whether the "scheduler" should be deleted for good or not; If yes, delete.
+- [x] Evaluate whether the "scheduler" should be deleted for good or not; If yes, delete.
 - [ ] Sendgrid: change the if-statement in the backend + fastauth
+- [ ] Deployment: volume for logs in all services (that we don't loose the logs on every deployment!)
 
 Future plans:
 - [ ] Automatic conversion from fiat (stripe) to ETH
@@ -29,10 +30,7 @@ split to other projects? or what's the flow?
 
 ### Marketing:
 
-Now:
-- [ ] Landing Page (Thomas)
-
-Future Plans:
+- [x] Landing Page (Thomas)
 - [ ] 99Designs for logo and brand identity
 - [ ] Create badges for sponsors (repos, etc)
 - [ ] 3 minute pitch deck

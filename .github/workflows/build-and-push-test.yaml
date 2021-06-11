@@ -1,6 +1,7 @@
 name: TEST-build-and-push
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
