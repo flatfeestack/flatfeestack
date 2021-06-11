@@ -1,11 +1,12 @@
 FROM node:15 AS base
 WORKDIR /app
 COPY package.json tsconfig.json rollup-prod.config.js ssr.js ./
-COPY ./public/assets ./public/assets
 RUN npm install
 
 FROM base as builder
 COPY ./src ./src
+COPY ./public/assets ./public/assets
+COPY ./public/server ./public/server
 RUN npm run prod
 
 FROM caddy:2
