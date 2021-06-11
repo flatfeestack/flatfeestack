@@ -1,23 +1,13 @@
-name: build-and-push
+name: PROD-build-and-push
 
 on:
   workflow_dispatch:
-    inputs:
-      push:
-        description: 'Push Images? ["true","false"]'
-        default: 'true'
-      env:
-        description: 'Env? ["test","prod"]'
-        default: 'test'
-      deploy:
-        description: 'Deploy? ["true","false"]'
-        default: 'true'
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
-      TAG_IMAGE: latest-${{ github.event.inputs.env }}
+      TAG_IMAGE: latest-prod
     steps:
       - uses: actions/checkout@v2
         with:
@@ -34,19 +24,9 @@ jobs:
       - name: Build Images
         run: docker-compose -f docker-compose.build.yml build
       - name: Push Images
-        if: (github.ref == 'refs/heads/master') && github.event.inputs.push == 'true'
         run: docker-compose -f docker-compose.build.yml push
-      - name: Deploy - TEST
-        uses: garygrossgarten/github-action-ssh@release
-        if: (github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true' && github.event.inputs.env == 'test'
-        with:
-          command: sh docker_login.sh && cd flatfeestack && git pull --recurse-submodules && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.test.yml -f docker-compose.caddy.yml --env-file .test.env pull && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.test.yml -f docker-compose.caddy.yml --env-file .test.env up -d
-          host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
-          username: ubuntu
-          privateKey: ${{ secrets.FLATFEESTACK1_NODE_PRIVATE_KEY}}
       - name: Deploy - PROD
         uses: garygrossgarten/github-action-ssh@release
-        if: (github.ref == 'refs/heads/master') && github.event.inputs.deploy == 'true' && github.event.inputs.env == 'prod'
         with:
           command: sh docker_login.sh && cd flatfeestack && git pull --recurse-submodules && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env pull && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env up -d
           host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
