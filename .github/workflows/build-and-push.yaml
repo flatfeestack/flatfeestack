@@ -14,7 +14,7 @@ on:
         default: 'true'
   push:
     tags:
-      - v*
+      - '*'
 
 jobs:
   build-and-push:
@@ -37,11 +37,11 @@ jobs:
       - name: Build Images
         run: docker-compose -f docker-compose.build.yml build
       - name: Push Images
-        if: ((github.ref == 'refs/heads/master') && (github.event.inputs.push == 'true')) || startsWith(github.ref, 'refs/tags/v')
+        if: ((github.ref == 'refs/heads/master') && (github.event.inputs.push == 'true')) || startsWith(github.ref, 'refs/tags/')
         run: docker-compose -f docker-compose.build.yml push
       - name: Deploy - TEST
         uses: garygrossgarten/github-action-ssh@release
-        if: ((github.ref == 'refs/heads/master') && (github.event.inputs.deploy == 'true') && (github.event.inputs.env == 'test')) || startsWith(github.ref, 'refs/tags/v')
+        if: ((github.ref == 'refs/heads/master') && (github.event.inputs.deploy == 'true') && (github.event.inputs.env == 'test')) || startsWith(github.ref, 'refs/tags/')
         with:
           command: sh docker_login.sh && cd flatfeestack && git pull --recurse-submodules && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.test.yml -f docker-compose.caddy.yml --env-file .test.env pull && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.test.yml -f docker-compose.caddy.yml --env-file .test.env up -d
           host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
