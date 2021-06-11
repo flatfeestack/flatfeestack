@@ -14,7 +14,8 @@ const htmlStart = `<!DOCTYPE html>
   <link rel='stylesheet' href='/build/bundle.css'>
   <script type="module" defer src='/build/main.js'></script>
   <script defer src="https://js.stripe.com/v3/"></script>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300&display=swap');
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500&display=swap" rel="stylesheet"> 
 </head>
 <body>`;
 
