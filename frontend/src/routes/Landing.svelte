@@ -1,42 +1,40 @@
 <script lang="ts">
-import { draw } from "svelte/transition";
-import { fly, fade } from 'svelte/transition';
-import { cubicOut } from 'svelte/easing';
-import P5 from 'p5-svelte';
+  import { draw } from "svelte/transition";
+  import { fly, fade } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
+  import App from "../ts/sphere.ts";
+  import { onMount } from "svelte";
+  import { navigate } from "svelte-routing";
 
-const sketch = (p5) => {
-  let earthAngle = 0;
-  let earthTexture;
-  p5.setup = () => {
-    p5.createCanvas(400, 400, p5.WEBGL);
-    p5.noStroke();
-  };
+  let canvas: HTMLCanvasElement;
 
-  p5.preload = () => {
-    earthTexture = p5.loadImage("assets/images/earth.png");
-  };
+  function handleSubmit() {
+    navigate("/signup");
+  }
 
-  p5.draw = () => {
-    //p5.background(220);
-    p5.orbitControl();
-    p5.texture(earthTexture);
-    p5.rotateY(earthAngle);
-    earthAngle += 0.001;
-    p5.sphere(100);
-  };
-};
+  onMount(async () => {
+    const a = new App(canvas);
+    a.SetDrawMode("LINES");
+    a.SetZoom(-2);
+    a.SetRotation("X", 0.00002);
+    a.SetRotation("Y", -0.00002);
+    a.SetQuality("3");
+    a.Draw();
+  });
 
-let svgVisible = true;
+  let svgVisible = true;
 </script>
 
 <style>
     .section-title {
         @apply text-3xl;
     }
+
     @screen md {
         .section-title {
             @apply text-4xl;
         }
+
         .subtitle {
             @apply font-normal;
         }
@@ -45,253 +43,240 @@ let svgVisible = true;
     .subtitle {
         @apply text-primary-400 text-lg font-bold;
     }
+
     .grey img {
-        filter: grayscale(100%);
+
         transform: scale(0.5);
     }
+
     .grey2 img {
-        filter: grayscale(100%);
-        transform: scale(0.25);
+        transform: scale(0.4);
     }
 
-    .big{
-        font-size: 500%;
+    .big {
+        font-weight: 500;
+        font-size: 700%;
         text-align: center;
-        position: absolute;
+        line-height: 90%;
+        padding: 1rem;
+        padding-left: 3rem;
+    }
+
+    .medium {
+        font-weight: 300;
+        font-size: 300%;
+        text-align: center;
+        line-height: 95%;
+        padding: 1rem;
+        padding-left: 3rem;
+    }
+
+    .small {
+        padding: 1em;
+        padding-top: 3em;
+        padding-bottom: 3em;
+        font-weight: 300;
+        font-size: 130%;
+        line-height: 100%;
+    }
+
+    .img {
+        height: 10rem;
+        position: relative;
+        text-align: center;
+        top: -162px;
+        left: 120px;
+        align-items: center;
+        width: 100%;
+    }
+
+    .center {
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .dark {
+        background-color: #333;
+        color: #fff;
+        margin: 0;
+        padding: 0
+    }
+
+    .parallax {
+        background-image: url("/assets/images/code-dark2.jpg");
+        color: #fff;
+        background-attachment: fixed;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+
+    .gcontainer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 2em;
+        margin: 1em;
+        grid-gap: 1em;
+    }
+    .gcontainer3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        padding: 2em;
+        margin: 1em;
+        grid-gap: 1em;
+    }
+
+    p > :global(a) {
+        color: white;
     }
 
 </style>
+<div class="container-col2">
+  <div class="container2">
+    <div>
+      <p class="big" in:fly="{{ y: 200, duration: 1500, easing: cubicOut }}">
+        On the Shoulders of Giants
+      </p>
+      <p class="medium" in:fly="{{ delay: 500, y: 200, duration: 1500, easing: cubicOut }}">
+        Without open source software, your software project would not exist.
+      </p>
+    </div>
+    <div>
+      <canvas bind:this={canvas} width="750rem" height="750rem" id="canvas" />
+      <img class="img" src="assets/images/atlas.svg">
+      <!--https://github.com/aholmes/webgl-sphere-->
+    </div>
+  </div>
 
-<p class = "big" transition:fly="{{ y: 100, duration: 1000, easing: cubicOut }}">
-  On the Shoulders of Giants
-</p>
-<P5 {sketch} />
-<img src="assets/images/atlas.svg">
-<!--https://github.com/aholmes/webgl-sphere-->
+  <div class="container-col2 parallax center" style="padding-top:5em;padding-bottom:5em;">
 
+    <div class="center container">
+      <p class="medium w1-2" style="border-right: 1px solid #fff;">
+        Flatfeestack is a flat-fee donations platform. Donations are
+        distributed based on git metrics.
+      </p>
 
+      <p class="medium w1-2">
+        Our mission: &#171;Open source contributors should be able to make a living with open
+        source software&#187;
+      </p>
 
-<!--<div class="bg-gradient-to-tr from-light-100 to-primary-100">
+    </div>
+    <form on:submit|preventDefault="{handleSubmit}">
+      <button class="button1 center" type="submit" style="font-size: 120%; width:10em;">Sign Up</button>
+    </form>
+  </div>
 
-  <div class="container mx-auto px-3 lg:px-0 pt-20">
-    <div class="flex flex-wrap pb-10">
-      <div
-        class="w-100 md:w-1/2 py-10 flex flex-col items-center md:items-start"
-      >
-        <h1 class="text-4xl md:text-6xl font-bold text-center md:text-left">
-          Show your
-        </h1>
-        {#if svgVisible}
-          <svg
-            height="100px"
-            width="100px"
-            x="0px"
-            y="0px"
-            viewBox="0 0 91 91"
-          ><g>
-              <path
-                in:draw="{{ duration: 1500 }}"
-                fill="none"
-                stroke="#ff0000"
-                stroke-width="7px"
-                stroke-linecap="round"
-                d="M52.7,71c-3.1,3.9,2.5,8.3,5.4,4.2c6.6-9.1,12.6-18.8,17.1-29.1c3.8-8.7,7-19.8,2.7-28.9c-4.7-10-15.6-3-20.5,2.7   c-4.6,5.4-7.7,11.8-10.3,18.4c-2.4-8-5.2-15.8-9.6-23C33.2,8,24.1,0.4,15.8,7.6c-8.4,7.3-4.6,19.3-1.2,28.1   c3.7,9.6,8.6,18.8,14.8,27c7,9.1,15.2,17.1,24.3,24"
-              ></path>
-            </g></svg>
-        {/if}
-        <h1 class="text-4xl md:text-6xl font-bold text-center md:text-left">
-          for Open Source Software
-        </h1>
-        <div
-          class="text-lg md:text-2xl  text-primary-500 text-center md:text-left"
-        >
-          Flatfeestack is a flat-fee open source software donations platform for
-          companies and individuals. Any developer can support awesome open
-          source projects. The only requirement: the awesome open source project
-          needs a public git repository.
-        </div>
+  <div class="container2">
+    <div class="small w1-3 container-col2">
+      <p>
+        Some individuals already live their dream of developing open source
+        software and manage to make a decent living. However, those are
+        exceptions rather then the norm.
+      </p>
+      <img src="assets/images/coding.svg" style="height: 10rem;">
+    </div>
+
+    <div class="small w1-3 container-col2">
+      <p>
+        For a flat fee of $34 per quarter (or $125 per year), you can support
+        as many open source project as you like. Your developer badge shows
+        which projects you support.
+      </p>
+      <img src="assets/images/handshake.svg" style="height: 10rem;">
+    </div>
+
+    <div class="small w1-3 container-col2">
+      <p>
+        Earn money if your open source project is backed. Your project badge
+        shows the sponsors. To receive funding, your open source project
+        needs a public git repository.
+      </p>
+      <img src="assets/images/trophy.svg" style="height: 10rem;">
+    </div>
+  </div>
+
+  <div class="container-col2 dark" style="padding-top:5em;padding-bottom:5em;">
+
+    <div class="gcontainer">
+      <div>
+
+        <h2>Why Flatfeestack?</h2>
+
+        <p>Donation services such as Open Collective, Patreon, or Github
+          Sponsors support project or person: e.g., support project X with $50 per year,
+          or support person Y with $50 per year. This is a good start, but the more projects or people you
+          support, the more you pay. When coming across an interesting or promising
+          project, we often end up not supporting, as we would have to
+          support many other interesting projects. With flatfeestack, you pay a flat-fee, never more.
+        </p>
+
       </div>
-      <div class="justify-center align-center flex flex-1 md:w-1/2">
-        <img
-          class="object-contain w-64 h-64 m-auto"
-          src="assets/images/Flatfeestack_LowPolyTree.png"
-          alt="Tree"
-        />
+      <div>
+        <h2>How does it work?</h2>
+        <p>
+          Each project receives your donation equally divided. Simply donate
+          and don't worry about how many projects you want to support, it is
+          always $34 per quarter (or $125 per year). It is a similar concept to Flattr for open
+          source projects, where git metrics decide how much each
+          contributor earns.
+        </p>
+
+      </div>
+      <div>
+
+        <h2>Can an organization donate as well?</h2>
+
+        <p>
+          Flatfeestack is compatible with your accounting department
+          Sponsoring open source projects is difficult for a company. Try to
+          convince your accounting department to sponsor
+          &lt;insert-open-source-project&gt;. Flatfeestack is compatible
+          with your accounting department. If the accounting department
+          calculates $1500/per year per developer for its IT cost, with
+          Flatfeestack it is $125 more: $1625. And the
+          developer can support as many projects as you want. In addition the
+          organization gets an up-to-date list of supported open source
+          projects.
+        </p>
+
+      </div>
+      <div>
+
+        <h2>Why Cryptocurrencies?</h2>
+        <p>
+          While the donation payment is done with credit cards, the payout is with cryptocurrency.
+          We chose Binance Coin, as the energy footprint is much lower compared to Ethereum and Bitcoin. With
+          crypto currencies, the payout is without restrictions and anyone can receive funding. While
+          <a href="https://github.blog/2021-01-05-advancing-developer-freedom-github-is-fully-available-in-iran/">
+            Github is finally available in Iran</a>, it took them <a
+          href="https://news.ycombinator.com/item?id=25648585">
+          two years to get the license</a>. These restrictions do not apply for cryptocurrencies. For selecting crypto
+          currencies, we have the following priorities: 1) energy-friendly, 2) popularity, 3) decentralization.
+        </p>
+
       </div>
     </div>
 
   </div>
 
-  <section class="bg-white">
-    <div class="container mx-auto px-3 lg:px-0 md:px-0 py-10">
-      <div class="section-title pb-5 font-light">
-        &#171;Software Engineers should be able to make a living with open
-        source software&#187;
-      </div>
 
-      <div class="subtitle">
-        Some individuals already live their dream of developing open source
-        software and manage to make a decent living. However, those are
-        exceptions rather then the norm. We want to change this!
-      </div>
-      <div class="flex justify-between flex-wrap mt-10">
-        <div
-          class="w-full md:w-2/5 p-5 bg-secondary-500 text-white shadow-lg mb-5 md:mb-0 rounded-md"
-        >
-          <div class="section-title justify-center">Become a Sponsor</div>
-          <div class="text-lg justify-center text-secondary-800 font-bold">
-            Support your favorite stack and projects.
-          </div>
-
-          <div class="justify-center mt-5">
-            For a flat fee of $10 per month (or $120 per year), you can support
-            as many open source project as you like. Your developer badge shows
-            which projects you are passionate about.
-          </div>
-          <div class="flex justify-center mt-5">
-            <button
-              class="bg-white p-2 text-secondary-500 rounded-sm"
-            >Support Open Source</button>
-          </div>
-        </div>
-        <div
-          class="w-full md:w-2/5 p-5 text-white bg-primary-500 shadow-lg rounded-md"
-        >
-          <div class="section-title justify-center">Monetize your Project</div>
-          <div class="text-lg justify-center text-primary-800 font-bold">
-            Put a value on your open source contribution.
-          </div>
-          <div class="justify-center mt-5 font-light">
-            Earn money if your open source project is backed. Your project badge
-            shows the number of sponsors. Your developer badge shows in addition
-            a score based on your earnings. Compare your score with other
-            developers.
-          </div>
-          <div class="flex justify-center mt-5">
-            <button
-              class="bg-white p-2 text-primary-500 rounded-sm"
-            >Receive Support</button>
-          </div>
-        </div>
-      </div>
+  <div class="container-col2" style="padding-top:2em;padding-bottom:2em;">
+    <h2 class="p-2 m-2">
+      Flatfeestack is supported by:
+    </h2>
+    <div class="gcontainer3 center">
+      <a href="https://axlabs.com" class="grey">
+        <img class="w-100" src="assets/images/axlabs.svg" alt="AxLabs" />
+      </a>
+      <a href="https://axelra.com" class="grey2">
+        <img class="w-100" src="assets/images/axelra.svg" alt="Axelra" />
+      </a>
+      <a href="https://coinblesk.com" class="grey2">
+        <img class="w-100" src="assets/images/coinblesk.svg" alt="Coinblesk" />
+      </a>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <div class="container container mx-auto px-3 lg:px-0 md:px-0 py-10">
-      <div class="section-title pb-10 font-light">Why Flatfeestack?</div>
-      <div class="flex flex-wrap mb-40">
-        <div class="w-full md:w-1/2">
-          <div class="container">
-            <div class="subtitle">Agony of choice</div>
-
-            <div>
-              Donation services such as Open Collective, Patreon, or Github
-              Sponsors support project or person based contributions: e.g.,
-              support project X with $50 per year, or support person Y with $50
-              per year. The problem is that the more projects or people you
-              support, the more you pay. When coming across an interesting
-              project, we often end up not supporting, as we would have to
-              support at least 50 other interesting projects.
-            </div>
-          </div>
-        </div>
-        <div
-          class="w-full md:w-1/2 flex justify-center order-first md:order-none mb-5"
-        >
-          <img
-            class="object-contain w-4/5 h-40"
-            src="assets/images/flat1.svg"
-            alt="Support"
-          />
-        </div>
-      </div>
-      <div class="flex flex-wrap mb-40">
-        <div class="w-full md:w-1/2 flex justify-center mb-5">
-          <img
-            class="object-contain w-4/5 h-40"
-            src="assets/images/flat2.svg"
-            alt="XLS"
-          />
-        </div>
-        <div class="w-full md:w-1/2">
-          <div class="container">
-            <div class="subtitle">
-              Flatfeestack is compatible with your accounting department
-            </div>
-
-            <div>
-              Sponsoring open source projects is difficult for a company. Try to
-              convince your accounting department to sponsor
-              &lt;insert-open-source-project&gt;. Flatfeestack is compatible
-              with your accounting department. If the accounting department
-              calculates $1500/per year per developer for its IT cost, with
-              Flatfeestack it is $120 (12 month x $10) more: $1620. And the
-              developer can support as many projects as you want.
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="flex flex-wrap">
-        <div class="w-full md:w-1/2">
-          <div class="container">
-            <div class="subtitle">Simplified flat-fee approach</div>
-
-            <div>
-              Each project receives your donation equally divided. Simply donate
-              and don't worry about how many projects you want to support, it is
-              always $10 per month. It is a similar concept to Flattr for open
-              source projects, where git commits decide how much each
-              contributor earns.
-            </div>
-          </div>
-        </div>
-        <div
-          class="flex w-full md:w-1/2 order-first md:order-none justify-center mb-5"
-        >
-          <img
-            class="object-contain w-4/5 h-40"
-            src="assets/images/flat3.svg"
-            alt="Support"
-          />
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <section class="mt-20 bg-white">
-    <div class="container mx-auto px-3 lg:px-0">
-      <div class="text-lg text-center font-light text-gray-600">
-        Flatfeestack is supported by:
-      </div>
-      <div class="flex flex-wrap">
-        <a
-          href="https://axlabs.com"
-          class="w-full md:w-1/3 flex justify-center grey"
-        ><img
-            class="object-contain w-full h-full"
-            src="assets/images/axlabs.png"
-            alt="AxLabs"
-          /></a>
-        <a
-          href="https://axelra.com"
-          class="w-full md:w-1/3 flex justify-center grey2"
-        ><img
-            class="object-contain w-full h-full"
-            src="assets/images/axelra.svg"
-            alt="Axelra"
-          /></a>
-        <a
-          href="https://coinblesk.com"
-          class="w-full md:w-1/3 flex justify-center grey2"
-        ><img
-            class="object-contain w-full h-full"
-            src="assets/images/coinblesk.svg"
-            alt="Coinblesk"
-          /></a>
-      </div>
-    </div>
-  </section>
-
-</div>-->
+</div>
