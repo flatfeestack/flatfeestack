@@ -28,7 +28,7 @@ test.flatfeestack.io {
         }
 }
 
-flatfeestack.io {
+flatfeestack.io, flatfeestack.ch, flatfeestack.com, flatfeestack.net, flatfeestack.org {
         tls info@flatfeestack.io
         encode gzip
         header / Cache-Control "no-cache, must-revalidate, max-age=0, no-store"
