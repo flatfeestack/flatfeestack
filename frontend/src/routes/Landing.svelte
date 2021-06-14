@@ -26,24 +26,6 @@
 </script>
 
 <style>
-    .section-title {
-        @apply text-3xl;
-    }
-
-    @screen md {
-        .section-title {
-            @apply text-4xl;
-        }
-
-        .subtitle {
-            @apply font-normal;
-        }
-    }
-
-    .subtitle {
-        @apply text-primary-400 text-lg font-bold;
-    }
-
     .grey img {
 
         transform: scale(0.5);
@@ -55,18 +37,20 @@
 
     .big {
         font-weight: 500;
-        font-size: 700%;
+        font-size: 10vw;
         text-align: center;
         line-height: 90%;
+        text-shadow: 2px 2px 2px #666;
         padding: 1rem;
         padding-left: 3rem;
     }
 
     .medium {
         font-weight: 300;
-        font-size: 300%;
+        font-size: 6vw;
         text-align: center;
         line-height: 95%;
+        text-shadow: 1px 1px 1px #666;
         padding: 1rem;
         padding-left: 3rem;
     }
@@ -83,11 +67,10 @@
     .img {
         height: 10rem;
         position: relative;
-        text-align: center;
-        top: -162px;
-        left: 120px;
+        top: -157px;
+        padding-left: 11em;
         align-items: center;
-        width: 100%;
+        overflow: hidden;
     }
 
     .center {
@@ -119,6 +102,17 @@
         margin: 1em;
         grid-gap: 1em;
     }
+
+    @media (max-width: 36rem) {
+        .gcontainer {
+            display: grid;
+            grid-template-columns: 1fr;
+            padding: 2em;
+            margin: 1em;
+            grid-gap: 1em;
+        }
+    }
+
     .gcontainer3 {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -126,6 +120,27 @@
         margin: 1em;
         grid-gap: 1em;
     }
+
+    @media (max-width: 36rem) {
+        .gcontainer3 {
+            display: grid;
+            grid-template-columns: 1fr;
+            padding: 2em;
+            margin: 1em;
+            grid-gap: 1em;
+        }
+    }
+
+    .whiteborder {
+        border-right: 1px solid #fff;
+    }
+
+    @media (max-width: 36rem) {
+        .whiteborder {
+            border-right: 0px;
+        }
+    }
+
 
     p > :global(a) {
         color: white;
@@ -142,17 +157,18 @@
         Without open source software, your software project would not exist.
       </p>
     </div>
-    <div>
-      <canvas bind:this={canvas} width="750rem" height="750rem" id="canvas" />
-      <img class="img" src="assets/images/atlas.svg">
+    <div class="container-col2 hide-md">
+      <canvas class="hide-md" bind:this={canvas} width="750rem" height="750rem" id="canvas" />
+      <img class="img hide-md" src="assets/images/atlas.svg">
       <!--https://github.com/aholmes/webgl-sphere-->
     </div>
   </div>
 
-  <div class="container-col2 parallax center" style="padding-top:5em;padding-bottom:5em;">
+  <div class="container-col3 parallax center" style="padding-top:5em;padding-bottom:5em;">
 
-    <div class="center container">
-      <p class="medium w1-2" style="border-right: 1px solid #fff;">
+    <div class="center container3">
+
+      <p class="medium w1-2 whiteborder">
         Flatfeestack is a flat-fee donations platform. Donations are
         distributed based on git metrics.
       </p>
