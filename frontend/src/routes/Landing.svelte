@@ -55,13 +55,29 @@
         padding-left: 3rem;
     }
 
+    .medium2 {
+        font-weight: 300;
+        font-size: 4vw;
+        text-align: center;
+        line-height: 95%;
+        text-shadow: 1px 1px 1px #666;
+        padding: 1rem;
+        padding-left: 3rem;
+    }
+
     .small {
         padding: 1em;
         padding-top: 3em;
         padding-bottom: 3em;
         font-weight: 300;
         font-size: 130%;
-        line-height: 100%;
+        line-height: 110%;
+    }
+
+    .small2 {
+        font-weight: 300;
+        font-size: 130%;
+        line-height: 110%;
     }
 
     .img {
@@ -168,12 +184,12 @@
 
     <div class="center container3">
 
-      <p class="medium w1-2 whiteborder">
+      <p class="medium2 w1-2 whiteborder">
         Flatfeestack is a flat-fee donations platform. Donations are
         distributed based on git metrics.
       </p>
 
-      <p class="medium w1-2">
+      <p class="medium2 w1-2">
         Our mission: &#171;Open source contributors should be able to make a living with open
         source software&#187;
       </p>
@@ -220,7 +236,7 @@
 
         <h2>Why Flatfeestack?</h2>
 
-        <p>Donation services such as Open Collective, Patreon, or Github
+        <p class="small2">Donation services such as Open Collective, Patreon, or Github
           Sponsors support project or person: e.g., support project X with $50 per year,
           or support person Y with $50 per year. This is a good start, but the more projects or people you
           support, the more you pay. When coming across an interesting or promising
@@ -231,7 +247,7 @@
       </div>
       <div>
         <h2>How does it work?</h2>
-        <p>
+        <p class="small2">
           Each project receives your donation equally divided. Simply donate
           and don't worry about how many projects you want to support, it is
           always $32 per quarter (or $125 per year). It is a similar concept to Flattr for open
@@ -244,7 +260,7 @@
 
         <h2>Can an organization donate as well?</h2>
 
-        <p>
+        <p class="small2">
           Flatfeestack is compatible with your accounting department
           Sponsoring open source projects is difficult for a company. Try to
           convince your accounting department to sponsor
@@ -261,7 +277,7 @@
       <div>
 
         <h2>Why Cryptocurrencies?</h2>
-        <p>
+        <p class="small2">
           While the donation payment is done with credit cards, the payout is with cryptocurrency.
           We chose Binance Coin, as the energy footprint is much lower compared to Ethereum and Bitcoin. With
           crypto currencies, the payout is without restrictions and anyone can receive funding. While
