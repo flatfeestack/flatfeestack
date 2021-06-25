@@ -8,39 +8,48 @@ import execute from "rollup-plugin-execute";
 
 import serve from "rollup-plugin-serve";
 
-export default [{
-  input: "./src/main.ts",
-  output: {
-    format: "esm",
-    dir: "public/build",
-    sourcemap: true,
-    manualChunks: {
-      deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js", "canvas-confetti"]
-    }
-  },
-  plugins: [
-    svelte({ emitCss: true, preprocess: sveltePreprocess(), compilerOptions: { hydratable: true } }),
-    resolve({ browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
-    typescript({ sourceMap: true }),
-    css({ output: "bundle.css" }),
-    commonjs(),
-  ]
-},
-  {
-    input: "./src/App.svelte",
-    output: {
-      name: "app",
-      format: "umd",
-      file: "public/server/ssr.js",
-      sourcemap: true
+export default [
+    {
+        input: "./src/main.ts",
+        output: {
+            format: "esm",
+            dir: "public/build",
+            sourcemap: true,
+            manualChunks: {
+                deps: ["ethers", "ky", "svelte-routing", "@stripe/stripe-js", "canvas-confetti"]
+            }
+        },
+        plugins: [
+            svelte({emitCss: true, preprocess: sveltePreprocess(), compilerOptions: {hydratable: true}}),
+            resolve({browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"]}),
+            typescript({sourceMap: true}),
+            css({output: "bundle.css"}),
+            commonjs(),
+        ]
     },
-    plugins: [
-      svelte({ emitCss: false, preprocess: sveltePreprocess(), compilerOptions: { generate: "ssr" } }),
-      resolve({ preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"] }),
-      typescript({ sourceMap: true }),
-      commonjs(),
-      execute("node ssr.js"),
-      serve({ contentBase: "public", port: 9085, host: "0.0.0.0", historyApiFallback: true })
-    ]
-  }
+    {
+        input: "./src/App.svelte",
+        output: {
+            name: "app",
+            format: "umd",
+            file: "public/server/ssr.js",
+            sourcemap: true
+        },
+        plugins: [
+            svelte({emitCss: false, preprocess: sveltePreprocess(), compilerOptions: {generate: "ssr"}}),
+            resolve({preferBuiltins: true, dedupe: ["svelte"], extensions: [".ts", ".js"]}),
+            typescript({sourceMap: true}),
+            commonjs(),
+            serve({contentBase: "public", port: 9085, host: "0.0.0.0", historyApiFallback: true})
+        ]
+    },
+    {
+        input: "./public/server/ssr.js",
+        output: {
+            file: "./public/index.html"
+        },
+        plugins: [
+            execute("node generate-index.js"),
+        ]
+    }
 ];

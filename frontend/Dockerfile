@@ -1,6 +1,6 @@
 FROM node:15 AS base
 WORKDIR /app
-COPY package.json tsconfig.json rollup-prod.config.js ssr.js ./
+COPY package.json tsconfig.json rollup-prod.config.js generate-index.js ./
 RUN npm install
 
 FROM base as builder

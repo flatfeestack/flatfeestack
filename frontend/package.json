@@ -2,8 +2,8 @@
   "name": "flatfeestack",
   "version": "1.0.0",
   "scripts": {
-    "prod": "rm -f public/build/* public/server/* && rollup -c rollup-prod.config.js",
-    "dev": "rm -f public/build/* public/server/* && rollup -c rollup.config.js -w"
+    "prod": "rm -rf ./public/build ./public/server ./public/index.html && rollup -c rollup-prod.config.js",
+    "dev": "rm -rf ./public/build ./public/server ./public/index.html && rollup -c rollup.config.js -w"
   },
   "devDependencies": {
     "@fortawesome/free-solid-svg-icons": "^5.15.3",

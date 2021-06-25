@@ -2,7 +2,7 @@ fs = require('fs');
 //https://www.base2.io/2020/12/12/svelte-ssr
 const App = require("./public/server/ssr.js")
 
-const { html} = App.render({})
+const { html } = App.render({})
 
 const htmlStart = `<!DOCTYPE html>
 <html lang="en">
