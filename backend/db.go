@@ -681,9 +681,11 @@ func insertAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time,
 }
 
 func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error {
+	// yes, 'EXCLUDED' is weird...
+	// read stuff here before freaking out: https://www.postgresqltutorial.com/postgresql-upsert/
 	stmt, err := db.Prepare(`INSERT INTO analysis_response(id, analysis_request_id, git_email, git_name, weight, created_at) 
 									VALUES ($1, $2, $3, $4, $5, $6)
-									ON CONFLICT(analysis_request_id, git_email) DO UPDATE SET weight=weight+$5`)
+									ON CONFLICT(analysis_request_id, git_email) DO UPDATE SET weight=EXCLUDED.weight+$5`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_response for %v/%v statement event: %v", aid, w, err)
 	}
