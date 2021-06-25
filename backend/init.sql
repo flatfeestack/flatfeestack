@@ -97,6 +97,7 @@ CREATE TABLE analysis_response (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     analysis_request_id UUID CONSTRAINT fk_analysis_request_id_c REFERENCES analysis_request (id),
     git_email           VARCHAR(255) NOT NULL,
+    git_name            VARCHAR(255),
     weight              DOUBLE PRECISION NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );
@@ -161,6 +162,7 @@ CREATE table daily_user_contribution(
     user_id             UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
     repo_id             UUID CONSTRAINT fk_repo_id_duc REFERENCES repo (id),
     contributor_email   VARCHAR(255),
+    contributor_name    VARCHAR(255),
     contributor_weight  DOUBLE PRECISION,
     contributor_user_id UUID CONSTRAINT fk_contributor_user_id_duc REFERENCES users (id) ,
     balance             BIGINT,

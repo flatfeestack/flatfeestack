@@ -137,6 +137,7 @@ func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time
 	for k, v := range email {
 		w1 := FlatFeeWeight{
 			Email:  v,
+			Name:   v,
 			Weight: weight[k],
 		}
 		err = insertAnalysisResponse(aid, &w1, timeNow())
@@ -260,7 +261,7 @@ func setupUser(email string) (*uuid.UUID, error) {
 	u := User{
 		Id:        uuid.New(),
 		StripeId:  stringPointer("strip-id"),
-		Email:     stringPointer(email),
+		Email:     email,
 		PayoutETH: stringPointer("0x123"),
 	}
 

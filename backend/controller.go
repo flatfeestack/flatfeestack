@@ -60,6 +60,7 @@ type RepoMapping struct {
 
 type FlatFeeWeight struct {
 	Email  string  `json:"email"`
+	Name   string  `json:"name"`
 	Weight float64 `json:"weight"`
 }
 
