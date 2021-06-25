@@ -96,8 +96,8 @@ export const API = {
       json: { email, password, email_token: token } }).json<Token>(),
     confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
       auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, inviteEmail, expireAt, inviteToken, inviteMeta }}).json<Token>(),
-    confirmInvite: (email: string, inviteEmails: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
-      auth.post("confirm/invite", { json: { email, inviteEmails, expireAt, inviteToken, inviteMeta }}),
+    confirmInvite: (email: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
+      auth.post("confirm/invite", { json: { email, inviteEmail, expireAt, inviteToken, inviteMeta }}),
   },
   user: {
     get: () => backendToken.get(`users/me`).json<Users>(),

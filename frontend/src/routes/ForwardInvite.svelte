@@ -12,7 +12,7 @@
 
   onMount(async () => {
     try {
-      await API.auth.confirmInvite(email, inviteEmail, expireAt, inviteToken);
+      await API.auth.confirmInvite(email, inviteEmail, expireAt, inviteToken, inviteMeta);
       await API.user.topup();
       navigate("/user/invitations");
     } catch (e) {
