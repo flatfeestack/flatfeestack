@@ -1,5 +1,10 @@
 #!/bin/sh -e
 
+command -v semver >/dev/null || {
+  echo "Command 'semver' not found in \$PATH. Please, first install it." >&2
+  exit 1
+}
+
 #git pull --recurse-submodules -j 16
 ##pulls to the latest version
 #git submodule update --recursive --remote
