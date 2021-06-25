@@ -205,7 +205,7 @@
       <p>
         Some individuals already live their dream of developing open source
         software and manage to make a decent living. However, those are
-        exceptions rather then the norm.
+        exceptions rather than the norm.
       </p>
       <img src="assets/images/coding.svg" style="height: 10rem;">
     </div>
