@@ -709,7 +709,7 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	uid := uuid.New()
 
 	u := User{
-		Email:     stringPointer(n),
+		Email:     n,
 		Id:        uid,
 		PayoutETH: stringPointer(fakePubKey1),
 		CreatedAt: timeNow(),
@@ -850,7 +850,95 @@ func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
+	if len(cs) == 0 {
+
+	}
+
 	writeJson(w, cs)
+}
+
+func userSummary2(w http.ResponseWriter, r *http.Request) {
+	m := mux.Vars(r)
+	u := m["uuid"]
+	if u == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+
+	uu, err := uuid.Parse(u)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	user, err := findUserById(uu)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	user2 := User{
+		Id:    user.Id,
+		Name:  user.Name,
+		Role:  user.Role,
+		Image: user.Image,
+	}
+	writeJson(w, user2)
+}
+
+func contributionsSum2(w http.ResponseWriter, r *http.Request) {
+	m := mux.Vars(r)
+	u := m["uuid"]
+	if u == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		return
+	}
+
+	uu, err := uuid.Parse(u)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	user, err := findUserById(uu)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	if user.Role != nil && *user.Role == "USR" {
+		r, err := findSponsoredReposById(user.Id)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			return
+		}
+		writeJson(w, r)
+	} else {
+		r, err := findSponsoredReposByOrgId(user.Email)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			return
+		}
+		writeJson(w, r)
+	}
+}
+
+func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
+	if user.Role != nil && *user.Role == "USR" {
+		r, err := findSponsoredReposById(user.Id)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			return
+		}
+		writeJson(w, r)
+	} else {
+		r, err := findSponsoredReposByOrgId(user.Email)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			return
+		}
+		writeJson(w, r)
+	}
 }
 
 func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User) {

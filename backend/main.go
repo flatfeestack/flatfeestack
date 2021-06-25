@@ -232,6 +232,9 @@ func main() {
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-send", jwtAuthUser(contributionsSend)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-receive", jwtAuthUser(contributionsRcv)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(contributionsSum)).Methods(http.MethodPost)
+	router.HandleFunc("/users/contributions-summary/{uuid}", contributionsSum2).Methods(http.MethodPost)
+	router.HandleFunc("/users/summary/{uuid}", userSummary2).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payout-pending", jwtAuthUser(pendingDailyUserPayouts)).Methods(http.MethodPost)
 	//
 	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
@@ -394,6 +397,32 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			}
 		}
 
+		found := true
+		if len(claims.InviteEmails) > 0 {
+			found = false
+		} else {
+			if user.InvitedEmail != nil {
+				err = updateInvitedEmail(nil, user.Id)
+				if err != nil {
+					writeErr(w, http.StatusBadRequest, "ERR-09, user find error: %v", err)
+					return
+				}
+			}
+		}
+		for _, v := range claims.InviteEmails {
+			if user.InvitedEmail != nil && v == *user.InvitedEmail {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err = updateInvitedEmail(&claims.InviteEmails[0], user.Id)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "ERR-09, user find error: %v", err)
+				return
+			}
+		}
+
 		user.Claims = claims
 		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
 		next(w, r, user)
@@ -401,14 +430,13 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 }
 
 func createUser(email string) (*User, error) {
-	log.Printf("need to stringPointer a user")
 	var user User
 	uid, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
 	user.Id = uid
-	user.Email = &email
+	user.Email = email
 	user.CreatedAt = timeNow()
 	user.Role = stringPointer("USR")
 

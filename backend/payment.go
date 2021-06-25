@@ -394,7 +394,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		email := *u.Email
+		email := u.Email
 		var other = map[string]string{}
 		other["email"] = email
 		other["url"] = opts.EmailLinkPrefix + "/user/payments"
@@ -457,7 +457,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		email := *u.Email
+		email := u.Email
 		var other = map[string]string{}
 		other["email"] = email
 		other["url"] = opts.EmailLinkPrefix + "/dashboard/profile"

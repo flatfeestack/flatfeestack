@@ -187,7 +187,7 @@ func dailyRunner(now time.Time) error {
 				log.Printf("error2 %v", err)
 				continue
 			}
-			ok, _ := topupWithSponsor(&u, pc.Freq, *sponsor.Email)
+			ok, _ := topupWithSponsor(&u, pc.Freq, sponsor.Email)
 			if ok {
 				continue
 			}
@@ -259,7 +259,7 @@ func reminderTopup(u User) error {
 		return err
 	}
 
-	email := *u.Email
+	email := u.Email
 	var other = map[string]string{}
 	other["email"] = email
 	other["url"] = opts.EmailLinkPrefix + "/user/payments"

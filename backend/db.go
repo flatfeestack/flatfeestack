@@ -16,9 +16,10 @@ import (
 type User struct {
 	Id             uuid.UUID  `json:"id" sql:",type:uuid"`
 	SponsorId      *uuid.UUID `json:"sponsor_id" sql:",type:uuid"`
+	InvitedEmail   *string    `json:"invited_email"`
 	StripeId       *string    `json:"-"`
 	PaymentCycleId uuid.UUID
-	Email          *string `json:"email"`
+	Email          string  `json:"email"`
 	Name           *string `json:"name"`
 	Image          *string `json:"image"`
 	PayoutETH      *string `json:"payout_eth"`
@@ -146,10 +147,10 @@ func findAllUsers() ([]User, error) {
 func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
-		QueryRow(`SELECT id, stripe_id, stripe_payment_method, payment_cycle_id,
+		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
                                 stripe_last4, email, name, image, payout_eth, role 
                          FROM users WHERE email=$1`, email).
-		Scan(&u.Id, &u.StripeId,
+		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
 			&u.Image, &u.PayoutETH, &u.Role)
 	switch err {
@@ -165,10 +166,10 @@ func findUserByEmail(email string) (*User, error) {
 func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
-		QueryRow(`SELECT id, stripe_id, stripe_payment_method, payment_cycle_id,
+		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
                                 stripe_last4, email, name, image, payout_eth, role 
                          FROM users WHERE id=$1`, uid).
-		Scan(&u.Id, &u.StripeId,
+		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
 			&u.Image, &u.PayoutETH, &u.Role)
 	switch err {
@@ -290,6 +291,21 @@ func updateDbSeats(paymentCycleId uuid.UUID, seats int) error {
 	return handleErrMustInsertOne(res)
 }
 
+func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
+	stmt, err := db.Prepare("UPDATE users SET invited_email=$1 WHERE id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", userId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(invitedEmail, userId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
 //*********************************************************************************
 //******************************* Sponsoring **************************************
 //*********************************************************************************
@@ -368,12 +384,44 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 }
 
 // Repositories and Sponsors
+
+func findSponsoredReposByOrgId(orgEmail string) ([]Repo, error) {
+	repos := []Repo{}
+	s := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags, COUNT(r.id) as score
+            FROM sponsor_event s
+            INNER JOIN repo r ON s.repo_id=r.id 
+            INNER JOIN users u ON s.user_id=u.id
+			WHERE u.invited_email=$1 AND s.unsponsor_at = to_date('9999', 'YYYY')
+			GROUP BY r.id ORDER BY score DESC`
+	rows, err := db.Query(s, orgEmail)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var repo Repo
+		var b []byte
+		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.Url, &repo.GitUrl, &repo.Branch, &repo.Name, &repo.Description, &b, &repo.Score)
+		if err != nil {
+			return nil, err
+		}
+		d := gob.NewDecoder(bytes.NewReader(b))
+		err = d.Decode(&repo.Tags)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
+}
+
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	//we want to send back an empty array, don't change
 	repos := []Repo{}
 	s := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
             FROM sponsor_event s
-            JOIN repo r ON s.repo_id=r.id 
+            INNER JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.unsponsor_at = to_date('9999', 'YYYY')`
 	rows, err := db.Query(s, userId)
 	if err != nil {
