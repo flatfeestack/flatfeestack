@@ -158,8 +158,14 @@ type WebhookResponse struct {
 }
 
 type WebhookCallback struct {
-	RequestId string `json:"request_id"`
-	Success bool `json:"success"`
-	Error string `json:"error"`
-	Result []FlatFeeWeight `json:"result"`
+	RequestId string                  `json:"request_id"`
+	Success   bool                    `json:"success"`
+	Error     string                  `json:"error"`
+	Result    []WebhookCallbackResult `json:"result"`
+}
+
+type WebhookCallbackResult struct {
+	Name   string  `json:"name"`
+	Email  string  `json:"email"`
+	Weight float64 `json:"weight"`
 }

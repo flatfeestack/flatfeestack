@@ -533,13 +533,21 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 		for _, v := range weightsMap {
 			contributionWeights = append(contributionWeights, v)
 		}
-
+		var webhookCallbackResults []WebhookCallbackResult
+		for _, c := range contributionWeights {
+			r := WebhookCallbackResult{
+				Name:   c.Contributor.Name,
+				Email:  c.Contributor.Email,
+				Weight: c.Weight,
+			}
+			webhookCallbackResults = append(webhookCallbackResults, r)
+		}
 		callbackToWebhook(
 			request.RepositoryUrl,
 			WebhookCallback{
 				RequestId: requestId,
 				Success:   true,
-				Result:    contributionWeights,
+				Result:    webhookCallbackResults,
 			})
 	} else {
 		weightsMap, err := weightContributions(contributionMap)
@@ -559,10 +567,19 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 		for _, v := range weightsMap {
 			contributionWeights = append(contributionWeights, v)
 		}
+		var webhookCallbackResults []WebhookCallbackResult
+		for _, c := range contributionWeights {
+			r := WebhookCallbackResult{
+				Name:   c.Contributor.Name,
+				Email:  c.Contributor.Email,
+				Weight: c.Weight,
+			}
+			webhookCallbackResults = append(webhookCallbackResults, r)
+		}
 		callbackToWebhook(request.RepositoryUrl, WebhookCallback{
 			RequestId: requestId,
 			Success:   true,
-			Result:    contributionWeights,
+			Result:    webhookCallbackResults,
 		})
 	}
 	fmt.Printf("Finished request %s\n", requestId)
