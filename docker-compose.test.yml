@@ -9,6 +9,8 @@ services:
   test-auth:
     hostname: test-auth
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE}
+    volumes:
+      - ./logs/test:/tmp/ffs:rw
     networks:
       - test
     env_file:
@@ -20,6 +22,8 @@ services:
   test-backend:
     hostname: test-backend
     image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE}
+    volumes:
+      - ./logs/test:/tmp/ffs:rw
     networks:
       - test
     env_file:
@@ -31,6 +35,8 @@ services:
   test-analysis-engine:
     hostname: test-analysis-engine
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE}
+    volumes:
+      - ./logs/test:/tmp/ffs:rw
     networks:
       - test
     env_file:
@@ -39,6 +45,8 @@ services:
   test-payout:
     hostname: test-payout
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE}
+    volumes:
+      - ./logs/test:/tmp/ffs:rw
     networks:
       - test
     env_file:
