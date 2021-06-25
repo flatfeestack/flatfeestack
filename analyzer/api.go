@@ -621,7 +621,7 @@ func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 		Timeout: 15 * time.Second,
 	}
 
-	hs256 := os.Getenv("HS256")
+	backendToken := os.Getenv("BACKEND_TOKEN")
 	url := os.Getenv("WEBHOOK_CALLBACK_URL")
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
@@ -629,8 +629,8 @@ func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 		log.Printf("Could not create a HTTP request to call the webhook %v", err)
 	}
 
-	if len(hs256) > 0 {
-		req.Header.Add("Authorization", "Bearer "+hs256)
+	if len(backendToken) > 0 {
+		req.Header.Add("Authorization", "Bearer "+backendToken)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
