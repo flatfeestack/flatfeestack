@@ -10,6 +10,7 @@
 
   import Landing from "./routes/Landing.svelte";
   import Badges from "./routes/Badges.svelte";
+  import PublicBadges from "./routes/PublicBadges.svelte";
   import Login from "./routes/Login.svelte";
   import Signup from "./routes/Signup.svelte";
   import Forgot from "./routes/Forgot.svelte";
@@ -166,6 +167,7 @@
         <Route path="/login" component="{Login}" />
         <Route path="/signup" component="{Signup}" />
         <Route path="/forgot" component="{Forgot}" />
+        <Route path="/badges/:uuid" component="{PublicBadges}" />
 
         <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
         <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />

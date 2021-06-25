@@ -123,6 +123,9 @@ export const API = {
     statusSponsoredUsers: () => backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
     contributionsSend: () => backendToken.post(`users/me/contributions-send`).json<Contributions[]>(),
     contributionsRcv: () => backendToken.post(`users/me/contributions-receive`).json<Contributions[]>(),
+    contributionsSummary: () => backendToken.post(`users/me/contributions-summary`).json<Repo[]>(),
+    contributionsSummary2: (uuid: string) => backendToken.post(`users/contributions-summary/${uuid}`).json<Repo[]>(),
+    summary: (uuid: string) => backendToken.post(`users/summary/${uuid}`).json<Users>(),
     pendingDailyUserPayouts: () => backendToken.post(`users/me/payout-pending`).json<UserBalanceCore>(),
   },
   repos: {
