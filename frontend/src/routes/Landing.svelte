@@ -213,7 +213,7 @@
     <div class="small w1-3 container-col2">
       <p>
         For a flat fee of $32 per quarter (or $125 per year), you can support
-        as many open source project as you like. Your developer badge shows
+        as many open source projects as you like. Your developer badge shows
         which projects you support.
       </p>
       <img src="assets/images/handshake.svg" style="height: 10rem;">
@@ -261,7 +261,7 @@
         <h2>Can an organization donate as well?</h2>
 
         <p class="small2">
-          Flatfeestack is compatible with your accounting department
+          Flatfeestack is compatible with your accounting department.
           Sponsoring open source projects is difficult for a company. Try to
           convince your accounting department to sponsor
           &lt;insert-open-source-project&gt;. Flatfeestack is compatible
