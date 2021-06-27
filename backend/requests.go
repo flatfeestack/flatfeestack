@@ -17,6 +17,7 @@ import (
  *	==== Analysis Request  ====
  */
 type AnalysisRequest struct {
+	RequestId           uuid.UUID `json:"reqId"`
 	RepositoryUrl       string    `json:"repository_url"`
 	DateFrom            time.Time `json:"since"`
 	DateTo              time.Time `json:"until"`
@@ -68,12 +69,19 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 	}
 	now := timeNow()
 	req := AnalysisRequest{
+		RequestId:           uuid.New(),
 		RepositoryUrl:       repoUrl,
 		DateFrom:            now.AddDate(0, -3, 0),
 		DateTo:              now,
 		PlatformInformation: false,
 		Branch:              branch,
 	}
+
+	err := insertAnalysisRequest(req.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
+	if err != nil {
+		return err
+	}
+
 	body, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -91,7 +99,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 		return err
 	}
 
-	return insertAnalysisRequest(resp.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
+	return nil
 }
 
 /*
