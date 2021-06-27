@@ -19,7 +19,9 @@ var (
 )
 
 type Opts struct {
-	Port int
+	Port         int
+	BackendToken string
+	CallbackUrl  string
 }
 
 func NewOpts() *Opts {
@@ -30,12 +32,29 @@ func NewOpts() *Opts {
 
 	o := &Opts{}
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT", 9083), "listening HTTP port")
+	flag.StringVar(&o.BackendToken, "token", lookupEnv("BACKEND_TOKEN",
+		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbmFseXNpcy1lbmdpbmVAZmxhdGZlZXN0YWNrLmlvIn0.HJInRFNeQNTZhdQghG1Ylbng23wKxFQscJTLAkf8hu8"),
+		"Backend Token")
+	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("WEBHOOK_CALLBACK_URL", "http://backend:9082/hooks/analysis-engine"), "Callback URL")
+
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	return o
+}
+
+func lookupEnv(key string, defaultValues ...string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	for _, v := range defaultValues {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func lookupEnvInt(key string, defaultValues ...int) int {

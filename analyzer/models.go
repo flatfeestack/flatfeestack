@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -146,19 +147,20 @@ type GQLPullRequestReview struct {
 }
 
 type WebhookRequest struct {
-	RepositoryUrl       string `json:"repository_url"`
-	Since               string `json:"since"`
-	Until               string `json:"until"`
-	PlatformInformation bool   `json:"platform_information"`
-	Branch              string `json:"branch"`
+	RequestId           uuid.UUID `json:"reqId"`
+	RepositoryUrl       string    `json:"repository_url"`
+	DateFrom            time.Time `json:"since"`
+	DateTo              time.Time `json:"until"`
+	PlatformInformation bool      `json:"platform_information"`
+	Branch              string    `json:"branch"`
 }
 
 type WebhookResponse struct {
-	RequestId string `json:"request_id"`
+	RequestId uuid.UUID `json:"request_id"`
 }
 
 type WebhookCallback struct {
-	RequestId string                  `json:"request_id"`
+	RequestId uuid.UUID               `json:"request_id"`
 	Success   bool                    `json:"success"`
 	Error     string                  `json:"error"`
 	Result    []WebhookCallbackResult `json:"result"`

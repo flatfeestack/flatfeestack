@@ -14,3 +14,4 @@
 # This is the resulting binary
 analysis-engine
 .idea
+.env

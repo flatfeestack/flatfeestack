@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type GitAnalyzationChannel struct {
@@ -361,43 +359,24 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 		branch = getGoGitDefaultBranchEnv()
 	}
 
-	var commitsSince time.Time
-	if len(request.Since) > 0 {
-		commitsSince, err = convertTimestampStringToTime(request.Since)
-		if err != nil {
-			makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
-		}
-	}
-
-	var commitsUntil time.Time
-	if len(request.Until) > 0 {
-		commitsUntil, err = convertTimestampStringToTime(request.Until)
-		if err != nil {
-			makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
-		}
-	}
-
-	requestId := uuid.New().String()
-
-	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: requestId})
+	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: request.RequestId})
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-
 	}
 
-	go analyzeForWebhookInBackground(requestId, request, branch, commitsSince, commitsUntil)
+	go analyzeForWebhookInBackground(request, branch)
 	fmt.Println("is analyzing")
 
 }
 
-func analyzeForWebhookInBackground(requestId string, request WebhookRequest, branch string, commitsSince time.Time, commitsUntil time.Time) {
+func analyzeForWebhookInBackground(request WebhookRequest, branch string) {
 	fmt.Printf("\n\n---> webhook request for repository %s on branch %s \n", request.RepositoryUrl, branch)
-	fmt.Printf("Request id: %s\n", requestId)
+	fmt.Printf("Request id: %s\n", request.RequestId)
 
 	if entry, err := cache.Get(request.RepositoryUrl); err == nil {
 		fmt.Printf("\n\n---> Cached result for repository: %s\n", request.RepositoryUrl)
 		data := WebhookCallback{}
-		json.Unmarshal([]byte(entry), &data)
+		json.Unmarshal(entry, &data)
 		callbackToWebhook(request.RepositoryUrl, data)
 	}
 
@@ -412,7 +391,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 
 	// go routine to analyze the repository using git independently from main thread
 	go func() {
-		routineContributionMap, routineErr := analyzeRepositoryFromString(request.RepositoryUrl, commitsSince, commitsUntil, branch)
+		routineContributionMap, routineErr := analyzeRepositoryFromString(request.RepositoryUrl, request.DateFrom, request.DateTo, branch)
 		gitAnalyzationChannel <- GitAnalyzationChannel{
 			Result: routineContributionMap,
 			Reason: routineErr,
@@ -423,7 +402,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 	// execute go routine to fetch the platform information only when the platformInformation flag is set
 	if request.PlatformInformation {
 		go func() {
-			routineIssues, routinePullRequests, routineErr := getPlatformInformation(request.RepositoryUrl, commitsSince, commitsUntil)
+			routineIssues, routinePullRequests, routineErr := getPlatformInformation(request.RepositoryUrl, request.DateFrom, request.DateTo)
 			platformInformationChannel <- PlatformInformationChannel{
 				ResultIssues:       routineIssues,
 				ResultPullRequests: routinePullRequests,
@@ -454,7 +433,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 				callbackToWebhook(
 					request.RepositoryUrl,
 					WebhookCallback{
-						RequestId: requestId,
+						RequestId: request.RequestId,
 						Success:   false,
 						Error:     msg1.Reason.Error(),
 					})
@@ -472,7 +451,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 				callbackToWebhook(
 					request.RepositoryUrl,
 					WebhookCallback{
-						RequestId: requestId,
+						RequestId: request.RequestId,
 						Success:   false,
 						Error:     msg2.Reason.Error(),
 					})
@@ -522,7 +501,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 			callbackToWebhook(
 				request.RepositoryUrl,
 				WebhookCallback{
-					RequestId: requestId,
+					RequestId: request.RequestId,
 					Success:   false,
 					Error:     err.Error(),
 				})
@@ -545,7 +524,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 		callbackToWebhook(
 			request.RepositoryUrl,
 			WebhookCallback{
-				RequestId: requestId,
+				RequestId: request.RequestId,
 				Success:   true,
 				Result:    webhookCallbackResults,
 			})
@@ -556,7 +535,7 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 			callbackToWebhook(
 				request.RepositoryUrl,
 				WebhookCallback{
-					RequestId: requestId,
+					RequestId: request.RequestId,
 					Success:   false,
 					Error:     err.Error(),
 				})
@@ -577,12 +556,12 @@ func analyzeForWebhookInBackground(requestId string, request WebhookRequest, bra
 			webhookCallbackResults = append(webhookCallbackResults, r)
 		}
 		callbackToWebhook(request.RepositoryUrl, WebhookCallback{
-			RequestId: requestId,
+			RequestId: request.RequestId,
 			Success:   true,
 			Result:    webhookCallbackResults,
 		})
 	}
-	fmt.Printf("Finished request %s\n", requestId)
+	fmt.Printf("Finished request %s\n", request.RequestId)
 }
 
 // getRepositoryFromRequest extracts the repository from the route parameters
@@ -631,6 +610,11 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 }
 
 func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
+
+	if body.Success {
+		log.Printf("About to returt the following data: %v", body.Result)
+	}
+
 	reqBody, _ := json.Marshal(body)
 	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
 
@@ -638,26 +622,26 @@ func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 		Timeout: 15 * time.Second,
 	}
 
-	backendToken := os.Getenv("BACKEND_TOKEN")
-	url := os.Getenv("WEBHOOK_CALLBACK_URL")
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", opts.CallbackUrl, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Printf("Could not create a HTTP request to call the webhook %v", err)
+		return
 	}
 
-	if len(backendToken) > 0 {
-		req.Header.Add("Authorization", "Bearer "+backendToken)
+	if len(opts.BackendToken) > 0 {
+		req.Header.Add("Authorization", "Bearer "+opts.BackendToken)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Do(req)
-	defer resp.Body.Close()
 
 	if err != nil {
 		log.Printf("Could not call webhook %v", err)
+		return
 	}
+
+	defer resp.Body.Close()
 
 	if _, err := cache.Get(repositoryUrl); err != nil {
 		cache.Set(repositoryUrl, reqBody)
