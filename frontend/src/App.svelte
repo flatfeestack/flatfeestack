@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { links, Route, Router } from "svelte-routing";
+  import { links, Route, Router, navigate } from "svelte-routing";
   import {globalHistory} from 'svelte-routing/src/history';
   import { user, route, loginFailed, error } from "./ts/store";
   import { removeSession } from "./ts/services";
@@ -65,8 +65,8 @@
 
     header {
         padding: 1em;
-        background-color: #000;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.75);
+        background-color: #fff;
+        border-bottom: 1px #000 solid;
         justify-content: space-between;
         flex: 0 1 auto;
     }
@@ -90,7 +90,7 @@
 
     header :global(a), .header :global(a:visited), .header :global(a:active) {
         text-decoration: none;
-        color: #ffffff;
+        color: #000;
     }
 
     img {
@@ -99,6 +99,8 @@
 
     .main-nav :global(a), .main-nav :global(a:visited) {
         padding: 0.5em 1em 0.5em 1em;
+        color: #000;
+        font-weight: 500;
     }
 
     .main-nav :global(a:hover) {
@@ -129,17 +131,18 @@
     footer > :global(a) {
         color: white;
     }
+
 </style>
 
 <div class="main">
   <header use:links>
     <a href="/">
-      <img src="/assets/images/new-logo-4.svg" alt="Flatfeestack" />
-      <img class="hide-sx" src="/assets/images/logo-text-w.svg" alt="Flatfeestack" />
+      <img class="hide-mda" src="/assets/images/new-logo-5.svg" alt="Flatfeestack" />
+      <img class="hide-sx" src="/assets/images/logo-text-b2.svg" alt="Flatfeestack" />
     </a>
     <nav>
       {#if $user.id}
-        <div class="main-nav signup"><a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a></div>
+        <div class="main-nav"><a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a></div>
         {#if $user.role === "USR" && $user.image}
           <img class="image-usr-sx" src="{$user.image}" />
         {:else if $user.image}
@@ -149,7 +152,9 @@
         <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
       {:else}
         <div class="main-nav"><a href="/login">Login</a></div>
-        <div class="main-nav signup"><a href="/signup">Sign up</a></div>
+        <form on:submit|preventDefault="{() => navigate('/signup')}">
+          <button class="button1 center" type="submit">Sign Up</button>
+        </form>
       {/if}
     </nav>
   </header>

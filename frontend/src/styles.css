@@ -1,5 +1,20 @@
 @charset "UTF-8";
 
+:root {
+  --primary-100: #ECF3EF;
+  --primary-300: #a9d4ba;
+  --primary-500: #77bd92;
+  --primary-700: #499768;
+  --primary-800: #38724e;
+  --primary-900: #285338;
+
+  --secondary-100: #f0f0f0;
+  --secondary-300: #b8b8b8;
+  --secondary-500: #808080;
+  --secondary-700: #494949;
+  --secondary-900: #000000;
+}
+
 body, html {
   font-family: 'Roboto', sans-serif;
   line-height: 1.4;
@@ -8,7 +23,6 @@ body, html {
   padding: 0;
   background: #ffffff;
   text-rendering: optimizeLegibility;
-  font-size: 1.1rem;
   height: 100%;
   font-weight: 300;
 }
@@ -146,8 +160,9 @@ button {
   border: 1px solid var(--primary-500);
   border-top: 2px solid var(--primary-700);
   background-image: linear-gradient(to bottom, var(--primary-700), var(--primary-500));
-  color: #ffffff;
-  text-shadow: rgba(0,0,0,1) 0 1px 0;
+  color: #000;
+  text-shadow: var(--primary-700) 0 1px 0;
+  font-size: 1.05rem;
 }
 
 .button1:hover {
@@ -179,28 +194,30 @@ input[type=email], input[type=text]{
   padding: 0.5rem 0.75rem 0.5rem 0.75rem;
 }
 
-:root {
-  --primary-100: #ECF3EF;
-  --primary-300: #a9d4ba;
-  --primary-500: #77bd92;
-  --primary-700: #55ad77;
-  --primary-800: #489666;
-  --primary-900: #285338;
 
-  --secondary-100: #f0f0f0;
-  --secondary-300: #b8b8b8;
-  --secondary-500: #808080;
-  --secondary-700: #494949;
-  --secondary-900: #000000;
-}
 
-@media (max-width: 36rem) {
+/* Small only */
+@media screen and (max-width: 39.9375em) {
   .hide-sx {
     display: none;
   }
 }
 
-@media (max-width: 42rem) {
+/* Medium and up */
+@media screen and (min-width: 40em) {
+  .hide-mda {
+    display: none;
+  }
+}
+
+/* Medium only */
+@media screen and (min-width: 40em) and (max-width: 63.9375em) {
+  .hide-md {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 64em) {
   .hide-md {
     display: none;
   }

@@ -174,8 +174,8 @@
       </p>
     </div>
     <div class="container-col2 hide-md">
-      <canvas class="hide-md" bind:this={canvas} width="750rem" height="750rem" id="canvas" />
-      <img class="img hide-md" src="assets/images/atlas.svg">
+      <canvas class="hide-sx" bind:this={canvas} width="750rem" height="750rem" id="canvas" />
+      <img class="img hide-sx" src="assets/images/atlas.svg">
       <!--https://github.com/aholmes/webgl-sphere-->
     </div>
   </div>
