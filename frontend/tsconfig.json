@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "landing-page/src/**/*.ts"],
   "exclude": ["node_modules/*", "public/*"],
   "compilerOptions": {
     "importsNotUsedAsValues": "remove",

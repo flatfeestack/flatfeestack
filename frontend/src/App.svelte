@@ -8,7 +8,7 @@
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
 
-  import Landing from "./routes/Landing.svelte";
+  import Landing from "../landing-page/Landing.svelte";
   import Badges from "./routes/Badges.svelte";
   import PublicBadges from "./routes/PublicBadges.svelte";
   import Login from "./routes/Login.svelte";
