@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'io.neow3j.gradle-plugin' version '3.12.0'
+}
+
+group 'io.flatfeestack'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+//    mavenLocal()
+}
+
+dependencies {
+    implementation 'io.neow3j:devpack:3.12.0'
+    implementation 'ch.qos.logback:logback-classic:1.2.5'
+    implementation 'junit:junit:4.13.2'
+    testImplementation 'io.neow3j:contract:3.12.0'
+    testImplementation 'io.neow3j:compiler:3.12.0'
+    testImplementation 'org.testcontainers:testcontainers:1.16.0'
+}
+
+neow3jCompiler {
+    className = "io.flatfeestack.PreSignNeo"
+    debug = true
+}
