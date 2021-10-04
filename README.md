@@ -1,4 +1,4 @@
-# Flatfeestack Docker
+# Fleuaaatfeestack Docker
 This repo combines all Flatfeestack packages using `docker-compose`.
 
 ## Build / Start / Stop
@@ -7,6 +7,12 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 git clone --recurse-submodules https://github.com/flatfeestack/flatfeestack.git
 cd flatfeestack
 docker-compose up -d --build
+```
+
+For ubuntu, install:
+
+```shell script
+sudo apt install net-tools
 ```
 
 if you want to stop, and clean everything up:
