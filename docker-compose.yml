@@ -115,6 +115,7 @@ services:
     ports:
       - 8545:8545
       - 8546:8546
+    user: root
     volumes:
       - ./.chain:/tmp/chain
     command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
