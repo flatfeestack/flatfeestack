@@ -6,20 +6,21 @@ import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.contract.SmartContract;
+import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.ContractManifest;
-import io.neow3j.protocol.core.response.InvocationResult;
+import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
 import io.neow3j.serialization.NeoSerializableInterface;
-import io.neow3j.transaction.AccountSigner;
-import io.neow3j.transaction.Signer;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.Witness;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
+import io.neow3j.types.NeoVMStateType;
 import io.neow3j.wallet.Account;
 import io.neow3j.wallet.Wallet;
 import org.junit.BeforeClass;
@@ -33,7 +34,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,13 +45,14 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.hash160;
 import static io.neow3j.types.ContractParameter.integer;
+import static io.neow3j.types.ContractParameter.publicKey;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.wallet.Account.createMultiSigAccount;
-import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.core.Is.is;
 
 public class PreSignIntegrationTest {
 
@@ -65,11 +66,13 @@ public class PreSignIntegrationTest {
 
     private static final Account defaultAccount =
             Account.fromWIF("L1eV34wPoj9weqhGijdDLtVQzUpWGHszXXpdU9dPuh2nRFFzFa7E");
+    private static final ECKeyPair.ECPublicKey defaultPubKey = defaultAccount.getECKeyPair().getPublicKey();
     private static final Account committee =
             createMultiSigAccount(singletonList(defaultAccount.getECKeyPair().getPublicKey()), 1);
 
     private static final Account owner =
             Account.fromWIF("L3cNMQUSrvUrHx1MzacwHiUeCWzqK2MLt5fPvJj9mz6L2rzYZpok");
+    private static final ECKeyPair.ECPublicKey ownerPubKey = owner.getECKeyPair().getPublicKey();
     private static final Account dev1 =
             Account.fromWIF("L1RgqMJEBjdXcuYCMYB6m7viQ9zjkNPjZPAKhhBoXxEsygNXENBb");
     private static final Account dev1Dupl =
@@ -89,6 +92,8 @@ public class PreSignIntegrationTest {
 
     // Methods
     private static final String withdraw = "withdraw";
+    private static final String changeOwner = "changeOwner";
+    private static final String getOwner = "getOwner";
     private static final String register = "register";
 
     @ClassRule
@@ -118,13 +123,45 @@ public class PreSignIntegrationTest {
 
         Hash256 txHash = preSignContract
                 .invokeFunction(register, ContractParameter.array(devsParams))
-                .wallet(ownerWallet)
                 .signers(none(owner))
                 .sign()
                 .send()
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+    }
+
+    @Test
+    public void testChangeOwner() throws Throwable {
+        Hash256 txHash = preSignContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
+                .signers(calledByEntry(owner), calledByEntry(defaultAccount))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        List<NeoApplicationLog.Execution> execs = neow3j.getApplicationLog(txHash).send()
+                .getApplicationLog().getExecutions();
+        assertThat(execs, hasSize(1));
+        assertThat(execs.get(0).getState(), is(NeoVMStateType.HALT));
+
+        StackItem item = preSignContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
+        assertThat(item.getByteArray(), is(defaultPubKey.getEncoded(true)));
+
+        // Change owner back to maintain same state for other tests
+        txHash = preSignContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
+                .signers(calledByEntry(owner), calledByEntry(defaultAccount))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        execs = neow3j.getApplicationLog(txHash).send().getApplicationLog().getExecutions();
+        assertThat(execs, hasSize(1));
+        assertThat(execs.get(0).getState(), is(NeoVMStateType.HALT));
+
+        item = preSignContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
+        assertThat(item.getByteArray(), is(ownerPubKey.getEncoded(true)));
     }
 
     @Test
@@ -136,7 +173,6 @@ public class PreSignIntegrationTest {
         // Create the pre-signed transaction
         Transaction txToBePreSignedByOwner =
                 preSignContract.invokeFunction(withdraw, hash160(dev1), integer(dev1Amount))
-                        .wallet(ownerWallet)
                         .signers(none(dev1),
                                 calledByEntry(owner).setAllowedContracts(preSignContract.getScriptHash()))
                         .getUnsignedTransaction();
@@ -210,12 +246,14 @@ public class PreSignIntegrationTest {
         BigInteger balanceOf = gasToken.getBalanceOf(preSignContract.getScriptHash());
         BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(7000));
         Hash256 txHash = gasToken
-                .transfer(ownerWallet, preSignContract.getScriptHash(), fundAmount)
+                .transfer(owner, preSignContract.getScriptHash(), fundAmount)
                 .sign()
                 .send()
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
+        NeoApplicationLog log = neow3j.getApplicationLog(txHash).send().getApplicationLog();
+        System.out.println(log.getExecutions().get(0).getNotifications().get(0).getEventName());
     }
 
     private static void fundAccounts(BigInteger gasFractions, Account... accounts) throws Throwable {
@@ -224,9 +262,9 @@ public class PreSignIntegrationTest {
         for (Account a : accounts) {
             if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
                 Hash256 txHash = gasToken
-                        .transferFromSpecificAccounts(committeeWallet, a.getScriptHash(),
-                                gasFractions, committee.getScriptHash())
-                        .sign()
+                        .transfer(committee, a.getScriptHash(), gasFractions)
+                        .getUnsignedTransaction()
+                        .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
                         .send()
                         .getSendRawTransaction()
                         .getHash();
@@ -247,20 +285,20 @@ public class PreSignIntegrationTest {
         ContractManifest manifest = getObjectMapper()
                 .readValue(manifestFile, ContractManifest.class);
         try {
-            Hash256 txHash =
-                    new ContractManagement(neow3j).deploy(nef, manifest, hash160(committee))
-                            .wallet(committeeWallet)
-                            .signers(none(committee))
-                            .sign()
-                            .send()
-                            .getSendRawTransaction()
-                            .getHash();
+            Hash256 txHash = new ContractManagement(neow3j)
+                    .deploy(nef, manifest,
+                            publicKey(owner.getECKeyPair().getPublicKey().getEncoded(true)))
+                    .signers(none(owner))
+                    .sign()
+                    .send()
+                    .getSendRawTransaction()
+                    .getHash();
             waitUntilTransactionIsExecuted(txHash, neow3j);
             System.out.println("Deployed PreSign contract");
         } catch (TransactionConfigurationException e) {
             System.out.println(e.getMessage());
         }
-        Hash160 hash = calcContractHash(committee.getScriptHash(), nef.getCheckSumAsInteger(),
+        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
                 manifest.getName());
         return new SmartContract(hash, neow3j);
     }
