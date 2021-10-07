@@ -4,7 +4,6 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
-import io.neow3j.devpack.Runtime;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -19,6 +18,8 @@ import io.neow3j.devpack.events.Event2Args;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
+import static io.neow3j.devpack.Runtime.checkWitness;
+import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 @Permission(contract = "0xd2a4cff31913016155e38e474a2c06d08be276cf") // GasToken
 @Permission(contract = "0x726cb6e0cd8628a1350a611384688911ab75f51b") // CryptoLib
@@ -62,13 +63,10 @@ public class PreSignNeo {
      * Changes the contract owner.
      *
      * @param newOwner The new contract owner.
-     * @throws Exception if the current owner did not witness this transaction.
      */
-    public static void changeOwner(ECPoint newOwner) throws Exception {
-        if (!Runtime.checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
-            throw new Exception("No authorization.");
-        }
-        assert Runtime.checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+    public static void changeOwner(ECPoint newOwner) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert checkWitness(newOwner) : "New owner must witness this change.";
         contractMap.put(ownerKey, newOwner.toByteString());
     }
 
@@ -95,23 +93,19 @@ public class PreSignNeo {
      *                   were earned.
      */
     public static void withdraw(Hash160 account, int tea) throws Exception {
-        if (!Runtime.checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
-            throw new Exception("No authorization.");
-        }
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         ByteString balance = withdrawalMap.get(account.toByteString());
         boolean transfer;
         if (balance == null) {
             withdrawalMap.put(account.toByteString(), tea);
-            transfer = GasToken.transfer(Runtime.getExecutingScriptHash(), account,
-                    tea, null);
+            transfer = GasToken.transfer(getExecutingScriptHash(), account, tea, null);
         } else {
             int alreadyWithdrawn = balance.toInt();
             int amountToWithdraw = tea - alreadyWithdrawn;
             if (amountToWithdraw <= 0) {
                 throw new Exception("These funds have already been withdrawn.");
             }
-            transfer = GasToken.transfer(Runtime.getExecutingScriptHash(), account,
-                    amountToWithdraw, null);
+            transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
         }
         if (!transfer) {
             throw new Exception("Transfer was not successful.");
@@ -153,13 +147,11 @@ public class PreSignNeo {
         int curve = contractMap.getInteger(curveKey);
 
         boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) curve);
-        if (!verified) {
-            throw new Exception("Signature invalid.");
-        }
+        assert verified : "Signature invalid.";
 
         ByteString withdrawn = withdrawalMap.get(account.toByteString());
         boolean transfer;
-        Hash160 executingScriptHash = Runtime.getExecutingScriptHash(); // This contract's script hash
+        Hash160 executingScriptHash = getExecutingScriptHash(); // This contract's script hash
         if (withdrawn == null) {
             withdrawalMap.put(account.toByteString(), tea);
             transfer = GasToken.transfer(executingScriptHash, account, tea, null);
@@ -167,26 +159,19 @@ public class PreSignNeo {
         } else {
             int withdrawnInt = withdrawn.toInt();
             int amountToWithdraw = tea - withdrawnInt;
-            if (amountToWithdraw <= 0) {
-                throw new Exception("These funds have already been withdrawn.");
-            }
+            assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
             transfer = GasToken.transfer(executingScriptHash, account, amountToWithdraw, null);
         }
-        if (!transfer) {
-            throw new Exception("Transfer was not successful.");
-        }
+        assert transfer : "Transfer was not successful.";
         onWithdrawal.fire(account, tea);
     }
 
     // return list of all unsuccessful transfers - check if transfer 0 returns true
-    public static void batchWithdraw(Hash160[] accounts, int[] teas, int[] totalAmountForPayout) throws Exception {
-        if (!Runtime.checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
-            throw new Exception("No authorization.");
-        }
+    public static void batchWithdraw(Hash160[] accounts, int[] teas, int[] totalAmountForPayout) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int nrAccounts = accounts.length;
-        if (nrAccounts != teas.length && nrAccounts != totalAmountForPayout.length) {
-            throw new Exception("The parameters must have the same length.");
-        }
+        assert nrAccounts == teas.length && nrAccounts == totalAmountForPayout.length :
+                "The parameters must have the same length.";
         // withdrawal loop
         // return list of hash160 or map... whatever is cheaper and serves the case.
     }
@@ -207,15 +192,11 @@ public class PreSignNeo {
     // ask claude if int is always 256 or if it is converted to byte[] and the size of this is used.
             throws Exception {
 
-        if (!Runtime.checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
-            throw new Exception("No authorization.");
-        }
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int nrAccounts = accounts.length;
-        if (nrAccounts != teas.length) {
-            throw new Exception("The parameters must have the same length.");
-        }
-        List<Hash160> unsuccessful = null;
-        Hash160 contractHash = Runtime.getExecutingScriptHash();
+        assert nrAccounts == teas.length : "The parameters must have the same length.";
+        List<Hash160> unsuccessful = new List<>();
+        Hash160 contractHash = getExecutingScriptHash();
         boolean transfer;
         Hash160 a;
         int tea;
@@ -289,11 +270,7 @@ public class PreSignNeo {
      * @throws Exception if the caller is not allowed to invoke this method.
      */
     public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) throws Exception {
-
-        ECPoint owner = new ECPoint(contractMap.get(ownerKey));
-        if (!Runtime.checkWitness(owner)) {
-            throw new Exception("No authorization.");
-        }
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
 
         ByteString alreadyWithdrawn = withdrawalMap.get(account.toByteString());
         int alreadyWithdrawnInt;
@@ -329,7 +306,7 @@ public class PreSignNeo {
     /**
      * Upon deployment, the initial owner is set and the curve is set to the secp256r1 curve.
      *
-     * @param data   The initial owner.
+     * @param data   The initial owner's public key.
      * @param update True, if the contract is being deployed, false if it is updated.
      */
     @OnDeployment
