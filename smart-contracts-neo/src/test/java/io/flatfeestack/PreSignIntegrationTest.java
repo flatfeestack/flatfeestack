@@ -15,6 +15,7 @@ import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
 import io.neow3j.serialization.NeoSerializableInterface;
 import io.neow3j.transaction.Transaction;
+import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.transaction.Witness;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.ContractParameter;
@@ -132,6 +133,22 @@ public class PreSignIntegrationTest {
     }
 
     @Test
+    public void testFundContract() throws Throwable {
+        BigInteger contractBalance = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(1500L));
+        Hash256 txHash = gasToken.transfer(owner, preSignContract.getScriptHash(), fundAmount)
+                .signers(calledByEntry(owner))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        BigInteger balanceAfterTransfer = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        assertThat(balanceAfterTransfer, is(contractBalance.add(fundAmount)));
+    }
+
+    @Test
     public void testChangeOwner() throws Throwable {
         Hash256 txHash = preSignContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
@@ -165,17 +182,15 @@ public class PreSignIntegrationTest {
     }
 
     @Test
-    public void testWithdrawFunds() throws Throwable {
-        BigInteger dev1InitialBalance = gasToken.getBalanceOf(dev1);
+    public void testWithdrawWithWitness() throws Throwable {
+        BigInteger initialBalanceDev1 = gasToken.getBalanceOf(dev1);
         BigInteger initialBalanceOwner = gasToken.getBalanceOf(owner);
-        BigInteger dev1Amount = gasToken.toFractions(BigDecimal.valueOf(2.2));
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(2.2));
 
         // Create the pre-signed transaction
-        Transaction txToBePreSignedByOwner =
-                preSignContract.invokeFunction(withdraw, hash160(dev1), integer(dev1Amount))
-                        .signers(none(dev1),
-                                calledByEntry(owner).setAllowedContracts(preSignContract.getScriptHash()))
-                        .getUnsignedTransaction();
+        Transaction txToBePreSignedByOwner = preSignContract.invokeFunction(withdraw, hash160(dev1), integer(teaDev1))
+                .signers(none(dev1), calledByEntry(owner).setAllowedContracts(preSignContract.getScriptHash()))
+                .getUnsignedTransaction();
 
         Witness ownerWitness =
                 Witness.create(txToBePreSignedByOwner.getHashData(), owner.getECKeyPair());
@@ -221,7 +236,15 @@ public class PreSignIntegrationTest {
         waitUntilTransactionIsExecuted(txHash, neow3j);
         BigInteger dev1FinalBalance = gasToken.getBalanceOf(dev1);
         BigInteger ownerFinalBalance = gasToken.getBalanceOf(owner);
-        assertThat(dev1FinalBalance, is(dev1InitialBalance.add(dev1Amount)));
+        assertThat(dev1FinalBalance, is(initialBalanceDev1.add(teaDev1)));
+    }
+
+    @Test
+    public void testWithdrawWithSignature() {
+    }
+
+    @Test
+    public void testBatchPayout() {
     }
 
     // Helper methods
