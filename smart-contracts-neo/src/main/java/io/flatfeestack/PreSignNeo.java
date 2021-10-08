@@ -167,7 +167,7 @@ public class PreSignNeo {
     }
 
     // return list of all unsuccessful transfers - check if transfer 0 returns true
-    public static void batchWithdraw(Hash160[] accounts, int[] teas, int[] totalAmountForPayout) {
+    public static void batchPayout(Hash160[] accounts, int[] teas, int[] totalAmountForPayout) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int nrAccounts = accounts.length;
         assert nrAccounts == teas.length && nrAccounts == totalAmountForPayout.length :
@@ -187,7 +187,7 @@ public class PreSignNeo {
      * @throws Exception if the transaction was not witnessed by the contract owner or the
      *                   parameters are not of equal length.
      */
-    public static List<Hash160> batchWithdraw(Hash160[] accounts, int[] teas)
+    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas)
     // or batchWithdraw(accounts, teas, tea_withDeductedFee)
     // ask claude if int is always 256 or if it is converted to byte[] and the size of this is used.
             throws Exception {
