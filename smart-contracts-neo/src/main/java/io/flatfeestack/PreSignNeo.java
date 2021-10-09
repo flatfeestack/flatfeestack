@@ -113,6 +113,20 @@ public class PreSignNeo {
         onWithdrawal.fire(account, tea);
     }
 
+    // 1. get the script hash's byte array in little endian
+    // 2. get the integer's byte array
+    // 3. reverse the integer's byte array
+    // 4. concatenate the little endian script hash's byte array with the reversed byte array of the integer amount
+    // 5. Sign this concatenation
+    public static boolean verifySig(Hash160 account, int tea, ByteString signature) {
+        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
+        return CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 0x17);
+    }
+
+    public static byte[] concatAccInt(Hash160 a, int i) {
+        return concat(a.toByteArray(), toByteArray(i));
+    }
+
     /**
      * Withdraws the earned amount with the option to delegate the payment of the emerging
      * transaction fees.
@@ -137,32 +151,34 @@ public class PreSignNeo {
      * @throws Exception if the provided signature is invalid, the funds have already been
      *                   withdrawn, or the transfer was not successful.
      */
-    public static void withdraw(Hash160 account, int tea, String signature) throws Exception {
+    public static void withdraw(Hash160 account, int tea, ByteString signature) {
 
         // The message that was signed by the owner and resulted in the provided signature.
-        byte[] messageByteArray = concat(account.toByteArray(), toByteArray(tea));
-        ByteString message = new ByteString(messageByteArray);
+        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
 
         // The curve that was used for the signature.
+        // TODO: 09.10.21 Not necessary?
         int curve = contractMap.getInteger(curveKey);
 
+        // Verify the signature
         boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) curve);
         assert verified : "Signature invalid.";
 
-        ByteString withdrawn = withdrawalMap.get(account.toByteString());
-        boolean transfer;
-        Hash160 executingScriptHash = getExecutingScriptHash(); // This contract's script hash
-        if (withdrawn == null) {
-            withdrawalMap.put(account.toByteString(), tea);
-            transfer = GasToken.transfer(executingScriptHash, account, tea, null);
+        // Get the already withdrawn amount
+        int withdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
 
-        } else {
-            int withdrawnInt = withdrawn.toInt();
-            int amountToWithdraw = tea - withdrawnInt;
-            assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
-            transfer = GasToken.transfer(executingScriptHash, account, amountToWithdraw, null);
-        }
+        // Calculate the payout amount
+        int amountToWithdraw = tea - withdrawn;
+        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+
+        // Update the withdrawalMap with the new tea
+        withdrawalMap.put(account.toByteString(), tea);
+
+        // Transfer the earned tokens to the account
+        Hash160 executingScriptHash = getExecutingScriptHash(); // This contract's script hash
+        boolean transfer = GasToken.transfer(executingScriptHash, account, amountToWithdraw, null);
         assert transfer : "Transfer was not successful.";
+
         onWithdrawal.fire(account, tea);
     }
 
