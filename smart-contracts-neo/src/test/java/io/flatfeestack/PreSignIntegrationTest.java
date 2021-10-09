@@ -7,8 +7,10 @@ import io.neow3j.contract.GasToken;
 import io.neow3j.contract.NefFile;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.ECKeyPair;
+import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
 import io.neow3j.protocol.core.response.ContractManifest;
+import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
 import io.neow3j.protocol.core.stackitem.StackItem;
@@ -22,6 +24,8 @@ import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
 import io.neow3j.types.NeoVMStateType;
+import io.neow3j.utils.ArrayUtils;
+import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import io.neow3j.wallet.Wallet;
 import org.junit.BeforeClass;
@@ -41,15 +45,17 @@ import java.util.stream.Collectors;
 import static io.neow3j.contract.ContractUtils.writeContractManifestFile;
 import static io.neow3j.contract.ContractUtils.writeNefFile;
 import static io.neow3j.contract.SmartContract.calcContractHash;
+import static io.neow3j.crypto.Sign.signMessage;
 import static io.neow3j.protocol.ObjectMapperFactory.getObjectMapper;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
-import static io.neow3j.types.ContractParameter.hash160;
-import static io.neow3j.types.ContractParameter.integer;
-import static io.neow3j.types.ContractParameter.publicKey;
+import static io.neow3j.types.ContractParameter.*;
+import static io.neow3j.utils.ArrayUtils.*;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.wallet.Account.createMultiSigAccount;
+import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
+import static java.util.Collections.reverseOrder;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -114,22 +120,13 @@ public class PreSignIntegrationTest {
         preSignContract = deployPreSignNeo();
         System.out.println("PreSign contract hash: " + preSignContract.getScriptHash());
         fundPreSignContract();
-//        registerDevs(dev1, dev2, dev3);
     }
 
-    private static void registerDevs(Account... devs) throws Throwable {
-        List<ContractParameter> devsParams = stream(devs)
-                .map(ContractParameter::hash160)
-                .collect(Collectors.toList());
-
-        Hash256 txHash = preSignContract
-                .invokeFunction(register, ContractParameter.array(devsParams))
-                .signers(none(owner))
-                .sign()
-                .send()
-                .getSendRawTransaction()
-                .getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
+    private Sign.SignatureData createSignature(Hash160 account, BigInteger tea, Account signer) {
+        byte[] accountArray = account.toLittleEndianArray();
+        byte[] teaArray = reverseArray(tea.toByteArray());
+        byte[] message = concatenate(accountArray, teaArray);
+        return signMessage(message, signer.getECKeyPair());
     }
 
     @Test
@@ -179,6 +176,71 @@ public class PreSignIntegrationTest {
 
         item = preSignContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
         assertThat(item.getByteArray(), is(ownerPubKey.getEncoded(true)));
+    }
+
+    @Test
+    public void testWithdrawWithSignature() throws Throwable {
+        BigInteger balanceContractBefore = getContractBalance();
+        BigInteger balanceDev1Before = getBalance(dev1.getScriptHash());
+        // Dev1 earned 12 gas for the first time
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+
+        // Create a signature
+        Sign.SignatureData signatureData = createSignature(dev1.getScriptHash(), teaDev1, owner);
+        System.out.println(signatureData.getV());
+        signatureData.getConcatenated();
+
+        // Dev1 invokes withdraw method with signatureData
+        Transaction tx = preSignContract.invokeFunction(
+                        withdraw,
+                        hash160(dev1), integer(teaDev1), signature(signatureData))
+                .signers(none(dev1))
+                .sign();
+        Hash256 txHash = tx.send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        BigInteger balanceContractAfter = getContractBalance();
+        assertThat(balanceContractAfter, is(balanceContractBefore.subtract(teaDev1)));
+
+        BigInteger balanceDev1After = getBalance(dev1.getScriptHash());
+        BigInteger networkFee = BigInteger.valueOf(tx.getNetworkFee());
+        BigInteger systemFee = new BigInteger(
+                neow3j.getApplicationLog(txHash).send().getApplicationLog()
+                        .getExecutions().get(0).getGasConsumed());
+        BigInteger totalFee = systemFee.add(networkFee);
+        System.out.println("'withdraw' system fee (gasconsumed): " + systemFee);
+        System.out.println("'withdraw' network fee:              " + networkFee);
+        System.out.println("'withdraw' total fee:                " + systemFee.add(networkFee));
+        assertThat(balanceDev1After, is(balanceDev1Before.add(teaDev1).subtract(totalFee)));
+    }
+
+    @Test
+    public void testVerifySig() throws IOException {
+        BigInteger balanceContract = getContractBalance();
+        // Dev1 earned 12 gas for the first time
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
+                reverseArray(teaDev1.toByteArray()));
+
+        Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
+        InvocationResult invocationResult = preSignContract.callInvokeFunction("verifySig",
+                        asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) // returns false
+//                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
+                .getInvocationResult();
+        System.out.println("#################");
+        System.out.println(invocationResult.getStack().get(0).getBoolean());
+        System.out.println("#################");
+    }
+
+    @Test
+    public void testConcat() throws IOException {
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
+                reverseArray(teaDev1.toByteArray()));
+        System.out.println(dev1.getScriptHash());
+        System.out.println(Numeric.toHexStringNoPrefix(message));
     }
 
     @Test
@@ -237,10 +299,6 @@ public class PreSignIntegrationTest {
         BigInteger dev1FinalBalance = gasToken.getBalanceOf(dev1);
         BigInteger ownerFinalBalance = gasToken.getBalanceOf(owner);
         assertThat(dev1FinalBalance, is(initialBalanceDev1.add(teaDev1)));
-    }
-
-    @Test
-    public void testWithdrawWithSignature() {
     }
 
     @Test
@@ -324,6 +382,14 @@ public class PreSignIntegrationTest {
         Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
                 manifest.getName());
         return new SmartContract(hash, neow3j);
+    }
+
+    private BigInteger getContractBalance() throws IOException {
+        return getBalance(preSignContract.getScriptHash());
+    }
+
+    private BigInteger getBalance(Hash160 account) throws IOException {
+        return gasToken.getBalanceOf(account);
     }
 
 }
