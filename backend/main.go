@@ -254,6 +254,9 @@ func main() {
 
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
+	router.HandleFunc("/nowpayments", nowpaymentstest).Methods(http.MethodGet)
+	router.HandleFunc("/nowpayments/ipn", ipn).Methods(http.MethodPost)
+
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods(http.MethodPost)
