@@ -89,27 +89,15 @@ public class PreSignNeo {
      *
      * @param account The beneficiary account.
      * @param tea     The {@code Total Earned Amount} of this account.
-     * @throws Exception if the owner of the contract did not witness the transaction or no funds
-     *                   were earned.
      */
-    public static void withdraw(Hash160 account, int tea) throws Exception {
+    public static void withdraw(Hash160 account, int tea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        ByteString balance = withdrawalMap.get(account.toByteString());
-        boolean transfer;
-        if (balance == null) {
-            withdrawalMap.put(account.toByteString(), tea);
-            transfer = GasToken.transfer(getExecutingScriptHash(), account, tea, null);
-        } else {
-            int alreadyWithdrawn = balance.toInt();
-            int amountToWithdraw = tea - alreadyWithdrawn;
-            if (amountToWithdraw <= 0) {
-                throw new Exception("These funds have already been withdrawn.");
-            }
-            transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
-        }
-        if (!transfer) {
-            throw new Exception("Transfer was not successful.");
-        }
+        int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
+        withdrawalMap.put(account.toByteString(), tea);
+        int amountToWithdraw = tea - alreadyWithdrawn;
+        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
+        assert transfer : "Transfer was not successful.";
         onWithdrawal.fire(account, tea);
     }
 
@@ -148,8 +136,6 @@ public class PreSignNeo {
      * @param account   The beneficiary account.
      * @param tea       The {@code Total Earned Amount} of this account.
      * @param signature The signature
-     * @throws Exception if the provided signature is invalid, the funds have already been
-     *                   withdrawn, or the transfer was not successful.
      */
     public static void withdraw(Hash160 account, int tea, ByteString signature) {
 
@@ -200,13 +186,10 @@ public class PreSignNeo {
      * @param accounts The accounts to pay out to.
      * @param teas     The corresponding {@code Total Earned Amount}s.
      * @return a list of all accounts that did not receive any payment.
-     * @throws Exception if the transaction was not witnessed by the contract owner or the
-     *                   parameters are not of equal length.
      */
-    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas)
+    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas) {
     // or batchWithdraw(accounts, teas, tea_withDeductedFee)
     // ask claude if int is always 256 or if it is converted to byte[] and the size of this is used.
-            throws Exception {
 
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int nrAccounts = accounts.length;
@@ -261,18 +244,13 @@ public class PreSignNeo {
      * Changes the curve that is used to create the signature for withdrawals.
      *
      * @param newCurve The new curve.
-     * @throws Exception if the curve is not allowed.
      */
-    public static void changeCurve(int newCurve) throws Exception {
+    public static void changeCurve(int newCurve) {
         int curve = contractMap.getInteger(curveKey);
-        if (newCurve == curve) {
-            return;
-        }
+        assert newCurve != curve : "Curve already set.";
         // Secp256k1 = 22
         // Secp256r1 = 23 (default)
-        if (newCurve != 22 && newCurve != 23) {
-            throw new Exception("Curve not supported.");
-        }
+        assert newCurve == 22 || newCurve == 23 : "Curve not supported.";
         contractMap.put(curveKey, newCurve);
     }
 
@@ -283,25 +261,18 @@ public class PreSignNeo {
      * @param account The account to set the {@code Total Earned Amount} for.
      * @param oldTea  The previous {@code Total Earned Amount} for that account.
      * @param newTea  The new {@code Total Earned Amount} for that account.
-     * @throws Exception if the caller is not allowed to invoke this method.
      */
-    public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) throws Exception {
+    public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-
-        ByteString alreadyWithdrawn = withdrawalMap.get(account.toByteString());
-        int alreadyWithdrawnInt;
-        if (alreadyWithdrawn == null) {
-            alreadyWithdrawnInt = 0;
-        } else {
-            alreadyWithdrawnInt = alreadyWithdrawn.toInt();
-            if (alreadyWithdrawnInt != oldTea) {
-                throw new Exception("Funds were withdrawn in the meantime.");
-            }
-        }
-        if (newTea < alreadyWithdrawnInt) {
-            throw new Exception("The provided amount is lower than the already withdrawn amount.");
-        }
+        int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
+        assert alreadyWithdrawn != oldTea : "Funds were withdrawn in the meantime.";
+        assert newTea < alreadyWithdrawn : "The provided amount is lower than the already withdrawn amount.";
         withdrawalMap.put(account.toByteString(), newTea);
+    }
+
+    @Safe
+    public static int getTotalEarnedAmount(Hash160 account) {
+        return withdrawalMap.get(account.toByteString()).toIntOrZero();
     }
 
     @DisplayName("onContractFunding")
