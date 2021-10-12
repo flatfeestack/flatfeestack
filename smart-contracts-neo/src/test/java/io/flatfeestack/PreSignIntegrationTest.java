@@ -20,10 +20,7 @@ import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.transaction.Witness;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
-import io.neow3j.types.ContractParameter;
-import io.neow3j.types.Hash160;
-import io.neow3j.types.Hash256;
-import io.neow3j.types.NeoVMStateType;
+import io.neow3j.types.*;
 import io.neow3j.utils.ArrayUtils;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
@@ -129,6 +126,121 @@ public class PreSignIntegrationTest {
         return signMessage(message, signer.getECKeyPair());
     }
 
+    // Helper methods
+
+    private static void compileContracts() throws IOException {
+        compileContract(PreSignNeo.class.getCanonicalName());
+    }
+
+    private static void compileContract(String canonicalName) throws IOException {
+        CompilationUnit res = new Compiler().compile(canonicalName);
+
+        // Write contract (compiled, NEF) to the disk
+        Path buildNeow3jPath = Paths.get("build", "neow3j");
+        buildNeow3jPath.toFile().mkdirs();
+        writeNefFile(res.getNefFile(), res.getManifest().getName(), buildNeow3jPath);
+
+        // Write manifest to the disk
+        writeContractManifestFile(res.getManifest(), buildNeow3jPath);
+    }
+
+    private static void fundPreSignContract() throws Throwable {
+        BigInteger balanceOf = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(7000));
+        Hash256 txHash = gasToken
+                .transfer(owner, preSignContract.getScriptHash(), fundAmount)
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        NeoApplicationLog log = neow3j.getApplicationLog(txHash).send().getApplicationLog();
+        System.out.println(log.getExecutions().get(0).getNotifications().get(0).getEventName());
+    }
+
+    private static void fundAccounts(BigInteger gasFractions, Account... accounts) throws Throwable {
+        BigInteger minAmount = gasToken.toFractions(new BigDecimal("500"));
+        BigInteger committeeBalance = gasToken.getBalanceOf(committee);
+        List<Hash256> txHashes = new ArrayList<>();
+        for (Account a : accounts) {
+            if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
+                NeoSendRawTransaction rawTx = gasToken
+                        .transfer(committee, a.getScriptHash(), gasFractions)
+                        .getUnsignedTransaction()
+                        .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
+                        .send();
+                Hash256 txHash = rawTx.getSendRawTransaction()
+                        .getHash();
+                txHashes.add(txHash);
+                System.out.println("Funded account " + a.getAddress());
+            }
+        }
+        for (Hash256 h : txHashes) {
+            waitUntilTransactionIsExecuted(h, neow3j);
+        }
+    }
+
+    private static SmartContract deployPreSignNeo() throws Throwable {
+        File nefFile = new File(PRE_SIGN_NEO_NEF.toUri());
+        NefFile nef = NefFile.readFromFile(nefFile);
+
+        File manifestFile = new File(PRE_SIGN_NEO_MANIFEST.toUri());
+        ContractManifest manifest = getObjectMapper()
+                .readValue(manifestFile, ContractManifest.class);
+        try {
+            Hash256 txHash = new ContractManagement(neow3j)
+                    .deploy(nef, manifest,
+                            publicKey(owner.getECKeyPair().getPublicKey().getEncoded(true)))
+                    .signers(none(owner))
+                    .sign()
+                    .send()
+                    .getSendRawTransaction()
+                    .getHash();
+            waitUntilTransactionIsExecuted(txHash, neow3j);
+            System.out.println("Deployed PreSign contract");
+        } catch (TransactionConfigurationException e) {
+            System.out.println(e.getMessage());
+        }
+        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
+                manifest.getName());
+        return new SmartContract(hash, neow3j);
+    }
+
+    private BigInteger getContractBalance() throws IOException {
+        return getBalance(preSignContract.getScriptHash());
+    }
+
+    private BigInteger getBalance(Hash160 account) throws IOException {
+        return gasToken.getBalanceOf(account);
+    }
+
+    @Test
+    public void testVerifySig() throws IOException {
+        BigInteger balanceContract = getContractBalance();
+        // Dev1 earned 12 gas for the first time
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
+                reverseArray(teaDev1.toByteArray()));
+
+        Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
+        InvocationResult invocationResult = preSignContract.callInvokeFunction("verifySig",
+                        asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) // returns false
+//                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
+                .getInvocationResult();
+        System.out.println("#################");
+        System.out.println(invocationResult.getStack().get(0).getBoolean());
+        System.out.println("#################");
+    }
+
+    @Test
+    public void testConcat() throws IOException {
+        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
+                reverseArray(teaDev1.toByteArray()));
+        System.out.println(dev1.getScriptHash());
+        System.out.println(Numeric.toHexStringNoPrefix(message));
+    }
+
     @Test
     public void testFundContract() throws Throwable {
         BigInteger contractBalance = gasToken.getBalanceOf(preSignContract.getScriptHash());
@@ -187,8 +299,6 @@ public class PreSignIntegrationTest {
 
         // Create a signature
         Sign.SignatureData signatureData = createSignature(dev1.getScriptHash(), teaDev1, owner);
-        System.out.println(signatureData.getV());
-        signatureData.getConcatenated();
 
         // Dev1 invokes withdraw method with signatureData
         Transaction tx = preSignContract.invokeFunction(
@@ -217,34 +327,11 @@ public class PreSignIntegrationTest {
     }
 
     @Test
-    public void testVerifySig() throws IOException {
-        BigInteger balanceContract = getContractBalance();
-        // Dev1 earned 12 gas for the first time
-        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
-        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
-                reverseArray(teaDev1.toByteArray()));
-
-        Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
-        InvocationResult invocationResult = preSignContract.callInvokeFunction("verifySig",
-                        asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) // returns false
-//                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
-                .getInvocationResult();
-        System.out.println("#################");
-        System.out.println(invocationResult.getStack().get(0).getBoolean());
-        System.out.println("#################");
-    }
-
-    @Test
-    public void testConcat() throws IOException {
-        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
-        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
-                reverseArray(teaDev1.toByteArray()));
-        System.out.println(dev1.getScriptHash());
-        System.out.println(Numeric.toHexStringNoPrefix(message));
-    }
-
-    @Test
     public void testWithdrawWithWitness() throws Throwable {
+        // check if second contract owner is needed that does not hold any funds
+        // to prevent paying for the transaction.
+        // Todo: Test, if the second signer automatically pays for the fees, if the first one can not cover them.
+
         BigInteger initialBalanceDev1 = gasToken.getBalanceOf(dev1);
         BigInteger initialBalanceOwner = gasToken.getBalanceOf(owner);
         BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(2.2));
@@ -269,127 +356,23 @@ public class PreSignIntegrationTest {
         NeoSendRawTransaction result = tx.send();
         Hash256 txHash = result.getSendRawTransaction().getHash();
 
-        // ##############
-//        txToBePreSignedByOwner =
-//                preSignContract.invokeFunction(withdraw, hash160(dev1),
-//                        integer(dev1Amount.multiply(BigInteger.valueOf(2))))
-//                        .wallet(ownerWallet)
-//                        .signers(none(dev1),
-//                                calledByEntry(owner).setAllowedContracts(preSignContract
-//                                .getScriptHash()))
-//                        .getUnsignedTransaction();
-//
-//        ownerWitness =
-//                Witness.create(txToBePreSignedByOwner.getHashData(), owner.getECKeyPair());
-//        witnessBytes = ownerWitness.toArray();
-//        preSignedTxBytes = txToBePreSignedByOwner.toArray();
-//
-//        tx = NeoSerializableInterface.from(preSignedTxBytes, Transaction.class);
-//        tx.setNeow3j(neow3j);
-//        dev1Witness = Witness.create(tx.getHashData(), dev1.getECKeyPair());
-//        tx.addWitness(dev1Witness);
-//        ownerWitnessFromBytes = NeoSerializableInterface.from(witnessBytes, Witness.class);
-//        tx.addWitness(ownerWitnessFromBytes);
-//
-//        result = tx.send();
-//        txHash = result.getSendRawTransaction().getHash();
-        //###########################
-
         waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        BigInteger networkFee = BigInteger.valueOf(tx.getNetworkFee());
+        BigInteger systemFee = BigInteger.valueOf(tx.getSystemFee());
+        BigInteger totalFee = networkFee.add(systemFee);
+
         BigInteger dev1FinalBalance = gasToken.getBalanceOf(dev1);
-        BigInteger ownerFinalBalance = gasToken.getBalanceOf(owner);
-        assertThat(dev1FinalBalance, is(initialBalanceDev1.add(teaDev1)));
+        assertThat(dev1FinalBalance, is(initialBalanceDev1.add(teaDev1).subtract(totalFee)));
+
+        StackItem teaOnContract = preSignContract.callInvokeFunction("getTotalEarnedAmount", asList(hash160(dev1)))
+                .getInvocationResult().getStack().get(0);
+        assertThat(teaOnContract.getType(), is(StackItemType.INTEGER));
+        assertThat(teaOnContract.getInteger(), is(teaDev1));
     }
 
     @Test
     public void testBatchPayout() {
-    }
-
-    // Helper methods
-
-    private static void compileContracts() throws IOException {
-        compileContract(PreSignNeo.class.getCanonicalName());
-    }
-
-    private static void compileContract(String canonicalName) throws IOException {
-        CompilationUnit res = new Compiler().compile(canonicalName);
-
-        // Write contract (compiled, NEF) to the disk
-        Path buildNeow3jPath = Paths.get("build", "neow3j");
-        buildNeow3jPath.toFile().mkdirs();
-        writeNefFile(res.getNefFile(), res.getManifest().getName(), buildNeow3jPath);
-
-        // Write manifest to the disk
-        writeContractManifestFile(res.getManifest(), buildNeow3jPath);
-    }
-
-    private static void fundPreSignContract() throws Throwable {
-        BigInteger balanceOf = gasToken.getBalanceOf(preSignContract.getScriptHash());
-        BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(7000));
-        Hash256 txHash = gasToken
-                .transfer(owner, preSignContract.getScriptHash(), fundAmount)
-                .sign()
-                .send()
-                .getSendRawTransaction()
-                .getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        NeoApplicationLog log = neow3j.getApplicationLog(txHash).send().getApplicationLog();
-        System.out.println(log.getExecutions().get(0).getNotifications().get(0).getEventName());
-    }
-
-    private static void fundAccounts(BigInteger gasFractions, Account... accounts) throws Throwable {
-        BigInteger minAmount = gasToken.toFractions(new BigDecimal("500"));
-        List<Hash256> txHashes = new ArrayList<>();
-        for (Account a : accounts) {
-            if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
-                Hash256 txHash = gasToken
-                        .transfer(committee, a.getScriptHash(), gasFractions)
-                        .getUnsignedTransaction()
-                        .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
-                        .send()
-                        .getSendRawTransaction()
-                        .getHash();
-                txHashes.add(txHash);
-                System.out.println("Funded account " + a.getAddress());
-            }
-        }
-        for (Hash256 h : txHashes) {
-            waitUntilTransactionIsExecuted(h, neow3j);
-        }
-    }
-
-    private static SmartContract deployPreSignNeo() throws Throwable {
-        File nefFile = new File(PRE_SIGN_NEO_NEF.toUri());
-        NefFile nef = NefFile.readFromFile(nefFile);
-
-        File manifestFile = new File(PRE_SIGN_NEO_MANIFEST.toUri());
-        ContractManifest manifest = getObjectMapper()
-                .readValue(manifestFile, ContractManifest.class);
-        try {
-            Hash256 txHash = new ContractManagement(neow3j)
-                    .deploy(nef, manifest,
-                            publicKey(owner.getECKeyPair().getPublicKey().getEncoded(true)))
-                    .signers(none(owner))
-                    .sign()
-                    .send()
-                    .getSendRawTransaction()
-                    .getHash();
-            waitUntilTransactionIsExecuted(txHash, neow3j);
-            System.out.println("Deployed PreSign contract");
-        } catch (TransactionConfigurationException e) {
-            System.out.println(e.getMessage());
-        }
-        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
-                manifest.getName());
-        return new SmartContract(hash, neow3j);
-    }
-
-    private BigInteger getContractBalance() throws IOException {
-        return getBalance(preSignContract.getScriptHash());
-    }
-
-    private BigInteger getBalance(Hash160 account) throws IOException {
-        return gasToken.getBalanceOf(account);
     }
 
 }
