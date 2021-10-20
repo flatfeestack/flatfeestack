@@ -48,13 +48,13 @@ public class PayoutNeo {
     static final byte[] ownerKey = toByteArray((byte) 0x02);
 
     /**
-     * The prefix for the withdrawalMap StorageMap
+     * The prefix for the total earned amount ({@code tea}) StorageMap
      */
-    static final byte[] withdrawalMapPrefix = toByteArray((byte) 0x10);
+    static final byte[] teaMapPrefix = toByteArray((byte) 0x10);
     /**
      * StorageMap to store k-v pairs mapping addresses (key) to their {@code Total Earned Amount}
      */
-    static final StorageMap withdrawalMap = ctx.createMap(withdrawalMapPrefix);
+    static final StorageMap teaMap = ctx.createMap(teaMapPrefix);
 
     /**
      * Changes the contract owner.
@@ -89,10 +89,10 @@ public class PayoutNeo {
      */
     public static void withdraw(Hash160 account, int tea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
-        withdrawalMap.put(account.toByteString(), tea);
-        int amountToWithdraw = tea - alreadyWithdrawn;
+        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
+        int amountToWithdraw = tea - storedTea;
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        teaMap.put(account.toByteString(), tea);
         boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
         assert transfer : "Transfer was not successful.";
     }
@@ -120,27 +120,20 @@ public class PayoutNeo {
      * @param signature The signature
      */
     public static void withdraw(Hash160 account, int tea, ByteString signature) {
-
         // The message that was signed by the owner and resulted in the provided signature.
         ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
-
         // Verify the signature
         boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 23);
         assert verified : "Signature invalid.";
-
-        // Get the already withdrawn amount
-        int withdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
-
-        // Calculate the payout amount
-        int amountToWithdraw = tea - withdrawn;
+        // Get the stored tea
+        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
+        // Calculate the amount to withdraw
+        int amountToWithdraw = tea - storedTea;
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
-
         // Update the withdrawalMap with the new tea
-        withdrawalMap.put(account.toByteString(), tea);
-
+        teaMap.put(account.toByteString(), tea);
         // Transfer the earned tokens to the account
-        Hash160 executingScriptHash = getExecutingScriptHash(); // This contract's script hash
-        boolean transfer = GasToken.transfer(executingScriptHash, account, amountToWithdraw, null);
+        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
         assert transfer : "Transfer was not successful.";
     }
 
@@ -151,14 +144,17 @@ public class PayoutNeo {
      * <p>
      * The service fee is deducted off-chain by the contract owner, when providing the first signature after each
      * batch payout.
+     * <p>
+     * The pre-signatures that are provided for accounts that are included in this batch payout should include the
+     * amount being the {@code tea} minus the {@code serviceFee}.
      *
-     * @param accounts The accounts to pay out to.
-     * @param teas     The corresponding {@code Total Earned Amount}s.
+     * @param accounts   The accounts to pay out to.
+     * @param teas       The corresponding {@code Total Earned Amount}s.
+     * @param serviceFee The service fee that each developer pays to be included in this batch payout.
      * @return a list of all accounts that did not receive any payment.
      */
     public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas, int serviceFee) {
         // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
-
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         assert accounts.length == teas.length : "The parameters must have the same length.";
         List<Hash160> unsuccessful = new List<>();
@@ -167,27 +163,27 @@ public class PayoutNeo {
         Hash160 a;
         int tea;
         for (int i = 0; i < accounts.length; i++) {
-            // TODO: 12.10.21 Is it cheaper to store in local var or read every time used?
+            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
             //  list.length and entry from list
             a = accounts[i];
             tea = teas[i];
-            int oldTea = withdrawalMap.get(a.toByteString()).toIntOrZero();
-            withdrawalMap.put(a.toByteString(), tea + serviceFee);
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            teaMap.put(a.toByteString(), tea + serviceFee);
             int payoutAmount = tea - oldTea - serviceFee;
             if (payoutAmount <= 0) {
-                // TODO: 12.10.21 Check this variation.
+                // TODO: 12.10.21 Evaluation -> Check this variation.
                 //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
                 //  owner has not calculated the payout correctly and should not have included this account in the
                 //  batch payout in the first place.
                 //  With the above mentioned, it is not clear who was mistaken.
-                withdrawalMap.put(a.toByteString(), oldTea + serviceFee);
+                teaMap.put(a.toByteString(), oldTea + serviceFee);
                 unsuccessful.add(a);
                 continue;
             }
             transfer = GasToken.transfer(contractHash, a, payoutAmount, null);
             if (!transfer) {
-                // TODO: 12.10.21 Should the service fee be deducted if the transfer goes wrong?
-                withdrawalMap.put(a.toByteString(), oldTea + serviceFee);
+                // TODO: 12.10.21 Evaluation -> Should the service fee be deducted if the transfer goes wrong?
+                teaMap.put(a.toByteString(), oldTea + serviceFee);
                 unsuccessful.add(a);
             }
         }
@@ -212,15 +208,15 @@ public class PayoutNeo {
         //assert checkWitness(account) : "No authorization.";
         // If the developer is required to witness this, the method looses its blacklist functionality.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
-        int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
+        int alreadyWithdrawn = teaMap.get(account.toByteString()).toIntOrZero();
         assert alreadyWithdrawn != oldTea : "Funds were withdrawn in the meantime.";
         assert newTea < alreadyWithdrawn : "The provided amount is lower than the already withdrawn amount.";
-        withdrawalMap.put(account.toByteString(), newTea);
+        teaMap.put(account.toByteString(), newTea);
     }
 
     @Safe
     public static int getTotalEarnedAmount(Hash160 account) {
-        return withdrawalMap.get(account.toByteString()).toIntOrZero();
+        return teaMap.get(account.toByteString()).toIntOrZero();
     }
 
     @DisplayName("onContractFunding")
