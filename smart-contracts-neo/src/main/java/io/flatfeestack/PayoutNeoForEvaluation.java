@@ -4,6 +4,7 @@ import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
 import io.neow3j.devpack.List;
+import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -22,9 +23,9 @@ import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
-@Permission(nativeContract = NativeContract.GasToken)
 @Permission(nativeContract = NativeContract.CryptoLib)
-public class PayoutNeo {
+@Permission(nativeContract = NativeContract.GasToken)
+public class PayoutNeoForEvaluation {
 
     /**
      * The storage context
@@ -42,7 +43,9 @@ public class PayoutNeo {
     /**
      * Key of the contract owner public key in the contractMap.
      * <p>
-     * The method withdraw(Hash160, int, String) requires an ECPoint to be stored from the owner.
+     * The method {@code withdraw(Hash160, int, String)} requires an ECPoint of the owner to be stored, since the
+     * method {@code verifyWithECDsa} of the native contract {@code CryptoLib} requires the public key.
+     * <p>
      * This restricts the owner from being a multi-sig account.
      */
     static final byte[] ownerKey = toByteArray((byte) 0x02);
@@ -63,7 +66,7 @@ public class PayoutNeo {
      */
     public static void changeOwner(ECPoint newOwner) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert checkWitness(newOwner) : "New owner must witness this change.";
+        assert checkWitness(newOwner) : "The new owner must witness this change.";
         contractMap.put(ownerKey, newOwner.toByteString());
     }
 
@@ -79,15 +82,14 @@ public class PayoutNeo {
 
     /**
      * Withdraws the earned amount.
-     * <p>
-     * This solution approach may need a second contract owner address that does not hold any funds.
-     * In order to guarantee, that the beneficiary account actually pays for the transaction.
-     * Otherwise, the beneficiary could transfer any funds to another address, so that the
      *
      * @param account The beneficiary account.
-     * @param tea     The {@code Total Earned Amount} of this account.
+     * @param tea     The total earned amount of this account.
      */
     public static void withdraw(Hash160 account, int tea) {
+        // TODO: 20.10.21 Evaluation -> This solution approach may need a second contract owner address that does not
+        //  hold any funds. In order to guarantee, that the beneficiary account (and not the contract owner) pays for
+        //  the transaction.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
         int amountToWithdraw = tea - storedTea;
@@ -158,7 +160,6 @@ public class PayoutNeo {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         assert accounts.length == teas.length : "The parameters must have the same length.";
         List<Hash160> unsuccessful = new List<>();
-        Hash160 contractHash = getExecutingScriptHash();
         boolean transfer;
         Hash160 a;
         int tea;
@@ -180,7 +181,7 @@ public class PayoutNeo {
                 unsuccessful.add(a);
                 continue;
             }
-            transfer = GasToken.transfer(contractHash, a, payoutAmount, null);
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
             if (!transfer) {
                 // TODO: 12.10.21 Evaluation -> Should the service fee be deducted if the transfer goes wrong?
                 teaMap.put(a.toByteString(), oldTea + serviceFee);
@@ -190,21 +191,110 @@ public class PayoutNeo {
         return unsuccessful;
     }
 
+    // service fee is deducted off-chain - as soon as it is deducted, the account is added to upcoming batchPayout list.
+    //
+    // add case with service fee -> if user wants to be included without further expected increase of her tea.
+    // TODO: 20.10.21 Evaluation -> find cheapest method to solve first and second case.
+    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas) {
+        // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert accounts.length == teas.length : "The parameters must have the same length.";
+        List<Hash160> unsuccessful = new List<>();
+        boolean transfer;
+        Hash160 a;
+        int tea;
+        for (int i = 0; i < accounts.length; i++) {
+            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
+            //  list.length and entry from list
+            a = accounts[i];
+            tea = teas[i];
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            teaMap.put(a.toByteString(), tea);
+            int payoutAmount = tea - oldTea;
+            if (payoutAmount <= 0) {
+                // TODO: 12.10.21 Evaluation -> Check this variation.
+                //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
+                //  owner has not calculated the payout correctly and should not have included this account in the
+                //  batch payout in the first place.
+                //  With the above mentioned, it is not clear who was mistaken.
+                teaMap.put(a.toByteString(), oldTea);
+                unsuccessful.add(a);
+                continue;
+            }
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            if (!transfer) {
+                // TODO: 12.10.21 Evaluation -> Should the service fee be deducted if the transfer goes wrong?
+                teaMap.put(a.toByteString(), oldTea);
+                unsuccessful.add(a);
+            }
+        }
+        return unsuccessful;
+    }
+
     /**
-     * This method provides an address blacklist functionality.
-     * <p>
-     * E.g., this may be used in the case a user wants to change her address. In that case, the contract owner
-     * can set the {@code Tea} to the highest {@code Tea} of that account for which a signature was provided.
-     * The new address can then be initialized with a {@code Tea} that is equal to the current {@code Tea} that is
-     * stored off-chain minus the here provided {@code oldTea}.
+     * Same as method above, but allows for individual service fee.
+     *
+     * @param accounts          The accounts to pay out to.
+     * @param teas              The total earned amounts that are used to store in the contract storage.
+     * @param teasForWithdrawal The total earned amounts that are used for the calculation of the payout amount.
+     * @return a list of all accounts that did not receive any payment.
+     */
+    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas, int[] teasForWithdrawal) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
+        assert (accounts.length == teas.length) && (accounts.length == teasForWithdrawal.length) : "The parameters " +
+                "must have the same length.";
+        List<Hash160> unsuccessful = new List<>();
+        boolean transfer;
+        Hash160 a;
+        int teaForWithdrawal;
+        int payoutAmount;
+        for (int i = 0; i < accounts.length; i++) {
+            a = accounts[i];
+            teaForWithdrawal = teasForWithdrawal[i];
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            payoutAmount = teaForWithdrawal - oldTea;
+            if (payoutAmount <= 0) {
+                // TODO: 20.10.21 Evaluation -> Should the dev be charged a fee if this is reached?
+                unsuccessful.add(a);
+                continue;
+            }
+            teaMap.put(a.toByteString(), teas[i]);
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            if (!transfer) {
+                teaMap.put(a.toByteString(), oldTea);
+                unsuccessful.add(a);
+            }
+        }
+        return unsuccessful;
+    }
+
+    public static List<Hash160> batchPayout(Map<Hash160, Integer> payoutMap) {
+        List<Hash160> unsuccessful = new List<>();
+        int payoutAmount;
+        for (Hash160 a : payoutMap.keys()) {
+            int tea = payoutMap.get(a);
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            payoutAmount = tea - oldTea;
+
+        }
+    }
+
+    /**
+     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier or
+     * in case a developer may want to change her address without withdrawing the earned funds to the old address (e.g.
+     * in case of a loss of the private key).
      * <p>
      * The {@code oldTea} is checked, so that no immediate withdrawal takes place before executing this.
+     * <p>
+     * In the case of an address change, the contract owner can set the {@code Tea} to the highest {@code Tea} of
+     * that account for which a signature was provided. The new address can then be initialized with a {@code Tea}
+     * that is equal to the current {@code Tea} that is stored off-chain minus the here provided {@code oldTea}.
      *
      * @param account The account to set the {@code Total Earned Amount} for.
      * @param oldTea  The previous {@code Total Earned Amount} for that account.
      * @param newTea  The new {@code Total Earned Amount} for that account.
      */
-    public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) {
+    public static void updateTea(Hash160 account, int oldTea, int newTea) {
         //assert checkWitness(account) : "No authorization.";
         // If the developer is required to witness this, the method looses its blacklist functionality.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
@@ -214,8 +304,14 @@ public class PayoutNeo {
         teaMap.put(account.toByteString(), newTea);
     }
 
+    /**
+     * Gets the total earned amount ({@code tea}) of an account.
+     *
+     * @param account The account.
+     * @return the total earned amount.
+     */
     @Safe
-    public static int getTotalEarnedAmount(Hash160 account) {
+    public static int getTea(Hash160 account) {
         return teaMap.get(account.toByteString()).toIntOrZero();
     }
 
@@ -223,11 +319,11 @@ public class PayoutNeo {
     private static Event2Args<Hash160, Integer> onContractFunding;
 
     /**
-     * This method is called if the contract is being funded.
+     * This method is called when the contract receives NEP-17 tokens.
      *
      * @param from   The sender.
      * @param amount The amount transferred to this contract.
-     * @param data   Arbitrary data.
+     * @param data   Arbitrary data. This field is required by standard and is not used here.
      */
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {

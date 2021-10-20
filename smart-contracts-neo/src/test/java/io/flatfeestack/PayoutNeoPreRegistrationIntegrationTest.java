@@ -185,7 +185,7 @@ public class PayoutNeoPreRegistrationIntegrationTest {
     // Helper methods
 
     private static void compileContracts() throws IOException {
-        compileContract(PayoutNeo.class.getCanonicalName());
+        compileContract(PayoutNeoForEvaluation.class.getCanonicalName());
     }
 
     private static void compileContract(String canonicalName) throws IOException {
