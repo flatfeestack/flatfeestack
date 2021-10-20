@@ -46,10 +46,6 @@ public class PayoutNeo {
      * This restricts the owner from being a multi-sig account.
      */
     static final byte[] ownerKey = toByteArray((byte) 0x02);
-    /**
-     * Key to the curve used in the signature verification
-     */
-    static final byte[] curveKey = toByteArray((byte) 0x03);
 
     /**
      * The prefix for the withdrawalMap StorageMap
@@ -128,12 +124,8 @@ public class PayoutNeo {
         // The message that was signed by the owner and resulted in the provided signature.
         ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
 
-        // The curve that was used for the signature.
-        // TODO: 09.10.21 Not necessary?
-        int curve = contractMap.getInteger(curveKey);
-
         // Verify the signature
-        boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) curve);
+        boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 23);
         assert verified : "Signature invalid.";
 
         // Get the already withdrawn amount
@@ -203,31 +195,6 @@ public class PayoutNeo {
     }
 
     /**
-     * Gets the curve that is used to create the signature for withdrawals.
-     *
-     * @return the curve.
-     */
-    @Safe
-    public static int getCurve() {
-        return contractMap.getInteger(curveKey);
-    }
-
-    /**
-     * Changes the curve that is used to create the signature for withdrawals.
-     *
-     * @param newCurve The new curve.
-     */
-    public static void changeCurve(int newCurve) {
-        // TODO: 15.10.21 This method could be dangerous, since it would invalidate all pre-signatures!!!
-        int curve = contractMap.getInteger(curveKey);
-        assert newCurve != curve : "Curve already set.";
-        // Secp256k1 = 22
-        // Secp256r1 = 23 (default)
-        assert newCurve == 22 || newCurve == 23 : "Curve not supported.";
-        contractMap.put(curveKey, newCurve);
-    }
-
-    /**
      * This method provides an address blacklist functionality.
      * <p>
      * E.g., this may be used in the case a user wants to change her address. In that case, the contract owner
@@ -242,7 +209,8 @@ public class PayoutNeo {
      * @param newTea  The new {@code Total Earned Amount} for that account.
      */
     public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) {
-        assert checkWitness(account) : "No authorization."; // The developer should also witness this!
+        //assert checkWitness(account) : "No authorization.";
+        // If the developer is required to witness this, the method looses its blacklist functionality.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
         assert alreadyWithdrawn != oldTea : "Funds were withdrawn in the meantime.";
@@ -271,7 +239,7 @@ public class PayoutNeo {
     }
 
     /**
-     * Upon deployment, the initial owner is set and the curve is set to the secp256r1 curve.
+     * Upon deployment, the initial owner is set.
      *
      * @param data   The initial owner's public key.
      * @param update True, if the contract is being deployed, false if it is updated.
@@ -281,7 +249,6 @@ public class PayoutNeo {
         if (!update) {
             ECPoint initialOwner = (ECPoint) data;
             contractMap.put(ownerKey, initialOwner.toByteString());
-            contractMap.put(curveKey, 23);
         }
     }
 
