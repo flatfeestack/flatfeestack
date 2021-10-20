@@ -10,12 +10,13 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.GasToken;
 
 import static io.neow3j.devpack.StringLiteralHelper.addressToScriptHash;
 
-@Permission(contract = "0xd2a4cff31913016155e38e474a2c06d08be276cf")
-public class PreSignNeoWithPreRegister {
+@Permission(nativeContract = NativeContract.GasToken)
+public class PayoutNeoWithPreRegister {
 
     static final StorageContext ctx = Storage.getStorageContext();
     static final byte[] contractMapPrefix = Helper.toByteArray((byte) 0x01);
@@ -50,7 +51,7 @@ public class PreSignNeoWithPreRegister {
         if (!Runtime.checkWitness(new Hash160(contractMap.get(ownerKey)))) {
             throw new Exception("No authorization.");
         }
-        int alreadyWithdrawn = balanceMap.get(account.toByteString()).toInteger();
+        int alreadyWithdrawn = balanceMap.get(account.toByteString()).toInt();
         int amountToWithdraw = totalAmountOverall - alreadyWithdrawn;
         if (amountToWithdraw <= 0) {
             throw new Exception("These funds have already been withdrawn.");

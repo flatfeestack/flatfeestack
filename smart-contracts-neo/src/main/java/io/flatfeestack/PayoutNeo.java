@@ -12,6 +12,7 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.events.Event2Args;
@@ -21,9 +22,9 @@ import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
-@Permission(contract = "0xd2a4cff31913016155e38e474a2c06d08be276cf") // GasToken
-@Permission(contract = "0x726cb6e0cd8628a1350a611384688911ab75f51b") // CryptoLib
-public class PreSignNeo {
+@Permission(nativeContract = NativeContract.GasToken)
+@Permission(nativeContract = NativeContract.CryptoLib)
+public class PayoutNeo {
 
     /**
      * The storage context
@@ -98,21 +99,6 @@ public class PreSignNeo {
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
         boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
         assert transfer : "Transfer was not successful.";
-        onWithdrawal.fire(account, tea);
-    }
-
-    // 1. get the script hash's byte array in little endian
-    // 2. get the integer's byte array
-    // 3. reverse the integer's byte array
-    // 4. concatenate the little endian script hash's byte array with the reversed byte array of the integer amount
-    // 5. Sign this concatenation
-    public static boolean verifySig(Hash160 account, int tea, ByteString signature) {
-        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
-        return CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 0x17);
-    }
-
-    public static byte[] concatAccInt(Hash160 a, int i) {
-        return concat(a.toByteArray(), toByteArray(i));
     }
 
     /**
@@ -164,71 +150,57 @@ public class PreSignNeo {
         Hash160 executingScriptHash = getExecutingScriptHash(); // This contract's script hash
         boolean transfer = GasToken.transfer(executingScriptHash, account, amountToWithdraw, null);
         assert transfer : "Transfer was not successful.";
-
-        onWithdrawal.fire(account, tea);
-    }
-
-    // return list of all unsuccessful transfers - check if transfer 0 returns true
-    public static void batchPayout(Hash160[] accounts, int[] teas, int[] totalAmountForPayout) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int nrAccounts = accounts.length;
-        assert nrAccounts == teas.length && nrAccounts == totalAmountForPayout.length :
-                "The parameters must have the same length.";
-        // withdrawal loop
-        // return list of hash160 or map... whatever is cheaper and serves the case.
     }
 
     /**
      * Withdraws the earned amount for multiple accounts.
      * <p>
      * Must be invoked by the contract owner.
+     * <p>
+     * The service fee is deducted off-chain by the contract owner, when providing the first signature after each
+     * batch payout.
      *
      * @param accounts The accounts to pay out to.
      * @param teas     The corresponding {@code Total Earned Amount}s.
      * @return a list of all accounts that did not receive any payment.
      */
-    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas) {
-    // or batchWithdraw(accounts, teas, tea_withDeductedFee)
-    // ask claude if int is always 256 or if it is converted to byte[] and the size of this is used.
+    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas, int serviceFee) {
+        // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
 
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int nrAccounts = accounts.length;
-        assert nrAccounts == teas.length : "The parameters must have the same length.";
+        assert accounts.length == teas.length : "The parameters must have the same length.";
         List<Hash160> unsuccessful = new List<>();
         Hash160 contractHash = getExecutingScriptHash();
         boolean transfer;
         Hash160 a;
         int tea;
-        for (int i = 0; i < nrAccounts; i++) {
-            // is it cheaper to store in local var or read every time used?
+        for (int i = 0; i < accounts.length; i++) {
+            // TODO: 12.10.21 Is it cheaper to store in local var or read every time used?
+            //  list.length and entry from list
             a = accounts[i];
             tea = teas[i];
-            ByteString withdrawn = withdrawalMap.get(a.toByteString());
-            int toWithdraw;
-            if (withdrawn == null) {
-                toWithdraw = tea;
-            } else {
-                int withdrawnInt = withdrawn.toInt();
-                if (withdrawnInt >= tea) {
-                    unsuccessful.add(a);
-                    continue;
-                } else {
-                    toWithdraw = tea - withdrawn.toInt();
-                }
+            int oldTea = withdrawalMap.get(a.toByteString()).toIntOrZero();
+            withdrawalMap.put(a.toByteString(), tea + serviceFee);
+            int payoutAmount = tea - oldTea - serviceFee;
+            if (payoutAmount <= 0) {
+                // TODO: 12.10.21 Check this variation.
+                //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
+                //  owner has not calculated the payout correctly and should not have included this account in the
+                //  batch payout in the first place.
+                //  With the above mentioned, it is not clear who was mistaken.
+                withdrawalMap.put(a.toByteString(), oldTea + serviceFee);
+                unsuccessful.add(a);
+                continue;
             }
-            transfer = GasToken.transfer(contractHash, a, toWithdraw, null);
-            if (transfer) {
-                withdrawalMap.put(a.toByteString(), toWithdraw);
-            } else {
+            transfer = GasToken.transfer(contractHash, a, payoutAmount, null);
+            if (!transfer) {
+                // TODO: 12.10.21 Should the service fee be deducted if the transfer goes wrong?
+                withdrawalMap.put(a.toByteString(), oldTea + serviceFee);
                 unsuccessful.add(a);
             }
         }
         return unsuccessful;
     }
-
-    // Not sure, whether this event provides any useful function
-    @DisplayName("onWithdrawal")
-    private static Event2Args<Hash160, Integer> onWithdrawal;
 
     /**
      * Gets the curve that is used to create the signature for withdrawals.
@@ -246,6 +218,7 @@ public class PreSignNeo {
      * @param newCurve The new curve.
      */
     public static void changeCurve(int newCurve) {
+        // TODO: 15.10.21 This method could be dangerous, since it would invalidate all pre-signatures!!!
         int curve = contractMap.getInteger(curveKey);
         assert newCurve != curve : "Curve already set.";
         // Secp256k1 = 22
@@ -255,15 +228,22 @@ public class PreSignNeo {
     }
 
     /**
-     * This method provides a blacklist functionality. The old {@code Total Earned Amount} is checked, so
-     * that no immediate withdrawal takes place before executing this.
+     * This method provides an address blacklist functionality.
+     * <p>
+     * E.g., this may be used in the case a user wants to change her address. In that case, the contract owner
+     * can set the {@code Tea} to the highest {@code Tea} of that account for which a signature was provided.
+     * The new address can then be initialized with a {@code Tea} that is equal to the current {@code Tea} that is
+     * stored off-chain minus the here provided {@code oldTea}.
+     * <p>
+     * The {@code oldTea} is checked, so that no immediate withdrawal takes place before executing this.
      *
      * @param account The account to set the {@code Total Earned Amount} for.
      * @param oldTea  The previous {@code Total Earned Amount} for that account.
      * @param newTea  The new {@code Total Earned Amount} for that account.
      */
     public static void setTotalEarnedAmount(Hash160 account, int oldTea, int newTea) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert checkWitness(account) : "No authorization."; // The developer should also witness this!
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         int alreadyWithdrawn = withdrawalMap.get(account.toByteString()).toIntOrZero();
         assert alreadyWithdrawn != oldTea : "Funds were withdrawn in the meantime.";
         assert newTea < alreadyWithdrawn : "The provided amount is lower than the already withdrawn amount.";
@@ -303,6 +283,26 @@ public class PreSignNeo {
             contractMap.put(ownerKey, initialOwner.toByteString());
             contractMap.put(curveKey, 23);
         }
+    }
+
+    // Helper methods for development process
+
+    // 1. get the script hash's byte array in little endian
+    // 2. get the integer's byte array
+    // 3. reverse the integer's byte array
+    // 4. concatenate the little endian script hash's byte array with the reversed byte array of the integer amount
+    // 5. Sign this concatenation
+    public static boolean verifySig(Hash160 account, int tea, ByteString signature) {
+        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
+        return CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 0x17);
+    }
+
+    public static byte[] concatAccInt(Hash160 a, int i) {
+        return concat(a.toByteArray(), toByteArray(i));
+    }
+
+    public static int length(int[] list) {
+        return list.length;
     }
 
 }

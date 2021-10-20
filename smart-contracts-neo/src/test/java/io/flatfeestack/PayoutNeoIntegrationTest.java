@@ -9,19 +9,14 @@ import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.ContractManifest;
-import io.neow3j.protocol.core.response.InvocationResult;
-import io.neow3j.protocol.core.response.NeoApplicationLog;
-import io.neow3j.protocol.core.response.NeoSendRawTransaction;
+import io.neow3j.protocol.core.response.*;
 import io.neow3j.protocol.core.stackitem.StackItem;
 import io.neow3j.protocol.http.HttpService;
 import io.neow3j.serialization.NeoSerializableInterface;
 import io.neow3j.transaction.Transaction;
-import io.neow3j.transaction.TransactionBuilder;
 import io.neow3j.transaction.Witness;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.*;
-import io.neow3j.utils.ArrayUtils;
 import io.neow3j.utils.Numeric;
 import io.neow3j.wallet.Account;
 import io.neow3j.wallet.Wallet;
@@ -37,7 +32,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static io.neow3j.contract.ContractUtils.writeContractManifestFile;
 import static io.neow3j.contract.ContractUtils.writeNefFile;
@@ -51,14 +45,12 @@ import static io.neow3j.utils.ArrayUtils.*;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.wallet.Account.createMultiSigAccount;
 import static java.util.Arrays.asList;
-import static java.util.Arrays.stream;
-import static java.util.Collections.reverseOrder;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 
-public class PreSignIntegrationTest {
+public class PayoutNeoIntegrationTest {
 
     private static Neow3j neow3j;
     private static GasToken gasToken;
@@ -129,7 +121,7 @@ public class PreSignIntegrationTest {
     // Helper methods
 
     private static void compileContracts() throws IOException {
-        compileContract(PreSignNeo.class.getCanonicalName());
+        compileContract(PayoutNeo.class.getCanonicalName());
     }
 
     private static void compileContract(String canonicalName) throws IOException {
@@ -213,6 +205,9 @@ public class PreSignIntegrationTest {
     private BigInteger getBalance(Hash160 account) throws IOException {
         return gasToken.getBalanceOf(account);
     }
+
+//    private Hash256 withdrawWithWitness(Hash160 dev, BigInteger teaFractions) {
+//    }
 
     @Test
     public void testVerifySig() throws IOException {

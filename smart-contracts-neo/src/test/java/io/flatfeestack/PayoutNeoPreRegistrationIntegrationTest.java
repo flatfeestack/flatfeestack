@@ -48,7 +48,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class PreSignWithPreRegisterIntegrationTest {
+public class PayoutNeoPreRegistrationIntegrationTest {
 
     private static Neow3j neow3j;
     private static GasToken gasToken;
@@ -114,7 +114,6 @@ public class PreSignWithPreRegisterIntegrationTest {
 
         Hash256 txHash = preSignContract
                 .invokeFunction(register, ContractParameter.array(devsParams))
-                .wallet(ownerWallet)
                 .signers(none(owner))
                 .sign()
                 .send()
@@ -132,7 +131,6 @@ public class PreSignWithPreRegisterIntegrationTest {
         // Create the pre-signed transaction
         Transaction txToBePreSignedByOwner =
                 preSignContract.invokeFunction(withdraw, hash160(dev1), integer(dev1Amount))
-                        .wallet(ownerWallet)
                         .signers(none(dev1),
                                 calledByEntry(owner).setAllowedContracts(preSignContract.getScriptHash()))
                         .getUnsignedTransaction();
@@ -187,7 +185,7 @@ public class PreSignWithPreRegisterIntegrationTest {
     // Helper methods
 
     private static void compileContracts() throws IOException {
-        compileContract(PreSignNeo.class.getCanonicalName());
+        compileContract(PayoutNeo.class.getCanonicalName());
     }
 
     private static void compileContract(String canonicalName) throws IOException {
@@ -206,7 +204,7 @@ public class PreSignWithPreRegisterIntegrationTest {
         BigInteger balanceOf = gasToken.getBalanceOf(preSignContract.getScriptHash());
         BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(7000));
         Hash256 txHash = gasToken
-                .transfer(ownerWallet, preSignContract.getScriptHash(), fundAmount)
+                .transfer(owner, preSignContract.getScriptHash(), fundAmount)
                 .sign()
                 .send()
                 .getSendRawTransaction()
@@ -220,9 +218,9 @@ public class PreSignWithPreRegisterIntegrationTest {
         for (Account a : accounts) {
             if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
                 Hash256 txHash = gasToken
-                        .transferFromSpecificAccounts(committeeWallet, a.getScriptHash(),
-                                gasFractions, committee.getScriptHash())
-                        .sign()
+                        .transfer(committee, a.getScriptHash(), gasFractions)
+                        .getUnsignedTransaction()
+                        .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
                         .send()
                         .getSendRawTransaction()
                         .getHash();
@@ -245,7 +243,6 @@ public class PreSignWithPreRegisterIntegrationTest {
         try {
             Hash256 txHash =
                     new ContractManagement(neow3j).deploy(nef, manifest, hash160(committee))
-                            .wallet(committeeWallet)
                             .signers(none(committee))
                             .sign()
                             .send()
