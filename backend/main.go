@@ -254,8 +254,8 @@ func main() {
 
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
-	router.HandleFunc("/nowpayments", nowpaymentstest).Methods(http.MethodGet)
-	router.HandleFunc("/nowpayments/ipn", ipn).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/nowpayments", jwtAuthUser(nowpaymentPayment)).Methods(http.MethodPost)
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
