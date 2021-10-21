@@ -747,6 +747,47 @@ func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, cre
 	return &lastInsertId, handleErrMustInsertOne(res)
 }
 
+func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
+	stmt, err := db.Prepare(`insert into invoice (nowpayments_invoice_id, 
+					 payment_cycle_id, 
+					 price_amount, 
+					 price_currency, 
+					 pay_amount, 
+					 pay_currency, 
+					 created_at) 
+					 values (
+					 $1,
+					 $2,
+					 $3,
+					 $4,
+					 $5,
+					 $6,
+					 $7
+					 ) RETURNING id`)
+
+	if err != nil {
+		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
+	}
+	defer closeAndLog(stmt)
+
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
+		invoiceDb.PaymentCycleId,
+		invoiceDb.PriceAmount,
+		invoiceDb.PriceCurrency, invoiceDb.PayAmount, invoiceDb.PayCurrency, invoiceDb.CreatedAt).Scan(&lastInsertId)
+	if err != nil {
+		return nil, err
+	}
+	return &lastInsertId, nil
+
+	var res sql.Result
+	res, err = stmt.Exec("uid", " createdAt") //wieso braucht es hier noch das Exec??
+	if err != nil {
+		return nil, err
+	}
+	return &lastInsertId, handleErrMustInsertOne(res)
+}
+
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET freq = $1 WHERE id=$2`)
 	if err != nil {

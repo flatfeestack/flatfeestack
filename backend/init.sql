@@ -27,6 +27,20 @@ CREATE TABLE payment_cycle (
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
 
+CREATE TABLE invoice (
+     id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+     nowpayments_invoice_id BIGINT NOT NULL,
+     payment_cycle_id       UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+     price_amount           BIGINT NOT NULL,
+     price_currency         VARCHAR(16),
+     pay_amount             BIGINT,
+     actually_paid          BIGINT,
+     pay_currency           VARCHAR(16) NOT NULL,
+     created_at             TIMESTAMP NOT NULL,
+     paid_at                TIMESTAMP NULL
+);
+
+
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
