@@ -54,11 +54,11 @@ public class PayoutNeoIntegrationTest {
 
     private static Neow3j neow3j;
     private static GasToken gasToken;
-    private static SmartContract preSignContract;
+    private static SmartContract payoutContract;
 
-    private static final Path PRE_SIGN_NEO_NEF = Paths.get("./build/neow3j/PreSignNeo.nef");
-    private static final Path PRE_SIGN_NEO_MANIFEST =
-            Paths.get("./build/neow3j/PreSignNeo.manifest.json");
+    private static final Path PAYOUT_CONTRACT_NEF = Paths.get("./build/neow3j/PayoutNeo.nef");
+    private static final Path PAYOUT_CONTRACT_MANIFEST =
+            Paths.get("./build/neow3j/PayoutNeo.manifest.json");
 
     private static final Account defaultAccount =
             Account.fromWIF("L1eV34wPoj9weqhGijdDLtVQzUpWGHszXXpdU9dPuh2nRFFzFa7E");
@@ -87,10 +87,10 @@ public class PayoutNeoIntegrationTest {
     private static final Wallet dev2Wallet = Wallet.withAccounts(dev2);
 
     // Methods
-    private static final String withdraw = "withdraw";
+    private static final String batchPayout = "batchPayout";
     private static final String changeOwner = "changeOwner";
     private static final String getOwner = "getOwner";
-    private static final String register = "register";
+    private static final String withdraw = "withdraw";
 
     @ClassRule
     public static NeoTestContainer neoTestContainer = new NeoTestContainer();
@@ -98,7 +98,7 @@ public class PayoutNeoIntegrationTest {
     @BeforeClass
     public static void setUp() throws Throwable {
         neow3j = Neow3j.build(new HttpService(neoTestContainer.getNodeUrl()));
-        compileContracts();
+        compileContract(PayoutNeoForEvaluation.class.getCanonicalName());
         gasToken = new GasToken(neow3j);
         System.out.println("Owner hash:   " + owner.getScriptHash());
         System.out.println("Owner address:" + owner.getAddress());
@@ -106,8 +106,8 @@ public class PayoutNeoIntegrationTest {
         System.out.println("Dev1 address: " + dev1.getAddress());
         fundAccounts(gasToken.toFractions(BigDecimal.valueOf(10_000)), defaultAccount, owner);
         fundAccounts(gasToken.toFractions(BigDecimal.valueOf(10)), dev1, dev2);
-        preSignContract = deployPreSignNeo();
-        System.out.println("PreSign contract hash: " + preSignContract.getScriptHash());
+        payoutContract = deployPreSignNeo();
+        System.out.println("Payout contract hash: " + payoutContract.getScriptHash());
         fundPreSignContract();
     }
 
@@ -119,10 +119,6 @@ public class PayoutNeoIntegrationTest {
     }
 
     // Helper methods
-
-    private static void compileContracts() throws IOException {
-        compileContract(PayoutNeoForEvaluation.class.getCanonicalName());
-    }
 
     private static void compileContract(String canonicalName) throws IOException {
         CompilationUnit res = new Compiler().compile(canonicalName);
@@ -137,10 +133,10 @@ public class PayoutNeoIntegrationTest {
     }
 
     private static void fundPreSignContract() throws Throwable {
-        BigInteger balanceOf = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        BigInteger balanceOf = gasToken.getBalanceOf(payoutContract.getScriptHash());
         BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(7000));
         Hash256 txHash = gasToken
-                .transfer(owner, preSignContract.getScriptHash(), fundAmount)
+                .transfer(owner, payoutContract.getScriptHash(), fundAmount)
                 .sign()
                 .send()
                 .getSendRawTransaction()
@@ -173,10 +169,10 @@ public class PayoutNeoIntegrationTest {
     }
 
     private static SmartContract deployPreSignNeo() throws Throwable {
-        File nefFile = new File(PRE_SIGN_NEO_NEF.toUri());
+        File nefFile = new File(PAYOUT_CONTRACT_NEF.toUri());
         NefFile nef = NefFile.readFromFile(nefFile);
 
-        File manifestFile = new File(PRE_SIGN_NEO_MANIFEST.toUri());
+        File manifestFile = new File(PAYOUT_CONTRACT_MANIFEST.toUri());
         ContractManifest manifest = getObjectMapper()
                 .readValue(manifestFile, ContractManifest.class);
         try {
@@ -199,7 +195,7 @@ public class PayoutNeoIntegrationTest {
     }
 
     private BigInteger getContractBalance() throws IOException {
-        return getBalance(preSignContract.getScriptHash());
+        return getBalance(payoutContract.getScriptHash());
     }
 
     private BigInteger getBalance(Hash160 account) throws IOException {
@@ -218,7 +214,7 @@ public class PayoutNeoIntegrationTest {
                 reverseArray(teaDev1.toByteArray()));
 
         Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
-        InvocationResult invocationResult = preSignContract.callInvokeFunction("verifySig",
+        InvocationResult invocationResult = payoutContract.callInvokeFunction("verifySig",
                         asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) // returns false
 //                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
                 .getInvocationResult();
@@ -238,9 +234,9 @@ public class PayoutNeoIntegrationTest {
 
     @Test
     public void testFundContract() throws Throwable {
-        BigInteger contractBalance = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        BigInteger contractBalance = gasToken.getBalanceOf(payoutContract.getScriptHash());
         BigInteger fundAmount = gasToken.toFractions(BigDecimal.valueOf(1500L));
-        Hash256 txHash = gasToken.transfer(owner, preSignContract.getScriptHash(), fundAmount)
+        Hash256 txHash = gasToken.transfer(owner, payoutContract.getScriptHash(), fundAmount)
                 .signers(calledByEntry(owner))
                 .sign()
                 .send()
@@ -248,13 +244,13 @@ public class PayoutNeoIntegrationTest {
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
 
-        BigInteger balanceAfterTransfer = gasToken.getBalanceOf(preSignContract.getScriptHash());
+        BigInteger balanceAfterTransfer = gasToken.getBalanceOf(payoutContract.getScriptHash());
         assertThat(balanceAfterTransfer, is(contractBalance.add(fundAmount)));
     }
 
     @Test
     public void testChangeOwner() throws Throwable {
-        Hash256 txHash = preSignContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
+        Hash256 txHash = payoutContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -266,11 +262,11 @@ public class PayoutNeoIntegrationTest {
         assertThat(execs, hasSize(1));
         assertThat(execs.get(0).getState(), is(NeoVMStateType.HALT));
 
-        StackItem item = preSignContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
+        StackItem item = payoutContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
         assertThat(item.getByteArray(), is(defaultPubKey.getEncoded(true)));
 
         // Change owner back to maintain same state for other tests
-        txHash = preSignContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
+        txHash = payoutContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -281,7 +277,7 @@ public class PayoutNeoIntegrationTest {
         assertThat(execs, hasSize(1));
         assertThat(execs.get(0).getState(), is(NeoVMStateType.HALT));
 
-        item = preSignContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
+        item = payoutContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
         assertThat(item.getByteArray(), is(ownerPubKey.getEncoded(true)));
     }
 
@@ -296,7 +292,7 @@ public class PayoutNeoIntegrationTest {
         Sign.SignatureData signatureData = createSignature(dev1.getScriptHash(), teaDev1, owner);
 
         // Dev1 invokes withdraw method with signatureData
-        Transaction tx = preSignContract.invokeFunction(
+        Transaction tx = payoutContract.invokeFunction(
                         withdraw,
                         hash160(dev1), integer(teaDev1), signature(signatureData))
                 .signers(none(dev1))
@@ -332,8 +328,8 @@ public class PayoutNeoIntegrationTest {
         BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(2.2));
 
         // Create the pre-signed transaction
-        Transaction txToBePreSignedByOwner = preSignContract.invokeFunction(withdraw, hash160(dev1), integer(teaDev1))
-                .signers(none(dev1), calledByEntry(owner).setAllowedContracts(preSignContract.getScriptHash()))
+        Transaction txToBePreSignedByOwner = payoutContract.invokeFunction(withdraw, hash160(dev1), integer(teaDev1))
+                .signers(none(dev1), calledByEntry(owner).setAllowedContracts(payoutContract.getScriptHash()))
                 .getUnsignedTransaction();
 
         Witness ownerWitness =
@@ -360,7 +356,7 @@ public class PayoutNeoIntegrationTest {
         BigInteger dev1FinalBalance = gasToken.getBalanceOf(dev1);
         assertThat(dev1FinalBalance, is(initialBalanceDev1.add(teaDev1).subtract(totalFee)));
 
-        StackItem teaOnContract = preSignContract.callInvokeFunction("getTotalEarnedAmount", asList(hash160(dev1)))
+        StackItem teaOnContract = payoutContract.callInvokeFunction("getTotalEarnedAmount", asList(hash160(dev1)))
                 .getInvocationResult().getStack().get(0);
         assertThat(teaOnContract.getType(), is(StackItemType.INTEGER));
         assertThat(teaOnContract.getInteger(), is(teaDev1));
