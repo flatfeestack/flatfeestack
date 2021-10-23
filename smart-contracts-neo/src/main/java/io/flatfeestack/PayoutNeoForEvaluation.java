@@ -174,7 +174,7 @@ public class PayoutNeoForEvaluation {
      * @param serviceFee The service fee that each developer pays to be included in this batch payout.
      * @return a list of all accounts that did not receive any payment.
      */
-    public static void batchPayout(Hash160[] accounts, int[] teas, int serviceFee) {
+    public static void batchPayoutWithServiceFee(Hash160[] accounts, int[] teas, int serviceFee) {
         // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         assert accounts.length == teas.length : "The parameters must have the same length.";
@@ -216,7 +216,7 @@ public class PayoutNeoForEvaluation {
      * @param teasForWithdrawal The total earned amounts that are used for the calculation of the payout amount.
      * @return a list of all accounts that did not receive any payment.
      */
-    public static void batchPayout(Hash160[] accounts, int[] teas, int[] teasForWithdrawal) {
+    public static void batchPayoutWithTeas(Hash160[] accounts, int[] teas, int[] teasForWithdrawal) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         assert (accounts.length == teas.length) && (accounts.length == teasForWithdrawal.length) : "The parameters " +
                 "must have the same length.";
@@ -243,7 +243,7 @@ public class PayoutNeoForEvaluation {
         }
     }
 
-    public static void batchPayout(Map<Hash160, Integer> payoutMap) {
+    public static void batchPayoutWithMap(Map<Hash160, Integer> payoutMap) {
         int payoutAmount;
         boolean transfer;
         for (Hash160 a : payoutMap.keys()) {
@@ -264,7 +264,7 @@ public class PayoutNeoForEvaluation {
         }
     }
 
-    public static void batchPayout(Map<Hash160, Integer> payoutMap, int serviceFee) {
+    public static void batchPayoutWithMapAndServiceFee(Map<Hash160, Integer> payoutMap, int serviceFee) {
         boolean transfer;
         for (Hash160 a : payoutMap.keys()) {
             int tea = payoutMap.get(a);
@@ -285,7 +285,8 @@ public class PayoutNeoForEvaluation {
 
     }
 
-    public static void batchPayout(Map<Hash160, Integer> payoutMap, Map<Hash160, Integer> teasForWithdrawal) {
+    public static void batchPayoutWithDoubleMap(Map<Hash160, Integer> payoutMap,
+            Map<Hash160, Integer> teasForWithdrawal) {
     }
 
     @DisplayName("onUnsuccessfulPayout")
