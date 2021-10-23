@@ -3,12 +3,12 @@ package io.flatfeestack;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
-import io.neow3j.devpack.List;
 import io.neow3j.devpack.Map;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
 import io.neow3j.devpack.annotations.DisplayName;
+import io.neow3j.devpack.annotations.ManifestExtra;
 import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
@@ -16,7 +16,7 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
-import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event1Arg;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
@@ -25,21 +25,19 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
 @Permission(nativeContract = NativeContract.CryptoLib)
 @Permission(nativeContract = NativeContract.GasToken)
+@ManifestExtra(key = "Author", value = "Michael Bucher")
 public class PayoutNeoForEvaluation {
+
+// region static variables
 
     /**
      * The storage context
      */
     static final StorageContext ctx = Storage.getStorageContext();
-
-    /**
-     * The prefix for the contractMap StorageMap
-     */
-    static final byte[] contractMapPrefix = toByteArray((byte) 0x01);
     /**
      * StorageMap to store contract relevant information
      */
-    static final StorageMap contractMap = ctx.createMap(contractMapPrefix);
+    static final StorageMap contractMap = ctx.createMap(new byte[]{0x01});
     /**
      * Key of the contract owner public key in the contractMap.
      * <p>
@@ -51,34 +49,12 @@ public class PayoutNeoForEvaluation {
     static final byte[] ownerKey = toByteArray((byte) 0x02);
 
     /**
-     * The prefix for the total earned amount ({@code tea}) StorageMap
-     */
-    static final byte[] teaMapPrefix = toByteArray((byte) 0x10);
-    /**
      * StorageMap to store k-v pairs mapping addresses (key) to their {@code Total Earned Amount}
      */
-    static final StorageMap teaMap = ctx.createMap(teaMapPrefix);
+    static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
-    /**
-     * Changes the contract owner.
-     *
-     * @param newOwner The new contract owner.
-     */
-    public static void changeOwner(ECPoint newOwner) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert checkWitness(newOwner) : "The new owner must witness this change.";
-        contractMap.put(ownerKey, newOwner.toByteString());
-    }
-
-    /**
-     * Get the {@code ECPoint} of the owner of this contract.
-     *
-     * @return the contract owner's {@code ECPoint}.
-     */
-    @Safe
-    public static ECPoint getOwner() {
-        return new ECPoint(contractMap.get(ownerKey));
-    }
+// endregion static variables
+// region withdrawal
 
     /**
      * Withdraws the earned amount.
@@ -139,67 +115,19 @@ public class PayoutNeoForEvaluation {
         assert transfer : "Transfer was not successful.";
     }
 
-    /**
-     * Withdraws the earned amount for multiple accounts.
-     * <p>
-     * Must be invoked by the contract owner.
-     * <p>
-     * The service fee is deducted off-chain by the contract owner, when providing the first signature after each
-     * batch payout.
-     * <p>
-     * The pre-signatures that are provided for accounts that are included in this batch payout should include the
-     * amount being the {@code tea} minus the {@code serviceFee}.
-     *
-     * @param accounts   The accounts to pay out to.
-     * @param teas       The corresponding {@code Total Earned Amount}s.
-     * @param serviceFee The service fee that each developer pays to be included in this batch payout.
-     * @return a list of all accounts that did not receive any payment.
-     */
-    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas, int serviceFee) {
-        // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert accounts.length == teas.length : "The parameters must have the same length.";
-        List<Hash160> unsuccessful = new List<>();
-        boolean transfer;
-        Hash160 a;
-        int tea;
-        for (int i = 0; i < accounts.length; i++) {
-            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
-            //  list.length and entry from list
-            a = accounts[i];
-            tea = teas[i];
-            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
-            teaMap.put(a.toByteString(), tea + serviceFee);
-            int payoutAmount = tea - oldTea - serviceFee;
-            if (payoutAmount <= 0) {
-                // TODO: 12.10.21 Evaluation -> Check this variation.
-                //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
-                //  owner has not calculated the payout correctly and should not have included this account in the
-                //  batch payout in the first place.
-                //  With the above mentioned, it is not clear who was mistaken.
-                teaMap.put(a.toByteString(), oldTea + serviceFee);
-                unsuccessful.add(a);
-                continue;
-            }
-            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
-            if (!transfer) {
-                // TODO: 12.10.21 Evaluation -> Should the service fee be deducted if the transfer goes wrong?
-                teaMap.put(a.toByteString(), oldTea + serviceFee);
-                unsuccessful.add(a);
-            }
-        }
-        return unsuccessful;
-    }
+// endregion withdrawal
+// region batch payout
 
     // service fee is deducted off-chain - as soon as it is deducted, the account is added to upcoming batchPayout list.
     //
     // add case with service fee -> if user wants to be included without further expected increase of her tea.
     // TODO: 20.10.21 Evaluation -> find cheapest method to solve first and second case.
-    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas) {
+    public static void batchPayout(Hash160[] accounts, int[] teas) {
         // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         assert accounts.length == teas.length : "The parameters must have the same length.";
-        List<Hash160> unsuccessful = new List<>();
+//        List<Hash160> unsuccessful = new List<>();
+//        Not necessary - GatToken events can fbe used to track the successful transfers.
         boolean transfer;
         Hash160 a;
         int tea;
@@ -218,17 +146,66 @@ public class PayoutNeoForEvaluation {
                 //  batch payout in the first place.
                 //  With the above mentioned, it is not clear who was mistaken.
                 teaMap.put(a.toByteString(), oldTea);
-                unsuccessful.add(a);
+                onUnsuccessfulPayout.fire(a);
                 continue;
             }
             transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
             if (!transfer) {
-                // TODO: 12.10.21 Evaluation -> Should the service fee be deducted if the transfer goes wrong?
+                // This can only be reached, if contract funds are too low.
                 teaMap.put(a.toByteString(), oldTea);
-                unsuccessful.add(a);
+                onUnsuccessfulPayout.fire(a);
             }
         }
-        return unsuccessful;
+    }
+
+    /**
+     * Withdraws the earned amount for multiple accounts.
+     * <p>
+     * Must be invoked by the contract owner.
+     * <p>
+     * The service fee is deducted off-chain by the contract owner, when providing the first signature after each
+     * batch payout.
+     * <p>
+     * The pre-signatures that are provided for accounts that are included in this batch payout should include the
+     * amount being the {@code tea} minus the {@code serviceFee}.
+     *
+     * @param accounts   The accounts to pay out to.
+     * @param teas       The corresponding {@code Total Earned Amount}s.
+     * @param serviceFee The service fee that each developer pays to be included in this batch payout.
+     * @return a list of all accounts that did not receive any payment.
+     */
+    public static void batchPayout(Hash160[] accounts, int[] teas, int serviceFee) {
+        // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert accounts.length == teas.length : "The parameters must have the same length.";
+        boolean transfer;
+        Hash160 a;
+        int tea;
+        for (int i = 0; i < accounts.length; i++) {
+            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
+            //  list.length and entry from list
+            a = accounts[i];
+            tea = teas[i];
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            teaMap.put(a.toByteString(), tea + serviceFee);
+            int payoutAmount = tea - oldTea - serviceFee;
+            if (payoutAmount <= 0) {
+                // TODO: 12.10.21 Evaluation -> Check this variation.
+                //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
+                //  owner has not calculated the payout correctly and should not have included this account in the
+                //  batch payout in the first place.
+                //  With the above mentioned, it is not clear who was mistaken.
+//                teaMap.put(a.toByteString(), oldTea + serviceFee);
+                onUnsuccessfulPayout.fire(a);
+                continue;
+            }
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            if (!transfer) {
+                // This can only be reached, if contract funds are too low.
+                teaMap.put(a.toByteString(), oldTea);
+                onUnsuccessfulPayout.fire(a);
+            }
+        }
     }
 
     /**
@@ -239,11 +216,10 @@ public class PayoutNeoForEvaluation {
      * @param teasForWithdrawal The total earned amounts that are used for the calculation of the payout amount.
      * @return a list of all accounts that did not receive any payment.
      */
-    public static List<Hash160> batchPayout(Hash160[] accounts, int[] teas, int[] teasForWithdrawal) {
+    public static void batchPayout(Hash160[] accounts, int[] teas, int[] teasForWithdrawal) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         assert (accounts.length == teas.length) && (accounts.length == teasForWithdrawal.length) : "The parameters " +
                 "must have the same length.";
-        List<Hash160> unsuccessful = new List<>();
         boolean transfer;
         Hash160 a;
         int teaForWithdrawal;
@@ -255,28 +231,78 @@ public class PayoutNeoForEvaluation {
             payoutAmount = teaForWithdrawal - oldTea;
             if (payoutAmount <= 0) {
                 // TODO: 20.10.21 Evaluation -> Should the dev be charged a fee if this is reached?
-                unsuccessful.add(a);
+                onUnsuccessfulPayout.fire(a);
                 continue;
             }
             teaMap.put(a.toByteString(), teas[i]);
             transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
             if (!transfer) {
                 teaMap.put(a.toByteString(), oldTea);
-                unsuccessful.add(a);
+                onUnsuccessfulPayout.fire(a);
             }
         }
-        return unsuccessful;
     }
 
-    public static List<Hash160> batchPayout(Map<Hash160, Integer> payoutMap) {
-        List<Hash160> unsuccessful = new List<>();
+    public static void batchPayout(Map<Hash160, Integer> payoutMap) {
         int payoutAmount;
+        boolean transfer;
         for (Hash160 a : payoutMap.keys()) {
             int tea = payoutMap.get(a);
             int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
             payoutAmount = tea - oldTea;
-
+            if (payoutAmount <= 0) {
+                onUnsuccessfulPayout.fire(a);
+                continue;
+            }
+            teaMap.put(a.toByteString(), tea);
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            if (!transfer) {
+                // This can only be reached, if contract funds are too low.
+                teaMap.put(a.toByteString(), oldTea);
+                onUnsuccessfulPayout.fire(a);
+            }
         }
+    }
+
+    public static void batchPayout(Map<Hash160, Integer> payoutMap, int serviceFee) {
+        boolean transfer;
+        for (Hash160 a : payoutMap.keys()) {
+            int tea = payoutMap.get(a);
+            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
+            int payoutAmount = tea - oldTea - serviceFee;
+            if (payoutAmount <= 0) {
+                onUnsuccessfulPayout.fire(a);
+                continue;
+            }
+            teaMap.put(a.toByteString(), tea);
+            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            if (!transfer) {
+                // This can only be reached, if contract funds are too low.
+                teaMap.put(a.toByteString(), oldTea);
+                onUnsuccessfulPayout.fire(a);
+            }
+        }
+
+    }
+
+    public static void batchPayout(Map<Hash160, Integer> payoutMap, Map<Hash160, Integer> teasForWithdrawal) {
+    }
+
+    @DisplayName("onUnsuccessfulPayout")
+    private static Event1Arg<Hash160> onUnsuccessfulPayout;
+
+// endregion batch payout
+// region setters
+
+    /**
+     * Changes the contract owner.
+     *
+     * @param newOwner The new contract owner.
+     */
+    public static void changeOwner(ECPoint newOwner) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert checkWitness(newOwner) : "The new owner must witness this change.";
+        contractMap.put(ownerKey, newOwner.toByteString());
     }
 
     /**
@@ -304,6 +330,20 @@ public class PayoutNeoForEvaluation {
         teaMap.put(account.toByteString(), newTea);
     }
 
+// endregion setters
+// region getters
+
+
+    /**
+     * Get the {@code ECPoint} of the owner of this contract.
+     *
+     * @return the contract owner's {@code ECPoint}.
+     */
+    @Safe
+    public static ECPoint getOwner() {
+        return new ECPoint(contractMap.get(ownerKey));
+    }
+
     /**
      * Gets the total earned amount ({@code tea}) of an account.
      *
@@ -315,11 +355,13 @@ public class PayoutNeoForEvaluation {
         return teaMap.get(account.toByteString()).toIntOrZero();
     }
 
-    @DisplayName("onContractFunding")
-    private static Event2Args<Hash160, Integer> onContractFunding;
+// endregion getters
+// region nep17
 
     /**
      * This method is called when the contract receives NEP-17 tokens.
+     * <p>
+     * It is required to receive NEP-17 tokens.
      *
      * @param from   The sender.
      * @param amount The amount transferred to this contract.
@@ -327,8 +369,10 @@ public class PayoutNeoForEvaluation {
      */
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
-        onContractFunding.fire(from, amount);
     }
+
+// endregion nep17
+// region deployment
 
     /**
      * Upon deployment, the initial owner is set.
@@ -343,6 +387,9 @@ public class PayoutNeoForEvaluation {
             contractMap.put(ownerKey, initialOwner.toByteString());
         }
     }
+
+// endregion deployment
+// region helper methods for evaluation
 
     // Helper methods for development process
 
@@ -363,5 +410,7 @@ public class PayoutNeoForEvaluation {
     public static int length(int[] list) {
         return list.length;
     }
+
+// endregion helper methods for evaluation
 
 }
