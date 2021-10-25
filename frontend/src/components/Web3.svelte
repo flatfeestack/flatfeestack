@@ -26,6 +26,7 @@
     const ethProv = await detectEthereumProvider();
     if (ethProv) {
       try {
+        ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new providers.Web3Provider(<any>ethProv);
         const signer = provider.getSigner();
         const contractAddress = $config.contractAddr;
@@ -46,7 +47,6 @@
       $error = e;
     }
   };
-
 </script>
 
 <style>
