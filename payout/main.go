@@ -139,6 +139,7 @@ func main() {
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 	router.HandleFunc("/pay", PaymentRequestHandler).Methods("POST", "OPTIONS")
+	router.HandleFunc("/pay-crypto", PaymentCryptoRequestHandler).Methods("POST", "OPTIONS")
 
 	log.Printf("listing on port %v", opts.Port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
@@ -204,6 +205,26 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
 	}
+}
+
+func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
+	var amountWei []*big.Int
+	var addresses []string
+	var payoutWei []PayoutWei
+
+	balance := new(big.Int)
+	balance.SetInt64(int64(100000))
+	amountWei = append(amountWei, balance)
+	addresses = append(addresses, "0x142f2858De9Ae2B3b598b1032f92D9437437Affe")
+
+	txHash, err := client.fill(addresses, amountWei)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
+		return
+	}
+	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
+	log.Printf(p.TxHash)
+	return
 }
 
 func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
