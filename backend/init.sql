@@ -31,13 +31,17 @@ CREATE TABLE invoice (
      id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
      nowpayments_invoice_id BIGINT NOT NULL,
      payment_cycle_id       UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+     payment_id             BIGINT,
      price_amount           BIGINT NOT NULL,
-     price_currency         VARCHAR(16),
+     price_currency         VARCHAR(16) NOT NULL,
      pay_amount             BIGINT,
-     actually_paid          BIGINT,
      pay_currency           VARCHAR(16) NOT NULL,
+     actually_paid          BIGINT,
+     outcome_amount         BIGINT,
+     outcome_currency       VARCHAR(16),
+     payment_status         VARCHAR(16),
      created_at             TIMESTAMP NOT NULL,
-     paid_at                TIMESTAMP NULL
+     last_update            TIMESTAMP NULL
 );
 
 
@@ -48,6 +52,7 @@ CREATE TABLE user_balances (
     from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          BIGINT,
     balance_type     VARCHAR(16) NOT NULL,
+    currency         VARCHAR(16) NOT NULL,
     day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );

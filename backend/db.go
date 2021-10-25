@@ -95,6 +95,7 @@ type UserBalance struct {
 	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
 	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
+	Currency       string     `json:"currency"`
 	CreatedAt      time.Time  `json:"createdAt"`
 }
 
@@ -709,15 +710,16 @@ func insertUserBalance(ub UserBalance) error {
                                             from_user_id,
                                             balance, 
                                             balance_type, 
+                          					currency,
                                             created_at) 
-                                    VALUES($1, $2, $3, $4, $5, $6)`)
+                                    VALUES($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.Currency, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -748,22 +750,15 @@ func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, cre
 }
 
 func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`insert into invoice (nowpayments_invoice_id, 
+	stmt, err := db.Prepare(`INSERT INTO invoice (nowpayments_invoice_id, 
 					 payment_cycle_id, 
 					 price_amount, 
 					 price_currency, 
-					 pay_amount, 
 					 pay_currency, 
-					 created_at) 
-					 values (
-					 $1,
-					 $2,
-					 $3,
-					 $4,
-					 $5,
-					 $6,
-					 $7
-					 ) RETURNING id`)
+					 created_at,
+                     last_update,
+                     payment_status) 
+					 values($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`)
 
 	if err != nil {
 		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
@@ -774,7 +769,7 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		invoiceDb.PriceCurrency, invoiceDb.PayAmount, invoiceDb.PayCurrency, invoiceDb.CreatedAt).Scan(&lastInsertId)
+		invoiceDb.PriceCurrency, invoiceDb.PayCurrency, invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -786,6 +781,84 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &lastInsertId, handleErrMustInsertOne(res)
+}
+
+func updateInvoice(invoice *InvoiceDB) error {
+	stmt, err := db.Prepare(`UPDATE invoice SET 
+                                           payment_cycle_id = $1, 
+								payment_id = $2,            
+								price_amount = $3,          
+								price_currency = $4,        
+								pay_amount = $5,            
+								pay_currency = $6,          
+								actually_paid = $7,         
+								outcome_amount = $8,        
+								outcome_currency = $9,      
+								payment_status = $10,        
+								created_at = $11,            
+								last_update = $12 
+                                    WHERE nowpayments_invoice_id=$13`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(
+		&invoice.PaymentCycleId, &invoice.PaymentId.Int64, &invoice.PriceAmount, &invoice.PriceCurrency,
+		&invoice.PayAmount.Int64, &invoice.PayCurrency, &invoice.ActuallyPaid.Int64, &invoice.OutcomeAmount.Int64, &invoice.OutcomeCurrency.String, invoice.PaymentStatus,
+		&invoice.CreatedAt, &invoice.LastUpdate, &invoice.NowpaymentsInvoiceId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func getInvoice(id int64) (*InvoiceDB, error) {
+	var invoice InvoiceDB
+	err := db.
+		QueryRow(`SELECT  nowpayments_invoice_id,
+								payment_cycle_id, 
+								payment_id,            
+								price_amount,          
+								price_currency,        
+								pay_amount,            
+								pay_currency,          
+								actually_paid,         
+								outcome_amount,        
+								outcome_currency,      
+								payment_status,        
+								created_at,            
+								last_update                FROM invoice WHERE nowpayments_invoice_id=$1`, id).
+		Scan(&invoice.NowpaymentsInvoiceId, &invoice.PaymentCycleId, &invoice.PaymentId, &invoice.PriceAmount, &invoice.PriceCurrency,
+			&invoice.PayAmount, &invoice.PayCurrency, &invoice.ActuallyPaid, &invoice.OutcomeAmount, &invoice.OutcomeCurrency, &invoice.PaymentStatus,
+			&invoice.CreatedAt, &invoice.LastUpdate)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &invoice, nil
+	default:
+		return nil, err
+	}
+
+}
+
+func findUserIdByInvoice(id int64) (uuid.UUID, error) {
+	var userId uuid.UUID
+
+	err := db.
+		QueryRow(`SELECT payment_cycle.user_id FROM invoice 
+    join payment_cycle on invoice.payment_cycle_id = payment_cycle.id where invoice.nowpayments_invoice_id = $1`, id).Scan(&userId)
+
+	switch err {
+	case sql.ErrNoRows:
+		return uuid.UUID{}, nil
+	case nil:
+		return userId, nil
+	default:
+		return uuid.UUID{}, err
+	}
 }
 
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
@@ -810,6 +883,24 @@ func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, erro
 		QueryRow(`SELECT COALESCE(sum(balance), 0)
                              FROM user_balances 
                              WHERE user_id = $1 AND payment_cycle_id = $2`, userId, paymentCycleId).
+		Scan(&sum)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return sum, nil
+	default:
+		return 0, err
+	}
+}
+
+func findSumUserBalance2(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
+	var sum int64
+	var err error
+	err = db.
+		QueryRow(`SELECT COALESCE(sum(balance), 0)
+                             FROM user_balances 
+                             WHERE user_id = $1 AND payment_cycle_id = $2 AND currency = $3`, userId, paymentCycleId, currency).
 		Scan(&sum)
 	switch err {
 	case sql.ErrNoRows:
@@ -882,6 +973,26 @@ func findSponsoredUserBalances(userId uuid.UUID) ([]UserStatus, error) {
 		userStatus = append(userStatus, userState)
 	}
 	return userStatus, nil
+}
+
+func findAllCurreniesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error) {
+	s := `select distinct currency from user_balances where payment_cycle_id = $1`
+	rows, err := db.Query(s, paymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var currencies []string
+	for rows.Next() {
+		var currency string
+		err = rows.Scan(&currency)
+		if err != nil {
+			return nil, err
+		}
+		currencies = append(currencies, currency)
+	}
+	return currencies, nil
 }
 
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
