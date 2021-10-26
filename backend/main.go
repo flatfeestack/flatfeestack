@@ -70,6 +70,8 @@ type Opts struct {
 	RestTimeout            int
 	LogPath                string
 	ContractAddr           string
+	NowpaymentsToken       string
+	NowpaymentsIpnKey      string
 }
 
 type TokenClaims struct {
@@ -121,6 +123,8 @@ func NewOpts() *Opts {
 		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
+	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
+	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])

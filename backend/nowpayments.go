@@ -68,7 +68,7 @@ type PaymentInformation struct {
 }
 
 type NowpaymentsWebhookResponse struct {
-	ActuallyPaid     int64       `json:"actually_paid"`
+	ActuallyPaid     float64     `json:"actually_paid"`
 	InvoiceId        int64       `json:"invoice_id"`
 	OrderDescription interface{} `json:"order_description"`
 	OrderId          interface{} `json:"order_id"`
@@ -115,10 +115,8 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 
 func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID) error {
 	invoiceUrl := "https://api.nowpayments.io/v1/invoice"
-	//invoiceUrl := "https://api.sandbox.nowpayments.io/v1/payment"
-	apiToken := "R6WFT2D-7TC4ZK2-K2P43ES-P4AD2G8"
-	//sandboxToken := "JA6GXF8-DY4MJ9H-H6NQD53-E89DQJ2"
-	invoice.IpnCallbackUrl = "https://1638-31-10-156-230.ngrok.io/hooks/nowpayments"
+	apiToken := opts.NowpaymentsToken
+	invoice.IpnCallbackUrl = "https://95a5-2a02-aa16-947f-b800-30e6-cfcb-a1fc-c204.ngrok.io/hooks/nowpayments"
 	invoiceData, err := json.Marshal(invoice)
 
 	client := &http.Client{
@@ -172,20 +170,22 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonData, err := json.Marshal(data)
+
+	fmt.Println(string(jsonData))
+
 	isWebhookVerified := verifyNowpaymentsWebhook(jsonData, nowpaymentsSignature)
-	if isWebhookVerified {
+	if isWebhookVerified && !isWebhookVerified {
 		return
 	}
 
 	invoice, _ := getInvoice(data.InvoiceId)
 	userId, _ := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
 	user, _ := findUserById(userId)
-	fmt.Println(user)
 	// get user id from invoice
 
 	switch data.PaymentStatus {
 	case "finished":
-		nowpaymentSuccess(user, *invoice.PaymentCycleId, invoice.PayAmount.Int64, invoice.PayCurrency)
+		nowpaymentSuccess(user, *invoice.PaymentCycleId, int64(data.ActuallyPaid*1_000_000_000), data.PayCurrency)
 		updateInvoiceFromWebhook(data)
 	case "expired":
 		updateInvoiceFromWebhook(data)
@@ -193,17 +193,12 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)
 	}
-
-	// close payment cycle --> close cycle for all currencies the user has
-
-	// insertUserBalance
-
-	// updatePaymentCycleId
 }
 
 // Helper
 func closeCycle2(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
 	// get user balance for each currency
+	fmt.Println(currency)
 	currencies, _ := findAllCurreniesFromUserBalance(oldPaymentCycleId)
 	if !contains(currencies, currency) {
 		currencies = append(currencies, currency)
@@ -249,11 +244,11 @@ func updateInvoiceFromWebhook(data NowpaymentsWebhookResponse) {
 	invoice, _ := getInvoice(data.InvoiceId)
 
 	invoice.PaymentId.Int64 = data.PaymentId
-	invoice.PriceAmount = data.PriceAmount
+	invoice.PriceAmount = data.PriceAmount * 1_000_000
 	invoice.PriceCurrency = data.PriceCurrency
 	invoice.PayAmount.Int64 = int64(data.PayAmount * 1_000_000_000)
 	invoice.PayCurrency = data.PayCurrency
-	invoice.ActuallyPaid.Int64 = data.ActuallyPaid
+	invoice.ActuallyPaid.Int64 = int64(data.ActuallyPaid * 1_000_000_000)
 	invoice.OutcomeAmount.Int64 = int64(data.OutcomeAmount * 1_000_000_000)
 	invoice.OutcomeCurrency.String = data.OutcomeCurrency
 	invoice.PaymentStatus = data.PaymentStatus
@@ -303,32 +298,17 @@ func getPrice(paymentInformation PaymentInformation) int64 {
 }
 
 func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) bool {
-	//key := "SYqQtcEUdoPbfjdsI6aIdOZFE4I4XG07" //TODO: Move to env
-	key := "5Bni1y93E1xIUOY9YDnH3IsLnreZKHfN" //prod
+	key := opts.NowpaymentsIpnKey
 	mac := hmac.New(sha512.New, []byte(key))
 
 	io.WriteString(mac, string(data))
 	expectedMAC := mac.Sum(nil)
 
-	fmt.Println(string(data))
-
 	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature
-
-	/*	fmt.Println("------------------")
-		fmt.Println(string(sig))
-		fmt.Println("------------------")
-		fmt.Println(hex.EncodeToString(expectedMAC))
-		fmt.Println("------------------")
-
-		fmt.Println("------------------")
-		fmt.Println(err)
-		fmt.Println("------------------")
-		fmt.Println(string(json))
-		fmt.Println("------------------")
-		fmt.Println(data)*/
 }
 
 func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string) error {
+	fmt.Println(u)
 	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT")
 	if err != nil {
 		return err
