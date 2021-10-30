@@ -98,6 +98,7 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily Repo Hours inserted %v entries", nr)
 
+	// TODO: before runDailyUserBalance, get in which currency and how much 1 day costs
 	nr, err = runDailyUserBalance(yesterdayStart, now)
 	if err != nil {
 		return err

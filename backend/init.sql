@@ -22,7 +22,7 @@ CREATE TABLE payment_cycle (
     user_id    UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
     seats      INTEGER DEFAULT 0,
     freq       INTEGER DEFAULT 365,
-    days_left  INTEGER NOT NULL,
+    -- days_left  INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
@@ -48,7 +48,9 @@ CREATE TABLE daily_payment (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
   currency          VARCHAR(16),
-  amount            BIGINT
+  amount            BIGINT,
+  days_left         INTEGER,
+  last_update       TIMESTAMP
 );
 
 

@@ -95,9 +95,9 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	usdPrice := 1
 
 	priceCurrency := "USD"
-	payCurrency := "XTZ" //get from request
+	payCurrency := "NEO" //get from request
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, paymentInformation.Freq, paymentInformation.Seats, paymentInformation.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, paymentInformation.Seats, paymentInformation.Freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -183,7 +183,7 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	userId, _ := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
 	user, _ := findUserById(userId)
 
-	amount := int64(data.ActuallyPaid * 1_000_000_000) // nanoCrypto
+	amount := int64(data.OutcomeAmount * 1_000_000_000) // nanoCrypto
 
 	switch data.PaymentStatus {
 	case "finished":
@@ -313,14 +313,14 @@ func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) bool {
 }
 
 func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string) error {
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency) // TODO: do wee need currency check?
+	_, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency) // TODO: do wee need currency check?
 	if err != nil {
 		return err
 	}
-	if ub != nil {
+	/*if ub != nil {
 		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
 		return nil
-	}
+	}*/
 
 	ubNew, err := closeCycle2(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
 	if err != nil {
@@ -336,8 +336,36 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 		return err
 	}
 
-	daysLeft, err := getPaymentCycleDays(u.PaymentCycleId)
-	err = updatePaymentCycleDaysLeft(newPaymentCycleId, daysLeft+365)
+	isNewCurrencyPayment := true
+	dailyPayments, _ := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	for _, dailyPayment := range dailyPayments {
+		if dailyPayment.Currency == currency {
+			isNewCurrencyPayment = false
+		}
+
+		fmt.Println(newPaymentCycleId)
+		dailyPayment.PaymentCycleId = newPaymentCycleId
+		dailyPayment.LastUpdate = time.Now()
+		insertDailyPayment(dailyPayment)
+		fmt.Println(dailyPayment)
+	}
+
+	// get days_left for currency
+	daysLeft, err := findDaysLeftForCurrency(newPaymentCycleId, currency)
+	newDaysLeft := daysLeft + 365
+	// get sum balance for currency
+	balance, err := findSumUserBalance2(u.Id, newPaymentCycleId, currency)
+	// sum / days_left + 365
+	newDailyPaymentAmount := balance / newDaysLeft
+
+	// carry over days left from other currencies
+	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
+
+	if isNewCurrencyPayment {
+		err = insertDailyPayment(newDailyPayment)
+	} else {
+		err = updateDailyPayment(newDailyPayment)
+	}
 
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
 	if err != nil {

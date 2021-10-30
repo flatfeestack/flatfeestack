@@ -726,16 +726,16 @@ func insertUserBalance(ub UserBalance) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, createdAt time.Time) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, days_left, seats, freq, created_at) 
-                                    VALUES($1, $2, $3, $4, $5)  RETURNING id`)
+func insertNewPaymentCycle(uid uuid.UUID, seats int, freq int, createdAt time.Time) (*uuid.UUID, error) {
+	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, seats, freq, created_at) 
+                                    VALUES($1, $2, $3, $4)  RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", uid, err)
 	}
 	defer closeAndLog(stmt)
 
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(uid, daysLeft, seats, freq, createdAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(uid, seats, freq, createdAt).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -861,6 +861,106 @@ func findUserIdByInvoice(id int64) (uuid.UUID, error) {
 	}
 }
 
+type DailyPayment struct {
+	PaymentCycleId uuid.UUID
+	Currency       string
+	Amount         int64
+	DaysLeft       int64
+	LastUpdate     time.Time
+}
+
+func insertDailyPayment(dailyPayment DailyPayment) error {
+	stmt, err := db.Prepare(`
+					INSERT INTO daily_payment (payment_cycle_id, currency, amount, days_left, last_update) 
+					values($1, $2, $3, $4, $5)`)
+
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO daily_payment statement event: %v", err)
+	}
+
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateDailyPayment(dailyPayment DailyPayment) error {
+	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE payment_cycle for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int64, error) {
+	var daysLeft int64
+	err := db.
+		QueryRow(`select days_left from daily_payment where payment_cycle_id = $1 and currency = $2 order by last_update desc limit 1`, paymentCycleId, currency).
+		Scan(&daysLeft)
+	if err != nil {
+		return 0, err
+	}
+
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return daysLeft, nil
+	default:
+		return 0, err
+	}
+}
+
+func findDailyPaymentByPaymentCycleId(paymentCycleId uuid.UUID) ([]DailyPayment, error) {
+	s := `select distinct payment_cycle_id, currency, amount, days_left, last_update from daily_payment where payment_cycle_id = $1`
+	rows, err := db.Query(s, paymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var dailyPayments []DailyPayment
+	for rows.Next() {
+		var dailyPayment DailyPayment
+		err = rows.Scan(&dailyPayment.PaymentCycleId, &dailyPayment.Currency, &dailyPayment.Amount, &dailyPayment.DaysLeft, &dailyPayment.LastUpdate)
+		if err != nil {
+			return nil, err
+		}
+		dailyPayments = append(dailyPayments, dailyPayment)
+	}
+	return dailyPayments, nil
+}
+
+func findDailyPaymentAmountForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
+	var amount int
+	err := db.
+		QueryRow(`select amount from daily_payment where payment_cycle_id = $1 and currency = $2 order by created_at desc limit 1`, paymentCycleId, currency).
+		Scan(&amount)
+	if err != nil {
+		return 0, err
+	}
+
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return amount, nil
+	default:
+		return 0, err
+	}
+}
+
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET freq = $1 WHERE id=$2`)
 	if err != nil {
@@ -876,7 +976,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func getPaymentCycleDays(paymentCycleId uuid.UUID) (int64, error) {
+/*func getPaymentCycleDays(paymentCycleId uuid.UUID) (int64, error) {
 	var daysLeft int64
 	err := db.
 		QueryRow(`SELECT days_left FROM payment_cycle WHERE id = $1`, paymentCycleId).
@@ -893,9 +993,9 @@ func getPaymentCycleDays(paymentCycleId uuid.UUID) (int64, error) {
 	default:
 		return 0, err
 	}
-}
+}*/
 
-func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
+/*func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET days_left = $1 WHERE id=$2`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", daysLeft, err)
@@ -908,7 +1008,7 @@ func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error 
 		return err
 	}
 	return handleErrMustInsertOne(res)
-}
+}*/
 
 func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, error) {
 	var sum int64
@@ -1032,8 +1132,8 @@ func findAllCurreniesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error)
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
-		QueryRow(`SELECT id, seats, freq, days_left FROM payment_cycle WHERE id=$1`, pcid).
-		Scan(&pc.Id, &pc.Seats, &pc.Freq, &pc.DaysLeft)
+		QueryRow(`SELECT id, seats, freq, FROM payment_cycle WHERE id=$1`, pcid).
+		Scan(&pc.Id, &pc.Seats, &pc.Freq)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
