@@ -20,10 +20,10 @@ import (
 )
 
 type InvoiceRequest struct {
-	PriceAmount    int64  `json:"price_amount"`
-	PriceCurrency  string `json:"price_currency"`
-	PayCurrency    string `json:"pay_currency"`
-	IpnCallbackUrl string `json:"ipn_callback_url"`
+	PriceAmount    float64 `json:"price_amount"`
+	PriceCurrency  string  `json:"price_currency"`
+	PayCurrency    string  `json:"pay_currency"`
+	IpnCallbackUrl string  `json:"ipn_callback_url"`
 }
 
 type InvoiceResponse struct {
@@ -46,10 +46,10 @@ type InvoiceDB struct {
 	PaymentCycleId       *uuid.UUID
 	PaymentId            sql.NullInt64
 
-	PriceAmount   int64  // price amount in USD
+	PriceAmount   int64  // price amount in microUSD
 	PriceCurrency string // USD
 
-	PayAmount   sql.NullInt64 // how much to pay
+	PayAmount   sql.NullInt64 // how much to pay in crypto (nanoCrypto)
 	PayCurrency string        // in which currency
 
 	ActuallyPaid    sql.NullInt64  // how much the user really paid (incl. fees)
@@ -67,7 +67,7 @@ type PaymentInformation struct {
 	Plan  *Plan
 }
 
-type NowpaymentsWebhookResponse struct {
+type NowpaymentWebhookResponse struct {
 	ActuallyPaid     float64     `json:"actually_paid"`
 	InvoiceId        int64       `json:"invoice_id"`
 	OrderDescription interface{} `json:"order_description"`
@@ -79,7 +79,7 @@ type NowpaymentsWebhookResponse struct {
 	PayCurrency      string      `json:"pay_currency"`
 	PaymentId        int64       `json:"payment_id"`
 	PaymentStatus    string      `json:"payment_status"`
-	PriceAmount      int64       `json:"price_amount"`
+	PriceAmount      float64     `json:"price_amount"`
 	PriceCurrency    string      `json:"price_currency"`
 	PurchaseId       string      `json:"purchase_id"`
 }
@@ -104,7 +104,7 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	invoice := InvoiceRequest{int64(usdPrice), priceCurrency, payCurrency, ""}
+	invoice := InvoiceRequest{float64(usdPrice), priceCurrency, payCurrency, ""}
 
 	err = createNowpaymentsInvoice(invoice, paymentCycleId)
 	if err != nil {
@@ -162,7 +162,7 @@ func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID)
 
 func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	nowpaymentsSignature := r.Header.Get("x-nowpayments-sig")
-	var data NowpaymentsWebhookResponse
+	var data NowpaymentWebhookResponse
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not parse webhook data: %v", err)
@@ -178,14 +178,19 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// maybe simplify
 	invoice, _ := getInvoice(data.InvoiceId)
 	userId, _ := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
 	user, _ := findUserById(userId)
-	// get user id from invoice
+
+	amount := int64(data.ActuallyPaid * 1_000_000_000) // nanoCrypto
 
 	switch data.PaymentStatus {
 	case "finished":
-		nowpaymentSuccess(user, *invoice.PaymentCycleId, int64(data.ActuallyPaid*1_000_000_000), data.PayCurrency)
+		err := nowpaymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency)
+		if err != nil {
+			return
+		}
 		updateInvoiceFromWebhook(data)
 	case "expired":
 		updateInvoiceFromWebhook(data)
@@ -240,11 +245,11 @@ func closeCycle2(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId u
 	return ubNew, nil
 }
 
-func updateInvoiceFromWebhook(data NowpaymentsWebhookResponse) {
+func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) {
 	invoice, _ := getInvoice(data.InvoiceId)
 
 	invoice.PaymentId.Int64 = data.PaymentId
-	invoice.PriceAmount = data.PriceAmount * 1_000_000
+	invoice.PriceAmount = int64(data.PriceAmount * 1_000_000)
 	invoice.PriceCurrency = data.PriceCurrency
 	invoice.PayAmount.Int64 = int64(data.PayAmount * 1_000_000_000)
 	invoice.PayCurrency = data.PayCurrency
@@ -308,8 +313,7 @@ func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) bool {
 }
 
 func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string) error {
-	fmt.Println(u)
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT")
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency) // TODO: do wee need currency check?
 	if err != nil {
 		return err
 	}
@@ -331,6 +335,9 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 	if err != nil {
 		return err
 	}
+
+	daysLeft, err := getPaymentCycleDays(u.PaymentCycleId)
+	err = updatePaymentCycleDaysLeft(newPaymentCycleId, daysLeft+365)
 
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
 	if err != nil {

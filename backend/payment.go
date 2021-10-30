@@ -368,7 +368,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ", "usd")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -431,7 +431,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS", "usd")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -485,7 +485,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64) error {
 
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT")
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", "usd")
 	if err != nil {
 		return err
 	}
