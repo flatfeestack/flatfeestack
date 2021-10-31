@@ -148,14 +148,13 @@ CREATE TABLE daily_repo_balance (
     currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_repo_balance_index ON daily_repo_balance(repo_id, day);
+CREATE UNIQUE INDEX daily_repo_balance_index ON daily_repo_balance(repo_id, day, currency);
 
 CREATE TABLE daily_repo_weight (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     repo_id     UUID CONSTRAINT fk_repo_id_drw REFERENCES repo (id),
     weight      DOUBLE PRECISION NOT NULL,
     day         DATE NOT NULL,
-    currency    VARCHAR(16) NOT NULL,
     created_at  TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX daily_repo_weight_index ON daily_repo_weight(repo_id, day);
@@ -188,7 +187,7 @@ CREATE TABLE daily_future_leftover (
     currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day);
+CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day, currency);
 
 CREATE table daily_user_contribution(
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

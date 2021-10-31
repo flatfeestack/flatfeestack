@@ -393,11 +393,26 @@ func contains(s []string, str string) bool {
 
 func crontester(w http.ResponseWriter, r *http.Request) {
 
-	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-30T23:59:41+00:00")
+	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
+	/*	repos, _ := runDailyAnalysisCheck(time.Now(), 5)
+		log.Printf("Daily Analysis Check found %v entries", len(repos))*/
+
+	/*	for _, v := range repos {
+		if v.Url == nil {
+			log.Printf("URL is nil of %v", v.Id)
+			continue
+		}
+		if v.Branch == nil {
+			log.Printf("Branch is nil of %v", v.Id)
+			continue
+		}
+		_ = analysisRequest(v.Id, *v.Url, *v.Branch)
+	}*/
+
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
-	nr, err := runDailyUserBalance(yesterdayStart, time.Now())
+	nr, err := runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
 	if err != nil {
 		log.Printf("error")
 	}

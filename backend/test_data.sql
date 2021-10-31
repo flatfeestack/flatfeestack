@@ -99,7 +99,7 @@ INSERT INTO public.user_emails_sent (id, user_id, email_type, created_at) VALUES
 
 
 -- tests
-CREATE OR REPLACE FUNCTION test(yesterdayStart DATE, now TIMESTAMP with time zone) RETURNS SETOF record AS
+CREATE OR REPLACE FUNCTION updateDailyUserBalance(yesterdayStart DATE, now TIMESTAMP with time zone) RETURNS SETOF record AS
 $$
 DECLARE
 r record;
@@ -141,3 +141,25 @@ select * from test(to_date('2021-10-29', 'YYYY-MM-DD'), now()) f(payment_cycle_i
 select * from user_balances order by created_at desc
 
 delete from user_balances where id = 'cd111bc8-860a-473c-a1be-acf2705fc5b5'
+
+
+
+select
+    s.repo_id,
+    min(q.payPerHour),
+    q.currency,
+    SUM((EXTRACT(epoch from age(LEAST('2021-10-30 23:59:59.325272', s.unsponsor_at), GREATEST('2021-10-30 00:00:00.00000', s.sponsor_at)))/3600)::bigint),
+    SUM(((EXTRACT(epoch from age(LEAST('2021-10-30 23:59:59.325272', s.unsponsor_at), GREATEST('2021-10-30 00:00:00.00000', s.sponsor_at)))/3600)::bigint * q.payPerHour)
+		* (EXTRACT(epoch from age(LEAST('2021-10-30 23:59:59.325272', s.unsponsor_at), GREATEST('2021-10-30 00:00:00.00000', s.sponsor_at)))/3600)::bigint / drh.repo_hours)
+from (
+         select ub.user_id,-(min(ub.balance) / 24) as payPerHour, min(ub.currency) as currency from user_balances ub
+                                                                                                        join sponsor_event s on s.user_id = ub.user_id
+         where ub.day = '2021-10-29 00:26:12.325272'
+           AND NOT((s.sponsor_at<'2021-10-30 00:26:12.325272' AND s.unsponsor_at<'2021-10-30 00:26:12.325272') OR (s.sponsor_at>='2021-10-30 23:26:12.325272' AND s.unsponsor_at>='2021-10-30 23:26:12.325272'))
+           AND ub.balance_type = 'DAY'
+         group by ub.user_id
+     ) as q
+         join sponsor_event s on s.user_id = q.user_id
+         INNER JOIN users u ON u.id = s.user_id
+         INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
+group by s.repo_id, q.currency
