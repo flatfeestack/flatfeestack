@@ -726,16 +726,16 @@ func insertUserBalance(ub UserBalance) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertNewPaymentCycle(uid uuid.UUID, seats int, freq int, createdAt time.Time) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, seats, freq, created_at) 
-                                    VALUES($1, $2, $3, $4)  RETURNING id`)
+func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, createdAt time.Time) (*uuid.UUID, error) {
+	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, days_left, seats, freq, created_at) 
+                                    VALUES($1, $2, $3, $4, $5)  RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", uid, err)
 	}
 	defer closeAndLog(stmt)
 
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(uid, seats, freq, createdAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(uid, daysLeft, seats, freq, createdAt).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -995,7 +995,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	}
 }*/
 
-/*func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
+func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET days_left = $1 WHERE id=$2`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", daysLeft, err)
@@ -1008,7 +1008,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 		return err
 	}
 	return handleErrMustInsertOne(res)
-}*/
+}
 
 func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, error) {
 	var sum int64

@@ -91,13 +91,15 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	//usdPrice := getPrice(paymentInformation)
-	usdPrice := 1
+	var data map[string]string
+	err = json.NewDecoder(r.Body).Decode(&data)
+
+	usdPrice := getPrice(paymentInformation)
 
 	priceCurrency := "USD"
-	payCurrency := "NEO" //get from request
+	payCurrency := data["currency"] //get from request
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, paymentInformation.Seats, paymentInformation.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, 0, paymentInformation.Seats, paymentInformation.Freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -337,28 +339,24 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 	}
 
 	isNewCurrencyPayment := true
+	totalDaysLeft := 365 // add one year by default, because payment is successful
+
 	dailyPayments, _ := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
 	for _, dailyPayment := range dailyPayments {
 		if dailyPayment.Currency == currency {
 			isNewCurrencyPayment = false
 		}
-
-		fmt.Println(newPaymentCycleId)
+		totalDaysLeft += int(dailyPayment.DaysLeft)
 		dailyPayment.PaymentCycleId = newPaymentCycleId
 		dailyPayment.LastUpdate = time.Now()
-		insertDailyPayment(dailyPayment)
-		fmt.Println(dailyPayment)
+		err = insertDailyPayment(dailyPayment)
 	}
 
-	// get days_left for currency
 	daysLeft, err := findDaysLeftForCurrency(newPaymentCycleId, currency)
 	newDaysLeft := daysLeft + 365
-	// get sum balance for currency
 	balance, err := findSumUserBalance2(u.Id, newPaymentCycleId, currency)
-	// sum / days_left + 365
 	newDailyPaymentAmount := balance / newDaysLeft
 
-	// carry over days left from other currencies
 	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
 
 	if isNewCurrencyPayment {
@@ -367,6 +365,7 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 		err = updateDailyPayment(newDailyPayment)
 	}
 
+	err = updatePaymentCycleDaysLeft(newPaymentCycleId, totalDaysLeft)
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
 	if err != nil {
 		return err
@@ -390,4 +389,17 @@ func contains(s []string, str string) bool {
 	}
 
 	return false
+}
+
+func crontester(w http.ResponseWriter, r *http.Request) {
+
+	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-30T23:59:41+00:00")
+	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
+
+	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+	nr, err := runDailyUserBalance(yesterdayStart, time.Now())
+	if err != nil {
+		log.Printf("error")
+	}
+	log.Printf("Daily Repo Hours inserted %v entries", nr)
 }

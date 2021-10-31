@@ -260,6 +260,7 @@ func main() {
 
 	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentPayment)).Methods(http.MethodPost)
+	router.HandleFunc("/nowpayments/crontester", crontester).Methods(http.MethodGet)
 
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {

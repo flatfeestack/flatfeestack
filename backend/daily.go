@@ -50,23 +50,19 @@ func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now ti
 //Running this twice wont work as we have a unique index on: user_id, day, balance_type
 //TODO: needs to be updated, deduct from right pot and right amount
 func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO user_balances (payment_cycle_id, user_id, balance, balance_type, day, created_at)
-		   SELECT u.payment_cycle_id as payment_cycle_id,
-		          u.id as user_id, 
-				  $2 as balance,
-		          'DAY' as balance_type,
-			      $1 as day, 
-                  $3 as created_at
-			 FROM users u
-			     INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
-			 WHERE drh.day=$1`)
+	stmt, err := db.Prepare(`INSERT INTO user_balances (payment_cycle_id, user_id, balance, balance_type, currency, day, created_at)
+		   select * from test(
+		       $1, 
+		       $2) 
+		       f(payment_cycle_id uuid, user_id uuid, balance bigint, balance_type text, currency VARCHAR(16), day date, created_at TIMESTAMP with time zone)
+`)
 	if err != nil {
 		return 0, err
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, -mUSDPerDay, now)
+	res, err = stmt.Exec(yesterdayStart, now)
 	if err != nil {
 		return 0, err
 	}
@@ -77,7 +73,6 @@ func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error)
 //
 //Running this twice is ok, as it will give a more accurate state
 // TODO: needs to be updated, is not based on mUSDPerDay but depends on currency
-// TODO: why not days left - 1?
 func runDailyDaysLeft(yesterdayStart time.Time) (int64, error) {
 	stmt, err := db.Prepare(`
            UPDATE payment_cycle set days_left = q.sum / $1

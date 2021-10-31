@@ -98,7 +98,7 @@ func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) 
 	}
 
 	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
-	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, 1, freq, timeNow())
+	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, 1, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", u.Id, err)
 		return false, nil
@@ -236,7 +236,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, seats, freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -292,7 +292,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	}
 
 	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Seats, pc.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Freq, pc.Seats, pc.Freq, timeNow())
 	if err != nil {
 		return nil, err
 	}
