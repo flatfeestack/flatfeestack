@@ -28,8 +28,6 @@ import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 @ManifestExtra(key = "Author", value = "Michael Bucher")
 public class PayoutNeoForEvaluation {
 
-// region static variables
-
     /**
      * The storage context
      */
@@ -53,8 +51,100 @@ public class PayoutNeoForEvaluation {
      */
     static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
-// endregion static variables
-// region withdrawal
+    /**
+     * Upon deployment, the initial owner is set.
+     *
+     * @param data   The initial owner's public key.
+     * @param update True, if the contract is being deployed, false if it is updated.
+     */
+    @OnDeployment
+    public static void deploy(Object data, boolean update) {
+        if (!update) {
+            ECPoint initialOwner = (ECPoint) data;
+            contractMap.put(ownerKey, initialOwner.toByteString());
+        }
+    }
+
+    /**
+     * This method is called when the contract receives NEP-17 tokens.
+     * <p>
+     * It is required to receive NEP-17 tokens.
+     *
+     * @param from   The sender.
+     * @param amount The amount transferred to this contract.
+     * @param data   Arbitrary data. This field is required by standard and is not used here.
+     */
+    @OnNEP17Payment
+    public static void onNep17Payment(Hash160 from, int amount, Object data) {
+    }
+
+    @DisplayName("onUnsuccessfulPayout")
+    private static Event1Arg<Hash160> onUnsuccessfulPayout;
+
+    // region owner
+
+    /**
+     * Get the {@code ECPoint} of the owner of this contract.
+     *
+     * @return the contract owner's {@code ECPoint}.
+     */
+    @Safe
+    public static ECPoint getOwner() {
+        return new ECPoint(contractMap.get(ownerKey));
+    }
+
+    /**
+     * Changes the contract owner.
+     *
+     * @param newOwner The new contract owner.
+     */
+    public static void setOwner(ECPoint newOwner) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        assert checkWitness(newOwner) : "The new owner must witness this change.";
+        contractMap.put(ownerKey, newOwner.toByteString());
+    }
+
+    // endregion owner
+    // region tea
+
+    /**
+     * Gets the total earned amount ({@code tea}) of an account.
+     *
+     * @param account The account.
+     * @return the total earned amount.
+     */
+    @Safe
+    public static int getTea(Hash160 account) {
+        return teaMap.get(account.toByteString()).toIntOrZero();
+    }
+
+    /**
+     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier or
+     * in case a developer may want to change her address without withdrawing the earned funds to the old address (e.g.
+     * in case of a loss of the private key).
+     * <p>
+     * The {@code oldTea} is checked, so that no immediate withdrawal takes place before executing this.
+     * <p>
+     * In the case of an address change, the contract owner can set the {@code Tea} to the highest {@code Tea} of
+     * that account for which a signature was provided. The new address can then be initialized with a {@code Tea}
+     * that is equal to the current {@code Tea} that is stored off-chain minus the here provided {@code oldTea}.
+     *
+     * @param account The account to set the {@code Total Earned Amount} for.
+     * @param oldTea  The previous {@code Total Earned Amount} for that account.
+     * @param newTea  The new {@code Total Earned Amount} for that account.
+     */
+    public static void setTea(Hash160 account, int oldTea, int newTea) {
+        //assert checkWitness(account) : "No authorization.";
+        // If the developer is required to witness this, the method looses its blacklist functionality.
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
+        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
+        assert oldTea == storedTea : "Stored tea is not equal to the provided oldTea.";
+        assert newTea > storedTea : "The provided amount is lower than or equal to the stored tea.";
+        teaMap.put(account.toByteString(), newTea);
+    }
+
+    // endregion tea
+    // region withdrawal
 
     /**
      * Withdraws the earned amount.
@@ -116,7 +206,7 @@ public class PayoutNeoForEvaluation {
     }
 
 // endregion withdrawal
-// region batch payout
+    // region batch payout
 
     // service fee is deducted off-chain - as soon as it is deducted, the account is added to upcoming batchPayout list.
     //
@@ -187,7 +277,7 @@ public class PayoutNeoForEvaluation {
             a = accounts[i];
             tea = teas[i];
             int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
-            teaMap.put(a.toByteString(), tea + serviceFee);
+            teaMap.put(a.toByteString(), tea);
             int payoutAmount = tea - oldTea - serviceFee;
             if (payoutAmount <= 0) {
                 // TODO: 12.10.21 Evaluation -> Check this variation.
@@ -289,108 +379,9 @@ public class PayoutNeoForEvaluation {
             Map<Hash160, Integer> teasForWithdrawal) {
     }
 
-    @DisplayName("onUnsuccessfulPayout")
-    private static Event1Arg<Hash160> onUnsuccessfulPayout;
+    // endregion batch payout
 
-// endregion batch payout
-// region setters
-
-    /**
-     * Changes the contract owner.
-     *
-     * @param newOwner The new contract owner.
-     */
-    public static void changeOwner(ECPoint newOwner) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert checkWitness(newOwner) : "The new owner must witness this change.";
-        contractMap.put(ownerKey, newOwner.toByteString());
-    }
-
-    /**
-     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier or
-     * in case a developer may want to change her address without withdrawing the earned funds to the old address (e.g.
-     * in case of a loss of the private key).
-     * <p>
-     * The {@code oldTea} is checked, so that no immediate withdrawal takes place before executing this.
-     * <p>
-     * In the case of an address change, the contract owner can set the {@code Tea} to the highest {@code Tea} of
-     * that account for which a signature was provided. The new address can then be initialized with a {@code Tea}
-     * that is equal to the current {@code Tea} that is stored off-chain minus the here provided {@code oldTea}.
-     *
-     * @param account The account to set the {@code Total Earned Amount} for.
-     * @param oldTea  The previous {@code Total Earned Amount} for that account.
-     * @param newTea  The new {@code Total Earned Amount} for that account.
-     */
-    public static void updateTea(Hash160 account, int oldTea, int newTea) {
-        //assert checkWitness(account) : "No authorization.";
-        // If the developer is required to witness this, the method looses its blacklist functionality.
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
-        int alreadyWithdrawn = teaMap.get(account.toByteString()).toIntOrZero();
-        assert alreadyWithdrawn != oldTea : "Funds were withdrawn in the meantime.";
-        assert newTea < alreadyWithdrawn : "The provided amount is lower than the already withdrawn amount.";
-        teaMap.put(account.toByteString(), newTea);
-    }
-
-// endregion setters
-// region getters
-
-
-    /**
-     * Get the {@code ECPoint} of the owner of this contract.
-     *
-     * @return the contract owner's {@code ECPoint}.
-     */
-    @Safe
-    public static ECPoint getOwner() {
-        return new ECPoint(contractMap.get(ownerKey));
-    }
-
-    /**
-     * Gets the total earned amount ({@code tea}) of an account.
-     *
-     * @param account The account.
-     * @return the total earned amount.
-     */
-    @Safe
-    public static int getTea(Hash160 account) {
-        return teaMap.get(account.toByteString()).toIntOrZero();
-    }
-
-// endregion getters
-// region nep17
-
-    /**
-     * This method is called when the contract receives NEP-17 tokens.
-     * <p>
-     * It is required to receive NEP-17 tokens.
-     *
-     * @param from   The sender.
-     * @param amount The amount transferred to this contract.
-     * @param data   Arbitrary data. This field is required by standard and is not used here.
-     */
-    @OnNEP17Payment
-    public static void onNep17Payment(Hash160 from, int amount, Object data) {
-    }
-
-// endregion nep17
-// region deployment
-
-    /**
-     * Upon deployment, the initial owner is set.
-     *
-     * @param data   The initial owner's public key.
-     * @param update True, if the contract is being deployed, false if it is updated.
-     */
-    @OnDeployment
-    public static void deploy(Object data, boolean update) {
-        if (!update) {
-            ECPoint initialOwner = (ECPoint) data;
-            contractMap.put(ownerKey, initialOwner.toByteString());
-        }
-    }
-
-// endregion deployment
-// region helper methods for evaluation
+    // region helper methods for evaluation
 
     // Helper methods for development process
 
@@ -408,10 +399,6 @@ public class PayoutNeoForEvaluation {
         return concat(a.toByteArray(), toByteArray(i));
     }
 
-    public static int length(int[] list) {
-        return list.length;
-    }
-
-// endregion helper methods for evaluation
+    // endregion helper methods for evaluation
 
 }
