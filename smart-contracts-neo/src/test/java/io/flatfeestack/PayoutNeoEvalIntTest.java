@@ -15,6 +15,7 @@ import io.neow3j.protocol.http.HttpService;
 import io.neow3j.serialization.NeoSerializableInterface;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.Witness;
+import io.neow3j.transaction.exceptions.TransactionConfigurationException;
 import io.neow3j.types.*;
 import io.neow3j.wallet.Account;
 import io.neow3j.wallet.Wallet;
@@ -45,10 +46,14 @@ import static io.neow3j.wallet.Account.createMultiSigAccount;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class PayoutNeoIntegrationTest {
+public class PayoutNeoEvalIntTest {
 
     private static Neow3j neow3j;
     private static GasToken gasToken;
@@ -85,11 +90,12 @@ public class PayoutNeoIntegrationTest {
     private static final Wallet dev2Wallet = Wallet.withAccounts(dev2);
 
     // Methods
-    private static final String batchPayout = "batchPayout";
-    private static final String changeOwner = "changeOwner";
     private static final String getOwner = "getOwner";
-    private static final String withdraw = "withdraw";
+    private static final String setOwner = "setOwner";
     private static final String getTea = "getTea";
+    private static final String setTea = "setTea";
+    private static final String withdraw = "withdraw";
+    private static final String batchPayout = "batchPayout";
 
     @ClassRule
     public static NeoTestContainer neoTestContainer = new NeoTestContainer();
@@ -110,6 +116,8 @@ public class PayoutNeoIntegrationTest {
         fundPreSignContract();
     }
 
+    // region helper methods
+
     private Sign.SignatureData createSignature(Hash160 account, BigInteger tea, Account signer) {
         byte[] accountArray = account.toLittleEndianArray();
         byte[] teaArray = reverseArray(tea.toByteArray());
@@ -117,7 +125,9 @@ public class PayoutNeoIntegrationTest {
         return signMessage(message, signer.getECKeyPair());
     }
 
-    // Helper methods
+    private Hash160 getHash160FromPublicKey(String publicKey) {
+        return Hash160.fromPublicKey(new ECKeyPair.ECPublicKey(publicKey).getEncoded(true));
+    }
 
     private static void compileContract(String canonicalName) throws IOException {
         CompilationUnit res = new Compiler().compile(canonicalName);
@@ -195,27 +205,24 @@ public class PayoutNeoIntegrationTest {
         return gasToken.getBalanceOf(account);
     }
 
-//    private Hash256 withdrawWithWitness(Hash160 dev, BigInteger teaFractions) {
-//    }
-
-    @Test
-    public void testVerifySig() throws IOException {
-        BigInteger balanceContract = getContractBalance();
-        // Dev1 earned 12 gas for the first time
-        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
-        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
-                reverseArray(teaDev1.toByteArray()));
-
-        Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
-        InvocationResult invocationResult = payoutContract.callInvokeFunction("verifySig",
-                        asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) //
-                // returns false
-//                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
-                .getInvocationResult();
-        System.out.println("#################");
-        System.out.println(invocationResult.getStack().get(0).getBoolean());
-        System.out.println("#################");
+    private BigInteger getTea(Hash160 account) throws IOException {
+        return payoutContract.callFuncReturningInt(getTea, hash160(account));
     }
+
+    private Hash256 setTea(Hash160 scriptHash, BigInteger oldTea, BigInteger newTea) throws Throwable {
+        Hash256 txHash = payoutContract
+                .invokeFunction(setTea, hash160(scriptHash), integer(oldTea), integer(newTea))
+                .signers(calledByEntry(owner))
+                .sign()
+                .send()
+                .getSendRawTransaction()
+                .getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        return txHash;
+    }
+
+    // endregion helper methods
+    // region test basic contract methods
 
     @Test
     public void testFundContract() throws Throwable {
@@ -234,8 +241,16 @@ public class PayoutNeoIntegrationTest {
     }
 
     @Test
-    public void testChangeOwner() throws Throwable {
-        Hash256 txHash = payoutContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
+    public void testOwner() throws IOException {
+        InvocationResult res = payoutContract.callInvokeFunction(getOwner).getInvocationResult();
+        String publicKey = res.getStack().get(0).getHexString();
+        Hash160 o = getHash160FromPublicKey(publicKey);
+        assertThat(o, is(owner.getScriptHash()));
+    }
+
+    @Test
+    public void testSetOwner() throws Throwable {
+        Hash256 txHash = payoutContract.invokeFunction(setOwner, publicKey(defaultPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -251,7 +266,7 @@ public class PayoutNeoIntegrationTest {
         assertThat(item.getByteArray(), is(defaultPubKey.getEncoded(true)));
 
         // Change owner back to maintain same state for other tests
-        txHash = payoutContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
+        txHash = payoutContract.invokeFunction(setOwner, publicKey(ownerPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -265,6 +280,47 @@ public class PayoutNeoIntegrationTest {
         item = payoutContract.callInvokeFunction(getOwner).getInvocationResult().getStack().get(0);
         assertThat(item.getByteArray(), is(ownerPubKey.getEncoded(true)));
     }
+
+    @Test
+    public void testGetSetTea() throws Throwable {
+        Account randomAccount = Account.create();
+        assertThat(getTea(randomAccount.getScriptHash()), is(BigInteger.ZERO));
+        setTea(randomAccount.getScriptHash(), BigInteger.ZERO, BigInteger.valueOf(1234890));
+        assertThat(getTea(randomAccount.getScriptHash()), is(BigInteger.valueOf(1234890)));
+        setTea(randomAccount.getScriptHash(), BigInteger.valueOf(1234890), BigInteger.valueOf(1234891));
+        assertThat(getTea(randomAccount.getScriptHash()), is(BigInteger.valueOf(1234891)));
+    }
+
+    @Test
+    public void testSetTeaInvalidOldTea() throws Throwable {
+        Account randomAccount = Account.create();
+        assertThat(getTea(randomAccount.getScriptHash()), is(BigInteger.ZERO));
+        boolean failed = false;
+        try {
+            setTea(randomAccount.getScriptHash(), BigInteger.valueOf(10), BigInteger.valueOf(11));
+        } catch (TransactionConfigurationException e) {
+            failed = true;
+            assertThat(e.getMessage(), containsString("is not equal to the provided oldTea"));
+        }
+        assertTrue(failed);
+    }
+
+    @Test
+    public void testSetTeaInvalidNewTea() throws Throwable {
+        Account randomAccount = Account.create();
+        assertThat(getTea(randomAccount.getScriptHash()), is(BigInteger.ZERO));
+        boolean failed = false;
+        try {
+            setTea(randomAccount.getScriptHash(), BigInteger.ZERO, BigInteger.valueOf(-1));
+        } catch (TransactionConfigurationException e) {
+            failed = true;
+            assertThat(e.getMessage(), containsString("is lower than or equal to the stored tea."));
+        }
+        assertTrue(failed);
+    }
+
+    // endregion test basic contract methods
+    // region test withdraw
 
     @Test
     public void testWithdrawWithSignature() throws Throwable {
@@ -349,8 +405,33 @@ public class PayoutNeoIntegrationTest {
         assertThat(teaOnContract.getInteger(), is(teaDev1));
     }
 
+    // endregion test withdraw methods
+    // region test batch payout methods
+
     @Test
     public void testBatchPayout() {
     }
+
+    // endregion test batch payout methods
+    // region test helper methods
+//    @Test
+//    public void testVerifySig() throws IOException {
+//        BigInteger balanceContract = getContractBalance();
+//        // Dev1 earned 12 gas for the first time
+//        BigInteger teaDev1 = gasToken.toFractions(BigDecimal.valueOf(12));
+//        byte[] message = concatenate(dev1.getScriptHash().toLittleEndianArray(),
+//                reverseArray(teaDev1.toByteArray()));
+//
+//        Sign.SignatureData signatureData = signMessage(message, owner.getECKeyPair());
+//        InvocationResult invocationResult = payoutContract.callInvokeFunction("verifySig",
+//                        asList(hash160(dev1), integer(teaDev1), signature(signatureData)), calledByEntry(owner)) //
+//                // returns false
+////                        asList(byteArray(message), signature(signatureData)), calledByEntry(owner)) // returns true
+//                .getInvocationResult();
+//        System.out.println("#################");
+//        System.out.println(invocationResult.getStack().get(0).getBoolean());
+//        System.out.println("#################");
+//    }
+    // endregion test helper methods
 
 }
