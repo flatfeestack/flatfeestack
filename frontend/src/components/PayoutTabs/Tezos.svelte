@@ -1,15 +1,12 @@
 <script lang="ts">
-  import {ethers, providers} from "ethers";
-  import {ABI} from "../../types/contract";
-  import {error, user, config} from "../../ts/store";
-  import detectEthereumProvider from "@metamask/detect-provider";
+  import {error, user} from "../../ts/store";
   import {onMount} from "svelte";
-  import Spinner from "../Spinner.svelte";
   import Dots from "../Dots.svelte";
   import { TempleWallet } from "@temple-wallet/dapp";
 
 
   let balance
+  let contract
 
   $: {
     if ($user.payout_eth) {
@@ -30,17 +27,19 @@
     // Alternatively, you can use the method `TempleWallet.onAvailabilityChange`
     // that tracks availability in real-time .
 
-    const wallet = new TempleWallet("My Super DApp");
+    const permission = await TempleWallet.getCurrentPermission();
+    const wallet = new TempleWallet("Flatfeestack", permission);
     await wallet.connect("granadanet");
     const tezos = wallet.toTezos();
-
-    const accountPkh = await tezos.wallet.pkh();
-    balance = await tezos.tz.getBalance(accountPkh);
+    // example contract with amount which can be changed
+    contract = await tezos.wallet.at('KT1K22GJXnz7ufXJbqyjQ859HHN3AAaU9act');
+    balance = await contract.storage()
   });
 
   const requestFunds = async () => {
     try {
-
+      const op = await contract.methods.replace(balance * 2).send();
+      await op.confirmation();
     } catch (e) {
       $error = e;
     }
