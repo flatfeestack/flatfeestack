@@ -1,15 +1,16 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
   import Fa from "svelte-fa";
-  import { onMount } from "svelte";
-  import { API } from "../ts/api";
-  import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
-  import Web3 from "../components/Web3.svelte";
-  import { error, user, firstTime } from "../ts/store";
-  import type { GitUser, UserBalanceCore } from "../types/users.ts";
-  import { formatDate, formatMUSD, formatDay } from "../ts/services";
-  import { navigate } from "svelte-routing";
-  import { Contributions } from "../types/users.ts";
+  import {onMount} from "svelte";
+  import {API} from "../ts/api";
+  import {faTrash, faClock} from "@fortawesome/free-solid-svg-icons";
+  import Web3 from "../components/PayoutTabs/Web3.svelte";
+  import {error, user, firstTime} from "../ts/store";
+  import type {GitUser, UserBalanceCore} from "../types/users.ts";
+  import {formatDate, formatMUSD, formatDay} from "../ts/services";
+  import {navigate} from "svelte-routing";
+  import {Contributions} from "../types/users.ts";
+  import PayoutSelection from "../components/PayoutSelection.svelte";
 
   let address = "";
   let gitEmails: GitUser[] = [];
@@ -58,7 +59,7 @@
       const pr2 = API.user.contributionsRcv();
       const pr3 = API.user.pendingDailyUserPayouts();
       const res1 = await pr1;
-      gitEmails = res1 ? res1:gitEmails;
+      gitEmails = res1 ? res1 : gitEmails;
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
       pendingPayouts = await pr3;
@@ -138,7 +139,8 @@
     <label class="px-2">Pending income:</label>{pendingPayouts?pendingPayouts.balance:0}
   </div>
 
-  <Web3 />
+
+  <PayoutSelection />
 
   <div class="border-primary-500 rounded small p-2 m-2">
     Our commit evaluation engine analyzes within a timeframe of 2 month, and due to potential chargebacks,

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { ethers, providers } from "ethers";
-  import { ABI } from "./../types/contract";
-  import { error, user, config } from "../ts/store";
+  import { ABI } from "../../types/contract";
+  import { error, user, config } from "../../ts/store";
   import detectEthereumProvider from "@metamask/detect-provider";
   import { onMount } from "svelte";
-  import Spinner from "./Spinner.svelte";
-  import Dots from "./Dots.svelte";
+  import Spinner from "../Spinner.svelte";
+  import Dots from "../Dots.svelte";
 
   let storageContract;
   let viewContract;
@@ -26,7 +26,6 @@
     const ethProv = await detectEthereumProvider();
     if (ethProv) {
       try {
-        ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new providers.Web3Provider(<any>ethProv);
         const signer = provider.getSigner();
         const contractAddress = $config.contractAddr;
@@ -42,6 +41,7 @@
 
   const requestFunds = async () => {
     try {
+      ethereum.request({ method: 'eth_requestAccounts' });
       await storageContract.release();
     } catch (e) {
       $error = e;

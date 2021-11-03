@@ -1,6 +1,6 @@
 <script>
-    import FiatTab from "./FiatTab.svelte";
-    import CryptoTab from "./CryptoTab.svelte";
+    import FiatTab from "./PaymentTabs/FiatTab.svelte";
+    import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
     import Tabs from "./Tabs.svelte";
 
     // List of tab items with labels, values and assigned components
