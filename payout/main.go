@@ -20,14 +20,30 @@ type PayoutUsd struct {
 	ExchangeRate string `json:"exchange_rate_USD_ETH"`
 }
 
+type PayoutCryptoRequest struct {
+	Address  string `json:"address"`
+	Balance  int64  `json:"balance"`
+	Currency string `json:"crypto_currency"`
+}
+
 type PayoutWei struct {
 	Address string  `json:"address"`
 	Balance big.Int `json:"balance_wei"`
 }
 
+type PayoutCrypto struct {
+	Address string  `json:"address"`
+	Balance big.Int `json:"balance"`
+}
+
 type PayoutResponse struct {
 	TxHash     string      `json:"tx_hash"`
 	PayoutWeis []PayoutWei `json:"payout_weis"`
+}
+
+type PayoutCryptoResponse struct {
+	TxHash        string         `json:"tx_hash"`
+	PayoutCryptos []PayoutCrypto `json:"payout_cryptos"`
 }
 
 type Opts struct {
@@ -40,12 +56,13 @@ type Opts struct {
 }
 
 var (
-	opts     *Opts
-	EthWei   = big.NewFloat(0)
-	MicroUsd = big.NewFloat(0)
-	UsdWei   = big.NewFloat(0)
-	client   *ClientETH
-	debug    bool
+	opts         *Opts
+	EthWei       = big.NewFloat(0)
+	MicroUsd     = big.NewFloat(0)
+	UsdWei       = big.NewFloat(0)
+	CryptoFactor = big.NewFloat(0)
+	ethClient    *ClientETH
+	debug        bool
 )
 
 func NewOpts() *Opts {
@@ -119,17 +136,18 @@ func main() {
 
 	EthWei.SetString("1000000000000000000")
 	MicroUsd.SetString("1000000")
-	UsdWei.SetString("1000000000000") //EthWei/MicroUsd
+	UsdWei.SetString("1000000000000")    //EthWei/MicroUsd
+	CryptoFactor.SetString("1000000000") // Fixed factor for the moment
 
 	opts = NewOpts()
 
-	client, err = NewClientETH(opts.EthUrl, opts.EthPrivateKey)
+	ethClient, err = NewClientETH(opts.EthUrl, opts.EthPrivateKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if opts.Deploy {
-		ContractAddr, err = client.deploy(ContractCode)
+		ContractAddr, err = ethClient.deploy(ContractCode)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -139,7 +157,7 @@ func main() {
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 	router.HandleFunc("/pay", PaymentRequestHandler).Methods("POST", "OPTIONS")
-	router.HandleFunc("/pay-crypto", PaymentCryptoRequestHandler).Methods("POST", "OPTIONS")
+	router.HandleFunc("/pay-crypto/{currency}", PaymentCryptoRequestHandler).Methods("POST", "OPTIONS")
 
 	log.Printf("listing on port %v", opts.Port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
@@ -192,7 +210,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	txHash, err := client.fill(addresses, amountWei)
+	txHash, err := ethClient.fill(addresses, amountWei)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "authorization header not set")
 		return
@@ -208,21 +226,51 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
-	var amountWei []*big.Int
+	params := mux.Vars(r)
+	cur := params["currency"]
+	w.Header().Set("Content-Type", "application/json")
+	var data []PayoutCryptoRequest
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Printf("Could not decode Webhook Body %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var amount []*big.Int
 	var addresses []string
-	var payoutWei []PayoutWei
+	var payoutCrypto []PayoutCrypto
 
-	balance := new(big.Int)
-	balance.SetInt64(int64(100000))
-	amountWei = append(amountWei, balance)
-	addresses = append(addresses, "0x142f2858De9Ae2B3b598b1032f92D9437437Affe")
+	for _, v := range data {
+		balance := new(big.Int)
+		balance.SetInt64(v.Balance)
+		amount = append(amount, balance)
+		addresses = append(addresses, v.Address)
+		payoutCrypto = append(payoutCrypto, PayoutCrypto{
+			Address: v.Address,
+			Balance: *balance,
+		})
+	}
 
-	txHash, err := client.fill(addresses, amountWei)
+	txHash, err := "", nil
+	switch cur {
+	case "eth":
+		txHash, err = ethClient.fill(addresses, amount)
+		break
+	case "neo":
+		break
+	case "tez":
+		break
+	default:
+		log.Printf("Currency isn't supported %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		writeErr(w, http.StatusBadRequest, "Currency isn't supported %v", err)
+	}
+
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
 	}
-	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
+	p := PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 	log.Printf(p.TxHash)
 	return
 }
