@@ -51,6 +51,8 @@ public class PayoutNeoForEvaluation {
      */
     static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
+    // region tested
+
     /**
      * Upon deployment, the initial owner is set.
      *
@@ -134,8 +136,7 @@ public class PayoutNeoForEvaluation {
      * @param newTea  The new {@code Total Earned Amount} for that account.
      */
     public static void setTea(Hash160 account, int oldTea, int newTea) {
-        //assert checkWitness(account) : "No authorization.";
-        // If the developer is required to witness this, the method looses its blacklist functionality.
+        // Idea: If the developer is required to witness this, the method loses its blacklist functionality.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
         assert oldTea == storedTea : "Stored tea is not equal to the provided oldTea.";
@@ -145,25 +146,6 @@ public class PayoutNeoForEvaluation {
 
     // endregion tea
     // region withdrawal
-
-    /**
-     * Withdraws the earned amount.
-     *
-     * @param account The beneficiary account.
-     * @param tea     The total earned amount of this account.
-     */
-    public static void withdraw(Hash160 account, int tea) {
-        // TODO: 20.10.21 Evaluation -> This solution approach may need a second contract owner address that does not
-        //  hold any funds. In order to guarantee, that the beneficiary account (and not the contract owner) pays for
-        //  the transaction.
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
-        int amountToWithdraw = tea - storedTea;
-        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
-        teaMap.put(account.toByteString(), tea);
-        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
-        assert transfer : "Transfer was not successful.";
-    }
 
     /**
      * Withdraws the earned amount with the option to delegate the payment of the emerging
@@ -205,7 +187,24 @@ public class PayoutNeoForEvaluation {
         assert transfer : "Transfer was not successful.";
     }
 
-// endregion withdrawal
+    /**
+     * Withdraws the earned amount.
+     *
+     * @param account The beneficiary account.
+     * @param tea     The total earned amount of this account.
+     */
+    public static void withdraw(Hash160 account, int tea) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
+        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
+        int amountToWithdraw = tea - storedTea;
+        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        teaMap.put(account.toByteString(), tea);
+        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
+        assert transfer : "Transfer was not successful.";
+    }
+
+    // endregion withdrawal
+    // endregion tested
     // region batch payout
 
     // service fee is deducted off-chain - as soon as it is deducted, the account is added to upcoming batchPayout list.
