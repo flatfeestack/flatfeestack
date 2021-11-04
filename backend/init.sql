@@ -53,6 +53,15 @@ CREATE TABLE daily_payment (
   last_update       TIMESTAMP
 );
 
+CREATE table wallet_address(
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
+    currency    VARCHAR(16) NOT NULL,
+    address  	VARCHAR(255),
+    is_deleted	BOOLEAN
+);
+
+CREATE UNIQUE INDEX wallet_address_index ON wallet_address(user_id, currency, is_deleted) where is_deleted = false;
 
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

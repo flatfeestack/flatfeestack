@@ -380,6 +380,43 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 	return nil
 }
 
+// Wallet
+func getUserWallets(w http.ResponseWriter, r *http.Request, user *User) {
+	userWallets, err := findWalletsByUserId(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJson(w, userWallets)
+}
+
+func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
+	var data Wallet
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	err = insertWallet(user.Id, data.Currency, data.Address, false)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
+	p := mux.Vars(r)
+	f := p["uuid"]
+	id, _ := uuid.Parse(f)
+
+	err := deleteWallet(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
 // contains checks if a string is present in a slice
 func contains(s []string, str string) bool {
 	for _, v := range s {

@@ -125,6 +125,12 @@ type Contribution struct {
 	Day               time.Time `json:"day"`
 }
 
+type Wallet struct {
+	Id       uuid.UUID
+	Currency string
+	Address  string
+}
+
 func findAllUsers() ([]User, error) {
 	users := []User{}
 	s := `SELECT email from users`
@@ -301,6 +307,56 @@ func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(invitedEmail, userId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
+	var userWallets []Wallet
+	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
+	rows, err := db.Query(s, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var userWallet Wallet
+		err = rows.Scan(&userWallet.Id, &userWallet.Currency, &userWallet.Address)
+		if err != nil {
+			return nil, err
+		}
+		userWallets = append(userWallets, userWallet)
+	}
+	return userWallets, nil
+}
+
+func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool) error {
+	stmt, err := db.Prepare("INSERT INTO wallet_address(user_id, currency, address, is_deleted) VALUES($1, $2, $3, $4)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(uid, currency, address, isDeleted)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func deleteWallet(id uuid.UUID) error {
+	stmt, err := db.Prepare("UPDATE wallet_address set is_deleted = true WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(id)
 	if err != nil {
 		return err
 	}
