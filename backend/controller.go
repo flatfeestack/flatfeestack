@@ -791,6 +791,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
+	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
 	paymentCycleId, err := insertNewPaymentCycle(u.Id, 90, seats, 90, timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)

@@ -97,6 +97,7 @@ func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) 
 		return false, nil
 	}
 
+	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
 	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, 1, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", u.Id, err)
@@ -234,6 +235,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)),
 	}
 
+	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
@@ -289,6 +291,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		OffSession:    stripe.Bool(true),
 	}
 
+	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Freq, pc.Seats, pc.Freq, timeNow())
 	if err != nil {
 		return nil, err
@@ -368,7 +371,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ", "usd")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -431,7 +434,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS", "usd")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -485,7 +488,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64) error {
 
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT")
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", "usd")
 	if err != nil {
 		return err
 	}
