@@ -204,48 +204,48 @@ public class PayoutNeoForEvaluation {
     }
 
     // endregion withdrawal
-    // endregion tested
     // region batch payout
+
+    // TODO: 20.10.21 Evaluation -> find cheapest batchPayout method and use that to evaluate scenarios.
 
     // service fee is deducted off-chain - as soon as it is deducted, the account is added to upcoming batchPayout list.
     //
     // add case with service fee -> if user wants to be included without further expected increase of her tea.
-    // TODO: 20.10.21 Evaluation -> find cheapest method to solve first and second case.
     public static void batchPayout(Hash160[] accounts, int[] teas) {
         // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert accounts.length == teas.length : "The parameters must have the same length.";
-//        List<Hash160> unsuccessful = new List<>();
-//        Not necessary - GatToken events can fbe used to track the successful transfers.
-        boolean transfer;
-        Hash160 a;
-        int tea;
-        for (int i = 0; i < accounts.length; i++) {
-            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
-            //  list.length and entry from list
-            a = accounts[i];
-            tea = teas[i];
-            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
-            teaMap.put(a.toByteString(), tea);
+        // Note: Instead of reading the length multiple times, storing its value in a local var is cheaper.
+        int len = accounts.length;
+        assert len == teas.length : "The parameters must have the same length.";
+        // Idea: Return unsuccessful payouts -> This is not necessary, since the GasToken events can be used to track
+        // the successful transfers and thus the unsuccessful payouts can be derived from the parameters and those
+        // events.
+        for (int i = 0; i < len; i++) {
+            // Note: Initializing the account hash160, the tea and oldTea integer outside the loop does not affect
+            // the Gas costs.
+            Hash160 acc = accounts[i];
+            int tea = teas[i];
+            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
             int payoutAmount = tea - oldTea;
             if (payoutAmount <= 0) {
-                // TODO: 12.10.21 Evaluation -> Check this variation.
-                //  AFAIK, this case should only occur, if the dev herself already withdrew. Otherwise, the contract
-                //  owner has not calculated the payout correctly and should not have included this account in the
-                //  batch payout in the first place.
-                //  With the above mentioned, it is not clear who was mistaken.
-                teaMap.put(a.toByteString(), oldTea);
-                onUnsuccessfulPayout.fire(a);
+                // Throwing this even costs 0.04_388_202 Gas (Gas=10USD -> about 1 cent)
+                // This case only happens if the dev herself already withdrew or the contract owner did not pass the
+                // values correctly.
+                onUnsuccessfulPayout.fire(acc);
                 continue;
             }
-            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
+            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
             if (!transfer) {
-                // This can only be reached, if contract funds are too low.
-                teaMap.put(a.toByteString(), oldTea);
-                onUnsuccessfulPayout.fire(a);
+                // This can only be reached if contract funds are too low.
+                onUnsuccessfulPayout.fire(acc);
+                continue;
             }
+            // The contract cannot be drained, since only the contract owner can call this method.
+            teaMap.put(acc.toByteString(), tea);
         }
     }
+
+    // endregion tested
 
     /**
      * Withdraws the earned amount for multiple accounts.
@@ -261,22 +261,15 @@ public class PayoutNeoForEvaluation {
      * @param accounts   The accounts to pay out to.
      * @param teas       The corresponding {@code Total Earned Amount}s.
      * @param serviceFee The service fee that each developer pays to be included in this batch payout.
-     * @return a list of all accounts that did not receive any payment.
      */
     public static void batchPayoutWithServiceFee(Hash160[] accounts, int[] teas, int serviceFee) {
-        // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert accounts.length == teas.length : "The parameters must have the same length.";
-        boolean transfer;
-        Hash160 a;
-        int tea;
-        for (int i = 0; i < accounts.length; i++) {
-            // TODO: 12.10.21 Evaluation -> Is it cheaper to store in local var or read every time used?
-            //  list.length and entry from list
-            a = accounts[i];
-            tea = teas[i];
-            int oldTea = teaMap.get(a.toByteString()).toIntOrZero();
-            teaMap.put(a.toByteString(), tea);
+        int len = accounts.length;
+        assert len == teas.length : "The parameters must have the same length.";
+        for (int i = 0; i < len; i++) {
+            Hash160 acc = accounts[i];
+            int tea = teas[i];
+            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
             int payoutAmount = tea - oldTea - serviceFee;
             if (payoutAmount <= 0) {
                 // TODO: 12.10.21 Evaluation -> Check this variation.
@@ -284,15 +277,17 @@ public class PayoutNeoForEvaluation {
                 //  owner has not calculated the payout correctly and should not have included this account in the
                 //  batch payout in the first place.
                 //  With the above mentioned, it is not clear who was mistaken.
-//                teaMap.put(a.toByteString(), oldTea + serviceFee);
-                onUnsuccessfulPayout.fire(a);
+//                teaMap.put(acc.toByteString(), oldTea + serviceFee);
+                onUnsuccessfulPayout.fire(acc);
                 continue;
             }
-            transfer = GasToken.transfer(getExecutingScriptHash(), a, payoutAmount, null);
-            if (!transfer) {
+            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            if (transfer) {
+                teaMap.put(acc.toByteString(), tea);
+            } else {
                 // This can only be reached, if contract funds are too low.
-                teaMap.put(a.toByteString(), oldTea);
-                onUnsuccessfulPayout.fire(a);
+                teaMap.put(acc.toByteString(), oldTea);
+                onUnsuccessfulPayout.fire(acc);
             }
         }
     }
