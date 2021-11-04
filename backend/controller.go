@@ -76,8 +76,8 @@ type Plan struct {
 }
 
 type CryptoCurrency struct {
-	Name      string
-	ShortName string
+	Name      string `json:"name"`
+	ShortName string `json:"shortName"`
 }
 
 var plans = []Plan{}
