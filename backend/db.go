@@ -126,9 +126,9 @@ type Contribution struct {
 }
 
 type Wallet struct {
-	Id       uuid.UUID
-	Currency string
-	Address  string
+	Id       uuid.UUID `json:"id"`
+	Currency string    `json:"currency"`
+	Address  string    `json:"address"`
 }
 
 func findAllUsers() ([]User, error) {
