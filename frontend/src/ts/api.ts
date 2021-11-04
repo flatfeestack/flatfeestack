@@ -13,7 +13,8 @@ import type {
   UserAggBalance,
   GitUser,
   RepoMapping,
-  UserBalance, Contributions, UserBalanceCore
+  UserBalance, Contributions, UserBalanceCore,
+  PayoutAddress
 } from "../types/users";
 import { PaymentCycle, UserStatus } from "../types/users";
 
@@ -107,6 +108,9 @@ export const API = {
     addEmail: (email: string) => backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) => backendToken.delete(`users/me/git-email/${encodeURI(email)}`),
     updatePayoutAddress: (address: string) => backendToken.put(`users/me/payout/${address}`),
+    getPayoutAddresses: () => backendToken.get(`users/me/wallet`).json<PayoutAddress[]>(),
+    addPayoutAddress: (currency: string, address: string) => backendToken.post(`users/me/wallet`, {json: {currency, address}}).json<PayoutAddress>(),
+    removePayoutAddress: (id: number) => backendToken.delete(`users/me/wallet/${id}`),
     updatePaymentMethod: (method: string) => backendToken.put(`users/me/method/${method}`).json<Users>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),

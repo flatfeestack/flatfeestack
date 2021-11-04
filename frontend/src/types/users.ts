@@ -135,3 +135,9 @@ export type Contributions = {
   balanceRepo: number;
   day: string;
 }
+
+export type PayoutAddress = {
+  id: number;
+  currency: string;
+  address: string;
+}

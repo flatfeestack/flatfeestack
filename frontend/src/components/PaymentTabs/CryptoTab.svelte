@@ -1,5 +1,5 @@
 <script>
-    let questions = [
+    let currencies = [
         { id: 1, name: `Ethereum` },
         { id: 2, name: `NEO` },
         { id: 3, name: `Tezos` }
@@ -19,9 +19,9 @@
 
 <form on:submit|preventDefault={handleSubmit}>
     <select bind:value={selected}>
-        {#each questions as question}
-            <option value={question}>
-                {question.name}
+        {#each currencies as currency}
+            <option value={currency}>
+                {currency.name}
             </option>
         {/each}
     </select>
