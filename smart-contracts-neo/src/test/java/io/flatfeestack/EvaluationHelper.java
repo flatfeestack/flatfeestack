@@ -34,10 +34,6 @@ public class EvaluationHelper {
         return arr;
     }
 
-    static BigInteger getTotalPayoutAmount(BigInteger[] teas) {
-        return getSum(teas);
-    }
-
     static BigInteger getSum(BigInteger[] arr) {
         BigInteger totalAmount = BigInteger.ZERO;
         for (BigInteger val : arr) {
