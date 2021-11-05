@@ -462,6 +462,7 @@ public class PayoutNeoEvalIntTest {
         assertThat(getContractGasBalance(), is(balanceContractBefore.subtract(teaDev)));
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
         assertThat(getGasBalance(dev), is(devFundAmountFractions.add(teaDev).subtract(totalFee)));
+        printFees("withdraw sig", tx);
     }
 
     @Test
@@ -532,6 +533,7 @@ public class PayoutNeoEvalIntTest {
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
         assertThat(getGasBalance(dev), is(devFundAmountFractions.add(teaDev).subtract(totalFee)));
         assertThat(getTea(dev), is(teaDev));
+        printFees("withdraw witness", tx);
     }
 
     @Test

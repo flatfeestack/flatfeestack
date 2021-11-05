@@ -176,7 +176,8 @@ public class PayoutNeoForEvaluation {
         // The message that was signed by the owner and resulted in the provided signature.
         ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
         // Verify the signature
-        boolean verified = CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 23);
+        boolean verified = CryptoLib.verifyWithECDsa(message, new ECPoint(contractMap.get(ownerKey)), signature,
+                (byte) 23);
         assert verified : "Signature invalid.";
         // Get the stored tea
         int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
@@ -351,7 +352,8 @@ public class PayoutNeoForEvaluation {
 
         for (Hash160 acc : storeMap.keys()) {
             int teaToStore = storeMap.get(acc);
-            int teaForWithdrawal = mapForWithdrawal.get(acc); // The VM will fault immediately if the key is not present.
+            int teaForWithdrawal =
+                    mapForWithdrawal.get(acc); // The VM will fault immediately if the key is not present.
             assert teaToStore > teaForWithdrawal : "Tea to store must be greater or equal than tea to withdraw.";
             int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
             int payoutAmount = teaForWithdrawal - oldTea;
@@ -369,22 +371,5 @@ public class PayoutNeoForEvaluation {
     }
 
     // endregion batch payout
-    // region helper methods for development process
-
-    // 1. get the script hash's byte array in little endian
-    // 2. get the integer's byte array
-    // 3. reverse the integer's byte array
-    // 4. concatenate the little endian script hash's byte array with the reversed byte array of the integer amount
-    // 5. Sign this concatenation
-    public static boolean verifySig(Hash160 account, int tea, ByteString signature) {
-        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
-        return CryptoLib.verifyWithECDsa(message, getOwner(), signature, (byte) 0x17);
-    }
-
-    public static byte[] concatAccInt(Hash160 a, int i) {
-        return concat(a.toByteArray(), toByteArray(i));
-    }
-
-    // endregion helper methods for development process
 
 }
