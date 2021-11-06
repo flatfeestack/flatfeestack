@@ -60,8 +60,7 @@ public class PayoutNeoForEvaluation {
     @OnDeployment
     public static void deploy(Object data, boolean update) {
         if (!update) {
-            ECPoint initialOwner = (ECPoint) data;
-            contractMap.put(ownerKey, initialOwner.toByteString());
+            contractMap.put(ownerKey, ((ECPoint) data).toByteString());
         }
     }
 
