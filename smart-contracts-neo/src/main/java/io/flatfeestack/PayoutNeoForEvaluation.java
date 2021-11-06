@@ -174,22 +174,21 @@ public class PayoutNeoForEvaluation {
      * @param signature The signature
      */
     public static void withdraw(Hash160 account, int tea, ByteString signature) {
-        // The message that was signed by the owner and resulted in the provided signature.
-        ByteString message = new ByteString(concat(account.toByteArray(), toByteArray(tea)));
         // Verify the signature
-        boolean verified = CryptoLib.verifyWithECDsa(message, new ECPoint(contractMap.get(ownerKey)), signature,
-                (byte) 23);
-        assert verified : "Signature invalid.";
-        // Get the stored tea
-        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
+        assert CryptoLib.verifyWithECDsa(
+                new ByteString(concat(account.toByteArray(), toByteArray(tea))), // the message
+                new ECPoint(contractMap.get(ownerKey)), // the contract owner
+                signature, // the signature
+                (byte) 23 // the curve
+        ) : "Signature invalid.";
         // Calculate the amount to withdraw
-        int amountToWithdraw = tea - storedTea;
+        int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        // Transfer the earned tokens to the account
+        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
+                "Transfer was not successful.";
         // Update the withdrawalMap with the new tea
         teaMap.put(account.toByteString(), tea);
-        // Transfer the earned tokens to the account
-        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
-        assert transfer : "Transfer was not successful.";
     }
 
     /**
@@ -200,12 +199,11 @@ public class PayoutNeoForEvaluation {
      */
     public static void withdraw(Hash160 account, int tea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
-        int amountToWithdraw = tea - storedTea;
+        int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
+                "Transfer was not successful.";
         teaMap.put(account.toByteString(), tea);
-        boolean transfer = GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null);
-        assert transfer : "Transfer was not successful.";
     }
 
     // endregion withdrawal
@@ -233,8 +231,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 // This can only be reached if contract funds are too low.
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
@@ -271,8 +268,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
@@ -300,8 +296,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
@@ -317,8 +312,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
@@ -334,8 +328,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
@@ -356,8 +349,7 @@ public class PayoutNeoForEvaluation {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
             }
-            boolean transfer = GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-            if (!transfer) {
+            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
                 onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
