@@ -128,7 +128,8 @@ public class PayoutNeoForEvaluation {
      * in case a developer may want to change her address without withdrawing the earned funds to the old address (e.g.
      * in case of a loss of the private key).
      * <p>
-     * The {@code oldTea} is checked, so that no immediate withdrawal takes place before executing this.
+     * The {@code oldTea} is compared with the stored {@code tea}, so that no immediate withdrawal takes place before
+     * executing this.
      * <p>
      * In the case of an address change, the contract owner can set the {@code Tea} to the highest {@code Tea} of
      * that account for which a signature was provided. The new address can then be initialized with a {@code Tea}
@@ -220,12 +221,11 @@ public class PayoutNeoForEvaluation {
         // the successful transfers and thus the unsuccessful payouts can be derived from the parameters and those
         // events.
         for (int i = 0; i < len; i++) {
-            // Note: Initializing the account hash160, the tea and oldTea integer outside the loop does not affect
+            // Note: Initializing the account hash160 and the tea integer outside the loop does not affect
             // the Gas costs.
             Hash160 acc = accounts[i];
             int tea = teas[i];
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = tea - oldTea;
+            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
                 // Throwing this even costs 0.04_388_202 Gas (Gas=10USD -> about 1 cent)
                 // This case only happens if the dev herself already withdrew or the contract owner did not pass the
@@ -266,8 +266,7 @@ public class PayoutNeoForEvaluation {
         for (int i = 0; i < len; i++) {
             Hash160 acc = accounts[i];
             int tea = teas[i];
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = tea - oldTea - serviceFee;
+            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero() - serviceFee;
             if (payoutAmount <= 0) {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
@@ -296,8 +295,7 @@ public class PayoutNeoForEvaluation {
         for (int i = 0; i < accounts.length; i++) {
             Hash160 acc = accounts[i];
             int teaForWithdrawal = teasForWithdrawal[i];
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = teaForWithdrawal - oldTea;
+            int payoutAmount = teaForWithdrawal - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
@@ -314,8 +312,7 @@ public class PayoutNeoForEvaluation {
     public static void batchPayoutWithMap(Map<Hash160, Integer> payoutMap) {
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = tea - oldTea;
+            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
@@ -332,8 +329,7 @@ public class PayoutNeoForEvaluation {
     public static void batchPayoutWithMapAndServiceFee(Map<Hash160, Integer> payoutMap, int serviceFee) {
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = tea - oldTea - serviceFee;
+            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero() - serviceFee;
             if (payoutAmount <= 0) {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
@@ -355,8 +351,7 @@ public class PayoutNeoForEvaluation {
             int teaForWithdrawal =
                     mapForWithdrawal.get(acc); // The VM will fault immediately if the key is not present.
             assert teaToStore > teaForWithdrawal : "Tea to store must be greater or equal than tea to withdraw.";
-            int oldTea = teaMap.get(acc.toByteString()).toIntOrZero();
-            int payoutAmount = teaForWithdrawal - oldTea;
+            int payoutAmount = teaForWithdrawal - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
                 onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
                 continue;
