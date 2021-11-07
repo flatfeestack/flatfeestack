@@ -430,8 +430,13 @@ func contains(s []string, str string) bool {
 
 func crontester(w http.ResponseWriter, r *http.Request) {
 
-	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
-	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
+	err := monthlyRunner()
+	if err != nil {
+		return
+	}
+
+	/*	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
+		yesterdayStart := yesterdayStop.AddDate(0, 0, -1)*/
 
 	/*	repos, _ := runDailyAnalysisCheck(time.Now(), 5)
 		log.Printf("Daily Analysis Check found %v entries", len(repos))*/
@@ -448,10 +453,10 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 		_ = analysisRequest(v.Id, *v.Url, *v.Branch)
 	}*/
 
-	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
-	nr, err := runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
-	if err != nil {
-		log.Printf("error")
-	}
-	log.Printf("Daily Repo Hours inserted %v entries", nr)
+	/*	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+		nr, err := runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
+		if err != nil {
+			log.Printf("error")
+		}
+		log.Printf("Daily Repo Hours inserted %v entries", nr)*/
 }

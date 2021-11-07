@@ -219,7 +219,6 @@ CREATE TABLE payouts_request (
     daily_user_payout_id UUID CONSTRAINT fk_daily_user_payout_id_pay REFERENCES daily_user_payout (id),
     batch_id             UUID NOT NULL,
     exchange_rate        NUMERIC NOT NULL,
-    currency             VARCHAR(16) NOT NULL,
     created_at           TIMESTAMP NOT NULL
 );
 CREATE INDEX payouts_index ON payouts_request(batch_id);
@@ -228,7 +227,6 @@ CREATE TABLE payouts_response (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     batch_id   UUID UNIQUE NOT NULL,
     tx_hash    VARCHAR(66),
-    currency   VARCHAR(16) NOT NULL,
     error      TEXT,
     created_at TIMESTAMP NOT NULL
 );
@@ -236,8 +234,37 @@ CREATE TABLE payouts_response (
 CREATE TABLE payouts_response_details (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payouts_response_id UUID CONSTRAINT fk_payouts_response_id_pres REFERENCES payouts_response (id),
-    currency            VARCHAR(16) NOT NULL,
     address             VARCHAR(42),
     balance             NUMERIC NOT NULL,
+    created_at          TIMESTAMP NOT NULL
+);
+
+-- Migration from payouts_request to payout_request needs to be done for USD pay in -> eth payout
+CREATE TABLE payout_request (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id             UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
+    batch_id            UUID NOT NULL,
+    currency            VARCHAR(16) NOT NULL,
+    exchange_rate       NUMERIC,
+    tea                 BIGINT NOT NULL,
+    address             TEXT NOT NULL,
+    created_at          TIMESTAMP NOT NULL
+);
+CREATE INDEX payout_index ON payouts_request(batch_id);
+
+CREATE TABLE payout_response (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id   UUID UNIQUE NOT NULL,
+    tx_hash    VARCHAR(66),
+    error      TEXT,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE payout_response_details (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payout_response_id  UUID CONSTRAINT fk_payout_response_id_pres REFERENCES payout_response (id),
+    currency            VARCHAR(16) NOT NULL,
+    amount              BIGINT NOT NULL,
+    address             VARCHAR(42),
     created_at          TIMESTAMP NOT NULL
 );

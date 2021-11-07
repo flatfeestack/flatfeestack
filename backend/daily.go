@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"time"
 )
@@ -358,6 +359,7 @@ func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	return cs, nil
 }
 
+//ToDo: do we need this daily payout anymore if we make everything over batch job?
 func getDailyPayouts(s string) ([]UserAggBalance, error) {
 	day := timeDay(-60, timeNow()) //day -2 month
 	var userAggBalances []UserAggBalance
@@ -471,4 +473,38 @@ func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time,
 		return 0, err
 	}
 	return handleErr(res)
+}
+
+//*********************************************************************************
+//**************************** Monthly Batchjob Payout ****************************
+//*********************************************************************************
+
+type PayoutCrypto struct {
+	UserId   uuid.UUID
+	Address  string
+	Tea      int64
+	Currency string
+}
+
+func monthlyBatchJobPayout() ([]PayoutCrypto, error) {
+	s := `SELECT dup.user_id, wa.address, SUM(dup.balance), dup.currency FROM daily_user_payout dup 
+		  JOIN wallet_address wa ON wa.user_id = dup.user_id AND wa.currency = dup.currency
+		  WHERE wa.is_deleted = false
+		  GROUP BY dup.user_id, dup.currency, wa.address`
+	rows, err := db.Query(s)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var payoutsCrypto []PayoutCrypto
+	for rows.Next() {
+		var payoutCrypto PayoutCrypto
+		err = rows.Scan(&payoutCrypto.UserId, &payoutCrypto.Address, &payoutCrypto.Tea, &payoutCrypto.Currency)
+		if err != nil {
+			return nil, err
+		}
+		payoutsCrypto = append(payoutsCrypto, payoutCrypto)
+	}
+	return payoutsCrypto, nil
 }

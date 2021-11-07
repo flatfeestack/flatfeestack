@@ -572,6 +572,7 @@ type PayoutToService struct {
 	Address      string    `json:"address"`
 	Balance      int64     `json:"balance_micro_USD"`
 	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
+	Tea          int64     `json:"nano_tea"`
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {

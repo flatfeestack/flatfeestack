@@ -70,12 +70,32 @@ type PayoutsRequest struct {
 	CreatedAt         time.Time
 }
 
+// PayoutRequestDB New for Crypto, USD pay in should be migrated
+type PayoutRequestDB struct {
+	UserId       uuid.UUID
+	BatchId      uuid.UUID
+	Currency     string
+	ExchangeRate big.Float
+	Tea          int64
+	Address      string
+	CreatedAt    time.Time
+}
+
 type PayoutsResponse struct {
 	BatchId    uuid.UUID
 	TxHash     string
 	Error      *string
 	CreatedAt  time.Time
 	PayoutWeis []PayoutWei
+}
+
+// PayoutsResponseDB New for Crypto, USD pay in should be migrated
+type PayoutResponseDB struct {
+	BatchId uuid.UUID
+	//TxHash     string
+	Error     *string
+	CreatedAt time.Time
+	Payouts   []PayoutResponseNew
 }
 
 type GitEmail struct {
@@ -1259,6 +1279,69 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func insertPayoutRequest(p *PayoutRequestDB) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_request(user_id, batch_id, currency, exchange_rate, tea, address, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6, $7)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.UserId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func insertPayoutResponse(p *PayoutResponseDB) error {
+	pid := uuid.New()
+	//ToDo: muss die tx_hash von hier nach details??
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response(id, batch_id, error, created_at) 
+				VALUES($1, $2, $3, $4)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, p.BatchId, p.Error, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	err = handleErrMustInsertOne(res)
+	if err != nil {
+		return err
+	}
+	for _, v := range p.Payouts {
+		err = insertPayoutResponseDetails(pid, &v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertPayoutResponseDetails(pid uuid.UUID, payout *PayoutResponseNew) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response_details(payouts_response_id, tx_hash, currency, amount, address, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, payout.TxHash, payout.Currency, payout.Amount, payout.Amount, timeNow())
 	if err != nil {
 		return err
 	}
