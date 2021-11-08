@@ -3,16 +3,7 @@
 package main
 
 import (
-	"context"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/assert"
-	"log"
-	"math/big"
-	"os"
-	"testing"
 )
 
 var (
@@ -23,6 +14,7 @@ var (
 	testPublicKey     *ecdsa.PublicKey
 )
 
+/*
 func TestMain(m *testing.M) {
 	var err error
 
@@ -129,3 +121,4 @@ func sendEth(to string) (string, error) {
 	tx := types.NewTransaction(nonce, common.HexToAddress(to), big.NewInt(1000000000000), 21000, gasPrice, nil)
 	return c.singAndSend(tx, nil)
 }
+*/

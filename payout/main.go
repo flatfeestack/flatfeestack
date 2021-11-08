@@ -1,10 +1,19 @@
 package main
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
@@ -126,6 +135,92 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	return 0
 }
 
+type ClientETH struct {
+	c           *ethclient.Client
+	rpc         *rpc.Client
+	privateKey  *ecdsa.PrivateKey
+	publicKey   *ecdsa.PublicKey
+	fromAddress common.Address
+	chainId     *big.Int
+	contract    *PayoutEthEval
+}
+
+func getEthClient(ethUrl string, hexPrivateKey string, ethContract string) (*ClientETH, error) {
+	rpc, err := rpc.DialContext(context.Background(), ethUrl)
+	if err != nil {
+		return nil, err
+	}
+	client := ethclient.NewClient(rpc)
+
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := crypto.HexToECDSA(hexPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("error casting public key to ECDSA")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	c := &ClientETH{
+		c:           client,
+		rpc:         rpc,
+		privateKey:  privateKey,
+		publicKey:   publicKeyECDSA,
+		fromAddress: fromAddress,
+	}
+
+	chainId, err := c.c.NetworkID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	c.chainId = chainId
+
+	if opts.Deploy {
+		c.contract = deployEthContract(c)
+	} else {
+		c.contract, err = NewPayoutEthEval(common.HexToAddress(ethContract), c.c)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return c, nil
+}
+
+func deployEthContract(ethClient *ClientETH) *PayoutEthEval {
+	opts, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
+	address, tx, contract, err := DeployPayoutEthEval(opts, ethClient.c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = bind.WaitDeployed(context.Background(), ethClient.c, tx)
+	log.Printf("Contract deployed at %v", address)
+	return contract
+}
+
+func payoutEth(contract *PayoutEthEval, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
+	var addresses []common.Address
+	for i := range addressValues {
+		addresses = append(addresses, common.HexToAddress(addressValues[i]))
+	}
+	transactor, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
+	if err != nil {
+		log.Fatalf("Failed to create authorized transactor: %v", err)
+	}
+	tx, err := contract.BatchPayout(transactor, addresses, teas)
+	if err != nil {
+		log.Fatalf("Failed transaction: %v", err)
+	}
+	return tx, err
+}
+
 func main() {
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -141,17 +236,9 @@ func main() {
 
 	opts = NewOpts()
 
-	ethClient, err = NewClientETH(opts.EthUrl, opts.EthPrivateKey)
+	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if opts.Deploy {
-		ContractAddr, err = ethClient.deploy(ContractCode)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("Contract deployed at %v", ContractAddr)
 	}
 
 	// only internal routes, not accessible through caddy server
@@ -205,18 +292,18 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if opts.Env == "local" || opts.Env == "dev" {
-		for k, _ := range addresses {
+		for k := range addresses {
 			log.Printf("sending %v wei to %s", amountWei[k], addresses[k])
 		}
 	}
 
-	txHash, err := ethClient.fill(addresses, amountWei)
+	txHash, err := payoutEth(ethClient.contract, addresses, amountWei)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "authorization header not set")
 		return
 	}
 
-	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
+	p := PayoutResponse{TxHash: txHash.Hash().String(), PayoutWeis: payoutWei}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
@@ -254,7 +341,7 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	txHash, err := "", nil
 	switch cur {
 	case "eth":
-		txHash, err = ethClient.fill(addresses, amount)
+		payoutEth(ethClient.contract, addresses, amount)
 		break
 	case "neo":
 		break

@@ -1,80 +1,130 @@
-pragma solidity ~0.8.4;
+pragma solidity ^0.8.4;
 
-contract Flatfeestack {
-    mapping(address => Balance) private balances;
-    address private owner;
+contract PayoutEthEval {
 
-    event PaymentReleased(address to, uint192 amount, uint64 time);
-
-    struct Balance {
-        uint192 balanceWei;
-        uint64 time;
-    }
+    mapping(address => uint256) private teaMap;
+    address public owner;
 
     constructor () {
         owner = msg.sender;
     }
 
-    /**
-     * @dev Fill contract with array of balances. This needs to be optimized to cost as less gas as possible
-     * Currently, for the input, it costs 104684 gas
-     *  - ["0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2","0xDA0bab807633f07f013f94DD0E6A4F96F8742B53","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99"], [1234,1235,1236] wei: 3705
-     * calling hash: 158c29c7
-     * @param addresses, balancesWei payouts to update
-     */
-    function fill(address[] memory addresses, uint192[] memory balancesWei) public payable {
-        require(msg.sender == owner, "Only the owner can add new payouts");
-        require(addresses.length == balancesWei.length, "Addresses and balances array must have the same length");
+    function deposit(uint256 amount) public payable {
+        require(msg.value == amount, "Message value must match the provided parameter value.");
+    }
 
-        uint256 sumWei;
-        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
-            balances[addresses[i]].balanceWei += balancesWei[i];
-            if(balances[addresses[i]].time == 0) {
-                balances[addresses[i]].time = uint64(block.timestamp);
+    function changeOwner(address newOwner) public {
+        require(msg.sender == owner, "No authorization.");
+        owner = newOwner;
+    }
+
+    function getTotalEarnedAmount(address _dev) public view returns (uint256) {
+        return teaMap[_dev];
+    }
+
+    function withdrawNotHashed(address payable _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) public {
+        require(_tea > teaMap[_dev], "These funds have already been withdrawn.");
+        bytes memory concatDevTea = abi.encodePacked(_dev, _tea);
+        address signer = recoverSigner(concatDevTea, _v, _r, _s);
+        if (signer == owner) {
+            uint256 oldTea = teaMap[_dev];
+            teaMap[_dev] = _tea;
+            bool transfer = _dev.send(_tea - oldTea);
+            require(transfer, "Transfer was not successful.");
+        }
+    }
+
+    function withdrawHashedRequire(address payable _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) public {
+        require(_tea > teaMap[_dev], "These funds have already been withdrawn.");
+        bytes32 concatDevTeaHash = keccak256(abi.encodePacked(_dev, _tea));
+        address signer = recoverSignerHash(concatDevTeaHash, _v, _r, _s);
+        require(signer == owner, "Signature does not match owner and provided parameters.");
+        uint256 oldTea = teaMap[_dev];
+        teaMap[_dev] = _tea;
+        bool transfer = _dev.send(_tea - oldTea);
+        require(transfer, "Transfer was not successful.");
+    }
+
+    function withdrawHashed(address payable _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) public {
+        require(_tea > teaMap[_dev], "These funds have already been withdrawn.");
+        bytes32 concatDevTeaHash = keccak256(abi.encodePacked(_dev, _tea));
+        address signer = recoverSignerHash(concatDevTeaHash, _v, _r, _s);
+        if (signer == owner) {
+            uint256 oldTea = teaMap[_dev];
+            teaMap[_dev] = _tea;
+            bool transfer = _dev.send(_tea - oldTea);
+            require(transfer, "Transfer was not successful.");
+        }
+    }
+
+    function batchPayout(address payable[] memory _devs, uint256[] memory _teas) public {
+        require(msg.sender == owner, "No authorization.");
+        require(_devs.length == _teas.length, "Arrays must have same length.");
+        for (uint256 i = 0; i < _devs.length; i++) {
+            uint256 oldTea = teaMap[_devs[i]];
+            if (oldTea >= _teas[i]) {
+                continue;
             }
-            //impossible to overflow, no SafeMath here
-            sumWei += uint256(balancesWei[i]);
-        }
-        if(sumWei != msg.value) {
-            revert("Sum of balances is higher than paid amount");
+            teaMap[_devs[i]] = _teas[i];
+            _devs[i].send(_teas[i] - oldTea);
         }
     }
 
-    /**
-    * @dev Triggers a transfer of the assigned funds.
-    * total shares and their previous withdrawals.
-    */
-    function release() public payable {
-        require(balances[msg.sender].balanceWei > 0, "PaymentSplitter: account has no balance");
-
-        uint192 balanceWei = balances[msg.sender].balanceWei;
-        uint64 time = balances[msg.sender].time;
-        balances[msg.sender].balanceWei = 0;
-        balances[msg.sender].time = 0;
-
-        payable(msg.sender).transfer(balanceWei);
-        emit PaymentReleased(msg.sender, balanceWei, time);
-    }
-
-    /**
-     * @dev Return balance
-     * @return balance and the time it was first added
-     */
-    function balanceOf(address addr) public view returns (uint192) {
-        return balances[addr].balanceWei;
-    }
-
-    function timeOf(address addr) public view returns (uint64) {
-        return balances[addr].time;
-    }
-
-    function unclaimed(address[] memory addresses) public {
-        require(msg.sender == owner, "Only the owner can collect unclaimed payouts");
-        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
-            if (balances[addresses[i]].time + 365 days < block.timestamp) {
-                balances[msg.sender].balanceWei += balances[addresses[i]].balanceWei;
-                balances[addresses[i]].balanceWei = 0;
+    function batchPayoutServiceFeeWithPayout(address payable[] memory _devs, uint256[] memory _teasForPayout, uint256 serviceFee) public {
+        require(msg.sender == owner, "No authorization.");
+        require(_devs.length == _teasForPayout.length, "Arrays must have same length.");
+        for (uint256 i = 0; i < _devs.length; i++) {
+            uint256 oldTea = teaMap[_devs[i]];
+            if (oldTea >= _teasForPayout[i]) {
+                continue;
             }
+            teaMap[_devs[i]] = _teasForPayout[i] + serviceFee;
+            _devs[i].send(_teasForPayout[i] - oldTea);
         }
     }
+
+    function batchPayoutServiceFeeWithStore(address payable[] memory _devs, uint256[] memory _teasToStore, uint256 serviceFee) public {
+        require(msg.sender == owner, "No authorization.");
+        require(_devs.length == _teasToStore.length, "Arrays must have same length.");
+        for (uint256 i = 0; i < _devs.length; i++) {
+            uint256 oldTea = teaMap[_devs[i]];
+            if (oldTea >= _teasToStore[i] - serviceFee) {
+                continue;
+            }
+            teaMap[_devs[i]] = _teasToStore[i];
+            _devs[i].send(_teasToStore[i] - oldTea - serviceFee);
+        }
+    }
+
+    // helper methods
+
+    function getConcat(address _dev, uint256 _tea) public pure returns (bytes memory) {
+        return abi.encodePacked(_dev, _tea);
+    }
+
+    // todo: Consider inlining in withdraw method.
+    function recoverSigner(bytes memory concatDevTea, uint8 v, bytes32 r, bytes32 s) public pure returns (address) {
+        /*
+        Signature is produced by signing a keccak256 hash with the following format:
+        "\x19Ethereum Signed Message\n" + len(msg) + msg
+        */
+        bytes memory prefix = "\x19Ethereum Signed Message:\n106";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, concatDevTea));
+        return ecrecover(prefixedHash, v, r, s);
+    }
+
+    function getConcatHash(address _dev, uint256 _tea) public pure returns (bytes32) {
+        return keccak256(getConcat(_dev, _tea));
+    }
+
+    function recoverSignerHash(bytes32 concatDevTeaHash, uint8 v, bytes32 r, bytes32 s) public pure returns (address) {
+        /*
+        Signature is produced by signing a keccak256 hash with the following format:
+        "\x19Ethereum Signed Message\n" + len(msg) + msg
+        */
+        bytes memory prefix = "\x19Ethereum Signed Message:\n66";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, concatDevTeaHash));
+        return ecrecover(prefixedHash, v, r, s);
+    }
+
 }
