@@ -4,13 +4,13 @@
   import {onMount} from "svelte";
   import {API} from "../ts/api";
   import {faTrash, faClock} from "@fortawesome/free-solid-svg-icons";
-  import Web3 from "../components/PayoutTabs/Web3.svelte";
   import {error, user, firstTime, config} from "../ts/store";
   import type {GitUser, UserBalanceCore} from "../types/users.ts";
   import {formatDate, formatMUSD, formatDay} from "../ts/services";
   import {navigate} from "svelte-routing";
   import {Contributions, PayoutAddress} from "../types/users.ts";
   import PayoutSelection from "../components/PayoutSelection.svelte";
+  import {CryptoCurrency} from "../types/crypto";
 
   let address = "";
   let gitEmails: GitUser[] = [];
@@ -18,21 +18,34 @@
   let isSubmitting = false;
   let contributions: Contributions[] = [];
   let pendingPayouts: UserBalanceCore;
-  let newPayoutAddress: PayoutAddress = {id: 0, currency: "", address: ""};
+  let newPayoutAddress: ""
+  let newPayoutCurrency: CryptoCurrency = { name: "Ethereum", shortName: "eth" }
   let payoutAddresses: PayoutAddress [] = [];
-  let selected;
-
-  let currencies = [
-    { id: 1, name: `Ethereum` },
-    { id: 2, name: `NEO` },
-    { id: 3, name: `Tezos` }
-  ];
 
   async function handleAddPayoutAddress() {
+    debugger
     try {
-      let confirmedPayoutAddress: PayoutAddress = await API.user.addPayoutAddress(newPayoutAddress.currency, newPayoutAddress.address);
+      let regex;
+      switch (newPayoutCurrency.shortName) {
+        case "eth":
+          regex = /^0x[a-fA-F0-9]{40}$/g
+          break;
+        case "neo":
+          break;
+        case "xtz":
+          break;
+        default:
+          $error = "Invalid currency";
+      }
+
+      if (!newPayoutCurrency || (regex && !newPayoutAddress.match(regex))) {
+        $error = "Invalid ethereum address";
+      }
+
+      let confirmedPayoutAddress: PayoutAddress = await API.user.addPayoutAddress(newPayoutCurrency.shortName, newPayoutAddress);
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
-      newPayoutAddress = {id: 0, currency: "", address: ""};
+      newPayoutAddress = ""
+      newPayoutCurrency = { name: "Ethereum", shortName: "eth" }
     } catch (e) {
       $error = e;
     }
@@ -92,8 +105,8 @@
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
       pendingPayouts = await pr3;
-      payoutAddresses = [{id: 1, currency: "eth", address: "abc..."}, {id: 2, currency: "neo", address: "cde..."}, {id: 3, currency: "tez", address: "fgh..."}]
-      //payoutAddresses = await pr4;
+      //payoutAddresses = [{id: "1", currency: "eth", address: "abc..."}, {id: "2", currency: "neo", address: "cde..."}, {id: "3", currency: "tez", address: "fgh..."}]
+      payoutAddresses = await pr4;
     } catch (e) {
       $error = e;
     }
@@ -156,16 +169,16 @@
 
   <div class="container">
     <label class="px-2">Add Payout Address:</label>
-    <select bind:value={newPayoutAddress.currency}>
-      {#each currencies as currency}
+    <select bind:value={newPayoutCurrency}>
+      {#each $config.supportedCurrencies as currency}
         <option value={currency}>
           {currency.name}
         </option>
       {/each}
     </select>
-    <input id="address-input" name="address" type="text" bind:value={newPayoutAddress.address} placeholder="Address" />
+    <input id="address-input" name="address" type="text" bind:value={newPayoutAddress} placeholder="Address" />
     <form class="p-2" on:submit|preventDefault="{handleAddPayoutAddress}">
-      <button class="button2" disabled={!selected} type="submit">Add address</button>
+      <button class="button2" disabled={!newPayoutCurrency} type="submit">Add address</button>
     </form>
   </div>
   <div class="container">
@@ -204,7 +217,7 @@
   </div>
 
 
-  <PayoutSelection />
+  <!--<PayoutSelection />-->
 
   <div class="border-primary-500 rounded small p-2 m-2">
     Our commit evaluation engine analyzes within a timeframe of 2 month, and due to potential chargebacks,

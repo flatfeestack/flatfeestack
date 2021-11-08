@@ -1,4 +1,5 @@
 <script>
+    import { config } from "../../ts/store";
     let currencies = [
         { id: 1, name: `Ethereum` },
         { id: 2, name: `NEO` },
@@ -19,7 +20,7 @@
 
 <form on:submit|preventDefault={handleSubmit}>
     <select bind:value={selected}>
-        {#each currencies as currency}
+        {#each $config.supportedCurrencies as currency}
             <option value={currency}>
                 {currency.name}
             </option>

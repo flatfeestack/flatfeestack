@@ -137,7 +137,7 @@ export type Contributions = {
 }
 
 export type PayoutAddress = {
-  id: number;
+  id: string;
   currency: string;
   address: string;
 }
