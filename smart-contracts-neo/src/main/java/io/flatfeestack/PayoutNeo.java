@@ -206,6 +206,8 @@ public class PayoutNeo {
     public static void batchPayout(Hash160[] accounts, int[] teas) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int len = accounts.length;
+        // Note: If teas had fewer items than accounts, the code would run into out of bounds anyways, but the other
+        // way around that is not the case, thus this check is required.
         assert len == teas.length : "The parameters must have the same length.";
         for (int i = 0; i < len; i++) {
             Hash160 acc = accounts[i];
@@ -224,7 +226,7 @@ public class PayoutNeo {
         }
     }
 
-    public static void batchPayoutWithMap(Map<Hash160, Integer> payoutMap) {
+    public static void batchPayout(Map<Hash160, Integer> payoutMap) {
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
             int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
