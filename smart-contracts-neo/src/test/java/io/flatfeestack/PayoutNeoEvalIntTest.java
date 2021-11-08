@@ -114,7 +114,7 @@ public class PayoutNeoEvalIntTest {
         System.out.printf("Owner hash:    '%s'\n", owner.getScriptHash());
         System.out.printf("Owner address: '%s'\n", owner.getAddress());
         fundAccounts(neow3j, gasToken.toFractions(BigDecimal.valueOf(10_000)), defaultAccount, owner);
-        payoutContract = deployPayoutNeoContract(neow3j);
+        payoutContract = deployPayoutNeoContract(neow3j, false);
         System.out.printf("Payout contract hash: '%s'", payoutContract.getScriptHash());
         fundContract(neow3j, payoutContract, contractFundAmount);
         System.out.println("##############setup#################\n");

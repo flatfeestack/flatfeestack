@@ -47,6 +47,7 @@ import static io.neow3j.utils.ArrayUtils.concatenate;
 import static io.neow3j.utils.ArrayUtils.reverseArray;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
 import static io.neow3j.wallet.Account.createMultiSigAccount;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
 public class EvaluationHelper {
@@ -57,6 +58,9 @@ public class EvaluationHelper {
     static final BigInteger HUNDRED_GAS = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
     static final BigInteger TSD_GAS = toFractions(BigDecimal.valueOf(1000), GasToken.DECIMALS);
 
+    static final int MAX_ACCOUNTS_BATCH_PAYOUT_LIST = 1012;
+    static final int MAX_ACCOUNTS_BATCH_PAYOUT_MAP = 674;
+
     static final BigInteger FEE_PER_BYTE = BigInteger.valueOf(100);
     static final BigInteger STORAGE_PRICE = BigInteger.valueOf(10_000);
     static final BigInteger EXEC_FEE_FACTION = BigInteger.valueOf(3);
@@ -64,6 +68,10 @@ public class EvaluationHelper {
     private static final Path PAYOUT_EVALUATION_CONTRACT_NEF = Paths.get("./build/neow3j/PayoutNeoForEvaluation.nef");
     private static final Path PAYOUT_EVALUATION_CONTRACT_MANIFEST =
             Paths.get("./build/neow3j/PayoutNeoForEvaluation.manifest.json");
+
+    private static final Path PAYOUT_CONTRACT_NEF = Paths.get("./build/neow3j/PayoutNeo.nef");
+    private static final Path PAYOUT_CONTRACT_MANIFEST =
+            Paths.get("./build/neow3j/PayoutNeo.manifest.json");
 
     static final Account defaultAccount = Account.fromWIF("L1eV34wPoj9weqhGijdDLtVQzUpWGHszXXpdU9dPuh2nRFFzFa7E");
     static final ECKeyPair.ECPublicKey defaultPubKey = defaultAccount.getECKeyPair().getPublicKey();
@@ -164,11 +172,17 @@ public class EvaluationHelper {
         writeContractManifestFile(res.getManifest(), buildNeow3jPath);
     }
 
-    static SmartContract deployPayoutNeoContract(Neow3j neow3j) throws Throwable {
-        File nefFile = new File(PAYOUT_EVALUATION_CONTRACT_NEF.toUri());
+    static SmartContract deployPayoutNeoContract(Neow3j neow3j, boolean optimizedContract) throws Throwable {
+        File nefFile;
+        File manifestFile;
+        if (optimizedContract) {
+            nefFile = new File(PAYOUT_CONTRACT_NEF.toUri());
+            manifestFile = new File(PAYOUT_CONTRACT_MANIFEST.toUri());
+        } else {
+            nefFile = new File(PAYOUT_EVALUATION_CONTRACT_NEF.toUri());
+            manifestFile = new File(PAYOUT_EVALUATION_CONTRACT_MANIFEST.toUri());
+        }
         NefFile nef = NefFile.readFromFile(nefFile);
-
-        File manifestFile = new File(PAYOUT_EVALUATION_CONTRACT_MANIFEST.toUri());
         ContractManifest manifest = getObjectMapper().readValue(manifestFile, ContractManifest.class);
         Hash256 txHash = new ContractManagement(neow3j)
                 .deploy(nef, manifest, publicKey(ownerPubKey.getEncoded(true)))
@@ -268,6 +282,29 @@ public class EvaluationHelper {
     static FileWriter getResultFileWriter(String filename) throws IOException {
         File file = openFile(filename + ".csv");
         return getFileWriter(file);
+    }
+
+    static void writeFees(FileWriter w, GasToken gasToken, int i, long systemFee, long networkFee) throws IOException {
+        BigInteger nrAccountsBigInt = BigInteger.valueOf(i);
+        BigInteger sysFee = BigInteger.valueOf(systemFee);
+        BigInteger netFee = BigInteger.valueOf(networkFee);
+        BigInteger totalFee = sysFee.add(netFee);
+        BigInteger sysFeePerAcc = sysFee.divide(nrAccountsBigInt);
+        if (sysFee.mod(nrAccountsBigInt).compareTo(BigInteger.ZERO) > 0) {
+            sysFeePerAcc = sysFeePerAcc.add(BigInteger.ONE);
+        }
+        BigInteger netFeePerAcc = netFee.divide(nrAccountsBigInt);
+        if (netFee.mod(nrAccountsBigInt).compareTo(BigInteger.ZERO) > 0) {
+            netFeePerAcc = netFeePerAcc.add(BigInteger.ONE);
+        }
+        BigInteger totalFeePerAcc = totalFee.divide(nrAccountsBigInt);
+        if (totalFee.mod(nrAccountsBigInt).compareTo(BigInteger.ZERO) > 0) {
+            totalFeePerAcc = totalFeePerAcc.add(BigInteger.ONE);
+        }
+        w.write(format("%s,%s,%s,%s,%s,%s,%s\n", i, gasToken.toDecimals(sysFee), gasToken.toDecimals(netFee),
+                gasToken.toDecimals(totalFee), gasToken.toDecimals(sysFeePerAcc), gasToken.toDecimals(netFeePerAcc),
+                gasToken.toDecimals(totalFeePerAcc)
+        ));
     }
 
     // endregion helper methods
