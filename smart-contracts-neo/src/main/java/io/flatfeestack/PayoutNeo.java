@@ -17,6 +17,7 @@ import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
 import io.neow3j.devpack.events.Event2Args;
+import io.neow3j.devpack.events.Event3Args;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
@@ -90,6 +91,15 @@ public class PayoutNeo {
     @DisplayName("onUnsuccessfulPayout")
     private static Event2Args<Hash160, String> onUnsuccessfulPayout;
 
+    /**
+     * Is fired if the tea of an account is changed without a payment.
+     * <p>
+     * The arguments relate to the account, the tea that was stored before and the tea that was
+     * stored after this event is thrown.
+     */
+    @DisplayName("onTeaUpdateWithoutPayment")
+    private static Event3Args<Hash160, Integer, Integer> onTeaUpdateWithoutPayment;
+
     // region owner
 
     /**
@@ -135,13 +145,12 @@ public class PayoutNeo {
      * The {@code oldTea} is compared with the stored {@code tea}, so that no immediate withdrawal takes place before
      * executing this.
      * <p>
-     * In the case of an address change, the contract owner can set the {@code Tea} to the highest {@code Tea} of
-     * that account for which a signature was provided. The new address can then be initialized with a {@code Tea}
-     * that is equal to the current {@code Tea} that is stored off-chain minus the here provided {@code oldTea}.
+     * In the case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of
+     * that account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param account The account to set the {@code Total Earned Amount} for.
-     * @param oldTea  The previous {@code Total Earned Amount} for that account.
-     * @param newTea  The new {@code Total Earned Amount} for that account.
+     * @param account The account to set the {@code total earned amount} for.
+     * @param oldTea  The previous {@code total earned amount} for that account.
+     * @param newTea  The new {@code total earned amount} for that account.
      */
     public static void setTea(Hash160 account, int oldTea, int newTea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
@@ -149,6 +158,40 @@ public class PayoutNeo {
         assert oldTea == storedTea : "Stored tea is not equal to the provided oldTea.";
         assert newTea > storedTea : "The provided amount is lower than or equal to the stored tea.";
         teaMap.put(account.toByteString(), newTea);
+        onTeaUpdateWithoutPayment.fire(account, oldTea, newTea);
+    }
+
+    /**
+     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier of
+     * in case developers may want to change their addresses without withdrawing the earned funds to the current
+     * address (e.g. in case of a loss of the private key).
+     * <p>
+     * For each account, {@code oldTea} is compared with the stored {@code tea}, so that no immediate withdrawal
+     * takes place before executing this.
+     * <p>
+     * In case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of that
+     * account for which a signature was provided, in order to invalidate that signature.
+     *
+     * @param accounts The accounts to set the {@code total earned amounts} for.
+     * @param oldTeas  The previously stored {@code total earned amounts} for the accounts.
+     * @param newTeas  The new {@code total earned amounts} for the accounts.
+     */
+    public static void setTeas(Hash160[] accounts, int[] oldTeas, int[] newTeas) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
+        for (int i = 0; i < accounts.length; i++) {
+            Hash160 acc = accounts[i];
+            int storedTea = teaMap.get(acc.toByteString()).toIntOrZero();
+            int oldTea = oldTeas[i];
+            if (oldTea != storedTea) {
+                continue;
+            }
+            int newTea = newTeas[i];
+            if (newTea <= storedTea) {
+                continue;
+            }
+            teaMap.put(acc.toByteString(), newTea);
+            onTeaUpdateWithoutPayment.fire(acc, oldTea, newTea);
+        }
     }
 
     // endregion tea
