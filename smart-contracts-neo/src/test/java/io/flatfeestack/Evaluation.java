@@ -71,8 +71,8 @@ public class Evaluation {
     private static final boolean batchPayout_list_oneToMaxAccs_32 = false;
     private static final boolean batchPayout_list_oneToMaxAccs_64 = false;
     private static final boolean batchPayout_map = false;
-    private static final boolean batchPayout_map_oneToMaxAccs_32 = true;
-    private static final boolean batchPayout_map_oneToMaxAccs_64 = true;
+    private static final boolean batchPayout_map_oneToMaxAccs_32 = false;
+    private static final boolean batchPayout_map_oneToMaxAccs_64 = false;
 
     private static final BigDecimal contractFundAmount = BigDecimal.valueOf(51_000_000);
     private static final BigInteger devFundAmountFractions = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
@@ -389,7 +389,7 @@ public class Evaluation {
         writeNetworkFactors(w, neow3j);
         w.write(format("tea=%s\n", gasToken.toDecimals(tea)));
         w.write("#accounts,systemfee,networkfee,totalfee,sysfeeperacc,netfeeperacc,totalfeeperacc\n");
-        for (int i = 0; i <= MAX_ACCOUNTS_BATCH_PAYOUT_MAP; i++) {
+        for (int i = 1; i <= MAX_ACCOUNTS_BATCH_PAYOUT_MAP; i++) {
             Transaction tx = executeSingleBatchPayout_map(i, tea);
             waitUntilTransactionIsExecuted(tx.getTxId(), neow3j);
             NeoApplicationLog.Execution log = tx.getApplicationLog().getExecutions().get(0);
