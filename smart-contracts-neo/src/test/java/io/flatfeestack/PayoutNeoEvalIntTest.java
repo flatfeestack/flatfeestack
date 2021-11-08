@@ -1,16 +1,9 @@
 package io.flatfeestack;
 
-import io.neow3j.compiler.CompilationUnit;
-import io.neow3j.compiler.Compiler;
-import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
-import io.neow3j.contract.NefFile;
-import io.neow3j.contract.PolicyContract;
 import io.neow3j.contract.SmartContract;
-import io.neow3j.crypto.ECKeyPair;
 import io.neow3j.crypto.Sign;
 import io.neow3j.protocol.Neow3j;
-import io.neow3j.protocol.core.response.ContractManifest;
 import io.neow3j.protocol.core.response.InvocationResult;
 import io.neow3j.protocol.core.response.NeoApplicationLog;
 import io.neow3j.protocol.core.response.NeoSendRawTransaction;
@@ -32,33 +25,37 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
+import static io.flatfeestack.EvaluationHelper.committee;
+import static io.flatfeestack.EvaluationHelper.compileContract;
+import static io.flatfeestack.EvaluationHelper.createMapParam;
+import static io.flatfeestack.EvaluationHelper.createSignature;
+import static io.flatfeestack.EvaluationHelper.defaultAccount;
+import static io.flatfeestack.EvaluationHelper.defaultPubKey;
+import static io.flatfeestack.EvaluationHelper.deployPayoutNeoContract;
+import static io.flatfeestack.EvaluationHelper.fundAccounts;
+import static io.flatfeestack.EvaluationHelper.fundContract;
+import static io.flatfeestack.EvaluationHelper.getHash160FromPublicKey;
+import static io.flatfeestack.EvaluationHelper.getNetworkFee;
 import static io.flatfeestack.EvaluationHelper.getRandomHashes;
 import static io.flatfeestack.EvaluationHelper.getRandomTeasToPreset;
 import static io.flatfeestack.EvaluationHelper.getSum;
+import static io.flatfeestack.EvaluationHelper.getSystemFee;
 import static io.flatfeestack.EvaluationHelper.getUniformTeas;
-import static io.neow3j.contract.ContractUtils.writeContractManifestFile;
-import static io.neow3j.contract.ContractUtils.writeNefFile;
-import static io.neow3j.contract.SmartContract.calcContractHash;
+import static io.flatfeestack.EvaluationHelper.handleFeeFactors;
+import static io.flatfeestack.EvaluationHelper.owner;
+import static io.flatfeestack.EvaluationHelper.ownerPubKey;
+import static io.flatfeestack.EvaluationHelper.printFees;
+import static io.flatfeestack.EvaluationHelper.sendAndWaitUntilTransactionIsExecuted;
 import static io.neow3j.contract.Token.toFractions;
-import static io.neow3j.crypto.Sign.signMessage;
-import static io.neow3j.protocol.ObjectMapperFactory.getObjectMapper;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.*;
-import static io.neow3j.utils.ArrayUtils.*;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
-import static io.neow3j.wallet.Account.createMultiSigAccount;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -73,24 +70,6 @@ public class PayoutNeoEvalIntTest {
     private static Neow3j neow3j;
     private static GasToken gasToken;
     private static SmartContract payoutContract;
-
-    private static final BigInteger FEE_PER_BYTE = BigInteger.valueOf(100);
-    private static final BigInteger STORAGE_PRICE = BigInteger.valueOf(10_000);
-    private static final BigInteger EXEC_FEE_FACTION = BigInteger.valueOf(3);
-
-    private static final Path PAYOUT_CONTRACT_NEF = Paths.get("./build/neow3j/PayoutNeoForEvaluation.nef");
-    private static final Path PAYOUT_CONTRACT_MANIFEST =
-            Paths.get("./build/neow3j/PayoutNeoForEvaluation.manifest.json");
-
-    private static final Account defaultAccount =
-            Account.fromWIF("L1eV34wPoj9weqhGijdDLtVQzUpWGHszXXpdU9dPuh2nRFFzFa7E");
-    private static final ECKeyPair.ECPublicKey defaultPubKey = defaultAccount.getECKeyPair().getPublicKey();
-    private static final Account committee =
-            createMultiSigAccount(singletonList(defaultAccount.getECKeyPair().getPublicKey()), 1);
-
-    private static final Account owner =
-            Account.fromWIF("L3cNMQUSrvUrHx1MzacwHiUeCWzqK2MLt5fPvJj9mz6L2rzYZpok");
-    private static final ECKeyPair.ECPublicKey ownerPubKey = owner.getECKeyPair().getPublicKey();
 
     private static final BigDecimal contractFundAmount = BigDecimal.valueOf(7000);
     private static final BigInteger devFundAmountFractions = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
@@ -128,16 +107,16 @@ public class PayoutNeoEvalIntTest {
     public static void setUp() throws Throwable {
         neow3j = Neow3j.build(new HttpService(neoTestContainer.getNodeUrl()));
         gasToken = new GasToken(neow3j);
-        handleFeeFactors();
+        handleFeeFactors(neow3j, committee, defaultAccount);
         setTestFactors();
         compileContract(PayoutNeoForEvaluation.class.getCanonicalName());
         System.out.println("\n##############setup#################");
-        System.out.println("Owner hash:    " + owner.getScriptHash());
-        System.out.println("Owner address: " + owner.getAddress());
-        fundAccounts(gasToken.toFractions(BigDecimal.valueOf(10_000)), defaultAccount, owner);
-        payoutContract = deployPayoutNeoContract();
-        System.out.println("Payout contract hash: " + payoutContract.getScriptHash());
-        fundPayoutContract();
+        System.out.printf("Owner hash:    '%s'\n", owner.getScriptHash());
+        System.out.printf("Owner address: '%s'\n", owner.getAddress());
+        fundAccounts(neow3j, gasToken.toFractions(BigDecimal.valueOf(10_000)), defaultAccount, owner);
+        payoutContract = deployPayoutNeoContract(neow3j);
+        System.out.printf("Payout contract hash: '%s'", payoutContract.getScriptHash());
+        fundContract(neow3j, payoutContract, contractFundAmount);
         System.out.println("##############setup#################\n");
     }
 
@@ -148,7 +127,7 @@ public class PayoutNeoEvalIntTest {
     }
 
     private static void setTestFactors() {
-        nrAccounts = 5; // max 404 for all tests to pass
+        nrAccounts = 10; // max 404 for all tests to pass
         nrAccountsBigInt = BigInteger.valueOf(nrAccounts);
         presetTea = BigInteger.valueOf(100);
         presetTeas = getRandomTeasToPreset(nrAccounts, 1000, 10);
@@ -157,116 +136,8 @@ public class PayoutNeoEvalIntTest {
         serviceFeeParam = integer(serviceFee);
     }
 
-    private static void handleFeeFactors() throws Throwable {
-        PolicyContract policyContract = new PolicyContract(neow3j);
-        Transaction tx = policyContract.setFeePerByte(FEE_PER_BYTE).signers(calledByEntry(committee))
-                .getUnsignedTransaction();
-        tx.addMultiSigWitness(committee.getVerificationScript(), defaultAccount);
-        Hash256 txHashFeePerByte = tx.send().getSendRawTransaction().getHash();
-
-        tx = policyContract.setStoragePrice(STORAGE_PRICE).signers(calledByEntry(committee))
-                .getUnsignedTransaction();
-        tx.addMultiSigWitness(committee.getVerificationScript(), defaultAccount);
-        Hash256 txHashStoragePrice = tx.send().getSendRawTransaction().getHash();
-
-        tx = policyContract.setExecFeeFactor(EXEC_FEE_FACTION).signers(calledByEntry(committee))
-                .getUnsignedTransaction();
-        tx.addMultiSigWitness(committee.getVerificationScript(), defaultAccount);
-        Hash256 txHashExecFeeFactor = tx.send().getSendRawTransaction().getHash();
-
-        waitUntilTransactionIsExecuted(txHashFeePerByte, neow3j);
-        waitUntilTransactionIsExecuted(txHashStoragePrice, neow3j);
-        waitUntilTransactionIsExecuted(txHashExecFeeFactor, neow3j);
-
-        BigDecimal actualFeePerByte = gasToken.toDecimals(policyContract.getFeePerByte());
-        BigInteger actualStoragePrice = policyContract.getStoragePrice();
-        BigInteger actualExecFeeFactor = policyContract.getExecFeeFactor();
-
-        System.out.println("\n##############feefactors#################");
-        System.out.printf("Network Fee Per Byte: '%s'\n", actualFeePerByte);
-        System.out.printf("Storage Fee Factor:   '%s'\n", actualStoragePrice);
-        System.out.printf("Execution Fee Factor: '%s'\n", actualExecFeeFactor);
-        System.out.println("##############feefactors#################\n");
-    }
-
     // endregion setup
     // region helper methods
-
-    private Sign.SignatureData createSignature(Hash160 account, BigInteger tea, Account signer) {
-        byte[] accountArray = account.toLittleEndianArray();
-        byte[] teaArray = reverseArray(tea.toByteArray());
-        byte[] message = concatenate(accountArray, teaArray);
-        return signMessage(message, signer.getECKeyPair());
-    }
-
-    private Hash160 getHash160FromPublicKey(String publicKey) {
-        return Hash160.fromPublicKey(new ECKeyPair.ECPublicKey(publicKey).getEncoded(true));
-    }
-
-    private static void compileContract(String canonicalName) throws IOException {
-        CompilationUnit res = new Compiler().compile(canonicalName);
-
-        // Write contract (compiled, NEF) to the disk
-        Path buildNeow3jPath = Paths.get("build", "neow3j");
-        buildNeow3jPath.toFile().mkdirs();
-        writeNefFile(res.getNefFile(), res.getManifest().getName(), buildNeow3jPath);
-
-        // Write manifest to the disk
-        writeContractManifestFile(res.getManifest(), buildNeow3jPath);
-    }
-
-    private static void fundPayoutContract() throws Throwable {
-        BigInteger fundAmountFractions = gasToken.toFractions(contractFundAmount);
-        Hash256 txHash = gasToken
-                .transfer(owner, payoutContract.getScriptHash(), fundAmountFractions)
-                .sign()
-                .send()
-                .getSendRawTransaction()
-                .getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        System.out.printf("Contract funded with %s GAS%n", contractFundAmount);
-    }
-
-    private static void fundAccounts(BigInteger gasFractions, Account... accounts) throws Throwable {
-        BigInteger minAmount = gasToken.toFractions(new BigDecimal("500"));
-        List<Hash256> txHashes = new ArrayList<>();
-        for (Account a : accounts) {
-            if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
-                NeoSendRawTransaction rawTx = gasToken
-                        .transfer(committee, a.getScriptHash(), gasFractions)
-                        .getUnsignedTransaction()
-                        .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
-                        .send();
-                Hash256 txHash = rawTx.getSendRawTransaction()
-                        .getHash();
-                txHashes.add(txHash);
-                System.out.println("Funded account " + a.getAddress());
-            }
-        }
-        for (Hash256 h : txHashes) {
-            waitUntilTransactionIsExecuted(h, neow3j);
-        }
-    }
-
-    private static SmartContract deployPayoutNeoContract() throws Throwable {
-        File nefFile = new File(PAYOUT_CONTRACT_NEF.toUri());
-        NefFile nef = NefFile.readFromFile(nefFile);
-
-        File manifestFile = new File(PAYOUT_CONTRACT_MANIFEST.toUri());
-        ContractManifest manifest = getObjectMapper().readValue(manifestFile, ContractManifest.class);
-        Hash256 txHash = new ContractManagement(neow3j)
-                .deploy(nef, manifest, publicKey(owner.getECKeyPair().getPublicKey().getEncoded(true)))
-                .signers(none(owner))
-                .sign()
-                .send()
-                .getSendRawTransaction()
-                .getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        System.out.println("Deployed PayoutNeo contract");
-        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
-                manifest.getName());
-        return new SmartContract(hash, neow3j);
-    }
 
     private BigInteger getContractGasBalance() throws IOException {
         return getGasBalance(payoutContract.getScriptHash());
@@ -288,7 +159,7 @@ public class PayoutNeoEvalIntTest {
         return payoutContract.callFuncReturningInt(getTea, hash160(account));
     }
 
-    private Hash256 setTea(Hash160 scriptHash, BigInteger oldTea, BigInteger newTea) throws Throwable {
+    private void setTea(Hash160 scriptHash, BigInteger oldTea, BigInteger newTea) throws Throwable {
         Hash256 txHash = payoutContract
                 .invokeFunction(setTea, hash160(scriptHash), integer(oldTea), integer(newTea))
                 .signers(calledByEntry(owner))
@@ -297,37 +168,6 @@ public class PayoutNeoEvalIntTest {
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
-        return txHash;
-    }
-
-    private Hash256 sendAndWaitUntilTransactionIsExecuted(Transaction tx) throws Throwable {
-        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-        return txHash;
-    }
-
-    private BigInteger getSystemFee(Transaction tx) {
-        return BigInteger.valueOf(tx.getSystemFee());
-    }
-
-    private BigInteger getNetworkFee(Transaction tx) {
-        return BigInteger.valueOf(tx.getNetworkFee());
-    }
-
-    private void printFees(String method, Transaction tx) {
-        System.out.println("\n############fees############");
-        System.out.println(method);
-        System.out.printf("System fees:  '%s'\n", tx.getSystemFee());
-        System.out.printf("Network fees: '%s'\n", tx.getNetworkFee());
-        System.out.println("############fees############\n");
-    }
-
-    private ContractParameter createMapParam(Hash160[] devs, BigInteger[] teas) {
-        HashMap<ContractParameter, ContractParameter> map = new HashMap<>();
-        for (int i = 0; i < devs.length; i++) {
-            map.put(hash160(devs[i]), integer(teas[i]));
-        }
-        return map(map);
     }
 
     // endregion helper methods
@@ -448,7 +288,7 @@ public class PayoutNeoEvalIntTest {
     @Test
     public void testWithdrawWithSignature() throws Throwable {
         Account dev = Account.create();
-        fundAccounts(devFundAmountFractions, dev);
+        fundAccounts(neow3j, devFundAmountFractions, dev);
         BigInteger balanceContractBefore = getContractGasBalance();
         // Dev earned 12 gas for the first time
         BigInteger teaDev = gasToken.toFractions(BigDecimal.valueOf(12));
@@ -457,7 +297,7 @@ public class PayoutNeoEvalIntTest {
         // Dev invokes withdraw method with signatureData
         Transaction tx = payoutContract.invokeFunction(withdraw, hash160(dev), integer(teaDev), signature(sigData))
                 .signers(none(dev)).sign();
-        sendAndWaitUntilTransactionIsExecuted(tx);
+        sendAndWaitUntilTransactionIsExecuted(tx, neow3j);
 
         assertThat(getContractGasBalance(), is(balanceContractBefore.subtract(teaDev)));
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
@@ -468,13 +308,13 @@ public class PayoutNeoEvalIntTest {
     @Test
     public void testWithdrawAgain() throws Throwable {
         Account dev = Account.create();
-        fundAccounts(devFundAmountFractions, dev);
+        fundAccounts(neow3j, devFundAmountFractions, dev);
         BigInteger balanceContractBefore = getContractGasBalance();
         BigInteger teaDev = gasToken.toFractions(BigDecimal.valueOf(10));
         Sign.SignatureData sigData = createSignature(dev.getScriptHash(), teaDev, owner);
         Transaction tx = payoutContract.invokeFunction(withdraw, hash160(dev), integer(teaDev), signature(sigData))
                 .signers(none(dev)).sign();
-        sendAndWaitUntilTransactionIsExecuted(tx);
+        sendAndWaitUntilTransactionIsExecuted(tx, neow3j);
 
         assertThat(getContractGasBalance(), is(balanceContractBefore.subtract(teaDev)));
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
@@ -499,7 +339,7 @@ public class PayoutNeoEvalIntTest {
     @Test
     public void testWithdrawWithWitness() throws Throwable {
         Account dev = Account.create();
-        fundAccounts(devFundAmountFractions, dev);
+        fundAccounts(neow3j, devFundAmountFractions, dev);
         BigInteger balanceContractBefore = getContractGasBalance();
         BigInteger teaDev = gasToken.toFractions(BigDecimal.valueOf(22));
         SmartContract smartContract = new SmartContract(payoutContract.getScriptHash(), neow3j);
@@ -527,7 +367,7 @@ public class PayoutNeoEvalIntTest {
         tx.addWitness(devWitness);
         Witness ownerWitnessFromBytes = NeoSerializableInterface.from(witnessBytes, Witness.class);
         tx.addWitness(ownerWitnessFromBytes);
-        sendAndWaitUntilTransactionIsExecuted(tx);
+        sendAndWaitUntilTransactionIsExecuted(tx, neow3j);
 
         assertThat(getContractGasBalance(), is(balanceContractBefore.subtract(teaDev)));
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
@@ -539,7 +379,7 @@ public class PayoutNeoEvalIntTest {
     @Test
     public void testWithdrawWithWitnessAgain() throws Throwable {
         Account dev = Account.create();
-        fundAccounts(devFundAmountFractions, dev);
+        fundAccounts(neow3j, devFundAmountFractions, dev);
         BigInteger balanceContractBefore = getContractGasBalance();
         BigInteger teaDev = gasToken.toFractions(BigDecimal.valueOf(22));
         Transaction txToBePreSigned = payoutContract.invokeFunction(withdraw, hash160(dev), integer(teaDev))
@@ -557,7 +397,7 @@ public class PayoutNeoEvalIntTest {
         tx.addWitness(devWitness);
         Witness ownerWitnessFromBytes = NeoSerializableInterface.from(witnessBytes, Witness.class);
         tx.addWitness(ownerWitnessFromBytes);
-        sendAndWaitUntilTransactionIsExecuted(tx);
+        sendAndWaitUntilTransactionIsExecuted(tx, neow3j);
 
         assertThat(getContractGasBalance(), is(balanceContractBefore.subtract(teaDev)));
         BigInteger totalFee = getSystemFee(tx).add(getNetworkFee(tx));
@@ -724,7 +564,7 @@ public class PayoutNeoEvalIntTest {
     }
 
     // endregion batch payout with service fee
-    // region batch payout with two lists
+    // region batch payout with two tea lists
 
     @Test
     public void test1_batchPayoutListList() throws Throwable {
@@ -806,7 +646,7 @@ public class PayoutNeoEvalIntTest {
         printFees("test3 - list list", tx);
     }
 
-    // endregion batch payout with two lists
+    // endregion batch payout with two tea lists
     // region batch payout with map
 
     @Test
