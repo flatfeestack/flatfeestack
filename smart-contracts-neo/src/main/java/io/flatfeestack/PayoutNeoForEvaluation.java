@@ -23,6 +23,10 @@ import static io.neow3j.devpack.Helper.toByteArray;
 import static io.neow3j.devpack.Runtime.checkWitness;
 import static io.neow3j.devpack.Runtime.getExecutingScriptHash;
 
+/**
+ * This contract was used to manually evaluate implementation specific details. The most optimized methods are
+ * collected in the final {@link PayoutNeo} contract.
+ */
 @Permission(nativeContract = NativeContract.CryptoLib)
 @Permission(nativeContract = NativeContract.GasToken)
 @ManifestExtra(key = "Author", value = "Michael Bucher")
@@ -32,10 +36,12 @@ public class PayoutNeoForEvaluation {
      * The storage context
      */
     static final StorageContext ctx = Storage.getStorageContext();
+
     /**
      * StorageMap to store contract relevant information
      */
     static final StorageMap contractMap = ctx.createMap(new byte[]{0x01});
+
     /**
      * Key of the contract owner public key in the contractMap.
      * <p>
