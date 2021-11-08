@@ -45,7 +45,6 @@ import static io.flatfeestack.EvaluationHelper.getResultFileWriter;
 import static io.flatfeestack.EvaluationHelper.handleFeeFactors;
 import static io.flatfeestack.EvaluationHelper.owner;
 import static io.flatfeestack.EvaluationHelper.writeFees;
-import static io.neow3j.contract.Token.toFractions;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.array;
@@ -66,16 +65,28 @@ public class Evaluation {
     private static SmartContract payoutContract;
 
     private static final boolean evaluateWithdrawSignature = false;
+    private static final boolean preset_evaluateWithdrawSignature = false;
+
     private static final boolean evaluateWithdrawWitness = false;
+    private static final boolean preset_evaluateWithdrawWitness = false;
+
     private static final boolean batchPayout_list = false;
     private static final boolean batchPayout_list_oneToMaxAccs_32 = false;
     private static final boolean batchPayout_list_oneToMaxAccs_64 = false;
+    private static final boolean preset_batchPayout_list = false;
+    private static final boolean preset_batchPayout_list_oneToMaxAccs_32 = false;
+    private static final boolean preset_batchPayout_list_oneToMaxAccs_64 = false;
+
     private static final boolean batchPayout_map = false;
     private static final boolean batchPayout_map_oneToMaxAccs_32 = false;
     private static final boolean batchPayout_map_oneToMaxAccs_64 = false;
+    private static final boolean preset_batchPayout_map = false;
+    private static final boolean preset_batchPayout_map_oneToMaxAccs_32 = false;
+    private static final boolean preset_batchPayout_map_oneToMaxAccs_64 = false;
+
+    private static final BigDecimal presetTea = new BigDecimal("0.01");
 
     private static final BigDecimal contractFundAmount = BigDecimal.valueOf(51_000_000);
-    private static final BigInteger devFundAmountFractions = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
 
     private static final String TRANSFER_EVENT_NAME = "Transfer";
 
@@ -115,15 +126,88 @@ public class Evaluation {
         assertThat(new PolicyContract(neow3j).getExecFeeFactor(), is(EXEC_FEE_FACTION));
     }
 
-    private static void runWithdrawWithSignature() throws Throwable {
-        // Requires the contract to be funded with 51_000_500 Gas [(10_000/2)*(1_000.1) Gas]
-        FileWriter w = getResultFileWriter("withdrawWithSignature");
+    private static void setTea(Hash160 dev) throws Throwable {
+        BigInteger teaToSet = gasToken.toFractions(presetTea);
+        Transaction tx = payoutContract.invokeFunction("setTea", hash160(dev), integer(BigInteger.ZERO),
+                        integer(teaToSet))
+                .signers(none(feePayAccount), calledByEntry(owner))
+                .sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        assertTeaEquals(dev, teaToSet);
+    }
+
+    private static void setTeas(Hash160[] devs) throws Throwable {
+        BigInteger teaToSet = gasToken.toFractions(presetTea);
+        if (devs.length == 1) {
+            setTea(devs[0]);
+            assertTeaEquals(devs[0], teaToSet);
+            return;
+        }
+        Hash160[] devs1 = Arrays.copyOfRange(devs, 0, devs.length / 2);
+        BigInteger[] oldTeas1 = new BigInteger[devs1.length];
+        Arrays.fill(oldTeas1, BigInteger.ZERO);
+        BigInteger[] newTeas1 = new BigInteger[devs1.length];
+        Arrays.fill(newTeas1, teaToSet);
+        Hash160[] devs2 = Arrays.copyOfRange(devs, devs.length / 2, devs.length);
+        BigInteger[] oldTeas2 = new BigInteger[devs2.length];
+        Arrays.fill(oldTeas2, BigInteger.ZERO);
+        BigInteger[] newTeas2 = new BigInteger[devs2.length];
+        Arrays.fill(newTeas2, teaToSet);
+        Transaction tx = payoutContract.invokeFunction("setTeas", array(devs1), array(oldTeas1), array(newTeas1))
+                .signers(none(feePayAccount), calledByEntry(owner))
+                .sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        tx = payoutContract.invokeFunction("setTeas", array(devs2), array(oldTeas2), array(newTeas2))
+                .signers(none(feePayAccount), calledByEntry(owner))
+                .sign();
+        txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+        for (Hash160 dev : devs) {
+            assertTeaEquals(dev, teaToSet);
+        }
+    }
+
+    private static void assertTeaEquals(Hash160 dev, BigInteger tea) throws IOException {
+        assertThat(payoutContract.callFuncReturningInt("getTea", hash160(dev)), is(tea));
+    }
+
+    // region withdraw sig
+
+    @Test
+    public void evaluateWithdrawSignature() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (evaluateWithdrawSignature) {
+            runWithdrawWithSignature(false);
+        }
+    }
+
+    @Test
+    public void preset_evaluateWithdrawSignature() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_evaluateWithdrawSignature) {
+            runWithdrawWithSignature(true);
+        }
+    }
+
+    private static void runWithdrawWithSignature(boolean preset) throws Throwable {
+        FileWriter w;
+        if (preset) {
+            w = getResultFileWriter("preset_int32_withdrawWithSignature");
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+        } else {
+            w = getResultFileWriter("withdrawWithSignature");
+        }
         writeNetworkFactors(w, neow3j);
         w.write("tea,systemfee,networkfee\n");
         for (EvaluationTypeWithdraw type : EvaluationTypeWithdraw.values()) {
             BigInteger tea = type.tea;
-            Account dev = Account.create();
-            Sign.SignatureData sig = createSignature(dev.getScriptHash(), tea, owner);
+            Hash160 dev = Account.create().getScriptHash();
+            if (preset) {
+                setTea(dev);
+            }
+            Sign.SignatureData sig = createSignature(dev, tea, owner);
             Transaction tx = payoutContract.invokeFunction(withdraw, hash160(dev), integer(tea), signature(sig))
                     .signers(none(feePayAccount))
                     .sign();
@@ -142,14 +226,41 @@ public class Evaluation {
         w.close();
     }
 
-    private static void runWithdrawWithWitness() throws Throwable {
-        // Requires the contract to be funded with 50_050_000 Gas [(10_000/2)*(10_001) Gas].
-        FileWriter w = getResultFileWriter("withdrawWithWitness");
+    // endregion withdraw sig
+    // region withdraw witness
+
+    @Test
+    public void evaluateWithdrawWitness() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (evaluateWithdrawWitness) {
+            runWithdrawWithWitness(false);
+        }
+    }
+
+    @Test
+    public void preset_evaluateWithdrawWitness() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_evaluateWithdrawWitness) {
+            runWithdrawWithWitness(true);
+        }
+    }
+
+    private static void runWithdrawWithWitness(boolean preset) throws Throwable {
+        FileWriter w;
+        if (preset) {
+            w = getResultFileWriter("preset_int32_withdrawWithWitness");
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(BigDecimal.ONE))));
+        } else {
+            w = getResultFileWriter("withdrawWithWitness");
+        }
         writeNetworkFactors(w, neow3j);
         w.write("tea,systemfee,networkfee\n");
         for (EvaluationTypeWithdraw type : EvaluationTypeWithdraw.values()) {
             BigInteger tea = type.tea;
-            Account dev = Account.create();
+            Hash160 dev = Account.create().getScriptHash();
+            if (preset) {
+                setTea(dev);
+            }
             Transaction txWithoutWitnesses = payoutContract.invokeFunction(withdraw, hash160(dev), integer(tea))
                     .signers(none(feePayAccount),
                             calledByEntry(owner).setAllowedContracts(payoutContract.getScriptHash()))
@@ -181,54 +292,41 @@ public class Evaluation {
         w.close();
     }
 
-    // region withdraw sig
-
-    @Test
-    public void evaluateWithdrawSignature() throws Throwable {
-        assertCorrectNetworkFactors();
-        if (evaluateWithdrawSignature) {
-            runWithdrawWithSignature();
-        }
-    }
-
-    // endregion withdraw sig
-    // region withdraw witness
-
-    @Test
-    public void evaluateWithdrawWitness() throws Throwable {
-        assertCorrectNetworkFactors();
-        if (evaluateWithdrawWitness) {
-            runWithdrawWithWitness();
-        }
-    }
-
     // endregion withdraw witness
-    // region batch list - 0.1 Gas to 1000 Gas
+    // region batch list - EvaluationTypeList
 
     @Test
-    public void testEvaluateBatchPayout_list() throws Throwable {
+    public void evaluateBatchPayout_list() throws Throwable {
         assertCorrectNetworkFactors();
         if (batchPayout_list) {
-            runBatchPayoutEvaluation_list();
+            runBatchPayoutEvaluation_list(false);
         }
     }
 
-    private static void runBatchPayoutEvaluation_list() throws Throwable {
-        FileWriter w = getResultFileWriter("batchPayout_list");
+    @Test
+    public void preset_evaluateBatchPayout_list() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_batchPayout_list) {
+            runBatchPayoutEvaluation_list(true);
+        }
+    }
+
+    private static void runBatchPayoutEvaluation_list(boolean preset) throws Throwable {
+        FileWriter w;
+        if (preset) {
+            w = getResultFileWriter("preset_batchPayout_list");
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+        } else {
+            w = getResultFileWriter("batchPayout_list");
+        }
         writeNetworkFactors(w, neow3j);
         w.write("#accounts,tea,systemfee,networkfee\n");
         for (EvaluationTypeList type : EvaluationTypeList.values()) {
-            System.out.println(type.name());
-            Transaction tx = executeSingleBatchPayout_list(type);
-            NeoApplicationLog.Execution log = null;
-            try {
-                log = tx.getApplicationLog().getExecutions().get(0);
-                assertThat(log.getState(), is(NeoVMStateType.HALT));
-                assertThat(log.getNotifications(), hasSize(type.nrAccounts.intValue()));
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-            for (NeoApplicationLog.Execution.Notification notification : log.getNotifications()) {
+            Transaction tx = executeSingleBatchPayout_list(type, preset);
+            NeoApplicationLog.Execution exec = tx.getApplicationLog().getExecutions().get(0);
+            assertThat(exec.getState(), is(NeoVMStateType.HALT));
+            assertThat(exec.getNotifications(), hasSize(type.nrAccounts.intValue()));
+            for (NeoApplicationLog.Execution.Notification notification : exec.getNotifications()) {
                 assertThat(notification.getContract(), is(GasToken.SCRIPT_HASH));
                 assertThat(notification.getEventName(), is(TRANSFER_EVENT_NAME));
             }
@@ -240,10 +338,13 @@ public class Evaluation {
         w.close();
     }
 
-    private static Transaction executeSingleBatchPayout_list(EvaluationTypeList type) throws Throwable {
+    private static Transaction executeSingleBatchPayout_list(EvaluationTypeList type, boolean preset) throws Throwable {
         BigInteger tea = type.tea;
         BigInteger nrAccounts = type.nrAccounts;
         Hash160[] randomHashes = getRandomHashes(nrAccounts.intValue());
+        if (preset) {
+            setTeas(randomHashes);
+        }
         ContractParameter accountsParam = array(randomHashes);
         BigInteger[] teas = new BigInteger[nrAccounts.intValue()];
         Arrays.fill(teas, tea);
@@ -256,7 +357,7 @@ public class Evaluation {
         return tx;
     }
 
-    // endregion batch list - 0.1 Gas to 1000 Gas
+    // endregion batch list - EvaluationTypeList
     // region batch list - 1 to 1012 accounts - pushint32/pushint64
 
     @Test
@@ -264,7 +365,17 @@ public class Evaluation {
         assertCorrectNetworkFactors();
         if (batchPayout_list_oneToMaxAccs_32) {
             FileWriter w = getResultFileWriter("batchPayout_list_oneToMax_pushint32");
-            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(BigDecimal.ONE));
+            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(BigDecimal.ONE), false);
+        }
+    }
+
+    @Test
+    public void preset_evaluateBatchPayout_list_oneToMax_pushint32() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_batchPayout_list_oneToMaxAccs_32) {
+            FileWriter w = getResultFileWriter("preset_batchPayout_list_oneToMax_pushint32");
+//            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(BigDecimal.ONE), true);
         }
     }
 
@@ -273,16 +384,27 @@ public class Evaluation {
         if (batchPayout_list_oneToMaxAccs_64) {
             assertCorrectNetworkFactors();
             FileWriter w = getResultFileWriter("batchPayout_list_oneToMax_pushint64");
-            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(new BigDecimal("25")));
+            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), false);
         }
     }
 
-    private static void runBatchPayoutEvaluation_list_oneToMax(FileWriter w, BigInteger tea) throws Throwable {
+    @Test
+    public void preset_evaluateBatchPayout_list_oneToMax_pushint64() throws Throwable {
+        if (preset_batchPayout_list_oneToMaxAccs_64) {
+            assertCorrectNetworkFactors();
+            FileWriter w = getResultFileWriter("preset_batchPayout_list_oneToMax_pushint64");
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), false);
+        }
+    }
+
+    private static void runBatchPayoutEvaluation_list_oneToMax(FileWriter w, BigInteger tea, boolean preset)
+            throws Throwable {
         writeNetworkFactors(w, neow3j);
         w.write(format("tea=%s\n", gasToken.toDecimals(tea)));
         w.write("#accounts,systemfee,networkfee,totalfee,sysfeeperacc,netfeeperacc,totalfeeperacc\n");
-        for (int i = 0; i <= MAX_ACCOUNTS_BATCH_PAYOUT_LIST; i++) {
-            Transaction tx = executeSingleBatchPayout_list(i, tea);
+        for (int i = 1; i <= MAX_ACCOUNTS_BATCH_PAYOUT_LIST; i++) {
+            Transaction tx = executeSingleBatchPayout_list(i, tea, preset);
             waitUntilTransactionIsExecuted(tx.getTxId(), neow3j);
             NeoApplicationLog.Execution log = tx.getApplicationLog().getExecutions().get(0);
             assertThat(log.getState(), is(NeoVMStateType.HALT));
@@ -296,10 +418,13 @@ public class Evaluation {
         w.close();
     }
 
-    private static Transaction executeSingleBatchPayout_list(int nrAccounts, BigInteger tea) throws Throwable {
+    private static Transaction executeSingleBatchPayout_list(int nrAccounts, BigInteger tea, boolean preset) throws Throwable {
         Hash160[] randomHashes = getRandomHashes(nrAccounts);
         if (nrAccounts % 10 == 0) {
             System.out.println(nrAccounts + " accounts");
+        }
+        if (preset) {
+            setTeas(randomHashes);
         }
         ContractParameter accsParam = array(randomHashes);
         BigInteger[] teas = new BigInteger[nrAccounts];
@@ -313,29 +438,44 @@ public class Evaluation {
     }
 
     // endregion batch list - 1 to 1012 accounts - pushint32/pushint64
-    // region batch map - 0.1 Gas to 1000 Gas
+    // region batch map - EvaluationTypeMap
 
     @Test
-    public void testEvaluateBatchPayout_map() throws Throwable {
+    public void evaluateBatchPayout_map() throws Throwable {
         assertCorrectNetworkFactors();
         if (batchPayout_map) {
-            runBatchPayoutEvaluation_map();
+            runBatchPayoutEvaluation_map(false);
         }
     }
 
-    private static void runBatchPayoutEvaluation_map() throws Throwable {
-        FileWriter w = getResultFileWriter("batchPayout_map_v2");
+    @Test
+    public void preseet_evaluateBatchPayout_map() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_batchPayout_map) {
+            runBatchPayoutEvaluation_map(true);
+        }
+    }
+
+    private static void runBatchPayoutEvaluation_map(boolean preset) throws Throwable {
+        FileWriter w;
+        if (preset) {
+            w = getResultFileWriter("preset_batchPayout_map");
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+        } else {
+            w = getResultFileWriter("batchPayout_map");
+        }
         writeNetworkFactors(w, neow3j);
         w.write("#accounts,tea,systemfee,networkfee\n");
         for (EvaluationTypeMap type : EvaluationTypeMap.values()) {
-            Transaction tx = executeSingleBatchPayout_map(type);
+            System.out.println(type.name());
+            Transaction tx = executeSingleBatchPayout_map(type, preset);
             waitUntilTransactionIsExecuted(tx.getTxId(), neow3j);
-            NeoApplicationLog log = tx.getApplicationLog();
-            NeoApplicationLog.Execution exec = log.getExecutions().get(0);
+            NeoApplicationLog.Execution exec = tx.getApplicationLog().getExecutions().get(0);
             assertThat(exec.getState(), is(NeoVMStateType.HALT));
             assertThat(exec.getNotifications(), hasSize(type.nrAccounts.intValue()));
-            for (NeoApplicationLog.Execution.Notification not : exec.getNotifications()) {
-                assertThat(not.getEventName(), is(TRANSFER_EVENT_NAME));
+            for (NeoApplicationLog.Execution.Notification notification : exec.getNotifications()) {
+                assertThat(notification.getContract(), is(GasToken.SCRIPT_HASH));
+                assertThat(notification.getEventName(), is(TRANSFER_EVENT_NAME));
             }
             w.write(format("%s,%s,%s,%s\n", type.nrAccounts,
                     gasToken.toDecimals(type.tea),
@@ -345,10 +485,13 @@ public class Evaluation {
         w.close();
     }
 
-    private static Transaction executeSingleBatchPayout_map(EvaluationTypeMap type) throws Throwable {
+    private static Transaction executeSingleBatchPayout_map(EvaluationTypeMap type, boolean preset) throws Throwable {
         BigInteger tea = type.tea;
         BigInteger nrAccounts = type.nrAccounts;
         Hash160[] randomHashes = getRandomHashes(nrAccounts.intValue());
+        if (preset) {
+            setTeas(randomHashes);
+        }
         HashMap<Hash160, BigInteger> hashMap = new HashMap<>();
         for (Hash160 randomHash : randomHashes) {
             hashMap.put(randomHash, tea);
@@ -362,17 +505,24 @@ public class Evaluation {
         return tx;
     }
 
-    // endregion batch map - 0.1 Gas to 1000 Gas
+    // endregion batch map - EvaluationTypeMap
     // region batch map - 1 to 674 accounts - pushint32/pushint64
-
-    // region batch list - 1 to 1012 accounts - pushint32/pushint64
 
     @Test
     public void evaluateBatchPayout_map_oneToMax_pushint32() throws Throwable {
         assertCorrectNetworkFactors();
         if (batchPayout_map_oneToMaxAccs_32) {
             FileWriter w = getResultFileWriter("batchPayout_map_oneToMax_pushint32");
-            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(BigDecimal.ONE));
+            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(BigDecimal.ONE), false);
+        }
+    }
+
+    @Test
+    public void preset_evaluateBatchPayout_map_oneToMax_pushint32() throws Throwable {
+        assertCorrectNetworkFactors();
+        if (preset_batchPayout_map_oneToMaxAccs_32) {
+            FileWriter w = getResultFileWriter("preset_batchPayout_map_oneToMax_pushint32");
+            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(BigDecimal.ONE), true);
         }
     }
 
@@ -381,16 +531,26 @@ public class Evaluation {
         if (batchPayout_map_oneToMaxAccs_64) {
             assertCorrectNetworkFactors();
             FileWriter w = getResultFileWriter("batchPayout_map_oneToMax_pushint64");
-            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(new BigDecimal("25")));
+            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), false);
         }
     }
 
-    private static void runBatchPayoutEvaluation_map_oneToMax(FileWriter w, BigInteger tea) throws Throwable {
+    @Test
+    public void preset_evaluateBatchPayout_map_oneToMax_pushint64() throws Throwable {
+        if (preset_batchPayout_map_oneToMaxAccs_64) {
+            assertCorrectNetworkFactors();
+            FileWriter w = getResultFileWriter("preset_batchPayout_map_oneToMax_pushint64");
+            runBatchPayoutEvaluation_map_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), true);
+        }
+    }
+
+    private static void runBatchPayoutEvaluation_map_oneToMax(FileWriter w, BigInteger tea, boolean preset)
+            throws Throwable {
         writeNetworkFactors(w, neow3j);
         w.write(format("tea=%s\n", gasToken.toDecimals(tea)));
         w.write("#accounts,systemfee,networkfee,totalfee,sysfeeperacc,netfeeperacc,totalfeeperacc\n");
-        for (int i = 1; i <= MAX_ACCOUNTS_BATCH_PAYOUT_MAP; i++) {
-            Transaction tx = executeSingleBatchPayout_map(i, tea);
+        for (int i = 468; i <= MAX_ACCOUNTS_BATCH_PAYOUT_MAP; i++) {
+            Transaction tx = executeSingleBatchPayout_map(i, tea, preset);
             waitUntilTransactionIsExecuted(tx.getTxId(), neow3j);
             NeoApplicationLog.Execution log = tx.getApplicationLog().getExecutions().get(0);
             assertThat(log.getState(), is(NeoVMStateType.HALT));
@@ -404,10 +564,14 @@ public class Evaluation {
         w.close();
     }
 
-    private static Transaction executeSingleBatchPayout_map(int nrAccounts, BigInteger tea) throws Throwable {
+    private static Transaction executeSingleBatchPayout_map(int nrAccounts, BigInteger tea, boolean preset)
+            throws Throwable {
         Hash160[] randomHashes = getRandomHashes(nrAccounts);
         if (nrAccounts % 10 == 0) {
             System.out.println(nrAccounts + " accounts");
+        }
+        if (preset) {
+            setTeas(randomHashes);
         }
         HashMap<Hash160, BigInteger> hashMap = new HashMap<>();
         for (Hash160 randomHash : randomHashes) {
