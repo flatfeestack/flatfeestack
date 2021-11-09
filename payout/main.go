@@ -1,19 +1,11 @@
 package main
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/flatfeestack/payout/flat_ethclient"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
@@ -23,16 +15,11 @@ import (
 	"strconv"
 )
 
+// USD
 type PayoutUsd struct {
 	Address      string `json:"address"`
 	Balance      int64  `json:"balance_micro_USD"`
 	ExchangeRate string `json:"exchange_rate_USD_ETH"`
-}
-
-type PayoutCryptoRequest struct {
-	Address  string `json:"address"`
-	Balance  int64  `json:"balance"`
-	Currency string `json:"crypto_currency"`
 }
 
 type PayoutWei struct {
@@ -40,14 +27,21 @@ type PayoutWei struct {
 	Balance big.Int `json:"balance_wei"`
 }
 
-type PayoutCrypto struct {
-	Address string  `json:"address"`
-	Balance big.Int `json:"balance"`
-}
-
 type PayoutResponse struct {
 	TxHash     string      `json:"tx_hash"`
 	PayoutWeis []PayoutWei `json:"payout_weis"`
+}
+
+//Crypto
+
+type PayoutCryptoRequest struct {
+	Address string `json:"address"`
+	Balance int64  `json:"nano_tea"`
+}
+
+type PayoutCrypto struct {
+	Address string  `json:"address"`
+	Balance big.Int `json:"balance"`
 }
 
 type PayoutCryptoResponse struct {
@@ -70,7 +64,7 @@ var (
 	MicroUsd     = big.NewFloat(0)
 	UsdWei       = big.NewFloat(0)
 	CryptoFactor = big.NewFloat(0)
-	ethClient    *ClientETH
+	ethClient    *flat_ethclient.ClientETH
 	debug        bool
 )
 
@@ -135,92 +129,6 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	return 0
 }
 
-type ClientETH struct {
-	c           *ethclient.Client
-	rpc         *rpc.Client
-	privateKey  *ecdsa.PrivateKey
-	publicKey   *ecdsa.PublicKey
-	fromAddress common.Address
-	chainId     *big.Int
-	contract    *PayoutEthEval
-}
-
-func getEthClient(ethUrl string, hexPrivateKey string, ethContract string) (*ClientETH, error) {
-	rpc, err := rpc.DialContext(context.Background(), ethUrl)
-	if err != nil {
-		return nil, err
-	}
-	client := ethclient.NewClient(rpc)
-
-	if err != nil {
-		return nil, err
-	}
-	privateKey, err := crypto.HexToECDSA(hexPrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("error casting public key to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-
-	c := &ClientETH{
-		c:           client,
-		rpc:         rpc,
-		privateKey:  privateKey,
-		publicKey:   publicKeyECDSA,
-		fromAddress: fromAddress,
-	}
-
-	chainId, err := c.c.NetworkID(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	c.chainId = chainId
-
-	if opts.Deploy {
-		c.contract = deployEthContract(c)
-	} else {
-		c.contract, err = NewPayoutEthEval(common.HexToAddress(ethContract), c.c)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	return c, nil
-}
-
-func deployEthContract(ethClient *ClientETH) *PayoutEthEval {
-	opts, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
-	address, tx, contract, err := DeployPayoutEthEval(opts, ethClient.c)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = bind.WaitDeployed(context.Background(), ethClient.c, tx)
-	log.Printf("Contract deployed at %v", address)
-	return contract
-}
-
-func payoutEth(contract *PayoutEthEval, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
-	var addresses []common.Address
-	for i := range addressValues {
-		addresses = append(addresses, common.HexToAddress(addressValues[i]))
-	}
-	transactor, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
-	if err != nil {
-		log.Fatalf("Failed to create authorized transactor: %v", err)
-	}
-	tx, err := contract.BatchPayout(transactor, addresses, teas)
-	if err != nil {
-		log.Fatalf("Failed transaction: %v", err)
-	}
-	return tx, err
-}
-
 func main() {
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -236,7 +144,7 @@ func main() {
 
 	opts = NewOpts()
 
-	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.EthContract)
+	ethClient, err = flat_ethclient.GetEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -297,7 +205,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	txHash, err := payoutEth(ethClient.contract, addresses, amountWei)
+	txHash, err := flat_ethclient.PayoutEth(ethClient, addresses, amountWei)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "authorization header not set")
 		return
@@ -341,11 +249,15 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	txHash, err := "", nil
 	switch cur {
 	case "eth":
-		payoutEth(ethClient.contract, addresses, amount)
+		transaction, err := flat_ethclient.PayoutEth(ethClient, addresses, amount)
+		if err != nil {
+			log.Fatal(err)
+		}
+		txHash = transaction.Hash().String()
 		break
 	case "neo":
 		break
-	case "tez":
+	case "xtc":
 		break
 	default:
 		log.Printf("Currency isn't supported %v", err)
