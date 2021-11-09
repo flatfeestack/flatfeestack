@@ -70,12 +70,32 @@ type PayoutsRequest struct {
 	CreatedAt         time.Time
 }
 
+// PayoutRequestDB New for Crypto, USD pay in should be migrated
+type PayoutRequestDB struct {
+	UserId       uuid.UUID
+	BatchId      uuid.UUID
+	Currency     string
+	ExchangeRate big.Float
+	Tea          int64
+	Address      string
+	CreatedAt    time.Time
+}
+
 type PayoutsResponse struct {
 	BatchId    uuid.UUID
 	TxHash     string
 	Error      *string
 	CreatedAt  time.Time
 	PayoutWeis []PayoutWei
+}
+
+// PayoutsResponseDB New for Crypto, USD pay in should be migrated
+type PayoutResponseDB struct {
+	BatchId   uuid.UUID
+	TxHash    string
+	Error     *string
+	CreatedAt time.Time
+	Payouts   PayoutResponseNew
 }
 
 type GitEmail struct {
@@ -123,6 +143,12 @@ type Contribution struct {
 	Balance           *int64    `json:"balance"`
 	BalanceRepo       int64     `json:"balanceRepo"`
 	Day               time.Time `json:"day"`
+}
+
+type Wallet struct {
+	Id       uuid.UUID `json:"id"`
+	Currency string    `json:"currency"`
+	Address  string    `json:"address"`
 }
 
 func findAllUsers() ([]User, error) {
@@ -301,6 +327,56 @@ func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(invitedEmail, userId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
+	var userWallets []Wallet
+	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
+	rows, err := db.Query(s, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var userWallet Wallet
+		err = rows.Scan(&userWallet.Id, &userWallet.Currency, &userWallet.Address)
+		if err != nil {
+			return nil, err
+		}
+		userWallets = append(userWallets, userWallet)
+	}
+	return userWallets, nil
+}
+
+func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool) error {
+	stmt, err := db.Prepare("INSERT INTO wallet_address(user_id, currency, address, is_deleted) VALUES($1, $2, $3, $4)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(uid, currency, address, isDeleted)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func deleteWallet(id uuid.UUID) error {
+	stmt, err := db.Prepare("UPDATE wallet_address set is_deleted = true WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(id)
 	if err != nil {
 		return err
 	}
@@ -1203,6 +1279,68 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func insertPayoutRequest(p *PayoutRequestDB) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_request(user_id, batch_id, currency, exchange_rate, tea, address, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6, $7)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.UserId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func insertPayoutResponse(p *PayoutResponseDB) error {
+	pid := uuid.New()
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response(id, tx_hash, batch_id, error, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, p.TxHash, p.BatchId, p.Error, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	err = handleErrMustInsertOne(res)
+	if err != nil {
+		return err
+	}
+	for _, v := range p.Payouts.Payout {
+		err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response_details(payout_response_id, currency, address, balance, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payout_response_details for %v statement event: %v", pid, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
 	if err != nil {
 		return err
 	}

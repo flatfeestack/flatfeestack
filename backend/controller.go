@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/template"
+	_ "github.com/aristanetworks/goarista/key"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
+	_ "golang.org/x/net/dns/dnsmessage"
 	"golang.org/x/text/language"
 	"log"
 	"math/big"
@@ -73,7 +75,17 @@ type Plan struct {
 	FeePrm      int       `json:"feePrm"`
 }
 
+type CryptoCurrency struct {
+	Name      string `json:"name"`
+	ShortName string `json:"shortName"`
+}
+
 var plans = []Plan{}
+var supportedCurrencies = []CryptoCurrency{
+	{Name: "Ethereum", ShortName: "eth"},
+	{Name: "Neo", ShortName: "neo"},
+	{Name: "Tezos", ShortName: "xtz"},
+}
 
 func init() {
 	py := new(big.Float)
@@ -560,6 +572,12 @@ type PayoutToService struct {
 	Address      string    `json:"address"`
 	Balance      int64     `json:"balance_micro_USD"`
 	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
+	Tea          int64     `json:"nano_tea"`
+}
+
+type PayoutToServiceCrypto struct {
+	Address string `json:"address"`
+	Tea     int64  `json:"nano_tea"`
 }
 
 func payout(w http.ResponseWriter, r *http.Request, email string) {
@@ -688,6 +706,7 @@ func users(w http.ResponseWriter, r *http.Request, email string) {
 
 func config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(plans)
+	supportedCurrencies, err := json.Marshal(supportedCurrencies)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
@@ -699,7 +718,9 @@ func config(w http.ResponseWriter, _ *http.Request) {
 			"restTimeout":"`+strconv.Itoa(opts.RestTimeout)+`",
             "plans": `+string(b)+`,
 			"env":"`+opts.Env+`",
-			"contractAddr":"`+opts.ContractAddr+`"}`)
+			"contractAddr":"`+opts.ContractAddr+`",
+			"supportedCurrencies":`+string(supportedCurrencies)+`
+			}`)
 }
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {

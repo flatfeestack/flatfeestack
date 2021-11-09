@@ -34,6 +34,17 @@ type PayoutWei struct {
 	Balance big.Int `json:"balance_wei"`
 }
 
+type Payout struct {
+	Balance int64  `json:"balance"`
+	Address string `json:"address"`
+}
+
+type PayoutResponseNew struct {
+	TxHash   string   `json:"tx_hash"`
+	Currency string   `json:"currency"`
+	Payout   []Payout `json:"payout_cryptos"`
+}
+
 type PayoutResponse struct {
 	TxHash     string      `json:"tx_hash"`
 	PayoutWeis []PayoutWei `json:"payout_weis"`
@@ -55,6 +66,29 @@ func payoutRequest(pts []PayoutToService) (*PayoutResponse, error) {
 	defer r.Body.Close()
 
 	var resp PayoutResponse
+	err = json.NewDecoder(r.Body).Decode(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func cryptoPayoutRequest(pts []PayoutToServiceCrypto, currency string) (*PayoutResponseNew, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	body, err := json.Marshal(pts)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := client.Post(opts.PayoutUrl+"/pay-crypto/"+currency, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	var resp PayoutResponseNew
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
 		return nil, err

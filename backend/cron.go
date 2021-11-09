@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"log"
 	"time"
@@ -280,4 +281,81 @@ func reminderTopup(u User) error {
 
 	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil
+}
+
+// ToDo: how to run monthly?
+func monthlyRunner() error {
+	chunkSize := 1000
+	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+
+	payouts, err := monthlyBatchJobPayout()
+	if err != nil {
+		return err
+	}
+
+	for _, payout := range payouts {
+		for i, currency := range supportedCurrencies {
+			if payout.Currency == currency.ShortName {
+				container[i] = append(container[i], payout)
+			}
+		}
+	}
+
+	for _, payouts := range container {
+		currency := payouts[0].Currency
+
+		for i := 0; i < len(payouts); i += chunkSize {
+			end := i + chunkSize
+			if end > len(payouts) {
+				end = len(payouts)
+			}
+			var pts []PayoutToServiceCrypto
+			batchId := uuid.New()
+			for _, payout := range payouts[i:end] {
+				request := PayoutRequestDB{
+					UserId:    payout.UserId,
+					BatchId:   batchId,
+					Currency:  currency,
+					Tea:       payout.Tea,
+					Address:   payout.Address,
+					CreatedAt: timeNow(),
+				}
+				err := insertPayoutRequest(&request)
+				if err != nil {
+					return err
+				}
+
+				pt := PayoutToServiceCrypto{
+					Address: payout.Address,
+					Tea:     payout.Tea,
+				}
+				pts = append(pts, pt)
+			}
+			err := cryptoPayout(pts, batchId, currency)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func cryptoPayout(pts []PayoutToServiceCrypto, batchId uuid.UUID, currency string) error {
+	res, err := cryptoPayoutRequest(pts, currency)
+	res.Currency = currency
+	if err != nil {
+		err1 := err.Error()
+		err2 := insertPayoutsResponse(&PayoutsResponse{
+			BatchId:   batchId,
+			Error:     &err1,
+			CreatedAt: timeNow(),
+		})
+		return fmt.Errorf("error %v/%v", err, err2)
+	}
+	return insertPayoutResponse(&PayoutResponseDB{
+		BatchId:   batchId,
+		Error:     nil,
+		CreatedAt: timeNow(),
+		Payouts:   *res,
+	})
 }
