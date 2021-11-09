@@ -575,6 +575,11 @@ type PayoutToService struct {
 	Tea          int64     `json:"nano_tea"`
 }
 
+type PayoutToServiceCrypto struct {
+	Address string `json:"address"`
+	Tea     int64  `json:"nano_tea"`
+}
+
 func payout(w http.ResponseWriter, r *http.Request, email string) {
 	log.Printf("papout")
 	userAggBalances, err := getDailyPayouts("pending")

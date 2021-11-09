@@ -34,11 +34,15 @@ type PayoutWei struct {
 	Balance big.Int `json:"balance_wei"`
 }
 
+type Payout struct {
+	Balance int64  `json:"balance"`
+	Address string `json:"address"`
+}
+
 type PayoutResponseNew struct {
-	Currency string `json:"currency"`
-	Amount   int64  `json:"amount"`
-	Address  string `json:"address"`
-	TxHash   string `json:"tx_hash"` //ToDo: gibt es für jeden user einen TxHash? vorher war es pro request
+	TxHash   string   `json:"tx_hash"`
+	Currency string   `json:"currency"`
+	Payout   []Payout `json:"payout_cryptos"`
 }
 
 type PayoutResponse struct {
@@ -69,7 +73,7 @@ func payoutRequest(pts []PayoutToService) (*PayoutResponse, error) {
 	return &resp, nil
 }
 
-func cryptoPayoutRequest(pts []PayoutToService, currency string) (*[]PayoutResponseNew, error) {
+func cryptoPayoutRequest(pts []PayoutToServiceCrypto, currency string) (*PayoutResponseNew, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -84,7 +88,7 @@ func cryptoPayoutRequest(pts []PayoutToService, currency string) (*[]PayoutRespo
 	}
 	defer r.Body.Close()
 
-	var resp []PayoutResponseNew
+	var resp PayoutResponseNew
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
 		return nil, err

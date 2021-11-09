@@ -309,7 +309,7 @@ func monthlyRunner() error {
 			if end > len(payouts) {
 				end = len(payouts)
 			}
-			var pts []PayoutToService
+			var pts []PayoutToServiceCrypto
 			batchId := uuid.New()
 			for _, payout := range payouts[i:end] {
 				request := PayoutRequestDB{
@@ -325,7 +325,7 @@ func monthlyRunner() error {
 					return err
 				}
 
-				pt := PayoutToService{
+				pt := PayoutToServiceCrypto{
 					Address: payout.Address,
 					Tea:     payout.Tea,
 				}
@@ -340,8 +340,9 @@ func monthlyRunner() error {
 	return nil
 }
 
-func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) error {
+func cryptoPayout(pts []PayoutToServiceCrypto, batchId uuid.UUID, currency string) error {
 	res, err := cryptoPayoutRequest(pts, currency)
+	res.Currency = currency
 	if err != nil {
 		err1 := err.Error()
 		err2 := insertPayoutsResponse(&PayoutsResponse{

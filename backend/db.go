@@ -91,11 +91,11 @@ type PayoutsResponse struct {
 
 // PayoutsResponseDB New for Crypto, USD pay in should be migrated
 type PayoutResponseDB struct {
-	BatchId uuid.UUID
-	//TxHash     string
+	BatchId   uuid.UUID
+	TxHash    string
 	Error     *string
 	CreatedAt time.Time
-	Payouts   []PayoutResponseNew
+	Payouts   PayoutResponseNew
 }
 
 type GitEmail struct {
@@ -1304,17 +1304,16 @@ func insertPayoutRequest(p *PayoutRequestDB) error {
 
 func insertPayoutResponse(p *PayoutResponseDB) error {
 	pid := uuid.New()
-	//ToDo: muss die tx_hash von hier nach details??
 	stmt, err := db.Prepare(`
-				INSERT INTO payout_response(id, batch_id, error, created_at) 
-				VALUES($1, $2, $3, $4)`)
+				INSERT INTO payout_response(id, tx_hash, batch_id, error, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, p.BatchId, p.Error, p.CreatedAt)
+	res, err = stmt.Exec(pid, p.TxHash, p.BatchId, p.Error, p.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -1322,8 +1321,8 @@ func insertPayoutResponse(p *PayoutResponseDB) error {
 	if err != nil {
 		return err
 	}
-	for _, v := range p.Payouts {
-		err = insertPayoutResponseDetails(pid, &v)
+	for _, v := range p.Payouts.Payout {
+		err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
 		if err != nil {
 			return err
 		}
@@ -1331,17 +1330,17 @@ func insertPayoutResponse(p *PayoutResponseDB) error {
 	return nil
 }
 
-func insertPayoutResponseDetails(pid uuid.UUID, payout *PayoutResponseNew) error {
+func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payout_response_details(payouts_response_id, tx_hash, currency, amount, address, created_at) 
-				VALUES($1, $2, $3, $4, $5, $6)`)
+				INSERT INTO payout_response_details(payout_response_id, currency, address, balance, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
+		return fmt.Errorf("prepare INSERT INTO payout_response_details for %v statement event: %v", pid, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, payout.TxHash, payout.Currency, payout.Amount, payout.Amount, timeNow())
+	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
 	if err != nil {
 		return err
 	}

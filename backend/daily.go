@@ -127,6 +127,7 @@ func runDailyDaysLeftPaymentCycle() (int64, error) {
 //
 //Running this twice does not work as we have a unique index on: repo_id, day
 //TODO: update doc
+//TODO: choose pot with least days left
 func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day, currency, created_at)
 		   	SELECT
