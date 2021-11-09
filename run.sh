@@ -13,7 +13,7 @@ host_ip() {
   # check what machine we are on
   host_ip="localhost"
   case "$(uname -s)" in
-      Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
+      Linux*)     host_ip=$(ip -br -4 a show dev docker0|tr -s ' '|cut -d' ' -f 3|cut -d/ -f1);;
       Darwin*)    host_ip="host.docker.internal";;
       *)          host_ip="localhost";;
   esac
@@ -103,10 +103,10 @@ msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
 
 if [ "$include_build" = true ]; then
   msg "${GREEN}Run: docker-compose build --parallel ${services}"
-  HOSTS="${hosts}" docker-compose build --parallel ${services}
+  EXTRA_HOSTS="${hosts}" docker-compose build --parallel ${services}
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${services}"
-UID_GID="$(id -u):$(id -g)" HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}
+EXTRA_HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}
