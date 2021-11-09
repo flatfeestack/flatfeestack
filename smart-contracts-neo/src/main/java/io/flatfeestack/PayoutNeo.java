@@ -176,9 +176,12 @@ public class PayoutNeo {
      * @param oldTeas  The previously stored {@code total earned amounts} for the accounts.
      * @param newTeas  The new {@code total earned amounts} for the accounts.
      */
-    public static void setTeas(Hash160[] accounts, int[] oldTeas, int[] newTeas) {
+    public static void setTeas(Hash160[] accounts, int[] oldTeas, int[] newTeas) throws Exception {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
-        for (int i = 0; i < accounts.length; i++) {
+        int len = accounts.length;
+        assert len == oldTeas.length : "Parameters must have same length.";
+        assert len == newTeas.length : "Parameters must have same length.";
+        for (int i = 0; i < len; i++) {
             Hash160 acc = accounts[i];
             int storedTea = teaMap.get(acc.toByteString()).toIntOrZero();
             int oldTea = oldTeas[i];
