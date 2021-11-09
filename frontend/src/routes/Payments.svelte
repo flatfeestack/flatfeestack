@@ -1,6 +1,5 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import Payment from "../components/Payment.svelte";
   import { error, user, userBalances, token, config, firstTime } from "../ts/store";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
@@ -10,6 +9,7 @@
   import { connectWs, formatDate, parseJwt} from "../ts/services";
   import Dots from "../components/Dots.svelte";
   import { navigate } from "svelte-routing";
+  import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let isUser = $user.role != "ORG";
   let sponsoredRepos: Repo[] = [];
@@ -154,7 +154,7 @@
   {/if}
 
   {#if !$userBalances || !$userBalances.paymentCycle || $userBalances.paymentCycle.freq === 0 || !isUser}
-      <Payment />
+      <PaymentSelection />
   {/if}
 
   {#if $firstTime}

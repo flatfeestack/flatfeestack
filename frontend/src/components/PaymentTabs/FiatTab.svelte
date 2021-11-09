@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { error, user, config, userBalances, firstTime } from "./../ts/store";
-  import Dots from "./Dots.svelte";
-  import { stripePayment, stripePaymentMethod } from "../ts/services";
+  import { error, user, config, userBalances, firstTime } from "../../ts/store";
+  import Dots from "../Dots.svelte";
+  import { stripePayment, stripePaymentMethod } from "../../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
-  import { API } from "../ts/api";
+  import { API } from "../../ts/api";
 
   let stripe;
   let selectedPlan = 0;

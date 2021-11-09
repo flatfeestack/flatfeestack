@@ -5,6 +5,9 @@ import typescript from "rollup-plugin-typescript2";
 import css from "rollup-plugin-css-only";
 import commonjs from "@rollup/plugin-commonjs";
 import execute from "rollup-plugin-execute";
+import json from '@rollup/plugin-json';
+import builtins from 'rollup-plugin-node-builtins';
+import globals from 'rollup-plugin-node-globals';
 
 import serve from "rollup-plugin-serve";
 
@@ -21,10 +24,13 @@ export default [
         },
         plugins: [
             svelte({emitCss: true, preprocess: sveltePreprocess(), compilerOptions: {hydratable: true}}),
-            resolve({browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"]}),
+            resolve({preferBuiltins: false, browser: true, dedupe: ["svelte"], extensions: [".ts", ".js"]}),
             typescript({sourceMap: true}),
             css({output: "bundle.css"}),
-            commonjs(),
+            commonjs({transformMixedEsModules: true}),
+            globals(),
+            builtins(),
+            json()
         ]
     },
     {

@@ -8,16 +8,19 @@
   "devDependencies": {
     "@fortawesome/free-solid-svg-icons": "^5.15.3",
     "@rollup/plugin-commonjs": "^19.0.0",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@tsconfig/svelte": "^1.0.10",
-    "@types/canvas-confetti": "^1.4.0",
     "@typechain/ethers-v5": "^7.0.0",
+    "@types/canvas-confetti": "^1.4.0",
     "rollup": "^2.48.0",
     "rollup-plugin-brotli": "^3.1.0",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-execute": "^1.1.1",
     "rollup-plugin-gzip": "^2.5.0",
     "rollup-plugin-license": "^2.3.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.4.0",
     "rollup-plugin-serve": "^1.1.0",
     "rollup-plugin-svelte": "^7.1.0",
     "rollup-plugin-terser": "^7.0.2",
@@ -30,11 +33,13 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
+    "@metamask/detect-provider": "^1.2.0",
     "@stripe/stripe-js": "^1.15.0",
+    "@taquito/taquito": "^10.2.1",
+    "@temple-wallet/dapp": "^5.0.2",
     "canvas-confetti": "^1.4.0",
     "ethers": "^5.2.0",
     "ky": "^0.28.1",
-    "svelte-routing": "^1.6.0",
-    "@metamask/detect-provider": "^1.2.0"
+    "svelte-routing": "^1.6.0"
   }
 }
