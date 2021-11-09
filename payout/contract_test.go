@@ -3,26 +3,19 @@
 package main
 
 import (
-	"context"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/assert"
-	"log"
-	"math/big"
-	"os"
-	"testing"
+	"github.com/flatfeestack/payout/flat_ethclient"
 )
 
 var (
-	c                 *ClientETH
+	c                 *flat_ethclient.ClientETH
 	testPrivateKeyHex = "36ae1cf18fa77be025d3668ddcfeb4ab6c227d66b82473db4bd58fec37ce74df"
 	testPublicKeyHex  = "0x48Fe4A98911ae45648d9a17aAD5E209DAadF7559"
 	testPrivateKey    *ecdsa.PrivateKey
 	testPublicKey     *ecdsa.PublicKey
 )
 
+/*
 func TestMain(m *testing.M) {
 	var err error
 
@@ -129,3 +122,4 @@ func sendEth(to string) (string, error) {
 	tx := types.NewTransaction(nonce, common.HexToAddress(to), big.NewInt(1000000000000), 21000, gasPrice, nil)
 	return c.singAndSend(tx, nil)
 }
+*/
