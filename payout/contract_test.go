@@ -4,10 +4,11 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"github.com/flatfeestack/payout/flat_ethclient"
 )
 
 var (
-	c                 *ClientETH
+	c                 *flat_ethclient.ClientETH
 	testPrivateKeyHex = "36ae1cf18fa77be025d3668ddcfeb4ab6c227d66b82473db4bd58fec37ce74df"
 	testPublicKeyHex  = "0x48Fe4A98911ae45648d9a17aAD5E209DAadF7559"
 	testPrivateKey    *ecdsa.PrivateKey

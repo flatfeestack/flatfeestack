@@ -271,6 +271,10 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	p := PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 	log.Printf(p.TxHash)
+	err = json.NewEncoder(w).Encode(p)
+	if err != nil {
+		return
+	}
 	return
 }
 
