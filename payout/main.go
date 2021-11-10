@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
-	"github.com/flatfeestack/payout/flat_ethclient"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
@@ -64,7 +63,7 @@ var (
 	MicroUsd     = big.NewFloat(0)
 	UsdWei       = big.NewFloat(0)
 	CryptoFactor = big.NewFloat(0)
-	ethClient    *flat_ethclient.ClientETH
+	ethClient    *ClientETH
 	debug        bool
 )
 
@@ -144,7 +143,7 @@ func main() {
 
 	opts = NewOpts()
 
-	ethClient, err = flat_ethclient.GetEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
+	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,7 +204,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	txHash, err := flat_ethclient.PayoutEth(ethClient, addresses, amountWei)
+	txHash, err := payoutEth(ethClient, addresses, amountWei)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "authorization header not set")
 		return
@@ -249,7 +248,7 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	txHash, err := "", nil
 	switch cur {
 	case "eth":
-		transaction, err := flat_ethclient.PayoutEth(ethClient, addresses, amount)
+		transaction, err := payoutEth(ethClient, addresses, amount)
 		if err != nil {
 			log.Fatal(err)
 		}

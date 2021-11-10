@@ -1,4 +1,4 @@
-package flat_ethclient
+package main
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type ClientETH struct {
 	contract    *PayoutEthEval
 }
 
-func PayoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
+func payoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
 	var addresses []common.Address
 	for i := range addressValues {
 		addresses = append(addresses, common.HexToAddress(addressValues[i]))
@@ -40,7 +40,7 @@ func PayoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*
 	return tx, err
 }
 
-func GetEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract string) (*ClientETH, error) {
+func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract string) (*ClientETH, error) {
 	rpc, err := rpc.DialContext(context.Background(), ethUrl)
 	if err != nil {
 		return nil, err
