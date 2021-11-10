@@ -92,7 +92,7 @@ export const API = {
     login: (email: string, password: string) => auth.post("login", { json: { email, password } }).json<Token>(),
     refresh: (refresh: string) => auth.post("refresh", { json: { refresh_token: refresh } }).json<Token>(),
     reset: (email: string) => auth.post(`reset/${email}`),
-    confirmEmail: (email: string, token: string) => auth.post("confirm/signup", { json: { email, token } }).json<Token>(),
+    confirmEmail: (email: string, emailToken: string) => auth.post("confirm/signup", { json: { email, emailToken } }).json<Token>(),
     confirmReset: (email: string, password: string, token: string) => auth.post("confirm/reset", {
       json: { email, password, email_token: token } }).json<Token>(),
     confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
