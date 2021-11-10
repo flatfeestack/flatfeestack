@@ -16,7 +16,6 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
-import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event3Args;
 
 import static io.neow3j.devpack.Helper.concat;
@@ -82,14 +81,6 @@ public class PayoutNeo {
     @OnNEP17Payment
     public static void onNep17Payment(Hash160 from, int amount, Object data) {
     }
-
-    /**
-     * Is fired if a payout was not successful.
-     * <p>
-     * The arguments relate to the account that should have been paid and the reason why it was not successful.
-     */
-    @DisplayName("onUnsuccessfulPayout")
-    private static Event2Args<Hash160, String> onUnsuccessfulPayout;
 
     /**
      * Is fired if the tea of an account is changed without a payment.
@@ -231,9 +222,9 @@ public class PayoutNeo {
         ) : "Signature invalid.";
         int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        teaMap.put(account.toByteString(), tea);
         assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
                 "Transfer was not successful.";
-        teaMap.put(account.toByteString(), tea);
     }
 
     /**
@@ -246,9 +237,9 @@ public class PayoutNeo {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
+        teaMap.put(account.toByteString(), tea);
         assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
                 "Transfer was not successful.";
-        teaMap.put(account.toByteString(), tea);
     }
 
     // endregion withdraw
@@ -265,15 +256,10 @@ public class PayoutNeo {
             int tea = teas[i];
             int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
-                onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
-                continue;
-            }
-            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
-                // This can only be reached if contract funds are too low.
-                onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
+            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
         }
     }
 
@@ -282,14 +268,10 @@ public class PayoutNeo {
             int tea = payoutMap.get(acc);
             int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
             if (payoutAmount <= 0) {
-                onUnsuccessfulPayout.fire(acc, "The payout amount is lower or equal to 0.");
-                continue;
-            }
-            if (!GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
-                onUnsuccessfulPayout.fire(acc, "The transfer was not successful.");
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
+            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
         }
     }
 
