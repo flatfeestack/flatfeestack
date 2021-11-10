@@ -213,18 +213,19 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
 	cents = cents * int64(seats)
 
-	oldSum, err := findSumUserBalance(user.Id, user.PaymentCycleId)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Cannot find sum: %v", err)
-		return
-	}
-	if oldSum > 0 {
-		cents = cents - (oldSum / 10000)
-	}
-	if cents <= 0 {
-		writeErr(w, http.StatusInternalServerError, "Cannot be lower: %v", cents)
-		return
-	}
+	//ToDo: oldSum is not needed anymore, always make full payment
+	/*	oldSum, err := findSumUserBalance(user.Id, user.PaymentCycleId)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "Cannot find sum: %v", err)
+			return
+		}
+		if oldSum > 0 {
+			cents = cents - (oldSum / 10000)
+		}
+		if cents <= 0 {
+			writeErr(w, http.StatusInternalServerError, "Cannot be lower: %v", cents)
+			return
+		}*/
 
 	//cents := stripe.Int64(int64(plan.Price.Int64()))
 	params := &stripe.PaymentIntentParams{

@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -825,7 +826,7 @@ func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, cre
 	return &lastInsertId, handleErrMustInsertOne(res)
 }
 
-func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
+func insertNewInvoice(invoiceDb InvoiceDB) error {
 	stmt, err := db.Prepare(`INSERT INTO invoice (nowpayments_invoice_id, 
 					 payment_cycle_id, 
 					 price_amount, 
@@ -837,7 +838,7 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 					 values($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`)
 
 	if err != nil {
-		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
+		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
 	}
 	defer closeAndLog(stmt)
 
@@ -845,21 +846,21 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		invoiceDb.PriceCurrency, invoiceDb.PayCurrency, invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus).Scan(&lastInsertId)
+		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency), invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus)).Scan(&lastInsertId)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &lastInsertId, nil
+	return nil
 
 	var res sql.Result
 	res, err = stmt.Exec("uid", " createdAt") //wieso braucht es hier noch das Exec??
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &lastInsertId, handleErrMustInsertOne(res)
+	return handleErrMustInsertOne(res)
 }
 
-func updateInvoice(invoice *InvoiceDB) error {
+func updateInvoice(invoice InvoiceDB) error {
 	stmt, err := db.Prepare(`UPDATE invoice SET 
                                            payment_cycle_id = $1, 
 								payment_id = $2,            
@@ -881,9 +882,9 @@ func updateInvoice(invoice *InvoiceDB) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(
-		&invoice.PaymentCycleId, &invoice.PaymentId.Int64, &invoice.PriceAmount, &invoice.PriceCurrency,
-		&invoice.PayAmount.Int64, &invoice.PayCurrency, &invoice.ActuallyPaid.Int64, &invoice.OutcomeAmount.Int64, &invoice.OutcomeCurrency.String, invoice.PaymentStatus,
-		&invoice.CreatedAt, &invoice.LastUpdate, &invoice.NowpaymentsInvoiceId)
+		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, strings.ToUpper(invoice.PriceCurrency),
+		invoice.PayAmount.Int64, strings.ToUpper(invoice.PayCurrency), invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, strings.ToUpper(invoice.OutcomeCurrency.String), strings.ToUpper(invoice.PaymentStatus),
+		invoice.CreatedAt, invoice.LastUpdate, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
 	}
@@ -965,14 +966,14 @@ func insertDailyPayment(dailyPayment DailyPayment) error {
 }
 
 func updateDailyPayment(dailyPayment DailyPayment) error {
-	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4`)
+	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4 AND currency = $5`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for statement event: %v", err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId)
+	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId, dailyPayment.Currency)
 	if err != nil {
 		return err
 	}
@@ -1104,7 +1105,7 @@ func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, erro
 	}
 }
 
-func findSumUserBalance2(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
+func findSumUserBalanceCrypto(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
 	var sum int64
 	var err error
 	err = db.

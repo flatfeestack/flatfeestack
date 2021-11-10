@@ -87,7 +87,8 @@ type NowpaymentWebhookResponse struct {
 func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	paymentInformation, err := getPaymentInformation(r)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Cannot get payment informations: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -97,7 +98,7 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	usdPrice := getPrice(paymentInformation)
 
 	priceCurrency := "USD"
-	payCurrency := data["currency"] //get from request
+	payCurrency := data["currency"]
 
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, 0, paymentInformation.Seats, paymentInformation.Freq, timeNow())
 	if err != nil {
@@ -107,59 +108,66 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	invoice := InvoiceRequest{float64(usdPrice), priceCurrency, payCurrency, ""}
+	invoiceUrl, err := createNowpaymentsInvoice(invoice, paymentCycleId)
 
-	err = createNowpaymentsInvoice(invoice, paymentCycleId)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not create invoice: %v", err)
 		return
 	}
+	writeJsonStr(w, `{ "invoice_url": " `+invoiceUrl+`" }`)
 }
 
-func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID) error {
-	invoiceUrl := "https://api.nowpayments.io/v1/invoice"
+func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID) (string, error) {
+	invoiceUrl := opts.NowpaymentsApiUrl + "/invoice"
 	apiToken := opts.NowpaymentsToken
-	invoice.IpnCallbackUrl = "https://95a5-2a02-aa16-947f-b800-30e6-cfcb-a1fc-c204.ngrok.io/hooks/nowpayments"
+	invoice.IpnCallbackUrl = opts.NowpaymentsIpnCallbackUrl
 	invoiceData, err := json.Marshal(invoice)
+
+	if err != nil {
+		return "", err
+	}
 
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	req, err := http.NewRequest("POST", invoiceUrl, strings.NewReader(string(invoiceData)))
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("x-api-key", apiToken)
 	req.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(req)
-
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
+
 	defer response.Body.Close()
 
 	var data InvoiceResponse
 	json.NewDecoder(response.Body).Decode(&data)
 	id, err := strconv.ParseInt(data.Id, 10, 64)
+	if err != nil {
+		return "", err
+	}
 	priceAmount, err := strconv.ParseInt(data.PriceAmount, 10, 64)
-
-	db := InvoiceDB{
+	if err != nil {
+		return "", err
+	}
+	invoiceDb := InvoiceDB{
 		NowpaymentsInvoiceId: id,
 		PaymentCycleId:       paymentCycleId,
-
-		PriceAmount:   priceAmount * 1_000_000_000,
-		PriceCurrency: data.PriceCurrency,
-
-		PayCurrency:   data.PayCurrency,
-		PaymentStatus: "CREATED",
-		CreatedAt:     data.CreatedAt,
-		LastUpdate:    data.CreatedAt,
+		PriceAmount:          priceAmount * cryptoFactor,
+		PriceCurrency:        data.PriceCurrency,
+		PayCurrency:          data.PayCurrency,
+		PaymentStatus:        "CREATED",
+		CreatedAt:            data.CreatedAt,
+		LastUpdate:           data.CreatedAt,
 	}
 
-	_, err = insertNewInvoice(db)
+	err = insertNewInvoice(invoiceDb)
 
-	return err
+	return data.InvoiceUrl, err
 }
 
 func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
@@ -167,35 +175,74 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	var data NowpaymentWebhookResponse
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not parse webhook data: %v", err)
+		log.Printf("Could not parse webhook data: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	jsonData, err := json.Marshal(data)
-
-	fmt.Println(string(jsonData))
-
-	isWebhookVerified := verifyNowpaymentsWebhook(jsonData, nowpaymentsSignature)
-	if isWebhookVerified && !isWebhookVerified {
+	if err != nil {
+		log.Printf("Could not convert to JSON: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// maybe simplify
-	invoice, _ := getInvoice(data.InvoiceId)
-	userId, _ := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
-	user, _ := findUserById(userId)
+	isWebhookVerified, err := verifyNowpaymentsWebhook(jsonData, nowpaymentsSignature)
+	if debug {
+		isWebhookVerified = true
+	}
+	if err != nil {
+		log.Printf("Could not verify Webhook data: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isWebhookVerified {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	amount := int64(data.OutcomeAmount * 1_000_000_000) // nanoCrypto
+	invoice, err := getInvoice(data.InvoiceId)
+	if err != nil {
+		log.Printf("Could not get invoice: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	userId, err := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
+	if err != nil {
+		log.Printf("Could not find user ID by invoice: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	user, err := findUserById(userId)
+	if err != nil {
+		log.Printf("Could not find user: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	amount := int64(data.OutcomeAmount * cryptoFactor) // nanoCrypto
 
 	switch data.PaymentStatus {
 	case "finished":
 		err := nowpaymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency)
 		if err != nil {
+			log.Printf("Could not process nowpayment success: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		updateInvoiceFromWebhook(data)
+		err = updateInvoiceFromWebhook(data)
+		if err != nil {
+			log.Printf("Could update Invoice: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	case "expired":
-		updateInvoiceFromWebhook(data)
+		err := updateInvoiceFromWebhook(data)
+		if err != nil {
+			log.Printf("Could update Invoice: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)
@@ -203,18 +250,18 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helper
-func closeCycle2(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
-	// get user balance for each currency
-	fmt.Println(currency)
-	currencies, _ := findAllCurreniesFromUserBalance(oldPaymentCycleId)
+func closeCycleCrypto(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
+	currencies, err := findAllCurreniesFromUserBalance(oldPaymentCycleId)
+	if err != nil {
+		return nil, err
+	}
 	if !contains(currencies, currency) {
 		currencies = append(currencies, currency)
 	}
 
 	var ubNew *UserBalance
-
 	for _, currency := range currencies {
-		oldSum, err := findSumUserBalance2(uid, oldPaymentCycleId, currency)
+		oldSum, err := findSumUserBalanceCrypto(uid, oldPaymentCycleId, currency)
 		if err != nil {
 			return nil, err
 		}
@@ -247,24 +294,25 @@ func closeCycle2(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId u
 	return ubNew, nil
 }
 
-func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) {
+func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) error {
 	invoice, _ := getInvoice(data.InvoiceId)
 
 	invoice.PaymentId.Int64 = data.PaymentId
-	invoice.PriceAmount = int64(data.PriceAmount * 1_000_000)
+	invoice.PriceAmount = int64(data.PriceAmount * usdFactor)
 	invoice.PriceCurrency = data.PriceCurrency
-	invoice.PayAmount.Int64 = int64(data.PayAmount * 1_000_000_000)
+	invoice.PayAmount.Int64 = int64(data.PayAmount * cryptoFactor)
 	invoice.PayCurrency = data.PayCurrency
-	invoice.ActuallyPaid.Int64 = int64(data.ActuallyPaid * 1_000_000_000)
-	invoice.OutcomeAmount.Int64 = int64(data.OutcomeAmount * 1_000_000_000)
+	invoice.ActuallyPaid.Int64 = int64(data.ActuallyPaid * cryptoFactor)
+	invoice.OutcomeAmount.Int64 = int64(data.OutcomeAmount * cryptoFactor)
 	invoice.OutcomeCurrency.String = data.OutcomeCurrency
 	invoice.PaymentStatus = data.PaymentStatus
 	invoice.LastUpdate = timeNow().Format(time.RFC3339)
 
-	err := updateInvoice(invoice)
+	err := updateInvoice(*invoice)
 	if err != nil {
-		return
+		return err
 	}
+	return nil
 }
 
 func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
@@ -304,27 +352,30 @@ func getPrice(paymentInformation PaymentInformation) int64 {
 	return usd
 }
 
-func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) bool {
+func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, error) {
 	key := opts.NowpaymentsIpnKey
 	mac := hmac.New(sha512.New, []byte(key))
 
-	io.WriteString(mac, string(data))
+	_, err := io.WriteString(mac, string(data))
+	if err != nil {
+		return false, err
+	}
 	expectedMAC := mac.Sum(nil)
 
-	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature
+	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature, nil
 }
 
 func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string) error {
-	_, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency) // TODO: do wee need currency check?
+	_, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency)
 	if err != nil {
 		return err
 	}
-	/*if ub != nil {
+	/*	if ub != nil {
 		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
 		return nil
 	}*/
 
-	ubNew, err := closeCycle2(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
+	ubNew, err := closeCycleCrypto(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
 	if err != nil {
 		return err
 	}
@@ -341,7 +392,10 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 	isNewCurrencyPayment := true
 	totalDaysLeft := 365 // add one year by default, because payment is successful
 
-	dailyPayments, _ := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	if err != nil {
+		return err
+	}
 	for _, dailyPayment := range dailyPayments {
 		if dailyPayment.Currency == currency {
 			isNewCurrencyPayment = false
@@ -354,18 +408,27 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 
 	daysLeft, err := findDaysLeftForCurrency(newPaymentCycleId, currency)
 	newDaysLeft := daysLeft + 365
-	balance, err := findSumUserBalance2(u.Id, newPaymentCycleId, currency)
+	balance, err := findSumUserBalanceCrypto(u.Id, newPaymentCycleId, currency)
 	newDailyPaymentAmount := balance / newDaysLeft
 
 	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
 
 	if isNewCurrencyPayment {
 		err = insertDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
 	} else {
 		err = updateDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = updatePaymentCycleDaysLeft(newPaymentCycleId, totalDaysLeft)
+	if err != nil {
+		return err
+	}
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
 	if err != nil {
 		return err
@@ -428,6 +491,7 @@ func contains(s []string, str string) bool {
 	return false
 }
 
+//Todo: remove only for cron testing
 func crontester(w http.ResponseWriter, r *http.Request) {
 
 	err := monthlyRunner()
@@ -435,13 +499,13 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*	yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
-		yesterdayStart := yesterdayStop.AddDate(0, 0, -1)*/
+	/*		yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
+		yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-	/*	repos, _ := runDailyAnalysisCheck(time.Now(), 5)
-		log.Printf("Daily Analysis Check found %v entries", len(repos))*/
+		repos, _ := runDailyAnalysisCheck(time.Now(), 5)
+		log.Printf("Daily Analysis Check found %v entries", len(repos))
 
-	/*	for _, v := range repos {
+		for _, v := range repos {
 		if v.Url == nil {
 			log.Printf("URL is nil of %v", v.Id)
 			continue
@@ -451,9 +515,9 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		_ = analysisRequest(v.Id, *v.Url, *v.Branch)
-	}*/
+	}
 
-	/*	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+		log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
 		nr, err := runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
 		if err != nil {
 			log.Printf("error")
