@@ -114,7 +114,7 @@ func nowpaymentPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErr(w, http.StatusInternalServerError, "could not create invoice: %v", err)
 		return
 	}
-	writeJsonStr(w, `{ "invoice_url": " `+invoiceUrl+`" }`)
+	writeJsonStr(w, `{ "invoice_url": "`+invoiceUrl+`" }`)
 }
 
 func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID) (string, error) {
