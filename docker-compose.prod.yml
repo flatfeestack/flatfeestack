@@ -52,6 +52,14 @@ services:
     env_file:
       - .prod.payout.env
 
+  prod-payout-node:
+    hostname: prod-payout-node
+    image: ghcr.io/flatfeestack/flatfeestack/payout-node:${TAG_IMAGE}
+    networks:
+      - prod
+    env_file:
+      - .prod.payout-node.env
+
   prod-frontend:
     hostname: prod-frontend
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE}

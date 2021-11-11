@@ -47,8 +47,18 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       - openethereum
+      - payout-node
     env_file:
       - payout/.env
+
+  payout-node:
+    container_name: flatfeestack-payout-node
+    image: ghcr.io/flatfeestack/flatfeestack/payout-node:${TAG_IMAGE:-latest}
+    build: ./payout-node
+    ports:
+      - 9086:9086
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
   frontend:
     container_name: flatfeestack-frontend

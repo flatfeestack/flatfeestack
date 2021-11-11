@@ -52,6 +52,14 @@ services:
     env_file:
       - .test.payout.env
 
+  test-payout-node:
+    hostname: test-payout-node
+    image: ghcr.io/flatfeestack/flatfeestack/payout-node:${TAG_IMAGE}
+    networks:
+      - test
+    env_file:
+      - .test.payout-node.env
+
   test-frontend:
     hostname: test-frontend
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE}
