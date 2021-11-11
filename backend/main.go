@@ -155,7 +155,7 @@ func NewOpts() *Opts {
 	}
 
 	if o.StripeWebhookSecretKey == "" {
-		o.StripeWebhookSecretKey = "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL"
+		o.StripeWebhookSecretKey = "whsec_BlO0hcHIJb82nUM9v8fpq0WP55FxKF2U"
 	}
 
 	pathFormat := filepath.Join(o.LogPath, "backend_2006-01-02.txt")
@@ -269,7 +269,7 @@ func main() {
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
 	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentPayment)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/nowpayments/crontester", crontester).Methods(http.MethodGet)
 
 	//dev settings

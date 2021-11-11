@@ -40,6 +40,7 @@ CREATE TABLE invoice (
      outcome_amount         BIGINT,
      outcome_currency       VARCHAR(16),
      payment_status         VARCHAR(16),
+     freq                   INT NOT NULL,
      created_at             TIMESTAMP NOT NULL,
      last_update            TIMESTAMP NULL
 );
@@ -47,10 +48,10 @@ CREATE TABLE invoice (
 CREATE TABLE daily_payment (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
-  currency          VARCHAR(16),
-  amount            BIGINT,
-  days_left         INTEGER,
-  last_update       TIMESTAMP
+  currency          VARCHAR(16) NOT NULL,
+  amount            BIGINT NOT NULL,
+  days_left         INTEGER NOT NULL,
+  last_update       TIMESTAMP NOT NULL
 );
 
 CREATE table wallet_address(
@@ -255,7 +256,7 @@ CREATE INDEX payout_index ON payouts_request(batch_id);
 CREATE TABLE payout_response (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     batch_id   UUID UNIQUE NOT NULL,
-    tx_hash    VARCHAR(66),
+    tx_hash    VARCHAR(66) NOT NULL,
     error      TEXT,
     created_at TIMESTAMP NOT NULL
 );

@@ -834,8 +834,9 @@ func insertNewInvoice(invoiceDb InvoiceDB) error {
 					 pay_currency, 
 					 created_at,
                      last_update,
-                     payment_status) 
-					 values($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`)
+                     payment_status,
+                     freq) 
+					 values($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`)
 
 	if err != nil {
 		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
@@ -846,7 +847,7 @@ func insertNewInvoice(invoiceDb InvoiceDB) error {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency), invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus)).Scan(&lastInsertId)
+		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency), invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus), invoiceDb.Freq).Scan(&lastInsertId)
 	if err != nil {
 		return err
 	}
@@ -904,12 +905,13 @@ func getInvoice(id int64) (*InvoiceDB, error) {
 								actually_paid,         
 								outcome_amount,        
 								outcome_currency,      
-								payment_status,        
+								payment_status,
+       							freq,
 								created_at,            
 								last_update                FROM invoice WHERE nowpayments_invoice_id=$1`, id).
 		Scan(&invoice.NowpaymentsInvoiceId, &invoice.PaymentCycleId, &invoice.PaymentId, &invoice.PriceAmount, &invoice.PriceCurrency,
 			&invoice.PayAmount, &invoice.PayCurrency, &invoice.ActuallyPaid, &invoice.OutcomeAmount, &invoice.OutcomeCurrency, &invoice.PaymentStatus,
-			&invoice.CreatedAt, &invoice.LastUpdate)
+			&invoice.Freq, &invoice.CreatedAt, &invoice.LastUpdate)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -942,7 +944,7 @@ type DailyPayment struct {
 	PaymentCycleId uuid.UUID
 	Currency       string
 	Amount         int64
-	DaysLeft       int64
+	DaysLeft       int
 	LastUpdate     time.Time
 }
 
@@ -980,8 +982,8 @@ func updateDailyPayment(dailyPayment DailyPayment) error {
 	return handleErrMustInsertOne(res)
 }
 
-func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int64, error) {
-	var daysLeft int64
+func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
+	var daysLeft int
 	err := db.
 		QueryRow(`select days_left from daily_payment where payment_cycle_id = $1 and currency = $2 order by last_update desc limit 1`, paymentCycleId, currency).
 		Scan(&daysLeft)
@@ -1053,26 +1055,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-/*func getPaymentCycleDays(paymentCycleId uuid.UUID) (int64, error) {
-	var daysLeft int64
-	err := db.
-		QueryRow(`SELECT days_left FROM payment_cycle WHERE id = $1`, paymentCycleId).
-		Scan(&daysLeft)
-	if err != nil {
-		return 0, err
-	}
-
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return daysLeft, nil
-	default:
-		return 0, err
-	}
-}*/
-
-func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int) error {
+func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET days_left = $1 WHERE id=$2`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", daysLeft, err)
@@ -1087,25 +1070,33 @@ func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, error) {
-	var sum int64
-	var err error
-	err = db.
-		QueryRow(`SELECT COALESCE(sum(balance), 0)
-                             FROM user_balances 
-                             WHERE user_id = $1 AND payment_cycle_id = $2`, userId, paymentCycleId).
-		Scan(&sum)
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return sum, nil
-	default:
-		return 0, err
+func findSumUserBalances(userId uuid.UUID, paymentCycleId uuid.UUID) ([]UserBalance, error) {
+	s := `SELECT currency, COALESCE(sum(balance), 0)
+          FROM user_balances 
+          WHERE user_id = $1 AND payment_cycle_id = $2
+          GROUP BY currency`
+
+	rows, err := db.Query(s, userId, paymentCycleId)
+
+	if err != nil {
+		return nil, err
 	}
+
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalance
+	for rows.Next() {
+		var userBalance UserBalance
+		err = rows.Scan(&userBalance.Currency, &userBalance.Balance)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
 }
 
-func findSumUserBalanceCrypto(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
+func findSumUserBalanceByCurrency(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
 	var sum int64
 	var err error
 	err = db.
