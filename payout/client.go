@@ -21,7 +21,7 @@ type ClientETH struct {
 	publicKey   *ecdsa.PublicKey
 	fromAddress common.Address
 	chainId     *big.Int
-	contract    *PayoutEthEval
+	contract    *PayoutEth
 }
 
 func payoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
@@ -80,7 +80,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	if deploy {
 		c.contract = deployEthContract(c)
 	} else {
-		c.contract, err = NewPayoutEthEval(common.HexToAddress(ethContract), c.c)
+		c.contract, err = NewPayoutEth(common.HexToAddress(ethContract), c.c)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -89,9 +89,9 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	return c, nil
 }
 
-func deployEthContract(ethClient *ClientETH) *PayoutEthEval {
+func deployEthContract(ethClient *ClientETH) *PayoutEth {
 	opts, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
-	address, tx, contract, err := DeployPayoutEthEval(opts, ethClient.c)
+	address, tx, contract, err := DeployPayoutEth(opts, ethClient.c)
 	if err != nil {
 		log.Fatal(err)
 	}
