@@ -143,10 +143,18 @@ func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID,
 		return "", err
 	}
 
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Body ReadCloser: %v", err)
+		}
+	}(response.Body)
 
 	var data InvoiceResponse
-	json.NewDecoder(response.Body).Decode(&data)
+	err = json.NewDecoder(response.Body).Decode(&data)
+	if err != nil {
+		return "", err
+	}
 	id, err := strconv.ParseInt(data.Id, 10, 64)
 	if err != nil {
 		return "", err
@@ -421,6 +429,9 @@ func nowpaymentsSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curr
 	newDaysLeft := daysLeft + freq
 	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, currency)
 	newDailyPaymentAmount := balance / int64(newDaysLeft)
+	if currency == "USD" {
+		newDailyPaymentAmount = mUSDPerDay
+	}
 
 	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
 
@@ -455,7 +466,7 @@ func nowpaymentsSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curr
 }
 
 // Wallet
-func getUserWallets(w http.ResponseWriter, r *http.Request, user *User) {
+func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
 	userWallets, err := findWalletsByUserId(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -479,6 +490,7 @@ func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+// ToDo: verify that wallet is from the right user
 func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 	p := mux.Vars(r)
 	f := p["uuid"]
