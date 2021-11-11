@@ -119,6 +119,7 @@ export const API = {
     setUserMode: (mode: string) => backendToken.put(`users/me/mode/${mode}`),
     setupStripe: () => backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) => backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
+    nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
     topup: () => backendToken.post(`users/me/topup`),
