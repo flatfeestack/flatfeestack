@@ -390,6 +390,7 @@ func nowpaymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curre
 	}
 
 	isNewCurrencyPayment := true
+	//ToDo: change 365 to freq
 	totalDaysLeft := 365 // add one year by default, because payment is successful
 
 	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)

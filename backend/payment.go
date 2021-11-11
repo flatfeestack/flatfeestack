@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type ClientSecretBody struct {
@@ -38,6 +39,7 @@ func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+// ToDo: needs to be done for each currency
 func topup(w http.ResponseWriter, r *http.Request, user *User) {
 	if len(user.Claims.InviteEmails) == 0 {
 		log.Printf("no invitations")
@@ -76,6 +78,7 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+// ToDo: needs to be done for each currency
 func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) {
 	sponsor, err := findUserByEmail(inviteEmail)
 	if err != nil {
@@ -213,7 +216,6 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
 	cents = cents * int64(seats)
 
-	//ToDo: oldSum is not needed anymore, always make full payment
 	/*	oldSum, err := findSumUserBalance(user.Id, user.PaymentCycleId)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "Cannot find sum: %v", err)
@@ -236,7 +238,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)),
 	}
 
-	// ToDo: daysLeft removed, verify if needed to add daily_payment logic
+	// ToDo: maybe days_left to 0 and update after successful payment?
 	paymentCycleId, err := insertNewPaymentCycle(user.Id, freq, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
@@ -263,6 +265,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+// ToDo: automatic renewal?
 func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	pc, err := findPaymentCycle(user.PaymentCycleId)
 	if err != nil {
@@ -372,7 +375,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ", "usd")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "AUTHREQ", "USD")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -388,6 +391,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			UserId:         uid,
 			Balance:        0,
 			BalanceType:    "AUTHREQ",
+			Currency:       "USD",
 			CreatedAt:      timeNow(),
 		}
 
@@ -435,7 +439,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS", "usd")
+		ub, err := findUserBalancesAndType(newPaymentCycleId, "NOFUNDS", "USD")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -451,6 +455,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			UserId:         uid,
 			Balance:        0,
 			BalanceType:    "NOFUNDS",
+			Currency:       "USD",
 			CreatedAt:      timeNow(),
 		}
 
@@ -489,7 +494,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64) error {
 
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", "usd")
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", "USD")
 	if err != nil {
 		return err
 	}
@@ -498,7 +503,7 @@ func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64
 		return nil
 	}
 
-	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
+	ubNew, err := closeCycleCrypto(u.Id, u.PaymentCycleId, newPaymentCycleId, "USD")
 	if err != nil {
 		return err
 	}
@@ -506,6 +511,7 @@ func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64
 	ubNew.PaymentCycleId = newPaymentCycleId
 	ubNew.BalanceType = "PAYMENT"
 	ubNew.Balance = amount
+	ubNew.Currency = "USD"
 	err = insertUserBalance(*ubNew)
 	if err != nil {
 		return err
@@ -514,6 +520,48 @@ func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64
 	ubNew.BalanceType = "FEE"
 	ubNew.Balance = -fee
 	err = insertUserBalance(*ubNew)
+	if err != nil {
+		return err
+	}
+
+	isNewCurrencyPayment := true
+	//ToDo: change 365 to freq
+	totalDaysLeft := 365 // add one year by default, because payment is successful
+
+	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	if err != nil {
+		return err
+	}
+	for _, dailyPayment := range dailyPayments {
+		if dailyPayment.Currency == "USD" {
+			isNewCurrencyPayment = false
+		}
+		totalDaysLeft += int(dailyPayment.DaysLeft)
+		dailyPayment.PaymentCycleId = newPaymentCycleId
+		dailyPayment.LastUpdate = time.Now()
+		err = insertDailyPayment(dailyPayment)
+	}
+
+	daysLeft, err := findDaysLeftForCurrency(newPaymentCycleId, "USD")
+	newDaysLeft := daysLeft + 365
+	balance, err := findSumUserBalanceCrypto(u.Id, newPaymentCycleId, "USD")
+	newDailyPaymentAmount := balance / newDaysLeft
+
+	newDailyPayment := DailyPayment{newPaymentCycleId, "USD", newDailyPaymentAmount, newDaysLeft, time.Now()}
+
+	if isNewCurrencyPayment {
+		err = insertDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = updateDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = updatePaymentCycleDaysLeft(newPaymentCycleId, totalDaysLeft)
 	if err != nil {
 		return err
 	}
