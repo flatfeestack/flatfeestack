@@ -22,7 +22,3 @@
 	path = search-proj
 	url = git@github.com:flatfeestack/search-proj.git
 	branch = master
-[submodule "payout-nodejs"]
-	path = payout-node
-	url = git@github.com:flatfeestack/payout-nodejs.git
-	branch = main
