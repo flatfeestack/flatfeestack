@@ -41,6 +41,7 @@ CREATE TABLE invoice (
      outcome_currency       VARCHAR(16),
      payment_status         VARCHAR(16),
      freq                   INT NOT NULL,
+     invoice_url            TEXT,
      created_at             TIMESTAMP NOT NULL,
      last_update            TIMESTAMP NULL
 );

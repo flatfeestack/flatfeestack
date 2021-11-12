@@ -58,6 +58,7 @@ type InvoiceDB struct {
 
 	PaymentStatus string
 	Freq          int
+	InvoiceUrl    sql.NullString
 	CreatedAt     string
 	LastUpdate    string
 }
@@ -174,6 +175,7 @@ func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID,
 		CreatedAt:            data.CreatedAt,
 		LastUpdate:           data.CreatedAt,
 	}
+	invoiceDb.InvoiceUrl.String = data.InvoiceUrl
 
 	err = insertNewInvoice(invoiceDb)
 
@@ -253,6 +255,105 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/user/payments"
+		other["lang"] = "en"
+
+		defaultMessage := "Your payment expired. To start a new payment go to: " + other["url"]
+		e := prepareEmail(email, other,
+			"template-subject-payment-expired_", "Payment expired",
+			"template-plain-payment-expired_", defaultMessage,
+			"template-html-payment-expired_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "payment-expired-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
+	case "partially_paid":
+		err := updateInvoiceFromWebhook(data)
+		if err != nil {
+			log.Printf("Could update Invoice: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = invoice.InvoiceUrl.String
+		other["lang"] = "en"
+
+		defaultMessage := "Your payment is partially paid. Please transfer the missing amount over the following link: " + other["url"]
+		e := prepareEmail(email, other,
+			"template-subject-payment-expired_", "Partially paid",
+			"template-plain-partially-paid_", defaultMessage,
+			"template-html-partially-paid_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "partially-paid-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
+	case "failed":
+		err := updateInvoiceFromWebhook(data)
+		if err != nil {
+			log.Printf("Could update Invoice: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["lang"] = "en"
+
+		defaultMessage := "Your payment has failed. Please contact support@flatfeestack.io"
+		e := prepareEmail(email, other,
+			"template-subject-payment-failed_", "Payment failed",
+			"template-plain-partially-failed_", defaultMessage,
+			"template-html-partially-failed_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "payment-failed-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
+	case "refunded":
+		err := updateInvoiceFromWebhook(data)
+		if err != nil {
+			log.Printf("Could update Invoice: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["lang"] = "en"
+
+		defaultMessage := "You got your money refunded."
+		e := prepareEmail(email, other,
+			"template-subject-payment-refunded_", "Payment refunded",
+			"template-plain-partially-refunded_", defaultMessage,
+			"template-html-partially-refunded_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "payment-refunded-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)

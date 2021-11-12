@@ -362,7 +362,7 @@ func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uid, currency, address, isDeleted)
+	res, err = stmt.Exec(uid, strings.ToUpper(currency), address, isDeleted)
 	if err != nil {
 		return err
 	}
@@ -796,7 +796,7 @@ func insertUserBalance(ub UserBalance) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.Currency, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, strings.ToUpper(ub.Currency), ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -835,8 +835,8 @@ func insertNewInvoice(invoiceDb InvoiceDB) error {
 					 created_at,
                      last_update,
                      payment_status,
-                     freq) 
-					 values($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`)
+                     freq, invoice_url) 
+					 values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`)
 
 	if err != nil {
 		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
@@ -847,7 +847,9 @@ func insertNewInvoice(invoiceDb InvoiceDB) error {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency), invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus), invoiceDb.Freq).Scan(&lastInsertId)
+		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency),
+		invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus),
+		invoiceDb.Freq, invoiceDb.InvoiceUrl.String).Scan(&lastInsertId)
 	if err != nil {
 		return err
 	}
@@ -874,8 +876,9 @@ func updateInvoice(invoice InvoiceDB) error {
 								outcome_currency = $9,      
 								payment_status = $10,        
 								created_at = $11,            
-								last_update = $12 
-                                    WHERE nowpayments_invoice_id=$13`)
+								last_update = $12,
+                   				invoice_url = $13
+                                    WHERE nowpayments_invoice_id=$14`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
 	}
@@ -885,7 +888,7 @@ func updateInvoice(invoice InvoiceDB) error {
 	res, err = stmt.Exec(
 		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, strings.ToUpper(invoice.PriceCurrency),
 		invoice.PayAmount.Int64, strings.ToUpper(invoice.PayCurrency), invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, strings.ToUpper(invoice.OutcomeCurrency.String), strings.ToUpper(invoice.PaymentStatus),
-		invoice.CreatedAt, invoice.LastUpdate, invoice.NowpaymentsInvoiceId)
+		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
 	}
@@ -960,7 +963,7 @@ func insertDailyPayment(dailyPayment DailyPayment) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
+	res, err = stmt.Exec(dailyPayment.PaymentCycleId, strings.ToUpper(dailyPayment.Currency), dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
 	if err != nil {
 		return err
 	}
@@ -1019,25 +1022,6 @@ func findDailyPaymentByPaymentCycleId(paymentCycleId uuid.UUID) ([]DailyPayment,
 		dailyPayments = append(dailyPayments, dailyPayment)
 	}
 	return dailyPayments, nil
-}
-
-func findDailyPaymentAmountForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
-	var amount int
-	err := db.
-		QueryRow(`select amount from daily_payment where payment_cycle_id = $1 and currency = $2 order by created_at desc limit 1`, paymentCycleId, currency).
-		Scan(&amount)
-	if err != nil {
-		return 0, err
-	}
-
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return amount, nil
-	default:
-		return 0, err
-	}
 }
 
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
@@ -1287,7 +1271,7 @@ func insertPayoutRequest(p *PayoutRequestDB) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	res, err = stmt.Exec(p.UserId, p.BatchId, strings.ToUpper(p.Currency), p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -1332,7 +1316,7 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
+	res, err = stmt.Exec(pid, strings.ToUpper(currency), payout.Address, payout.Balance, timeNow())
 	if err != nil {
 		return err
 	}
