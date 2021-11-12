@@ -1,0 +1,25 @@
+{
+  "name": "payout-nodejs",
+  "version": "0.0.1",
+  "description": "Node package to communicate with the blockchains over node",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "prod": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flatfeestack/payout-nodejs.git"
+  },
+  "author": "Flatfeestack",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/flatfeestack/payout-nodejs/issues"
+  },
+  "homepage": "https://github.com/flatfeestack/payout-nodejs#readme",
+  "dependencies": {
+    "@taquito/taquito": "^10.2.1",
+    "express": "^4.17.1"
+  }
+}
