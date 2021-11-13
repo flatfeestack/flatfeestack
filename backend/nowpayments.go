@@ -617,34 +617,34 @@ func contains(s []string, str string) bool {
 
 //Todo: remove only for cron testing
 func crontester(w http.ResponseWriter, r *http.Request) {
-
-	err := monthlyRunner()
+	var data map[string]string
+	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		return
 	}
 
-	/*		yesterdayStop, _ := time.Parse(time.RFC3339, "2021-10-31T23:59:59+00:00")
-		yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
+	yesterdayStop, _ := time.Parse(time.RFC3339, data["yesterdayStop"])
+	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-		repos, _ := runDailyAnalysisCheck(time.Now(), 5)
-		log.Printf("Daily Analysis Check found %v entries", len(repos))
+	_, err = runDailyUserBalance(yesterdayStart, yesterdayStop, time.Now())
 
-		for _, v := range repos {
-		if v.Url == nil {
-			log.Printf("URL is nil of %v", v.Id)
-			continue
-		}
-		if v.Branch == nil {
-			log.Printf("Branch is nil of %v", v.Id)
-			continue
-		}
-		_ = analysisRequest(v.Id, *v.Url, *v.Branch)
-	}
+	_, err = runDailyDaysLeftDailyPayment()
 
-		log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
-		nr, err := runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
-		if err != nil {
-			log.Printf("error")
-		}
-		log.Printf("Daily Repo Hours inserted %v entries", nr)*/
+	_, err = runDailyDaysLeftPaymentCycle()
+
+	_, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, time.Now())
+
+	_, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, time.Now())
+
+	_, err = runDailyUserPayout(yesterdayStart, yesterdayStop, time.Now())
+
+	// _, err = runDailyUserContribution(yesterdayStart, yesterdayStop, time.Now())
+
+	_, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
+
+	// _, err = runDailyAnalysisCheck(time.Now(), 5) --> sollte keine änderungen brauchen
+
+	// _, err = runDailyTopupReminderUser()
+
+	// _, err = runDailyMarketing(yesterdayStart) --> currency änderung
 }

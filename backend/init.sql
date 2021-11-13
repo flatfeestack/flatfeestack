@@ -76,7 +76,7 @@ CREATE TABLE user_balances (
     day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE INDEX user_balances_index ON user_balances (
+CREATE UNIQUE INDEX user_balances_index ON user_balances (
     payment_cycle_id,
     user_id,
     balance_type,
@@ -188,7 +188,7 @@ CREATE TABLE daily_user_payout (
     currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_user_payout_index ON daily_user_payout(user_id, day);
+CREATE UNIQUE INDEX daily_user_payout_index ON daily_user_payout(user_id, day, currency);
 
 CREATE TABLE daily_future_leftover (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -270,3 +270,39 @@ CREATE TABLE payout_response_details (
     address             VARCHAR(42),
     created_at          TIMESTAMP NOT NULL
 );
+
+-- Functions
+CREATE OR REPLACE FUNCTION updateDailyUserBalance(yesterdayStart DATE, yesterdayEnd TIMESTAMP with time zone, now TIMESTAMP with time zone) RETURNS SETOF record AS
+$$
+DECLARE
+r record;
+	_id uuid;
+BEGIN
+FOR r IN
+SELECT
+    u.payment_cycle_id,
+    u.id as user_id,
+    -dp.amount as balance,
+    'DAY' as balance_type,
+    dp.currency,
+    yesterdayStart as day,
+	now as created_at$
+FROM daily_payment dp
+    INNER JOIN users u ON u.payment_cycle_id = dp.payment_cycle_id
+    INNER JOIN sponsor_event s ON s.user_id = u.id
+    INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
+WHERE pc.days_left > 0
+  AND u.role = 'USR'
+  AND (EXTRACT(epoch from age(LEAST(yesterdayEnd, s.unsponsor_at), GREATEST(yesterdayStart, s.sponsor_at)))/3600)::bigInt >= 24
+ORDER BY u.id, dp.days_left asc
+    LOOP
+    if _id = r.payment_cycle_id then
+    continue;
+end if;
+_id = r.payment_cycle_id;
+    RETURN NEXT r;
+END LOOP;
+    RETURN;
+END;
+$$
+LANGUAGE plpgsql;

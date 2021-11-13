@@ -1340,28 +1340,6 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 	}
 }
 
-func getDailyUserPayouts(day time.Time) ([]UserBalanceCore, error) {
-	//day -2 month
-	day = timeDay(-60, day)
-	q := `SELECT user_id, balance from daily_user_payout where day=$1`
-	rows, err := db.Query(q, day)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	var userBalances []UserBalanceCore
-	for rows.Next() {
-		var userBalance UserBalanceCore
-		err = rows.Scan(&userBalance.UserId, &userBalance.Balance)
-		if err != nil {
-			return nil, err
-		}
-		userBalances = append(userBalances, userBalance)
-	}
-	return userBalances, nil
-}
-
 func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`
 			INSERT INTO user_emails_sent(user_id, email_type, created_at) 
