@@ -24,4 +24,4 @@
 	branch = master
 [submodule "payout-nodejs"]
 	path = payout-nodejs
-	url = https://github.com/flatfeestack/payout-nodejs.git
+	url = git@github.com:flatfeestack/payout-nodejs.git
