@@ -59,6 +59,8 @@ services:
       - 9086:9086
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    env_file:
+      payout-nodejs/.env
 
   frontend:
     container_name: flatfeestack-frontend

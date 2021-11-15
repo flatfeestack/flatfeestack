@@ -75,7 +75,7 @@ parse_params() {
     -na | --no-auth) hosts="${hosts} auth"; services="${services//auth/}";;
     -ne | --no-engine) hosts="${hosts} analysis-engine"; services="${services//analysis-engine/}";;
     -nb | --no-backend) hosts="${hosts} backend"; services="${services//backend/}";;
-    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout/}";;
+    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout /}";;
     -npn | --no-payout-nodejs) hosts="${hosts} payout-nodejs"; services="${services//payout-nodejs/}";;
     -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
     -sb | --skip-build) include_build=false;;
