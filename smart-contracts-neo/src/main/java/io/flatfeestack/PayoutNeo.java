@@ -52,7 +52,7 @@ public class PayoutNeo {
     static final byte[] ownerKey = toByteArray((byte) 0x02);
 
     /**
-     * The StorageMap to store k-v pairs mapping addresses as key to their {@code total earned amount} (tea) as value.
+     * The StorageMap to store k-v pairs mapping addresses as key to their total earned amount (tea) as value.
      */
     static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
@@ -117,7 +117,7 @@ public class PayoutNeo {
     // region tea
 
     /**
-     * Gets the total earned amount ({@code tea}) of an account.
+     * Gets the total earned amount (tea) of an account.
      *
      * @param account The account.
      * @return the total earned amount.
@@ -138,9 +138,9 @@ public class PayoutNeo {
      * In the case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of
      * that account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param account The account to set the {@code total earned amount} for.
-     * @param oldTea  The previous {@code total earned amount} for that account.
-     * @param newTea  The new {@code total earned amount} for that account.
+     * @param account The account to set the tea for.
+     * @param oldTea  The previous tea for that account.
+     * @param newTea  The new tea for that account.
      */
     public static void setTea(Hash160 account, int oldTea, int newTea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
@@ -162,9 +162,9 @@ public class PayoutNeo {
      * In case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of that
      * account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param accounts The accounts to set the {@code total earned amounts} for.
-     * @param oldTeas  The previously stored {@code total earned amounts} for the accounts.
-     * @param newTeas  The new {@code total earned amounts} for the accounts.
+     * @param accounts The accounts to set the tea for.
+     * @param oldTeas  The previously stored tea for the accounts.
+     * @param newTeas  The new tea for the accounts.
      */
     public static void setTeas(Hash160[] accounts, int[] oldTeas, int[] newTeas) throws Exception {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
@@ -212,7 +212,7 @@ public class PayoutNeo {
      * updated with the new tea.
      *
      * @param account   The beneficiary account.
-     * @param tea       The {@code Total Earned Amount} of this account.
+     * @param tea       The tea of this account.
      * @param signature The signature
      */
     public static void withdraw(Hash160 account, int tea, ByteString signature) {
@@ -239,7 +239,7 @@ public class PayoutNeo {
      * updated with the new tea.
      *
      * @param account The beneficiary account.
-     * @param tea     The total earned amount of this account.
+     * @param tea     The tea of this account.
      */
     public static void withdraw(Hash160 account, int tea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
@@ -266,7 +266,7 @@ public class PayoutNeo {
      * providing the first signature after each batch payout.
      *
      * @param accounts The accounts to pay out to.
-     * @param teas     The corresponding {@code total earned amount}s.
+     * @param teas     The corresponding teas.
      */
     public static void batchPayout(Hash160[] accounts, int[] teas) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";

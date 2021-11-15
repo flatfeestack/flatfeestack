@@ -51,7 +51,7 @@ public class PayoutNeoForEvaluation {
     static final byte[] ownerKey = toByteArray((byte) 0x02);
 
     /**
-     * StorageMap to store k-v pairs mapping addresses (key) to their {@code Total Earned Amount}
+     * StorageMap to store k-v pairs mapping addresses (key) to their total earned amount (tea).
      */
     static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
@@ -108,7 +108,7 @@ public class PayoutNeoForEvaluation {
     // region tea
 
     /**
-     * Gets the total earned amount ({@code tea}) of an account.
+     * Gets the total earned amount (tea) of an account.
      *
      * @param account The account.
      * @return the total earned amount.
@@ -129,9 +129,9 @@ public class PayoutNeoForEvaluation {
      * In the case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of
      * that account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param account The account to set the {@code total earned amount} for.
-     * @param oldTea  The previous {@code total earned amount} for that account.
-     * @param newTea  The new {@code total earned amount} for that account.
+     * @param account The account to set the tea for.
+     * @param oldTea  The previous tea for that account.
+     * @param newTea  The new tea for that account.
      */
     public static void setTea(Hash160 account, int oldTea, int newTea) {
         // Idea: If the developer is required to witness this, the method loses its blacklist functionality.
@@ -167,7 +167,7 @@ public class PayoutNeoForEvaluation {
      * updated with the new tea.
      *
      * @param account   The beneficiary account.
-     * @param tea       The {@code Total Earned Amount} of this account.
+     * @param tea       The tea of this account.
      * @param signature The signature
      */
     public static void withdraw(Hash160 account, int tea, ByteString signature) {
@@ -197,7 +197,7 @@ public class PayoutNeoForEvaluation {
      * updated with the new tea.
      *
      * @param account The beneficiary account.
-     * @param tea     The total earned amount of this account.
+     * @param tea     The tea of this account.
      */
     public static void withdraw(Hash160 account, int tea) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
@@ -224,7 +224,7 @@ public class PayoutNeoForEvaluation {
      * providing the first signature after each batch payout.
      *
      * @param accounts The accounts to pay out to.
-     * @param teas     The corresponding {@code total earned amount}s.
+     * @param teas     The corresponding teas.
      */
     public static void batchPayout(Hash160[] accounts, int[] teas) {
         // Note: int is always handled as BigInteger on NeoVM. -> It does not matter how high the number is.
@@ -262,7 +262,7 @@ public class PayoutNeoForEvaluation {
      * value of the account in the {@code teaMap} is updated with the new tea.
      *
      * @param accounts   The accounts to pay out to.
-     * @param teas       The corresponding {@code total earned amount}s.
+     * @param teas       The corresponding teas.
      * @param serviceFee The service fee that each developer pays to be included in this batch payout.
      */
     public static void batchPayoutWithServiceFee(Hash160[] accounts, int[] teas, int serviceFee) {
@@ -293,8 +293,8 @@ public class PayoutNeoForEvaluation {
      * {@code teaForWithdrawal} parameter and the currently stored value in the {@code teaMap}.
      *
      * @param accounts          The accounts to pay out to.
-     * @param teasToStore       The total earned amounts that are used to store in the contract storage.
-     * @param teasForWithdrawal The total earned amounts that are used for the calculation of the payout amount.
+     * @param teasToStore       The teas that are used to store in the contract storage.
+     * @param teasForWithdrawal The teas that are used for the calculation of the payout amount.
      */
     public static void batchPayoutWithTeas(Hash160[] accounts, int[] teasToStore, int[] teasForWithdrawal) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
@@ -371,10 +371,9 @@ public class PayoutNeoForEvaluation {
      * The payment amount for each account is equal to the difference of the provided new tea in the
      * {@code withdrawalMap} parameter and the currently stored value in the {@code teaMap}.
      *
-     * @param storeMap      The accounts and their corresponding total earned amounts that are used to store in the
-     *                      contract storage.
-     * @param withdrawalMap The accounts and their corresponding total earned amounts that are used for the calculation
-     *                      of the payout amount.
+     * @param storeMap      The accounts and their corresponding tea that is used to store in the contract storage.
+     * @param withdrawalMap The accounts and their corresponding tea that is used for the calculation of the payout
+     *                      amount.
      */
     public static void batchPayoutWithDoubleMap(Map<Hash160, Integer> storeMap, Map<Hash160, Integer> withdrawalMap) {
         for (Hash160 acc : storeMap.keys()) {
