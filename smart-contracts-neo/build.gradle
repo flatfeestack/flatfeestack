@@ -25,6 +25,6 @@ dependencies {
 }
 
 neow3jCompiler {
-    className = "io.flatfeestack.PayoutNeoForEvaluation"
+    className = "io.flatfeestack.PayoutNeo"
     debug = true
 }

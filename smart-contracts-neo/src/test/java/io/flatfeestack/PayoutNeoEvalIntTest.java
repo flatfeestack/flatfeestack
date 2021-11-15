@@ -56,6 +56,8 @@ import static io.neow3j.transaction.AccountSigner.calledByEntry;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.*;
 import static io.neow3j.utils.Await.waitUntilTransactionIsExecuted;
+import static io.neow3j.utils.Numeric.toHexString;
+import static io.neow3j.utils.Numeric.toHexStringNoPrefix;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -76,7 +78,7 @@ public class PayoutNeoEvalIntTest {
 
     // Methods
     private static final String getOwner = "getOwner";
-    private static final String setOwner = "setOwner";
+    private static final String changeOwner = "changeOwner";
     private static final String getTea = "getTea";
     private static final String setTea = "setTea";
     private static final String withdraw = "withdraw";
@@ -173,6 +175,19 @@ public class PayoutNeoEvalIntTest {
     // endregion helper methods
 
     @Test
+    public void testSig() throws IOException {
+        Account dev = Account.fromWIF("L1D7rqnLDXpJJmHa9o6GyMcoKPr1sSVZzHXFa8fk8GuFJ7dQ7c3L");
+        System.out.println("dev: " + dev.getScriptHash());
+        BigInteger tea = gasToken.toFractions(new BigDecimal("2"));
+        System.out.printf("tea: '%s'\n", toHexString(tea.toByteArray()));
+        Sign.SignatureData sig = createSignature(dev.getScriptHash(), tea, owner);
+        System.out.println("v: " + sig.getV());
+        System.out.println("r: " + toHexStringNoPrefix(sig.getR()));
+        System.out.println("s: " + toHexStringNoPrefix(sig.getS()));
+        System.out.println(toHexString(sig.getConcatenated()));
+    }
+
+    @Test
     public void verifyThatSecondSignerCannotCoverFees() throws Throwable {
         // Contains a dummy transaction with a random account as first signer with witness scope none and the contract
         // owner as second signer with witness scope calledByEntry. This is the order of the signers in a pre-signed
@@ -212,8 +227,8 @@ public class PayoutNeoEvalIntTest {
     }
 
     @Test
-    public void testSetOwner() throws Throwable {
-        Hash256 txHash = payoutContract.invokeFunction(setOwner, publicKey(defaultPubKey.getEncoded(true)))
+    public void testChangeOwner() throws Throwable {
+        Hash256 txHash = payoutContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -229,7 +244,7 @@ public class PayoutNeoEvalIntTest {
         assertThat(item.getByteArray(), is(defaultPubKey.getEncoded(true)));
 
         // Change owner back to maintain same state for other tests
-        txHash = payoutContract.invokeFunction(setOwner, publicKey(ownerPubKey.getEncoded(true)))
+        txHash = payoutContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -312,6 +327,9 @@ public class PayoutNeoEvalIntTest {
         BigInteger balanceContractBefore = getContractGasBalance();
         BigInteger teaDev = gasToken.toFractions(BigDecimal.valueOf(10));
         Sign.SignatureData sigData = createSignature(dev.getScriptHash(), teaDev, owner);
+        System.out.println("v" + sigData.getV());
+        System.out.println("r" + sigData.getR());
+        System.out.println("s" + sigData.getS());
         Transaction tx = payoutContract.invokeFunction(withdraw, hash160(dev), integer(teaDev), signature(sigData))
                 .signers(none(dev)).sign();
         sendAndWaitUntilTransactionIsExecuted(tx, neow3j);

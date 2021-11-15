@@ -82,7 +82,7 @@ public class PayoutNeoIntegrationTest {
 
     // Methods
     private static final String getOwner = "getOwner";
-    private static final String setOwner = "setOwner";
+    private static final String changeOwner = "changeOwner";
     private static final String getTea = "getTea";
     private static final String setTea = "setTea";
     private static final String setTeas = "setTeas";
@@ -221,8 +221,8 @@ public class PayoutNeoIntegrationTest {
     }
 
     @Test
-    public void testSetOwner() throws Throwable {
-        Hash256 txHash = payoutContract.invokeFunction(setOwner, publicKey(defaultPubKey.getEncoded(true)))
+    public void testChangeOwner() throws Throwable {
+        Hash256 txHash = payoutContract.invokeFunction(changeOwner, publicKey(defaultPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()
@@ -238,7 +238,7 @@ public class PayoutNeoIntegrationTest {
         assertThat(item.getByteArray(), is(defaultPubKey.getEncoded(true)));
 
         // Change owner back to maintain same state for other tests
-        txHash = payoutContract.invokeFunction(setOwner, publicKey(ownerPubKey.getEncoded(true)))
+        txHash = payoutContract.invokeFunction(changeOwner, publicKey(ownerPubKey.getEncoded(true)))
                 .signers(calledByEntry(owner), calledByEntry(defaultAccount))
                 .sign()
                 .send()

@@ -37,22 +37,22 @@ public class PayoutNeo {
     static final StorageContext ctx = Storage.getStorageContext();
 
     /**
-     * StorageMap to store contract relevant information
+     * The StorageMap to store contract relevant information.
      */
     static final StorageMap contractMap = ctx.createMap(new byte[]{0x01});
 
     /**
-     * Key of the contract owner public key in the contractMap.
+     * The key where the contract owner's public key is stored in the contractMap.
      * <p>
      * The method {@code withdraw(Hash160, int, String)} requires an ECPoint of the owner to be stored, since the
-     * method {@code verifyWithECDsa} of the native contract {@code CryptoLib} requires the public key.
+     * method {@code verifyWithECDsa} of the native contract {@code CryptoLib} requires the public key of the signer.
      * <p>
      * This restricts the owner from being a multi-sig account.
      */
     static final byte[] ownerKey = toByteArray((byte) 0x02);
 
     /**
-     * StorageMap to store k-v pairs mapping addresses (key) to their {@code Total Earned Amount}
+     * The StorageMap to store k-v pairs mapping addresses as key to their {@code total earned amount} (tea) as value.
      */
     static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
 
@@ -83,10 +83,9 @@ public class PayoutNeo {
     }
 
     /**
-     * Is fired if the tea of an account is changed without a payment.
+     * Is fired if the tea of an account is changed by the contract owner without a payment.
      * <p>
-     * The arguments relate to the account, the tea that was stored before and the tea that was
-     * stored after this event is thrown.
+     * The arguments relate to the account, the tea that was stored before and the new tea.
      */
     @DisplayName("onTeaUpdateWithoutPayment")
     private static Event3Args<Hash160, Integer, Integer> onTeaUpdateWithoutPayment;
@@ -108,7 +107,7 @@ public class PayoutNeo {
      *
      * @param newOwner The new contract owner.
      */
-    public static void setOwner(ECPoint newOwner) {
+    public static void changeOwner(ECPoint newOwner) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         assert checkWitness(newOwner) : "The new owner must witness this change.";
         contractMap.put(ownerKey, newOwner.toByteString());
@@ -130,7 +129,7 @@ public class PayoutNeo {
 
     /**
      * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier or
-     * in case a developer may want to change her address without withdrawing the earned funds to the old address (e.g.
+     * in case a developer wants to change her address without withdrawing the earned funds to the old address (e.g.
      * in case of a loss of the private key).
      * <p>
      * The {@code oldTea} is compared with the stored {@code tea}, so that no immediate withdrawal takes place before
@@ -153,8 +152,8 @@ public class PayoutNeo {
     }
 
     /**
-     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier of
-     * in case developers may want to change their addresses without withdrawing the earned funds to the current
+     * This method supports multiple use cases. It may be used as a blacklist functionality, as a simple modifier or
+     * in case developers want to change their addresses without withdrawing the earned funds to the current
      * address (e.g. in case of a loss of the private key).
      * <p>
      * For each account, {@code oldTea} is compared with the stored {@code tea}, so that no immediate withdrawal
@@ -192,14 +191,13 @@ public class PayoutNeo {
     // region withdraw
 
     /**
-     * Withdraws the earned amount with the option to delegate the payment of the emerging
-     * transaction fees.
+     * Withdraws the earned amount with the option to delegate the payment of the emerging transaction fees.
      * <p>
      * This method uses a signature that is passed as parameter, so that an address different to
-     * the beneficiary address may pay for the transaction fees emerging of this withdrawal.
+     * the beneficiary address may pay for the transaction fees that emerge from this transaction.
      * <p>
      * The signature is created by the owner of this contract and the signed message is
-     * the concatenation of the account and the {@code Total Earned Amount}.
+     * the concatenation of the account and the tea.
      * <p>
      * For the use of this method, the owner of the contract is expected to share just the
      * signature data with the beneficiary. The transaction can then be created by the
@@ -208,6 +206,10 @@ public class PayoutNeo {
      * <p>
      * This method requires the contract owner to be a single-sig account, since its public key
      * is required for the verification of the signature.
+     * <p>
+     * The payment amount is equal to the difference of the provided tea and the currently stored value in the
+     * {@code teaMap}. After calculating the payment amount, the value of the account in the {@code teaMap} is
+     * updated with the new tea.
      *
      * @param account   The beneficiary account.
      * @param tea       The {@code Total Earned Amount} of this account.
@@ -229,6 +231,12 @@ public class PayoutNeo {
 
     /**
      * Withdraws the earned amount.
+     * <p>
+     * Requires to be witnessed by the contract owner.
+     * <p>
+     * The payment amount is equal to the difference of the provided tea and the currently stored value in the
+     * {@code teaMap}. After calculating the payment amount, the value of the account in the {@code teaMap} is
+     * updated with the new tea.
      *
      * @param account The beneficiary account.
      * @param tea     The total earned amount of this account.
@@ -245,6 +253,21 @@ public class PayoutNeo {
     // endregion withdraw
     // region batched payouts
 
+    /**
+     * Pays out the earned amount for multiple accounts.
+     * <p>
+     * Must be invoked by the contract owner.
+     * <p>
+     * The payment amount for each account is equal to the difference of the provided new tea in the parameter and the
+     * currently stored value in the {@code teaMap}. After calculating the payment amount, the value of the
+     * account in the {@code teaMap} is updated with the new tea.
+     * <p>
+     * A potential service fee for each included account can be deducted off-chain by the contract owner when
+     * providing the first signature after each batch payout.
+     *
+     * @param accounts The accounts to pay out to.
+     * @param teas     The corresponding {@code total earned amount}s.
+     */
     public static void batchPayout(Hash160[] accounts, int[] teas) {
         assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
         int len = accounts.length;
@@ -263,6 +286,17 @@ public class PayoutNeo {
         }
     }
 
+    /**
+     * Pays out the earned amount for multiple accounts.
+     * <p>
+     * Must be invoked by the contract owner.
+     * <p>
+     * The payment amount for each account is equal to the difference of the provided new tea in the parameter and the
+     * currently stored value in the {@code teaMap}. After calculating the payment amount, the value of the
+     * account in the {@code teaMap} is updated with the new tea.
+     *
+     * @param payoutMap The accounts and their corresponding teas.
+     */
     public static void batchPayout(Map<Hash160, Integer> payoutMap) {
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
