@@ -131,10 +131,11 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	return handleErr(res)
 }
 
-/*func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, day, created_at)
+func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, currency, day, created_at)
 		SELECT res.git_email as email,
 		       FLOOR(SUM(res.weight * drb.balance)) as balance,
+		       drb.currency
 		       $1 as day,
 		       $3 as created_at
         FROM analysis_response res
@@ -144,7 +145,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
                 AS req ON res.analysis_request_id = req.id
             JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
         WHERE drb.day = $1
-		GROUP BY res.git_email`)
+		GROUP BY res.git_email, drb.currency`)
 
 	if err != nil {
 		return 0, err
@@ -157,7 +158,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 		return 0, err
 	}
 	return handleErr(res)
-}*/
+}
 
 func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_weight (repo_id, weight, day, created_at)
@@ -220,14 +221,17 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
 
 //if a repo gets funds, but no user is in our system, it goes to the leftover table and can be claimed later on
 //by the first user that registers in our system.
-// Todo: what happens with mutlplie currency leftover
 // ToDo: Sum up leftover
 func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO daily_future_leftover (repo_id, balance, currency, day, created_at)
-		SELECT drb.repo_id, drb.balance, drb.currency, $1 as day, $2 as created_at
+	stmt, err := db.Prepare(`WITH cte_leftover_yesterday AS (
+	select repo_id, balance, currency from daily_future_leftover where day = $1
+	)
+		INSERT INTO daily_future_leftover (repo_id, balance, currency, day, created_at)
+		SELECT drb.repo_id, drb.balance + cte.balance, drb.currency, $1 as day, $2 as created_at
         FROM daily_repo_balance drb
         LEFT JOIN daily_repo_weight drw ON drb.repo_id = drw.repo_id
-        WHERE drw.repo_id IS NULL AND drb.day = $1`)
+		JOIN cte_leftover_yesterday as cte on cte.repo_id = drb.repo_id
+        WHERE drw.repo_id IS NULL AND drb.day = $1 AND cte.currency = drb.currency`)
 
 	if err != nil {
 		return 0, err
@@ -294,6 +298,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 }
 
 // ToDo: update Sum (balance)
+// ToDo: where do we get the data for the not registered users?
 func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT STRING_AGG(r.name, ','), d.contributor_email, SUM(d.balance) as balance
@@ -322,7 +327,8 @@ func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	return cs, nil
 }
 
-// TODO: check case what the balance should be (for registered and not registered contributors)
+// ToDo: check case what the balance should be (for registered and not registered contributors)
+// ToDo: Do we need to know which sponsor supported which contributor with how much or do we need to know
 func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_user_contribution(
                                     user_id, 

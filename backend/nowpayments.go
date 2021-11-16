@@ -642,6 +642,8 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 
 	_, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
 
+	//_, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, time.Now())
+
 	// _, err = runDailyAnalysisCheck(time.Now(), 5) --> sollte keine änderungen brauchen
 
 	// _, err = runDailyTopupReminderUser()
