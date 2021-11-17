@@ -14,7 +14,7 @@ func TestUser(t *testing.T) {
 	u := User{
 		Id:        uuid.New(),
 		StripeId:  stringPointer("strip-id"),
-		Email:     stringPointer("email"),
+		Email:     "email",
 		PayoutETH: stringPointer("0x123"),
 	}
 
@@ -29,13 +29,14 @@ func TestUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, u3)
 
-	u.Email = stringPointer("email2")
+	u.Email = "email2"
 	err = updateUser(&u)
 	assert.Nil(t, err)
 
+	//cannot change Email
 	u4, err := findUserByEmail("email2")
 	assert.Nil(t, err)
-	assert.NotNil(t, u4)
+	assert.Nil(t, u4)
 
 	u5, err := findUserById(u.Id)
 	assert.Nil(t, err)
@@ -49,7 +50,7 @@ func TestSponsor(t *testing.T) {
 	u := User{
 		Id:        uuid.New(),
 		StripeId:  stringPointer("strip-id"),
-		Email:     stringPointer("email"),
+		Email:     "email",
 		PayoutETH: stringPointer("0x123"),
 	}
 
@@ -57,6 +58,9 @@ func TestSponsor(t *testing.T) {
 		Id:          uuid.New(),
 		OrigId:      0,
 		Url:         stringPointer("url"),
+		GitUrl:      stringPointer("giturl"),
+		Branch:      stringPointer("branch"),
+		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
@@ -131,6 +135,9 @@ func TestRepo(t *testing.T) {
 		Id:          uuid.New(),
 		OrigId:      0,
 		Url:         stringPointer("url"),
+		GitUrl:      stringPointer("giturl"),
+		Branch:      stringPointer("branch"),
+		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
@@ -139,7 +146,7 @@ func TestRepo(t *testing.T) {
 	assert.NotNil(t, id)
 
 	r2, err := findRepoById(uuid.New())
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 	assert.Nil(t, r2)
 
 	r3, err := findRepoById(r.Id)
@@ -151,7 +158,7 @@ func saveTestUser(t *testing.T, email string) uuid.UUID {
 	u := User{
 		Id:        uuid.New(),
 		StripeId:  stringPointer("strip-id"),
-		Email:     stringPointer(email),
+		Email:     email,
 		PayoutETH: stringPointer("0x123"),
 	}
 
@@ -166,9 +173,9 @@ func TestGitEmail(t *testing.T) {
 
 	uid := saveTestUser(t, "email1")
 
-	err := insertGitEmail(uid, "email1", "A", timeNow())
+	err := insertGitEmail(uid, "email1", stringPointer("A"), timeNow())
 	assert.Nil(t, err)
-	err = insertGitEmail(uid, "email2", "A", timeNow())
+	err = insertGitEmail(uid, "email2", stringPointer("A"), timeNow())
 	assert.Nil(t, err)
 	emails, err := findGitEmailsByUserId(uid)
 	assert.Nil(t, err)

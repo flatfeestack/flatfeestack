@@ -1,10 +1,10 @@
 .PHONY: all dep build test clean
 
-all: dep build test
+all: clean dep build test
 dep:
 	go mod download
 build:
-	go build -ldflags "-linkmode external -extldflags -static"
+	go build
 test:
 	go test
 clean:
