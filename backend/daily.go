@@ -102,7 +102,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 						SUM((q.balance / q.sponsored_repos)) + COALESCE((
 					    	SELECT dfl.balance 
 					    	FROM daily_future_leftover dfl 
-					    	WHERE dfl.repo_id = s.repo_id AND dfl.day = $1 AND dfl.currency = q.currency), 0) as balance, 
+					    	WHERE dfl.repo_id = s.repo_id AND dfl.day = $4 AND dfl.currency = q.currency), 0) as balance, 
 						$1 AS DAY,
 						q.currency,
 						$3 AS created_at
@@ -124,7 +124,8 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	// $4 to add leftover from the day before yesterday to yesterday
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now, yesterdayStart.AddDate(0, 0, -1))
 	if err != nil {
 		return 0, err
 	}
@@ -221,17 +222,12 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
 
 //if a repo gets funds, but no user is in our system, it goes to the leftover table and can be claimed later on
 //by the first user that registers in our system.
-// ToDo: Sum up leftover
 func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`WITH cte_leftover_yesterday AS (
-	select repo_id, balance, currency from daily_future_leftover where day = $1
-	)
-		INSERT INTO daily_future_leftover (repo_id, balance, currency, day, created_at)
-		SELECT drb.repo_id, drb.balance + cte.balance, drb.currency, $1 as day, $2 as created_at
+	stmt, err := db.Prepare(`INSERT INTO daily_future_leftover (repo_id, balance, currency, day, created_at)
+		SELECT drb.repo_id, drb.balance, drb.currency, $1 as day, $2 as created_at
         FROM daily_repo_balance drb
         LEFT JOIN daily_repo_weight drw ON drb.repo_id = drw.repo_id
-		JOIN cte_leftover_yesterday as cte on cte.repo_id = drb.repo_id
-        WHERE drw.repo_id IS NULL AND drb.day = $1 AND cte.currency = drb.currency`)
+        WHERE drw.repo_id IS NULL AND drb.day = $1`)
 
 	if err != nil {
 		return 0, err

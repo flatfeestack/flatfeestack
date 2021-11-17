@@ -174,7 +174,6 @@ CREATE TABLE daily_email_payout (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email      VARCHAR(255) NOT NULL,
     balance    BIGINT NOT NULL,
-    currency   VARCHAR(16) NOT NULL,
     day        DATE NOT NULL,
     currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
