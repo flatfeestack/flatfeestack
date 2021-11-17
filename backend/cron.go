@@ -256,14 +256,16 @@ func reminderTopup(u User) error {
 func monthlyRunner() error {
 	chunkSize := 1000
 	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
 
 	payouts, err := monthlyBatchJobPayout()
 	if err != nil {
 		return err
 	}
 
+	// group container by currency [[eth], [neo], [tez], [usd]]
 	for _, payout := range payouts {
-		for i, currency := range supportedCurrencies {
+		for i, currency := range supportedCurrenciesWithUSD {
 			if payout.Currency == currency.ShortName {
 				container[i] = append(container[i], payout)
 			}
