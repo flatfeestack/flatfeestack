@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -361,7 +362,7 @@ func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uid, currency, address, isDeleted)
+	res, err = stmt.Exec(uid, strings.ToUpper(currency), address, isDeleted)
 	if err != nil {
 		return err
 	}
@@ -795,7 +796,7 @@ func insertUserBalance(ub UserBalance) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.Currency, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, strings.ToUpper(ub.Currency), ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -825,7 +826,7 @@ func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, cre
 	return &lastInsertId, handleErrMustInsertOne(res)
 }
 
-func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
+func insertNewInvoice(invoiceDb InvoiceDB) error {
 	stmt, err := db.Prepare(`INSERT INTO invoice (nowpayments_invoice_id, 
 					 payment_cycle_id, 
 					 price_amount, 
@@ -833,11 +834,12 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 					 pay_currency, 
 					 created_at,
                      last_update,
-                     payment_status) 
-					 values($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`)
+                     payment_status,
+                     freq, invoice_url) 
+					 values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`)
 
 	if err != nil {
-		return nil, fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
+		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
 	}
 	defer closeAndLog(stmt)
 
@@ -845,21 +847,23 @@ func insertNewInvoice(invoiceDb InvoiceDB) (*uuid.UUID, error) {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		invoiceDb.PriceCurrency, invoiceDb.PayCurrency, invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus).Scan(&lastInsertId)
+		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency),
+		invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus),
+		invoiceDb.Freq, invoiceDb.InvoiceUrl.String).Scan(&lastInsertId)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &lastInsertId, nil
+	return nil
 
 	var res sql.Result
 	res, err = stmt.Exec("uid", " createdAt") //wieso braucht es hier noch das Exec??
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &lastInsertId, handleErrMustInsertOne(res)
+	return handleErrMustInsertOne(res)
 }
 
-func updateInvoice(invoice *InvoiceDB) error {
+func updateInvoice(invoice InvoiceDB) error {
 	stmt, err := db.Prepare(`UPDATE invoice SET 
                                            payment_cycle_id = $1, 
 								payment_id = $2,            
@@ -872,8 +876,9 @@ func updateInvoice(invoice *InvoiceDB) error {
 								outcome_currency = $9,      
 								payment_status = $10,        
 								created_at = $11,            
-								last_update = $12 
-                                    WHERE nowpayments_invoice_id=$13`)
+								last_update = $12,
+                   				invoice_url = $13
+                                    WHERE nowpayments_invoice_id=$14`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
 	}
@@ -881,9 +886,9 @@ func updateInvoice(invoice *InvoiceDB) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(
-		&invoice.PaymentCycleId, &invoice.PaymentId.Int64, &invoice.PriceAmount, &invoice.PriceCurrency,
-		&invoice.PayAmount.Int64, &invoice.PayCurrency, &invoice.ActuallyPaid.Int64, &invoice.OutcomeAmount.Int64, &invoice.OutcomeCurrency.String, invoice.PaymentStatus,
-		&invoice.CreatedAt, &invoice.LastUpdate, &invoice.NowpaymentsInvoiceId)
+		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, strings.ToUpper(invoice.PriceCurrency),
+		invoice.PayAmount.Int64, strings.ToUpper(invoice.PayCurrency), invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, strings.ToUpper(invoice.OutcomeCurrency.String), strings.ToUpper(invoice.PaymentStatus),
+		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
 	}
@@ -903,12 +908,13 @@ func getInvoice(id int64) (*InvoiceDB, error) {
 								actually_paid,         
 								outcome_amount,        
 								outcome_currency,      
-								payment_status,        
+								payment_status,
+       							freq,
 								created_at,            
 								last_update                FROM invoice WHERE nowpayments_invoice_id=$1`, id).
 		Scan(&invoice.NowpaymentsInvoiceId, &invoice.PaymentCycleId, &invoice.PaymentId, &invoice.PriceAmount, &invoice.PriceCurrency,
 			&invoice.PayAmount, &invoice.PayCurrency, &invoice.ActuallyPaid, &invoice.OutcomeAmount, &invoice.OutcomeCurrency, &invoice.PaymentStatus,
-			&invoice.CreatedAt, &invoice.LastUpdate)
+			&invoice.Freq, &invoice.CreatedAt, &invoice.LastUpdate)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -941,7 +947,7 @@ type DailyPayment struct {
 	PaymentCycleId uuid.UUID
 	Currency       string
 	Amount         int64
-	DaysLeft       int64
+	DaysLeft       int
 	LastUpdate     time.Time
 }
 
@@ -957,7 +963,7 @@ func insertDailyPayment(dailyPayment DailyPayment) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
+	res, err = stmt.Exec(dailyPayment.PaymentCycleId, strings.ToUpper(dailyPayment.Currency), dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
 	if err != nil {
 		return err
 	}
@@ -965,22 +971,22 @@ func insertDailyPayment(dailyPayment DailyPayment) error {
 }
 
 func updateDailyPayment(dailyPayment DailyPayment) error {
-	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4`)
+	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4 AND currency = $5`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for statement event: %v", err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId)
+	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId, dailyPayment.Currency)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
 }
 
-func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int64, error) {
-	var daysLeft int64
+func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
+	var daysLeft int
 	err := db.
 		QueryRow(`select days_left from daily_payment where payment_cycle_id = $1 and currency = $2 order by last_update desc limit 1`, paymentCycleId, currency).
 		Scan(&daysLeft)
@@ -1018,25 +1024,6 @@ func findDailyPaymentByPaymentCycleId(paymentCycleId uuid.UUID) ([]DailyPayment,
 	return dailyPayments, nil
 }
 
-func findDailyPaymentAmountForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
-	var amount int
-	err := db.
-		QueryRow(`select amount from daily_payment where payment_cycle_id = $1 and currency = $2 order by created_at desc limit 1`, paymentCycleId, currency).
-		Scan(&amount)
-	if err != nil {
-		return 0, err
-	}
-
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return amount, nil
-	default:
-		return 0, err
-	}
-}
-
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET freq = $1 WHERE id=$2`)
 	if err != nil {
@@ -1052,26 +1039,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-/*func getPaymentCycleDays(paymentCycleId uuid.UUID) (int64, error) {
-	var daysLeft int64
-	err := db.
-		QueryRow(`SELECT days_left FROM payment_cycle WHERE id = $1`, paymentCycleId).
-		Scan(&daysLeft)
-	if err != nil {
-		return 0, err
-	}
-
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return daysLeft, nil
-	default:
-		return 0, err
-	}
-}*/
-
-func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int) error {
+func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET days_left = $1 WHERE id=$2`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", daysLeft, err)
@@ -1086,25 +1054,33 @@ func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, error) {
-	var sum int64
-	var err error
-	err = db.
-		QueryRow(`SELECT COALESCE(sum(balance), 0)
-                             FROM user_balances 
-                             WHERE user_id = $1 AND payment_cycle_id = $2`, userId, paymentCycleId).
-		Scan(&sum)
-	switch err {
-	case sql.ErrNoRows:
-		return 0, nil
-	case nil:
-		return sum, nil
-	default:
-		return 0, err
+func findSumUserBalances(userId uuid.UUID, paymentCycleId uuid.UUID) ([]UserBalance, error) {
+	s := `SELECT currency, COALESCE(sum(balance), 0)
+          FROM user_balances 
+          WHERE user_id = $1 AND payment_cycle_id = $2
+          GROUP BY currency`
+
+	rows, err := db.Query(s, userId, paymentCycleId)
+
+	if err != nil {
+		return nil, err
 	}
+
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalance
+	for rows.Next() {
+		var userBalance UserBalance
+		err = rows.Scan(&userBalance.Currency, &userBalance.Balance)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
 }
 
-func findSumUserBalance2(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
+func findSumUserBalanceByCurrency(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
 	var sum int64
 	var err error
 	err = db.
@@ -1208,7 +1184,7 @@ func findAllCurreniesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error)
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
-		QueryRow(`SELECT id, seats, freq, FROM payment_cycle WHERE id=$1`, pcid).
+		QueryRow(`SELECT id, seats, freq FROM payment_cycle WHERE id=$1`, pcid).
 		Scan(&pc.Id, &pc.Seats, &pc.Freq)
 	switch err {
 	case sql.ErrNoRows:
@@ -1295,7 +1271,7 @@ func insertPayoutRequest(p *PayoutRequestDB) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	res, err = stmt.Exec(p.UserId, p.BatchId, strings.ToUpper(p.Currency), p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -1340,7 +1316,7 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
+	res, err = stmt.Exec(pid, strings.ToUpper(currency), payout.Address, payout.Balance, timeNow())
 	if err != nil {
 		return err
 	}
@@ -1362,28 +1338,6 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 	default:
 		return nil, err
 	}
-}
-
-func getDailyUserPayouts(day time.Time) ([]UserBalanceCore, error) {
-	//day -2 month
-	day = timeDay(-60, day)
-	q := `SELECT user_id, balance from daily_user_payout where day=$1`
-	rows, err := db.Query(q, day)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	var userBalances []UserBalanceCore
-	for rows.Next() {
-		var userBalance UserBalanceCore
-		err = rows.Scan(&userBalance.UserId, &userBalance.Balance)
-		if err != nil {
-			return nil, err
-		}
-		userBalances = append(userBalances, userBalance)
-	}
-	return userBalances, nil
 }
 
 func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {

@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
-	"fmt"
 	"github.com/alecthomas/template"
 	_ "github.com/aristanetworks/goarista/key"
 	"github.com/google/uuid"
@@ -545,7 +544,7 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
+/*func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
 	m := mux.Vars(r)
 	h := m["type"]
 	if h == "" {
@@ -566,7 +565,7 @@ func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
 		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
 		return
 	}
-}
+}*/
 
 type PayoutToService struct {
 	Address      string    `json:"address"`
@@ -580,7 +579,7 @@ type PayoutToServiceCrypto struct {
 	Tea     int64  `json:"nano_tea"`
 }
 
-func payout(w http.ResponseWriter, r *http.Request, email string) {
+/*func payout(w http.ResponseWriter, r *http.Request, email string) {
 	log.Printf("papout")
 	userAggBalances, err := getDailyPayouts("pending")
 	if err != nil {
@@ -669,9 +668,9 @@ func payout(w http.ResponseWriter, r *http.Request, email string) {
 			return
 		}
 	}
-}
+}*/
 
-func payout0(pts []PayoutToService, batchId uuid.UUID) error {
+/*func payout0(pts []PayoutToService, batchId uuid.UUID) error {
 	res, err := payoutRequest(pts)
 	if err != nil {
 		err1 := err.Error()
@@ -688,7 +687,7 @@ func payout0(pts []PayoutToService, batchId uuid.UUID) error {
 		CreatedAt:  timeNow(),
 		PayoutWeis: res.PayoutWeis,
 	})
-}
+}*/
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()

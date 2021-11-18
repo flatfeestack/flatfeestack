@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"time"
 )
 
@@ -19,42 +18,14 @@ import (
 //1h then the full day (mUSDPerDay) should be deducted.
 //
 //Running this twice won't work as we have a unique index on: user_id, day
-func runDailyRepoHours(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	//https://stackoverflow.com/questions/17833176/postgresql-days-months-years-between-two-dates
-	stmt, err := db.Prepare(`INSERT INTO daily_repo_hours (user_id, repo_hours, day, created_at)
-              SELECT s.user_id, 
-                     SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at))) / 3600)::bigint) as repo_hours, 
-                     $1 as day, $3 as created_at
-                FROM sponsor_event s 
-                    INNER JOIN users u ON u.id = s.user_id
-                    INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-                WHERE NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-                    AND pc.days_left > 0
-                    AND u.role = 'USR'
-                GROUP BY s.user_id`)
-	if err != nil {
-		return 0, err
-	}
-	defer closeAndLog(stmt)
 
-	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return 0, err
-	}
-	return handleErr(res)
-}
-
-//This inserts a balance deduction for the user, than has the role "USR", has funds, and at least 1h of supported
+//This inserts a balance deduction for the user, that has the role "USR", has funds, and at least 24h of supported
 //repo. The balance is negative, thus deducted.
 //
-//Running this twice wont work as we have a unique index on: user_id, day, balance_type
-// ToDo: documentation
-func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error) {
+//Running this twice won't work as we have a unique index on: payment_cycle_id, user_id, balance_type, day
+func runDailyUserBalance(yesterdayStart time.Time, yesterdayEnd time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO user_balances (payment_cycle_id, user_id, balance, balance_type, currency, day, created_at)
-		   select * from test(
-		       $1, 
-		       $2) 
+		   select * from updateDailyUserBalance($1, $2, $3) 
 		       f(payment_cycle_id uuid, user_id uuid, balance bigint, balance_type text, currency VARCHAR(16), day date, created_at TIMESTAMP with time zone)
 `)
 	if err != nil {
@@ -63,14 +34,15 @@ func runDailyUserBalance(yesterdayStart time.Time, now time.Time) (int64, error)
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, now)
+	res, err = stmt.Exec(yesterdayStart, yesterdayEnd, now)
 	if err != nil {
 		return 0, err
 	}
 	return handleErr(res)
 }
 
-// ToDo: documentation
+// Here we update the days left for each currency of the user. This is done by balance_sum_of_currency / daily_payment_of_currency
+//Running this twice is ok, as it will give a more accurate state
 func runDailyDaysLeftDailyPayment() (int64, error) {
 	stmt, err := db.Prepare(`
            	UPDATE daily_payment SET days_left = q.sum / q.amount
@@ -94,10 +66,8 @@ func runDailyDaysLeftDailyPayment() (int64, error) {
 	return handleErr(res)
 }
 
-//Here we update the days left of the user. This calculates as the remaining balance divided by mUSDPerDay
-//
+// Because we have multiple currencies we need to update the sum of the days_left by currency and ad it to the payment_cycle
 //Running this twice is ok, as it will give a more accurate state
-// TODO: update doc
 func runDailyDaysLeftPaymentCycle() (int64, error) {
 	stmt, err := db.Prepare(`
         	UPDATE payment_cycle SET days_left = q.days_left
@@ -121,45 +91,41 @@ func runDailyDaysLeftPaymentCycle() (int64, error) {
 //TODO: limit user to 10000 repos
 //we can support up to 1000 (1h) - 27500 (24h) repos until the precision makes the distribution of 0
 //
-//Here we calculate how much balance a repository gets. The calculation is based on the daily_repo_hours. So if
-//a user has 3 repos with 72 repo hours, and supports repo X, then we calculate how much repo X gets from that user,
-//which is 24h (the user supported for 24h) x 24/72 = 8h, which is 1/3 of his repo hours.
+//Here we calculate how much balance a repository gets. Each repo which is longer supported than 24h will get the same portion.
+//So if the user has supported 3 repos, each repo gets 1/3.
 //
 //Running this twice does not work as we have a unique index on: repo_id, day
-//TODO: update doc
-//TODO: choose pot with least days left
 func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_balance (repo_id, balance, day, currency, created_at)
-		   	SELECT
-			    s.repo_id,
-		   	    SUM((EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigint * q.dailyAmount / drh.repo_hours) + COALESCE((
-		   	         SELECT dfl.balance 
-		             FROM daily_future_leftover dfl 
-		             WHERE dfl.repo_id = s.repo_id AND dfl.day = $1), 0) as balance, 
-			    $1 as day,
-			    q.currency,
-				$3 as created_at
-			FROM (
-			         SELECT ub.user_id,-(min(ub.balance)) as dailyAmount, min(ub.currency) as currency from user_balances ub
-			         JOIN sponsor_event s ON s.user_id = ub.user_id
-			         WHERE ub.day = $1
-			           AND NOT((s.sponsor_at<$1 AND s.unsponsor_at<$1) OR (s.sponsor_at>=$2 AND s.unsponsor_at>=$2))
-			           AND ub.balance_type = 'DAY'
-			         GROUP BY ub.user_id
-			     ) AS q
-			         INNER JOIN sponsor_event s ON s.user_id = q.user_id
-			         INNER JOIN users u ON u.id = s.user_id
-			         INNER JOIN daily_repo_hours drh ON u.id = drh.user_id
-			WHERE drh.day=$1 
-				AND u.role = 'USR' -- Maybe don't needed because we check balance_type = DAY and only USR should be able to make sponsoring
-			GROUP BY s.repo_id, q.currency`)
+					SELECT
+						s.repo_id, 
+						SUM((q.balance / q.sponsored_repos)) + COALESCE((
+					    	SELECT dfl.balance 
+					    	FROM daily_future_leftover dfl 
+					    	WHERE dfl.repo_id = s.repo_id AND dfl.day = $4 AND dfl.currency = q.currency), 0) as balance, 
+						$1 AS DAY,
+						q.currency,
+						$3 AS created_at
+					FROM (
+						SELECT ub.user_id, COUNT(*) AS sponsored_repos, -(MIN(ub.balance)) AS balance, ub.currency AS currency FROM user_balances ub
+						JOIN sponsor_event s ON s.user_id = ub.user_id
+						WHERE ub.balance_type = 'DAY'
+							AND ub.day = $1
+							AND (EXTRACT(epoch from age(LEAST($2, s.unsponsor_at), GREATEST($1, s.sponsor_at)))/3600)::bigInt >= 24
+						GROUP BY ub.user_id, ub.currency
+					) AS q
+					INNER JOIN sponsor_event s ON s.user_id = q.user_id
+					INNER JOIN users u ON u.id = s.user_id
+					WHERE u.role = 'USR'
+					GROUP BY s.repo_id, q.currency`)
 	if err != nil {
 		return 0, err
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	// $4 to add leftover from the day before yesterday to yesterday
+	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now, yesterdayStart.AddDate(0, 0, -1))
 	if err != nil {
 		return 0, err
 	}
@@ -167,9 +133,10 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 }
 
 /*func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, day, created_at)
+	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, currency, day, created_at)
 		SELECT res.git_email as email,
 		       FLOOR(SUM(res.weight * drb.balance)) as balance,
+		       drb.currency
 		       $1 as day,
 		       $3 as created_at
         FROM analysis_response res
@@ -179,7 +146,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
                 AS req ON res.analysis_request_id = req.id
             JOIN daily_repo_balance drb ON drb.repo_id = req.repo_id
         WHERE drb.day = $1
-		GROUP BY res.git_email`)
+		GROUP BY res.git_email, drb.currency`)
 
 	if err != nil {
 		return 0, err
@@ -206,7 +173,7 @@ func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now t
                     AS tmp ON tmp.date_to = req.date_to AND tmp.repo_id = req.repo_id)
                 AS req ON res.analysis_request_id = req.id
 			JOIN git_email g ON g.email = res.git_email
-		WHERE g.token IS NULL
+		WHERE g.token IS NOT NULL
         GROUP BY req.repo_id`)
 
 	if err != nil {
@@ -222,7 +189,6 @@ func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now t
 	return handleErr(res)
 }
 
-//ToDo: needs to be better testet, but needs more testdata and users
 func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_user_payout (user_id, balance, currency, day, created_at)
 		SELECT g.user_id as user_id, 
@@ -256,15 +222,12 @@ func runDailyUserPayout(yesterdayStart time.Time, yesterdayStop time.Time, now t
 
 //if a repo gets funds, but no user is in our system, it goes to the leftover table and can be claimed later on
 //by the first user that registers in our system.
-// Todo: update doc
 func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_future_leftover (repo_id, balance, currency, day, created_at)
-		SELECT ar.repo_id, drb.balance, drb.currency, $2 as day, $3 as created_at
-		FROM analysis_request ar 
-		join analysis_response ar2 on ar.id = ar2.analysis_request_id
-		join daily_repo_balance drb on drb.repo_id = ar.repo_id
-		where ar2.git_email not in (select g.email from git_email g join daily_user_payout dup on dup.user_id = g.user_id where dup.day = $1)
-		group by ar.repo_id, drb.currency, drb.balance`)
+		SELECT drb.repo_id, drb.balance, drb.currency, $1 as day, $2 as created_at
+        FROM daily_repo_balance drb
+        LEFT JOIN daily_repo_weight drw ON drb.repo_id = drw.repo_id
+        WHERE drw.repo_id IS NULL AND drb.day = $1`)
 
 	if err != nil {
 		return 0, err
@@ -272,7 +235,7 @@ func runDailyFutureLeftover(yesterdayStart time.Time, yesterdayStop time.Time, n
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
+	res, err = stmt.Exec(yesterdayStart, now)
 	if err != nil {
 		return 0, err
 	}
@@ -306,7 +269,6 @@ func runDailyAnalysisCheck(now time.Time, days int) ([]Repo, error) {
 	return repos, nil
 }
 
-// ToDo: reminder for each currency if needed
 func runDailyTopupReminderUser() ([]User, error) {
 	s := `SELECT u.id, u.sponsor_id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
@@ -331,7 +293,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	return repos, nil
 }
 
-//ToDo: marketing for each currency if needed
+// TODO: Thomas Bocek has to look into this one
 func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT STRING_AGG(r.name, ','), d.contributor_email, SUM(d.balance) as balance
@@ -360,102 +322,41 @@ func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	return cs, nil
 }
 
-//ToDo: do we need this daily payout anymore if we make everything over batch job?
-func getDailyPayouts(s string) ([]UserAggBalance, error) {
-	day := timeDay(-60, timeNow()) //day -2 month
-	var userAggBalances []UserAggBalance
-	//select monthly payments, but only those that do not have a payout entry
-	var query string
-	var rows *sql.Rows
-	var err error
-	switch s {
-	case "pending":
-		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
-				FROM daily_user_payout dup 
-			    JOIN users u ON dup.user_id = u.id 
-				LEFT JOIN payouts_request p ON p.daily_user_payout_id = dup.id
-				WHERE p.id IS NULL AND dup.day < $1
-				GROUP BY u.id, u.payout_eth`
-		rows, err = db.Query(query, day)
-	case "paid":
-		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
-				FROM daily_user_payout dup
-			    JOIN users u ON dup.user_id = u.id 
-				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
-				JOIN payouts_response pres ON pres.batch_id = preq.batch_id
-                WHERE pres.error is NULL
-				GROUP BY u.id, u.payout_eth`
-		rows, err = db.Query(query)
-	default: //limbo
-		query = `SELECT u.id, u.payout_eth, ARRAY_AGG(DISTINCT(u.email)) AS email_list, SUM(dup.balance), ARRAY_AGG(dup.id) AS id_list
-				FROM daily_user_payout dup
-			    JOIN users u ON dup.user_id = u.id 
-				JOIN payouts_request preq ON preq.daily_user_payout_id = dup.id
-				LEFT JOIN payouts_response pres ON pres.batch_id = preq.batch_id
-				WHERE pres.id IS NULL OR pres.error is NOT NULL
-				GROUP BY u.id, u.payout_eth`
-		rows, err = db.Query(query)
-	}
-
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		defer closeAndLog(rows)
-		for rows.Next() {
-			var userAggBalance UserAggBalance
-			err = rows.Scan(
-				&userAggBalance.UserId,
-				&userAggBalance.PayoutEth,
-				pq.Array(&userAggBalance.Emails),
-				&userAggBalance.Balance,
-				pq.Array(&userAggBalance.DailyUserPayoutIds))
-			if err != nil {
-				return nil, err
-			}
-			userAggBalances = append(userAggBalances, userAggBalance)
-		}
-		return userAggBalances, nil
-	default:
-		return nil, err
-	}
-}
-
-// TODO: check case what the balance should be (for registered and not registered contributors)
-func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+// TODO: Thomas Bocek has to look into this one
+/*func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_user_contribution(
-                                    user_id, 
-                                    repo_id, 
+                                    user_id,
+                                    repo_id,
                                     contributor_email,
-									contributor_name, 
-                                    contributor_weight, 
-                                    contributor_user_id, 
+									contributor_name,
+                                    contributor_weight,
+                                    contributor_user_id,
                                     balance,
                                     balance_repo,
-                                    day, 
+                                    day,
                                     created_at)
 		   SELECT s.user_id as user_id,
-		          s.repo_id as repo_id, 
+		          s.repo_id as repo_id,
 		          res.git_email as contributor_email,
 		          string_agg(res.git_name, ',') as contributor_name,
 	              AVG(res.weight) as contributor_weight,
 	              g.user_id as contributor_user_id,
-		          CASE WHEN g.user_id IS NULL THEN 
-		              	  FLOOR(SUM(drb.balance * res.weight / (drw.weight + res.weight))) 
+		          CASE WHEN g.user_id IS NULL THEN
+		              	  FLOOR(SUM(drb.balance * res.weight / (drw.weight + res.weight)))
 		              ELSE
-		                  FLOOR(SUM(drb.balance * res.weight / drw.weight)) 
+		                  FLOOR(SUM(drb.balance * res.weight / drw.weight))
 		              END as balance,
 		          SUM(drb.balance) as balance_repo,
-			      $1 as day, 
+			      $1 as day,
                   $3 as created_at
 			 FROM sponsor_event s
 			     INNER JOIN daily_repo_balance drb ON drb.repo_id = s.repo_id
 			     LEFT JOIN daily_repo_weight drw ON drw.repo_id = s.repo_id
                  LEFT JOIN (SELECT req.id, req.repo_id FROM analysis_request req
-                     INNER JOIN (SELECT MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id 
+                     INNER JOIN (SELECT MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id
                                  FROM analysis_request
                                  WHERE date_to <= $2
-                                 GROUP BY repo_id) 
+                                 GROUP BY repo_id)
                          AS tmp ON tmp.date_to = req.date_to AND tmp.dates_from[1] = req.date_from AND tmp.repo_id = req.repo_id)
                      AS req ON s.repo_id = req.repo_id
 			     LEFT JOIN analysis_response res ON res.analysis_request_id = req.id
@@ -474,7 +375,7 @@ func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time,
 		return 0, err
 	}
 	return handleErr(res)
-}
+}*/
 
 //*********************************************************************************
 //**************************** Monthly Batchjob Payout ****************************
@@ -488,8 +389,9 @@ type PayoutCrypto struct {
 }
 
 func monthlyBatchJobPayout() ([]PayoutCrypto, error) {
-	s := `SELECT dup.user_id, wa.address, SUM(dup.balance), dup.currency FROM daily_user_payout dup 
-		  JOIN wallet_address wa ON wa.user_id = dup.user_id AND wa.currency = dup.currency
+	s := `SELECT dup.user_id, wa.address, SUM(dup.balance), dup.currency 
+		  FROM daily_user_payout dup 
+		  JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
 		  WHERE wa.is_deleted = false
 		  GROUP BY dup.user_id, dup.currency, wa.address`
 	rows, err := db.Query(s)

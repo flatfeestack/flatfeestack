@@ -92,15 +92,8 @@ func dailyRunner(now time.Time) error {
 	yesterdayStop := timeDay(0, now)
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
-	nr, err := runDailyRepoHours(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Repo Hours inserted %v entries", nr)
-
 	// TODO: before runDailyUserBalance, get in which currency and how much 1 day costs
-	nr, err = runDailyUserBalance(yesterdayStart, now)
+	nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
@@ -211,30 +204,6 @@ func dailyRunner(now time.Time) error {
 		log.Printf("send mail to %v", u)
 	}
 
-	ubc, err := getDailyUserPayouts(yesterdayStart)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily payout found %v entries", len(users))
-	for _, u := range ubc {
-		u2, err := findUserById(u.UserId)
-		if err != nil {
-			return err
-		}
-		ub := UserBalance{
-			PaymentCycleId: u2.PaymentCycleId,
-			FromUserId:     nil,
-			BalanceType:    "INCOME",
-			CreatedAt:      timeNow(),
-			UserId:         u.UserId,
-			Balance:        u.Balance,
-		}
-		err = insertUserBalance(ub)
-		if err != nil {
-			return err
-		}
-	}
-
 	log.Printf("Daily runner finished")
 	return nil
 }
@@ -287,14 +256,16 @@ func reminderTopup(u User) error {
 func monthlyRunner() error {
 	chunkSize := 1000
 	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
 
 	payouts, err := monthlyBatchJobPayout()
 	if err != nil {
 		return err
 	}
 
+	// group container by currency [[eth], [neo], [tez], [usd]]
 	for _, payout := range payouts {
-		for i, currency := range supportedCurrencies {
+		for i, currency := range supportedCurrenciesWithUSD {
 			if payout.Currency == currency.ShortName {
 				container[i] = append(container[i], payout)
 			}
