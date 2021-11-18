@@ -66,7 +66,7 @@ parse_params() {
   # default values of variables set from params
   hosts=''
   include_build=true
-  services='db reverse-proxy openethereum auth analysis-engine backend payout payout-nodejs frontend'
+  services='db reverse-proxy openethereum flextesa auth analysis-engine backend payout payout-nodejs frontend'
 
   while :; do
     case "${1-}" in

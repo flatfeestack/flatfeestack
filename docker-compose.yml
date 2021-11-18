@@ -47,6 +47,7 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       - openethereum
+      - flextesa
       - payout-nodejs
     env_file:
       - payout/.env
@@ -104,3 +105,14 @@ services:
     volumes:
       - ./.chain:/tmp/chain
     command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+  # https://assets.tqtezos.com/docs/setup/2-sandbox/
+  flextesa:
+    container_name: flatfeestack-flextesa
+    image: tqtezos/flextesa:20210602
+    environment:
+      - block_time=15
+    ports:
+      - 20000:20000
+    command: flobox start
+
+

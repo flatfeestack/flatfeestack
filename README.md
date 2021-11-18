@@ -41,4 +41,10 @@ POSTGRES_USER=postgres
 POSTGRES_DB=flatfeestack
 ```
 
+## Tezos sandbox
+
+Get wallet information on private blockchain
+```
+docker exec -it flatfeestack-flextesa flobox info
+```
 
