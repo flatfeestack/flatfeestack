@@ -132,7 +132,7 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 	return handleErr(res)
 }
 
-func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+/*func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_email_payout (email, balance, currency, day, created_at)
 		SELECT res.git_email as email,
 		       FLOOR(SUM(res.weight * drb.balance)) as balance,
@@ -159,7 +159,7 @@ func runDailyEmailPayout(yesterdayStart time.Time, yesterdayStop time.Time, now 
 		return 0, err
 	}
 	return handleErr(res)
-}
+}*/
 
 func runDailyRepoWeight(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_repo_weight (repo_id, weight, day, created_at)
@@ -293,8 +293,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	return repos, nil
 }
 
-// ToDo: update Sum (balance)
-// ToDo: where do we get the data for the not registered users?
+// TODO: Thomas Bocek has to look into this one
 func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT STRING_AGG(r.name, ','), d.contributor_email, SUM(d.balance) as balance
@@ -323,42 +322,41 @@ func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	return cs, nil
 }
 
-// ToDo: check case what the balance should be (for registered and not registered contributors)
-// ToDo: Do we need to know which sponsor supported which contributor with how much or do we need to know
-func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+// TODO: Thomas Bocek has to look into this one
+/*func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO daily_user_contribution(
-                                    user_id, 
-                                    repo_id, 
+                                    user_id,
+                                    repo_id,
                                     contributor_email,
-									contributor_name, 
-                                    contributor_weight, 
-                                    contributor_user_id, 
+									contributor_name,
+                                    contributor_weight,
+                                    contributor_user_id,
                                     balance,
                                     balance_repo,
-                                    day, 
+                                    day,
                                     created_at)
 		   SELECT s.user_id as user_id,
-		          s.repo_id as repo_id, 
+		          s.repo_id as repo_id,
 		          res.git_email as contributor_email,
 		          string_agg(res.git_name, ',') as contributor_name,
 	              AVG(res.weight) as contributor_weight,
 	              g.user_id as contributor_user_id,
-		          CASE WHEN g.user_id IS NULL THEN 
-		              	  FLOOR(SUM(drb.balance * res.weight / (drw.weight + res.weight))) 
+		          CASE WHEN g.user_id IS NULL THEN
+		              	  FLOOR(SUM(drb.balance * res.weight / (drw.weight + res.weight)))
 		              ELSE
-		                  FLOOR(SUM(drb.balance * res.weight / drw.weight)) 
+		                  FLOOR(SUM(drb.balance * res.weight / drw.weight))
 		              END as balance,
 		          SUM(drb.balance) as balance_repo,
-			      $1 as day, 
+			      $1 as day,
                   $3 as created_at
 			 FROM sponsor_event s
 			     INNER JOIN daily_repo_balance drb ON drb.repo_id = s.repo_id
 			     LEFT JOIN daily_repo_weight drw ON drw.repo_id = s.repo_id
                  LEFT JOIN (SELECT req.id, req.repo_id FROM analysis_request req
-                     INNER JOIN (SELECT MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id 
+                     INNER JOIN (SELECT MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id
                                  FROM analysis_request
                                  WHERE date_to <= $2
-                                 GROUP BY repo_id) 
+                                 GROUP BY repo_id)
                          AS tmp ON tmp.date_to = req.date_to AND tmp.dates_from[1] = req.date_from AND tmp.repo_id = req.repo_id)
                      AS req ON s.repo_id = req.repo_id
 			     LEFT JOIN analysis_response res ON res.analysis_request_id = req.id
@@ -377,7 +375,7 @@ func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time,
 		return 0, err
 	}
 	return handleErr(res)
-}
+}*/
 
 //*********************************************************************************
 //**************************** Monthly Batchjob Payout ****************************
