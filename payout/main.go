@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
-	"github.com/flatfeestack/payout/flat_ethclient"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 // USD
@@ -50,22 +51,28 @@ type PayoutCryptoResponse struct {
 }
 
 type Opts struct {
-	Port          int
-	Env           string
-	EthContract   string
-	EthPrivateKey string
-	EthUrl        string
-	Deploy        bool
+	Port            int
+	Env             string
+	EthContract     string
+	EthPrivateKey   string
+	EthUrl          string
+	Deploy          bool
+	PayoutNodejsUrl string
 }
 
 var (
-	opts         *Opts
-	EthWei       = big.NewFloat(0)
-	MicroUsd     = big.NewFloat(0)
-	UsdWei       = big.NewFloat(0)
-	CryptoFactor = big.NewFloat(0)
-	ethClient    *flat_ethclient.ClientETH
-	debug        bool
+	opts                *Opts
+	EthWei              = big.NewFloat(0)
+	MicroUsd            = big.NewFloat(0)
+	UsdWei              = big.NewFloat(0)
+	defaultCryptoFactor = big.NewFloat(0)
+	cryptoFactor        = map[string]*big.Float{
+		"eth": big.NewFloat(1000000000000000000),
+		"neo": big.NewFloat(0),
+		"xtz": big.NewFloat(1000000),
+	}
+	ethClient *ClientETH
+	debug     bool
 )
 
 func NewOpts() *Opts {
@@ -85,6 +92,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.EthUrl, "eth-url", lookupEnv("ETH_URL",
 		"http://172.17.0.1:8545"), "Ethereum URL")
 	flag.BoolVar(&o.Deploy, "deploy", lookupEnv("DEPLOY") == "true", "Set to true to deploy contract")
+	flag.StringVar(&o.PayoutNodejsUrl, "payout-nodejs-url", lookupEnv("PAYOUT_NODEJS_URL",
+		"http://localhost:9086"), "Payout Nodejs Url")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -139,12 +148,12 @@ func main() {
 
 	EthWei.SetString("1000000000000000000")
 	MicroUsd.SetString("1000000")
-	UsdWei.SetString("1000000000000")    //EthWei/MicroUsd
-	CryptoFactor.SetString("1000000000") // Fixed factor for the moment
+	UsdWei.SetString("1000000000000")           //EthWei/MicroUsd
+	defaultCryptoFactor.SetString("1000000000") // Fixed factor for the moment (Nano)
 
 	opts = NewOpts()
 
-	ethClient, err = flat_ethclient.GetEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
+	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,7 +214,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	txHash, err := flat_ethclient.PayoutEth(ethClient, addresses, amountWei)
+	txHash, err := payoutEth(ethClient, addresses, amountWei)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "authorization header not set")
 		return
@@ -236,40 +245,43 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var payoutCrypto []PayoutCrypto
 
 	for _, v := range data {
-		balance := new(big.Int)
+		balance := new(big.Float)
 		balance.SetInt64(v.Balance)
-		amount = append(amount, balance)
+		balance = balance.Mul(balance, cryptoFactor[cur])
+		balance = balance.Quo(balance, defaultCryptoFactor)
+		i, _ := balance.Int(nil)
+		amount = append(amount, i)
 		addresses = append(addresses, v.Address)
 		payoutCrypto = append(payoutCrypto, PayoutCrypto{
 			Address: v.Address,
-			Balance: *balance,
+			Balance: *i,
 		})
 	}
 
 	txHash, err := "", nil
+	var p *PayoutCryptoResponse
 	switch cur {
 	case "eth":
-		transaction, err := flat_ethclient.PayoutEth(ethClient, addresses, amount)
+		transaction, err := payoutEth(ethClient, addresses, amount)
 		if err != nil {
 			log.Fatal(err)
 		}
 		txHash = transaction.Hash().String()
+		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "neo":
 		break
-	case "xtc":
+	case "xtz":
+		p, err = payoutNodejsRequest(payoutCrypto, "xtz")
+		if err != nil {
+			return
+		}
 		break
 	default:
 		log.Printf("Currency isn't supported %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		writeErr(w, http.StatusBadRequest, "Currency isn't supported %v", err)
 	}
-
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-	p := PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 	log.Printf(p.TxHash)
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
@@ -288,4 +300,31 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	if debug {
 		w.Write([]byte(`{"error":"` + msg + `"}`))
 	}
+}
+
+func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) (*PayoutCryptoResponse, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	body, err := json.Marshal(payoutCrypto)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("sending request to: " + opts.PayoutNodejsUrl + "/payout/" + currency)
+	r, err := client.Post(opts.PayoutNodejsUrl+"/payout/"+currency, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	var resp PayoutCryptoResponse
+	err = json.NewDecoder(r.Body).Decode(&resp)
+	if err != nil {
+		return nil, err
+	}
+	if resp.TxHash == "" {
+		return nil, fmt.Errorf("tx hash is empty contract call failed")
+	}
+	return &resp, nil
 }
