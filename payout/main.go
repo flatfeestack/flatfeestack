@@ -2,12 +2,31 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/nspcc-dev/neo-go/pkg/core/native"
+	"github.com/nspcc-dev/neo-go/pkg/core/native/nativenames"
+	"github.com/nspcc-dev/neo-go/pkg/core/state"
+	"github.com/nspcc-dev/neo-go/pkg/core/transaction"
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
+	"github.com/nspcc-dev/neo-go/pkg/encoding/address"
+	"github.com/nspcc-dev/neo-go/pkg/io"
+	"github.com/nspcc-dev/neo-go/pkg/rpc/client"
+	"github.com/nspcc-dev/neo-go/pkg/smartcontract/callflag"
+	"github.com/nspcc-dev/neo-go/pkg/smartcontract/manifest"
+	"github.com/nspcc-dev/neo-go/pkg/smartcontract/nef"
+	"github.com/nspcc-dev/neo-go/pkg/util"
+	"github.com/nspcc-dev/neo-go/pkg/vm/emit"
+	"github.com/nspcc-dev/neo-go/pkg/vm/opcode"
+	"github.com/nspcc-dev/neo-go/pkg/wallet"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -68,7 +87,7 @@ var (
 	defaultCryptoFactor = big.NewFloat(0)
 	cryptoFactor        = map[string]*big.Float{
 		"eth": big.NewFloat(1000000000000000000),
-		"neo": big.NewFloat(0),
+		"neo": big.NewFloat(100000000),
 		"xtz": big.NewFloat(1000000),
 	}
 	ethClient *ClientETH
@@ -153,7 +172,7 @@ func main() {
 
 	opts = NewOpts()
 
-	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
+	//ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -270,6 +289,11 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "neo":
+		txHash, err = payoutNEO(addresses, amount)
+		if err != nil {
+			return
+		}
+		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "xtz":
 		p, err = payoutNodejsRequest(payoutCrypto, "xtz")
@@ -327,4 +351,174 @@ func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) (*PayoutC
 		return nil, fmt.Errorf("tx hash is empty contract call failed")
 	}
 	return &resp, nil
+}
+
+func payoutNEO(addressValues []string, teas []*big.Int) (string, error) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Could not load env file.")
+	}
+	contractOwnerPrivateKey, _ := keys.NewPrivateKeyFromWIF(os.Getenv("CONTRACT_OWNER_WIF"))
+	// signatureBytes := signature_provider.NewSignatureNeo(dev, tea, contractOwnerPrivateKey)
+
+	// Following the steps on the developer's side after receiving the signature bytes:
+	// Create and initialize client
+	// Developer received the signature bytes and can now create the transaction to withdraw funds
+	owner := wallet.NewAccountFromPrivateKey(contractOwnerPrivateKey)
+	c, _ := client.New(context.TODO(), "http://seed1t4.neo.org:20332", client.Options{})
+
+	err = c.Init()
+	if err != nil {
+		log.Fatalf("Could not initialize network.")
+	}
+	// Contract hash of deployed contract on testnet
+	var payoutNeoHash, _ = util.Uint160DecodeStringLE("38f6215e40769c27fee742d7af1a9062e962158f")
+
+	if false {
+		//h, err := deploy(c, owner.PrivateKey().GetScriptHash())
+		//payoutNeoHash = h
+	}
+
+	tx, err := CreateBatchPayoutTx(c, payoutNeoHash, owner, 0, owner.PrivateKey().GetScriptHash(), addressValues, teas)
+	if err != nil {
+		log.Fatalf("Could not create withdraw transaction err: '%v'", err)
+	}
+
+	err = SignTransaction(c, owner, tx)
+	if err != nil {
+		log.Fatalf("Sign transaction err: %v", err)
+	}
+	txHash := tx.Hash()
+	log.Printf("Internally calculated hash: '%v'", txHash.StringLE())
+	hash, err := c.SendRawTransaction(tx)
+	if err != nil {
+		fmt.Errorf("send raw transaction err: %v", err)
+	}
+	log.Printf("Hash from response: '%v'", hash.StringLE())
+	return hash.StringLE(), nil
+}
+
+//CreateWithdrawTx creates a transaction to withdraw funds for the provided dev, tea and the signature bytes.
+func CreateBatchPayoutTx(c *client.Client, contractHash util.Uint160, acc *wallet.Account, additionalNetworkFee int64,
+	dev util.Uint160, addressValues []string, teas []*big.Int) (*transaction.Transaction, error) {
+
+	w := io.NewBufBinWriter()
+	packParams()
+	script := w.Bytes()
+	return c.CreateTxFromScript(script, acc, -1, additionalNetworkFee, []client.SignerAccount{{
+		Signer: transaction.Signer{
+			Account: acc.PrivateKey().GetScriptHash(),
+			Scopes:  transaction.None,
+		},
+		Account: acc,
+	}})
+}
+
+//SignTransaction Signs the transaction with the provided signer account.
+func SignTransaction(c *client.Client, signer *wallet.Account, transaction *transaction.Transaction) error {
+	return signer.SignTx(c.GetNetwork(), transaction)
+}
+
+func readNEFFile(filename string) (*nef.File, []byte, error) {
+	if len(filename) == 0 {
+		return nil, nil, errors.New("no nef file was provided")
+	}
+
+	f, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	nefFile, err := nef.FileFromBytes(f)
+	if err != nil {
+		return nil, nil, fmt.Errorf("can't parse NEF file: %w", err)
+	}
+
+	return &nefFile, f, nil
+}
+
+func readManifest(filename string) (*manifest.Manifest, []byte, error) {
+	if len(filename) == 0 {
+		return nil, nil, errors.New("no manifest file was provided")
+	}
+
+	manifestBytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	m := new(manifest.Manifest)
+	err = json.Unmarshal(manifestBytes, m)
+	if err != nil {
+		return nil, nil, err
+	}
+	return m, manifestBytes, nil
+}
+
+func deploy(c *client.Client, acc util.Uint160) (util.Uint160, error) {
+	buf := io.NewBufBinWriter()
+	hash, err := c.GetNativeContractHash(nativenames.Management)
+	if err != nil {
+		log.Fatalf("Couldn't fin Contract Hash")
+	}
+	ne, nefB, err := readNEFFile("./PayoutNeo.nef")
+	_, mfB, err := readManifest("./PayoutNeo.manifest.json")
+	emit.AppCall(buf.BinWriter, hash, "deploy", callflag.All, nefB, mfB, "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP")
+	tx := transaction.New(buf.Bytes(), 100*native.GASFactor)
+	tx.Signers = []transaction.Signer{{Account: acc}}
+	h := state.CreateContractHash(tx.Sender(), ne.Checksum, "FlatfeestackPayoutNEO")
+	return h, err
+}
+
+func packParams() string {
+	acc, _ := wallet.NewAccountFromWIF(os.Getenv("CONTRACT_OWNER_WIF"))
+	dev1, _ := address.StringToUint160("NS97WSqPa6N9zE1obeJdeHzt3Bi4tEhNRR")
+	dev2, _ := address.StringToUint160("NV1Q1dTdvzPbThPbSFz7zudTmsmgnCwX6c")
+	tea1 := new(big.Int).SetInt64(170000000)
+	tea2 := new(big.Int).SetInt64(7000000)
+
+	c, _ := client.New(context.TODO(), "http://seed1t4.neo.org:20332", client.Options{})
+	err := c.Init()
+	if err != nil {
+		log.Fatalf("Could not initialize network.")
+	}
+	// Contract hash of deployed contract on testnet
+	payoutNeoHash, _ := util.Uint160DecodeStringLE("38f6215e40769c27fee742d7af1a9062e962158f")
+	var devParams []util.Uint160
+	devParams = append(devParams, dev1)
+	devParams = append(devParams, dev2)
+	var teaParams []int64
+	teaParams = append(teaParams, tea1.Int64())
+	teaParams = append(teaParams, tea2.Int64())
+
+	w := io.NewBufBinWriter()
+	// tea array
+	emit.Int(w.BinWriter, tea2.Int64())
+	emit.Int(w.BinWriter, tea1.Int64())
+	emit.Int(w.BinWriter, int64(len(teaParams)))
+	emit.Opcodes(w.BinWriter, opcode.PACK)
+
+	// dev array
+	emit.Bytes(w.BinWriter, dev2.BytesBE())
+	emit.Bytes(w.BinWriter, dev1.BytesBE())
+	emit.Int(w.BinWriter, int64(len(devParams)))
+	emit.Opcodes(w.BinWriter, opcode.PACK)
+
+	// pack params
+	emit.Int(w.BinWriter, int64(len(devParams)))
+	emit.Opcodes(w.BinWriter, opcode.PACK)
+
+	emit.AppCallNoArgs(w.BinWriter, payoutNeoHash, "batchPayout", callflag.All)
+	script := w.Bytes()
+	log.Printf(hex.EncodeToString(script))
+	tx, err := c.CreateTxFromScript(script, acc, -1, 0, []client.SignerAccount{{
+		Signer: transaction.Signer{
+			Account: acc.PrivateKey().GetScriptHash(),
+			Scopes:  transaction.CalledByEntry,
+		},
+	}})
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	return tx.Hash().StringLE()
 }
