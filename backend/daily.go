@@ -294,11 +294,11 @@ func runDailyTopupReminderUser() ([]User, error) {
 }
 
 // TODO: Thomas Bocek has to look into this one
-func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
+/*func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT STRING_AGG(r.name, ','), d.contributor_email, SUM(d.balance) as balance
             FROM daily_user_contribution d
-            	INNER JOIN repo r ON d.repo_id=r.id 
+            	INNER JOIN repo r ON d.repo_id=r.id
 			WHERE d.day = $1 AND d.contributor_user_id IS NULL
 			GROUP BY d.contributor_email`
 	rows, err := db.Query(s, yesterdayStart)
@@ -320,7 +320,7 @@ func runDailyMarketing(yesterdayStart time.Time) ([]Contribution, error) {
 		cs = append(cs, c)
 	}
 	return cs, nil
-}
+}*/
 
 // TODO: Thomas Bocek has to look into this one
 /*func runDailyUserContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {

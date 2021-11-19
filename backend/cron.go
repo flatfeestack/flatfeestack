@@ -92,18 +92,25 @@ func dailyRunner(now time.Time) error {
 	yesterdayStop := timeDay(0, now)
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-	// TODO: before runDailyUserBalance, get in which currency and how much 1 day costs
+	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+
 	nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
 	log.Printf("Daily User Balance inserted %v entries", nr)
 
-	/*nr, err = runDailyDaysLeft(yesterdayStart)
+	nr, err = runDailyDaysLeftDailyPayment()
 	if err != nil {
 		return err
 	}
-	log.Printf("Daily Days Left inserted %v entries", nr)*/
+	log.Printf("Daily Days Left Daily Payment updated %v entries", nr)
+
+	nr, err = runDailyDaysLeftPaymentCycle()
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Days Left Payment Cycle updated %v entries", nr)
 
 	nr, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, now)
 	if err != nil {
@@ -129,11 +136,11 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily User Payout inserted %v entries", nr)
 
-	nr, err = runDailyUserContribution(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily User Contribution inserted %v entries", nr)
+	/*	nr, err = runDailyUserContribution(yesterdayStart, yesterdayStop, now)
+		if err != nil {
+			return err
+		}
+		log.Printf("Daily User Contribution inserted %v entries", nr)*/
 
 	nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
 	if err != nil {
@@ -194,15 +201,15 @@ func dailyRunner(now time.Time) error {
 		}
 	}
 
-	userRepo, err := runDailyMarketing(yesterdayStart)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Marketing candidates found %v entries", len(users))
-	for _, u := range userRepo {
-		//
-		log.Printf("send mail to %v", u)
-	}
+	/*	userRepo, err := runDailyMarketing(yesterdayStart)
+		if err != nil {
+			return err
+		}
+		log.Printf("Daily Marketing candidates found %v entries", len(users))
+		for _, u := range userRepo {
+			//
+			log.Printf("send mail to %v", u)
+		}*/
 
 	log.Printf("Daily runner finished")
 	return nil
