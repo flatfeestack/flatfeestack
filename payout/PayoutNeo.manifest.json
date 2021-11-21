@@ -28,13 +28,13 @@
         "name" : "data",
         "type" : "Any"
       } ],
-      "offset" : 19,
+      "offset" : 80,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "getOwner",
       "parameters" : [ ],
-      "offset" : 23,
+      "offset" : 84,
       "returntype" : "PublicKey",
       "safe" : true
     }, {
@@ -43,7 +43,7 @@
         "name" : "newOwner",
         "type" : "PublicKey"
       } ],
-      "offset" : 38,
+      "offset" : 99,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -52,7 +52,7 @@
         "name" : "account",
         "type" : "Hash160"
       } ],
-      "offset" : 147,
+      "offset" : 208,
       "returntype" : "Integer",
       "safe" : true
     }, {
@@ -67,7 +67,7 @@
         "name" : "newTea",
         "type" : "Integer"
       } ],
-      "offset" : 169,
+      "offset" : 230,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -82,7 +82,7 @@
         "name" : "newTeas",
         "type" : "Array"
       } ],
-      "offset" : 411,
+      "offset" : 472,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -97,7 +97,7 @@
         "name" : "signature",
         "type" : "ByteArray"
       } ],
-      "offset" : 669,
+      "offset" : 730,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -109,7 +109,7 @@
         "name" : "tea",
         "type" : "Integer"
       } ],
-      "offset" : 857,
+      "offset" : 918,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -121,7 +121,7 @@
         "name" : "teas",
         "type" : "Array"
       } ],
-      "offset" : 1032,
+      "offset" : 1093,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -130,13 +130,13 @@
         "name" : "payoutMap",
         "type" : "Map"
       } ],
-      "offset" : 1214,
+      "offset" : 1275,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "_initialize",
       "parameters" : [ ],
-      "offset" : 1378,
+      "offset" : 1439,
       "returntype" : "Void",
       "safe" : false
     } ],
