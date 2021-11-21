@@ -65,7 +65,10 @@ public class PayoutNeo {
     @OnDeployment
     public static void deploy(Object data, boolean update) {
         if (!update) {
-            contractMap.put(ownerKey, ((ECPoint) data).toByteString());
+            ByteString pubKey = (ByteString) data;
+            // ECPoint instantiation checks valid public key length. Thus, makes sure that the data cannot be a Hash160.
+            assert checkWitness(new ECPoint(pubKey)) : "Passed public key must match a witness.";
+            contractMap.put(ownerKey, pubKey);
         }
     }
 

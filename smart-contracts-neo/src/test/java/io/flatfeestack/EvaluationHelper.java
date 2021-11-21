@@ -184,17 +184,17 @@ public class EvaluationHelper {
         }
         NefFile nef = NefFile.readFromFile(nefFile);
         ContractManifest manifest = getObjectMapper().readValue(manifestFile, ContractManifest.class);
+        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
+                manifest.getName());
         Hash256 txHash = new ContractManagement(neow3j)
                 .deploy(nef, manifest, publicKey(ownerPubKey.getEncoded(true)))
-                .signers(none(owner))
+                .signers(none(owner).setAllowedContracts(hash))
                 .sign()
                 .send()
                 .getSendRawTransaction()
                 .getHash();
         waitUntilTransactionIsExecuted(txHash, neow3j);
         System.out.println("Deployed PayoutNeo contract");
-        Hash160 hash = calcContractHash(owner.getScriptHash(), nef.getCheckSumAsInteger(),
-                manifest.getName());
         return new SmartContract(hash, neow3j);
     }
 
