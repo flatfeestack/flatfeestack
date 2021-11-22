@@ -434,13 +434,13 @@ func readManifest(filename string) (*manifest.Manifest, []byte, error) {
 }
 
 func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
-	hash, err := c.GetNativeContractHash(nativenames.Management)
+	nativeManagementContractHash, err := c.GetNativeContractHash(nativenames.Management)
 	if err != nil {
-		log.Fatalf("Couldn't fin Contract Hash")
+		log.Fatalf("Couldn't get native management contract hash")
 	}
 	ne, nefB, err := readNEFFile("./PayoutNeo.nef")
 	_, mfB, err := readManifest("./PayoutNeo.manifest.json")
-	sender, err := address.StringToUint160(acc.Address)
+	sender := acc.PrivateKey().GetScriptHash()
 	pk := acc.PrivateKey().PublicKey().Bytes()
 	appCallParams := []smartcontract.Parameter{
 		{
@@ -457,24 +457,26 @@ func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
 		},
 	}
 
-	signer := []transaction.Signer{{Account: sender}}
-	resp, err := c.InvokeFunction(hash, "deploy", appCallParams, signer)
-	tx, err := c.CreateTxFromScript(resp.Script, acc, -1, 0, []client.SignerAccount{{
-		Signer: transaction.Signer{
-			Account: acc.PrivateKey().GetScriptHash(),
-			Scopes:  transaction.CalledByEntry,
-		},
-	}})
+	contractHash := state.CreateContractHash(sender, ne.Checksum, "PayoutNeo")
+	signer := transaction.Signer{
+		Account:          sender,
+		Scopes:           transaction.Global,
+		// CustomContracts do not work with neo-go, if that scope is used for the sender when using the method CreateTxFromScript.
+		// Same holds for CustomGroups...
+		//Scopes:           transaction.CustomContracts,
+		//AllowedContracts: []util.Uint160{contractHash},
+	}
+	resp, _ := c.InvokeFunction(nativeManagementContractHash, "deploy", appCallParams, []transaction.Signer{signer})
+	tx, err := c.CreateTxFromScript(resp.Script, acc, -1, 0, []client.SignerAccount{{Signer: signer}})
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 	txHash, err := c.SignAndPushTx(tx, acc, nil)
 	if err != nil {
-		fmt.Errorf("failed to add network fee: %w", err)
+		fmt.Errorf("failed to sign and push transaction: %w", err)
 	}
 	fmt.Println(txHash.StringLE())
-	h := state.CreateContractHash(sender, ne.Checksum, "PayoutNEO")
-	return h, err
+	return contractHash, err
 }
 
 func packParams(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {
