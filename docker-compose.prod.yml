@@ -51,6 +51,8 @@ services:
       - prod
     env_file:
       - .prod.payout.env
+    depends_on:
+      - prod-payout-nodejs
 
   prod-payout-nodejs:
     hostname: prod-payout-nodejs

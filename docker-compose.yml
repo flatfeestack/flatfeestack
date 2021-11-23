@@ -47,7 +47,6 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       - openethereum
-      - flextesa
       - payout-nodejs
     env_file:
       - payout/.env
@@ -62,6 +61,8 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     env_file:
       payout-nodejs/.env
+    depends_on:
+      - flextesa
 
   frontend:
     container_name: flatfeestack-frontend

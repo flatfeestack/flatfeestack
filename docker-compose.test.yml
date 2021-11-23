@@ -51,6 +51,8 @@ services:
       - test
     env_file:
       - .test.payout.env
+    depends_on:
+      - test-payout-nodejs
 
   test-payout-nodejs:
     hostname: test-payout-nodejs
