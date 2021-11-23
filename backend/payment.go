@@ -733,3 +733,13 @@ func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 }
+
+func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
+	infos, err := findPayoutInfos()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Could not find payout infos: %v", err)
+		return
+	}
+	writeJson(w, infos)
+}

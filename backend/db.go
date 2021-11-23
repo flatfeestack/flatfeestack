@@ -1340,6 +1340,48 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 	}
 }
 
+type PayoutInfo struct {
+	Currency string
+	Amount   int64
+}
+
+func findPayoutInfos() ([]PayoutInfo, error) {
+	var payoutInfos []PayoutInfo
+	s := `	SELECT 
+				dup.currency, 
+				CASE WHEN MAX(tmp.balance) IS NULL THEN 
+						SUM(dup.balance)
+					ELSE
+						SUM(dup.balance) - MAX(tmp.balance)
+					END AS balance
+			FROM daily_user_payout dup
+			LEFT JOIN (	SELECT r.currency, SUM(r.tea) AS balance
+					   	FROM payout_request r
+						JOIN (	SELECT user_id, currency, MAX(created_at) AS latest
+								FROM payout_request 
+								GROUP BY user_id, currency
+				 			 ) AS tmp ON tmp.user_id = r.user_id
+						WHERE tmp.latest = r.created_at AND tmp.currency = r.currency
+						GROUP BY r.currency
+					  ) AS tmp ON tmp.currency = dup.currency
+			GROUP BY dup.currency`
+	rows, err := db.Query(s)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var payoutInfo PayoutInfo
+		err = rows.Scan(&payoutInfo.Currency, &payoutInfo.Amount)
+		if err != nil {
+			return nil, err
+		}
+		payoutInfos = append(payoutInfos, payoutInfo)
+	}
+	return payoutInfos, nil
+}
+
 func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`
 			INSERT INTO user_emails_sent(user_id, email_type, created_at) 

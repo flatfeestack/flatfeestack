@@ -530,9 +530,10 @@ func nowpaymentsSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, curr
 	newDaysLeft := daysLeft + freq
 	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, currency)
 	newDailyPaymentAmount := balance / int64(newDaysLeft)
-	if currency == "USD" {
+	//ToDo: test if USD daily payment is correct and remove afterwards
+	/*	if currency == "USD" {
 		newDailyPaymentAmount = mUSDPerDay
-	}
+	}*/
 
 	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
 
@@ -649,4 +650,100 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 	// _, err = runDailyTopupReminderUser()
 
 	// _, err = runDailyMarketing(yesterdayStart) --> currency änderung
+}
+
+func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
+	chunkSize := 100
+	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
+
+	m := mux.Vars(r)
+	h := m["exchangeRate"]
+	if h == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		return
+	}
+
+	exchangeRate, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		return
+	}
+
+	payouts, err := findMonthlyBatchJobPayout()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// group container by currency [[eth], [neo], [tez], [usd]]
+	for _, payout := range payouts {
+		for i, currency := range supportedCurrenciesWithUSD {
+			if payout.Currency == currency.ShortName {
+				container[i] = append(container[i], payout)
+			}
+		}
+	}
+
+	for _, payouts := range container {
+		currency := payouts[0].Currency
+
+		for i := 0; i < len(payouts); i += chunkSize {
+			end := i + chunkSize
+			if end > len(payouts) {
+				end = len(payouts)
+			}
+			var pts []PayoutToServiceCrypto
+			batchId := uuid.New()
+			for _, payout := range payouts[i:end] {
+				request := PayoutRequestDB{
+					UserId:    payout.UserId,
+					BatchId:   batchId,
+					Currency:  currency,
+					Tea:       payout.Tea,
+					Address:   payout.Address,
+					CreatedAt: timeNow(),
+				}
+				if currency == "USD" {
+					request.ExchangeRate = *exchangeRate
+				}
+				err := insertPayoutRequest(&request)
+				if err != nil {
+					writeErr(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+
+				pt := PayoutToServiceCrypto{
+					Address: payout.Address,
+					Tea:     payout.Tea,
+				}
+				pts = append(pts, pt)
+			}
+			err := cryptoPayout(pts, batchId, currency)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+	}
+}
+
+func cryptoPayout(pts []PayoutToServiceCrypto, batchId uuid.UUID, currency string) error {
+	res, err := cryptoPayoutRequest(pts, currency)
+	res.Currency = currency
+	if err != nil {
+		err1 := err.Error()
+		err2 := insertPayoutsResponse(&PayoutsResponse{
+			BatchId:   batchId,
+			Error:     &err1,
+			CreatedAt: timeNow(),
+		})
+		return fmt.Errorf("error %v/%v", err, err2)
+	}
+	return insertPayoutResponse(&PayoutResponseDB{
+		BatchId:   batchId,
+		Error:     nil,
+		CreatedAt: timeNow(),
+		Payouts:   *res,
+	})
 }
