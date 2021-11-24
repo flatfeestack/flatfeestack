@@ -734,12 +734,27 @@ func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+type PayoutInfoDTO struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
+}
+
 func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 	infos, err := findPayoutInfos()
+	var result []PayoutInfoDTO
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		log.Printf("Could not find payout infos: %v", err)
 		return
 	}
-	writeJson(w, infos)
+	for _, v := range infos {
+		r := PayoutInfoDTO{Currency: v.Currency}
+		if v.Currency == "USD" {
+			r.Amount = float64(v.Amount) / usdFactor
+		} else {
+			r.Amount = float64(v.Amount) / cryptoFactor
+		}
+		result = append(result, r)
+	}
+	writeJson(w, result)
 }

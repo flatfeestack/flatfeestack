@@ -81,9 +81,9 @@ type CryptoCurrency struct {
 
 var plans = []Plan{}
 var supportedCurrencies = []CryptoCurrency{
-	{Name: "Ethereum", ShortName: "eth"},
-	{Name: "Neo", ShortName: "neo"},
-	{Name: "Tezos", ShortName: "xtz"},
+	{Name: "Ethereum", ShortName: "ETH"},
+	{Name: "Neo", ShortName: "NEO"},
+	{Name: "Tezos", ShortName: "XTZ"},
 }
 
 func init() {

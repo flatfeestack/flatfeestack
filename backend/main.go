@@ -32,10 +32,8 @@ const (
 )
 
 const (
-	mUSDPerHour  = 13750 //1.375 cents - x 10'000
-	mUSDPerDay   = mUSDPerHour * 24
 	cryptoFactor = 1_000_000_000
-	usdFactor    = 1_000_000_000
+	usdFactor    = 1_000_000
 )
 
 var (

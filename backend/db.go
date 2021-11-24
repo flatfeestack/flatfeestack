@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"math/big"
-	"strings"
 	"time"
 )
 
@@ -362,7 +361,7 @@ func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uid, strings.ToUpper(currency), address, isDeleted)
+	res, err = stmt.Exec(uid, currency, address, isDeleted)
 	if err != nil {
 		return err
 	}
@@ -796,7 +795,7 @@ func insertUserBalance(ub UserBalance) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, strings.ToUpper(ub.Currency), ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.Currency, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -847,8 +846,8 @@ func insertNewInvoice(invoiceDb InvoiceDB) error {
 	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
 		invoiceDb.PaymentCycleId,
 		invoiceDb.PriceAmount,
-		strings.ToUpper(invoiceDb.PriceCurrency), strings.ToUpper(invoiceDb.PayCurrency),
-		invoiceDb.CreatedAt, invoiceDb.LastUpdate, strings.ToUpper(invoiceDb.PaymentStatus),
+		invoiceDb.PriceCurrency, invoiceDb.PayCurrency,
+		invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus,
 		invoiceDb.Freq, invoiceDb.InvoiceUrl.String).Scan(&lastInsertId)
 	if err != nil {
 		return err
@@ -886,8 +885,8 @@ func updateInvoice(invoice InvoiceDB) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(
-		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, strings.ToUpper(invoice.PriceCurrency),
-		invoice.PayAmount.Int64, strings.ToUpper(invoice.PayCurrency), invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, strings.ToUpper(invoice.OutcomeCurrency.String), strings.ToUpper(invoice.PaymentStatus),
+		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, invoice.PriceCurrency,
+		invoice.PayAmount.Int64, invoice.PayCurrency, invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, invoice.OutcomeCurrency.String, invoice.PaymentStatus,
 		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
@@ -963,7 +962,7 @@ func insertDailyPayment(dailyPayment DailyPayment) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(dailyPayment.PaymentCycleId, strings.ToUpper(dailyPayment.Currency), dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
+	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
 	if err != nil {
 		return err
 	}
@@ -1271,7 +1270,7 @@ func insertPayoutRequest(p *PayoutRequestDB) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(p.UserId, p.BatchId, strings.ToUpper(p.Currency), p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -1316,7 +1315,7 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, strings.ToUpper(currency), payout.Address, payout.Balance, timeNow())
+	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
 	if err != nil {
 		return err
 	}
@@ -1341,8 +1340,8 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 }
 
 type PayoutInfo struct {
-	Currency string
-	Amount   int64
+	Currency string `json:"currency"`
+	Amount   int64  `json:"amount"`
 }
 
 func findPayoutInfos() ([]PayoutInfo, error) {
