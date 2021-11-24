@@ -7,9 +7,7 @@ import { config, error, loadedSponsoredRepos, user } from "../ts/store";
 import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
 
-let promisePendingPayouts =API.payouts.pending("pending");
-let promisePaidPayouts = API.payouts.pending("paid");
-let promiseLimboPayouts= API.payouts.pending("limbo");
+let promisePendingPayouts =API.payouts.payoutInfos();
 let promiseTime = API.payouts.time();
 let promiseUsers = API.admin.users();
 
@@ -179,88 +177,16 @@ async function loginAs(email: string) {
     <table>
       <thead>
       <tr>
-        <th>ETH Address</th>
-        <th>µ&nbsp;USD</th>
-        <th>Email(s)</th>
-        <th>Monthly Repo ID(s)</th>
+        <th>Currency</th>
+        <th>Amount</th>
       </tr>
       </thead>
       <tbody>
       {#if res && res.length > 0}
         {#each res as row}
           <tr>
-            <td>{row.payout_eth}</td>
-            <td>{row.balance}</td>
-            <td>{row.email_list}</td>
-            <td>{row.monthly_user_payout_id_list}</td>
-          </tr>
-        {:else}
-          <tr><td colspan="4">No Data</td></tr>
-        {/each}
-      {:else}
-        <tr><td colspan="4">No Data</td></tr>
-      {/if}
-      </tbody>
-    </table>
-  {:catch err}
-    {error.set(err)}
-  {/await}
-
-  <h2>Paid Payouts</h2>
-  {#await promisePaidPayouts}
-    <Spinner />
-  {:then res}
-    <table>
-      <thead>
-      <tr>
-        <th>ETH Address</th>
-        <th>µ&nbsp;USD</th>
-        <th>Email(s)</th>
-        <th>Monthly Repo ID(s)</th>
-      </tr>
-      </thead>
-      <tbody>
-      {#if res && res.length > 0}
-        {#each res as row}
-          <tr>
-            <td>{row.payout_eth}</td>
-            <td>{row.balance}</td>
-            <td>{row.email_list}</td>
-            <td>{row.monthly_user_payout_id_list}</td>
-          </tr>
-        {:else}
-          <tr><td colspan="4">No Data</td></tr>
-        {/each}
-      {:else}
-        <tr><td colspan="4">No Data</td></tr>
-      {/if}
-      </tbody>
-    </table>
-  {:catch err}
-    {error.set(err)}
-  {/await}
-
-  <h2>Limbo Payouts</h2>
-  {#await promiseLimboPayouts}
-    <Spinner />
-  {:then res}
-    <table>
-      <thead>
-      <tr>
-        <th>ETH Address</th>
-        <th>µ&nbsp;USD</th>
-        <th>Email(s)</th>
-        <th>Monthly Repo ID(s)</th>
-      </tr>
-      </thead>
-      <tbody>
-      {#if res && res.length > 0}
-        {#each res as row}
-          <tr>
-            <td>{row.payout_eth}</td>
-            <td>{row.balance}</td>
-            <td>{row.email_list}</td>
-            <td>{row.monthly_user_payout_id_list}</td>
+            <td>{row.currency}</td>
+            <td>{row.amount}</td>
           </tr>
         {:else}
           <tr><td colspan="4">No Data</td></tr>
@@ -278,6 +204,6 @@ async function loginAs(email: string) {
   <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={() => payout(exchangeRate)}>
     Payout
   </button>
-  Exchange Rate: <input bind:value={exchangeRate}>
+  Exchange Rate USD to ETH: <input bind:value={exchangeRate}>
 
 </Navigation>

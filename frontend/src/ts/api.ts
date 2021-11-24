@@ -16,7 +16,7 @@ import type {
   UserBalance, Contributions, UserBalanceCore,
   PayoutAddress
 } from "../types/users";
-import { PaymentCycle, UserStatus } from "../types/users";
+import { PaymentCycle, PayoutInfo, UserStatus } from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -149,6 +149,7 @@ export const API = {
     fakePayment: (email: string, seats: number) => backendToken.post(`admin/fake/payment/${email}/${seats}`),
     fakeContribution: (repo: RepoMapping) => backendToken.post(`admin/fake/contribution`, {json: repo}),
     payout: (exchangeRate: number) => backendToken.post(`admin/payout/${exchangeRate}`),
+    payoutInfos: () => backendToken.get(`admin/payout`).json<PayoutInfo[]>(),
   },
   config: {
     config: () => backend.get(`config`).json<Config>()
