@@ -11,7 +11,6 @@ RUN make build
 
 FROM gcr.io/distroless/static
 WORKDIR /home/nonroot
-COPY --from=builder /app/banner.txt /app/payout ./
-COPY PayoutNeo.nef PayoutNeo.manifest.json ./
+COPY --from=builder /app/banner.txt /app/PayoutNeo.nef /app/PayoutNeo.manifest.json /app/payout ./
 USER nonroot
 ENTRYPOINT ["/home/nonroot/payout"]

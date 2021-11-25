@@ -89,6 +89,7 @@ func readNEFFile(filename string) (*nef.File, []byte, error) {
 
 	f, err := ioutil.ReadFile(filename)
 	if err != nil {
+		log.Fatalf(err.Error())
 		return nil, nil, err
 	}
 
@@ -107,6 +108,7 @@ func readManifest(filename string) (*manifest.Manifest, []byte, error) {
 
 	manifestBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
+		log.Fatalf(err.Error())
 		return nil, nil, err
 	}
 
@@ -161,7 +163,8 @@ func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
 		fmt.Errorf("failed to sign and push transaction: %w", err)
 	}
 	fmt.Println("---------------------------------")
-	fmt.Println("NEO smart contract deployed: " + txHash.StringLE())
+	fmt.Println("NEO Transaction: " + txHash.StringLE())
+	fmt.Println("NEO smart contract deployed: " + contractHash.StringLE())
 	fmt.Println("---------------------------------")
 	return contractHash, err
 }

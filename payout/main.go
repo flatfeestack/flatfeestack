@@ -192,7 +192,10 @@ func main() {
 		log.Fatalf("Could not initialize network.")
 	}
 
-	contractOwnerPrivateKey, _ := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
+	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
+	if err != nil {
+		log.Fatalf("Could not transform private key %v", err)
+	}
 	// signatureBytes := signature_provider.NewSignatureNeo(dev, tea, contractOwnerPrivateKey)
 
 	// Following the steps on the developer's side after receiving the signature bytes:
