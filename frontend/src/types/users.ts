@@ -1,3 +1,5 @@
+import {CryptoCurrency} from "./crypto";
+
 export type Users = {
   id: string;
   payment_method: string;
@@ -20,6 +22,7 @@ export type Config = {
   plans: Plan[];
   env: string;
   contractAddr: string;
+  supportedCurrencies: CryptoCurrency[];
 }
 
 export type Plan = {

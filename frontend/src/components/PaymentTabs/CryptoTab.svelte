@@ -22,24 +22,14 @@
     let selectedPlan = 0;
 
     async function handleSubmit() {
-        let response = await API.user.nowpaymentsPayment(selected.shortName, $config.plans[selectedPlan].freq, seats);
-        let json = await response.json();
-        window.open(json.invoice_url, "", "width=800,height=800");
-    }
-
-    function createCardForm() {
-        if(!cardElement) {
-            cardElement.on("change", (e) => {
-                if (e.error) {
-                    $error = e.error;
-                }
-            });
+        try {
+            let response = await API.user.nowpaymentsPayment(selected.shortName, $config.plans[selectedPlan].freq, seats);
+            let json = await response.json();
+            window.open(json.invoice_url, "", "width=800,height=800");
+        } catch (e) {
+            $error = e;
         }
     }
-
-    onMount(async () => {
-        createCardForm();
-    });
 </script>
 
 <h2>Select your cryptocurrency</h2>
@@ -63,7 +53,7 @@
         </div>
     {/if}
     <select bind:value={selected}>
-        {#each $config.supportedCurrencies as currency}
+        {#each $config.supportedCurrencies || [] as currency}
             <option value={currency}>
                 {currency.name} - {currency.shortName}
             </option>
