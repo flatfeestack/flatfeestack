@@ -51,6 +51,16 @@ services:
       - prod
     env_file:
       - .prod.payout.env
+    depends_on:
+      - prod-payout-nodejs
+
+  prod-payout-nodejs:
+    hostname: prod-payout-nodejs
+    image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE}
+    networks:
+      - prod
+    env_file:
+      - .prod.payout-nodejs.env
 
   prod-frontend:
     hostname: prod-frontend

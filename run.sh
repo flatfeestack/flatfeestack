@@ -13,7 +13,7 @@ host_ip() {
   # check what machine we are on
   host_ip="localhost"
   case "$(uname -s)" in
-      Linux*)     host_ip=$(ifconfig docker0 | awk '/inet / {print $2}');;
+      Linux*)     host_ip=$(ip -br -4 a show dev docker0|tr -s ' '|cut -d' ' -f 3|cut -d/ -f1);;
       Darwin*)    host_ip="host.docker.internal";;
       *)          host_ip="localhost";;
   esac
@@ -23,7 +23,7 @@ host_ip() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-sb] [-db] [-rm]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-npn] [-nf] [-sb] [-db] [-rm]
 
 Build and run flatfeestack.
 
@@ -34,6 +34,7 @@ Available options:
 -ne, --no-engine    Don't start analysis-engine
 -nb, --no-backend   Don't start backend
 -np, --no-payout    Don't start payout
+-npn, --no-payout-nodejs    Don't start payout-nodejs
 -nf, --no-frontend  Dont' start frontend
 -sb, --skip-build   Don't run docker-compose build (if your machine is slow)
 -db, --db-only      Run the DB instance only, this ignores all the other options
@@ -65,7 +66,7 @@ parse_params() {
   # default values of variables set from params
   hosts=''
   include_build=true
-  services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
+  services='db reverse-proxy openethereum flextesa auth analysis-engine backend payout payout-nodejs frontend'
 
   while :; do
     case "${1-}" in
@@ -74,7 +75,8 @@ parse_params() {
     -na | --no-auth) hosts="${hosts} auth"; services="${services//auth/}";;
     -ne | --no-engine) hosts="${hosts} analysis-engine"; services="${services//analysis-engine/}";;
     -nb | --no-backend) hosts="${hosts} backend"; services="${services//backend/}";;
-    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout/}";;
+    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout /}";;
+    -npn | --no-payout-nodejs) hosts="${hosts} payout-nodejs"; services="${services//payout-nodejs/}";;
     -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
     -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
@@ -103,10 +105,10 @@ msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
 
 if [ "$include_build" = true ]; then
   msg "${GREEN}Run: docker-compose build --parallel ${services}"
-  HOSTS="${hosts}" docker-compose build --parallel ${services}
+  EXTRA_HOSTS="${hosts}" docker-compose build --parallel ${services}
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${services}"
-UID_GID="$(id -u):$(id -g)" HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}
+EXTRA_HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}

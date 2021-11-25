@@ -18,6 +18,10 @@ services:
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE}
     build: ./payout
 
+  payout-nodejs:
+    image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE}
+    build: ./payout-nodejs
+
   frontend:
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE}
     build: ./frontend

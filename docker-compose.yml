@@ -2,31 +2,16 @@ version: "3"
 
 services:
 
-  #######################
-  # Applications:
-  #######################
-
   auth:
     container_name: flatfeestack-auth
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
     ports:
       - 9081:9081
-    environment:
-      - ENV=local
-      - DEV=test
-      - USERS=tom@tom.tom:12345678
-      - PORT=9081
-      - EMAIL_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtYWlsX2Zyb20iOiJuby1yZXBseUBmbGF0ZmVlc3RhY2suaW8iLCJzdWIiOiJiYWNrZW5kIn0.EVCE4xGTYrsWgaHdRrsoa-c1t23iDOTFvx0zpO2Z9ik
-      - EMAIL_URL=https://nope.ch/mailer
-      - EMAIL_PREFIX=http://localhost
-      - DB_PATH=postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
-      - DB_DRIVER=postgres
-      - DB_SCRIPTS=init.sql
-      - ADMINS=tom.1@bocek.ch;tom.2@bocek.ch;tom.3@bocek.ch;tom.4@bocek.ch;tom.5@bocek.ch;tom.6@bocek.ch
+    env_file:
+      - fastauth/.env
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   backend:
     container_name: flatfeestack-backend
@@ -34,11 +19,12 @@ services:
     build: ./backend
     ports:
       - 9082:9082
-    environment:
-      - PORT=9082
+    env_file:
+      - backend/.env
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   analysis-engine:
     container_name: flatfeestack-analysis-engine
@@ -46,8 +32,10 @@ services:
     build: ./analysis-engine
     ports:
       - 9083:9083
-    environment:
-      - PORT=9083
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    env_file:
+      - analysis-engine/.env
 
   payout:
     container_name: flatfeestack-payout
@@ -56,12 +44,25 @@ services:
     ports:
       - 9084:9084
     extra_hosts:
-      - ${HOSTS}
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       - openethereum
-    environment:
-      - PORT=9084
-      - DEPLOY=true
+      - payout-nodejs
+    env_file:
+      - payout/.env
+
+  payout-nodejs:
+    container_name: flatfeestack-payout-nodejs
+    image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
+    build: ./payout-nodejs
+    ports:
+      - 9086:9086
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    env_file:
+      payout-nodejs/.env
+    depends_on:
+      - flextesa
 
   frontend:
     container_name: flatfeestack-frontend
@@ -69,30 +70,16 @@ services:
     build: ./frontend
     ports:
       - 9085:9085
-    environment:
-      - PORT=9085
-
-  #######################
-  # Infrastructure:
-  #######################
 
   db:
     container_name: flatfeestack-db
     image: postgres:13-alpine
-    user: "${UID_GID}"
     volumes:
-      - /etc/passwd:/etc/passwd:ro
       - ./.db:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
       - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
-    #https://docs.docker.com/engine/reference/builder/#healthcheck
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 1s
-      timeout: 5s
-      retries: 15
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=postgres
@@ -104,7 +91,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
     extra_hosts:
-      - ${HOSTS}
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     ports:
       - 80:80
 
@@ -119,3 +106,14 @@ services:
     volumes:
       - ./.chain:/tmp/chain
     command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+  # https://assets.tqtezos.com/docs/setup/2-sandbox/
+  flextesa:
+    container_name: flatfeestack-flextesa
+    image: tqtezos/flextesa:20210602
+    environment:
+      - block_time=15
+    ports:
+      - 20000:20000
+    command: flobox start
+
+
