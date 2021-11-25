@@ -55,12 +55,13 @@ type PayoutResponse struct {
 
 type PayoutCryptoRequest struct {
 	Address string `json:"address"`
-	Balance int64  `json:"nano_tea"`
+	NanoTea int64  `json:"nano_tea"`
 }
 
 type PayoutCrypto struct {
-	Address string  `json:"address"`
-	Balance big.Int `json:"balance"`
+	Address          string  `json:"address"`
+	NanoTea          int64   `json:"nano_tea"`
+	SmartContractTea big.Int `json:"smart_contract_tea"`
 }
 
 type PayoutCryptoResponse struct {
@@ -171,7 +172,7 @@ func main() {
 
 	opts = NewOpts()
 
-	//ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
+	ethClient, err = getEthClient(opts.EthUrl, opts.EthPrivateKey, opts.Deploy, opts.EthContract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -264,15 +265,16 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, v := range data {
 		balance := new(big.Float)
-		balance.SetInt64(v.Balance)
+		balance.SetInt64(v.NanoTea)
 		balance = balance.Mul(balance, cryptoFactor[cur])
 		balance = balance.Quo(balance, defaultCryptoFactor)
 		i, _ := balance.Int(nil)
 		amount = append(amount, i)
 		addresses = append(addresses, v.Address)
 		payoutCrypto = append(payoutCrypto, PayoutCrypto{
-			Address: v.Address,
-			Balance: *i,
+			Address:          v.Address,
+			NanoTea:          v.NanoTea,
+			SmartContractTea: *i,
 		})
 	}
 
@@ -292,10 +294,8 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "xtz":
-		p, err = payoutNodejsRequest(payoutCrypto, "xtz")
-		if err != nil {
-			return
-		}
+		txHash = payoutNodejsRequest(payoutCrypto, "xtz")
+		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	default:
 		log.Printf("Currency isn't supported %v", err)
@@ -322,31 +322,35 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	}
 }
 
-func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) (*PayoutCryptoResponse, error) {
+func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) string {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 	body, err := json.Marshal(payoutCrypto)
 	if err != nil {
-		return nil, err
+		log.Printf("Couldn't decode JSON %v", err)
+		return ""
 	}
 
 	fmt.Println("sending request to: " + opts.PayoutNodejsUrl + "/payout/" + currency)
 	r, err := client.Post(opts.PayoutNodejsUrl+"/payout/"+currency, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		log.Printf("Couldn't POST request to the NodeJs %v", err)
+		return ""
 	}
 	defer r.Body.Close()
 
 	var resp PayoutCryptoResponse
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
-		return nil, err
+		log.Printf("Couldnt  %v", err)
+		return ""
 	}
 	if resp.TxHash == "" {
-		return nil, fmt.Errorf("tx hash is empty contract call failed")
+		log.Printf("tx hash is empty contract call failed %v", err)
+		return ""
 	}
-	return &resp, nil
+	return resp.TxHash
 }
 
 func payoutNEO(addressValues []string, teas []*big.Int) string {
@@ -373,7 +377,7 @@ func payoutNEO(addressValues []string, teas []*big.Int) string {
 	var payoutNeoHash, _ = util.Uint160DecodeStringLE("80b4f117c6c882f0dd7c58cc6f6112e64b0f37b7") //Own
 	// var payoutNeoHash, _ = util.Uint160DecodeStringLE("38f6215e40769c27fee742d7af1a9062e962158f") // Michael
 
-	if true {
+	if false {
 		h, err := deploy(c, owner)
 		if err != nil {
 			log.Fatalf("Could not initialize network.")
@@ -459,8 +463,8 @@ func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
 
 	contractHash := state.CreateContractHash(sender, ne.Checksum, "PayoutNeo")
 	signer := transaction.Signer{
-		Account:          sender,
-		Scopes:           transaction.Global,
+		Account: sender,
+		Scopes:  transaction.Global,
 		// CustomContracts do not work with neo-go, if that scope is used for the sender when using the method CreateTxFromScript.
 		// Same holds for CustomGroups...
 		//Scopes:           transaction.CustomContracts,
