@@ -37,13 +37,12 @@ func payoutNEO(addressValues []string, teas []*big.Int) string {
 	// Developer received the signature bytes and can now create the transaction to withdraw funds
 	owner := wallet.NewAccountFromPrivateKey(contractOwnerPrivateKey)
 
-	h := CreateBatchPayoutTx(neoClient, payoutNeoHash, owner, 0, owner.PrivateKey().GetScriptHash(), addressValues, teas)
+	h := CreateBatchPayoutTx(neoClient, payoutNeoHash, owner, addressValues, teas)
 	return h
 }
 
 //CreateWithdrawTx creates a transaction to withdraw funds for the provided dev, tea and the signature bytes.
-func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, additionalNetworkFee int64,
-	dev util.Uint160, addressValues []string, teas []*big.Int) string {
+func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {
 	var devP []interface{}
 	for _, v := range addressValues {
 		add, _ := address.StringToUint160(v)

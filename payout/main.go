@@ -112,9 +112,10 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.PayoutNodejsUrl, "payout-nodejs-url", lookupEnv("PAYOUT_NODEJS_URL",
 		"http://localhost:9086"), "Payout Nodejs Url")
 
-	opts.Blockchains["eth"] = eth
-	opts.Blockchains["neo"] = neo
-	opts.Blockchains["xtz"] = xtz
+	o.Blockchains = make(map[string]Blockchain)
+	o.Blockchains["eth"] = eth
+	o.Blockchains["neo"] = neo
+	o.Blockchains["xtz"] = xtz
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
