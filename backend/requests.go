@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"log"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -29,51 +28,28 @@ type AnalysisResponse struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type PayoutWei struct {
+/*type PayoutWei struct {
 	Address string  `json:"address"`
 	Balance big.Int `json:"balance_wei"`
-}
+}*/
 
 type Payout struct {
 	Balance int64  `json:"balance"`
 	Address string `json:"address"`
 }
 
-type PayoutResponseNew struct {
+type PayoutResponse struct {
 	TxHash   string   `json:"tx_hash"`
 	Currency string   `json:"currency"`
 	Payout   []Payout `json:"payout_cryptos"`
 }
 
-type PayoutResponse struct {
+/*type PayoutResponse struct {
 	TxHash     string      `json:"tx_hash"`
 	PayoutWeis []PayoutWei `json:"payout_weis"`
-}
+}*/
 
-func payoutRequest(pts []PayoutToService) (*PayoutResponse, error) {
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
-	body, err := json.Marshal(pts)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := client.Post(opts.PayoutUrl+"/pay", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
-	defer r.Body.Close()
-
-	var resp PayoutResponse
-	err = json.NewDecoder(r.Body).Decode(&resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-func cryptoPayoutRequest(pts []PayoutToServiceCrypto, currency string) (*PayoutResponseNew, error) {
+func payoutRequest(pts []PayoutToService, currency string) (*PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -88,7 +64,7 @@ func cryptoPayoutRequest(pts []PayoutToServiceCrypto, currency string) (*PayoutR
 	}
 	defer r.Body.Close()
 
-	var resp PayoutResponseNew
+	var resp PayoutResponse
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
 		return nil, err

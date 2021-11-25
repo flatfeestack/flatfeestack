@@ -54,24 +54,24 @@ type Repo struct {
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
-type UserAggBalance struct {
+/*type UserAggBalance struct {
 	UserId             uuid.UUID   `json:"userId"`
 	PayoutEth          string      `json:"payout_eth"`
 	Balance            int64       `json:"balance"`
 	Emails             []string    `json:"email_list"`
 	DailyUserPayoutIds []uuid.UUID `json:"daily_user_payout_id_list"`
 	CreatedAt          time.Time
-}
+}*/
 
-type PayoutsRequest struct {
+/*type PayoutsRequest struct {
 	DailyUserPayoutId uuid.UUID `json:"daily-repo-balance-id"`
 	BatchId           uuid.UUID `json:"batch-id"`
 	ExchangeRate      big.Float
 	CreatedAt         time.Time
-}
+}*/
 
-// PayoutRequestDB New for Crypto, USD pay in should be migrated
-type PayoutRequestDB struct {
+// PayoutRequest New for Crypto, USD pay in should be migrated
+type PayoutRequest struct {
 	UserId       uuid.UUID
 	BatchId      uuid.UUID
 	Currency     string
@@ -81,21 +81,21 @@ type PayoutRequestDB struct {
 	CreatedAt    time.Time
 }
 
-type PayoutsResponse struct {
+/*type PayoutsResponse struct {
 	BatchId    uuid.UUID
 	TxHash     string
 	Error      *string
 	CreatedAt  time.Time
 	PayoutWeis []PayoutWei
-}
+}*/
 
 // PayoutsResponseDB New for Crypto, USD pay in should be migrated
-type PayoutResponseDB struct {
+type PayoutsResponse struct {
 	BatchId   uuid.UUID
 	TxHash    string
 	Error     *string
 	CreatedAt time.Time
-	Payouts   PayoutResponseNew
+	Payouts   PayoutResponse
 }
 
 type GitEmail struct {
@@ -151,6 +151,22 @@ type Wallet struct {
 	Address  string    `json:"address"`
 }
 
+type DailyPayment struct {
+	PaymentCycleId uuid.UUID
+	Currency       string
+	Amount         int64
+	DaysLeft       int
+	LastUpdate     time.Time
+}
+
+type PayoutInfo struct {
+	Currency string `json:"currency"`
+	Amount   int64  `json:"amount"`
+}
+
+//*********************************************************************************
+//********************************** User *****************************************
+//*********************************************************************************
 func findAllUsers() ([]User, error) {
 	users := []User{}
 	s := `SELECT email from users`
@@ -333,6 +349,9 @@ func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
 	return handleErrMustInsertOne(res)
 }
 
+//*********************************************************************************
+//********************************* Wallet ****************************************
+//*********************************************************************************
 func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
 	var userWallets []Wallet
 	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
@@ -353,19 +372,19 @@ func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
 	return userWallets, nil
 }
 
-func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool) error {
-	stmt, err := db.Prepare("INSERT INTO wallet_address(user_id, currency, address, is_deleted) VALUES($1, $2, $3, $4)")
+func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool) (*uuid.UUID, error) {
+	stmt, err := db.Prepare("INSERT INTO wallet_address(user_id, currency, address, is_deleted) VALUES($1, $2, $3, $4) RETURNING id")
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO wallet_address for statement event: %v", err)
+		return nil, fmt.Errorf("prepare INSERT INTO wallet_address for statement event: %v", err)
 	}
 	defer closeAndLog(stmt)
 
-	var res sql.Result
-	res, err = stmt.Exec(uid, currency, address, isDeleted)
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(uid, currency, address, isDeleted).Scan(&lastInsertId)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return handleErrMustInsertOne(res)
+	return &lastInsertId, nil
 }
 
 func deleteWallet(id uuid.UUID) error {
@@ -942,14 +961,6 @@ func findUserIdByInvoice(id int64) (uuid.UUID, error) {
 	}
 }
 
-type DailyPayment struct {
-	PaymentCycleId uuid.UUID
-	Currency       string
-	Amount         int64
-	DaysLeft       int
-	LastUpdate     time.Time
-}
-
 func insertDailyPayment(dailyPayment DailyPayment) error {
 	stmt, err := db.Prepare(`
 					INSERT INTO daily_payment (payment_cycle_id, currency, amount, days_left, last_update) 
@@ -1160,7 +1171,7 @@ func findSponsoredUserBalances(userId uuid.UUID) ([]UserStatus, error) {
 	return userStatus, nil
 }
 
-func findAllCurreniesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error) {
+func findAllCurrenciesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error) {
 	s := `select distinct currency from user_balances where payment_cycle_id = $1`
 	rows, err := db.Query(s, paymentCycleId)
 	if err != nil {
@@ -1198,9 +1209,9 @@ func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 //*********************************************************************************
 //******************************* Payouts *****************************************
 //*********************************************************************************
-func insertPayoutsRequest(p *PayoutsRequest) error {
+/*func insertPayoutsRequest(p *PayoutsRequest) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at) 
+				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at)
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.DailyUserPayoutId, err)
@@ -1218,7 +1229,7 @@ func insertPayoutsRequest(p *PayoutsRequest) error {
 func insertPayoutsResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at) 
+				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at)
 				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
@@ -1245,7 +1256,7 @@ func insertPayoutsResponse(p *PayoutsResponse) error {
 
 func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at) 
+				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at)
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
@@ -1258,9 +1269,9 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 		return err
 	}
 	return handleErrMustInsertOne(res)
-}
+}*/
 
-func insertPayoutRequest(p *PayoutRequestDB) error {
+func insertPayoutRequest(p *PayoutRequest) error {
 	stmt, err := db.Prepare(`
 				INSERT INTO payout_request(user_id, batch_id, currency, exchange_rate, tea, address, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7)`)
@@ -1277,7 +1288,7 @@ func insertPayoutRequest(p *PayoutRequestDB) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertPayoutResponse(p *PayoutResponseDB) error {
+func insertPayoutResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
 				INSERT INTO payout_response(id, tx_hash, batch_id, error, created_at) 
@@ -1337,11 +1348,6 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 	default:
 		return nil, err
 	}
-}
-
-type PayoutInfo struct {
-	Currency string `json:"currency"`
-	Amount   int64  `json:"amount"`
 }
 
 func findPayoutInfos() ([]PayoutInfo, error) {

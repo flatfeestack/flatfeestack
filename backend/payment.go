@@ -17,10 +17,16 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type ClientSecretBody struct {
 	ClientSecret string `json:"client_secret"`
+}
+
+type PayoutInfoDTO struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
 }
 
 func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
@@ -125,7 +131,7 @@ func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) 
 		return false, nil
 	}
 
-	ubNew, err := closeCycleCrypto(u.Id, u.PaymentCycleId, *newPaymentCycleId, currency)
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, *newPaymentCycleId, currency)
 	if err != nil {
 		return false, nil
 	}
@@ -354,7 +360,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = nowpaymentsSuccess(u, newPaymentCycleId, amount*10000, "USD", freq, fee*10000)
+		err = paymentSuccess(u, newPaymentCycleId, amount*10000, "USD", freq, fee*10000)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -496,94 +502,6 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 }
-
-/*func stripeSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, fee int64, freq int) error {
-
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", "USD")
-	if err != nil {
-		return err
-	}
-	if ub != nil {
-		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
-		return nil
-	}
-
-	ubNew, err := closeCycleCrypto(u.Id, u.PaymentCycleId, newPaymentCycleId, "USD")
-	if err != nil {
-		return err
-	}
-
-	ubNew.PaymentCycleId = newPaymentCycleId
-	ubNew.BalanceType = "PAYMENT"
-	ubNew.Balance = amount
-	ubNew.Currency = "USD"
-	err = insertUserBalance(*ubNew)
-	if err != nil {
-		return err
-	}
-
-	ubNew.BalanceType = "FEE"
-	ubNew.Balance = -fee
-	err = insertUserBalance(*ubNew)
-	if err != nil {
-		return err
-	}
-
-	isNewCurrencyPayment := true
-	totalDaysLeft := freq
-
-	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
-	if err != nil {
-		return err
-	}
-	for _, dailyPayment := range dailyPayments {
-		if dailyPayment.Currency == "USD" {
-			isNewCurrencyPayment = false
-		}
-		totalDaysLeft += dailyPayment.DaysLeft
-		dailyPayment.PaymentCycleId = newPaymentCycleId
-		dailyPayment.LastUpdate = time.Now()
-		err = insertDailyPayment(dailyPayment)
-	}
-
-	// ToDo: remove duplication from here and crypto success
-	daysLeft, err := findDaysLeftForCurrency(newPaymentCycleId, "USD")
-	newDaysLeft := daysLeft + freq
-	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, "USD")
-	newDailyPaymentAmount := balance / newDaysLeft
-
-	newDailyPayment := DailyPayment{newPaymentCycleId, "USD", newDailyPaymentAmount, newDaysLeft, time.Now()}
-
-	if isNewCurrencyPayment {
-		err = insertDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = updateDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = updatePaymentCycleDaysLeft(newPaymentCycleId, totalDaysLeft)
-	if err != nil {
-		return err
-	}
-
-	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
-	if err != nil {
-		return err
-	}
-
-	go func(uid uuid.UUID) {
-		err = sendToBrowser(uid, newPaymentCycleId)
-		if err != nil {
-			log.Printf("could not notify client %v", uid)
-		}
-	}(u.Id)
-	return nil
-}*/
 
 func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int, int, error) {
 	var pi stripe.PaymentIntent
@@ -734,11 +652,6 @@ func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-type PayoutInfoDTO struct {
-	Currency string  `json:"currency"`
-	Amount   float64 `json:"amount"`
-}
-
 func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 	infos, err := findPayoutInfos()
 	var result []PayoutInfoDTO
@@ -757,4 +670,256 @@ func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 		result = append(result, r)
 	}
 	writeJson(w, result)
+}
+
+func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
+	chunkSize := 100
+	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
+
+	m := mux.Vars(r)
+	h := m["exchangeRate"]
+	if h == "" {
+		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		return
+	}
+
+	exchangeRate, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		return
+	}
+
+	payouts, err := findMonthlyBatchJobPayout()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// group container by currency [[eth], [neo], [tez], [usd]]
+	for _, payout := range payouts {
+		for i, currency := range supportedCurrenciesWithUSD {
+			if payout.Currency == currency.ShortName {
+				container[i] = append(container[i], payout)
+			}
+		}
+	}
+
+	for _, payouts := range container {
+		currency := payouts[0].Currency
+
+		for i := 0; i < len(payouts); i += chunkSize {
+			end := i + chunkSize
+			if end > len(payouts) {
+				end = len(payouts)
+			}
+			var pts []PayoutToService
+			batchId := uuid.New()
+			for _, payout := range payouts[i:end] {
+				request := PayoutRequest{
+					UserId:    payout.UserId,
+					BatchId:   batchId,
+					Currency:  currency,
+					Tea:       payout.Tea,
+					Address:   payout.Address,
+					CreatedAt: timeNow(),
+				}
+				if currency == "USD" {
+					request.ExchangeRate = *exchangeRate
+				}
+				err := insertPayoutRequest(&request)
+				if err != nil {
+					writeErr(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+
+				pt := PayoutToService{
+					Address: payout.Address,
+					Tea:     payout.Tea,
+				}
+				if currency == "USD" {
+					pt.ExchangeRate = *exchangeRate
+				}
+				pts = append(pts, pt)
+			}
+			err := cryptoPayout(pts, batchId, currency)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+	}
+}
+
+// Helper
+func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) error {
+	res, err := payoutRequest(pts, currency)
+	res.Currency = currency
+	if err != nil {
+		err1 := err.Error()
+		err2 := insertPayoutResponse(&PayoutsResponse{
+			BatchId:   batchId,
+			Error:     &err1,
+			CreatedAt: timeNow(),
+		})
+		return fmt.Errorf("error %v/%v", err, err2)
+	}
+	return insertPayoutResponse(&PayoutsResponse{
+		BatchId:   batchId,
+		Error:     nil,
+		CreatedAt: timeNow(),
+		Payouts:   *res,
+	})
+}
+
+func closeCycle(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
+	currencies, err := findAllCurrenciesFromUserBalance(oldPaymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	if !contains(currencies, currency) {
+		currencies = append(currencies, currency)
+	}
+
+	var ubNew *UserBalance
+	for _, currency := range currencies {
+		oldSum, err := findSumUserBalanceByCurrency(uid, oldPaymentCycleId, currency)
+		if err != nil {
+			return nil, err
+		}
+
+		ubNew = &UserBalance{
+			PaymentCycleId: oldPaymentCycleId,
+			UserId:         uid,
+			Balance:        -oldSum,
+			BalanceType:    "CLOSE_CYCLE",
+			Currency:       currency,
+			CreatedAt:      timeNow(),
+		}
+
+		if oldSum > 0 {
+			err := insertUserBalance(*ubNew)
+			if err != nil {
+				return nil, err
+			}
+			ubNew.Balance = oldSum
+			ubNew.PaymentCycleId = newPaymentCycleId
+			ubNew.BalanceType = "CARRY_OVER"
+			ubNew.Currency = currency
+			err = insertUserBalance(*ubNew)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return ubNew, nil
+}
+
+func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string, freq int, fee int64) error {
+	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency)
+	if err != nil {
+		return err
+	}
+	if ub != nil {
+		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+		return nil
+	}
+
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
+	if err != nil {
+		return err
+	}
+
+	ubNew.PaymentCycleId = newPaymentCycleId
+	ubNew.BalanceType = "PAYMENT"
+	ubNew.Balance = amount
+	ubNew.Currency = currency
+	err = insertUserBalance(*ubNew)
+	if err != nil {
+		return err
+	}
+
+	if currency == "USD" {
+		ubNew.BalanceType = "FEE"
+		ubNew.Balance = -fee
+		err = insertUserBalance(*ubNew)
+		if err != nil {
+			return err
+		}
+	}
+
+	isNewCurrencyPayment := true
+	totalDaysLeft := freq
+
+	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	if err != nil {
+		return err
+	}
+	for _, dailyPayment := range dailyPayments {
+		if dailyPayment.Currency == currency {
+			isNewCurrencyPayment = false
+		}
+		totalDaysLeft += dailyPayment.DaysLeft
+		dailyPayment.PaymentCycleId = newPaymentCycleId
+		dailyPayment.LastUpdate = time.Now()
+		err = insertDailyPayment(dailyPayment)
+	}
+
+	daysLeft := 0
+	if !isNewCurrencyPayment {
+		daysLeft, err = findDaysLeftForCurrency(newPaymentCycleId, currency)
+		if err != nil {
+			return err
+		}
+	}
+
+	newDaysLeft := daysLeft + freq
+	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, currency)
+	if err != nil {
+		return err
+	}
+	newDailyPaymentAmount := balance / int64(newDaysLeft)
+
+	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
+
+	if isNewCurrencyPayment {
+		err = insertDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = updateDailyPayment(newDailyPayment)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = updatePaymentCycleDaysLeft(newPaymentCycleId, int64(totalDaysLeft))
+	if err != nil {
+		return err
+	}
+	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
+	if err != nil {
+		return err
+	}
+
+	go func(uid uuid.UUID) {
+		err = sendToBrowser(uid, newPaymentCycleId)
+		if err != nil {
+			log.Printf("could not notify client %v", uid)
+		}
+	}(u.Id)
+	return nil
+}
+
+// contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }

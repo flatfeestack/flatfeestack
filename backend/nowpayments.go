@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -242,7 +241,7 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch data.PaymentStatus {
 	case "FINISHED":
-		err := nowpaymentsSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Freq, 0)
+		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Freq, 0)
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -366,51 +365,6 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Helper
-func closeCycleCrypto(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
-	currencies, err := findAllCurreniesFromUserBalance(oldPaymentCycleId)
-	if err != nil {
-		return nil, err
-	}
-	if !contains(currencies, currency) {
-		currencies = append(currencies, currency)
-	}
-
-	var ubNew *UserBalance
-	for _, currency := range currencies {
-		oldSum, err := findSumUserBalanceByCurrency(uid, oldPaymentCycleId, currency)
-		if err != nil {
-			return nil, err
-		}
-
-		ubNew = &UserBalance{
-			PaymentCycleId: oldPaymentCycleId,
-			UserId:         uid,
-			Balance:        -oldSum,
-			BalanceType:    "CLOSE_CYCLE",
-			Currency:       currency,
-			CreatedAt:      timeNow(),
-		}
-
-		if oldSum > 0 {
-			err := insertUserBalance(*ubNew)
-			if err != nil {
-				return nil, err
-			}
-			ubNew.Balance = oldSum
-			ubNew.PaymentCycleId = newPaymentCycleId
-			ubNew.BalanceType = "CARRY_OVER"
-			ubNew.Currency = currency
-			err = insertUserBalance(*ubNew)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return ubNew, nil
-}
-
 func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) error {
 	invoice, _ := getInvoice(data.InvoiceId)
 
@@ -432,6 +386,7 @@ func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) error {
 	return nil
 }
 
+// Helper
 func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
 	p := mux.Vars(r)
 	f := p["freq"]
@@ -460,15 +415,6 @@ func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
 	return PaymentInformation{freq, seats, plan}, nil
 }
 
-/*func getPrice(paymentInformation PaymentInformation) big.Float {
-	var f1 big.Float
-	f1.SetString("100")
-	cents, _ := f1.Mul(&paymentInformation.Plan.Price, &f1).Int64()
-	cents = cents * int64(paymentInformation.Seats)
-	usd := cents / 100
-	return paymentInformation.Plan.Price
-}*/
-
 func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, error) {
 	key := opts.NowpaymentsIpnKey
 	mac := hmac.New(sha512.New, []byte(key))
@@ -480,152 +426,6 @@ func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, e
 	expectedMAC := mac.Sum(nil)
 
 	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature, nil
-}
-
-func nowpaymentsSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string, freq int, fee int64) error {
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency)
-	if err != nil {
-		return err
-	}
-	if ub != nil {
-		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
-		return nil
-	}
-
-	ubNew, err := closeCycleCrypto(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
-	if err != nil {
-		return err
-	}
-
-	ubNew.PaymentCycleId = newPaymentCycleId
-	ubNew.BalanceType = "PAYMENT"
-	ubNew.Balance = amount
-	ubNew.Currency = currency
-	err = insertUserBalance(*ubNew)
-	if err != nil {
-		return err
-	}
-
-	if currency == "USD" {
-		ubNew.BalanceType = "FEE"
-		ubNew.Balance = -fee
-		err = insertUserBalance(*ubNew)
-		if err != nil {
-			return err
-		}
-	}
-
-	isNewCurrencyPayment := true
-	totalDaysLeft := freq
-
-	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
-	if err != nil {
-		return err
-	}
-	for _, dailyPayment := range dailyPayments {
-		if dailyPayment.Currency == currency {
-			isNewCurrencyPayment = false
-		}
-		totalDaysLeft += dailyPayment.DaysLeft
-		dailyPayment.PaymentCycleId = newPaymentCycleId
-		dailyPayment.LastUpdate = time.Now()
-		err = insertDailyPayment(dailyPayment)
-	}
-
-	daysLeft := 0
-	if !isNewCurrencyPayment {
-		daysLeft, err = findDaysLeftForCurrency(newPaymentCycleId, currency)
-		if err != nil {
-			return err
-		}
-	}
-
-	newDaysLeft := daysLeft + freq
-	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, currency)
-	if err != nil {
-		return err
-	}
-	newDailyPaymentAmount := balance / int64(newDaysLeft)
-
-	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
-
-	if isNewCurrencyPayment {
-		err = insertDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = updateDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = updatePaymentCycleDaysLeft(newPaymentCycleId, int64(totalDaysLeft))
-	if err != nil {
-		return err
-	}
-	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
-	if err != nil {
-		return err
-	}
-
-	go func(uid uuid.UUID) {
-		err = sendToBrowser(uid, newPaymentCycleId)
-		if err != nil {
-			log.Printf("could not notify client %v", uid)
-		}
-	}(u.Id)
-	return nil
-}
-
-// Wallet
-func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
-	userWallets, err := findWalletsByUserId(user.Id)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJson(w, userWallets)
-}
-
-func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
-	var data Wallet
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	err = insertWallet(user.Id, data.Currency, data.Address, false)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-}
-
-// ToDo: verify that wallet is from the right user
-func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
-	p := mux.Vars(r)
-	f := p["uuid"]
-	id, _ := uuid.Parse(f)
-
-	err := deleteWallet(id)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-}
-
-// contains checks if a string is present in a slice
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-
-	return false
 }
 
 //Todo: remove only for cron testing
@@ -662,100 +462,4 @@ func crontester(w http.ResponseWriter, r *http.Request) {
 	// _, err = runDailyTopupReminderUser()
 
 	// _, err = runDailyMarketing(yesterdayStart) --> currency änderung
-}
-
-func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
-	chunkSize := 100
-	var container = make([][]PayoutCrypto, len(supportedCurrencies))
-	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
-
-	m := mux.Vars(r)
-	h := m["exchangeRate"]
-	if h == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
-		return
-	}
-
-	exchangeRate, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
-		return
-	}
-
-	payouts, err := findMonthlyBatchJobPayout()
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// group container by currency [[eth], [neo], [tez], [usd]]
-	for _, payout := range payouts {
-		for i, currency := range supportedCurrenciesWithUSD {
-			if payout.Currency == currency.ShortName {
-				container[i] = append(container[i], payout)
-			}
-		}
-	}
-
-	for _, payouts := range container {
-		currency := payouts[0].Currency
-
-		for i := 0; i < len(payouts); i += chunkSize {
-			end := i + chunkSize
-			if end > len(payouts) {
-				end = len(payouts)
-			}
-			var pts []PayoutToServiceCrypto
-			batchId := uuid.New()
-			for _, payout := range payouts[i:end] {
-				request := PayoutRequestDB{
-					UserId:    payout.UserId,
-					BatchId:   batchId,
-					Currency:  currency,
-					Tea:       payout.Tea,
-					Address:   payout.Address,
-					CreatedAt: timeNow(),
-				}
-				if currency == "USD" {
-					request.ExchangeRate = *exchangeRate
-				}
-				err := insertPayoutRequest(&request)
-				if err != nil {
-					writeErr(w, http.StatusInternalServerError, err.Error())
-					return
-				}
-
-				pt := PayoutToServiceCrypto{
-					Address: payout.Address,
-					Tea:     payout.Tea,
-				}
-				pts = append(pts, pt)
-			}
-			err := cryptoPayout(pts, batchId, currency)
-			if err != nil {
-				writeErr(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
-	}
-}
-
-func cryptoPayout(pts []PayoutToServiceCrypto, batchId uuid.UUID, currency string) error {
-	res, err := cryptoPayoutRequest(pts, currency)
-	res.Currency = currency
-	if err != nil {
-		err1 := err.Error()
-		err2 := insertPayoutsResponse(&PayoutsResponse{
-			BatchId:   batchId,
-			Error:     &err1,
-			CreatedAt: timeNow(),
-		})
-		return fmt.Errorf("error %v/%v", err, err2)
-	}
-	return insertPayoutResponse(&PayoutResponseDB{
-		BatchId:   batchId,
-		Error:     nil,
-		CreatedAt: timeNow(),
-		Payouts:   *res,
-	})
 }
