@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -78,6 +79,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	c.chainId = chainId
 
 	if deploy {
+		log.Printf("Start deploying ETH Contract...")
 		c.contract = deployEthContract(c)
 	} else {
 		c.contract, err = NewPayoutEth(common.HexToAddress(ethContract), c.c)
@@ -96,6 +98,8 @@ func deployEthContract(ethClient *ClientETH) *PayoutEth {
 		log.Fatal(err)
 	}
 	_, err = bind.WaitDeployed(context.Background(), ethClient.c, tx)
-	log.Printf("Contract deployed at %v", address)
+	fmt.Println("---------------------------------")
+	log.Printf("ETH Contract deployed at %v", address)
+	fmt.Println("---------------------------------")
 	return contract
 }
