@@ -27,12 +27,12 @@
     try {
       let regex;
       switch (newPayoutCurrency.shortName) {
-        case "eth":
+        case "ETH":
           regex = /^0x[a-fA-F0-9]{40}$/g
           break;
-        case "neo":
+        case "NEO":
           break;
-        case "xtz":
+        case "XTZ":
           break;
         default:
           $error = "Invalid currency";

@@ -141,3 +141,8 @@ export type PayoutAddress = {
   currency: string;
   address: string;
 }
+
+export type PayoutInfo = {
+  currency: string;
+  amount: number;
+}

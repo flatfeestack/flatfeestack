@@ -46,13 +46,12 @@
 
 <form on:submit|preventDefault={handleSubmit}>
     <div class="container-stretch">
-        {#each $config.plans as { title, desc, disclaimer }, i}
+        {#each $config.plans as { title, desc }, i}
             <div
                     class="child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
                     on:click="{() => (selectedPlan = i)}">
                 <h3 class="text-center font-bold text-lg">{title}</h3>
                 <div class="text-center">{@html desc}</div>
-                <div class="small text-center">{@html disclaimer}</div>
             </div>
         {/each}
     </div>
