@@ -69,7 +69,7 @@ INSERT INTO public.daily_payment (id, payment_cycle_id, currency, amount, days_l
 INSERT INTO public.daily_payment (id, payment_cycle_id, currency, amount, days_left, last_update) VALUES ('2115e768-6146-4926-befe-36daac097bca', 'e9db8eba-dfd2-4599-b300-365b19812261', 'ETH', 71188, 30, '2021-10-30 14:23:02.682054');
 INSERT INTO public.daily_payment (id, payment_cycle_id, currency, amount, days_left, last_update) VALUES ('7fdbfeea-ac4d-4b56-8725-4dfa0383cddf', 'e9db8eba-dfd2-4599-b300-365b19812261', 'NEO', 7239972, 365, '2021-10-30 14:17:37.713275');
 
--- wallet_address ToDo: what happens if there is no wallet?
+-- wallet_address
 INSERT INTO public.wallet_address (id, user_id, currency, address, is_deleted) VALUES ('acab0469-b792-4226-9cbf-d08ddaa77bee', 'd263a9f0-3fde-11ec-9356-0242ac130003', 'ETH', 'contributor_1_eth_address', false);
 INSERT INTO public.wallet_address (id, user_id, currency, address, is_deleted) VALUES ('5069fbf4-8739-4e5f-bed7-d2dcdd943820', '14b8f83c-3fdf-11ec-9356-0242ac130003', 'ETH', 'contributor_2_eth_address', false);
 INSERT INTO public.wallet_address (id, user_id, currency, address, is_deleted) VALUES ('690b39a6-3fe2-11ec-9356-0242ac130003', '14b8f83c-3fdf-11ec-9356-0242ac130003', 'XTZ', 'contributor_2_xtz_address', false);
