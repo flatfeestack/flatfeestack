@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,22 +25,20 @@ import (
 
 func payoutNEO(addressValues []string, teas []*big.Int) string {
 	var neo = opts.Blockchains["neo"]
-	// Contract hash of deployed contract on testnet
-
-	var payoutNeoHash, _ = util.Uint160DecodeStringLE(neo.Contract) //Own
-	contractOwnerPrivateKey, _ := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
-	// signatureBytes := signature_provider.NewSignatureNeo(dev, tea, contractOwnerPrivateKey)
-
-	// Following the steps on the developer's side after receiving the signature bytes:
-	// Create and initialize client
-	// Developer received the signature bytes and can now create the transaction to withdraw funds
+	var payoutNeoHash, err = util.Uint160DecodeStringLE(neo.Contract)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 	owner := wallet.NewAccountFromPrivateKey(contractOwnerPrivateKey)
 
 	h := CreateBatchPayoutTx(neoClient, payoutNeoHash, owner, addressValues, teas)
 	return h
 }
 
-//CreateWithdrawTx creates a transaction to withdraw funds for the provided dev, tea and the signature bytes.
 func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {
 	var devP []interface{}
 	for _, v := range addressValues {
@@ -56,7 +53,7 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 	w := io.NewBufBinWriter()
 	emit.AppCall(w.BinWriter, payoutNeoHash, "batchPayout", callflag.All, devP, teaP)
 	script := w.Bytes()
-	log.Printf(hex.EncodeToString(script))
+	log.Printf("About to execute job [batchPayout] %v")
 	tx, err := c.CreateTxFromScript(script, acc, -1, 0, []client.SignerAccount{{
 		Signer: transaction.Signer{
 			Account: acc.PrivateKey().GetScriptHash(),
@@ -66,20 +63,16 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	acc.SignTx(c.GetNetwork(), tx)
+	err = acc.SignTx(c.GetNetwork(), tx)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 	hash, err := c.SendRawTransaction(tx)
 	if err != nil {
-		fmt.Errorf("send raw transaction err: %v", err)
+		log.Fatalf("send raw transaction err: %v", err)
 	}
+	log.Printf("batchPayou succeded with hash %v", hash.StringLE())
 	return hash.StringLE()
-}
-
-//SignTransaction Signs the transaction with the provided signer account.
-func SignTransaction(c *client.Client, signer *wallet.Account, transaction *transaction.Transaction) error {
-	return signer.SignTx(c.GetNetwork(), transaction)
 }
 
 func readNEFFile(filename string) (*nef.File, []byte, error) {
@@ -160,7 +153,7 @@ func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
 	}
 	txHash, err := c.SignAndPushTx(tx, acc, nil)
 	if err != nil {
-		fmt.Errorf("failed to sign and push transaction: %w", err)
+		log.Fatalf("failed to sign and push transaction: %v", err)
 	}
 	fmt.Println("---------------------------------")
 	fmt.Println("NEO Transaction: " + txHash.StringLE())
