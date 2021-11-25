@@ -96,6 +96,6 @@ func deployEthContract(ethClient *ClientETH) *PayoutEth {
 		log.Fatal(err)
 	}
 	_, err = bind.WaitDeployed(context.Background(), ethClient.c, tx)
-	log.Printf("Contract deployed at %v", address)
+	log.Printf("ETH Contract deployed at %v", address)
 	return contract
 }
