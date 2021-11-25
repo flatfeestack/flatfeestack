@@ -378,7 +378,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 }*/
 
 //*********************************************************************************
-//**************************** Monthly Batchjob Payout ****************************
+//*************************** Monthly Batch Job Payout ****************************
 //*********************************************************************************
 
 type PayoutCrypto struct {
@@ -388,7 +388,7 @@ type PayoutCrypto struct {
 	Currency string
 }
 
-func monthlyBatchJobPayout() ([]PayoutCrypto, error) {
+func findMonthlyBatchJobPayout() ([]PayoutCrypto, error) {
 	s := `SELECT dup.user_id, wa.address, SUM(dup.balance), dup.currency 
 		  FROM daily_user_payout dup 
 		  JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))

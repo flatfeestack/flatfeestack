@@ -32,10 +32,8 @@ const (
 )
 
 const (
-	mUSDPerHour  = 13750 //1.375 cents - x 10'000
-	mUSDPerDay   = mUSDPerHour * 24
 	cryptoFactor = 1_000_000_000
-	usdFactor    = 1_000_000_000
+	usdFactor    = 1_000_000
 )
 
 var (
@@ -235,6 +233,7 @@ func main() {
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
@@ -260,16 +259,16 @@ func main() {
 	//payment
 
 	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
-	/*	router.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods(http.MethodPost)*/
+	router.HandleFunc("/admin/payout", jwtAuthAdmin(getPayoutInfos, admins)).Methods(http.MethodGet)
+	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(monthlyPayout, admins)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/users", jwtAuthAdmin(users, admins)).Methods(http.MethodPost)
 
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
-	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
+	// ToDo: only for testing -> remove later
 	router.HandleFunc("/nowpayments/crontester", crontester).Methods(http.MethodGet)
 
 	//dev settings

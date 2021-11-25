@@ -80,6 +80,7 @@ CREATE UNIQUE INDEX user_balances_index ON user_balances (
     payment_cycle_id,
     user_id,
     balance_type,
+    currency,
     day
 );
 
