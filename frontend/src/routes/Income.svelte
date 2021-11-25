@@ -9,7 +9,6 @@
   import {formatDate, formatMUSD, formatDay} from "../ts/services";
   import {navigate} from "svelte-routing";
   import {Contributions, PayoutAddress} from "../types/users.ts";
-  import PayoutSelection from "../components/PayoutSelection.svelte";
   import {CryptoCurrency} from "../types/crypto";
 
   let address = "";
@@ -19,11 +18,15 @@
   let contributions: Contributions[] = [];
   let pendingPayouts: UserBalanceCore;
   let newPayoutAddress: ""
-  let newPayoutCurrency: CryptoCurrency = { name: "Ethereum", shortName: "eth" }
-  let payoutAddresses: PayoutAddress [] = [];
+  let newPayoutCurrency: CryptoCurrency = { name: "Ethereum", shortName: "ETH" }
+  let payoutAddresses: PayoutAddress[] = [];
+  let currenciesWithoutWallet: CryptoCurrency[] = [];
+
+  $: {
+    currenciesWithoutWallet = $config.supportedCurrencies.filter((cur) => !(payoutAddresses?.map(pay => pay.currency).includes(cur.shortName)))
+  }
 
   async function handleAddPayoutAddress() {
-    debugger
     try {
       let regex;
       switch (newPayoutCurrency.shortName) {
@@ -45,7 +48,7 @@
       let confirmedPayoutAddress: PayoutAddress = await API.user.addPayoutAddress(newPayoutCurrency.shortName, newPayoutAddress);
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = ""
-      newPayoutCurrency = { name: "Ethereum", shortName: "eth" }
+      newPayoutCurrency = { name: "Ethereum", shortName: "ETH" }
     } catch (e) {
       $error = e;
     }
@@ -105,7 +108,6 @@
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
       pendingPayouts = await pr3;
-      //payoutAddresses = [{id: "1", currency: "eth", address: "abc..."}, {id: "2", currency: "neo", address: "cde..."}, {id: "3", currency: "tez", address: "fgh..."}]
       payoutAddresses = await pr4;
     } catch (e) {
       $error = e;
@@ -170,7 +172,7 @@
   <div class="container">
     <label class="px-2">Add Payout Address:</label>
     <select bind:value={newPayoutCurrency}>
-      {#each $config.supportedCurrencies as currency}
+      {#each currenciesWithoutWallet as currency}
         <option value={currency}>
           {currency.name}
         </option>
@@ -191,7 +193,7 @@
       </tr>
       </thead>
       <tbody>
-      {#each payoutAddresses as address, key (address.id)}
+      {#each payoutAddresses || [] as address, key (address.id)}
         <tr>
           <td><strong>{address.currency}</strong></td>
           <td>{address.address}</td>
