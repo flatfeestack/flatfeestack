@@ -23,20 +23,22 @@ import (
 	"math/big"
 )
 
-func payoutNEO(addressValues []string, teas []*big.Int) string {
+func payoutNEO(addressValues []string, teas []*big.Int) (string, error) {
 	var neo = opts.Blockchains["neo"]
 	var payoutNeoHash, err = util.Uint160DecodeStringLE(neo.Contract)
 	if err != nil {
 		log.Fatalf(err.Error())
+		return "", err
 	}
 	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
 	if err != nil {
 		log.Fatalf(err.Error())
+		return "", err
 	}
 	owner := wallet.NewAccountFromPrivateKey(contractOwnerPrivateKey)
 
 	h := CreateBatchPayoutTx(neoClient, payoutNeoHash, owner, addressValues, teas)
-	return h
+	return h, nil
 }
 
 func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {

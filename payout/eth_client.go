@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -25,7 +24,7 @@ type ClientETH struct {
 	contract    *PayoutEth
 }
 
-func payoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*types.Transaction, error) {
+func payoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (string, error) {
 	var addresses []common.Address
 	for i := range addressValues {
 		addresses = append(addresses, common.HexToAddress(addressValues[i]))
@@ -38,7 +37,7 @@ func payoutEth(ethClient *ClientETH, addressValues []string, teas []*big.Int) (*
 	if err != nil {
 		log.Fatalf("Failed transaction: %v", err)
 	}
-	return tx, err
+	return tx.Hash().String(), err
 }
 
 func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract string) (*ClientETH, error) {
