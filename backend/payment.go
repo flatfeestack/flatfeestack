@@ -674,8 +674,8 @@ func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 
 func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 	chunkSize := 100
-	var container = make([][]PayoutCrypto, len(supportedCurrencies))
 	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
+	var container = make([][]PayoutCrypto, len(supportedCurrenciesWithUSD))
 
 	m := mux.Vars(r)
 	h := m["exchangeRate"]
@@ -706,6 +706,9 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 	}
 
 	for _, payouts := range container {
+		if len(payouts) <= 0 {
+			continue
+		}
 		currency := payouts[0].Currency
 
 		for i := 0; i < len(payouts); i += chunkSize {
@@ -755,6 +758,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) error {
 	res, err := payoutRequest(pts, currency)
 	res.Currency = currency
+
 	if err != nil {
 		err1 := err.Error()
 		err2 := insertPayoutResponse(&PayoutsResponse{
@@ -766,6 +770,7 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 	}
 	return insertPayoutResponse(&PayoutsResponse{
 		BatchId:   batchId,
+		TxHash:    res.TxHash,
 		Error:     nil,
 		CreatedAt: timeNow(),
 		Payouts:   *res,

@@ -267,7 +267,8 @@ CREATE TABLE payout_response_details (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payout_response_id  UUID CONSTRAINT fk_payout_response_id_pres REFERENCES payout_response (id),
     currency            VARCHAR(16) NOT NULL,
-    balance              BIGINT NOT NULL,
+    nano_tea            BIGINT NOT NULL,
+    smart_contract_tea  NUMERIC NOT NULL,
     address             VARCHAR(42),
     created_at          TIMESTAMP NOT NULL
 );

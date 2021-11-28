@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,8 +35,9 @@ type AnalysisResponse struct {
 }*/
 
 type Payout struct {
-	Balance int64  `json:"balance"`
-	Address string `json:"address"`
+	Address          string  `json:"address"`
+	NanoTea          int64   `json:"nano_tea"`
+	SmartContractTea big.Int `json:"smart_contract_tea"`
 }
 
 type PayoutResponse struct {
@@ -58,7 +60,13 @@ func payoutRequest(pts []PayoutToService, currency string) (*PayoutResponse, err
 		return nil, err
 	}
 
-	r, err := client.Post(opts.PayoutUrl+"/pay-crypto/"+currency, "application/json", bytes.NewBuffer(body))
+	var r *http.Response
+	if currency == "USD" {
+		r, err = client.Post(opts.PayoutUrl+"/pay", "application/json", bytes.NewBuffer(body))
+	} else {
+		r, err = client.Post(opts.PayoutUrl+"/pay-crypto/"+string(bytes.ToLower([]byte(currency))), "application/json", bytes.NewBuffer(body))
+	}
+
 	if err != nil {
 		return nil, err
 	}
