@@ -182,7 +182,7 @@ func main() {
 	}
 
 	var neo = opts.Blockchains["neo"]
-	neoClient, err := client.New(context.TODO(), neo.Url, client.Options{})
+	neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
 	if err != nil {
 		log.Fatalf("Could not create a new NEO client")
 	}

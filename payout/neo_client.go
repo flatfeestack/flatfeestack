@@ -55,12 +55,14 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 	w := io.NewBufBinWriter()
 	emit.AppCall(w.BinWriter, payoutNeoHash, "batchPayout", callflag.All, devP, teaP)
 	script := w.Bytes()
-	log.Printf("About to execute job [batchPayout] %v")
+	log.Printf("About to execute job [batchPayout]")
+	sender := acc.PrivateKey().GetScriptHash()
+	signer := transaction.Signer{
+		Account: sender,
+		Scopes:  transaction.CalledByEntry,
+	}
 	tx, err := c.CreateTxFromScript(script, acc, -1, 0, []client.SignerAccount{{
-		Signer: transaction.Signer{
-			Account: acc.PrivateKey().GetScriptHash(),
-			Scopes:  transaction.CalledByEntry,
-		},
+		Signer: signer,
 	}})
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -73,7 +75,6 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 	if err != nil {
 		log.Fatalf("send raw transaction err: %v", err)
 	}
-	log.Printf("batchPayou succeded with hash %v", hash.StringLE())
 	return hash.StringLE()
 }
 
