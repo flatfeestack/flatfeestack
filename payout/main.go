@@ -20,28 +20,10 @@ import (
 	"time"
 )
 
-// USD
-type PayoutUsd struct {
-	Address      string `json:"address"`
-	Balance      int64  `json:"balance_micro_USD"`
-	ExchangeRate string `json:"exchange_rate_USD_ETH"`
-}
-
-type PayoutWei struct {
-	Address string  `json:"address"`
-	Balance big.Int `json:"balance_wei"`
-}
-
-type PayoutResponse struct {
-	TxHash     string      `json:"tx_hash"`
-	PayoutWeis []PayoutWei `json:"payout_weis"`
-}
-
-//Crypto
-
 type PayoutCryptoRequest struct {
-	Address string `json:"address"`
-	NanoTea int64  `json:"nano_tea"`
+	Address      string `json:"address"`
+	ExchangeRate string `json:"exchange_rate_USD_ETH"`
+	NanoTea      int64  `json:"nano_tea"`
 }
 
 type PayoutCrypto struct {
@@ -182,7 +164,7 @@ func main() {
 	}
 
 	var neo = opts.Blockchains["neo"]
-	neoClient, err := client.New(context.TODO(), neo.Url, client.Options{})
+	neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
 	if err != nil {
 		log.Fatalf("Could not create a new NEO client")
 	}
@@ -224,7 +206,7 @@ func main() {
 
 func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var data []PayoutUsd
+	var data []PayoutCryptoRequest
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("Could not decode Webhook Body %v", err)
@@ -234,7 +216,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	var amountWei []*big.Int
 	var addresses []string
-	var payoutWei []PayoutWei
+	var payoutCrypto []PayoutCrypto
 
 	for _, v := range data {
 		var flt *big.Float
@@ -244,15 +226,16 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		balance := new(big.Float)
-		balance.SetInt64(v.Balance)
+		balance.SetInt64(v.NanoTea)
 		balance = balance.Mul(balance, UsdWei)
-		balance = balance.Quo(balance, flt)
+		balance = balance.Mul(balance, flt)
 		i, _ := balance.Int(nil)
 		amountWei = append(amountWei, i)
 		addresses = append(addresses, v.Address)
-		payoutWei = append(payoutWei, PayoutWei{
-			Address: v.Address,
-			Balance: *i,
+		payoutCrypto = append(payoutCrypto, PayoutCrypto{
+			Address:          v.Address,
+			NanoTea:          v.NanoTea,
+			SmartContractTea: *i,
 		})
 	}
 
@@ -275,7 +258,7 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
+	p := PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
