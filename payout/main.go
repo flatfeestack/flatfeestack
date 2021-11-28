@@ -182,7 +182,7 @@ func main() {
 	}
 
 	var neo = opts.Blockchains["neo"]
-	neoClient, err := client.New(context.TODO(), neo.Url, client.Options{})
+	neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
 	if err != nil {
 		log.Fatalf("Could not create a new NEO client")
 	}
@@ -271,11 +271,11 @@ func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	txHash, err := payoutEth(ethClient, addresses, amountWei)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "authorization header not set")
+		writeErr(w, http.StatusBadRequest, "Unable to payout eth")
 		return
 	}
 
-	p := PayoutResponse{TxHash: txHash.Hash().String(), PayoutWeis: payoutWei}
+	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
@@ -318,19 +318,27 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var p *PayoutCryptoResponse
 	switch cur {
 	case "eth":
-		transaction, err := payoutEth(ethClient, addresses, amount)
+		txHash, err = payoutEth(ethClient, addresses, amount)
 		if err != nil {
-			log.Fatal(err)
+			writeErr(w, http.StatusBadRequest, "Unable to payout eth")
+			return
 		}
-		txHash = transaction.Hash().String()
 		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "neo":
-		txHash = payoutNEO(addresses, amount)
+		txHash, err = payoutNEO(addresses, amount)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Unable to payout neo")
+			return
+		}
 		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "xtz":
-		txHash = payoutNodejsRequest(payoutCrypto, "xtz")
+		txHash, err = payoutNodejsRequest(payoutCrypto, "xtz")
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "Unable to payout xtz")
+			return
+		}
 		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	default:
@@ -338,7 +346,12 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		writeErr(w, http.StatusBadRequest, "Currency isn't supported %v", err)
 	}
-	log.Printf(p.TxHash)
+	if p.TxHash == "" {
+		log.Printf("tx hash is empty contract call failed %v", err)
+		writeErr(w, http.StatusBadRequest, "Tx hash is empty contract call failed")
+		return
+	}
+	log.Printf("Contract call succeded. Transaction Hash is %v", p.TxHash)
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
 		return
@@ -358,21 +371,21 @@ func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) 
 	}
 }
 
-func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) string {
+func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) (string, error) {
 	nodejsClient := http.Client{
 		Timeout: 10 * time.Second,
 	}
 	body, err := json.Marshal(payoutCrypto)
 	if err != nil {
 		log.Printf("Couldn't decode JSON %v", err)
-		return ""
+		return "", err
 	}
 
 	fmt.Println("sending request to: " + opts.PayoutNodejsUrl + "/payout/" + currency)
 	r, err := nodejsClient.Post(opts.PayoutNodejsUrl+"/payout/"+currency, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Couldn't POST request to the NodeJs %v", err)
-		return ""
+		return "", err
 	}
 	defer r.Body.Close()
 
@@ -380,11 +393,7 @@ func payoutNodejsRequest(payoutCrypto []PayoutCrypto, currency string) string {
 	err = json.NewDecoder(r.Body).Decode(&resp)
 	if err != nil {
 		log.Printf("Couldnt  %v", err)
-		return ""
+		return "", err
 	}
-	if resp.TxHash == "" {
-		log.Printf("tx hash is empty contract call failed %v", err)
-		return ""
-	}
-	return resp.TxHash
+	return resp.TxHash, nil
 }
