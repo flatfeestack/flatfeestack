@@ -1291,7 +1291,7 @@ func insertPayoutRequest(p *PayoutRequest) error {
 func insertPayoutResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
-				INSERT INTO payout_response(id, tx_hash, batch_id, error, created_at) 
+				INSERT INTO payout_response(id, batch_id, tx_hash, error, created_at) 
 				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
@@ -1299,7 +1299,7 @@ func insertPayoutResponse(p *PayoutsResponse) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, p.TxHash, p.BatchId, p.Error, p.CreatedAt)
+	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -1318,15 +1318,15 @@ func insertPayoutResponse(p *PayoutsResponse) error {
 
 func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payout_response_details(payout_response_id, currency, address, balance, created_at) 
-				VALUES($1, $2, $3, $4, $5)`)
+				INSERT INTO payout_response_details(payout_response_id, currency, address, nano_tea, smart_contract_tea, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payout_response_details for %v statement event: %v", pid, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(pid, currency, payout.Address, payout.Balance, timeNow())
+	res, err = stmt.Exec(pid, currency, payout.Address, payout.NanoTea, payout.SmartContractTea.String(), timeNow())
 	if err != nil {
 		return err
 	}
@@ -1353,22 +1353,20 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 func findPayoutInfos() ([]PayoutInfo, error) {
 	var payoutInfos []PayoutInfo
 	s := `	SELECT 
-				dup.currency, 
-				CASE WHEN MAX(tmp.balance) IS NULL THEN 
-						SUM(dup.balance)
-					ELSE
-						SUM(dup.balance) - MAX(tmp.balance)
-					END AS balance
-			FROM daily_user_payout dup
-			LEFT JOIN (	SELECT r.currency, SUM(r.tea) AS balance
-					   	FROM payout_request r
-						JOIN (	SELECT user_id, currency, MAX(created_at) AS latest
-								FROM payout_request 
-								GROUP BY user_id, currency
-				 			 ) AS tmp ON tmp.user_id = r.user_id
-						WHERE tmp.latest = r.created_at AND tmp.currency = r.currency
-						GROUP BY r.currency
-					  ) AS tmp ON tmp.currency = dup.currency
+				dup.currency,
+				CASE WHEN MAX(tmp2.balance) IS NULL THEN 
+					SUM(dup.balance)
+				ELSE
+					SUM(dup.balance) - MAX(tmp2.balance)
+				END AS balance
+			FROM daily_user_payout dup 
+			JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
+			LEFT JOIN ( SELECT tmp.currency , SUM(tmp.balance) AS balance
+						FROM (	SELECT currency, MAX(nano_tea) AS balance 
+								FROM payout_response_details GROUP BY address, currency
+							 ) AS tmp GROUP BY tmp.currency
+					  ) AS tmp2 ON tmp2.currency = dup.currency
+			WHERE wa.is_deleted = false
 			GROUP BY dup.currency`
 	rows, err := db.Query(s)
 	if err != nil {

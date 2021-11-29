@@ -268,9 +268,6 @@ func main() {
 
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
-	// ToDo: only for testing -> remove later
-	router.HandleFunc("/nowpayments/crontester", crontester).Methods(http.MethodGet)
-
 	//dev settings
 	if opts.Env == "local" || opts.Env == "dev" {
 		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods(http.MethodPost)

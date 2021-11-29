@@ -79,14 +79,8 @@ type CryptoCurrency struct {
 	ShortName string `json:"shortName"`
 }
 
-/*type PayoutToServiceCrypto struct {
-	Address string `json:"address"`
-	Tea     int64  `json:"nano_tea"`
-}*/
-
 type PayoutToService struct {
-	Address string `json:"address"`
-	//	Balance      int64     `json:"balance_micro_USD"` TODO: can this be deleted? we have tea now
+	Address      string    `json:"address"`
 	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
 	Tea          int64     `json:"nano_tea"`
 }

@@ -23,6 +23,7 @@ type InvoiceRequest struct {
 	PriceCurrency  string  `json:"price_currency"`
 	PayCurrency    string  `json:"pay_currency"`
 	IpnCallbackUrl string  `json:"ipn_callback_url"`
+	SuccessUrl     string  `json:"success_url"`
 }
 
 type InvoiceResponse struct {
@@ -106,7 +107,7 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	price, _ := paymentInformation.Plan.Price.Float64()
-	invoice := InvoiceRequest{price, priceCurrency, strings.ToUpper(payCurrency), ""}
+	invoice := InvoiceRequest{price, priceCurrency, strings.ToUpper(payCurrency), "", opts.EmailLinkPrefix + "/user/search"}
 	invoiceUrl, err := createNowpaymentsInvoice(invoice, paymentCycleId, paymentInformation.Freq)
 
 	if err != nil {
@@ -253,6 +254,25 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["lang"] = "en"
+
+		defaultMessage := "Your payment was successful, you can start supporting your favorit repositories!"
+		e := prepareEmail(email, other,
+			"template-subject-payment-success_", "Payment successful",
+			"template-plain-payment-success_", defaultMessage,
+			"template-html-payment-success_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "payment-success-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
 	case "EXPIRED":
 		err := updateInvoiceFromWebhook(data)
 		if err != nil {
@@ -426,40 +446,4 @@ func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, e
 	expectedMAC := mac.Sum(nil)
 
 	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature, nil
-}
-
-//Todo: remove only for cron testing
-func crontester(w http.ResponseWriter, r *http.Request) {
-	var data map[string]string
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		return
-	}
-
-	yesterdayStop, _ := time.Parse(time.RFC3339, data["yesterdayStop"])
-	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
-
-	_, err = runDailyUserBalance(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyDaysLeftDailyPayment()
-
-	_, err = runDailyDaysLeftPaymentCycle()
-
-	_, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyUserPayout(yesterdayStart, yesterdayStop, time.Now())
-
-	// _, err = runDailyUserContribution(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
-
-	//_, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, time.Now())
-
-	// _, err = runDailyAnalysisCheck(time.Now(), 5) --> sollte keine änderungen brauchen
-
-	// _, err = runDailyTopupReminderUser()
-
-	// _, err = runDailyMarketing(yesterdayStart) --> currency änderung
 }
