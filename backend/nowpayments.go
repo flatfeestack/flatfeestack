@@ -253,6 +253,25 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		email := user.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["lang"] = "en"
+
+		defaultMessage := "Your payment was successful, you can start supporting your favorit repositories!"
+		e := prepareEmail(email, other,
+			"template-subject-payment-success_", "Payment successful",
+			"template-plain-payment-success_", defaultMessage,
+			"template-html-payment-success_", other["lang"])
+
+		go func() {
+			insertEmailSent(user.Id, "payment-success-"+invoice.PaymentCycleId.String(), timeNow())
+			err = sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}()
 	case "EXPIRED":
 		err := updateInvoiceFromWebhook(data)
 		if err != nil {
