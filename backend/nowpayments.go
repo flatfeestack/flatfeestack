@@ -447,39 +447,3 @@ func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, e
 
 	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature, nil
 }
-
-//Todo: remove only for cron testing
-func crontester(w http.ResponseWriter, r *http.Request) {
-	var data map[string]string
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		return
-	}
-
-	yesterdayStop, _ := time.Parse(time.RFC3339, data["yesterdayStop"])
-	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
-
-	_, err = runDailyUserBalance(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyDaysLeftDailyPayment()
-
-	_, err = runDailyDaysLeftPaymentCycle()
-
-	_, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyUserPayout(yesterdayStart, yesterdayStop, time.Now())
-
-	// _, err = runDailyUserContribution(yesterdayStart, yesterdayStop, time.Now())
-
-	_, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, time.Now())
-
-	//_, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, time.Now())
-
-	// _, err = runDailyAnalysisCheck(time.Now(), 5) --> sollte keine änderungen brauchen
-
-	// _, err = runDailyTopupReminderUser()
-
-	// _, err = runDailyMarketing(yesterdayStart) --> currency änderung
-}
