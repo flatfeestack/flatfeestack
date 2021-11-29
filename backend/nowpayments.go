@@ -23,6 +23,7 @@ type InvoiceRequest struct {
 	PriceCurrency  string  `json:"price_currency"`
 	PayCurrency    string  `json:"pay_currency"`
 	IpnCallbackUrl string  `json:"ipn_callback_url"`
+	SuccessUrl     string  `json:"success_url"`
 }
 
 type InvoiceResponse struct {
@@ -106,7 +107,7 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	price, _ := paymentInformation.Plan.Price.Float64()
-	invoice := InvoiceRequest{price, priceCurrency, strings.ToUpper(payCurrency), ""}
+	invoice := InvoiceRequest{price, priceCurrency, strings.ToUpper(payCurrency), "", opts.EmailLinkPrefix + "/user/search"}
 	invoiceUrl, err := createNowpaymentsInvoice(invoice, paymentCycleId, paymentInformation.Freq)
 
 	if err != nil {
