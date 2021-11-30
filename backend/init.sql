@@ -29,6 +29,44 @@ CREATE TABLE payment_cycle (
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
 
+CREATE TABLE invoice (
+     id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+     nowpayments_invoice_id BIGINT NOT NULL,
+     payment_cycle_id       UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+     payment_id             BIGINT,
+     price_amount           BIGINT NOT NULL,
+     price_currency         VARCHAR(16) NOT NULL,
+     pay_amount             BIGINT,
+     pay_currency           VARCHAR(16) NOT NULL,
+     actually_paid          BIGINT,
+     outcome_amount         BIGINT,
+     outcome_currency       VARCHAR(16),
+     payment_status         VARCHAR(16),
+     freq                   INT NOT NULL,
+     invoice_url            TEXT,
+     created_at             TIMESTAMP NOT NULL,
+     last_update            TIMESTAMP NULL
+);
+
+CREATE TABLE daily_payment (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+  currency          VARCHAR(16) NOT NULL,
+  amount            BIGINT NOT NULL,
+  days_left         INTEGER NOT NULL,
+  last_update       TIMESTAMP NOT NULL
+);
+
+CREATE table wallet_address(
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
+    currency    VARCHAR(16) NOT NULL,
+    address  	VARCHAR(255),
+    is_deleted	BOOLEAN
+);
+
+CREATE UNIQUE INDEX wallet_address_index ON wallet_address(user_id, currency, is_deleted) where is_deleted = false;
+
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
@@ -36,13 +74,15 @@ CREATE TABLE user_balances (
     from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          BIGINT,
     balance_type     VARCHAR(16) NOT NULL,
+    currency         VARCHAR(16) NOT NULL,
     day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE INDEX user_balances_index ON user_balances (
+CREATE UNIQUE INDEX user_balances_index ON user_balances (
     payment_cycle_id,
     user_id,
     balance_type,
+    currency,
     day
 );
 
@@ -119,9 +159,10 @@ CREATE TABLE daily_repo_balance (
     repo_id    UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
     balance    BIGINT NOT NULL,
     day        DATE NOT NULL,
+    currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_repo_balance_index ON daily_repo_balance(repo_id, day);
+CREATE UNIQUE INDEX daily_repo_balance_index ON daily_repo_balance(repo_id, day, currency);
 
 CREATE TABLE daily_repo_weight (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -137,6 +178,7 @@ CREATE TABLE daily_email_payout (
     email      VARCHAR(255) NOT NULL,
     balance    BIGINT NOT NULL,
     day        DATE NOT NULL,
+    currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX daily_email_payout_index ON daily_email_payout(email, day);
@@ -146,18 +188,20 @@ CREATE TABLE daily_user_payout (
     user_id    UUID CONSTRAINT fk_user_id_dup REFERENCES users (id),
     balance    BIGINT NOT NULL,
     day        DATE NOT NULL,
+    currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_user_payout_index ON daily_user_payout(user_id, day);
+CREATE UNIQUE INDEX daily_user_payout_index ON daily_user_payout(user_id, day, currency);
 
 CREATE TABLE daily_future_leftover (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     repo_id    UUID CONSTRAINT fk_repo_id_dfl REFERENCES repo (id),
     balance    BIGINT NOT NULL,
     day        DATE NOT NULL,
+    currency   VARCHAR(16) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day);
+CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day, currency);
 
 CREATE table daily_user_contribution(
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -170,6 +214,7 @@ CREATE table daily_user_contribution(
     balance             BIGINT,
     balance_repo        BIGINT,
     day                 DATE NOT NULL,
+    currency            VARCHAR(16) NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX daily_user_contribution_index ON daily_user_contribution(user_id, repo_id, contributor_email, day);
@@ -195,6 +240,73 @@ CREATE TABLE payouts_response_details (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payouts_response_id UUID CONSTRAINT fk_payouts_response_id_pres REFERENCES payouts_response (id),
     address             VARCHAR(42),
-    balance_wei         NUMERIC NOT NULL,
+    balance             NUMERIC NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );
+
+-- Migration from payouts_request to payout_request needs to be done for USD pay in -> eth payout
+CREATE TABLE payout_request (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id             UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
+    batch_id            UUID NOT NULL,
+    currency            VARCHAR(16) NOT NULL,
+    exchange_rate       NUMERIC,
+    tea                 BIGINT NOT NULL,
+    address             TEXT NOT NULL,
+    created_at          TIMESTAMP NOT NULL
+);
+CREATE INDEX payout_index ON payouts_request(batch_id);
+
+CREATE TABLE payout_response (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id   UUID UNIQUE NOT NULL,
+    tx_hash    VARCHAR(66) NOT NULL,
+    error      TEXT,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE payout_response_details (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payout_response_id  UUID CONSTRAINT fk_payout_response_id_pres REFERENCES payout_response (id),
+    currency            VARCHAR(16) NOT NULL,
+    nano_tea            BIGINT NOT NULL,
+    smart_contract_tea  NUMERIC NOT NULL,
+    address             VARCHAR(42),
+    created_at          TIMESTAMP NOT NULL
+);
+
+-- Functions
+CREATE OR REPLACE FUNCTION updateDailyUserBalance(yesterdayStart DATE, yesterdayEnd TIMESTAMP with time zone, now TIMESTAMP with time zone) RETURNS SETOF record AS
+$$
+DECLARE
+r record;
+	_id uuid;
+BEGIN
+FOR r IN
+SELECT
+    u.payment_cycle_id,
+    u.id as user_id,
+    -dp.amount as balance,
+    'DAY' as balance_type,
+    dp.currency,
+    yesterdayStart as day,
+	now as created_at$
+FROM daily_payment dp
+    INNER JOIN users u ON u.payment_cycle_id = dp.payment_cycle_id
+    INNER JOIN sponsor_event s ON s.user_id = u.id
+    INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
+WHERE pc.days_left > 0
+  AND u.role = 'USR'
+  AND (EXTRACT(epoch from age(LEAST(yesterdayEnd, s.unsponsor_at), GREATEST(yesterdayStart, s.sponsor_at)))/3600)::bigInt >= 24
+ORDER BY u.id, dp.days_left asc
+    LOOP
+    if _id = r.payment_cycle_id then
+    continue;
+end if;
+_id = r.payment_cycle_id;
+    RETURN NEXT r;
+END LOOP;
+    RETURN;
+END;
+$$
+LANGUAGE plpgsql;

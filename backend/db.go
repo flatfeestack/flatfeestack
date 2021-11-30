@@ -54,28 +54,48 @@ type Repo struct {
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
-type UserAggBalance struct {
+/*type UserAggBalance struct {
 	UserId             uuid.UUID   `json:"userId"`
 	PayoutEth          string      `json:"payout_eth"`
 	Balance            int64       `json:"balance"`
 	Emails             []string    `json:"email_list"`
 	DailyUserPayoutIds []uuid.UUID `json:"daily_user_payout_id_list"`
 	CreatedAt          time.Time
-}
+}*/
 
-type PayoutsRequest struct {
+/*type PayoutsRequest struct {
 	DailyUserPayoutId uuid.UUID `json:"daily-repo-balance-id"`
 	BatchId           uuid.UUID `json:"batch-id"`
 	ExchangeRate      big.Float
 	CreatedAt         time.Time
+}*/
+
+// PayoutRequest New for Crypto, USD pay in should be migrated
+type PayoutRequest struct {
+	UserId       uuid.UUID
+	BatchId      uuid.UUID
+	Currency     string
+	ExchangeRate big.Float
+	Tea          int64
+	Address      string
+	CreatedAt    time.Time
 }
 
-type PayoutsResponse struct {
+/*type PayoutsResponse struct {
 	BatchId    uuid.UUID
 	TxHash     string
 	Error      *string
 	CreatedAt  time.Time
 	PayoutWeis []PayoutWei
+}*/
+
+// PayoutsResponseDB New for Crypto, USD pay in should be migrated
+type PayoutsResponse struct {
+	BatchId   uuid.UUID
+	TxHash    string
+	Error     *string
+	CreatedAt time.Time
+	Payouts   PayoutResponse
 }
 
 type GitEmail struct {
@@ -95,6 +115,7 @@ type UserBalance struct {
 	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
 	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
+	Currency       string     `json:"currency"`
 	CreatedAt      time.Time  `json:"createdAt"`
 }
 
@@ -124,6 +145,28 @@ type Contribution struct {
 	Day               time.Time `json:"day"`
 }
 
+type Wallet struct {
+	Id       uuid.UUID `json:"id"`
+	Currency string    `json:"currency"`
+	Address  string    `json:"address"`
+}
+
+type DailyPayment struct {
+	PaymentCycleId uuid.UUID
+	Currency       string
+	Amount         int64
+	DaysLeft       int
+	LastUpdate     time.Time
+}
+
+type PayoutInfo struct {
+	Currency string `json:"currency"`
+	Amount   int64  `json:"amount"`
+}
+
+//*********************************************************************************
+//********************************** User *****************************************
+//*********************************************************************************
 func findAllUsers() ([]User, error) {
 	users := []User{}
 	s := `SELECT email from users`
@@ -300,6 +343,59 @@ func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(invitedEmail, userId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+//*********************************************************************************
+//********************************* Wallet ****************************************
+//*********************************************************************************
+func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
+	var userWallets []Wallet
+	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
+	rows, err := db.Query(s, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var userWallet Wallet
+		err = rows.Scan(&userWallet.Id, &userWallet.Currency, &userWallet.Address)
+		if err != nil {
+			return nil, err
+		}
+		userWallets = append(userWallets, userWallet)
+	}
+	return userWallets, nil
+}
+
+func insertWallet(uid uuid.UUID, currency string, address string, isDeleted bool) (*uuid.UUID, error) {
+	stmt, err := db.Prepare("INSERT INTO wallet_address(user_id, currency, address, is_deleted) VALUES($1, $2, $3, $4) RETURNING id")
+	if err != nil {
+		return nil, fmt.Errorf("prepare INSERT INTO wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(uid, currency, address, isDeleted).Scan(&lastInsertId)
+	if err != nil {
+		return nil, err
+	}
+	return &lastInsertId, nil
+}
+
+func deleteWallet(id uuid.UUID) error {
+	stmt, err := db.Prepare("UPDATE wallet_address set is_deleted = true WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE wallet_address for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(id)
 	if err != nil {
 		return err
 	}
@@ -709,15 +805,16 @@ func insertUserBalance(ub UserBalance) error {
                                             from_user_id,
                                             balance, 
                                             balance_type, 
+                          					currency,
                                             created_at) 
-                                    VALUES($1, $2, $3, $4, $5, $6)`)
+                                    VALUES($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, ub.Balance, ub.BalanceType, ub.Currency, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -747,6 +844,196 @@ func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, cre
 	return &lastInsertId, handleErrMustInsertOne(res)
 }
 
+func insertNewInvoice(invoiceDb InvoiceDB) error {
+	stmt, err := db.Prepare(`INSERT INTO invoice (nowpayments_invoice_id, 
+					 payment_cycle_id, 
+					 price_amount, 
+					 price_currency, 
+					 pay_currency, 
+					 created_at,
+                     last_update,
+                     payment_status,
+                     freq, invoice_url) 
+					 values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`)
+
+	if err != nil {
+		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
+	}
+	defer closeAndLog(stmt)
+
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
+		invoiceDb.PaymentCycleId,
+		invoiceDb.PriceAmount,
+		invoiceDb.PriceCurrency, invoiceDb.PayCurrency,
+		invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus,
+		invoiceDb.Freq, invoiceDb.InvoiceUrl.String).Scan(&lastInsertId)
+	if err != nil {
+		return err
+	}
+	return nil
+
+	var res sql.Result
+	res, err = stmt.Exec("uid", " createdAt") //wieso braucht es hier noch das Exec??
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateInvoice(invoice InvoiceDB) error {
+	stmt, err := db.Prepare(`UPDATE invoice SET 
+                                           payment_cycle_id = $1, 
+								payment_id = $2,            
+								price_amount = $3,          
+								price_currency = $4,        
+								pay_amount = $5,            
+								pay_currency = $6,          
+								actually_paid = $7,         
+								outcome_amount = $8,        
+								outcome_currency = $9,      
+								payment_status = $10,        
+								created_at = $11,            
+								last_update = $12,
+                   				invoice_url = $13
+                                    WHERE nowpayments_invoice_id=$14`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(
+		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, invoice.PriceCurrency,
+		invoice.PayAmount.Int64, invoice.PayCurrency, invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, invoice.OutcomeCurrency.String, invoice.PaymentStatus,
+		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func getInvoice(id int64) (*InvoiceDB, error) {
+	var invoice InvoiceDB
+	err := db.
+		QueryRow(`SELECT  nowpayments_invoice_id,
+								payment_cycle_id, 
+								payment_id,            
+								price_amount,          
+								price_currency,        
+								pay_amount,            
+								pay_currency,          
+								actually_paid,         
+								outcome_amount,        
+								outcome_currency,      
+								payment_status,
+       							freq,
+								created_at,            
+								last_update                FROM invoice WHERE nowpayments_invoice_id=$1`, id).
+		Scan(&invoice.NowpaymentsInvoiceId, &invoice.PaymentCycleId, &invoice.PaymentId, &invoice.PriceAmount, &invoice.PriceCurrency,
+			&invoice.PayAmount, &invoice.PayCurrency, &invoice.ActuallyPaid, &invoice.OutcomeAmount, &invoice.OutcomeCurrency, &invoice.PaymentStatus,
+			&invoice.Freq, &invoice.CreatedAt, &invoice.LastUpdate)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &invoice, nil
+	default:
+		return nil, err
+	}
+
+}
+
+func findUserIdByInvoice(id int64) (uuid.UUID, error) {
+	var userId uuid.UUID
+
+	err := db.
+		QueryRow(`SELECT payment_cycle.user_id FROM invoice 
+    join payment_cycle on invoice.payment_cycle_id = payment_cycle.id where invoice.nowpayments_invoice_id = $1`, id).Scan(&userId)
+
+	switch err {
+	case sql.ErrNoRows:
+		return uuid.UUID{}, nil
+	case nil:
+		return userId, nil
+	default:
+		return uuid.UUID{}, err
+	}
+}
+
+func insertDailyPayment(dailyPayment DailyPayment) error {
+	stmt, err := db.Prepare(`
+					INSERT INTO daily_payment (payment_cycle_id, currency, amount, days_left, last_update) 
+					values($1, $2, $3, $4, $5)`)
+
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO daily_payment statement event: %v", err)
+	}
+
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateDailyPayment(dailyPayment DailyPayment) error {
+	stmt, err := db.Prepare(`UPDATE daily_payment SET amount = $1, days_left = $2, last_update = $3 WHERE payment_cycle_id=$4 AND currency = $5`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE payment_cycle for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(dailyPayment.Amount, dailyPayment.DaysLeft, dailyPayment.LastUpdate, dailyPayment.PaymentCycleId, dailyPayment.Currency)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findDaysLeftForCurrency(paymentCycleId uuid.UUID, currency string) (int, error) {
+	var daysLeft int
+	err := db.
+		QueryRow(`select days_left from daily_payment where payment_cycle_id = $1 and currency = $2 order by last_update desc limit 1`, paymentCycleId, currency).
+		Scan(&daysLeft)
+	if err != nil {
+		return 0, err
+	}
+
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return daysLeft, nil
+	default:
+		return 0, err
+	}
+}
+
+func findDailyPaymentByPaymentCycleId(paymentCycleId uuid.UUID) ([]DailyPayment, error) {
+	s := `select distinct payment_cycle_id, currency, amount, days_left, last_update from daily_payment where payment_cycle_id = $1`
+	rows, err := db.Query(s, paymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var dailyPayments []DailyPayment
+	for rows.Next() {
+		var dailyPayment DailyPayment
+		err = rows.Scan(&dailyPayment.PaymentCycleId, &dailyPayment.Currency, &dailyPayment.Amount, &dailyPayment.DaysLeft, &dailyPayment.LastUpdate)
+		if err != nil {
+			return nil, err
+		}
+		dailyPayments = append(dailyPayments, dailyPayment)
+	}
+	return dailyPayments, nil
+}
+
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET freq = $1 WHERE id=$2`)
 	if err != nil {
@@ -762,13 +1049,54 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func findSumUserBalance(userId uuid.UUID, paymentCycleId uuid.UUID) (int64, error) {
+func updatePaymentCycleDaysLeft(paymentCycleId uuid.UUID, daysLeft int64) error {
+	stmt, err := db.Prepare(`UPDATE payment_cycle SET days_left = $1 WHERE id=$2`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement event: %v", daysLeft, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(daysLeft, paymentCycleId)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func findSumUserBalances(userId uuid.UUID, paymentCycleId uuid.UUID) ([]UserBalance, error) {
+	s := `SELECT currency, COALESCE(sum(balance), 0)
+          FROM user_balances 
+          WHERE user_id = $1 AND payment_cycle_id = $2
+          GROUP BY currency`
+
+	rows, err := db.Query(s, userId, paymentCycleId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer closeAndLog(rows)
+
+	var userBalances []UserBalance
+	for rows.Next() {
+		var userBalance UserBalance
+		err = rows.Scan(&userBalance.Currency, &userBalance.Balance)
+		if err != nil {
+			return nil, err
+		}
+		userBalances = append(userBalances, userBalance)
+	}
+	return userBalances, nil
+}
+
+func findSumUserBalanceByCurrency(userId uuid.UUID, paymentCycleId uuid.UUID, currency string) (int64, error) {
 	var sum int64
 	var err error
 	err = db.
 		QueryRow(`SELECT COALESCE(sum(balance), 0)
                              FROM user_balances 
-                             WHERE user_id = $1 AND payment_cycle_id = $2`, userId, paymentCycleId).
+                             WHERE user_id = $1 AND payment_cycle_id = $2 AND currency = $3`, userId, paymentCycleId, currency).
 		Scan(&sum)
 	switch err {
 	case sql.ErrNoRows:
@@ -800,9 +1128,9 @@ func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
 	return userBalances, nil
 }
 
-func findUserBalancesAndType(userId uuid.UUID, balanceType string) ([]UserBalance, error) {
-	s := `SELECT payment_cycle_id, user_id, balance, balance_type, created_at FROM user_balances WHERE user_id = $1 and balance_type = $2`
-	rows, err := db.Query(s, userId, balanceType)
+func findUserBalancesAndType(paymentCycleId uuid.UUID, balanceType string, currency string) ([]UserBalance, error) {
+	s := `SELECT payment_cycle_id, user_id, balance, balance_type, created_at FROM user_balances WHERE payment_cycle_id = $1 and balance_type = $2 and currency = $3`
+	rows, err := db.Query(s, paymentCycleId, balanceType, currency)
 	if err != nil {
 		return nil, err
 	}
@@ -843,11 +1171,31 @@ func findSponsoredUserBalances(userId uuid.UUID) ([]UserStatus, error) {
 	return userStatus, nil
 }
 
+func findAllCurrenciesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error) {
+	s := `select distinct currency from user_balances where payment_cycle_id = $1`
+	rows, err := db.Query(s, paymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	var currencies []string
+	for rows.Next() {
+		var currency string
+		err = rows.Scan(&currency)
+		if err != nil {
+			return nil, err
+		}
+		currencies = append(currencies, currency)
+	}
+	return currencies, nil
+}
+
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
-		QueryRow(`SELECT id, seats, freq, days_left FROM payment_cycle WHERE id=$1`, pcid).
-		Scan(&pc.Id, &pc.Seats, &pc.Freq, &pc.DaysLeft)
+		QueryRow(`SELECT id, seats, freq FROM payment_cycle WHERE id=$1`, pcid).
+		Scan(&pc.Id, &pc.Seats, &pc.Freq)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -861,9 +1209,9 @@ func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 //*********************************************************************************
 //******************************* Payouts *****************************************
 //*********************************************************************************
-func insertPayoutsRequest(p *PayoutsRequest) error {
+/*func insertPayoutsRequest(p *PayoutsRequest) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at) 
+				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at)
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.DailyUserPayoutId, err)
@@ -881,7 +1229,7 @@ func insertPayoutsRequest(p *PayoutsRequest) error {
 func insertPayoutsResponse(p *PayoutsResponse) error {
 	pid := uuid.New()
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at) 
+				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at)
 				VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
@@ -908,7 +1256,7 @@ func insertPayoutsResponse(p *PayoutsResponse) error {
 
 func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at) 
+				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at)
 				VALUES($1, $2, $3, $4)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
@@ -917,6 +1265,68 @@ func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}*/
+
+func insertPayoutRequest(p *PayoutRequest) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_request(user_id, batch_id, currency, exchange_rate, tea, address, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6, $7)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.UserId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func insertPayoutResponse(p *PayoutsResponse) error {
+	pid := uuid.New()
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response(id, batch_id, tx_hash, error, created_at) 
+				VALUES($1, $2, $3, $4, $5)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	err = handleErrMustInsertOne(res)
+	if err != nil {
+		return err
+	}
+	for _, v := range p.Payouts.Payout {
+		err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO payout_response_details(payout_response_id, currency, address, nano_tea, smart_contract_tea, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO payout_response_details for %v statement event: %v", pid, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(pid, currency, payout.Address, payout.NanoTea, payout.SmartContractTea.String(), timeNow())
 	if err != nil {
 		return err
 	}
@@ -940,26 +1350,39 @@ func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore,
 	}
 }
 
-func getDailyUserPayouts(day time.Time) ([]UserBalanceCore, error) {
-	//day -2 month
-	day = timeDay(-60, day)
-	q := `SELECT user_id, balance from daily_user_payout where day=$1`
-	rows, err := db.Query(q, day)
+func findPayoutInfos() ([]PayoutInfo, error) {
+	var payoutInfos []PayoutInfo
+	s := `	SELECT 
+				dup.currency,
+				CASE WHEN MAX(tmp2.balance) IS NULL THEN 
+					SUM(dup.balance)
+				ELSE
+					SUM(dup.balance) - MAX(tmp2.balance)
+				END AS balance
+			FROM daily_user_payout dup 
+			JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
+			LEFT JOIN ( SELECT tmp.currency , SUM(tmp.balance) AS balance
+						FROM (	SELECT currency, MAX(nano_tea) AS balance 
+								FROM payout_response_details GROUP BY address, currency
+							 ) AS tmp GROUP BY tmp.currency
+					  ) AS tmp2 ON tmp2.currency = dup.currency
+			WHERE wa.is_deleted = false
+			GROUP BY dup.currency`
+	rows, err := db.Query(s)
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
 
-	var userBalances []UserBalanceCore
 	for rows.Next() {
-		var userBalance UserBalanceCore
-		err = rows.Scan(&userBalance.UserId, &userBalance.Balance)
+		var payoutInfo PayoutInfo
+		err = rows.Scan(&payoutInfo.Currency, &payoutInfo.Amount)
 		if err != nil {
 			return nil, err
 		}
-		userBalances = append(userBalances, userBalance)
+		payoutInfos = append(payoutInfos, payoutInfo)
 	}
-	return userBalances, nil
+	return payoutInfos, nil
 }
 
 func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {

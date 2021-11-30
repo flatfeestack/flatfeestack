@@ -32,8 +32,8 @@ const (
 )
 
 const (
-	mUSDPerHour = 13750 //1.375 cents - x 10'000
-	mUSDPerDay  = mUSDPerHour * 24
+	cryptoFactor = 1_000_000_000
+	usdFactor    = 1_000_000
 )
 
 var (
@@ -50,26 +50,30 @@ var (
 )
 
 type Opts struct {
-	Port                   int
-	HS256                  string
-	Env                    string
-	StripeAPISecretKey     string
-	StripeAPIPublicKey     string
-	StripeWebhookSecretKey string
-	DBPath                 string
-	DBDriver               string
-	AnalysisUrl            string
-	PayoutUrl              string
-	Admins                 string
-	EmailLinkPrefix        string
-	EmailFrom              string
-	EmailFromName          string
-	EmailUrl               string
-	EmailToken             string
-	WebSocketBaseUrl       string
-	RestTimeout            int
-	LogPath                string
-	ContractAddr           string
+	Port                      int
+	HS256                     string
+	Env                       string
+	StripeAPISecretKey        string
+	StripeAPIPublicKey        string
+	StripeWebhookSecretKey    string
+	DBPath                    string
+	DBDriver                  string
+	AnalysisUrl               string
+	PayoutUrl                 string
+	Admins                    string
+	EmailLinkPrefix           string
+	EmailFrom                 string
+	EmailFromName             string
+	EmailUrl                  string
+	EmailToken                string
+	WebSocketBaseUrl          string
+	RestTimeout               int
+	LogPath                   string
+	ContractAddr              string
+	NowpaymentsToken          string
+	NowpaymentsIpnKey         string
+	NowpaymentsApiUrl         string
+	NowpaymentsIpnCallbackUrl string
 }
 
 type TokenClaims struct {
@@ -121,6 +125,10 @@ func NewOpts() *Opts {
 		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
+	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
+	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
+	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL"), "NOWPayments API URL")
+	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -145,7 +153,7 @@ func NewOpts() *Opts {
 	}
 
 	if o.StripeWebhookSecretKey == "" {
-		o.StripeWebhookSecretKey = "whsec_9HJx5EoyhE1K3UFBnTxpOSr0lscZMHJL"
+		o.StripeWebhookSecretKey = "whsec_BlO0hcHIJb82nUM9v8fpq0WP55FxKF2U"
 	}
 
 	pathFormat := filepath.Join(o.LogPath, "backend_2006-01-02.txt")
@@ -225,6 +233,7 @@ func main() {
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
@@ -236,6 +245,10 @@ func main() {
 	router.HandleFunc("/users/contributions-summary/{uuid}", contributionsSum2).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", userSummary2).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payout-pending", jwtAuthUser(pendingDailyUserPayouts)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/wallets", jwtAuthUser(getUserWallets)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/wallets", jwtAuthUser(addUserWallet)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(deleteUserWallet)).Methods(http.MethodDelete)
+
 	//
 	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
 	//repo github
@@ -246,9 +259,10 @@ func main() {
 	//payment
 
 	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
-	router.HandleFunc("/admin/pending-payout/{type}", jwtAuthAdmin(getPayouts, admins)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(payout, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/payout", jwtAuthAdmin(getPayoutInfos, admins)).Methods(http.MethodGet)
+	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(monthlyPayout, admins)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/users", jwtAuthAdmin(users, admins)).Methods(http.MethodPost)
 

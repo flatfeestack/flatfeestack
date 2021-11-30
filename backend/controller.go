@@ -5,11 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
-	"fmt"
 	"github.com/alecthomas/template"
+	_ "github.com/aristanetworks/goarista/key"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
+	_ "golang.org/x/net/dns/dnsmessage"
 	"golang.org/x/text/language"
 	"log"
 	"math/big"
@@ -73,7 +74,24 @@ type Plan struct {
 	FeePrm      int       `json:"feePrm"`
 }
 
+type CryptoCurrency struct {
+	Name      string `json:"name"`
+	ShortName string `json:"shortName"`
+}
+
+type PayoutToService struct {
+	Address      string    `json:"address"`
+	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
+	Tea          int64     `json:"nano_tea"`
+}
+
 var plans = []Plan{}
+
+var supportedCurrencies = []CryptoCurrency{
+	{Name: "Ethereum", ShortName: "ETH"},
+	{Name: "Neo", ShortName: "NEO"},
+	{Name: "Tezos", ShortName: "XTZ"},
+}
 
 func init() {
 	py := new(big.Float)
@@ -351,6 +369,56 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 	writeJson(w, repos)
 }
 
+func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
+	userWallets, err := findWalletsByUserId(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJson(w, userWallets)
+}
+
+func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
+	var data Wallet
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	lastInserted, err := insertWallet(user.Id, data.Currency, data.Address, false)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	data.Id = *lastInserted
+	writeJson(w, data)
+}
+
+func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
+	p := mux.Vars(r)
+	f := p["uuid"]
+	id, _ := uuid.Parse(f)
+
+	wallets, err := findWalletsByUserId(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, v := range wallets {
+		if v.Id == id {
+			err = deleteWallet(id)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, err.Error())
+			}
+			return
+		}
+	}
+
+	writeErr(w, http.StatusForbidden, "Action not allowed")
+}
+
 /*
  *	==== Repo ====
  */
@@ -462,6 +530,7 @@ func unTagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 	tagRepo0(w, user, repoId, Inactive)
 }
+
 func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
 	now := timeNow()
 	event := SponsorEvent{
@@ -533,145 +602,6 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func getPayouts(w http.ResponseWriter, r *http.Request, email string) {
-	m := mux.Vars(r)
-	h := m["type"]
-	if h == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
-		return
-	}
-
-	userAggBalances, err := getDailyPayouts(h)
-
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(userAggBalances)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-}
-
-type PayoutToService struct {
-	Address      string    `json:"address"`
-	Balance      int64     `json:"balance_micro_USD"`
-	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
-}
-
-func payout(w http.ResponseWriter, r *http.Request, email string) {
-	log.Printf("papout")
-	userAggBalances, err := getDailyPayouts("pending")
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
-
-	m := mux.Vars(r)
-	h := m["exchangeRate"]
-	if h == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
-		return
-	}
-	e, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
-		return
-	}
-
-	var pts []PayoutToService
-	batchId := uuid.New()
-	for _, ub := range userAggBalances {
-		//TODO: do one SQL insert instead of many small ones
-
-		//only transfer if amount is larger than 25$
-		if ub.Balance < 25*1000000 {
-			continue
-		}
-		u2, err := findUserById(ub.UserId)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "find user: %v", err)
-			return
-		}
-		u3 := UserBalance{
-			PaymentCycleId: u2.PaymentCycleId,
-			FromUserId:     nil,
-			BalanceType:    "INCOME_REQUEST",
-			CreatedAt:      timeNow(),
-			UserId:         ub.UserId,
-			Balance:        ub.Balance,
-		}
-		err = insertUserBalance(u3)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "user balance: %v", err)
-			return
-		}
-
-		for _, mid := range ub.DailyUserPayoutIds {
-			p := PayoutsRequest{
-				DailyUserPayoutId: mid,
-				BatchId:           batchId,
-				ExchangeRate:      *e,
-				CreatedAt:         timeNow(),
-			}
-			err = insertPayoutsRequest(&p)
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "Could not send payout0: %v", err)
-				return
-			}
-		}
-
-		pt := PayoutToService{
-			Address:      ub.PayoutEth,
-			Balance:      ub.Balance,
-			ExchangeRate: *e,
-		}
-		pts = append(pts, pt)
-
-		if len(pts) >= 50 {
-			err = payout0(pts, batchId)
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "Could not send payout1: %v", err)
-				return
-			}
-
-			//clear vars
-			batchId = uuid.New()
-			pts = []PayoutToService{}
-		}
-	}
-	if pts != nil {
-		//save remaining batch
-		err = payout0(pts, batchId)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could not send payout2: %v", err)
-			return
-		}
-	}
-}
-
-func payout0(pts []PayoutToService, batchId uuid.UUID) error {
-	res, err := payoutRequest(pts)
-	if err != nil {
-		err1 := err.Error()
-		err2 := insertPayoutsResponse(&PayoutsResponse{
-			BatchId:   batchId,
-			Error:     &err1,
-			CreatedAt: timeNow(),
-		})
-		return fmt.Errorf("error %v/%v", err, err2)
-	}
-	return insertPayoutsResponse(&PayoutsResponse{
-		BatchId:    batchId,
-		Error:      nil,
-		CreatedAt:  timeNow(),
-		PayoutWeis: res.PayoutWeis,
-	})
-}
-
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()
 	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`"}`)
@@ -688,6 +618,7 @@ func users(w http.ResponseWriter, r *http.Request, email string) {
 
 func config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(plans)
+	supportedCurrencies, err := json.Marshal(supportedCurrencies)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
@@ -699,7 +630,9 @@ func config(w http.ResponseWriter, _ *http.Request) {
 			"restTimeout":"`+strconv.Itoa(opts.RestTimeout)+`",
             "plans": `+string(b)+`,
 			"env":"`+opts.Env+`",
-			"contractAddr":"`+opts.ContractAddr+`"}`)
+			"contractAddr":"`+opts.ContractAddr+`",
+			"supportedCurrencies":`+string(supportedCurrencies)+`
+			}`)
 }
 
 func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
