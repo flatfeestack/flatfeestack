@@ -5,7 +5,7 @@ all: dep build test
 dep:
 	go mod download
 build:
-	go build -ldflags "-linkmode external -extldflags -static"
+	CGO_ENABLED=0 go build
 test:
 	go test
 clean:
