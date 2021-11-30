@@ -23,7 +23,7 @@ host_ip() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-nf] [-sb] [-db] [-rm]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-npn] [-nf] [-sb] [-db] [-rm]
 
 Build and run flatfeestack.
 
@@ -34,6 +34,7 @@ Available options:
 -ne, --no-engine    Don't start analysis-engine
 -nb, --no-backend   Don't start backend
 -np, --no-payout    Don't start payout
+-npn, --no-payout-nodejs    Don't start payout-nodejs
 -nf, --no-frontend  Dont' start frontend
 -sb, --skip-build   Don't run docker-compose build (if your machine is slow)
 -db, --db-only      Run the DB instance only, this ignores all the other options
@@ -65,7 +66,7 @@ parse_params() {
   # default values of variables set from params
   hosts=''
   include_build=true
-  services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
+  services='db reverse-proxy openethereum flextesa auth analysis-engine backend payout payout-nodejs frontend'
 
   while :; do
     case "${1-}" in
@@ -74,7 +75,8 @@ parse_params() {
     -na | --no-auth) hosts="${hosts} auth"; services="${services//auth/}";;
     -ne | --no-engine) hosts="${hosts} analysis-engine"; services="${services//analysis-engine/}";;
     -nb | --no-backend) hosts="${hosts} backend"; services="${services//backend/}";;
-    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout/}";;
+    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout /}";;
+    -npn | --no-payout-nodejs) hosts="${hosts} payout-nodejs"; services="${services//payout-nodejs/}";;
     -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
     -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored

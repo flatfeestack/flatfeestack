@@ -47,8 +47,22 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       - openethereum
+      - payout-nodejs
     env_file:
       - payout/.env
+
+  payout-nodejs:
+    container_name: flatfeestack-payout-nodejs
+    image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
+    build: ./payout-nodejs
+    ports:
+      - 9086:9086
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    env_file:
+      payout-nodejs/.env
+    depends_on:
+      - flextesa
 
   frontend:
     container_name: flatfeestack-frontend
@@ -92,3 +106,14 @@ services:
     volumes:
       - ./.chain:/tmp/chain
     command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+  # https://assets.tqtezos.com/docs/setup/2-sandbox/
+  flextesa:
+    container_name: flatfeestack-flextesa
+    image: tqtezos/flextesa:20210602
+    environment:
+      - block_time=15
+    ports:
+      - 20000:20000
+    command: flobox start
+
+
