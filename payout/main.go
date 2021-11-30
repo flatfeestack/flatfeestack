@@ -100,10 +100,10 @@ func NewOpts() *Opts {
 	flag.StringVar(&eth.Contract, "eth-contract", lookupEnv("ETH_CONTRACT",
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Ethereum contract address")
 	flag.StringVar(&eth.Url, "eth-url", lookupEnv("ETH_URL",
-		"http://172.17.0.1:8545"), "Ethereum URL")
+		"http://openethereum:8545"), "Ethereum URL")
 	flag.BoolVar(&eth.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "true", "Set to true to deploy ETH contract")
 	flag.StringVar(&neo.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY",
-		"4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7"), "NEO private key")
+		"L3WX5hiSstmFZBbr5Yyyvce1DoBZcQDgKn4xLeTdJHxsx7XcF3mp"), "NEO private key")
 	flag.StringVar(&neo.Contract, "neo-contract", lookupEnv("NEO_CONTRACT",
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "NEO contract address")
 	flag.StringVar(&neo.Url, "neo-url", lookupEnv("NEO_URL",
@@ -178,23 +178,23 @@ func main() {
 	var eth = opts.Blockchains["eth"]
 	ethClient, err = getEthClient(eth.Url, eth.PrivateKey, eth.Deploy, eth.Contract)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not initialize ETH network", err)
 	}
 
 	var neo = opts.Blockchains["neo"]
 	neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
 	if err != nil {
-		log.Fatalf("Could not create a new NEO client")
+		log.Fatalf("Could not create a new NEO client", err)
 	}
 
 	err = neoClient.Init()
 	if err != nil {
-		log.Fatalf("Could not initialize network.")
+		log.Fatalf("Could not initialize NEO network", err)
 	}
 
 	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
 	if err != nil {
-		log.Fatalf("Could not transform private key %v", err)
+		log.Fatalf("Could not transform NEO private key %v", err)
 	}
 	// signatureBytes := signature_provider.NewSignatureNeo(dev, tea, contractOwnerPrivateKey)
 
