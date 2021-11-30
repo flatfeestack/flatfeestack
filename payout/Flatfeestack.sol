@@ -1,80 +1,112 @@
-pragma solidity ~0.8.4;
+pragma solidity ^0.8.4;
 
-contract Flatfeestack {
-    mapping(address => Balance) private balances;
-    address private owner;
+contract PayoutEth {
 
-    event PaymentReleased(address to, uint192 amount, uint64 time);
+    /**
+    * @dev Maps each address to its current total earned amount (tea).
+    */
+    mapping(address => uint256) public teaMap;
 
-    struct Balance {
-        uint192 balanceWei;
-        uint64 time;
-    }
+    /**
+    * @dev The contract owner
+    */
+    address public owner;
 
     constructor () {
         owner = msg.sender;
     }
 
-    /**
-     * @dev Fill contract with array of balances. This needs to be optimized to cost as less gas as possible
-     * Currently, for the input, it costs 104684 gas
-     *  - ["0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2","0xDA0bab807633f07f013f94DD0E6A4F96F8742B53","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99"], [1234,1235,1236] wei: 3705
-     * calling hash: 158c29c7
-     * @param addresses, balancesWei payouts to update
-     */
-    function fill(address[] memory addresses, uint192[] memory balancesWei) public payable {
-        require(msg.sender == owner, "Only the owner can add new payouts");
-        require(addresses.length == balancesWei.length, "Addresses and balances array must have the same length");
-
-        uint256 sumWei;
-        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
-            balances[addresses[i]].balanceWei += balancesWei[i];
-            if(balances[addresses[i]].time == 0) {
-                balances[addresses[i]].time = uint64(block.timestamp);
-            }
-            //impossible to overflow, no SafeMath here
-            sumWei += uint256(balancesWei[i]);
-        }
-        if(sumWei != msg.value) {
-            revert("Sum of balances is higher than paid amount");
-        }
+    receive() external payable {
     }
 
     /**
-    * @dev Triggers a transfer of the assigned funds.
-    * total shares and their previous withdrawals.
+    * @dev Changes the owner of this contract.
     */
-    function release() public payable {
-        require(balances[msg.sender].balanceWei > 0, "PaymentSplitter: account has no balance");
-
-        uint192 balanceWei = balances[msg.sender].balanceWei;
-        uint64 time = balances[msg.sender].time;
-        balances[msg.sender].balanceWei = 0;
-        balances[msg.sender].time = 0;
-
-        payable(msg.sender).transfer(balanceWei);
-        emit PaymentReleased(msg.sender, balanceWei, time);
+    function changeOwner(address newOwner) public onlyOwner() {
+        owner = newOwner;
     }
 
     /**
-     * @dev Return balance
-     * @return balance and the time it was first added
-     */
-    function balanceOf(address addr) public view returns (uint192) {
-        return balances[addr].balanceWei;
+    * @dev Gets the tea for the provided address.
+    */
+    function getTea(address _dev) public view returns (uint256) {
+        return teaMap[_dev];
     }
 
-    function timeOf(address addr) public view returns (uint64) {
-        return balances[addr].time;
+    /**
+    * @dev Sets the tea for the provided address. The oldTea must match the currently stored value, in order to verify
+    * that no immediate withdrawal took place before this is executed.
+    */
+    function setTea(address _dev, uint256 oldTea, uint256 newTea) public onlyOwner() {
+        require(oldTea == teaMap[_dev], "Stored tea is not equal to the provided oldTea.");
+        require(newTea > teaMap[_dev], "Cannot set a lower value due to security reasons.");
+        teaMap[_dev] = newTea;
     }
 
-    function unclaimed(address[] memory addresses) public {
-        require(msg.sender == owner, "Only the owner can collect unclaimed payouts");
-        for (uint16 i=0; i < addresses.length; i++) { //unlikely to iterate over more than 65536 addresses
-            if (balances[addresses[i]].time + 365 days < block.timestamp) {
-                balances[msg.sender].balanceWei += balances[addresses[i]].balanceWei;
-                balances[addresses[i]].balanceWei = 0;
+    /**
+    * @dev Sets the teas for the provided addresses. The oldTeas must match the currently stored value, in order to
+    * verify that no immediate withdrawal took place before this is executed. In case one value does not match, no
+    * update is executed for that address.
+    */
+    function setTeas(address[] calldata _devs, uint256[] calldata oldTeas, uint256[] calldata newTeas) public onlyOwner() {
+        require(_devs.length == newTeas.length, "Parameters must have same length.");
+        for (uint256 i = 0; i < _devs.length; i++) {
+            address dev = _devs[i];
+            uint256 storedTea = teaMap[dev];
+            uint256 newTea = newTeas[i];
+            if ((oldTeas[i] == storedTea) && (newTea > storedTea)) {
+                teaMap[dev] = newTea;
             }
         }
     }
+
+    /**
+    * @dev Withdraws the earned amount. The signature has to be created by the contract owner and the signed message
+    * is the hash of the concatenation of the account and tea.
+    *
+    * @param _dev The address to withdraw to.
+    * @param _tea The amount to withdraw.
+    * @param _v The recovery byte of the signature.
+    * @param _r The r value of the signature.
+    * @param _s The s value of the signature.
+    */
+    function withdraw(address payable _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) public {
+        require(_tea > teaMap[_dev], "These funds have already been withdrawn.");
+        require(ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n66",
+            keccak256(abi.encodePacked(_dev, _tea)))), _v, _r, _s) == owner,
+            "Signature does not match owner and provided parameters.");
+        uint256 oldTea = teaMap[_dev];
+        teaMap[_dev] = _tea;
+        // transfer reverts transaction if not successful.
+        _dev.transfer(_tea - oldTea);
+    }
+
+    /**
+    * @dev Pays out the earned amount for multiple addresses. The payment amount for each address is equal to the
+    * difference of the provided new tea in the parameter and the currently stored value in the teaMap. After
+    * calculating the payment amount, the value of the account in the teaMap is updated with the new tea.
+    *
+    * @param _devs The addresses to pay out to.
+    * @param _teas The teas for the corresponding addresses.
+    */
+    function batchPayout(address payable[] memory _devs, uint256[] memory _teas) public onlyOwner() {
+        require(_devs.length == _teas.length, "Arrays must have same length.");
+        for (uint256 i = 0; i < _devs.length; i++) {
+            address payable dev = _devs[i];
+            uint256 oldTea = teaMap[dev];
+            uint256 tea = _teas[i];
+            if (tea <= oldTea) {
+                continue;
+            }
+            teaMap[dev] = tea;
+            // transfer reverts transaction if not successful.
+            dev.transfer(tea - oldTea);
+        }
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "No authorization.");
+        _;
+    }
+
 }

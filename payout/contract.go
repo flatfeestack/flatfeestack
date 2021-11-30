@@ -1,263 +1,435 @@
+// Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
 package main
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"errors"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
-	"strconv"
 	"strings"
-)
 
-var (
-	//curl --data '{"method":"eth_getTransactionReceipt","params":["0x25f6a4f512fa76621533e0f93c418be46269f87b8f2e3b751d47d4b6dd1d301f"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
-	//curl --data '{"method":"eth_getBalance","params":["<ETH>"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
-	//https://openethereum.github.io/JSONRPC-eth-module#eth_gettransactionreceipt
-	ContractCode = "608060405234801561001057600080fd5b50600180546001600160a01b03191633179055610ab8806100326000396000f3fe60806040526004361061004a5760003560e01c8063158c29c71461004f57806370a082311461006457806386d1a69f146100c0578063b2b57708146100c8578063d0b48509146100e8575b600080fd5b61006261005d3660046108ad565b610146565b005b34801561007057600080fd5b506100a361007f366004610852565b6001600160a01b03166000908152602081905260409020546001600160c01b031690565b6040516001600160c01b0390911681526020015b60405180910390f35b610062610479565b3480156100d457600080fd5b506100626100e3366004610873565b61059e565b3480156100f457600080fd5b5061012e610103366004610852565b6001600160a01b0316600090815260208190526040902054600160c01b90046001600160401b031690565b6040516001600160401b0390911681526020016100b7565b6001546001600160a01b031633146101b05760405162461bcd60e51b815260206004820152602260248201527f4f6e6c7920746865206f776e65722063616e20616464206e6577207061796f75604482015261747360f01b60648201526084015b60405180910390fd5b80518251146102205760405162461bcd60e51b815260206004820152603660248201527f41646472657373657320616e642062616c616e636573206172726179206d75736044820152750e840d0c2ecca40e8d0ca40e6c2daca40d8cadccee8d60531b60648201526084016101a7565b6000805b83518161ffff16101561041157828161ffff168151811061025557634e487b7160e01b600052603260045260246000fd5b6020026020010151600080868461ffff168151811061028457634e487b7160e01b600052603260045260246000fd5b6020908102919091018101516001600160a01b03168252810191909152604001600090812080549091906102c29084906001600160c01b03166109cf565b92506101000a8154816001600160c01b0302191690836001600160c01b03160217905550600080858361ffff168151811061030d57634e487b7160e01b600052603260045260246000fd5b6020908102919091018101516001600160a01b0316825281019190915260400160002054600160c01b90046001600160401b03166103bd5742600080868461ffff168151811061036d57634e487b7160e01b600052603260045260246000fd5b60200260200101516001600160a01b03166001600160a01b0316815260200190815260200160002060000160186101000a8154816001600160401b0302191690836001600160401b031602179055505b828161ffff16815181106103e157634e487b7160e01b600052603260045260246000fd5b60200260200101516001600160c01b0316826103fd91906109fa565b91508061040981610a34565b915050610224565b503481146104745760405162461bcd60e51b815260206004820152602a60248201527f53756d206f662062616c616e63657320697320686967686572207468616e2070604482015269185a5908185b5bdd5b9d60b21b60648201526084016101a7565b505050565b336000908152602081905260409020546001600160c01b03166104ee5760405162461bcd60e51b815260206004820152602760248201527f5061796d656e7453706c69747465723a206163636f756e7420686173206e6f2060448201526662616c616e636560c81b60648201526084016101a7565b3360008181526020819052604080822080549083905590516001600160c01b03821693600160c01b9092046001600160401b0316926108fc851502918591818181858888f19350505050158015610549573d6000803e3d6000fd5b50604080513381526001600160c01b03841660208201526001600160401b0383168183015290517fd60024301b81030e9c8bc232c048dd52e4a5ff8fb60493c637091ae17b1580949181900360600190a15050565b6001546001600160a01b0316331461060d5760405162461bcd60e51b815260206004820152602c60248201527f4f6e6c7920746865206f776e65722063616e20636f6c6c65637420756e636c6160448201526b696d6564207061796f75747360a01b60648201526084016101a7565b60005b81518161ffff1610156107bc5742600080848461ffff168151811061064557634e487b7160e01b600052603260045260246000fd5b6020908102919091018101516001600160a01b031682528101919091526040016000205461068790600160c01b90046001600160401b03166301e13380610a12565b6001600160401b031610156107aa57600080838361ffff16815181106106bd57634e487b7160e01b600052603260045260246000fd5b6020908102919091018101516001600160a01b031682528181019290925260409081016000908120543382529281905290812080546001600160c01b039384169391929161070d918591166109cf565b92506101000a8154816001600160c01b0302191690836001600160c01b031602179055506000806000848461ffff168151811061075a57634e487b7160e01b600052603260045260246000fd5b60200260200101516001600160a01b03166001600160a01b0316815260200190815260200160002060000160006101000a8154816001600160c01b0302191690836001600160c01b031602179055505b806107b481610a34565b915050610610565b5050565b80356001600160a01b03811681146107d757600080fd5b919050565b600082601f8301126107ec578081fd5b813560206108016107fc836109ac565b61097c565b80838252828201915082860187848660051b8901011115610820578586fd5b855b8581101561084557610833826107c0565b84529284019290840190600101610822565b5090979650505050505050565b600060208284031215610863578081fd5b61086c826107c0565b9392505050565b600060208284031215610884578081fd5b81356001600160401b03811115610899578182fd5b6108a5848285016107dc565b949350505050565b600080604083850312156108bf578081fd5b82356001600160401b03808211156108d5578283fd5b6108e1868387016107dc565b93506020915081850135818111156108f7578384fd5b85019050601f81018613610909578283fd5b80356109176107fc826109ac565b80828252848201915084840189868560051b8701011115610936578687fd5b8694505b8385101561096c5780356001600160c01b0381168114610958578788fd5b83526001949094019391850191850161093a565b5080955050505050509250929050565b604051601f8201601f191681016001600160401b03811182821017156109a4576109a4610a6c565b604052919050565b60006001600160401b038211156109c5576109c5610a6c565b5060051b60200190565b60006001600160c01b038281168482168083038211156109f1576109f1610a56565b01949350505050565b60008219821115610a0d57610a0d610a56565b500190565b60006001600160401b038083168185168083038211156109f1576109f1610a56565b600061ffff80831681811415610a4c57610a4c610a56565b6001019392505050565b634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052604160045260246000fdfea2646970667358221220039ba2a3f7d7e3e2335ed6fea1f5854dc305b9ffac1ace5ead46a9a4544e62be64736f6c63430008040033"
-	ContractAddr = "0x731a10897d267e19b34503ad902d0a29173ba4b1"
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
-type ClientETH struct {
-	c           *ethclient.Client
-	rpc         *rpc.Client
-	privateKey  *ecdsa.PrivateKey
-	publicKey   *ecdsa.PublicKey
-	fromAddress common.Address
-	chainId     *big.Int
+var (
+	_ = errors.New
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+)
+
+// PayoutEthMetaData contains all meta data concerning the PayoutEth contract.
+var PayoutEthMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"addresspayable[]\",\"name\":\"_devs\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_teas\",\"type\":\"uint256[]\"}],\"name\":\"batchPayout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_dev\",\"type\":\"address\"}],\"name\":\"getTea\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_dev\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"oldTea\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newTea\",\"type\":\"uint256\"}],\"name\":\"setTea\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_devs\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"oldTeas\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"newTeas\",\"type\":\"uint256[]\"}],\"name\":\"setTeas\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"teaMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"_dev\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_tea\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_s\",\"type\":\"bytes32\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	Sigs: map[string]string{
+		"d91966a7": "batchPayout(address[],uint256[])",
+		"a6f9dae1": "changeOwner(address)",
+		"eb3b46a4": "getTea(address)",
+		"8da5cb5b": "owner()",
+		"c78b6f4b": "setTea(address,uint256,uint256)",
+		"25aafce8": "setTeas(address[],uint256[],uint256[])",
+		"b2cb37f0": "teaMap(address)",
+		"7078002f": "withdraw(address,uint256,uint8,bytes32,bytes32)",
+	},
+	Bin: "0x608060405234801561001057600080fd5b50600180546001600160a01b03191633179055610c6b806100326000396000f3fe60806040526004361061007f5760003560e01c8063b2cb37f01161004e578063b2cb37f01461012a578063c78b6f4b14610165578063d91966a714610185578063eb3b46a4146101a557600080fd5b806325aafce81461008b5780637078002f146100ad5780638da5cb5b146100cd578063a6f9dae11461010a57600080fd5b3661008657005b600080fd5b34801561009757600080fd5b506100ab6100a63660046108b1565b6101db565b005b3480156100b957600080fd5b506100ab6100c8366004610963565b610338565b3480156100d957600080fd5b506001546100ed906001600160a01b031681565b6040516001600160a01b0390911681526020015b60405180910390f35b34801561011657600080fd5b506100ab6101253660046109bb565b610568565b34801561013657600080fd5b506101576101453660046109bb565b60006020819052908152604090205481565b604051908152602001610101565b34801561017157600080fd5b506100ab6101803660046109df565b6105b4565b34801561019157600080fd5b506100ab6101a0366004610aea565b6106fe565b3480156101b157600080fd5b506101576101c03660046109bb565b6001600160a01b031660009081526020819052604090205490565b6001546001600160a01b0316331461020e5760405162461bcd60e51b815260040161020590610bac565b60405180910390fd5b8481146102675760405162461bcd60e51b815260206004820152602160248201527f506172616d6574657273206d75737420686176652073616d65206c656e6774686044820152601760f91b6064820152608401610205565b60005b8581101561032f57600087878381811061028657610286610bd7565b905060200201602081019061029b91906109bb565b6001600160a01b0381166000908152602081905260408120549192508585858181106102c9576102c9610bd7565b905060200201359050818888868181106102e5576102e5610bd7565b905060200201351480156102f857508181115b15610319576001600160a01b03831660009081526020819052604090208190555b505050808061032790610c03565b91505061026a565b50505050505050565b6001600160a01b03851660009081526020819052604090205484116103b05760405162461bcd60e51b815260206004820152602860248201527f54686573652066756e6473206861766520616c7265616479206265656e2077696044820152673a34323930bbb71760c11b6064820152608401610205565b600180546040516bffffffffffffffffffffffff19606089901b166020820152603481018790526001600160a01b03909116919060540160408051601f198184030181529082905280516020918201207f19457468657265756d205369676e6564204d6573736167653a0a36360000000091830191909152603c820152605c0160408051601f198184030181528282528051602091820120600084529083018083525260ff871690820152606081018590526080810184905260a0016020604051602081039080840390855afa15801561048e573d6000803e3d6000fd5b505050602060405103516001600160a01b0316146105145760405162461bcd60e51b815260206004820152603760248201527f5369676e617475726520646f6573206e6f74206d61746368206f776e6572206160448201527f6e642070726f766964656420706172616d65746572732e0000000000000000006064820152608401610205565b6001600160a01b0385166000818152602081905260409020805490869055906108fc6105408388610c1e565b6040518115909202916000818181858888f1935050505015801561032f573d6000803e3d6000fd5b6001546001600160a01b031633146105925760405162461bcd60e51b815260040161020590610bac565b600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001546001600160a01b031633146105de5760405162461bcd60e51b815260040161020590610bac565b6001600160a01b038316600090815260208190526040902054821461065d5760405162461bcd60e51b815260206004820152602f60248201527f53746f72656420746561206973206e6f7420657175616c20746f20746865207060448201526e3937bb34b232b21037b6322a32b09760891b6064820152608401610205565b6001600160a01b03831660009081526020819052604090205481116106de5760405162461bcd60e51b815260206004820152603160248201527f43616e6e6f74207365742061206c6f7765722076616c75652064756520746f2060448201527039b2b1bab934ba3c903932b0b9b7b7399760791b6064820152608401610205565b6001600160a01b0390921660009081526020819052604090209190915550565b6001546001600160a01b031633146107285760405162461bcd60e51b815260040161020590610bac565b80518251146107795760405162461bcd60e51b815260206004820152601d60248201527f417272617973206d75737420686176652073616d65206c656e6774682e0000006044820152606401610205565b60005b825181101561086057600083828151811061079957610799610bd7565b602002602001015190506000806000836001600160a01b03166001600160a01b0316815260200190815260200160002054905060008484815181106107e0576107e0610bd7565b602002602001015190508181116107f95750505061084e565b6001600160a01b03831660008181526020819052604090208290556108fc6108218484610c1e565b6040518115909202916000818181858888f19350505050158015610849573d6000803e3d6000fd5b505050505b8061085881610c03565b91505061077c565b505050565b60008083601f84011261087757600080fd5b50813567ffffffffffffffff81111561088f57600080fd5b6020830191508360208260051b85010111156108aa57600080fd5b9250929050565b600080600080600080606087890312156108ca57600080fd5b863567ffffffffffffffff808211156108e257600080fd5b6108ee8a838b01610865565b9098509650602089013591508082111561090757600080fd5b6109138a838b01610865565b9096509450604089013591508082111561092c57600080fd5b5061093989828a01610865565b979a9699509497509295939492505050565b6001600160a01b038116811461096057600080fd5b50565b600080600080600060a0868803121561097b57600080fd5b85356109868161094b565b945060208601359350604086013560ff811681146109a357600080fd5b94979396509394606081013594506080013592915050565b6000602082840312156109cd57600080fd5b81356109d88161094b565b9392505050565b6000806000606084860312156109f457600080fd5b83356109ff8161094b565b95602085013595506040909401359392505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715610a5357610a53610a14565b604052919050565b600067ffffffffffffffff821115610a7557610a75610a14565b5060051b60200190565b600082601f830112610a9057600080fd5b81356020610aa5610aa083610a5b565b610a2a565b82815260059290921b84018101918181019086841115610ac457600080fd5b8286015b84811015610adf5780358352918301918301610ac8565b509695505050505050565b60008060408385031215610afd57600080fd5b823567ffffffffffffffff80821115610b1557600080fd5b818501915085601f830112610b2957600080fd5b81356020610b39610aa083610a5b565b82815260059290921b84018101918181019089841115610b5857600080fd5b948201945b83861015610b7f578535610b708161094b565b82529482019490820190610b5d565b96505086013592505080821115610b9557600080fd5b50610ba285828601610a7f565b9150509250929050565b60208082526011908201527027379030baba3437b934bd30ba34b7b71760791b604082015260600190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b6000600019821415610c1757610c17610bed565b5060010190565b600082821015610c3057610c30610bed565b50039056fea2646970667358221220ea7a83f1b407122748873060a7317a027980d8478977fda02d0f9c5edafdf34464736f6c634300080a0033",
 }
 
-// TransactionReceipt the struct for a transaction receipt on Ethereum
-type TransactionReceipt struct {
-	TransactionHash   string
-	TransactionIndex  string
-	BlockHash         string
-	BlockNumber       string
-	CumulativeGasUsed string
-	GasUsed           string
-	ContractAddress   string
-	Logs              []Log
-	LogsBloom         string
-	Root              string
-	Status            string
+// PayoutEthABI is the input ABI used to generate the binding from.
+// Deprecated: Use PayoutEthMetaData.ABI instead.
+var PayoutEthABI = PayoutEthMetaData.ABI
+
+// Deprecated: Use PayoutEthMetaData.Sigs instead.
+// PayoutEthFuncSigs maps the 4-byte function signature to its string representation.
+var PayoutEthFuncSigs = PayoutEthMetaData.Sigs
+
+// PayoutEthBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use PayoutEthMetaData.Bin instead.
+var PayoutEthBin = PayoutEthMetaData.Bin
+
+// DeployPayoutEth deploys a new Ethereum contract, binding an instance of PayoutEth to it.
+func DeployPayoutEth(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *PayoutEth, error) {
+	parsed, err := PayoutEthMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(PayoutEthBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &PayoutEth{PayoutEthCaller: PayoutEthCaller{contract: contract}, PayoutEthTransactor: PayoutEthTransactor{contract: contract}, PayoutEthFilterer: PayoutEthFilterer{contract: contract}}, nil
 }
 
-type Log struct {
-	Removed          bool
-	LogIndex         string
-	TransactionIndex string
-	TransactionHash  string
-	BlockNumber      string
-	BlockHash        string
-	Address          string
-	Data             string
-	Topics           []string
+// PayoutEth is an auto generated Go binding around an Ethereum contract.
+type PayoutEth struct {
+	PayoutEthCaller     // Read-only binding to the contract
+	PayoutEthTransactor // Write-only binding to the contract
+	PayoutEthFilterer   // Log filterer for contract events
 }
 
-func NewClientETH(ethUrl string, hexPrivateKey string) (*ClientETH, error) {
-	rpc, err := rpc.DialContext(context.Background(), ethUrl)
+// PayoutEthCaller is an auto generated read-only Go binding around an Ethereum contract.
+type PayoutEthCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// PayoutEthTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type PayoutEthTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// PayoutEthFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type PayoutEthFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// PayoutEthSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type PayoutEthSession struct {
+	Contract     *PayoutEth        // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// PayoutEthCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type PayoutEthCallerSession struct {
+	Contract *PayoutEthCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts    // Call options to use throughout this session
+}
+
+// PayoutEthTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type PayoutEthTransactorSession struct {
+	Contract     *PayoutEthTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+}
+
+// PayoutEthRaw is an auto generated low-level Go binding around an Ethereum contract.
+type PayoutEthRaw struct {
+	Contract *PayoutEth // Generic contract binding to access the raw methods on
+}
+
+// PayoutEthCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type PayoutEthCallerRaw struct {
+	Contract *PayoutEthCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// PayoutEthTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type PayoutEthTransactorRaw struct {
+	Contract *PayoutEthTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewPayoutEth creates a new instance of PayoutEth, bound to a specific deployed contract.
+func NewPayoutEth(address common.Address, backend bind.ContractBackend) (*PayoutEth, error) {
+	contract, err := bindPayoutEth(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	client := ethclient.NewClient(rpc)
+	return &PayoutEth{PayoutEthCaller: PayoutEthCaller{contract: contract}, PayoutEthTransactor: PayoutEthTransactor{contract: contract}, PayoutEthFilterer: PayoutEthFilterer{contract: contract}}, nil
+}
 
+// NewPayoutEthCaller creates a new read-only instance of PayoutEth, bound to a specific deployed contract.
+func NewPayoutEthCaller(address common.Address, caller bind.ContractCaller) (*PayoutEthCaller, error) {
+	contract, err := bindPayoutEth(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	privateKey, err := crypto.HexToECDSA(hexPrivateKey)
+	return &PayoutEthCaller{contract: contract}, nil
+}
+
+// NewPayoutEthTransactor creates a new write-only instance of PayoutEth, bound to a specific deployed contract.
+func NewPayoutEthTransactor(address common.Address, transactor bind.ContractTransactor) (*PayoutEthTransactor, error) {
+	contract, err := bindPayoutEth(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
+	return &PayoutEthTransactor{contract: contract}, nil
+}
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("error casting public key to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-
-	c := &ClientETH{
-		c:           client,
-		rpc:         rpc,
-		privateKey:  privateKey,
-		publicKey:   publicKeyECDSA,
-		fromAddress: fromAddress,
-	}
-
-	chainId, err := c.c.NetworkID(context.Background())
+// NewPayoutEthFilterer creates a new log filterer instance of PayoutEth, bound to a specific deployed contract.
+func NewPayoutEthFilterer(address common.Address, filterer bind.ContractFilterer) (*PayoutEthFilterer, error) {
+	contract, err := bindPayoutEth(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	c.chainId = chainId
-
-	return c, nil
+	return &PayoutEthFilterer{contract: contract}, nil
 }
 
-func (c ClientETH) balanceOf(addresses string) ([]byte, error) {
-	to := common.HexToAddress(ContractAddr)
-	data := "70a08231" + padString32(addresses)
-	callMsg := ethereum.CallMsg{
-		From:     c.fromAddress,
-		To:       &to,
-		Gas:      0,
-		GasPrice: nil,
-		Value:    nil,
-		Data:     common.Hex2Bytes(data),
-	}
-	ret, err := c.c.CallContract(context.Background(), callMsg, nil)
+// bindPayoutEth binds a generic wrapper to an already deployed contract.
+func bindPayoutEth(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(PayoutEthABI))
 	if err != nil {
 		return nil, err
 	}
-	return ret, err
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
-func (c ClientETH) unclaimed(addresses []string) (string, error) {
-	nonce, gasPrice, err := c.getNonceGas(nil)
-	if err != nil {
-		return "", err
-	}
-	stringAddresses := ""
-	for _, v := range addresses {
-		stringAddresses = stringAddresses + padString32(v)
-	}
-	gasLimit := uint64(8000000) //8mio gas
-
-	var data = "b2b57708" + padInt64(int64(len(addresses))) + stringAddresses
-	tx := types.NewTransaction(nonce, common.HexToAddress(ContractAddr), big.NewInt(0), gasLimit, gasPrice, common.Hex2Bytes(data))
-	return c.singAndSend(tx, nil)
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_PayoutEth *PayoutEthRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _PayoutEth.Contract.PayoutEthCaller.contract.Call(opts, result, method, params...)
 }
 
-//https://ethereum.stackexchange.com/questions/16472/signing-a-raw-transaction-in-go
-func (c ClientETH) fill(addresses []string, amounts []*big.Int) (string, error) {
-	nonce, gasPrice, err := c.getNonceGas(nil)
-	if err != nil {
-		return "", err
-	}
-
-	l := len(addresses)
-	if l != len(amounts) {
-		return "", errors.New("both arrays must match length")
-	}
-
-	stringAmounts := ""
-	total := big.NewInt(0)
-	for _, v := range amounts {
-		total = total.Add(total, v)
-		stringAmounts = stringAmounts + padBigInt(v)
-	}
-
-	stringAddresses := ""
-	for _, v := range addresses {
-		stringAddresses = stringAddresses + padString32(v)
-	}
-
-	gasLimit := uint64(8000000) //8mio gas
-
-	//64 is the index of the first array, its always 64
-	//second is 3 fix and 3 for the address array
-	var data = "158c29c7" + padInt64(64) + padInt64(int64(32*(3+l))) + padInt64(int64(l)) + stringAddresses + padInt64(int64(l)) + stringAmounts
-	tx := types.NewTransaction(nonce, common.HexToAddress(ContractAddr), total, gasLimit, gasPrice, common.Hex2Bytes(data))
-
-	return c.singAndSend(tx, nil)
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_PayoutEth *PayoutEthRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _PayoutEth.Contract.PayoutEthTransactor.contract.Transfer(opts)
 }
 
-func (c ClientETH) getNonceGas(from *common.Address) (uint64, *big.Int, error) {
-	if from == nil {
-		from = &c.fromAddress
-	}
-	nonce, err := c.c.PendingNonceAt(context.Background(), *from)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	gasPrice, err := c.c.SuggestGasPrice(context.Background())
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return nonce, gasPrice, nil
+// Transact invokes the (paid) contract method with params as input values.
+func (_PayoutEth *PayoutEthRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _PayoutEth.Contract.PayoutEthTransactor.contract.Transact(opts, method, params...)
 }
 
-func (c ClientETH) singAndSend(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (string, error) {
-	if privateKey == nil {
-		privateKey = c.privateKey
-	}
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(c.chainId), privateKey)
-	if err != nil {
-		return "", err
-	}
-
-	data, err := rlp.EncodeToBytes(signedTx)
-	if err != nil {
-		return "", err
-	}
-	var ret string
-	err = c.rpc.CallContext(context.Background(), &ret, "eth_sendRawTransaction", hexutil.Encode(data))
-
-	if err != nil {
-		return "", err
-	}
-
-	return ret, nil
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_PayoutEth *PayoutEthCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _PayoutEth.Contract.contract.Call(opts, result, method, params...)
 }
 
-func (c ClientETH) deploy(contract string) (string, error) {
-	nonce, gasPrice, err := c.getNonceGas(nil)
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_PayoutEth *PayoutEthTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _PayoutEth.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_PayoutEth *PayoutEthTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _PayoutEth.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetTea is a free data retrieval call binding the contract method 0xeb3b46a4.
+//
+// Solidity: function getTea(address _dev) view returns(uint256)
+func (_PayoutEth *PayoutEthCaller) GetTea(opts *bind.CallOpts, _dev common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _PayoutEth.contract.Call(opts, &out, "getTea", _dev)
+
 	if err != nil {
-		return "", err
+		return *new(*big.Int), err
 	}
 
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 867749, gasPrice, common.Hex2Bytes(contract))
-	addr, err := c.singAndSend(tx, nil)
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTea is a free data retrieval call binding the contract method 0xeb3b46a4.
+//
+// Solidity: function getTea(address _dev) view returns(uint256)
+func (_PayoutEth *PayoutEthSession) GetTea(_dev common.Address) (*big.Int, error) {
+	return _PayoutEth.Contract.GetTea(&_PayoutEth.CallOpts, _dev)
+}
+
+// GetTea is a free data retrieval call binding the contract method 0xeb3b46a4.
+//
+// Solidity: function getTea(address _dev) view returns(uint256)
+func (_PayoutEth *PayoutEthCallerSession) GetTea(_dev common.Address) (*big.Int, error) {
+	return _PayoutEth.Contract.GetTea(&_PayoutEth.CallOpts, _dev)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_PayoutEth *PayoutEthCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _PayoutEth.contract.Call(opts, &out, "owner")
+
 	if err != nil {
-		return "", err
+		return *new(common.Address), err
 	}
-	return c.txReceipt(addr)
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
-// GetTransactionReceipt returns the transaction receipt, noce the tx is mined
-func (c ClientETH) txReceipt(receipt string) (string, error) {
-	var raw TransactionReceipt
-	err := c.rpc.Call(&raw, "eth_getTransactionReceipt", receipt)
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_PayoutEth *PayoutEthSession) Owner() (common.Address, error) {
+	return _PayoutEth.Contract.Owner(&_PayoutEth.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_PayoutEth *PayoutEthCallerSession) Owner() (common.Address, error) {
+	return _PayoutEth.Contract.Owner(&_PayoutEth.CallOpts)
+}
+
+// TeaMap is a free data retrieval call binding the contract method 0xb2cb37f0.
+//
+// Solidity: function teaMap(address ) view returns(uint256)
+func (_PayoutEth *PayoutEthCaller) TeaMap(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _PayoutEth.contract.Call(opts, &out, "teaMap", arg0)
 
 	if err != nil {
-		return "", err
+		return *new(*big.Int), err
 	}
 
-	if raw.Status == "0x1" {
-		return raw.ContractAddress, nil
-	}
-	return "", errors.New("tx not fonud")
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
-func padString32(hex string) string {
-	if strings.Index(hex, "0x") == 0 {
-		hex = hex[2:]
-	}
-	if len(hex)%2 != 0 {
-		hex = "0" + hex
-	}
-	padded := common.LeftPadBytes(common.Hex2Bytes(hex), 32)
-	return common.Bytes2Hex(padded)
+// TeaMap is a free data retrieval call binding the contract method 0xb2cb37f0.
+//
+// Solidity: function teaMap(address ) view returns(uint256)
+func (_PayoutEth *PayoutEthSession) TeaMap(arg0 common.Address) (*big.Int, error) {
+	return _PayoutEth.Contract.TeaMap(&_PayoutEth.CallOpts, arg0)
 }
 
-func padBigInt(b *big.Int) string {
-	hex := b.Text(16)
-	return padString32(hex)
+// TeaMap is a free data retrieval call binding the contract method 0xb2cb37f0.
+//
+// Solidity: function teaMap(address ) view returns(uint256)
+func (_PayoutEth *PayoutEthCallerSession) TeaMap(arg0 common.Address) (*big.Int, error) {
+	return _PayoutEth.Contract.TeaMap(&_PayoutEth.CallOpts, arg0)
 }
 
-func padInt64(i int64) string {
-	hex := strconv.FormatInt(i, 16)
-	return padString32(hex)
+// BatchPayout is a paid mutator transaction binding the contract method 0xd91966a7.
+//
+// Solidity: function batchPayout(address[] _devs, uint256[] _teas) returns()
+func (_PayoutEth *PayoutEthTransactor) BatchPayout(opts *bind.TransactOpts, _devs []common.Address, _teas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.contract.Transact(opts, "batchPayout", _devs, _teas)
+}
+
+// BatchPayout is a paid mutator transaction binding the contract method 0xd91966a7.
+//
+// Solidity: function batchPayout(address[] _devs, uint256[] _teas) returns()
+func (_PayoutEth *PayoutEthSession) BatchPayout(_devs []common.Address, _teas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.BatchPayout(&_PayoutEth.TransactOpts, _devs, _teas)
+}
+
+// BatchPayout is a paid mutator transaction binding the contract method 0xd91966a7.
+//
+// Solidity: function batchPayout(address[] _devs, uint256[] _teas) returns()
+func (_PayoutEth *PayoutEthTransactorSession) BatchPayout(_devs []common.Address, _teas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.BatchPayout(&_PayoutEth.TransactOpts, _devs, _teas)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address newOwner) returns()
+func (_PayoutEth *PayoutEthTransactor) ChangeOwner(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _PayoutEth.contract.Transact(opts, "changeOwner", newOwner)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address newOwner) returns()
+func (_PayoutEth *PayoutEthSession) ChangeOwner(newOwner common.Address) (*types.Transaction, error) {
+	return _PayoutEth.Contract.ChangeOwner(&_PayoutEth.TransactOpts, newOwner)
+}
+
+// ChangeOwner is a paid mutator transaction binding the contract method 0xa6f9dae1.
+//
+// Solidity: function changeOwner(address newOwner) returns()
+func (_PayoutEth *PayoutEthTransactorSession) ChangeOwner(newOwner common.Address) (*types.Transaction, error) {
+	return _PayoutEth.Contract.ChangeOwner(&_PayoutEth.TransactOpts, newOwner)
+}
+
+// SetTea is a paid mutator transaction binding the contract method 0xc78b6f4b.
+//
+// Solidity: function setTea(address _dev, uint256 oldTea, uint256 newTea) returns()
+func (_PayoutEth *PayoutEthTransactor) SetTea(opts *bind.TransactOpts, _dev common.Address, oldTea *big.Int, newTea *big.Int) (*types.Transaction, error) {
+	return _PayoutEth.contract.Transact(opts, "setTea", _dev, oldTea, newTea)
+}
+
+// SetTea is a paid mutator transaction binding the contract method 0xc78b6f4b.
+//
+// Solidity: function setTea(address _dev, uint256 oldTea, uint256 newTea) returns()
+func (_PayoutEth *PayoutEthSession) SetTea(_dev common.Address, oldTea *big.Int, newTea *big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.SetTea(&_PayoutEth.TransactOpts, _dev, oldTea, newTea)
+}
+
+// SetTea is a paid mutator transaction binding the contract method 0xc78b6f4b.
+//
+// Solidity: function setTea(address _dev, uint256 oldTea, uint256 newTea) returns()
+func (_PayoutEth *PayoutEthTransactorSession) SetTea(_dev common.Address, oldTea *big.Int, newTea *big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.SetTea(&_PayoutEth.TransactOpts, _dev, oldTea, newTea)
+}
+
+// SetTeas is a paid mutator transaction binding the contract method 0x25aafce8.
+//
+// Solidity: function setTeas(address[] _devs, uint256[] oldTeas, uint256[] newTeas) returns()
+func (_PayoutEth *PayoutEthTransactor) SetTeas(opts *bind.TransactOpts, _devs []common.Address, oldTeas []*big.Int, newTeas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.contract.Transact(opts, "setTeas", _devs, oldTeas, newTeas)
+}
+
+// SetTeas is a paid mutator transaction binding the contract method 0x25aafce8.
+//
+// Solidity: function setTeas(address[] _devs, uint256[] oldTeas, uint256[] newTeas) returns()
+func (_PayoutEth *PayoutEthSession) SetTeas(_devs []common.Address, oldTeas []*big.Int, newTeas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.SetTeas(&_PayoutEth.TransactOpts, _devs, oldTeas, newTeas)
+}
+
+// SetTeas is a paid mutator transaction binding the contract method 0x25aafce8.
+//
+// Solidity: function setTeas(address[] _devs, uint256[] oldTeas, uint256[] newTeas) returns()
+func (_PayoutEth *PayoutEthTransactorSession) SetTeas(_devs []common.Address, oldTeas []*big.Int, newTeas []*big.Int) (*types.Transaction, error) {
+	return _PayoutEth.Contract.SetTeas(&_PayoutEth.TransactOpts, _devs, oldTeas, newTeas)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x7078002f.
+//
+// Solidity: function withdraw(address _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) returns()
+func (_PayoutEth *PayoutEthTransactor) Withdraw(opts *bind.TransactOpts, _dev common.Address, _tea *big.Int, _v uint8, _r [32]byte, _s [32]byte) (*types.Transaction, error) {
+	return _PayoutEth.contract.Transact(opts, "withdraw", _dev, _tea, _v, _r, _s)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x7078002f.
+//
+// Solidity: function withdraw(address _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) returns()
+func (_PayoutEth *PayoutEthSession) Withdraw(_dev common.Address, _tea *big.Int, _v uint8, _r [32]byte, _s [32]byte) (*types.Transaction, error) {
+	return _PayoutEth.Contract.Withdraw(&_PayoutEth.TransactOpts, _dev, _tea, _v, _r, _s)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x7078002f.
+//
+// Solidity: function withdraw(address _dev, uint256 _tea, uint8 _v, bytes32 _r, bytes32 _s) returns()
+func (_PayoutEth *PayoutEthTransactorSession) Withdraw(_dev common.Address, _tea *big.Int, _v uint8, _r [32]byte, _s [32]byte) (*types.Transaction, error) {
+	return _PayoutEth.Contract.Withdraw(&_PayoutEth.TransactOpts, _dev, _tea, _v, _r, _s)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_PayoutEth *PayoutEthTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _PayoutEth.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_PayoutEth *PayoutEthSession) Receive() (*types.Transaction, error) {
+	return _PayoutEth.Contract.Receive(&_PayoutEth.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_PayoutEth *PayoutEthTransactorSession) Receive() (*types.Transaction, error) {
+	return _PayoutEth.Contract.Receive(&_PayoutEth.TransactOpts)
 }
