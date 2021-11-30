@@ -13,9 +13,10 @@ import type {
   UserAggBalance,
   GitUser,
   RepoMapping,
-  UserBalance, Contributions, UserBalanceCore
+  UserBalance, Contributions, UserBalanceCore,
+  PayoutAddress
 } from "../types/users";
-import { PaymentCycle, UserStatus } from "../types/users";
+import { PaymentCycle, PayoutInfo, UserStatus } from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -107,6 +108,9 @@ export const API = {
     addEmail: (email: string) => backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) => backendToken.delete(`users/me/git-email/${encodeURI(email)}`),
     updatePayoutAddress: (address: string) => backendToken.put(`users/me/payout/${address}`),
+    getPayoutAddresses: () => backendToken.get(`users/me/wallets`).json<PayoutAddress[]>(),
+    addPayoutAddress: (currency: string, address: string) => backendToken.post(`users/me/wallets`, {json: {currency, address}}).json<PayoutAddress>(),
+    removePayoutAddress: (id: number) => backendToken.delete(`users/me/wallets/${id}`),
     updatePaymentMethod: (method: string) => backendToken.put(`users/me/method/${method}`).json<Users>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
@@ -115,6 +119,7 @@ export const API = {
     setUserMode: (mode: string) => backendToken.put(`users/me/mode/${mode}`),
     setupStripe: () => backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) => backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
+    nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
     topup: () => backendToken.post(`users/me/topup`),
@@ -144,6 +149,7 @@ export const API = {
     fakePayment: (email: string, seats: number) => backendToken.post(`admin/fake/payment/${email}/${seats}`),
     fakeContribution: (repo: RepoMapping) => backendToken.post(`admin/fake/contribution`, {json: repo}),
     payout: (exchangeRate: number) => backendToken.post(`admin/payout/${exchangeRate}`),
+    payoutInfos: () => backendToken.get(`admin/payout`).json<PayoutInfo[]>(),
   },
   config: {
     config: () => backend.get(`config`).json<Config>()
