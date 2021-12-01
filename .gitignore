@@ -3,3 +3,4 @@
 .idea
 .db
 .chain
+env*.tar.gz
