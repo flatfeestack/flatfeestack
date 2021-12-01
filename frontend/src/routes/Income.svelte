@@ -10,6 +10,7 @@
   import {navigate} from "svelte-routing";
   import {Contributions, PayoutAddress} from "../types/users.ts";
   import {CryptoCurrency} from "../types/crypto";
+  import Spinner from "../components/Spinner.svelte";
 
   let address = "";
   let gitEmails: GitUser[] = [];
@@ -88,13 +89,11 @@
     try {
       const pr1 = API.user.gitEmails();
       const pr2 = API.user.contributionsRcv();
-      const pr3 = API.user.pendingDailyUserPayouts();
       const pr4 = API.user.getPayoutAddresses();
       const res1 = await pr1;
       gitEmails = res1 ? res1 : gitEmails;
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
-      pendingPayouts = await pr3;
       payoutAddresses = await pr4;
     } catch (e) {
       $error = e;
@@ -197,21 +196,73 @@
     </table>
   </div>
 
+  <h2 class="px-2">Total realized income</h2>
   <div class="container">
-    <label class="px-2">Total realized income:</label>
+    {#await API.user.totalRealizedIncome()}
+      <Spinner />
+    {:then res}
+      <table>
+        <thead>
+        <tr>
+          <th>Currency</th>
+          <th>Amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        {#if res && res.length > 0}
+          {#each res as row}
+            <tr>
+              <td>{row.currency}</td>
+              <td>{row.balance}</td>
+            </tr>
+          {:else}
+            <tr><td colspan="4">No Data</td></tr>
+          {/each}
+        {:else}
+          <tr><td colspan="4">No Data</td></tr>
+        {/if}
+        </tbody>
+      </table>
+    {:catch err}
+      {error.set(err)}
+    {/await}
   </div>
 
+  <h2 class="px-2">Pending income</h2>
   <div class="container">
-    <label class="px-2">Pending income:</label>{pendingPayouts?pendingPayouts.balance:0}
+    {#await API.user.pendingDailyUserPayouts()}
+      <Spinner />
+    {:then res}
+      <table>
+        <thead>
+        <tr>
+          <th>Currency</th>
+          <th>Amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        {#if res && res.length > 0}
+          {#each res as row}
+            <tr>
+              <td>{row.currency}</td>
+              <td>{row.balance}</td>
+            </tr>
+          {:else}
+            <tr><td colspan="4">No Data</td></tr>
+          {/each}
+        {:else}
+          <tr><td colspan="4">No Data</td></tr>
+        {/if}
+        </tbody>
+      </table>
+    {:catch err}
+      {error.set(err)}
+    {/await}
   </div>
-
-
   <!--<PayoutSelection />-->
 
   <div class="border-primary-500 rounded small p-2 m-2">
-    Our commit evaluation engine analyzes within a timeframe of 2 month, and due to potential chargebacks,
-    we cannot convert the funds immediately. Thus, after 2 month, the pending income can be withdrawn if
-    the pending amount is larger than $25.
+    You need to add a wallet for each currency to receive the funds. The payout will happen manually every month.
   </div>
 
   {#if $firstTime}

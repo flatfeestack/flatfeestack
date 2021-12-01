@@ -47,6 +47,7 @@ export type UserBalances = {
 export type UserBalanceCore = {
   userId: string;
   balance: number;
+  currency: string;
 }
 
 export type UserBalance = {

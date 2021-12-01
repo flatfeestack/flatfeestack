@@ -131,6 +131,7 @@ export const API = {
     contributionsSummary2: (uuid: string) => backendToken.post(`users/contributions-summary/${uuid}`).json<Repo[]>(),
     summary: (uuid: string) => backendToken.post(`users/summary/${uuid}`).json<Users>(),
     pendingDailyUserPayouts: () => backendToken.post(`users/me/payout-pending`).json<UserBalanceCore>(),
+    totalRealizedIncome: () => backendToken.post(`users/me/payout`).json<UserBalanceCore>(),
   },
   repos: {
     search: (s: string) => backendToken.get(`repos/search?q=${encodeURI(s)}`).json<Repo[]>(),
