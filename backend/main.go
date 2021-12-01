@@ -244,6 +244,7 @@ func main() {
 	router.HandleFunc("/users/contributions-summary/{uuid}", contributionsSum2).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", userSummary2).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payout-pending", jwtAuthUser(pendingDailyUserPayouts)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payout", jwtAuthUser(totalRealizedIncome)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/wallets", jwtAuthUser(getUserWallets)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/wallets", jwtAuthUser(addUserWallet)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(deleteUserWallet)).Methods(http.MethodDelete)

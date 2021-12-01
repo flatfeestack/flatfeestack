@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"github.com/alecthomas/template"
 	_ "github.com/aristanetworks/goarista/key"
 	"github.com/google/uuid"
@@ -869,13 +870,50 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 }
 
+type UserBalanceCoreDto struct {
+	UserId   uuid.UUID `json:"userId"`
+	Balance  float64   `json:"balance"`
+	Currency string    `json:"currency"`
+}
+
 func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User) {
-	ub, err := getPendingDailyUserPayouts(user.Id, timeNow())
+	fmt.Println(user.Id)
+	ubs, err := getPendingDailyUserPayouts(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	writeJson(w, ub)
+	var result []UserBalanceCoreDto
+	for _, ub := range ubs {
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
+		if ub.Currency == "USD" {
+			r.Balance = float64(ub.Balance) / usdFactor
+		} else {
+			r.Balance = float64(ub.Balance) / cryptoFactor
+		}
+		result = append(result, r)
+	}
+	writeJson(w, result)
+}
+
+func totalRealizedIncome(w http.ResponseWriter, _ *http.Request, user *User) {
+	fmt.Println(user.Id)
+	ubs, err := getTotalRealizedIncome(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+	var result []UserBalanceCoreDto
+	for _, ub := range ubs {
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
+		if ub.Currency == "USD" {
+			r.Balance = float64(ub.Balance) / usdFactor
+		} else {
+			r.Balance = float64(ub.Balance) / cryptoFactor
+		}
+		result = append(result, r)
+	}
+	writeJson(w, result)
 }
 
 func genRnd(n int) ([]byte, error) {

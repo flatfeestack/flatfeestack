@@ -78,8 +78,9 @@ type GitEmail struct {
 }
 
 type UserBalanceCore struct {
-	UserId  uuid.UUID `json:"userId"`
-	Balance int64     `json:"balance"`
+	UserId   uuid.UUID `json:"userId"`
+	Balance  int64     `json:"balance"`
+	Currency string    `json:"currency"`
 }
 
 type UserBalance struct {
@@ -1316,21 +1317,59 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 	return handleErrMustInsertOne(res)
 }
 
-func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore, error) {
-	day = timeDay(-60, day) //day -2 month
-	var ub UserBalanceCore
-	err := db.
-		QueryRow(`SELECT COALESCE(SUM(balance),0) as balance from daily_user_payout where user_id = $1 AND day >= $2`, uid, day).
-		Scan(&ub.Balance)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		ub.UserId = uid
-		return &ub, nil
-	default:
+func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
+	var ubs []UserBalanceCore
+	s := `SELECT dup.currency, CASE WHEN max(tmp.balance) IS NULL THEN sum(dup.balance) ELSE sum(dup.balance) - max(tmp.balance) END as balance
+		  FROM daily_user_payout dup 
+		  LEFT JOIN (	SELECT res_details.currency, max(res_details.nano_tea) as balance FROM payout_request as req
+		  				JOIN payout_response as res on res.batch_id = req.batch_id 
+		  				JOIN payout_response_details as res_details on res_details.payout_response_id = res.id
+		  				WHERE req.user_id = $1
+		  				GROUP BY res_details.currency
+		  		    ) AS tmp on tmp.currency = dup.currency
+		  WHERE dup.user_id = $1
+		  GROUP BY dup.currency`
+
+	rows, err := db.Query(s, uid)
+	if err != nil {
 		return nil, err
 	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var ub UserBalanceCore
+		err = rows.Scan(&ub.Currency, &ub.Balance)
+		if err != nil {
+			return nil, err
+		}
+		ubs = append(ubs, ub)
+	}
+	return ubs, nil
+}
+
+func getTotalRealizedIncome(uid uuid.UUID) ([]UserBalanceCore, error) {
+	var ubs []UserBalanceCore
+	s := `	select res_details.currency, max(res_details.nano_tea) from payout_request as req
+			join payout_response as res on res.batch_id = req.batch_id 
+			join payout_response_details as res_details on res_details.payout_response_id = res.id
+			where req.user_id = $1
+			group by res_details.currency`
+
+	rows, err := db.Query(s, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var ub UserBalanceCore
+		err = rows.Scan(&ub.Currency, &ub.Balance)
+		if err != nil {
+			return nil, err
+		}
+		ubs = append(ubs, ub)
+	}
+	return ubs, nil
 }
 
 func findPayoutInfos() ([]PayoutInfo, error) {
