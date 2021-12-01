@@ -1,3 +1,5 @@
+-- Attention: any word that contains public
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
@@ -7,7 +9,7 @@ CREATE TABLE users (
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
     stripe_last4          VARCHAR(4),
-    payment_cycle_id      UUID, --CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)--
+    payment_cycle_id      UUID, /*CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)*/
     email                 VARCHAR(64) UNIQUE NOT NULL,
     name                  VARCHAR(255),
     image                 BYTEA,

@@ -7,11 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/template"
-	_ "github.com/aristanetworks/goarista/key"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
-	_ "golang.org/x/net/dns/dnsmessage"
 	"golang.org/x/text/language"
 	"log"
 	"math/big"
@@ -210,7 +208,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	//TODO: send email to user and add email after verification
 	rnd, err := genRnd(16)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "ERR-reset-email-02, RND %v err %v", err)
+		writeErr(w, http.StatusBadRequest, "ERR-reset-email-02, err %v", err)
 		return
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
