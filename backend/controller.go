@@ -254,17 +254,6 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	a := params["address"]
-	user.PayoutETH = &a
-	err := updateUser(user)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
-		return
-	}
-}
-
 func deleteMethod(w http.ResponseWriter, r *http.Request, user *User) {
 	user.PaymentMethod = nil
 	user.Last4 = nil
@@ -645,7 +634,6 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	u := User{
 		Email:     n,
 		Id:        uid,
-		PayoutETH: stringPointer(fakePubKey1),
 		CreatedAt: timeNow(),
 	}
 

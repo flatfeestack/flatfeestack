@@ -22,7 +22,6 @@ type User struct {
 	Email          string  `json:"email"`
 	Name           *string `json:"name"`
 	Image          *string `json:"image"`
-	PayoutETH      *string `json:"payout_eth"`
 	PaymentMethod  *string `json:"payment_method"`
 	Last4          *string `json:"last4"`
 	Token          *string `json:"token"`
@@ -54,23 +53,6 @@ type Repo struct {
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
-/*type UserAggBalance struct {
-	UserId             uuid.UUID   `json:"userId"`
-	PayoutEth          string      `json:"payout_eth"`
-	Balance            int64       `json:"balance"`
-	Emails             []string    `json:"email_list"`
-	DailyUserPayoutIds []uuid.UUID `json:"daily_user_payout_id_list"`
-	CreatedAt          time.Time
-}*/
-
-/*type PayoutsRequest struct {
-	DailyUserPayoutId uuid.UUID `json:"daily-repo-balance-id"`
-	BatchId           uuid.UUID `json:"batch-id"`
-	ExchangeRate      big.Float
-	CreatedAt         time.Time
-}*/
-
-// PayoutRequest New for Crypto, USD pay in should be migrated
 type PayoutRequest struct {
 	UserId       uuid.UUID
 	BatchId      uuid.UUID
@@ -81,15 +63,6 @@ type PayoutRequest struct {
 	CreatedAt    time.Time
 }
 
-/*type PayoutsResponse struct {
-	BatchId    uuid.UUID
-	TxHash     string
-	Error      *string
-	CreatedAt  time.Time
-	PayoutWeis []PayoutWei
-}*/
-
-// PayoutsResponseDB New for Crypto, USD pay in should be migrated
 type PayoutsResponse struct {
 	BatchId   uuid.UUID
 	TxHash    string
@@ -191,11 +164,11 @@ func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, payout_eth, role 
+                                stripe_last4, email, name, image, role 
                          FROM users WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.PayoutETH, &u.Role)
+			&u.Image, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -210,11 +183,11 @@ func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, payout_eth, role 
+                                stripe_last4, email, name, image, role 
                          FROM users WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.PayoutETH, &u.Role)
+			&u.Image, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -226,14 +199,14 @@ func findUserById(uid uuid.UUID) (*User, error) {
 }
 
 func insertUser(user *User, token string) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, token, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, token, created_at) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, token, user.CreatedAt)
+	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, token, user.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -242,17 +215,17 @@ func insertUser(user *User, token string) error {
 
 func updateUser(user *User) error {
 	stmt, err := db.Prepare(`UPDATE users SET 
-                                           stripe_id=$1, payout_eth=$2,  
-                                           stripe_payment_method=$3, 
-                                           stripe_last4=$4
-                                    WHERE id=$5`)
+                                           stripe_id=$1,  
+                                           stripe_payment_method=$2, 
+                                           stripe_last4=$3
+                                    WHERE id=$4`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(user.StripeId, user.PayoutETH, user.PaymentMethod, user.Last4, user.Id)
+	res, err = stmt.Exec(user.StripeId, user.PaymentMethod, user.Last4, user.Id)
 	if err != nil {
 		return err
 	}

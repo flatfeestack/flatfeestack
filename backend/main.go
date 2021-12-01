@@ -223,7 +223,6 @@ func main() {
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
