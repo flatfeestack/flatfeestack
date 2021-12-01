@@ -9,7 +9,6 @@ export type Users = {
   name: string;
   image: string;
   username: string;
-  payout_eth: string;
   token: string;
   role: string;
   login: boolean;
@@ -109,7 +108,6 @@ export type Time = {
 }
 
 export type UserAggBalance = {
-  payout_eth: string;
   balance: number;
   email_list: string[];
   daily_user_payout_id_list: string[];

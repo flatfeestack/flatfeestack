@@ -11,17 +11,6 @@
   let viewContract;
   let balance = 0;
 
-  $: {
-    if (viewContract && $user.payout_eth) {
-      try {
-        //TODO: make asynce
-        balance = viewContract.balanceOf($user.payout_eth);
-      } catch (e) {
-        $error = e;
-      }
-    }
-  }
-
   onMount(async () => {
     const ethProv = await detectEthereumProvider();
     if (ethProv) {

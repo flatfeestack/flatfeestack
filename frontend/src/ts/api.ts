@@ -107,7 +107,6 @@ export const API = {
       json: { email, token } }),
     addEmail: (email: string) => backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) => backendToken.delete(`users/me/git-email/${encodeURI(email)}`),
-    updatePayoutAddress: (address: string) => backendToken.put(`users/me/payout/${address}`),
     getPayoutAddresses: () => backendToken.get(`users/me/wallets`).json<PayoutAddress[]>(),
     addPayoutAddress: (currency: string, address: string) => backendToken.post(`users/me/wallets`, {json: {currency, address}}).json<PayoutAddress>(),
     removePayoutAddress: (id: number) => backendToken.delete(`users/me/wallets/${id}`),

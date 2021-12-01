@@ -62,19 +62,6 @@
       $error = e;
     }
   }
-
-  async function updatePayout(e) {
-    try {
-      if (!$user.payout_eth || !$user.payout_eth.match(/^0x[a-fA-F0-9]{40}$/g)) {
-        $error = "Invalid ethereum address";
-      }
-      //TODO: no button, wait 1sec
-      await API.user.updatePayoutAddress($user.payout_eth);
-    } catch (e) {
-      $error = e;
-    }
-  }
-
   async function handleSubmit() {
     try {
       await API.user.addEmail(newEmail);
