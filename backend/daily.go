@@ -386,6 +386,7 @@ type PayoutCrypto struct {
 	Address  string
 	Tea      int64
 	Currency string
+	Meta     []PayoutMeta
 }
 
 func findMonthlyBatchJobPayout() ([]PayoutCrypto, error) {

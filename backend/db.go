@@ -1281,9 +1281,19 @@ func insertPayoutResponse(p *PayoutsResponse) error {
 		return err
 	}
 	for _, v := range p.Payouts.Payout {
-		err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
-		if err != nil {
-			return err
+		if len(v.Meta) > 0 {
+			for _, i := range v.Meta {
+				v.NanoTea = i.Tea
+				err = insertPayoutResponseDetails(pid, &v, i.Currency)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

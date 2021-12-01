@@ -79,10 +79,16 @@ type CryptoCurrency struct {
 	ShortName string `json:"shortName"`
 }
 
+type PayoutMeta struct {
+	Currency string
+	Tea      int64
+}
+
 type PayoutToService struct {
-	Address      string    `json:"address"`
-	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
-	Tea          int64     `json:"nano_tea"`
+	Address      string       `json:"address"`
+	ExchangeRate big.Float    `json:"exchange_rate_USD_ETH"`
+	Tea          int64        `json:"nano_tea"`
+	Meta         []PayoutMeta `json:"meta"`
 }
 
 var plans = []Plan{}
