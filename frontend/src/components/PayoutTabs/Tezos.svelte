@@ -4,15 +4,8 @@
   import Dots from "../Dots.svelte";
   import { TempleWallet } from "@temple-wallet/dapp";
 
-
   let balance
   let contract
-
-  $: {
-    if ($user.payout_eth) {
-
-    }
-  }
 
   onMount(async () => {
     const available = await TempleWallet.isAvailable();

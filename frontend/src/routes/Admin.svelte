@@ -10,6 +10,7 @@ import Fa from "svelte-fa";
 let promisePendingPayouts =API.payouts.payoutInfos();
 let promiseTime = API.payouts.time();
 let promiseUsers = API.admin.users();
+let showSuccess = false;
 
 const handleFakeUsers = async (email: string) => {
   return API.payouts.fakeUser(email)
@@ -30,7 +31,10 @@ const handleWarp = async (hours: number) => {
 }
 
 const payout = async (exchangeRate: number) => {
-  await API.payouts.payout(exchangeRate)
+  const res = await API.payouts.payout(exchangeRate)
+  if (res.ok) {
+    showSuccess = true;
+  }
 }
 
 let userEmail = ""
@@ -206,4 +210,7 @@ async function loginAs(email: string) {
   </button>
   Exchange Rate USD to ETH: <input bind:value={exchangeRate}>
 
+  {#if showSuccess}
+    <div class="p-2">Payment successful!</div>
+  {/if}
 </Navigation>
