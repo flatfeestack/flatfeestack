@@ -868,9 +868,8 @@ func updateInvoice(invoice InvoiceDB) error {
 								outcome_currency = $9,      
 								payment_status = $10,        
 								created_at = $11,            
-								last_update = $12,
-                   				invoice_url = $13
-                                    WHERE nowpayments_invoice_id=$14`)
+								last_update = $12
+                                    WHERE nowpayments_invoice_id=$13`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
 	}
@@ -880,7 +879,7 @@ func updateInvoice(invoice InvoiceDB) error {
 	res, err = stmt.Exec(
 		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, invoice.PriceCurrency,
 		invoice.PayAmount.Int64, invoice.PayCurrency, invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, invoice.OutcomeCurrency.String, invoice.PaymentStatus,
-		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
+		invoice.CreatedAt, invoice.LastUpdate, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
 	}
