@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -19,10 +20,6 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 	// pulls an image, creates a container based on it and runs it
-	tmpName, err := ioutil.TempDir(os.TempDir(), "postgresql")
-	if err != nil {
-		log.Fatal(err)
-	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "postgres",
 		Tag:        "13-alpine",
@@ -35,17 +32,12 @@ func TestMain(m *testing.M) {
 		// set AutoRemove to true so that stopped container goes away by itself
 		config.AutoRemove = true
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
-		config.Mounts = []docker.HostMount{docker.HostMount{
-			Target: "/var/lib/postgresql/data",
-			Source: tmpName,
-			Type:   "bind",
-		}}
 	})
 
 	if err != nil {
 		log.Fatalf("Could not start resource: %s", err)
 	}
-	resource.Expire(3600) //1h
+	resource.Expire(60) //1min
 	port := resource.GetPort("5432/tcp")
 	log.Printf("DB port: %v\n", port)
 	if err = pool.Retry(func() error {
@@ -65,33 +57,31 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not purge resource: %s", err)
 	}
 
-	os.RemoveAll(tmpName)
 	os.Exit(code)
 }
 
-func runSQL(db *sql.DB, files ...string) error {
+func runSQL(files ...string) error {
 	for _, file := range files {
 		//this will stringPointer or alter tables
 		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
 		if _, err := os.Stat(file); err == nil {
-			file, err := ioutil.ReadFile(file)
+			fileBytes, err := ioutil.ReadFile(file)
 			if err != nil {
 				return err
 			}
-			requests := strings.Split(string(file), ";")
-			for _, request := range requests {
-				lines := strings.Split(request, "\n")
-				cleanRequest := ""
-				for _, line := range lines {
-					line = strings.Replace(line, "\t", "", -1)
-					if !strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "--") && len(line) > 0 {
-						cleanRequest += strings.TrimSpace(line) + " "
-					}
-				}
 
-				_, err := db.Exec(cleanRequest)
-				if err != nil {
-					return fmt.Errorf("[%v] %v", request, err)
+			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
+			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+			newBytes := re.ReplaceAll(fileBytes, nil)
+
+			requests := strings.Split(string(newBytes), ";")
+			for _, request := range requests {
+				request = strings.TrimSpace(request)
+				if len(request) > 0 {
+					_, err := db.Exec(request)
+					if err != nil {
+						return fmt.Errorf("[%v] %v", request, err)
+					}
 				}
 			}
 		} else {
@@ -102,14 +92,14 @@ func runSQL(db *sql.DB, files ...string) error {
 }
 
 func setup() {
-	err := runSQL(db, "init.sql")
+	err := runSQL("init.sql")
 	if err != nil {
-		log.Fatalf("Could run init scripts: %s", err)
+		log.Fatalf("Could not run init.sql scripts: %s", err)
 	}
 }
 func teardown() {
-	err := runSQL(db, "drop_test.sql")
+	err := runSQL("drop_test.sql")
 	if err != nil {
-		log.Fatalf("Could run drop_test.sql: %s", err)
+		log.Fatalf("Could not run drop_test.sql: %s", err)
 	}
 }

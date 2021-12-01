@@ -105,9 +105,9 @@ func NewOpts() *Opts {
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
-	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS-URL",
+	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS_URL",
 		"http://analysis-engine:9083"), "Analysis Url")
-	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT-URL",
+	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT_URL",
 		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 	flag.StringVar(&o.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
@@ -223,7 +223,6 @@ func main() {
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/payout/{address}", jwtAuthUser(updatePayout)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
@@ -245,6 +244,7 @@ func main() {
 	router.HandleFunc("/users/contributions-summary/{uuid}", contributionsSum2).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", userSummary2).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payout-pending", jwtAuthUser(pendingDailyUserPayouts)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payout", jwtAuthUser(totalRealizedIncome)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/wallets", jwtAuthUser(getUserWallets)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/wallets", jwtAuthUser(addUserWallet)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(deleteUserWallet)).Methods(http.MethodDelete)
