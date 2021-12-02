@@ -22,7 +22,6 @@ route /analysis/* {
 }
 
 route /hooks/* {
-    uri strip_prefix /hooks
     reverse_proxy backend:9082
 }
 

@@ -24,7 +24,6 @@ test.flatfeestack.io {
         }
 
         route /hooks/* {
-            uri strip_prefix /hooks
             reverse_proxy test-backend:9082
         }
 
@@ -59,7 +58,6 @@ flatfeestack.io, flatfeestack.ch, flatfeestack.com, flatfeestack.net, flatfeesta
         }
 
         route /hooks/* {
-            uri strip_prefix /hooks
             reverse_proxy prod-backend:9082
         }
 
