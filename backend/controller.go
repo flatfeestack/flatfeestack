@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -77,10 +78,16 @@ type CryptoCurrency struct {
 	ShortName string `json:"shortName"`
 }
 
+type PayoutMeta struct {
+	Currency string
+	Tea      int64
+}
+
 type PayoutToService struct {
-	Address      string    `json:"address"`
-	ExchangeRate big.Float `json:"exchange_rate_USD_ETH"`
-	Tea          int64     `json:"nano_tea"`
+	Address      string       `json:"address"`
+	ExchangeRate big.Float    `json:"exchange_rate_USD_ETH"`
+	Tea          int64        `json:"nano_tea"`
+	Meta         []PayoutMeta `json:"meta"`
 }
 
 var plans = []Plan{}
@@ -248,17 +255,6 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	err := deleteGitEmail(user.Id, email)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
-		return
-	}
-}
-
-func updatePayout(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	a := params["address"]
-	user.PayoutETH = &a
-	err := updateUser(user)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save payout address: %v", err)
 		return
 	}
 }
@@ -643,7 +639,6 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	u := User{
 		Email:     n,
 		Id:        uid,
-		PayoutETH: stringPointer(fakePubKey1),
 		CreatedAt: timeNow(),
 	}
 
@@ -873,13 +868,50 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 }
 
+type UserBalanceCoreDto struct {
+	UserId   uuid.UUID `json:"userId"`
+	Balance  float64   `json:"balance"`
+	Currency string    `json:"currency"`
+}
+
 func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User) {
-	ub, err := getPendingDailyUserPayouts(user.Id, timeNow())
+	fmt.Println(user.Id)
+	ubs, err := getPendingDailyUserPayouts(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	writeJson(w, ub)
+	var result []UserBalanceCoreDto
+	for _, ub := range ubs {
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
+		if ub.Currency == "USD" {
+			r.Balance = float64(ub.Balance) / usdFactor
+		} else {
+			r.Balance = float64(ub.Balance) / cryptoFactor
+		}
+		result = append(result, r)
+	}
+	writeJson(w, result)
+}
+
+func totalRealizedIncome(w http.ResponseWriter, _ *http.Request, user *User) {
+	fmt.Println(user.Id)
+	ubs, err := getTotalRealizedIncome(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+	var result []UserBalanceCoreDto
+	for _, ub := range ubs {
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
+		if ub.Currency == "USD" {
+			r.Balance = float64(ub.Balance) / usdFactor
+		} else {
+			r.Balance = float64(ub.Balance) / cryptoFactor
+		}
+		result = append(result, r)
+	}
+	writeJson(w, result)
 }
 
 func genRnd(n int) ([]byte, error) {

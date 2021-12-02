@@ -1,15 +1,15 @@
 -- Create Sponsors
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('7a760bac-5d84-498b-9757-5c913d35c605', NULL, NULL, NULL, NULL, NULL, NULL, 'sponsor1@flatfeestack.io', NULL, NULL, NULL, '6IREUFR7ST3UENSNKOBOWMSIXMMXU===', 'USR', '2021-10-30 12:00:53.293937');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('67d62066-b966-425d-8060-2a58a17b48c9', NULL, NULL, NULL, NULL, NULL, null, 'sponsor2@flatfeestack.io', NULL, NULL, NULL, 'BW56QCVUHPPTCM5DMAT7K774X4PDA===', 'USR', '2021-10-30 11:59:02.935403');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('23fbded4-6d6b-446e-8b33-9cefcacc9a01', NULL, NULL, NULL, NULL, NULL, null, 'sponsor3@flatfeestack.io', NULL, NULL, NULL, 'CD2AZO2S7Y73MR76Y6PLKPIYAF3QU===', 'USR', '2021-10-30 11:59:42.816161');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('d994260b-125e-441a-926a-bd0498bfb902', NULL, NULL, NULL, NULL, NULL, null, 'sponsor4@flatfeestack.io', NULL, NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('fdc85b12-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'sponsor5@flatfeestack.io', NULL, NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('7a760bac-5d84-498b-9757-5c913d35c605', NULL, NULL, NULL, NULL, NULL, NULL, 'sponsor1@flatfeestack.io', NULL, NULL, '6IREUFR7ST3UENSNKOBOWMSIXMMXU===', 'USR', '2021-10-30 12:00:53.293937');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('67d62066-b966-425d-8060-2a58a17b48c9', NULL, NULL, NULL, NULL, NULL, null, 'sponsor2@flatfeestack.io', NULL, NULL, 'BW56QCVUHPPTCM5DMAT7K774X4PDA===', 'USR', '2021-10-30 11:59:02.935403');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('23fbded4-6d6b-446e-8b33-9cefcacc9a01', NULL, NULL, NULL, NULL, NULL, null, 'sponsor3@flatfeestack.io', NULL, NULL, 'CD2AZO2S7Y73MR76Y6PLKPIYAF3QU===', 'USR', '2021-10-30 11:59:42.816161');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('d994260b-125e-441a-926a-bd0498bfb902', NULL, NULL, NULL, NULL, NULL, null, 'sponsor4@flatfeestack.io', NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('fdc85b12-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'sponsor5@flatfeestack.io', NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
 
 -- Create Contributor
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('d263a9f0-3fde-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, NULL, 'contributor1@flatfeestack.io', NULL, NULL, NULL, '6IREUFR7ST3UENSNKOBOWMSIXMMXU===', 'USR', '2021-10-30 12:00:53.293937');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('14b8f83c-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor2@flatfeestack.io', NULL, NULL, NULL, 'BW56QCVUHPPTCM5DMAT7K774X4PDA===', 'USR', '2021-10-30 11:59:02.935403');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('18a2da08-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor3@flatfeestack.io', NULL, NULL, NULL, 'CD2AZO2S7Y73MR76Y6PLKPIYAF3QU===', 'USR', '2021-10-30 11:59:42.816161');
-INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, payout_eth, token, role, created_at) VALUES ('1caeda7a-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor4@flatfeestack.io', NULL, NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('d263a9f0-3fde-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, NULL, 'contributor1@flatfeestack.io', NULL, NULL, '6IREUFR7ST3UENSNKOBOWMSIXMMXU===', 'USR', '2021-10-30 12:00:53.293937');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('14b8f83c-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor2@flatfeestack.io', NULL, NULL, 'BW56QCVUHPPTCM5DMAT7K774X4PDA===', 'USR', '2021-10-30 11:59:02.935403');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('18a2da08-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor3@flatfeestack.io', NULL, NULL, 'CD2AZO2S7Y73MR76Y6PLKPIYAF3QU===', 'USR', '2021-10-30 11:59:42.816161');
+INSERT INTO public.users (id, sponsor_id, invited_email, stripe_id, stripe_payment_method, stripe_last4, payment_cycle_id, email, name, image, token, role, created_at) VALUES ('1caeda7a-3fdf-11ec-9356-0242ac130003', NULL, NULL, NULL, NULL, NULL, null, 'contributor4@flatfeestack.io', NULL, NULL, 'YQQYQODRNSLDMONVEDLMUVE34T4AC===', 'USR', '2021-10-30 12:00:12.234188');
 
 -- Git Email for Contributors
 INSERT INTO public.git_email (id, user_id, email, token, confirmed_at, created_at) VALUES ('6a27baf5-3ed4-41f7-8317-94d844ac75b2', 'd263a9f0-3fde-11ec-9356-0242ac130003', 'contributor1@flatfeestack.io', 'C64IVABILT4SRAROBBWDNMVY2E======', NULL, '2021-10-30 12:48:59.413386');
@@ -124,40 +124,3 @@ INSERT INTO public.analysis_response (id, analysis_request_id, git_email, git_na
 INSERT INTO public.analysis_response (id, analysis_request_id, git_email, git_name, weight, created_at) VALUES ('b6eb1c16-4476-11ec-81d3-0242ac130003', '5ee7c5ca-6400-472e-ae55-7c6045bd6936', 'contributor4@flatfeestack.io', 'Contributor 4', 0.3, '2021-10-01 00:00:00.000000');
 
 INSERT INTO public.analysis_response (id, analysis_request_id, git_email, git_name, weight, created_at) VALUES ('b6eb1ee6-4476-11ec-81d3-0242ac130003', 'dba32194-3555-4587-8032-a37712ba0b9d', 'not@flatfeestack.io', 'Not at flatfeestack', 0.3, '2021-10-01 00:00:00.000000');
-
-select tmp.contributor_name, sum(tmp.balance) from (
-                                                       SELECT
-                                                           s.user_id,
-                                                           s.repo_id,
-                                                           res.git_email as contributor_email,
-                                                           res.git_name as contributor_name,
-                                                           res.weight as contributor_weight,
-                                                           g.user_id as contributor_user_id,
-                                                           drb.currency,
-                                                           CASE WHEN g.user_id IS NULL THEN
-                                                                    FLOOR(drb.balance * res.weight / (drw.weight + res.weight))
-                                                                ELSE
-                                                                    FLOOR(drb.balance * res.weight / drw.weight)
-                                                               END as balance,
-                                                           drb.day as day,
-    now() as created_at
-                                                       FROM sponsor_event AS s
-                                                           JOIN (
-                                                           SELECT id, MAX(date_to) as date_to, ARRAY_AGG(date_from) as dates_from, repo_id
-                                                           FROM analysis_request
-                                                           WHERE date_to <= '2021-10-01T23:59:59'
-                                                           GROUP BY repo_id, id
-                                                           ) AS tmp on tmp.repo_id = s.repo_id
-                                                           JOIN analysis_response as res on res.analysis_request_id = tmp.id
-                                                           JOIN daily_repo_balance as drb on drb.repo_id = s.repo_id
-                                                           JOIN daily_repo_weight as drw on drw.repo_id = s.repo_id
-                                                           LEFT JOIN git_email g ON g.email = res.git_email
-                                                       WHERE drb.day <= '2021-09-30' and drw.day <= '2021-09-30' and drw.day = drb.day
-                                                       order by drb.day, s.repo_id
-                                                   ) as tmp group by tmp.contributor_name
--- s.user_id, s.repo_id, drb.day, drb.currency, res.git_email, res.weight, drb.balance * res.weight
--- select repo_id, currency, day, sum(balance) OVER (PARTITION BY currency order by day) as cum_amt from daily_repo_balance
--- where day <= '2021-10-01'
--- order by day
-
-select * from analysis_response
