@@ -23,6 +23,11 @@ test.flatfeestack.io {
             reverse_proxy test-analysis-engine:9083
         }
 
+        route /hooks/* {
+            uri strip_prefix /hooks
+            reverse_proxy test-backend:9082
+        }
+
         route {
             reverse_proxy test-frontend:9085
         }

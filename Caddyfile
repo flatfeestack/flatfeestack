@@ -21,6 +21,11 @@ route /analysis/* {
     reverse_proxy analysis-engine:9083
 }
 
+route /hooks/* {
+    uri strip_prefix /hooks
+    reverse_proxy backend:9082
+}
+
 route {
     reverse_proxy frontend:9085
 }
