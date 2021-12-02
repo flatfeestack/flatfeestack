@@ -58,6 +58,11 @@ flatfeestack.io, flatfeestack.ch, flatfeestack.com, flatfeestack.net, flatfeesta
             reverse_proxy prod-analysis-engine:9083
         }
 
+        route /hooks/* {
+            uri strip_prefix /hooks
+            reverse_proxy prod-backend:9082
+        }
+
         route {
             reverse_proxy prod-frontend:9085
         }
