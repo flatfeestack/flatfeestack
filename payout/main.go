@@ -20,34 +20,23 @@ import (
 	"time"
 )
 
-// USD
-type PayoutUsd struct {
-	Address      string `json:"address"`
-	Balance      int64  `json:"balance_micro_USD"`
-	ExchangeRate string `json:"exchange_rate_USD_ETH"`
+type PayoutMeta struct {
+	Currency string
+	Tea      int64
 }
-
-type PayoutWei struct {
-	Address string  `json:"address"`
-	Balance big.Int `json:"balance_wei"`
-}
-
-type PayoutResponse struct {
-	TxHash     string      `json:"tx_hash"`
-	PayoutWeis []PayoutWei `json:"payout_weis"`
-}
-
-//Crypto
 
 type PayoutCryptoRequest struct {
-	Address string `json:"address"`
-	NanoTea int64  `json:"nano_tea"`
+	Address      string       `json:"address"`
+	ExchangeRate string       `json:"exchange_rate_USD_ETH"`
+	NanoTea      int64        `json:"nano_tea"`
+	Meta         []PayoutMeta `json:"meta"`
 }
 
 type PayoutCrypto struct {
-	Address          string  `json:"address"`
-	NanoTea          int64   `json:"nano_tea"`
-	SmartContractTea big.Int `json:"smart_contract_tea"`
+	Address          string       `json:"address"`
+	NanoTea          int64        `json:"nano_tea"`
+	SmartContractTea big.Int      `json:"smart_contract_tea"`
+	Meta             []PayoutMeta `json:"meta"`
 }
 
 type PayoutCryptoResponse struct {
@@ -168,9 +157,6 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	EthWei.SetString("1000000000000000000")
-	MicroUsd.SetString("1000000")
-	UsdWei.SetString("1000000000000")           //EthWei/MicroUsd
 	defaultCryptoFactor.SetString("1000000000") // Fixed factor for the moment (Nano)
 
 	opts = NewOpts()
@@ -215,73 +201,10 @@ func main() {
 
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
-	router.HandleFunc("/pay", PaymentRequestHandler).Methods("POST", "OPTIONS")
 	router.HandleFunc("/pay-crypto/{currency}", PaymentCryptoRequestHandler).Methods("POST", "OPTIONS")
 
 	log.Printf("listing on port %v", opts.Port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
-}
-
-func PaymentRequestHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var data []PayoutUsd
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Printf("Could not decode Webhook Body %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	var amountWei []*big.Int
-	var addresses []string
-	var payoutWei []PayoutWei
-
-	for _, v := range data {
-		var flt *big.Float
-		flt, _, err = big.ParseFloat(data[0].ExchangeRate, 10, 128, big.ToZero)
-		if flt.Cmp(big.NewFloat(0)) == 0 {
-			writeErr(w, http.StatusBadRequest, "exchange rate is zero, cannot calculate")
-			return
-		}
-		balance := new(big.Float)
-		balance.SetInt64(v.Balance)
-		balance = balance.Mul(balance, UsdWei)
-		balance = balance.Quo(balance, flt)
-		i, _ := balance.Int(nil)
-		amountWei = append(amountWei, i)
-		addresses = append(addresses, v.Address)
-		payoutWei = append(payoutWei, PayoutWei{
-			Address: v.Address,
-			Balance: *i,
-		})
-	}
-
-	log.Printf("received payout request for %v addresses", len(data))
-
-	if len(data) == 0 {
-		log.Printf("no data received, don't write on the chain")
-		return
-	}
-
-	if opts.Env == "local" || opts.Env == "dev" {
-		for k := range addresses {
-			log.Printf("sending %v wei to %s", amountWei[k], addresses[k])
-		}
-	}
-
-	txHash, err := payoutEth(ethClient, addresses, amountWei)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Unable to payout eth")
-		return
-	}
-
-	p := PayoutResponse{TxHash: txHash, PayoutWeis: payoutWei}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(p)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could encode json: %v", err)
-		return
-	}
 }
 
 func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -311,6 +234,7 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 			Address:          v.Address,
 			NanoTea:          v.NanoTea,
 			SmartContractTea: *i,
+			Meta:             v.Meta,
 		})
 	}
 
