@@ -1,0 +1,35 @@
+###
+# Documentation from NOWPayment:
+# - https://documenter.getpostman.com/view/7907941/S1a32n38?version=latest#5e37f3ad-0fa1-4292-af51-5c7f95730486
+#
+# IMPORTANT:
+# - change "invoice_id"
+# - change "pay_currency" (e.g., which currency the user/sponsor pays)
+# - change "outcome_currency" (e.g., which currency flatfeestack receives)
+# - change "pay_amount" (120 USD in ETH)
+# - change "outcome_amount" ('pay_amount' - fees, what flatfeestack receives),
+# - change "actually_paid" ('pay_amount' + fees, what the user/sponsor will be charged)
+# - change "price_amount" (price in USD)
+
+POST test.flatfeestack.io/hooks/nowpayments
+Content-Type: application/json
+
+{
+  "actually_paid":0.00697427,
+  "invoice_id":5428370338,
+  "order_description":null,
+  "order_id":null,
+  "outcome_amount":0.00697427,
+  "outcome_currency":"eth",
+  "pay_address":"tz1P4L2Jof6u13swL93Uxa33rCi5Jmkmhszv",
+  "pay_amount":0.00697427,
+  "pay_currency":"eth",
+  "payment_id":5520867065,
+  "payment_status":"finished",
+  "price_amount": 31.61,
+  "price_currency":"usd",
+  "purchase_id":"5281411522"
+}
+
+###
+
