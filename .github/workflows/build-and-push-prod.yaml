@@ -28,7 +28,7 @@ jobs:
       - name: Deploy - PROD
         uses: garygrossgarten/github-action-ssh@release
         with:
-          command: sh docker_login.sh && cd flatfeestack && git pull --recurse-submodules && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env pull && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env up -d
+          command: sh docker_login.sh && cd flatfeestack && git submodule update --init --recursive && git pull --recurse-submodules && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env pull && TAG_IMAGE=${{ env.TAG_IMAGE }} docker-compose -f docker-compose.prod.yml -f docker-compose.caddy.yml --env-file .prod.env up -d
           host: ${{ secrets.FLATFEESTACK1_NODE_HOST }}
           username: ubuntu
           privateKey: ${{ secrets.FLATFEESTACK1_NODE_PRIVATE_KEY}}
