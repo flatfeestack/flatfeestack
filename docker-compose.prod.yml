@@ -87,6 +87,8 @@ services:
       interval: 1s
       timeout: 5s
       retries: 15
+    ports:
+      - 15432:5432
     networks:
       - prod
     env_file:
