@@ -13,17 +13,6 @@
   let neoline;
   let account;
 
-  $: {
-    if (viewContract && $user.payout_eth) {
-      try {
-        //TODO: make asynce
-        balance = viewContract.balanceOf($user.payout_eth);
-      } catch (e) {
-        $error = e;
-      }
-    }
-  }
-
   const handleNeoLineEvent = () => {
     neoline = new window.NEOLineN3.Init()
     $error = "Please install <a href=\"https://neoline.io/en/\">NeoLine</a>";

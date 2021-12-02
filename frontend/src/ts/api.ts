@@ -107,7 +107,6 @@ export const API = {
       json: { email, token } }),
     addEmail: (email: string) => backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) => backendToken.delete(`users/me/git-email/${encodeURI(email)}`),
-    updatePayoutAddress: (address: string) => backendToken.put(`users/me/payout/${address}`),
     getPayoutAddresses: () => backendToken.get(`users/me/wallets`).json<PayoutAddress[]>(),
     addPayoutAddress: (currency: string, address: string) => backendToken.post(`users/me/wallets`, {json: {currency, address}}).json<PayoutAddress>(),
     removePayoutAddress: (id: number) => backendToken.delete(`users/me/wallets/${id}`),
@@ -132,6 +131,7 @@ export const API = {
     contributionsSummary2: (uuid: string) => backendToken.post(`users/contributions-summary/${uuid}`).json<Repo[]>(),
     summary: (uuid: string) => backendToken.post(`users/summary/${uuid}`).json<Users>(),
     pendingDailyUserPayouts: () => backendToken.post(`users/me/payout-pending`).json<UserBalanceCore>(),
+    totalRealizedIncome: () => backendToken.post(`users/me/payout`).json<UserBalanceCore>(),
   },
   repos: {
     search: (s: string) => backendToken.get(`repos/search?q=${encodeURI(s)}`).json<Repo[]>(),
