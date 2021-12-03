@@ -673,8 +673,8 @@ func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 
 func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 	chunkSize := 100
-	supportedCurrenciesWithUSD := append(supportedCurrencies, CryptoCurrency{Name: "Dollar", ShortName: "USD"})
-	var container = make([][]PayoutCrypto, len(supportedCurrenciesWithUSD))
+	var container = make([][]PayoutCrypto, len(supportedCurrencies))
+	var usdPayouts []PayoutCrypto
 
 	m := mux.Vars(r)
 	h := m["exchangeRate"]
@@ -695,11 +695,27 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	// group container by currency [[eth], [neo], [tez], [usd]]
+	// group container by currency [[eth], [neo], [tez]]
 	for _, payout := range payouts {
-		for i, currency := range supportedCurrenciesWithUSD {
+		if payout.Currency == "USD" {
+			usdPayouts = append(usdPayouts, payout)
+			continue
+		}
+		for i, currency := range supportedCurrencies {
 			if payout.Currency == currency.ShortName {
 				container[i] = append(container[i], payout)
+			}
+		}
+	}
+
+	for _, usdPayout := range usdPayouts {
+		for i := 0; i < len(container[0]); i++ { // ETH at position 1
+			if usdPayout.Address == container[0][i].Address {
+				e, _ := exchangeRate.Float64()
+				container[0][i].Meta = append(container[0][i].Meta, PayoutMeta{Currency: "USD", Tea: usdPayout.Tea})
+				container[0][i].Meta = append(container[0][i].Meta, PayoutMeta{Currency: "ETH", Tea: container[0][i].Tea})
+				usdInEth := float64(usdPayout.Tea) / float64(usdFactor) * e * cryptoFactor
+				container[0][i].Tea += int64(usdInEth)
 			}
 		}
 	}
@@ -726,9 +742,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 					Address:   payout.Address,
 					CreatedAt: timeNow(),
 				}
-				if currency == "USD" {
-					request.ExchangeRate = *exchangeRate
-				}
+
 				err := insertPayoutRequest(&request)
 				if err != nil {
 					writeErr(w, http.StatusInternalServerError, err.Error())
@@ -738,10 +752,9 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 				pt := PayoutToService{
 					Address: payout.Address,
 					Tea:     payout.Tea,
+					Meta:    payout.Meta,
 				}
-				if currency == "USD" {
-					pt.ExchangeRate = *exchangeRate
-				}
+
 				pts = append(pts, pt)
 			}
 			err := cryptoPayout(pts, batchId, currency)

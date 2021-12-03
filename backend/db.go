@@ -22,7 +22,6 @@ type User struct {
 	Email          string  `json:"email"`
 	Name           *string `json:"name"`
 	Image          *string `json:"image"`
-	PayoutETH      *string `json:"payout_eth"`
 	PaymentMethod  *string `json:"payment_method"`
 	Last4          *string `json:"last4"`
 	Token          *string `json:"token"`
@@ -54,23 +53,6 @@ type Repo struct {
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
-/*type UserAggBalance struct {
-	UserId             uuid.UUID   `json:"userId"`
-	PayoutEth          string      `json:"payout_eth"`
-	Balance            int64       `json:"balance"`
-	Emails             []string    `json:"email_list"`
-	DailyUserPayoutIds []uuid.UUID `json:"daily_user_payout_id_list"`
-	CreatedAt          time.Time
-}*/
-
-/*type PayoutsRequest struct {
-	DailyUserPayoutId uuid.UUID `json:"daily-repo-balance-id"`
-	BatchId           uuid.UUID `json:"batch-id"`
-	ExchangeRate      big.Float
-	CreatedAt         time.Time
-}*/
-
-// PayoutRequest New for Crypto, USD pay in should be migrated
 type PayoutRequest struct {
 	UserId       uuid.UUID
 	BatchId      uuid.UUID
@@ -81,15 +63,6 @@ type PayoutRequest struct {
 	CreatedAt    time.Time
 }
 
-/*type PayoutsResponse struct {
-	BatchId    uuid.UUID
-	TxHash     string
-	Error      *string
-	CreatedAt  time.Time
-	PayoutWeis []PayoutWei
-}*/
-
-// PayoutsResponseDB New for Crypto, USD pay in should be migrated
 type PayoutsResponse struct {
 	BatchId   uuid.UUID
 	TxHash    string
@@ -105,8 +78,9 @@ type GitEmail struct {
 }
 
 type UserBalanceCore struct {
-	UserId  uuid.UUID `json:"userId"`
-	Balance int64     `json:"balance"`
+	UserId   uuid.UUID `json:"userId"`
+	Balance  int64     `json:"balance"`
+	Currency string    `json:"currency"`
 }
 
 type UserBalance struct {
@@ -191,11 +165,11 @@ func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, payout_eth, role 
+                                stripe_last4, email, name, image, role 
                          FROM users WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.PayoutETH, &u.Role)
+			&u.Image, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -210,11 +184,11 @@ func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, payout_eth, role 
+                                stripe_last4, email, name, image, role 
                          FROM users WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.PayoutETH, &u.Role)
+			&u.Image, &u.Role)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -226,14 +200,14 @@ func findUserById(uid uuid.UUID) (*User, error) {
 }
 
 func insertUser(user *User, token string) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, payout_eth, token, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, token, created_at) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PayoutETH, token, user.CreatedAt)
+	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, token, user.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -242,17 +216,17 @@ func insertUser(user *User, token string) error {
 
 func updateUser(user *User) error {
 	stmt, err := db.Prepare(`UPDATE users SET 
-                                           stripe_id=$1, payout_eth=$2,  
-                                           stripe_payment_method=$3, 
-                                           stripe_last4=$4
-                                    WHERE id=$5`)
+                                           stripe_id=$1,  
+                                           stripe_payment_method=$2, 
+                                           stripe_last4=$3
+                                    WHERE id=$4`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(user.StripeId, user.PayoutETH, user.PaymentMethod, user.Last4, user.Id)
+	res, err = stmt.Exec(user.StripeId, user.PaymentMethod, user.Last4, user.Id)
 	if err != nil {
 		return err
 	}
@@ -894,9 +868,8 @@ func updateInvoice(invoice InvoiceDB) error {
 								outcome_currency = $9,      
 								payment_status = $10,        
 								created_at = $11,            
-								last_update = $12,
-                   				invoice_url = $13
-                                    WHERE nowpayments_invoice_id=$14`)
+								last_update = $12
+                                    WHERE nowpayments_invoice_id=$13`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
 	}
@@ -906,7 +879,7 @@ func updateInvoice(invoice InvoiceDB) error {
 	res, err = stmt.Exec(
 		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, invoice.PriceCurrency,
 		invoice.PayAmount.Int64, invoice.PayCurrency, invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, invoice.OutcomeCurrency.String, invoice.PaymentStatus,
-		invoice.CreatedAt, invoice.LastUpdate, invoice.InvoiceUrl.String, invoice.NowpaymentsInvoiceId)
+		invoice.CreatedAt, invoice.LastUpdate, invoice.NowpaymentsInvoiceId)
 	if err != nil {
 		return err
 	}
@@ -1308,9 +1281,19 @@ func insertPayoutResponse(p *PayoutsResponse) error {
 		return err
 	}
 	for _, v := range p.Payouts.Payout {
-		err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
-		if err != nil {
-			return err
+		if len(v.Meta) > 0 {
+			for _, i := range v.Meta {
+				v.NanoTea = i.Tea
+				err = insertPayoutResponseDetails(pid, &v, i.Currency)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -1333,21 +1316,59 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 	return handleErrMustInsertOne(res)
 }
 
-func getPendingDailyUserPayouts(uid uuid.UUID, day time.Time) (*UserBalanceCore, error) {
-	day = timeDay(-60, day) //day -2 month
-	var ub UserBalanceCore
-	err := db.
-		QueryRow(`SELECT COALESCE(SUM(balance),0) as balance from daily_user_payout where user_id = $1 AND day >= $2`, uid, day).
-		Scan(&ub.Balance)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		ub.UserId = uid
-		return &ub, nil
-	default:
+func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
+	var ubs []UserBalanceCore
+	s := `SELECT dup.currency, CASE WHEN max(tmp.balance) IS NULL THEN sum(dup.balance) ELSE sum(dup.balance) - max(tmp.balance) END as balance
+		  FROM daily_user_payout dup 
+		  LEFT JOIN (	SELECT res_details.currency, max(res_details.nano_tea) as balance FROM payout_request as req
+		  				JOIN payout_response as res on res.batch_id = req.batch_id 
+		  				JOIN payout_response_details as res_details on res_details.payout_response_id = res.id
+		  				WHERE req.user_id = $1
+		  				GROUP BY res_details.currency
+		  		    ) AS tmp on tmp.currency = dup.currency
+		  WHERE dup.user_id = $1
+		  GROUP BY dup.currency`
+
+	rows, err := db.Query(s, uid)
+	if err != nil {
 		return nil, err
 	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var ub UserBalanceCore
+		err = rows.Scan(&ub.Currency, &ub.Balance)
+		if err != nil {
+			return nil, err
+		}
+		ubs = append(ubs, ub)
+	}
+	return ubs, nil
+}
+
+func getTotalRealizedIncome(uid uuid.UUID) ([]UserBalanceCore, error) {
+	var ubs []UserBalanceCore
+	s := `	select res_details.currency, max(res_details.nano_tea) from payout_request as req
+			join payout_response as res on res.batch_id = req.batch_id 
+			join payout_response_details as res_details on res_details.payout_response_id = res.id
+			where req.user_id = $1
+			group by res_details.currency`
+
+	rows, err := db.Query(s, uid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var ub UserBalanceCore
+		err = rows.Scan(&ub.Currency, &ub.Balance)
+		if err != nil {
+			return nil, err
+		}
+		ubs = append(ubs, ub)
+	}
+	return ubs, nil
 }
 
 func findPayoutInfos() ([]PayoutInfo, error) {

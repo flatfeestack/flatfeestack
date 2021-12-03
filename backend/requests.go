@@ -29,15 +29,11 @@ type AnalysisResponse struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-/*type PayoutWei struct {
-	Address string  `json:"address"`
-	Balance big.Int `json:"balance_wei"`
-}*/
-
 type Payout struct {
-	Address          string  `json:"address"`
-	NanoTea          int64   `json:"nano_tea"`
-	SmartContractTea big.Int `json:"smart_contract_tea"`
+	Address          string       `json:"address"`
+	NanoTea          int64        `json:"nano_tea"`
+	SmartContractTea big.Int      `json:"smart_contract_tea"`
+	Meta             []PayoutMeta `json:"meta"`
 }
 
 type PayoutResponse struct {
@@ -45,11 +41,6 @@ type PayoutResponse struct {
 	Currency string   `json:"currency"`
 	Payout   []Payout `json:"payout_cryptos"`
 }
-
-/*type PayoutResponse struct {
-	TxHash     string      `json:"tx_hash"`
-	PayoutWeis []PayoutWei `json:"payout_weis"`
-}*/
 
 func payoutRequest(pts []PayoutToService, currency string) (*PayoutResponse, error) {
 	client := http.Client{
@@ -60,12 +51,7 @@ func payoutRequest(pts []PayoutToService, currency string) (*PayoutResponse, err
 		return nil, err
 	}
 
-	var r *http.Response
-	if currency == "USD" {
-		r, err = client.Post(opts.PayoutUrl+"/pay", "application/json", bytes.NewBuffer(body))
-	} else {
-		r, err = client.Post(opts.PayoutUrl+"/pay-crypto/"+string(bytes.ToLower([]byte(currency))), "application/json", bytes.NewBuffer(body))
-	}
+	r, err := client.Post(opts.PayoutUrl+"/pay-crypto/"+string(bytes.ToLower([]byte(currency))), "application/json", bytes.NewBuffer(body))
 
 	if err != nil {
 		return nil, err
