@@ -942,7 +942,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency
 		}
 		paymentCycleDaysLeft += dailyPayment.DaysLeft
 		dailyPayment.PaymentCycleId = newPaymentCycleId
-		dailyPayment.LastUpdate = time.Now()
+		dailyPayment.LastUpdate = timeNow()
 		err = insertDailyPayment(dailyPayment)
 	}
 
@@ -952,7 +952,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency
 	}
 	newDailyPaymentAmount := balance / int64(dailyPaymentDaysLeft)
 
-	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, dailyPaymentDaysLeft, time.Now()}
+	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, dailyPaymentDaysLeft, timeNow()}
 
 	if isNewCurrencyPayment {
 		err = insertDailyPayment(newDailyPayment)
