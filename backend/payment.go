@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 )
 
 type ClientSecretBody struct {
@@ -867,7 +866,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency
 		}
 		totalDaysLeft += dailyPayment.DaysLeft
 		dailyPayment.PaymentCycleId = newPaymentCycleId
-		dailyPayment.LastUpdate = time.Now()
+		dailyPayment.LastUpdate = timeNow()
 		err = insertDailyPayment(dailyPayment)
 	}
 
@@ -886,7 +885,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency
 	}
 	newDailyPaymentAmount := balance / int64(newDaysLeft)
 
-	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, time.Now()}
+	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, newDaysLeft, timeNow()}
 
 	if isNewCurrencyPayment {
 		err = insertDailyPayment(newDailyPayment)

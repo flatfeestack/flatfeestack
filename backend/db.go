@@ -1446,8 +1446,8 @@ func initDb() *sql.DB {
 
 	//we wait for ten seconds to connect
 	err = db.Ping()
-	now := time.Now()
-	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
+	now := timeNow()
+	for err != nil && now.Add(time.Duration(10)*time.Second).After(timeNow()) {
 		// check the connection
 		err = db.Ping()
 		time.Sleep(time.Second)
