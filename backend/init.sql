@@ -83,7 +83,7 @@ CREATE UNIQUE INDEX user_balances_index ON user_balances (
     balance_type,
     currency,
     day
-);
+) where (balance_type != 'SPONSOR');
 
 CREATE TABLE user_emails_sent (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

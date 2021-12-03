@@ -107,7 +107,8 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 	price, _ := paymentInformation.Plan.Price.Float64()
-	invoice := InvoiceRequest{price, priceCurrency, strings.ToUpper(payCurrency), "", opts.EmailLinkPrefix + "/user/search"}
+	totalPrice := price * float64(paymentInformation.Seats)
+	invoice := InvoiceRequest{totalPrice, priceCurrency, strings.ToUpper(payCurrency), "", opts.EmailLinkPrefix + "/user/search"}
 	invoiceUrl, err := createNowpaymentsInvoice(invoice, paymentCycleId, paymentInformation.Freq)
 
 	if err != nil {

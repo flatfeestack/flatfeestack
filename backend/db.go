@@ -1167,8 +1167,8 @@ func findAllCurrenciesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
-		QueryRow(`SELECT id, seats, freq FROM payment_cycle WHERE id=$1`, pcid).
-		Scan(&pc.Id, &pc.Seats, &pc.Freq)
+		QueryRow(`SELECT id, seats, freq, days_left FROM payment_cycle WHERE id=$1`, pcid).
+		Scan(&pc.Id, &pc.Seats, &pc.Freq, &pc.DaysLeft)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
