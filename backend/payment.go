@@ -544,6 +544,9 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int, in
 }
 
 var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	Subprotocols:    []string{"access_token"},
@@ -596,11 +599,26 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	}()
 }
 
+type UserBalanceDto struct {
+	UserId         uuid.UUID  `json:"userId"`
+	Balance        float64    `json:"balance"`
+	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
+	FromUserId     *uuid.UUID `json:"fromUserId"`
+	BalanceType    string     `json:"balanceType"`
+	Currency       string     `json:"currency"`
+	CreatedAt      time.Time  `json:"createdAt"`
+}
+
 type UserBalances struct {
-	PaymentCycle PaymentCycle  `json:"paymentCycle"`
-	UserBalances []UserBalance `json:"userBalances"`
-	Total        int64         `json:"total"`
-	DaysLeft     int           `json:"daysLeft"`
+	PaymentCycle PaymentCycle       `json:"paymentCycle"`
+	UserBalances []UserBalanceDto   `json:"userBalances"`
+	Total        []TotalUserBalance `json:"total"`
+	DaysLeft     int                `json:"daysLeft"`
+}
+
+type TotalUserBalance struct {
+	Currency string  `json:"currency"`
+	Balance  float64 `json:"balance"`
 }
 
 func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
@@ -613,14 +631,37 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	}
 
 	userBalances, err := findUserBalances(userId)
+	var userBalancesDto []UserBalanceDto
+	for _, ub := range userBalances {
+		r := UserBalanceDto{
+			UserId:         ub.UserId,
+			PaymentCycleId: ub.PaymentCycleId,
+			FromUserId:     ub.FromUserId,
+			BalanceType:    ub.BalanceType,
+			Currency:       ub.Currency,
+			CreatedAt:      ub.CreatedAt,
+		}
+		if ub.Currency == "USD" {
+			r.Balance = float64(ub.Balance) / usdFactor
+		} else {
+			r.Balance = float64(ub.Balance) / cryptoFactor
+		}
+		userBalancesDto = append(userBalancesDto, r)
+	}
+
 	if err != nil {
 		conn.Close()
 		return err
 	}
 
-	total := int64(0)
-	for _, v := range userBalances {
-		total += v.Balance
+	var total = make([]TotalUserBalance, 0, len(supportedCurrencies))
+	for i, v := range supportedCurrencies {
+		total = append(total, TotalUserBalance{Currency: v.ShortName, Balance: 0})
+		for _, ub := range userBalancesDto {
+			if ub.Currency == total[i].Currency {
+				total[i].Balance += ub.Balance
+			}
+		}
 	}
 
 	pc, err := findPaymentCycle(paymentCycleId)
@@ -633,7 +674,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		return nil //nothing to do
 	}
 
-	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalances, Total: total, DaysLeft: pc.DaysLeft})
+	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalancesDto, Total: total, DaysLeft: pc.DaysLeft})
 	if err != nil {
 		conn.Close()
 		return err
