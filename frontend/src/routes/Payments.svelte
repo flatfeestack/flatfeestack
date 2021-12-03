@@ -18,7 +18,7 @@
 
   let current;
   $: {
-    current = $userBalances && $userBalances.total > 0 ? $userBalances.total / 1000000 : 0
+    current = $userBalances && $userBalances.total > 0 ? $userBalances.total : 0
   }
 
 
@@ -87,10 +87,37 @@
 <Navigation>
   <h1 class="px-2">Payments</h1>
 
-  <div class="container">
-    <label class="px-2">Current Balance: </label>
-    <span class="bold">{$userBalances && $userBalances.total > 0 ? $userBalances.total / 1000000 : 0} USD</span>
-  </div>
+  {#if $userBalances && $userBalances.total}
+    <div class="container">
+      <h2 class="p-2">
+        Current Balance:
+      </h2>
+    </div>
+    <div class="container">
+      <table>
+        <thead>
+        <tr>
+          <th>Currency</th>
+          <th>Balance</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {#each $userBalances.total as row}
+          <tr>
+            <td>{row.currency}</td>
+            <td>{row.balance}</td>
+          </tr>
+        {:else}
+          <tr>
+            <td colspan="5">No Data</td>
+          </tr>
+        {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+
 
   <div class="container">
     <label class="px-2">Current Recurring Support: </label>
@@ -179,6 +206,7 @@
         <tr>
           <th>Payment Cycle</th>
           <th>Balance</th>
+          <th>Currency</th>
           <th>Type</th>
           <th>Day</th>
         </tr>
@@ -188,7 +216,8 @@
         {#each $userBalances.userBalances as row}
           <tr>
             <td>{row.paymentCycleId}</td>
-            <td>{row.balance / 1000000} USD</td>
+            <td>{row.balance}</td>
+            <td>{row.currency}</td>
             <td>{row.balanceType}</td>
             <td>{formatDate(new Date(row.createdAt))}</td>
           </tr>
