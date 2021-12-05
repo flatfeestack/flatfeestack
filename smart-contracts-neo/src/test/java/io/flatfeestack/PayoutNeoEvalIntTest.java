@@ -22,7 +22,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
@@ -99,6 +101,9 @@ public class PayoutNeoEvalIntTest {
     private static ContractParameter serviceFeeParam;
 
     private static BigInteger contractGasBalanceBeforePayout;
+
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     @ClassRule
     public static NeoTestContainer neoTestContainer = new NeoTestContainer();
@@ -505,6 +510,24 @@ public class PayoutNeoEvalIntTest {
         printFees("test 3 - list", tx);
     }
 
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutList() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teas = new BigInteger[2];
+        teas[0] = contractGasBalance;
+        teas[1] = BigInteger.ONE;
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasParam = array(teas);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful");
+        payoutContract.invokeFunction(batchPayout, accountsParam, teasParam)
+                .signers(calledByEntry(owner)).sign();
+    }
+
     // endregion batch payout
     // region batch payout with service fee
 
@@ -579,6 +602,24 @@ public class PayoutNeoEvalIntTest {
         assertThat(contractGasBalanceAfterPayout,
                 is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
         printFees("test3 - list with service fee", tx);
+    }
+
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutListWithServiceFee() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teas = new BigInteger[2];
+        teas[0] = contractGasBalance.add(serviceFee);
+        teas[1] = BigInteger.ONE.add(serviceFee);
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasParam = array(teas);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful");
+        payoutContract.invokeFunction(batchPayoutWithServiceFee, accountsParam, teasParam, integer(serviceFee))
+                .signers(calledByEntry(owner)).sign();
     }
 
     // endregion batch payout with service fee
@@ -664,6 +705,28 @@ public class PayoutNeoEvalIntTest {
         printFees("test3 - list list", tx);
     }
 
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutListList() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teasForWithdrawal = new BigInteger[2];
+        teasForWithdrawal[0] = contractGasBalance;
+        teasForWithdrawal[1] = BigInteger.ONE;
+        BigInteger[] teasToStore = new BigInteger[2];
+        teasToStore[0] = teasForWithdrawal[0].add(serviceFee);
+        teasToStore[1] = teasForWithdrawal[1].add(serviceFee);
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasToStoreParam = array(teasToStore);
+        ContractParameter teasForWithdrawalParam = array(teasForWithdrawal);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful");
+        payoutContract.invokeFunction(batchPayoutWithTeas, accountsParam, teasToStoreParam, teasForWithdrawalParam)
+                .signers(calledByEntry(owner)).sign();
+    }
+
     // endregion batch payout with two tea lists
     // region batch payout with map
 
@@ -730,6 +793,24 @@ public class PayoutNeoEvalIntTest {
         assertThat(contractGasBalanceAfterPayout,
                 is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
         printFees("test3 - map", tx);
+    }
+
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutMap() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teas = new BigInteger[2];
+        teas[0] = contractGasBalance;
+        teas[1] = BigInteger.ONE;
+
+        ContractParameter payoutMapParam = createMapParam(devs, teas);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful.");
+        payoutContract.invokeFunction(batchPayoutWithMap, payoutMapParam)
+                .signers(calledByEntry(owner)).sign();
     }
 
     // endregion batch payout with map
@@ -804,6 +885,24 @@ public class PayoutNeoEvalIntTest {
         assertThat(contractGasBalanceAfterPayout,
                 is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
         printFees("test3 - map with service fee", tx);
+    }
+
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutMapServiceFee() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teas = new BigInteger[2];
+        teas[0] = contractGasBalance.add(serviceFee);
+        teas[1] = BigInteger.ONE.add(serviceFee);
+
+        ContractParameter payoutMapParam = createMapParam(devs, teas);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful.");
+        payoutContract.invokeFunction(batchPayoutWithMapAndServiceFee, payoutMapParam, integer(serviceFee))
+                .signers(calledByEntry(owner)).sign();
     }
 
     // endregion batch payout with map and service fee
@@ -887,6 +986,28 @@ public class PayoutNeoEvalIntTest {
         assertThat(contractGasBalanceAfterPayout,
                 is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
         printFees("test3 - double map", tx);
+    }
+
+    @Test
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutMapMap() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoEvalIntTest.devs[0];
+        devs[1] = PayoutNeoEvalIntTest.devs[1];
+        BigInteger[] teasForWithdrawal = new BigInteger[2];
+        teasForWithdrawal[0] = contractGasBalance;
+        teasForWithdrawal[1] = BigInteger.ONE;
+        BigInteger[] teasToStore = new BigInteger[2];
+        teasToStore[0] = teasForWithdrawal[0].add(BigInteger.TEN);
+        teasToStore[1] = teasForWithdrawal[1].add(BigInteger.TEN);
+
+        ContractParameter mapForWithdrawParam = createMapParam(devs, teasForWithdrawal);
+        ContractParameter mapToStoreParam = createMapParam(devs, teasToStore);
+
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful.");
+        payoutContract.invokeFunction(batchPayoutWithDoubleMap, mapToStoreParam, mapForWithdrawParam)
+                .signers(calledByEntry(owner)).sign();
     }
 
     // endregion batch payout with two maps

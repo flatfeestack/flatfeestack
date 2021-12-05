@@ -285,30 +285,8 @@ public class PayoutNeo {
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
-        }
-    }
-
-    /**
-     * Pays out the earned amount for multiple accounts.
-     * <p>
-     * Must be invoked by the contract owner.
-     * <p>
-     * The payment amount for each account is equal to the difference of the provided new tea in the parameter and the
-     * currently stored value in the {@code teaMap}. After calculating the payment amount, the value of the
-     * account in the {@code teaMap} is updated with the new tea.
-     *
-     * @param payoutMap The accounts and their corresponding teas.
-     */
-    public static void batchPayout(Map<Hash160, Integer> payoutMap) {
-        for (Hash160 acc : payoutMap.keys()) {
-            int tea = payoutMap.get(acc);
-            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
-            if (payoutAmount <= 0) {
-                continue;
-            }
-            teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 

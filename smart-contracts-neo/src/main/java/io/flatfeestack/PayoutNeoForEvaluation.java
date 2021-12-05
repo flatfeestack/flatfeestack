@@ -15,6 +15,7 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
+import io.neow3j.devpack.Runtime;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
@@ -207,8 +208,8 @@ public class PayoutNeoForEvaluation {
         int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
         assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
         teaMap.put(account.toByteString(), tea);
-        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
-                "Transfer was not successful.";
+        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) : "Transfer was not " +
+                "successful.";
     }
 
     // endregion withdrawal
@@ -251,7 +252,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 
@@ -280,7 +282,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 
@@ -312,7 +315,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), teasToStore[i]);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 
@@ -328,6 +332,7 @@ public class PayoutNeoForEvaluation {
      * @param payoutMap The accounts and their corresponding teas.
      */
     public static void batchPayoutWithMap(Map<Hash160, Integer> payoutMap) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
             int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
@@ -335,7 +340,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 
@@ -352,6 +358,7 @@ public class PayoutNeoForEvaluation {
      * @param serviceFee A service fee that is deducted from the payment amount.
      */
     public static void batchPayoutWithMapAndServiceFee(Map<Hash160, Integer> payoutMap, int serviceFee) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         for (Hash160 acc : payoutMap.keys()) {
             int tea = payoutMap.get(acc);
             int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero() - serviceFee;
@@ -359,7 +366,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), tea);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 
@@ -379,6 +387,7 @@ public class PayoutNeoForEvaluation {
      *                      amount.
      */
     public static void batchPayoutWithDoubleMap(Map<Hash160, Integer> storeMap, Map<Hash160, Integer> withdrawalMap) {
+        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
         for (Hash160 acc : storeMap.keys()) {
             int teaToStore = storeMap.get(acc);
             int teaForWithdrawal =
@@ -389,7 +398,8 @@ public class PayoutNeoForEvaluation {
                 continue;
             }
             teaMap.put(acc.toByteString(), teaToStore);
-            GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null);
+            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
+                    "successful.";
         }
     }
 

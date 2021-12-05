@@ -22,7 +22,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
@@ -97,6 +99,9 @@ public class PayoutNeoIntegrationTest {
     private static BigInteger[] presetTeas;
 
     private static BigInteger contractGasBalanceBeforePayout;
+
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     @ClassRule
     public static NeoTestContainer neoTestContainer = new NeoTestContainer();
@@ -623,73 +628,26 @@ public class PayoutNeoIntegrationTest {
     }
 
     // endregion batch payout
-    // region batch payout with map
+    // region test batch payout with insufficient balance
 
     @Test
-    public void test1_batchPayoutMap() throws Throwable {
-        ContractParameter payoutMapParam = createMapParam(devs, teas);
-        Transaction tx = payoutContract.invokeFunction(batchPayout, payoutMapParam)
-                .signers(calledByEntry(owner)).sign();
-        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
+    public void test4_insufficientBalanceToPayoutAllAccounts_batchPayoutList() throws Throwable {
+        BigInteger contractGasBalance = getContractGasBalance();
+        Hash160[] devs = new Hash160[2];
+        devs[0] = PayoutNeoIntegrationTest.devs[0];
+        devs[1] = PayoutNeoIntegrationTest.devs[1];
+        BigInteger[] teas = new BigInteger[2];
+        teas[0] = contractGasBalance;
+        teas[1] = BigInteger.ONE;
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasParam = array(teas);
 
-        for (int i = 0; i < nrAccounts; i++) {
-            assertThat(getTea(devs[i]), is(teas[i]));
-            assertThat(getGasBalance(devs[i]), is(teas[i]));
-        }
-        BigInteger summedUpPayoutAmount = getSum(teas);
-        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
-        assertThat(contractGasBalanceAfterPayout,
-                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
-        printFees("test1 - map", tx);
+        exceptionRule.expect(TransactionConfigurationException.class);
+        exceptionRule.expectMessage("Transfer was not successful");
+        payoutContract.invokeFunction(batchPayout, accountsParam, teasParam)
+                .signers(calledByEntry(owner)).sign();
     }
 
-    @Test
-    public void test2_withStoredTeas_batchPayoutMap() throws Throwable {
-        for (Hash160 dev : devs) {
-            setTea(dev, BigInteger.ZERO, presetTea);
-        }
-        ContractParameter payoutMapParam = createMapParam(devs, teas);
-        Transaction tx = payoutContract.invokeFunction(batchPayout, payoutMapParam)
-                .signers(calledByEntry(owner)).sign();
-        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-
-        for (int i = 0; i < nrAccounts; i++) {
-            assertThat(getTea(devs[i]), is(teas[i]));
-            assertThat(getGasBalance(devs[i]), is(teas[i].subtract(presetTea)));
-        }
-        BigInteger summedUpPayoutAmount = getSum(teas).subtract(presetTea.multiply(nrAccountsBigInt));
-        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
-        assertThat(contractGasBalanceAfterPayout,
-                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
-        printFees("test2 - map", tx);
-    }
-
-    @Test
-    public void test3_withDiverseStoredTeas_batchPayoutMap() throws Throwable {
-        BigInteger contractGasBalanceBeforePayout = getContractGasBalance();
-        for (int i = 0; i < nrAccounts; i++) {
-            setTea(devs[i], BigInteger.ZERO, presetTeas[i]);
-        }
-        ContractParameter payoutMapParam = createMapParam(devs, teas);
-        Transaction tx = payoutContract.invokeFunction(batchPayout, payoutMapParam)
-                .signers(calledByEntry(owner)).sign();
-        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
-        waitUntilTransactionIsExecuted(txHash, neow3j);
-
-        for (int i = 0; i < nrAccounts; i++) {
-            assertThat(getTea(devs[i]), is(teas[i]));
-            assertThat(getGasBalance(devs[i]), is(teas[i].subtract(presetTeas[i])));
-        }
-
-        BigInteger summedUpPayoutAmount = getSum(teas).subtract(getSum(presetTeas));
-        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
-        assertThat(contractGasBalanceAfterPayout,
-                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
-        printFees("test3 - map", tx);
-    }
-
-    // endregion batch payout with map
+    // endregion test batch payout with insufficient balance
 
 }
