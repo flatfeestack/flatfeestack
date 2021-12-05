@@ -40,8 +40,13 @@ export type ClientSecret = {
 export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
-  total: number;
+  total: TotalUserBalance[];
   daysLeft: number;
+}
+
+export type TotalUserBalance = {
+  currency: string;
+  balance: number;
 }
 
 export type UserBalanceCore = {
@@ -54,6 +59,7 @@ export type UserBalance = {
   paymentCycleId: string;
   userId: string;
   balance: number;
+  currency: string;
   balanceType: string;
   createdAt: string;
 }
