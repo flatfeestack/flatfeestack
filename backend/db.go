@@ -1082,7 +1082,7 @@ func findSumUserBalanceByCurrency(userId uuid.UUID, paymentCycleId uuid.UUID, cu
 }
 
 func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
-	s := `SELECT payment_cycle_id, user_id, balance, balance_type, created_at FROM user_balances WHERE user_id = $1`
+	s := `SELECT payment_cycle_id, user_id, balance, currency, balance_type, created_at FROM user_balances WHERE user_id = $1`
 	rows, err := db.Query(s, userId)
 	if err != nil {
 		return nil, err
@@ -1092,7 +1092,7 @@ func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
 	var userBalances []UserBalance
 	for rows.Next() {
 		var userBalance UserBalance
-		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &userBalance.Balance, &userBalance.BalanceType, &userBalance.CreatedAt)
+		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &userBalance.Balance, &userBalance.Currency, &userBalance.BalanceType, &userBalance.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -1167,8 +1167,8 @@ func findAllCurrenciesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
-		QueryRow(`SELECT id, seats, freq FROM payment_cycle WHERE id=$1`, pcid).
-		Scan(&pc.Id, &pc.Seats, &pc.Freq)
+		QueryRow(`SELECT id, seats, freq, days_left FROM payment_cycle WHERE id=$1`, pcid).
+		Scan(&pc.Id, &pc.Seats, &pc.Freq, &pc.DaysLeft)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
