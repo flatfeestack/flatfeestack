@@ -35,7 +35,6 @@ import java.util.List;
 
 import static io.flatfeestack.EvaluationHelper.committee;
 import static io.flatfeestack.EvaluationHelper.compileContract;
-import static io.flatfeestack.EvaluationHelper.createMapParam;
 import static io.flatfeestack.EvaluationHelper.createSignature;
 import static io.flatfeestack.EvaluationHelper.defaultAccount;
 import static io.flatfeestack.EvaluationHelper.defaultPubKey;

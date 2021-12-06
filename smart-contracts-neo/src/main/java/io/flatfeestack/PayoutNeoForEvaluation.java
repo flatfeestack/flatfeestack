@@ -15,7 +15,6 @@ import io.neow3j.devpack.annotations.Safe;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
-import io.neow3j.devpack.Runtime;
 
 import static io.neow3j.devpack.Helper.concat;
 import static io.neow3j.devpack.Helper.toByteArray;
