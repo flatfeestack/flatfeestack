@@ -26,10 +26,9 @@ type PayoutMeta struct {
 }
 
 type PayoutCryptoRequest struct {
-	Address      string       `json:"address"`
-	ExchangeRate string       `json:"exchange_rate_USD_ETH"`
-	NanoTea      int64        `json:"nano_tea"`
-	Meta         []PayoutMeta `json:"meta"`
+	Address string       `json:"address"`
+	NanoTea int64        `json:"nano_tea"`
+	Meta    []PayoutMeta `json:"meta"`
 }
 
 type PayoutCrypto struct {
@@ -247,7 +246,6 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "Unable to payout eth")
 			return
 		}
-		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "neo":
 		txHash, err = payoutNEO(addresses, amount)
@@ -255,7 +253,6 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "Unable to payout neo")
 			return
 		}
-		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	case "xtz":
 		txHash, err = payoutNodejsRequest(payoutCrypto, "xtz")
@@ -263,18 +260,18 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "Unable to payout xtz")
 			return
 		}
-		p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 		break
 	default:
 		log.Printf("Currency isn't supported %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		writeErr(w, http.StatusBadRequest, "Currency isn't supported %v", err)
 	}
-	if p.TxHash == "" {
+	if txHash == "" {
 		log.Printf("tx hash is empty contract call failed %v", err)
 		writeErr(w, http.StatusBadRequest, "Tx hash is empty contract call failed")
 		return
 	}
+	p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
 	log.Printf("Contract call succeded. Transaction Hash is %v", p.TxHash)
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
