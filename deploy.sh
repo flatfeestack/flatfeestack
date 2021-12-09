@@ -10,8 +10,9 @@ command -v semver >/dev/null || {
 #git submodule update --recursive --remote
 ##or
 git fetch
-git submodule foreach 'git pull'
-git add analysis-engine backend fastauth frontend payout search-proj
+git submodule update --recursive --remote
+git submodule foreach git pull origin main
+git add analysis-engine backend fastauth frontend payout payout-nodejs search-proj
 git commit -m "update to latest"
 git push --recurse-submodules=on-demand
 CURRENT=`git tag --sort=creatordate | tail -1`
