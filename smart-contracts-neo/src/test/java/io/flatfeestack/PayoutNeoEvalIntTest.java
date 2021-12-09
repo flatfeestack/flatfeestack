@@ -77,6 +77,7 @@ public class PayoutNeoEvalIntTest {
 
     private static final BigDecimal contractFundAmount = BigDecimal.valueOf(7000);
     private static final BigInteger devFundAmountFractions = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
+    private static final Hash160 maliciousDev = Account.create().getScriptHash();
 
     // Methods
     private static final String getOwner = "getOwner";
@@ -124,6 +125,7 @@ public class PayoutNeoEvalIntTest {
         payoutContract = deployPayoutNeoContract(neow3j, false);
         System.out.printf("Payout contract hash: '%s'", payoutContract.getScriptHash());
         fundContract(neow3j, payoutContract, contractFundAmount);
+        fundAccounts(neow3j, gasToken.toFractions(BigDecimal.TEN), maliciousDev);
         System.out.println("##############setup#################\n");
     }
 
@@ -528,6 +530,34 @@ public class PayoutNeoEvalIntTest {
                 .signers(calledByEntry(owner)).sign();
     }
 
+    @Test
+    public void test5_noAuth_batchPayoutList() throws Throwable {
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasParam = array(teas);
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayout, accountsParam, teasParam)
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+        Transaction tx = payoutContract.invokeFunction(batchPayout, accountsParam, teasParam)
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teas[i]));
+            assertThat(getGasBalance(devs[i]), is(teas[i]));
+        }
+        BigInteger summedUpPayoutAmount = getSum(teas);
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
+    }
+
     // endregion batch payout
     // region batch payout with service fee
 
@@ -620,6 +650,37 @@ public class PayoutNeoEvalIntTest {
         exceptionRule.expectMessage("Transfer was not successful");
         payoutContract.invokeFunction(batchPayoutWithServiceFee, accountsParam, teasParam, integer(serviceFee))
                 .signers(calledByEntry(owner)).sign();
+    }
+
+    @Test
+    public void test5_noAuth_batchPayoutListServiceFee() throws Throwable {
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasParam = array(teas);
+
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayoutWithServiceFee, accountsParam, teasParam, integer(serviceFee))
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+
+        Transaction tx = payoutContract.invokeFunction(batchPayoutWithServiceFee, accountsParam, teasParam,
+                        integer(serviceFee))
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teas[i]));
+            assertThat(getGasBalance(devs[i]), is(teas[i].subtract(serviceFee)));
+        }
+        BigInteger summedUpPayoutAmount = getSum(teas).subtract(serviceFee.multiply(nrAccountsBigInt));
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
     }
 
     // endregion batch payout with service fee
@@ -727,6 +788,39 @@ public class PayoutNeoEvalIntTest {
                 .signers(calledByEntry(owner)).sign();
     }
 
+    @Test
+    public void test5_noAuth_batchPayoutListList() throws Throwable {
+        BigInteger[] teasToStore = getUniformTeas(nrAccounts, BigInteger.valueOf(10001), BigInteger.ONE);
+        BigInteger[] teasForWithdrawal = getUniformTeas(nrAccounts, BigInteger.valueOf(10000), BigInteger.ONE);
+        ContractParameter accountsParam = array(devs);
+        ContractParameter teasToStoreParam = array(teasToStore);
+        ContractParameter teasForWithdrawalParam = array(teasForWithdrawal);
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayoutWithTeas, accountsParam, teasToStoreParam, teasForWithdrawalParam)
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+
+        Transaction tx = payoutContract.invokeFunction(batchPayoutWithTeas, accountsParam, teasToStoreParam,
+                        teasForWithdrawalParam)
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teasToStore[i]));
+            assertThat(getGasBalance(devs[i]), is(teasForWithdrawal[i]));
+        }
+        BigInteger summedUpPayoutAmount = getSum(teasForWithdrawal);
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
+    }
+
     // endregion batch payout with two tea lists
     // region batch payout with map
 
@@ -811,6 +905,36 @@ public class PayoutNeoEvalIntTest {
         exceptionRule.expectMessage("Transfer was not successful.");
         payoutContract.invokeFunction(batchPayoutWithMap, payoutMapParam)
                 .signers(calledByEntry(owner)).sign();
+    }
+
+    @Test
+    public void test5_noAuth_batchPayoutMap() throws Throwable {
+        ContractParameter payoutMapParam = createMapParam(devs, teas);
+
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayoutWithMap, payoutMapParam)
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+
+        Transaction tx = payoutContract.invokeFunction(batchPayoutWithMap, payoutMapParam)
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teas[i]));
+            assertThat(getGasBalance(devs[i]), is(teas[i]));
+        }
+        BigInteger summedUpPayoutAmount = getSum(teas);
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
+        printFees("test1 - map", tx);
     }
 
     // endregion batch payout with map
@@ -903,6 +1027,38 @@ public class PayoutNeoEvalIntTest {
         exceptionRule.expectMessage("Transfer was not successful.");
         payoutContract.invokeFunction(batchPayoutWithMapAndServiceFee, payoutMapParam, integer(serviceFee))
                 .signers(calledByEntry(owner)).sign();
+    }
+
+    @Test
+    public void test5_noAuth_batchPayoutMapServiceFee() throws Throwable {
+        ContractParameter payoutMapParam = createMapParam(devs, teas);
+
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayoutWithMapAndServiceFee, payoutMapParam,
+                            integer(serviceFee))
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+
+        Transaction tx = payoutContract.invokeFunction(batchPayoutWithMapAndServiceFee, payoutMapParam,
+                        integer(serviceFee))
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teas[i]));
+            assertThat(getGasBalance(devs[i]), is(teas[i].subtract(serviceFee)));
+        }
+
+        BigInteger summedUpPayoutAmount = getSum(teas).subtract(serviceFee.multiply(nrAccountsBigInt));
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
     }
 
     // endregion batch payout with map and service fee
@@ -1008,6 +1164,39 @@ public class PayoutNeoEvalIntTest {
         exceptionRule.expectMessage("Transfer was not successful.");
         payoutContract.invokeFunction(batchPayoutWithDoubleMap, mapToStoreParam, mapForWithdrawParam)
                 .signers(calledByEntry(owner)).sign();
+    }
+
+    @Test
+    public void test5_noAuth_batchPayoutMapMap() throws Throwable {
+        BigInteger[] teasToStore = getUniformTeas(nrAccounts, BigInteger.valueOf(10001), BigInteger.ONE);
+        BigInteger[] teasForWithdrawal = getUniformTeas(nrAccounts, BigInteger.valueOf(10000), BigInteger.ONE);
+        ContractParameter mapToStoreParam = createMapParam(devs, teasToStore);
+        ContractParameter mapForWithdrawParam = createMapParam(devs, teasForWithdrawal);
+
+        boolean tested = false;
+        try {
+            payoutContract.invokeFunction(batchPayoutWithDoubleMap, mapToStoreParam, mapForWithdrawParam)
+                    .signers(calledByEntry(maliciousDev)).sign();
+        } catch (TransactionConfigurationException e) {
+            assertThat(e.getMessage(), containsString("No authorization"));
+            tested = true;
+        }
+        assertTrue(tested);
+
+        Transaction tx = payoutContract.invokeFunction(batchPayoutWithDoubleMap, mapToStoreParam, mapForWithdrawParam)
+                .signers(calledByEntry(owner)).sign();
+        Hash256 txHash = tx.send().getSendRawTransaction().getHash();
+        waitUntilTransactionIsExecuted(txHash, neow3j);
+
+        for (int i = 0; i < nrAccounts; i++) {
+            assertThat(getTea(devs[i]), is(teasToStore[i]));
+            assertThat(getGasBalance(devs[i]), is(teasForWithdrawal[i]));
+        }
+
+        BigInteger summedUpPayoutAmount = getSum(teasForWithdrawal);
+        BigInteger contractGasBalanceAfterPayout = getContractGasBalance();
+        assertThat(contractGasBalanceAfterPayout,
+                is(contractGasBalanceBeforePayout.subtract(summedUpPayoutAmount)));
     }
 
     // endregion batch payout with two maps
