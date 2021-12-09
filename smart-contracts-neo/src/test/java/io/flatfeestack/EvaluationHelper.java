@@ -55,6 +55,8 @@ public class EvaluationHelper {
     static final BigInteger TENTH_GAS = toFractions(new BigDecimal("0.1"), GasToken.DECIMALS);
     static final BigInteger ONE_GAS = toFractions(BigDecimal.ONE, GasToken.DECIMALS);
     static final BigInteger TEN_GAS = toFractions(BigDecimal.TEN, GasToken.DECIMALS);
+    static final BigInteger INT32_LIMIT_GAS = new BigInteger("2147483647");
+    static final BigInteger INT64_LIMIT_GAS = new BigInteger("2147483648");
     static final BigInteger HUNDRED_GAS = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
     static final BigInteger TSD_GAS = toFractions(BigDecimal.valueOf(1000), GasToken.DECIMALS);
 
@@ -215,20 +217,28 @@ public class EvaluationHelper {
     }
 
     static void fundAccounts(Neow3j neow3j, BigInteger gasFractions, Account... accounts) throws Throwable {
+        Hash160[] hashes = new Hash160[accounts.length];
+        for (int i = 0; i < accounts.length; i++) {
+            hashes[i] = accounts[i].getScriptHash();
+        }
+        fundAccounts(neow3j, gasFractions, hashes);
+    }
+
+    static void fundAccounts(Neow3j neow3j, BigInteger gasFractions, Hash160... accounts) throws Throwable {
         GasToken gasToken = new GasToken(neow3j);
         BigInteger minAmount = gasToken.toFractions(new BigDecimal("500"));
         List<Hash256> txHashes = new ArrayList<>();
-        for (Account a : accounts) {
+        for (Hash160 a : accounts) {
             if (gasToken.getBalanceOf(a).compareTo(minAmount) < 0) {
                 NeoSendRawTransaction rawTx = gasToken
-                        .transfer(committee, a.getScriptHash(), gasFractions)
+                        .transfer(committee, a, gasFractions)
                         .getUnsignedTransaction()
                         .addMultiSigWitness(committee.getVerificationScript(), defaultAccount)
                         .send();
                 Hash256 txHash = rawTx.getSendRawTransaction()
                         .getHash();
                 txHashes.add(txHash);
-                System.out.println("Funded account " + a.getAddress());
+                System.out.println("Funded account " + a.toAddress());
             }
         }
         for (Hash256 h : txHashes) {
