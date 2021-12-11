@@ -28,7 +28,7 @@ import java.util.Arrays;
 
 import static io.flatfeestack.EvaluationHelper.EXEC_FEE_FACTION;
 import static io.flatfeestack.EvaluationHelper.FEE_PER_BYTE;
-import static io.flatfeestack.EvaluationHelper.MAX_ACCOUNTS_BATCH_PAYOUT_LIST;
+import static io.flatfeestack.EvaluationHelper.MAX_ACCOUNTS_BATCH_PAYOUT;
 import static io.flatfeestack.EvaluationHelper.STORAGE_PRICE;
 import static io.flatfeestack.EvaluationHelper.committee;
 import static io.flatfeestack.EvaluationHelper.compileContract;
@@ -344,7 +344,7 @@ public class Evaluation {
         assertCorrectNetworkFactors();
         if (preset_batchPayout_list_oneToMaxAccs_32) {
             FileWriter w = getResultFileWriter("preset_batchPayout_list_oneToMax_pushint32");
-//            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
+            w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
             runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(BigDecimal.ONE), true);
         }
     }
@@ -364,7 +364,7 @@ public class Evaluation {
             assertCorrectNetworkFactors();
             FileWriter w = getResultFileWriter("preset_batchPayout_list_oneToMax_pushint64");
             w.write(format("preset_tea=%s\n", gasToken.toDecimals(gasToken.toFractions(presetTea))));
-            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), false);
+            runBatchPayoutEvaluation_list_oneToMax(w, gasToken.toFractions(new BigDecimal("25")), true);
         }
     }
 
@@ -373,7 +373,7 @@ public class Evaluation {
         writeNetworkFactors(w, neow3j);
         w.write(format("tea=%s\n", gasToken.toDecimals(tea)));
         w.write("#accounts,systemfee,networkfee,totalfee,sysfeeperacc,netfeeperacc,totalfeeperacc\n");
-        for (int i = 1; i <= MAX_ACCOUNTS_BATCH_PAYOUT_LIST; i++) {
+        for (int i = 1; i <= MAX_ACCOUNTS_BATCH_PAYOUT; i++) {
             Transaction tx = executeSingleBatchPayout_list(i, tea, preset);
             waitUntilTransactionIsExecuted(tx.getTxId(), neow3j);
             NeoApplicationLog.Execution log = tx.getApplicationLog().getExecutions().get(0);

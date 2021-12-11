@@ -58,10 +58,8 @@ public class EvaluationHelper {
     static final BigInteger INT32_LIMIT_GAS = new BigInteger("2147483647");
     static final BigInteger INT64_LIMIT_GAS = new BigInteger("2147483648");
     static final BigInteger HUNDRED_GAS = toFractions(BigDecimal.valueOf(100), GasToken.DECIMALS);
-    static final BigInteger TSD_GAS = toFractions(BigDecimal.valueOf(1000), GasToken.DECIMALS);
 
-    static final int MAX_ACCOUNTS_BATCH_PAYOUT_LIST = 1012;
-    static final int MAX_ACCOUNTS_BATCH_PAYOUT_MAP = 674;
+    static final int MAX_ACCOUNTS_BATCH_PAYOUT = 1012;
 
     static final BigInteger FEE_PER_BYTE = BigInteger.valueOf(100);
     static final BigInteger STORAGE_PRICE = BigInteger.valueOf(10_000);
