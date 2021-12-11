@@ -8,6 +8,7 @@ import execute from "rollup-plugin-execute";
 import json from '@rollup/plugin-json';
 import builtins from 'rollup-plugin-node-builtins';
 import globals from 'rollup-plugin-node-globals';
+import copy from 'rollup-plugin-copy'
 
 import serve from "rollup-plugin-serve";
 
@@ -30,7 +31,8 @@ export default [
             commonjs({transformMixedEsModules: true}),
             globals(),
             builtins(),
-            json()
+            json(),
+            copy({targets: [{ src: 'landing-page/public/images', dest: 'public' }]})
         ]
     },
     {

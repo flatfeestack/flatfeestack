@@ -6,8 +6,6 @@ RUN npm install
 FROM base as builder
 COPY ./src ./src
 COPY ./landing-page ./landing-page
-COPY ./public/assets ./public/assets
-COPY ./public/wip ./public/wip
 RUN npm run prod
 
 FROM caddy:2

@@ -86,6 +86,12 @@
         color: white;
         height: 100%;
         flex: 0 1 auto;
+        padding: 1rem;
+    }
+
+    footer > :global(a) {
+      color: white;
+      font-size: 1rem;
     }
 
     header :global(a), .header :global(a:visited), .header :global(a:active) {
@@ -93,29 +99,15 @@
         color: #000;
     }
 
-    img {
-        padding-right: 0.25em;
-    }
-
     .main-nav :global(a), .main-nav :global(a:visited) {
         padding: 0.5em 1em 0.5em 1em;
         color: #000;
-        font-weight: 500;
+        font-size: 1.05rem;
     }
 
     .main-nav :global(a:hover) {
         color: var(--primary-500);
-        transition: color .15s;
-    }
-
-    .signup :global(a), .signup :global(a:visited) {
-        border: white 1px solid;
-        border-radius: 3px;
-    }
-
-    .signup :global(a:hover) {
-        border: var(--primary-500) 1px solid;
-        transition: border .15s;
+        transition: color .5s;
     }
 
     .close {
@@ -128,8 +120,13 @@
         flex-direction: row;
     }
 
-    footer > :global(a) {
-        color: white;
+    .imgSmallLogo {
+      padding-right: 0.25em;
+      width: 3rem;
+    }
+    .imgNormalLogo {
+      padding-right: 0.25em;
+      width: 10rem;
     }
 
 </style>
@@ -137,8 +134,8 @@
 <div class="main">
   <header use:links>
     <a href="/">
-      <img class="hide-mda" src="/assets/images/new-logo-5.svg" alt="Flatfeestack" />
-      <img class="hide-sx" src="/assets/images/logo-text-b2.svg" alt="Flatfeestack" />
+      <img class="hide-mda imgSmallLogo" src="/images/favicon.svg" alt="FlatFeeStack" />
+      <img class="hide-sx imgNormalLogo" src="/images/ffs-logo.svg" alt="FlatFeeStack" />
     </a>
     <nav>
       {#if $user.id}
@@ -151,7 +148,9 @@
         <div class="main-nav"><a href="/user/settings">{$user.email}</a></div>
         <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
       {:else}
-        <div class="main-nav"><a href="/login">Login</a></div>
+        <form on:submit|preventDefault="{() => navigate('/login')}">
+          <button class="button3 center mx-2" type="submit">Login</button>
+        </form>
         <form on:submit|preventDefault="{() => navigate('/signup')}">
           <button class="button1 center" type="submit">Sign Up</button>
         </form>
@@ -195,5 +194,5 @@
     </Router>
   </main>
 
-  <footer>© flatfeestack.io. We used the following <a href="dependencies.txt">dependencies</a></footer>
+  <footer class="text-center">We used the following <a href="dependencies.txt">dependencies</a></footer>
 </div>

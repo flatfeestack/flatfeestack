@@ -10,6 +10,7 @@
     "@rollup/plugin-commonjs": "^19.0.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
+    "rollup-plugin-copy": "^3.4.0",
     "@tsconfig/svelte": "^1.0.10",
     "@typechain/ethers-v5": "^7.0.0",
     "@types/canvas-confetti": "^1.4.0",

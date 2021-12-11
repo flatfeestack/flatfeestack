@@ -9,7 +9,7 @@ const htmlStart = `<!DOCTYPE html>
 <head>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width,initial-scale=1'>
-  <title>Flatfeestack</title>
+  <title>FlatFeeStack</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
   <link rel='stylesheet' href='/build/bundle.css'>
   <script type="module" defer src='/build/main.js'></script>

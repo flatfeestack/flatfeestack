@@ -13,6 +13,7 @@ import gzipPlugin from "rollup-plugin-gzip";
 import globals from "rollup-plugin-node-globals";
 import builtins from "rollup-plugin-node-builtins";
 import json from "@rollup/plugin-json";
+import copy from 'rollup-plugin-copy'
 
 export default [
     {
@@ -37,7 +38,8 @@ export default [
             terser({format: {comments: false}}),
             license({thirdParty: {output: "public/dependencies.txt"}}),
             brotli(),
-            gzipPlugin()
+            gzipPlugin(),
+            copy({targets: [{ src: 'landing-page/public/images', dest: 'public' }]})
         ]
     },
     {
