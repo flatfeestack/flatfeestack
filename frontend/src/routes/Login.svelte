@@ -64,7 +64,7 @@
 
 <div class="max">
   <div class="box-container rounded p-5">
-    <h2 class="py-5 text-center text-primary-900">Sign in to flatfeestack</h2>
+    <h2 class="py-5 text-center text-primary-900">Sign in to FlatFeeStack</h2>
 
     <form on:submit|preventDefault="{handleSubmit}">
       <label for="email" class="py-1">Email address</label>
@@ -90,7 +90,7 @@
 
     <div class="divider"></div>
     <div class="flex">
-      New to flatfeestack?&nbsp;<Link to="/signup">Sign up</Link>
+      New to FlatFeeStack?&nbsp;<Link to="/signup">Sign up</Link>
     </div>
 
   </div>

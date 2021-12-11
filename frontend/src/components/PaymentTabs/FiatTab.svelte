@@ -173,7 +173,7 @@
     We request your permission that we initiate a payment or a series of {$config.plans[selectedPlan].title.toLowerCase()}
     payments on your behalf of
     {total} USD.<br />
-    By continuing, I authorize flatfeestack.io to send instructions to the financial institution that issued my card to
+    By continuing, I authorize FlatFeeStack to send instructions to the financial institution that issued my card to
     take payments from my card account in accordance with the terms of my agreement with you.
   </div>
 </div>
