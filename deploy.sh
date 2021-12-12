@@ -9,12 +9,12 @@ command -v semver >/dev/null || {
 ##pulls to the latest version
 #git submodule update --recursive --remote
 ##or
-git fetch
+#git fetch
 #git submodule update --recursive --remote
-git submodule foreach --recursive git pull origin main
-git add analysis-engine backend fastauth frontend payout payout-nodejs search-proj
-git commit -m "update to latest"
-git push --recurse-submodules=on-demand
+#git submodule foreach --recursive git pull origin main
+#git add analysis-engine backend fastauth frontend payout payout-nodejs search-proj
+#git commit -m "update to latest"
+#git push --recurse-submodules=on-demand
 echo "get latest tag"
 CURRENT=`git tag --sort=creatordate | tail -1`
 git tag "`semver $CURRENT -i patch`"
