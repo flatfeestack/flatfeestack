@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/sh -e
 
 command -v semver >/dev/null || {
   echo "Command 'semver' not found in \$PATH. Please, first install it." >&2
