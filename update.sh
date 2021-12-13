@@ -1,7 +1,4 @@
 #!/bin/sh -e
 
-#git pull --recurse-submodules -j 16
-##pulls to the latest version
-#git submodule update --recursive --remote
-##or
-git submodule foreach 'git pull'
+git submodule update --recursive --remote
+git submodule foreach 'git pull origin main'

@@ -3,7 +3,6 @@ version: "3"
 services:
 
   auth:
-    container_name: flatfeestack-auth
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
     ports:
@@ -14,7 +13,6 @@ services:
       - db
 
   backend:
-    container_name: flatfeestack-backend
     image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-latest}
     build: ./backend
     ports:
@@ -27,7 +25,6 @@ services:
       - db
 
   analysis-engine:
-    container_name: flatfeestack-analysis-engine
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
     build: ./analysis-engine
     ports:
@@ -38,7 +35,6 @@ services:
       - analysis-engine/.env
 
   payout:
-    container_name: flatfeestack-payout
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
     ports:
@@ -52,7 +48,6 @@ services:
       - payout/.env
 
   payout-nodejs:
-    container_name: flatfeestack-payout-nodejs
     image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
     build: ./payout-nodejs
     ports:
@@ -65,28 +60,26 @@ services:
       - flextesa
 
   frontend:
-    container_name: flatfeestack-frontend
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-latest}
     build: ./frontend
     ports:
       - 9085:9085
 
   db:
-    container_name: flatfeestack-db
-    image: postgres:13-alpine
+    image: postgres:14-alpine
     volumes:
       - ./.db:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
       - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
-    environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=flatfeestack
+    env_file:
+      .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 5s
 
   reverse-proxy:
-    container_name: flatfeestack-caddy
     image: caddy:2-alpine
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
@@ -97,7 +90,6 @@ services:
 
   #https://openethereum.wiki/Private-development-chain/
   openethereum:
-    container_name: flatfeestack-openethereum
     image: openethereum/openethereum:v3.1.1
     ports:
       - 8545:8545
@@ -106,14 +98,12 @@ services:
     volumes:
       - ./.chain:/tmp/chain
     command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+
   # https://assets.tqtezos.com/docs/setup/2-sandbox/
   flextesa:
-    container_name: flatfeestack-flextesa
-    image: tqtezos/flextesa:20210602
+    image: tqtezos/flextesa:20211206
     environment:
       - block_time=15
     ports:
       - 20000:20000
-    command: flobox start
-
-
+    command: hangzbox start
