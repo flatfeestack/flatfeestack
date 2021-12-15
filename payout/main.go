@@ -272,7 +272,7 @@ func PaymentCryptoRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p = &PayoutCryptoResponse{TxHash: txHash, PayoutCryptos: payoutCrypto}
-	log.Printf("Contract call succeded. Transaction Hash is %v", p.TxHash)
+	log.Printf("%v: Contract call succeeded. Transaction Hash is %v", cur, p.TxHash)
 	err = json.NewEncoder(w).Encode(p)
 	if err != nil {
 		return
