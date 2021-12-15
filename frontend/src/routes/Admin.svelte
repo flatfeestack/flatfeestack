@@ -100,7 +100,7 @@ async function loginAs(email: string) {
   {/await}
   </div>
 
-  {#if $config.env == "local"}
+  {#if $config.env == "local" || $config.env == "dev"}
     <h2 class="px-2">Timewarp</h2>
     <div class="container">
       <button class="button2 m-2" on:click={() => handleWarp(1)}>
