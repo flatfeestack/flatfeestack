@@ -327,7 +327,7 @@ func updateInvitedEmail(invitedEmail *string, userId uuid.UUID) error {
 //********************************* Wallet ****************************************
 //*********************************************************************************
 func findWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
-	var userWallets []Wallet
+	userWallets := []Wallet{}
 	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
 	rows, err := db.Query(s, uid)
 	if err != nil {
