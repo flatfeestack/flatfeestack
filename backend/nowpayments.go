@@ -121,6 +121,9 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID, freq int) (string, error) {
 	invoiceUrl := opts.NowpaymentsApiUrl + "/invoice"
 	apiToken := opts.NowpaymentsToken
+	if apiToken == "" {
+		return "", fmt.Errorf("now Paymenst API token is empty")
+	}
 	invoice.IpnCallbackUrl = opts.NowpaymentsIpnCallbackUrl
 	invoiceData, err := json.Marshal(invoice)
 
