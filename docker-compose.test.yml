@@ -16,8 +16,7 @@ services:
     env_file:
       - .test.fastauth.env
     depends_on:
-      test-db:
-        condition: service_healthy
+      - test-db
 
   test-backend:
     hostname: test-backend
@@ -29,8 +28,7 @@ services:
     env_file:
       - .test.backend.env
     depends_on:
-      test-db:
-        condition: service_healthy
+      - test-db
 
   test-analysis-engine:
     hostname: test-analysis-engine
@@ -80,13 +78,12 @@ services:
     volumes:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./backend/init_func.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
     #https://docs.docker.com/engine/reference/builder/#healthcheck
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 1s
-      timeout: 5s
-      retries: 15
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 5s
     ports:
       - 25432:5432
     networks:
