@@ -82,7 +82,7 @@ services:
       - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
     #https://docs.docker.com/engine/reference/builder/#healthcheck
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
     ports:
       - 15432:5432
