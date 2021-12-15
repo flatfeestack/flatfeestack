@@ -653,9 +653,9 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		conn.Close()
 		return err
 	}
-
-	var total = make([]TotalUserBalance, 0, len(supportedCurrencies))
-	for i, v := range supportedCurrencies {
+	supportedCurrenciesAndUSD := append(supportedCurrencies, CryptoCurrency{Name: "US Dollar", ShortName: "USD"})
+	var total = make([]TotalUserBalance, 0, len(supportedCurrenciesAndUSD))
+	for i, v := range supportedCurrenciesAndUSD {
 		total = append(total, TotalUserBalance{Currency: v.ShortName, Balance: 0})
 		for _, ub := range userBalancesDto {
 			if ub.Currency == total[i].Currency {
