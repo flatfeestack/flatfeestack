@@ -259,10 +259,9 @@ func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day int,
 
 func setupUser(email string) (*uuid.UUID, error) {
 	u := User{
-		Id:        uuid.New(),
-		StripeId:  stringPointer("strip-id"),
-		Email:     email,
-		PayoutETH: stringPointer("0x123"),
+		Id:       uuid.New(),
+		StripeId: stringPointer("strip-id"),
+		Email:    email,
 	}
 
 	err := insertUser(&u, "A")

@@ -9,6 +9,6 @@ RUN make build
 
 FROM gcr.io/distroless/static
 WORKDIR /home/nonroot
-COPY --from=builder /app/banner.txt /app/backend /app/init.sql ./
+COPY --from=builder /app/banner.txt /app/backend /app/init.sql /app/init_func.sql ./
 USER nonroot
 ENTRYPOINT ["/home/nonroot/backend"]

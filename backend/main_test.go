@@ -60,6 +60,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func runSQLFile(files ...string) error {
+	for _, file := range files {
+		if _, err := os.Stat(file); err == nil {
+			fileBytes, err := ioutil.ReadFile(file)
+			if err != nil {
+				return err
+			}
+			_, err = db.Exec(string(fileBytes))
+			if err != nil {
+				return fmt.Errorf("[%v] %v", string(fileBytes), err)
+			}
+		}
+	}
+	return nil
+}
+
 func runSQL(files ...string) error {
 	for _, file := range files {
 		//this will stringPointer or alter tables
@@ -95,6 +111,10 @@ func setup() {
 	err := runSQL("init.sql")
 	if err != nil {
 		log.Fatalf("Could not run init.sql scripts: %s", err)
+	}
+	runSQLFile("init_func.sql")
+	if err != nil {
+		log.Fatalf("Could not run init_func.sql scripts: %s", err)
 	}
 }
 func teardown() {
