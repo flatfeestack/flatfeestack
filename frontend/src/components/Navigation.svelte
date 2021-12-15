@@ -32,8 +32,8 @@
         color: var(--secondary-900);
         padding: 1em;
         text-decoration: none;
-        transition: background-color 0.5s ease-out;
-        transition: color 0.5s ease-out;
+        transition: background-color 0.1s linear;
+        transition: color 0.1s linear;
     }
 
     nav .inactive{
