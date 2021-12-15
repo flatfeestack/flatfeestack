@@ -1,25 +1,12 @@
 <script>
-    import {config, user, error} from "../../ts/store";
-    import {onMount} from "svelte";
-    import {loadStripe} from "@stripe/stripe-js/pure";
+    import {config, error} from "../../ts/store";
     import {API} from "../../ts/api";
 
-    $: {
-        if (card) {
-            if ($user.payment_method) {
-                card.style.display = "none";
-            } else {
-                card.style.display = "block";
-            }
-        }
-    }
+    export let total;
+    export let selectedPlan;
+    export let seats;
 
     let selected;
-    let cardElement;
-    let stripe;
-    let card; // HTML div to mount card
-    let seats = 1;
-    let selectedPlan = 0;
 
     async function handleSubmit() {
         try {
@@ -32,37 +19,21 @@
     }
 </script>
 
-<h2>Select your cryptocurrency</h2>
-
 <form on:submit|preventDefault={handleSubmit}>
-    <div class="container-stretch">
-        {#each $config.plans as { title, desc }, i}
-            <div
-                    class="child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
-                    on:click="{() => (selectedPlan = i)}">
-                <h3 class="text-center font-bold text-lg">{title}</h3>
-                <div class="text-center">{@html desc}</div>
-            </div>
-        {/each}
-    </div>
-
-    {#if $user.role === "ORG" }
+    <div class="container">
         <div class="p-2">
-            <span>How many seats?</span>
-            <input size="5" type="number" min="1" bind:value={seats}>
+            <select bind:value={selected}>
+                {#each $config.supportedCurrencies || [] as currency}
+                    <option value={currency}>
+                        {currency.name} - {currency.shortName}
+                    </option>
+                {/each}
+            </select>
         </div>
-    {/if}
-    <select bind:value={selected}>
-        {#each $config.supportedCurrencies || [] as currency}
-            <option value={currency}>
-                {currency.name} - {currency.shortName}
-            </option>
-        {/each}
-    </select>
-
-    <button disabled={!selected} type=submit>
-        Submit
-    </button>
+        <div class="p-2">
+            <button class="button1" type="submit" disabled="{total < 10}">❤&nbsp;Support</button>
+        </div>
+    </div>
 </form>
 
 <style>
@@ -70,9 +41,5 @@
         display: block;
         width: 500px;
         max-width: 100%;
-    }
-
-    .small {
-        font-size: x-small;
     }
 </style>

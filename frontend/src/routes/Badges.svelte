@@ -2,29 +2,19 @@
   import Navigation from "../components/Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { error, firstTime, user} from "../ts/store";
+  import { error, user} from "../ts/store";
   import type { Contributions, Repo } from "../types/users";
   import { formatDay, formatMUSD } from "../ts/services";
-  import confetti from "canvas-confetti";
-
 
   let repos: Repo[] = [];
   let contributions: Contributions[] = [];
   let canvas;
 
   onMount(async () => {
-    console.log($firstTime);
     try {
       let pr1;
-      if ($firstTime) {
-        pr1 = confetti.create(<HTMLCanvasElement>canvas, {
-          resize: true,
-          useWorker: true,
-        })({ particleCount: 200, spread: 500 });
-      }
-      firstTime.set(false);
       const pr2 = API.user.contributionsSend();
-      const pr3 = API.user.contributionsSummary($user.id);
+      const pr3 = API.user.contributionsSummary();
 
       const res2 = await pr2;
       contributions = res2 ? res2 : contributions;
@@ -51,17 +41,8 @@
 </style>
 
 <Navigation>
-  <h1 class="px-2">Badges</h1>
-  Public badge URL:
-  <a href="/badges/{$user.id}">/badges/{$user.id}"</a>
-
-  {#if $firstTime}
-    <canvas bind:this="{canvas}"></canvas>
-  {/if}
-
-
   {#if repos && repos.length > 0}
-    <h2 class="px-2">Supported Repositories</h2>
+    <h2 class="p-2 m-2">Supported Repositories</h2>
     <div class="container">
       <table>
         <thead>
@@ -86,6 +67,8 @@
         </tbody>
       </table>
     </div>
+  {:else}
+    <p class="p-2 m-2">No supported repositories yet.</p>
   {/if}
 
 
@@ -131,7 +114,9 @@
         </tbody>
       </table>
     </div>
+  {:else}
+    <p class="p-2 m-2">No contributions yet.</p>
   {/if}
-
+  <p class="p-2 m-2">Public URL: <a href="/badges/{$user.id}">/badges/{$user.id}"</a></p>
 
 </Navigation>

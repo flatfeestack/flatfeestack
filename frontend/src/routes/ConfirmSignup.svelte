@@ -2,7 +2,6 @@
   import { Link, navigate } from "svelte-routing";
   import { onMount } from 'svelte';
   import { confirmEmail } from "../ts/services";
-  import { firstTime } from "../ts/store";
 
   export let email;
   export let token;
@@ -11,7 +10,6 @@
   onMount(async () => {
     try {
       await confirmEmail(email, token);
-      $firstTime = true;
       navigate("/user/settings");
     } catch (e) {
       error = e;

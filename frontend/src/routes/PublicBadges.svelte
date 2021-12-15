@@ -1,11 +1,8 @@
 <script type="ts">
-  import Navigation from "../components/Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { error, firstTime } from "../ts/store";
-  import type { Contributions, Repo, Users } from "../types/users";
-  import { formatDay, formatMUSD } from "../ts/services";
-  import confetti from "canvas-confetti";
+  import { error } from "../ts/store";
+  import type { Repo, Users } from "../types/users";
 
   export let uuid: string;
   let repos: Repo[] = [];
@@ -32,13 +29,10 @@
 </style>
 
 <div class="container-col">
-<h1 class="px-2">Badges</h1>
 
 {#if repos && repos.length > 0}
-  <h2 class="px-2">Supported Repositories for {user.name}</h2>
-  {#if user.role != "ORG"}
-    <img class="image-usr" src="{user.image}" />
-  {:else}
+  <h2 class="px-2">Supported Repositories for {user.name? user.name:user.id}</h2>
+  {#if user.image}
     <img class="image-org" src="{user.image}" />
   {/if}
   <div class="container">

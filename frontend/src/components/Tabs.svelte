@@ -1,7 +1,9 @@
 <script>
     export let items = [];
     export let activeTabValue = 1;
-
+    export let total;
+    export let selectedPlan;
+    export let seats;
     const handleClick = tabValue => () => (activeTabValue = tabValue);
 </script>
 
@@ -15,14 +17,14 @@
 {#each items as item}
     {#if activeTabValue == item.value}
         <div class="box">
-            <svelte:component this={item.component}/>
+            <svelte:component this={item.component} {total} {selectedPlan} {seats}/>
         </div>
     {/if}
 {/each}
 <style>
     .box {
         margin-bottom: 10px;
-        padding: 40px;
+        padding: 0.1rem;
         border: 1px solid #dee2e6;
         border-radius: 0 0 .5rem .5rem;
         border-top: 0;

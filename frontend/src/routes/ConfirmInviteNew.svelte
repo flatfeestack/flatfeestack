@@ -3,7 +3,6 @@
   import Dots from "../components/Dots.svelte";
   import { confirmInviteNew } from "../ts/services";
   import { API } from "../ts/api";
-  import { firstTime } from "../ts/store";
 
   export let email;
   export let emailToken;
@@ -25,7 +24,6 @@
       email = "";
       password = "";
       isSubmitting = false;
-      $firstTime = true;
       navigate("/user/payments");
     } catch (e) {
       isSubmitting = false;

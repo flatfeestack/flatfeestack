@@ -10,7 +10,6 @@ export type Users = {
   image: string;
   username: string;
   token: string;
-  role: string;
   login: boolean;
 };
 

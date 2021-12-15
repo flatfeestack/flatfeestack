@@ -2,7 +2,7 @@
   import type { Repo } from "../types/users";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import { user, firstTime, error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
+  import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
 
   import Navigation from "../components/Navigation.svelte";
   import { navigate } from "svelte-routing";
@@ -52,17 +52,6 @@
 </style>
 
 <Navigation>
-  <h1 class="px-2">Search Repositories</h1>
-
-  {#if $sponsoredRepos.length === 0}
-    <div class="container bg-green rounded p-2 m-2">
-      <div>
-        <p>Search for your repositories you want to tag. Currently only GitHub search is supported. You can tag as many
-          repositories as you want.</p>
-        <p>Once you have tagged at least on repository, this message will disappear.</p>
-      </div>
-    </div>
-  {/if}
 
   <div class="p-2">
     {#if $sponsoredRepos.length > 0}
@@ -73,20 +62,19 @@
       </div>
     {/if}
 
-    <h2>Find your favorite opes source projects</h2>
+    <h2 class="p-2 m-2">Find your favorite opes source projects</h2>
+    {#if $sponsoredRepos.length === 0}
 
-    <div class="py-3">
+          <p class="p-2 m-2">Search for your repositories you want to tag. Currently only GitHub search is supported. You can tag as many
+            repositories as you want.</p>
+
+    {/if}
+    <div class="p-2 m-2">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
         <input type="text" bind:value="{search}" />
-        <button class="{!$firstTime || $sponsoredRepos.length == 0 ?`button1`:`button2`}" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
+        <button class="{$sponsoredRepos.length == 0 ?`button1`:`button2`}" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
       </form>
     </div>
-
-    {#if $firstTime}
-      <div class="container">
-        <button class="{$sponsoredRepos.length == 0 ?`button2`:`button1`} px-2" on:click="{() => {navigate(`/user/payments`)}}">Next: Setup payment</button>
-      </div>
-    {/if}
 
     {#if repos.length > 0}
       <h2>Results</h2>

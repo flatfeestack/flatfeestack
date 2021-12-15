@@ -38,7 +38,6 @@
     "@stripe/stripe-js": "^1.22.0",
     "@taquito/taquito": "^11.0.2",
     "@temple-wallet/dapp": "^6.0.1",
-    "canvas-confetti": "^1.4.0",
     "ethers": "^5.5.2",
     "ky": "^0.28.7",
     "svelte-routing": "^1.6.0"

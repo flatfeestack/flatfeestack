@@ -82,11 +82,12 @@
     }
 
     footer {
-        background-color: #000;
-        color: white;
-        height: 100%;
-        flex: 0 1 auto;
-        padding: 1rem;
+      background-color: #000;
+      color: white;
+      height: 100%;
+      flex: 0 1 auto;
+      font-size: 1rem;
+      padding: 0.5rem;
     }
 
     footer > :global(a) {
@@ -140,9 +141,7 @@
     <nav>
       {#if $user.id}
         <div class="main-nav"><a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a></div>
-        {#if $user.role === "USR" && $user.image}
-          <img class="image-usr-sx" src="{$user.image}" />
-        {:else if $user.image}
+        {#if $user.image}
           <img class="image-org-sx" src="{$user.image}" />
         {/if}
         <div class="main-nav"><a href="/user/settings">{$user.email}</a></div>

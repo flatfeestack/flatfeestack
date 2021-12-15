@@ -115,7 +115,6 @@ export const API = {
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     setImage: (image: string) => backendToken.post(`users/me/image`, { json: { image } }),
-    setUserMode: (mode: string) => backendToken.put(`users/me/mode/${mode}`),
     setupStripe: () => backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) => backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
     nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}),

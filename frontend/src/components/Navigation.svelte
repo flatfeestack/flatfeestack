@@ -18,7 +18,7 @@
         display: flex;
     }
     nav {
-        padding-top: 3em;
+        padding-top: 2rem;
         display: flex;
         flex-flow: column;
         min-width: 12rem;
@@ -27,11 +27,13 @@
         white-space: nowrap;
 
     }
-    nav :global(a), nav .inactive{
+    nav :global(a), nav .inactive {
         display: block;
         color: var(--secondary-900);
         padding: 1em;
         text-decoration: none;
+        transition: background-color 0.5s ease-out;
+        transition: color 0.5s ease-out;
     }
 
     nav .inactive{
@@ -39,7 +41,7 @@
     }
 
     nav :global(a:hover), nav .selected  {
-        background-color: var(--primary-500);
+        background-color: var(--primary-700);
         color: var(--secondary-100);
     }
 
@@ -70,32 +72,22 @@
       <Fa icon="{faUserCog}" size="sm" class="icon" />
       <span class="hide-sx">Settings</span>
     </a>
-    {#if $user.role != "ORG" }
     <a href="/user/search" class="{$route.pathname === `/user/search` ? `selected`:``}">
       <Fa icon="{faSearch}" size="sm" class="icon" />
       <span class="hide-sx">Search</span>
     </a>
-    {:else}
-      <div class="inactive">
-        <Fa icon="{faSearch}" size="sm" class="icon" />
-        <span class="hide-sx">Search</span>
-      </div>
-    {/if}
     <a href="/user/payments" class="{$route.pathname === `/user/payments` ? `selected`:``}">
       <Fa icon="{faCreditCard}" size="sm" class="icon" />
       <span class="hide-sx">Payments</span>
     </a>
-    {#if $user.role != "ORG" }
-      <a href="/user/income" class="{$route.pathname === `/user/income` ? `selected`:``}">
-        <Fa icon="{faHandHoldingUsd}" size="sm" class="icon" />
-        <span class="hide-sx">Income</span>
-      </a>
-    {:else}
-      <a href="/user/invitations" class="{$route.pathname === `/user/invitations` ? `selected`:``}">
-        <Fa icon="{faUserFriends}" size="sm" class="icon" />
-        <span class="hide-sx">Invitations</span>
-      </a>
-    {/if}
+    <a href="/user/income" class="{$route.pathname === `/user/income` ? `selected`:``}">
+      <Fa icon="{faHandHoldingUsd}" size="sm" class="icon" />
+      <span class="hide-sx">Income</span>
+    </a>
+    <a href="/user/invitations" class="{$route.pathname === `/user/invitations` ? `selected`:``}">
+      <Fa icon="{faUserFriends}" size="sm" class="icon" />
+      <span class="hide-sx">Invitations</span>
+    </a>
     <a href="/user/badges" class="{$route.pathname === `/user/badges` ? `selected`:``}">
       <Fa icon="{faMedal}" size="sm" class="icon" />
       <span class="hide-sx">Badges</span>
