@@ -823,8 +823,6 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 // Helper
 func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) error {
 	res, err := payoutRequest(pts, currency)
-	res.Currency = currency
-
 	if err != nil {
 		err1 := err.Error()
 		err2 := insertPayoutResponse(&PayoutsResponse{
@@ -834,6 +832,8 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 		})
 		return fmt.Errorf("error %v/%v", err, err2)
 	}
+
+	res.Currency = currency
 	return insertPayoutResponse(&PayoutsResponse{
 		BatchId:   batchId,
 		TxHash:    res.TxHash,
