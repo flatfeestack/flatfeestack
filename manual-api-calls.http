@@ -33,3 +33,12 @@ Content-Type: application/json
 
 ###
 
+POST test.flatfeestack.io/backend/admin/timewarp/24
+Content-Type: application/json
+Authorization: Bearer {{BEARER_TOKEN}}
+
+###
+
+POST test.flatfeestack.io/auth/timewarp/24
+Content-Type: application/json
+Authorization: Bearer {{BEARER_TOKEN}}

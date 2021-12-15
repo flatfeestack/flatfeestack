@@ -4,3 +4,4 @@
 .db
 .chain
 env*.tar.gz
+**/*.private.env.json
