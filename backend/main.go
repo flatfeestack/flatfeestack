@@ -127,7 +127,8 @@ func NewOpts() *Opts {
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
 	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
 	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
-	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL"), "NOWPayments API URL")
+	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
+		"https://api.nowpayments.io/v1/"), "NOWPayments API URL")
 	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
 
 	flag.Usage = func() {
@@ -233,7 +234,7 @@ func main() {
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
-	router.HandleFunc("/ws/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
@@ -258,9 +259,12 @@ func main() {
 	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
 	//payment
 
+	//hooks
 	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
+
+	//admin
 	router.HandleFunc("/admin/payout", jwtAuthAdmin(getPayoutInfos, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(monthlyPayout, admins)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
