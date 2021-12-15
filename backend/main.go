@@ -229,7 +229,6 @@ func main() {
 	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(updateImage), 200*1024)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/mode/{mode}", jwtAuthUser(updateMode)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
@@ -456,7 +455,6 @@ func createUser(email string) (*User, error) {
 	user.Id = uid
 	user.Email = email
 	user.CreatedAt = timeNow()
-	user.Role = stringPointer("USR")
 
 	rnd, err := genRnd(18)
 	if err != nil {

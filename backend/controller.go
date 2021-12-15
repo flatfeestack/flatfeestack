@@ -318,20 +318,6 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func updateMode(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	a := params["mode"]
-	if a != "USR" && a != "ORG" {
-		writeErr(w, http.StatusInternalServerError, "Can only change between USR/ORG, input: %s", a)
-		return
-	}
-	err := updateUserMode(user.Id, a)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
-		return
-	}
-}
-
 func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	a := params["seats"]
@@ -807,7 +793,6 @@ func userSummary2(w http.ResponseWriter, r *http.Request) {
 	user2 := User{
 		Id:    user.Id,
 		Name:  user.Name,
-		Role:  user.Role,
 		Image: user.Image,
 	}
 	writeJson(w, user2)
@@ -833,39 +818,16 @@ func contributionsSum2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Role != nil && *user.Role == "USR" {
-		r, err := findSponsoredReposById(user.Id)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-			return
-		}
-		writeJson(w, r)
-	} else {
-		r, err := findSponsoredReposByOrgId(user.Email)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-			return
-		}
-		writeJson(w, r)
-	}
+	contributionsSum(w, r, user)
 }
 
 func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
-	if user.Role != nil && *user.Role == "USR" {
-		r, err := findSponsoredReposById(user.Id)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-			return
-		}
-		writeJson(w, r)
-	} else {
-		r, err := findSponsoredReposByOrgId(user.Email)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-			return
-		}
-		writeJson(w, r)
+	r, err := findSponsoredReposByOrgId(user.Email)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
 	}
+	writeJson(w, r)
 }
 
 type UserBalanceCoreDto struct {

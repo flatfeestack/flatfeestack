@@ -116,7 +116,6 @@ func runDailyRepoBalance(yesterdayStart time.Time, yesterdayStop time.Time, now 
 					) AS q
 					INNER JOIN sponsor_event s ON s.user_id = q.user_id
 					INNER JOIN users u ON u.id = s.user_id
-					WHERE u.role = 'USR'
 					GROUP BY s.repo_id, q.currency`)
 	if err != nil {
 		return 0, err
@@ -273,7 +272,7 @@ func runDailyTopupReminderUser() ([]User, error) {
 	s := `SELECT u.id, u.sponsor_id, u.email, u.payment_cycle_id, u.stripe_id, u.stripe_payment_method
             FROM users u
                 INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
-			WHERE u.role='USR' AND pc.days_left <= 1 AND pc.freq != 0 AND (u.stripe_payment_method IS NOT NULL OR u.sponsor_id IS NOT NULL)`
+			WHERE pc.days_left <= 1 AND pc.freq != 0 AND (u.stripe_payment_method IS NOT NULL OR u.sponsor_id IS NOT NULL)`
 
 	rows, err := db.Query(s)
 	if err != nil {

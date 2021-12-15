@@ -25,7 +25,6 @@ type User struct {
 	PaymentMethod  *string `json:"payment_method"`
 	Last4          *string `json:"last4"`
 	Token          *string `json:"token"`
-	Role           *string `json:"role"`
 	CreatedAt      time.Time
 	Claims         *TokenClaims
 }
@@ -165,11 +164,11 @@ func findUserByEmail(email string) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, role 
+                                stripe_last4, email, name, image 
                          FROM users WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.Role)
+			&u.Image)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -184,11 +183,11 @@ func findUserById(uid uuid.UUID) (*User, error) {
 	var u User
 	err := db.
 		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_id,
-                                stripe_last4, email, name, image, role 
+                                stripe_last4, email, name, image 
                          FROM users WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
 			&u.PaymentMethod, &u.PaymentCycleId, &u.Last4, &u.Email, &u.Name,
-			&u.Image, &u.Role)
+			&u.Image)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -272,21 +271,6 @@ func updateUserImage(uid uuid.UUID, data string) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(data, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateUserMode(uid uuid.UUID, mode string) error {
-	stmt, err := db.Prepare("UPDATE users SET role=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(mode, uid)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,6 @@ CREATE TABLE users (
     name                  VARCHAR(255),
     image                 BYTEA,
     token                 VARCHAR(32) NOT NULL,
-    role                  VARCHAR(3) DEFAULT 'USR' NOT NULL,
     created_at            TIMESTAMP NOT NULL
 );
 

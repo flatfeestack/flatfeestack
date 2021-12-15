@@ -19,7 +19,6 @@ BEGIN
                  INNER JOIN sponsor_event s ON s.user_id = u.id
                  INNER JOIN payment_cycle pc ON u.payment_cycle_id = pc.id
         WHERE pc.days_left > 0
-          AND u.role = 'USR'
           AND (EXTRACT(epoch from age(LEAST(yesterdayEnd, s.unsponsor_at), GREATEST(yesterdayStart, s.sponsor_at)))/3600)::bigInt >= 24
         ORDER BY u.id, dp.days_left asc
         LOOP
