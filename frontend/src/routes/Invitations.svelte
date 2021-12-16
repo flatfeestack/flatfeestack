@@ -121,7 +121,7 @@
                 <option value="{plan.freq}">{plan.title}</option>
               {/each}
             </select>
-            <button class="ml-5 p-2 {invites.length === 0 ?`button1`:`button2`}" type="submit" disabled="{isAddInviteSubmitting}">Invite to {$user.name ? $user.name : "your org"}
+            <button class="ml-5 p-2 button1" type="submit" disabled="{isAddInviteSubmitting}">Invite
               {#if isAddInviteSubmitting}
                 <Dots />
               {/if}
