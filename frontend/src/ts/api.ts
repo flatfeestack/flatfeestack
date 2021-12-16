@@ -13,7 +13,7 @@ import type {
   UserAggBalance,
   GitUser,
   RepoMapping,
-  UserBalance, Contributions, UserBalanceCore,
+  Contributions, UserBalanceCore,
   PayoutAddress
 } from "../types/users";
 import { PaymentCycle, PayoutInfo, UserStatus } from "../types/users";

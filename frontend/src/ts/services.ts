@@ -1,8 +1,7 @@
-import { token, user, loginFailed, userBalances, config, error } from "./store";
+import { token, user, loginFailed, userBalances, config } from "./store";
 import { API } from "./api";
-import { Config, Token, Users } from "../types/users";
+import { Token, Users } from "../types/users";
 import { get } from "svelte/store";
-import { loadStripe } from "@stripe/stripe-js/pure";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const p1 = API.auth.confirmReset(email, password, emailToken);

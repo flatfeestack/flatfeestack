@@ -29,11 +29,10 @@
     }
     nav :global(a), nav .inactive {
         display: block;
-        color: var(--secondary-900);
+        color: var(--secondary-700);
         padding: 1em;
         text-decoration: none;
-        transition: background-color 0.1s linear;
-        transition: color 0.1s linear;
+        transition: color 0.3s linear, background-color 0.3s linear;
     }
 
     nav .inactive{
@@ -41,8 +40,8 @@
     }
 
     nav :global(a:hover), nav .selected  {
-        background-color: var(--primary-700);
-        color: var(--secondary-100);
+        background-color: var(--primary-300);
+        color: var(--primary-900);
     }
 
     @media (max-width: 36rem) {

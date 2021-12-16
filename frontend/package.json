@@ -13,7 +13,6 @@
     "rollup-plugin-copy": "^3.4.0",
     "@tsconfig/svelte": "^2.0.1",
     "@typechain/ethers-v5": "^8.0.5",
-    "@types/canvas-confetti": "^1.4.2",
     "rollup": "^2.61.1",
     "rollup-plugin-brotli": "^3.1.0",
     "rollup-plugin-css-only": "^3.1.0",

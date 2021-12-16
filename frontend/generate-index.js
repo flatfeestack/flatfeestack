@@ -11,11 +11,12 @@ const htmlStart = `<!DOCTYPE html>
   <meta name='viewport' content='width=device-width,initial-scale=1'>
   <title>FlatFeeStack</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
-  <link rel='stylesheet' href='/build/bundle.css'>
+  <link rel="stylesheet" type="text/css" href="/build/bundle.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" > 
   <script type="module" defer src='/build/main.js'></script>
   <script defer src="https://js.stripe.com/v3/"></script>
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"> 
+  
 </head>
 <body>`;
 

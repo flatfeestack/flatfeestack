@@ -72,7 +72,7 @@
     <div class="p-2 m-2">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
         <input type="text" bind:value="{search}" />
-        <button class="{$sponsoredRepos.length == 0 ?`button1`:`button2`}" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
+        <button class="button1" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
       </form>
     </div>
 
