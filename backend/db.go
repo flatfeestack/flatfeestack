@@ -27,6 +27,7 @@ type User struct {
 	Token          *string `json:"token"`
 	CreatedAt      time.Time
 	Claims         *TokenClaims
+	Role           *string `json:"role,omitempty"`
 }
 
 type SponsorEvent struct {

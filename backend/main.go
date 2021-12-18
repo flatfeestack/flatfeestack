@@ -77,9 +77,6 @@ type Opts struct {
 }
 
 type TokenClaims struct {
-	Meta         *string  `json:"meta,omitempty"`
-	Scope        string   `json:"scope,omitempty"`
-	InviteToken  string   `json:"inviteToken,omitempty"`
 	InviteEmails []string `json:"inviteEmails,omitempty"`
 	InviteMeta   []string `json:"inviteMeta,omitempty"`
 	jwt.Claims
@@ -412,6 +409,14 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			if err != nil {
 				writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
 				return
+			}
+		}
+
+		//User exists now, check if we are admin
+		for _, email := range admins {
+			if claims.Subject == email {
+				log.Printf("Authenticated admin %s\n", email)
+				user.Role = stringPointer("admin")
 			}
 		}
 
