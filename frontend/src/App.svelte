@@ -31,6 +31,11 @@
   export let url;
   let loading = true;
 
+  function logout() {
+    removeSession();
+    navigate('/login')
+  }
+
   onMount(async () => {
     try {
       loading = true;
@@ -74,6 +79,7 @@
     header, nav {
         display: flex;
         align-items: center;
+        font-size: 1.1rem;
     }
 
     main {
@@ -98,17 +104,6 @@
     header :global(a), .header :global(a:visited), .header :global(a:active) {
         text-decoration: none;
         color: #000;
-    }
-
-    .main-nav :global(a), .main-nav :global(a:visited) {
-        padding: 0.5em 1em 0.5em 1em;
-        color: #000;
-        font-size: 1.05rem;
-    }
-
-    .main-nav :global(a:hover) {
-        color: var(--primary-500);
-        transition: color .5s;
     }
 
     .close {
@@ -140,12 +135,14 @@
     </a>
     <nav>
       {#if $user.id}
-        <div class="main-nav"><a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a></div>
+        <a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a>
         {#if $user.image}
           <img class="image-org-sx" src="{$user.image}" />
         {/if}
-        <div class="main-nav"><a href="/user/settings">{$user.email}</a></div>
-        <div class="main-nav"><a href="/login" on:click={removeSession}>Sign out</a></div>
+        {$user.email}
+        <form on:submit|preventDefault="{logout}">
+          <button class="button3 center mx-2" type="submit">Sign out</button>
+        </form>
       {:else}
         <form on:submit|preventDefault="{() => navigate('/login')}">
           <button class="button3 center mx-2" type="submit">Login</button>

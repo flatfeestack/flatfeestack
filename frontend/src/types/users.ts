@@ -11,6 +11,7 @@ export type Users = {
   username: string;
   token: string;
   login: boolean;
+  role: string;
 };
 
 export type Config = {
