@@ -1302,16 +1302,24 @@ func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string)
 
 func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
 	var ubs []UserBalanceCore
-	s := `SELECT dup.currency, CASE WHEN max(tmp.balance) IS NULL THEN sum(dup.balance) ELSE sum(dup.balance) - max(tmp.balance) END as balance
-		  FROM daily_user_payout dup 
-		  LEFT JOIN (	SELECT res_details.currency, max(res_details.nano_tea) as balance FROM payout_request as req
-		  				JOIN payout_response as res on res.batch_id = req.batch_id 
-		  				JOIN payout_response_details as res_details on res_details.payout_response_id = res.id
-		  				WHERE req.user_id = $1
-		  				GROUP BY res_details.currency
-		  		    ) AS tmp on tmp.currency = dup.currency
-		  WHERE dup.user_id = $1
-		  GROUP BY dup.currency`
+	s := `SELECT 
+		 		payout.currency, 
+		 		MAX(payout.balance) - COALESCE(SUM(payout_response.balance), 0) as balance
+		 	FROM (	SELECT dup.user_id, wa.address, SUM(dup.balance) as balance, dup.currency 
+		 			FROM daily_user_payout dup 
+		 			JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
+		 			WHERE wa.is_deleted = false
+		 			GROUP BY dup.user_id, dup.currency, wa.address
+		 		 ) as payout
+		 	LEFT JOIN (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
+		 				JOIN payout_response res on res_details.payout_response_id = res.id
+		 				JOIN payout_request req on req.batch_id = res.batch_id
+		 				GROUP BY req.user_id, res_details.address, res_details.currency 
+		 			  ) as payout_response 
+		 				on payout_response.user_id = payout.user_id 
+		 				AND payout_response.currency = payout.currency 
+			WHERE payout.user_id = $1
+		 	GROUP BY payout.user_id, payout.currency, payout.address`
 
 	rows, err := db.Query(s, uid)
 	if err != nil {
@@ -1332,11 +1340,13 @@ func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
 
 func getTotalRealizedIncome(uid uuid.UUID) ([]UserBalanceCore, error) {
 	var ubs []UserBalanceCore
-	s := `	select res_details.currency, max(res_details.nano_tea) from payout_request as req
-			join payout_response as res on res.batch_id = req.batch_id 
-			join payout_response_details as res_details on res_details.payout_response_id = res.id
-			where req.user_id = $1
-			group by res_details.currency`
+	s := `	SELECT tmp.currency, SUM(tmp.balance) 
+			FROM (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
+					JOIN payout_response res on res_details.payout_response_id = res.id
+					JOIN payout_request req on req.batch_id = res.batch_id
+					where req.user_id = $1
+					GROUP BY req.user_id, res_details.address, res_details.currency ) as tmp
+			GROUP BY tmp.currency`
 
 	rows, err := db.Query(s, uid)
 	if err != nil {
