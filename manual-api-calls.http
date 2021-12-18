@@ -42,3 +42,17 @@ Authorization: Bearer {{BEARER_TOKEN}}
 POST test.flatfeestack.io/auth/timewarp/24
 Content-Type: application/json
 Authorization: Bearer {{BEARER_TOKEN}}
+
+###
+# - used for locale testing (calculation-test-excel) to verify daily calculations
+# - use admin token
+# - sponsoring beginns on 01.10.2021
+# - first calculation results with now = 2021-10-02T00:00:00+00:00
+
+POST localhost:9082/nowpayments/crontester
+Content-Type: application/json
+Authorization: Bearer {{BEARER_TOKEN}}
+
+{
+  "yesterdayStop": "2021-10-01T00:00:00+00:00"
+}
