@@ -748,6 +748,61 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("time warp: %v", timeNow())
 }
 
+func crontester(w http.ResponseWriter, r *http.Request, _ string) {
+	var data map[string]string
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		return
+	}
+
+	yesterdayStop, _ := time.Parse(time.RFC3339, data["yesterdayStop"])
+	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
+
+	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+
+	nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, timeNow())
+	if err != nil {
+		return
+	}
+	log.Printf("Daily User Balance inserted %v entries", nr)
+
+	nr, err = runDailyDaysLeftDailyPayment()
+	if err != nil {
+		return
+	}
+	log.Printf("Daily Days Left Daily Payment updated %v entries", nr)
+
+	nr, err = runDailyDaysLeftPaymentCycle()
+	if err != nil {
+		return
+	}
+	log.Printf("Daily Days Left Payment Cycle updated %v entries", nr)
+
+	nr, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, timeNow())
+	if err != nil {
+		return
+	}
+	log.Printf("Daily Repo Balance inserted %v entries", nr)
+
+	nr, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, timeNow())
+	if err != nil {
+		return
+	}
+	log.Printf("Daily Repo Weight inserted %v entries", nr)
+
+	nr, err = runDailyUserPayout(yesterdayStart, yesterdayStop, timeNow())
+	if err != nil {
+		return
+	}
+	log.Printf("Daily User Payout inserted %v entries", nr)
+
+	nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, timeNow())
+	if err != nil {
+		return
+	}
+	log.Printf("Daily Leftover inserted %v entries", nr)
+}
+
 func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
 	cs, err := findUserContributions(user.Id)
 	if err != nil {
