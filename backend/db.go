@@ -1326,11 +1326,9 @@ func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
 	s := `SELECT 
 		 		payout.currency, 
 		 		MAX(payout.balance) - COALESCE(SUM(payout_response.balance), 0) as balance
-		 	FROM (	SELECT dup.user_id, wa.address, SUM(dup.balance) as balance, dup.currency 
+		 	FROM (	SELECT dup.user_id, SUM(dup.balance) as balance, dup.currency 
 		 			FROM daily_user_payout dup 
-		 			JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
-		 			WHERE wa.is_deleted = false
-		 			GROUP BY dup.user_id, dup.currency, wa.address
+		 			GROUP BY dup.user_id, dup.currency
 		 		 ) as payout
 		 	LEFT JOIN (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
 		 				JOIN payout_response res on res_details.payout_response_id = res.id
@@ -1340,7 +1338,7 @@ func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
 		 				on payout_response.user_id = payout.user_id 
 		 				AND payout_response.currency = payout.currency 
 			WHERE payout.user_id = $1
-		 	GROUP BY payout.user_id, payout.currency, payout.address`
+		 	GROUP BY payout.user_id, payout.currency`
 
 	rows, err := db.Query(s, uid)
 	if err != nil {
