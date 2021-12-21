@@ -64,6 +64,10 @@
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = "";
     } catch (e) {
+      if (e.response.status === 409) {
+        $error = "Wallet Address is already used by someone else. Please use one Wallet per user."
+        return
+      }
       $error = e;
     }
   }
