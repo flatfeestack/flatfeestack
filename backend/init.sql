@@ -63,7 +63,7 @@ CREATE table wallet_address(
     is_deleted	BOOLEAN
 );
 
-CREATE UNIQUE INDEX wallet_address_index ON wallet_address(user_id, currency, is_deleted) where is_deleted = false;
+CREATE UNIQUE INDEX wallet_address_index ON wallet_address(address);
 
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

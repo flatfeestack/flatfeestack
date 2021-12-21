@@ -350,7 +350,7 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 }
 
 func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
-	userWallets, err := findWalletsByUserId(user.Id)
+	userWallets, err := findActiveWalletsByUserId(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -366,8 +366,30 @@ func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	userWallets, err := findAllWalletsByUserId(user.Id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, wallet := range userWallets {
+		if wallet.Currency == data.Currency && wallet.Address == data.Address {
+			err := updateWallet(wallet.Id, false)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			writeJson(w, wallet)
+			return
+		}
+	}
+
 	lastInserted, err := insertWallet(user.Id, data.Currency, data.Address, false)
 	if err != nil {
+		if err.Error() == "pq: duplicate key value violates unique constraint \"wallet_address_index\"" {
+			writeErr(w, http.StatusConflict, err.Error())
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -380,7 +402,7 @@ func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 	f := p["uuid"]
 	id, _ := uuid.Parse(f)
 
-	wallets, err := findWalletsByUserId(user.Id)
+	wallets, err := findActiveWalletsByUserId(user.Id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -388,7 +410,7 @@ func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 
 	for _, v := range wallets {
 		if v.Id == id {
-			err = deleteWallet(id)
+			err = updateWallet(id, true)
 			if err != nil {
 				writeErr(w, http.StatusInternalServerError, err.Error())
 			}
