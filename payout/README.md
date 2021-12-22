@@ -28,6 +28,25 @@ The NEO payout is based on two files:
 These are generated from the smart contract development repository.
 https://github.com/flatfeestack/payout-neo-contracts
 
+To fill up the smart contract you need a NEO3 address.
+If you want to convert the smart contract address to a NEO3-address you can use this code or use the converter linked below. (**Important with as prefix when you convert 0x**)
+
+```
+noX := strings.TrimPrefix(neo.Contract, "0x")
+rawStr, err := hex.DecodeString(noX)
+val, _ := util.Uint160DecodeBytesBE(rawStr)
+addrRev := address.Uint160ToString(val.Reverse())
+
+if err != nil {
+    log.Fatalf("Unable to convert address", err)
+}
+
+log.Printf("NEO3 address of the smart contract: %v", addrRev)
+```
+
+## Example
+`0xbca8ee6c194c71ce9b3da6da239287abc755b901` should be `NL55tFjExEKNJBkpkihaexabQUk2N9Seb7`
+
 ## Useful links:
 - [Contract address to NEO-Adddress Converter](https://neo.org/converter/index)
 - [Blockchain Explorer](https://neo3.testnet.neotube.io/home)
