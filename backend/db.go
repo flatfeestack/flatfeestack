@@ -1332,7 +1332,7 @@ func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
 		 		 ) as payout
 		 	LEFT JOIN (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
 		 				JOIN payout_response res on res_details.payout_response_id = res.id
-		 				JOIN payout_request req on req.batch_id = res.batch_id
+		 				JOIN payout_request req on req.batch_id = res.batch_id and req.address = res_details.address
 		 				GROUP BY req.user_id, res_details.address, res_details.currency 
 		 			  ) as payout_response 
 		 				on payout_response.user_id = payout.user_id 
@@ -1362,7 +1362,7 @@ func getTotalRealizedIncome(uid uuid.UUID) ([]UserBalanceCore, error) {
 	s := `	SELECT tmp.currency, SUM(tmp.balance) 
 			FROM (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
 					JOIN payout_response res on res_details.payout_response_id = res.id
-					JOIN payout_request req on req.batch_id = res.batch_id
+					JOIN payout_request req on req.batch_id = res.batch_id and req.address = res_details.address
 					where req.user_id = $1
 					GROUP BY req.user_id, res_details.address, res_details.currency ) as tmp
 			GROUP BY tmp.currency`
