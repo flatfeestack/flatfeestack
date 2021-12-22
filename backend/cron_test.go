@@ -146,8 +146,10 @@ func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time
 }
 
 func setupContributionScenario1(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
-	users := setupUsers(t, "tom@tom.tom", "sam@sam.sam", "unreferenced-user")
-	repos := setupRepos(t, "tomp2p", "yaml", "sql", "unreferenced-repo")
+	/*sponsors := setupUsers(t, "tom@tom.tom sp1", "sam@sam.sam sp2", "arm@arm.arm sp3", "gui@gui.gui sp4", "mar@mar.mar sp5")
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	repos := setupRepos(t, "tomp2p 1", "yaml 2", "sql 3", "linux 4")
+	setupFundsUSD(sponsors[0], 120000000, 300000)
 	setupSponsor(t, users[0], repos[0], 0, 0)
 	setupUnsponsor(t, users[0], repos[0], 0, 12)
 	setupSponsor(t, users[0], repos[0], 0, 12)
@@ -159,7 +161,12 @@ func setupContributionScenario1(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
 	//
 	//repo balance for day1 (tomp2p total repo_hours day1 1)
 	//13750
-	return users, repos
+	//return users, repos*/
+	return nil, nil
+}
+
+func setupFundsUSD(u *uuid.UUID, total uint32, daily uint32) {
+
 }
 
 func setupContributionScenario2(t *testing.T) ([]*uuid.UUID, []*uuid.UUID) {
