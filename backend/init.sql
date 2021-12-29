@@ -13,7 +13,6 @@ CREATE TABLE users (
     email                 VARCHAR(64) UNIQUE NOT NULL,
     name                  VARCHAR(255),
     image                 BYTEA,
-    token                 VARCHAR(32) NOT NULL,
     created_at            TIMESTAMP NOT NULL
 );
 
@@ -234,4 +233,13 @@ CREATE TABLE payout_response_details (
     smart_contract_tea  NUMERIC NOT NULL,
     address             VARCHAR(42),
     created_at          TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invite (
+    email VARCHAR(64),
+    invite_email VARCHAR(64),
+    confirmed_at TIMESTAMP,
+    freq INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    PRIMARY KEY(email, invite_email)
 );

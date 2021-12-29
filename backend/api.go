@@ -650,7 +650,7 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 		CreatedAt: timeNow(),
 	}
 
-	err := insertUser(&u, "A")
+	err := insertUser(&u)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
 		return

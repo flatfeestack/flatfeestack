@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -83,11 +84,6 @@ type TokenClaims struct {
 }
 
 func NewOpts() *Opts {
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Could not find env file [%v], using defaults", err)
-	}
-
 	o := &Opts{}
 	flag.StringVar(&o.Env, "env", lookupEnv("ENV",
 		"local"), "ENV variable")
@@ -139,6 +135,7 @@ func NewOpts() *Opts {
 		debug = true
 	}
 
+	var err error
 	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
 	if err != nil {
 		log.Fatalf("cannot decode %v", o.HS256)
@@ -198,6 +195,12 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 // @host localhost:8080
 // @BasePath /
 func main() {
+	//the .env should be loaded before showing the banner, as the banner shows also the ENVs
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Could not find env file [%v], using defaults", err)
+	}
+
 	f, err := os.Open("banner.txt")
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
@@ -276,6 +279,23 @@ func main() {
 		router.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods(http.MethodPost)
 		router.HandleFunc("/nowpayments/crontester", jwtAuthAdmin(crontester, admins)).Methods(http.MethodPost)
 	}
+
+	router.HandleFunc("/confirm/invite/{email}", jwtAuthUser(confirmInvite)).Methods(http.MethodPost)
+	router.HandleFunc("/invite", jwtAuthUser(invitations)).Methods(http.MethodGet)
+	router.HandleFunc("/invite/{email}", jwtAuthUser(inviteOtherDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/me/{email}", jwtAuthUser(inviteMyDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/{email}/{freq}", jwtAuthUser(inviteOther)).Methods(http.MethodPost)
+	/**
+	//invites
+	router.HandleFunc("/confirm/invite-new", confirmInviteNew).Methods(http.MethodPost)
+
+	//invites
+	router.HandleFunc("/invite", jwtAuth(inviteOther)).Methods(http.MethodPost)
+
+
+	//TODO: not yet in the frontend
+	router.HandleFunc("/invite", jwtAuth(inviteResetMyToken)).Methods(http.MethodPatch)
+	*/
 
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[404] no route matched for: %s, %s", r.URL, r.Method)
@@ -462,13 +482,7 @@ func createUser(email string) (*User, error) {
 	user.Email = email
 	user.CreatedAt = timeNow()
 
-	rnd, err := genRnd(18)
-	if err != nil {
-		return nil, err
-	}
-	token := base32.StdEncoding.EncodeToString(rnd)
-
-	err = insertUser(&user, token)
+	err = insertUser(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -498,4 +512,13 @@ func (m *KeyedMutex) Lock(key string) func() {
 	mtx.Lock()
 
 	return func() { mtx.Unlock() }
+}
+
+func validateEmail(email string) error {
+	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
+	if len(email) > 254 || !rxEmail.MatchString(email) {
+		return fmt.Errorf("[%s] is not a valid email address", email)
+	}
+	return nil
 }

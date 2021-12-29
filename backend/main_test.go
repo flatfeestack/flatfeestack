@@ -78,7 +78,9 @@ func runSQLFile(files ...string) error {
 
 func runSQL(files ...string) error {
 	for _, file := range files {
-		//this will stringPointer or alter tables
+		if file == "" {
+			continue
+		}
 		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
 		if _, err := os.Stat(file); err == nil {
 			fileBytes, err := ioutil.ReadFile(file)

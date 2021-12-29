@@ -24,7 +24,6 @@ type User struct {
 	Image          *string `json:"image"`
 	PaymentMethod  *string `json:"payment_method"`
 	Last4          *string `json:"last4"`
-	Token          *string `json:"token"`
 	CreatedAt      time.Time
 	Claims         *TokenClaims
 	Role           *string `json:"role,omitempty"`
@@ -199,15 +198,15 @@ func findUserById(uid uuid.UUID) (*User, error) {
 	}
 }
 
-func insertUser(user *User, token string) error {
-	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, token, created_at) VALUES ($1, $2, $3, $4, $5)")
+func insertUser(user *User) error {
+	stmt, err := db.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, token, user.CreatedAt)
+	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt)
 	if err != nil {
 		return err
 	}
