@@ -105,7 +105,6 @@ export type GitUser = {
 
 export type Invitation = {
   email: string;
-  meta: string;
   confirmedAt: string|null;
   createdAt: string;
 };

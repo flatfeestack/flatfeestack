@@ -8,7 +8,6 @@
   import { faTrash, faSync, faClock, faCheck } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
-  import { navigate } from "svelte-routing";
 
   let invites: Invitation[] = [];
   let inviteEmail;
@@ -18,7 +17,7 @@
 
   async function removeInvite(email: string) {
     try {
-      await API.authToken.delInvite(email);
+      await API.invite.delInvite(email);
       invites = invites.filter((inv: Invitation) => {
         return inv.email !== email;
       });
@@ -30,7 +29,7 @@
   async function refreshInvite() {
     $isSubmitting = true;
     try {
-      const res1 = await API.authToken.invites();
+      const res1 = await API.invite.invites();
       invites = res1 === null ? [] : res1;
     } catch (e) {
       $error = e;
@@ -42,10 +41,8 @@
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-      const d = new Date();
-      d.setTime(d.getTime() + (1000 * 60 * 60 * 24 * 7));
-      await API.authToken.invite(inviteEmail, $user.name, d.toISOString(), selected);
-      const inv: Invitation = { email: inviteEmail, meta: selected, createdAt: new Date().toISOString(), confirmedAt: null };
+      await API.invite.invite(inviteEmail, selected);
+      const inv: Invitation = { email: inviteEmail, createdAt: new Date().toISOString(), confirmedAt: null };
       invites = [...invites, inv];
     } catch (e) {
       $error = e;

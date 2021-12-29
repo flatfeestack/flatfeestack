@@ -79,10 +79,6 @@ const search = ky.create({
 
 export const API = {
   authToken: {
-    invites: () => authToken.get('invite').json<Invitation[]>(),
-    invite: (email: string, name: string, expireAt: string, meta: string) => authToken.post('invite', {
-      json: { email, name, expireAt, meta: meta.toString() } }),
-    delInvite: (email: string) => authToken.delete(`invite/${email}`),
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
     loginAs: (email: string) => authToken.post(`admin/login-as/${email}`).json<Token>()
@@ -95,10 +91,6 @@ export const API = {
     confirmEmail: (email: string, emailToken: string) => auth.post("confirm/signup", { json: { email, emailToken } }).json<Token>(),
     confirmReset: (email: string, password: string, token: string) => auth.post("confirm/reset", {
       json: { email, password, email_token: token } }).json<Token>(),
-    confirmInviteNew: (email: string, password: string, emailToken: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
-      auth.post("confirm/invite-new", { json: { email, password, email_token: emailToken, inviteEmail, expireAt, inviteToken, inviteMeta }}).json<Token>(),
-    confirmInvite: (email: string, inviteEmail: string, expireAt: string, inviteToken: string, inviteMeta: string) =>
-      auth.post("confirm/invite", { json: { email, inviteEmail, expireAt, inviteToken, inviteMeta }}),
   },
   user: {
     get: () => backendToken.get(`users/me`).json<Users>(),
@@ -137,6 +129,13 @@ export const API = {
     get: (id: number) => backendToken.get(`repos/${id}`),
     tag: (repo: Repo) => backendToken.post(`repos/tag`, { json: repo }).json<Repo>(),
     untag: (id: string) => backendToken.post(`repos/${id}/untag`),
+  },
+  invite: {
+    invites: () => backendToken.get('invite').json<Invitation[]>(),
+    invite: (email: string, freq: string) => backendToken.post(`invite/${email}/${freq}`),
+    delInvite: (email: string) => backendToken.delete(`invite/${email}`),
+    confirmInvite: (email: string) => backendToken.post("confirm/invite", { json: { email }}).json<Token>(),
+    inviteAuth: (email: string, freq:number) => auth.post(`invite/${email}`, { json: { freq }}),
   },
   search: {
     keywords: (keywords: string) => search.get(`search/${keywords}`),

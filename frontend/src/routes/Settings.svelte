@@ -36,7 +36,7 @@
 
   $: {
     currenciesWithoutWallet = $config.supportedCurrencies.filter((cur) => !(payoutAddresses.map(pay => pay.currency).includes(cur.shortName)))
-    if (currenciesWithoutWallet.length > 0) {
+    if (!newPayoutCurrency) {
       newPayoutCurrency = currenciesWithoutWallet[0];
     }
   }

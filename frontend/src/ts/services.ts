@@ -37,7 +37,7 @@ export const confirmEmail = async(email: string, emailToken: string) => {
 export const confirmInviteNew = async(email: string, password: string,
                                       emailToken: string, inviteEmail: string,
                                       expireAt: string, inviteToken: string, inviteMeta: string) => {
-  const p1 = API.auth.confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken, inviteMeta);
+  const p1 = API.invite.confirmInvite(email);
   const p2 = API.config.config();
 
   const res = await p1;
