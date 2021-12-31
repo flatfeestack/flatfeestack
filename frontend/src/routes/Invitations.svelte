@@ -15,12 +15,32 @@
   let selected;
   let statusSponsoredUsers: UserStatus[] = [];
 
-  async function removeInvite(email: string) {
+  async function removeMyInvite(email: string, inviteEmail: string) {
     try {
-      await API.invite.delInvite(email);
+      await API.invite.delMyInvite(inviteEmail);
       invites = invites.filter((inv: Invitation) => {
-        return inv.email !== email;
+        return inv.email !== email || inv.inviteEmail !== inviteEmail;
       });
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  async function removeByInvite(email: string, inviteEmail: string) {
+    try {
+      await API.invite.delByInvite(email);
+      invites = invites.filter((inv: Invitation) => {
+        return inv.email !== email || inv.inviteEmail !== inviteEmail;
+      });
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  async function acceptInvite(email: string) {
+    try {
+      await API.invite.confirmInvite(email);
+      await refreshInvite();
     } catch (e) {
       $error = e;
     }
@@ -41,9 +61,12 @@
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-      await API.invite.invite(inviteEmail, selected);
-      const inv: Invitation = { email: inviteEmail, createdAt: new Date().toISOString(), confirmedAt: null };
+      const res1 = API.invite.inviteAuth(inviteEmail, selected);
+      const res2 = API.invite.invite(inviteEmail, selected);
+      const inv: Invitation = { email: $user.email, inviteEmail, freq: selected, createdAt: new Date().toISOString(), confirmedAt: null };
       invites = [...invites, inv];
+      await res1
+      await res2;
     } catch (e) {
       $error = e;
     } finally {
@@ -77,7 +100,7 @@
     <table>
       <thead>
       <tr>
-        <th>Email</th>
+        <th>Invited</th>
         <th>Status</th>
         <th>Date</th>
         <th>Plan</th>
@@ -87,9 +110,10 @@
       </tr>
       </thead>
       <tbody>
-      {#each invites as inv, key (inv.email)}
+      {#each invites as inv, key (inv.email+inv.inviteEmail)}
+        {#if (inv.email === $user.email)}
         <tr>
-          <td>{inv.email}</td>
+          <td>{inv.inviteEmail}</td>
           <td class="text-center">
             {#if inv.confirmedAt}
               <Fa icon="{faCheck}" size="md" />
@@ -100,18 +124,18 @@
           <td title="{formatDate(new Date(inv.createdAt))}">
             {timeSince(new Date(inv.createdAt), new Date())} ago
           </td>
-          <td>{$config.plans.find(plan => plan.freq == inv.meta).title}</td>
+          <td>{$config.plans.find(plan => plan.freq == inv.freq).title}</td>
           <td>{daysLeft(inv.email)}</td>
-          <td class="text-center">
-            <span class="cursor-pointer" on:click="{() => removeInvite(inv.email)}"><Fa icon="{faTrash}" size="md" /></span>
+          <td class="text-center" colspan="2">
+            <span class="cursor-pointer" on:click="{() => removeMyInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
           </td>
-          <td />
         </tr>
+        {/if}
       {/each}
       <tr>
         <td colspan="7">
           <form on:submit|preventDefault="{addInvite}" class="container-small">
-            <label class="p-2">Invite this email:</label>
+            <label class="p-2">Invite by email:</label>
             <input size="24" maxlength="50" type="email" bind:value="{inviteEmail}" />&nbsp;
             <select bind:value={selected}>
               {#each $config.plans as plan, i}
@@ -126,6 +150,50 @@
           </form>
         </td>
       </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="p-2 m-2">Invited By</h2>
+  <p class="p-2 m-2">Accept your invitation and fund your account.</p>
+
+  <div class="container">
+    <table>
+      <thead>
+      <tr>
+        <th>Invited By</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Plan</th>
+        <th>Days Left</th>
+        <th>Action</th>
+        <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
+      </tr>
+      </thead>
+      <tbody>
+      {#each invites as inv, key (inv.email+inv.inviteEmail)}
+        {#if (inv.inviteEmail === $user.email)}
+        <tr>
+          <td>{inv.email}</td>
+          <td class="text-center">
+            {#if inv.confirmedAt}
+              <Fa icon="{faCheck}" size="md" />
+            {:else}
+              <Fa icon="{faClock}" size="md" />
+            {/if}
+          </td>
+          <td title="{formatDate(new Date(inv.createdAt))}">
+            {timeSince(new Date(inv.createdAt), new Date())} ago
+          </td>
+          <td>{$config.plans.find(plan => plan.freq == inv.freq).title}</td>
+          <td>{daysLeft(inv.email)}</td>
+          <td class="text-center" colspan="2">
+            <span class="cursor-pointer" on:click="{() => removeByInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
+            {#if !inv.confirmedAt} <span class="cursor-pointer" on:click="{() => acceptInvite(inv.email)}"><Fa icon="{faCheck}" size="md" /></span> {/if}
+          </td>
+        </tr>
+        {/if}
+      {/each}
       </tbody>
     </table>
   </div>

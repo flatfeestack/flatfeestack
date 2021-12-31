@@ -43,9 +43,11 @@ async function refreshToken(request: Request, options: any, response: Response) 
   }
 }
 
+const restTimeout = 5000;
+
 const authToken = ky.create({
   prefixUrl: "/auth",
-  timeout: get(config) ? get(config).restTimeout : 5000,
+  timeout: restTimeout,
   hooks: {
     beforeRequest: [async request => addToken(request)],
     afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
@@ -54,7 +56,7 @@ const authToken = ky.create({
 
 const backendToken = ky.create({
   prefixUrl: "/backend",
-  timeout: get(config) ? get(config).restTimeout : 5000,
+  timeout: restTimeout,
   hooks: {
     beforeRequest: [async request => addToken(request)],
     afterResponse: [async (request: Request, options: any, response: Response) => refreshToken(request, options, response)]
@@ -63,17 +65,17 @@ const backendToken = ky.create({
 
 const auth = ky.create({
   prefixUrl: "/auth",
-  timeout: get(config) ? get(config).restTimeout : 5000,
+  timeout: restTimeout,
 });
 
 const backend = ky.create({
   prefixUrl: "/backend",
-  timeout: get(config) ? get(config).restTimeout : 5000,
+  timeout: restTimeout,
 })
 
 const search = ky.create({
   prefixUrl: "/search",
-  timeout: get(config) ? get(config).restTimeout : 5000,
+  timeout: restTimeout,
 });
 
 
@@ -88,15 +90,14 @@ export const API = {
     login: (email: string, password: string) => auth.post("login", { json: { email, password } }).json<Token>(),
     refresh: (refresh: string) => auth.post("refresh", { json: { refresh_token: refresh } }).json<Token>(),
     reset: (email: string) => auth.post(`reset/${email}`),
+    confirmInvite: (email: string, password: string, emailToken: string) => auth.post("confirm/invite", { json: { email, password, emailToken } }).json<Token>(),
     confirmEmail: (email: string, emailToken: string) => auth.post("confirm/signup", { json: { email, emailToken } }).json<Token>(),
-    confirmReset: (email: string, password: string, token: string) => auth.post("confirm/reset", {
-      json: { email, password, email_token: token } }).json<Token>(),
+    confirmReset: (email: string, password: string, emailToken: string) => auth.post("confirm/reset", {json: { email, password, emailToken } }).json<Token>(),
   },
   user: {
     get: () => backendToken.get(`users/me`).json<Users>(),
     gitEmails: () => backendToken.get(`users/me/git-email`).json<GitUser[]>(),
-    confirmGitEmail: (email: string, token: string) => backendToken.post("users/git-email", {
-      json: { email, token } }),
+    confirmGitEmail: (email: string, token: string) => backendToken.post("users/git-email", {json: { email, token } }),
     addEmail: (email: string) => backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) => backendToken.delete(`users/me/git-email/${encodeURI(email)}`),
     getPayoutAddresses: () => backendToken.get(`users/me/wallets`).json<PayoutAddress[]>(),
@@ -112,7 +113,6 @@ export const API = {
     nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
-    topup: () => backendToken.post(`users/me/topup`),
     paymentCycle: () => backendToken.post(`users/me/payment-cycle`).json<PaymentCycle>(),
     updateSeats: (seats: number)=> backendToken.post(`users/me/seats/${seats}`),
     statusSponsoredUsers: () => backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
@@ -133,9 +133,10 @@ export const API = {
   invite: {
     invites: () => backendToken.get('invite').json<Invitation[]>(),
     invite: (email: string, freq: string) => backendToken.post(`invite/${email}/${freq}`),
-    delInvite: (email: string) => backendToken.delete(`invite/${email}`),
-    confirmInvite: (email: string) => backendToken.post("confirm/invite", { json: { email }}).json<Token>(),
-    inviteAuth: (email: string, freq:number) => auth.post(`invite/${email}`, { json: { freq }}),
+    inviteAuth: (email: string, freq:number) => authToken.post(`invite/${email}`, { json: { freq }}),
+    delMyInvite: (email: string) => backendToken.delete(`invite/my/${email}`),
+    delByInvite: (email: string) => backendToken.delete(`invite/by/${email}`),
+    confirmInvite: (email: string) => backendToken.post(`confirm/invite/${email}`),
   },
   search: {
     keywords: (keywords: string) => search.get(`search/${keywords}`),

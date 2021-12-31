@@ -23,32 +23,36 @@ export const confirmEmail = async(email: string, emailToken: string) => {
   const p2 = API.config.config();
 
   const res = await p1;
+  storeToken(res);
   const p3 = API.user.get();
 
   const conf = await p2;
-
   config.set(conf);
-  storeToken(res);
 
   const u = await p3;
   user.set(u);
 };
 
-export const confirmInviteNew = async(email: string, password: string,
-                                      emailToken: string, inviteEmail: string,
-                                      expireAt: string, inviteToken: string, inviteMeta: string) => {
-  const p1 = API.invite.confirmInvite(email);
+export const confirmInvite = async(email: string, password: string, emailToken: string, inviteByEmail: string) => {
+  const p1 = API.auth.confirmInvite(email, password, emailToken);
   const p2 = API.config.config();
-
+  console.log("here2");
   const res = await p1;
-  const p3 = API.user.get();
-
-  const conf = await p2;
-  config.set(conf);
   storeToken(res);
+  console.log("here3");
+  const p3 = API.invite.confirmInvite(inviteByEmail);
+  const p4 = API.user.get();
+  console.log("here4");
+  const conf = await p2;
+  console.log("conf", conf);
+  config.set(conf);
 
-  const u = await p3;
+  console.log("here4.5");
+  await p3;
+  console.log("here5");
+  const u = await p4;
   user.set(u);
+  console.log("here6");
 }
 
 export const login = async (email: string, password: string) => {
@@ -56,21 +60,22 @@ export const login = async (email: string, password: string) => {
   const p2 = API.config.config();
 
   const res = await p1;
+  storeToken(res);
+
   const conf = await p2;
   config.set(conf);
-  storeToken(res);
 
   const u = await API.user.get();
   user.set(u);
 };
 
 export const refresh = async ():Promise<string> => {
+  const p2 = API.config.config();
   const refresh = localStorage.getItem("ffs-refresh");
   if (refresh === null) {
     throw 'No refresh token not in local storage';
   }
   const p1 = API.auth.refresh(refresh);
-  const p2 = API.config.config();
 
   const tok = await p1;
   const conf = await p2;
@@ -111,8 +116,10 @@ const connect = ():Promise<WebSocket> => {
     console.log("connect")
     const t = get(token);
     const c = get(config)
+    console.log("ws to", `${c.wsBaseUrl}/ws/users/me/payment`);
     const server = new WebSocket(`${c.wsBaseUrl}/ws/users/me/payment`, ["access_token", t]);
     server.onopen = function() {
+      console.log("open")
       resolve(server);
     };
     server.onerror = function(err) {
@@ -137,6 +144,7 @@ export const connectWs = async () => {
   try {
     const ws = await connect();
     ws.onmessage = function(event:MessageEvent) {
+      console.log("msg", event);
       try {
         userBalances.set(JSON.parse(event.data));
       } catch (e) {

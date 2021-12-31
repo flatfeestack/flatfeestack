@@ -1,15 +1,12 @@
 <script lang="ts">
   import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
-  import { confirmInviteNew } from "../ts/services";
+  import { confirmInvite } from "../ts/services";
   import { API } from "../ts/api";
 
   export let email;
   export let emailToken;
-  export let inviteEmail;
-  export let expireAt;
-  export let inviteToken;
-  export let inviteMeta;
+  export let inviteByEmail;
 
   let password = "";
   let error = "";
@@ -19,8 +16,7 @@
     try {
       error = "";
       isSubmitting = true;
-      await confirmInviteNew(email, password, emailToken, inviteEmail, expireAt, inviteToken, inviteMeta);
-      await API.user.topup();
+      await confirmInvite(email, password, emailToken, inviteByEmail);
       email = "";
       password = "";
       isSubmitting = false;
@@ -66,7 +62,7 @@
 
 <div class="max">
   <div class="box-container rounded p-5">
-    <h2 class="py-5 text-center text-primary-900">{inviteEmail} invited you</h2>
+    <h2 class="py-5 text-center text-primary-900">Invited by {inviteByEmail}</h2>
       <form on:submit|preventDefault="{handleSubmit}">
         <label for="email" class="py-1">Email address</label>
         <input required size="100" maxlength="100" type="email" id="email" name="email" bind:value={email} class="rounded py-2 border-primary-900" />

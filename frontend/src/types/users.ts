@@ -17,7 +17,6 @@ export type Users = {
 export type Config = {
   stripePublicApi: string;
   wsBaseUrl: string;
-  restTimeout: number;
   plans: Plan[];
   env: string;
   contractAddr: string;
@@ -30,7 +29,7 @@ export type Plan = {
   freq:       number;
   desc:       string;
   disclaimer: string;
-  feePRm:     number;
+  feePrm:     number;
 }
 
 export type ClientSecret = {
@@ -105,6 +104,8 @@ export type GitUser = {
 
 export type Invitation = {
   email: string;
+  inviteEmail: string;
+  freq: number;
   confirmedAt: string|null;
   createdAt: string;
 };

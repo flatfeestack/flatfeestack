@@ -23,9 +23,8 @@
   import Admin from "./routes/Admin.svelte";
   import Spinner from "./components/Spinner.svelte";
   import ForwardGitEmail from "./routes/ForwardGitEmail.svelte";
-  import ForwardInvite from "./routes/ForwardInvite.svelte";
   import Settings from "./routes/Settings.svelte";
-  import ConfirmInviteNew from "./routes/ConfirmInviteNew.svelte";
+  import ConfirmInvite from "./routes/ConfirmInvite.svelte";
   import Invitations from "./routes/Invitations.svelte";
 
   export let url;
@@ -139,6 +138,7 @@
         {#if $user.image}
           <img class="image-org-sx" src="{$user.image}" />
         {/if}
+        &nbsp;
         {$user.email}
         <form on:submit|preventDefault="{logout}">
           <button class="button3 center mx-2" type="submit">Sign out</button>
@@ -172,8 +172,7 @@
         <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
         <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
         <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
-        <Route path="/confirm/invite-new/:email/:emailToken/:inviteEmail/:expireAt/:inviteToken/:inviteMeta" component="{ConfirmInviteNew}" />
-        <Route path="/confirm/invite/:email/:inviteEmail/:expireAt/:inviteToken/:inviteMeta" component="{ForwardInvite}" />
+        <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component="{ConfirmInvite}" />
 
         {#if $user.id && ($route.pathname.startsWith("/user") || pathname.startsWith("/user"))}
           <Route path="/user/search" component="{Search}" />

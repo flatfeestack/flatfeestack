@@ -1,9 +1,10 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {error, user, config} from "../../ts/store";
+    import {error, user, config, userBalances} from "../../ts/store";
     import Dots from "../Dots.svelte";
     import {stripePayment, stripePaymentMethod} from "../../ts/services";
     import {loadStripe} from "@stripe/stripe-js/pure";
+    import {API} from "../../ts/api";
 
     export let total;
     export let selectedPlan;
@@ -58,6 +59,22 @@
         }
     };
 
+    async function deletePaymentMethod() {
+        isSubmitting = true;
+        try {
+            const p1 = API.user.deletePaymentMethod()
+            const p2 = API.user.cancelSub()
+            $user.payment_method = null;
+            $user.last4 = null;
+            await p1;
+            await p2;
+        } catch (e) {
+            $error = e;
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     onMount(async () => {
         stripe = await loadStripe($config.stripePublicApi);
         createCardForm();
@@ -90,13 +107,18 @@
         </button>
     </form>
 </div>
+    <label class="nobreak">Credit card: </label>
+    <div class="container">
+        <span>*** *** *** {$user.last4}</span>
+        <form class="p-2" on:submit|preventDefault="{deletePaymentMethod}">
+            <button class="button3" disabled="{isSubmitting}" type="submit">Cancel
+                {#if isSubmitting}
+                    <Dots/>
+                {/if}
+            </button>
+        </form>
+    </div>
 </div>
 
-{#if showSuccess}
-    <div class="p-2">Payment successful!</div>
-{/if}
-{#if paymentProcessing}
-    <div class="p-2">Verifying payment
-        <Dots/>
-    </div>
-{/if}
+{#if showSuccess}<div class="p-2">Payment successful sent</div>{/if}
+{#if paymentProcessing}<div class="p-2">Verifying payment<Dots/></div>{/if}
