@@ -8,16 +8,17 @@ import (
 
 type dbInvite struct {
 	Email       string     `json:"email"`
+	InviteEmail string     `json:"inviteEmail"`
 	Freq        int64      `json:"freq"`
 	ConfirmedAt *time.Time `json:"confirmedAt"`
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 
-func findInvitationsByEmail(email string) ([]dbInvite, error) {
+func findInvitationsByAnyEmail(email string) ([]dbInvite, error) {
 	var res []dbInvite
-	query := `SELECT email, confirmed_at, freq, created_at 
+	query := `SELECT email, invite_email, confirmed_at, freq, created_at 
               FROM invite 
-              WHERE invite_email=$1`
+              WHERE invite_email=$1 OR email=$1`
 	rows, err := db.Query(query, email)
 
 	switch err {
@@ -27,7 +28,33 @@ func findInvitationsByEmail(email string) ([]dbInvite, error) {
 		defer closeAndLog(rows)
 		for rows.Next() {
 			var inv dbInvite
-			err = rows.Scan(&inv.Email, &inv.ConfirmedAt, &inv.Freq, &inv.CreatedAt)
+			err = rows.Scan(&inv.Email, &inv.InviteEmail, &inv.ConfirmedAt, &inv.Freq, &inv.CreatedAt)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, inv)
+		}
+		return res, nil
+	default:
+		return nil, err
+	}
+}
+
+func findMyInvitations(email string) ([]dbInvite, error) {
+	var res []dbInvite
+	query := `SELECT email, invite_email, confirmed_at, freq, created_at 
+              FROM invite 
+              WHERE email=$1`
+	rows, err := db.Query(query, email)
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		defer closeAndLog(rows)
+		for rows.Next() {
+			var inv dbInvite
+			err = rows.Scan(&inv.Email, &inv.InviteEmail, &inv.ConfirmedAt, &inv.Freq, &inv.CreatedAt)
 			if err != nil {
 				return nil, err
 			}
@@ -47,6 +74,9 @@ func deleteInvite(myEmail string, inviteEmail string) error {
 	defer closeAndLog(stmt)
 
 	res, err := stmt.Exec(myEmail, inviteEmail)
+	if err != nil {
+		return err
+	}
 	return handleErrMustInsertOne(res)
 }
 
@@ -58,6 +88,9 @@ func insertInvite(email string, inviteEmail string, freq int64, now time.Time) e
 	defer closeAndLog(stmt)
 
 	res, err := stmt.Exec(email, inviteEmail, freq, now)
+	if err != nil {
+		return err
+	}
 	return handleErrMustInsertOne(res)
 }
 
@@ -69,5 +102,8 @@ func updateConfirmInviteAt(email string, inviteEmail string, now time.Time) erro
 	defer closeAndLog(stmt)
 
 	res, err := stmt.Exec(now, email, inviteEmail)
+	if err != nil {
+		return err
+	}
 	return handleErrMustInsertOne(res)
 }

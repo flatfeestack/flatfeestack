@@ -68,7 +68,6 @@ type Opts struct {
 	EmailUrl                  string
 	EmailToken                string
 	WebSocketBaseUrl          string
-	RestTimeout               int
 	LogPath                   string
 	ContractAddr              string
 	NowpaymentsToken          string
@@ -78,8 +77,9 @@ type Opts struct {
 }
 
 type TokenClaims struct {
-	InviteEmails []string `json:"inviteEmails,omitempty"`
-	InviteMeta   []string `json:"inviteMeta,omitempty"`
+	Scope            string                 `json:"scope,omitempty"`
+	InviteMetaSystem map[string]interface{} `json:"inviteMetaSystem,omitempty"`
+	InviteMetaUser   map[string]interface{} `json:"inviteMetaUser,omitempty"`
 	jwt.Claims
 }
 
@@ -112,8 +112,6 @@ func NewOpts() *Opts {
 		"http://localhost/"), "Email link prefix")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
 		"ws://localhost"), "Websocket base URL")
-	flag.IntVar(&o.RestTimeout, "rest-timeout", lookupEnvInt("REST_TIMEOUT",
-		5000), "Rest timeout, default 5s")
 	flag.StringVar(&o.LogPath, "log", lookupEnv("LOG",
 		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
@@ -234,7 +232,6 @@ func main() {
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/topup", jwtAuthUser(topup)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
@@ -282,8 +279,8 @@ func main() {
 
 	router.HandleFunc("/confirm/invite/{email}", jwtAuthUser(confirmInvite)).Methods(http.MethodPost)
 	router.HandleFunc("/invite", jwtAuthUser(invitations)).Methods(http.MethodGet)
-	router.HandleFunc("/invite/{email}", jwtAuthUser(inviteOtherDelete)).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/me/{email}", jwtAuthUser(inviteMyDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/by/{email}", jwtAuthUser(inviteByDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/my/{email}", jwtAuthUser(inviteMyDelete)).Methods(http.MethodDelete)
 	router.HandleFunc("/invite/{email}/{freq}", jwtAuthUser(inviteOther)).Methods(http.MethodPost)
 	/**
 	//invites
@@ -437,32 +434,6 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 			if claims.Subject == email {
 				log.Printf("Authenticated admin %s\n", email)
 				user.Role = stringPointer("admin")
-			}
-		}
-
-		found := true
-		if len(claims.InviteEmails) > 0 {
-			found = false
-		} else {
-			if user.InvitedEmail != nil {
-				err = updateInvitedEmail(nil, user.Id)
-				if err != nil {
-					writeErr(w, http.StatusBadRequest, "ERR-09, user find error: %v", err)
-					return
-				}
-			}
-		}
-		for _, v := range claims.InviteEmails {
-			if user.InvitedEmail != nil && v == *user.InvitedEmail {
-				found = true
-				break
-			}
-		}
-		if !found {
-			err = updateInvitedEmail(&claims.InviteEmails[0], user.Id)
-			if err != nil {
-				writeErr(w, http.StatusBadRequest, "ERR-09, user find error: %v", err)
-				return
 			}
 		}
 

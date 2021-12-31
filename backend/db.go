@@ -101,9 +101,9 @@ type UserStatus struct {
 
 type PaymentCycle struct {
 	Id       uuid.UUID `json:"id"`
-	Seats    int       `json:"seats"`
-	Freq     int       `json:"freq"`
-	DaysLeft int       `json:"daysLeft"`
+	Seats    int64     `json:"seats"`
+	Freq     int64     `json:"freq"`
+	DaysLeft int64     `json:"daysLeft"`
 }
 
 type Contribution struct {
@@ -128,7 +128,7 @@ type DailyPayment struct {
 	PaymentCycleId uuid.UUID
 	Currency       string
 	Amount         int64
-	DaysLeft       int
+	DaysLeft       int64
 	LastUpdate     time.Time
 }
 
@@ -799,7 +799,7 @@ func insertUserBalance(ub UserBalance) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertNewPaymentCycle(uid uuid.UUID, daysLeft int, seats int, freq int, createdAt time.Time) (*uuid.UUID, error) {
+func insertNewPaymentCycle(uid uuid.UUID, daysLeft int64, seats int64, freq int64, createdAt time.Time) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, days_left, seats, freq, created_at) 
                                     VALUES($1, $2, $3, $4, $5)  RETURNING id`)
 	if err != nil {

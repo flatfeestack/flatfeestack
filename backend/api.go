@@ -67,10 +67,10 @@ type FlatFeeWeight struct {
 type Plan struct {
 	Title       string    `json:"title"`
 	Price       big.Float `json:"price"`
-	Freq        int       `json:"freq"`
+	Freq        int64     `json:"freq"`
 	Description string    `json:"desc"`
 	Disclaimer  string    `json:"disclaimer"`
-	FeePrm      int       `json:"feePrm"`
+	FeePrm      int64     `json:"feePrm"`
 }
 
 type CryptoCurrency struct {
@@ -113,16 +113,16 @@ func init() {
 	}
 	plans = append(plans, plan)
 
-	//91 * 330000 / 1-(0.05)
+	//9125 * 330000 / 1-(0.035)
 	py = new(big.Float)
-	py.SetString("31.61")
+	py.SetString("3120.47")
 	plan = Plan{
-		Title:       "Quarterly",
+		Title:       "Forever",
 		Price:       *py,
-		Freq:        91,
-		FeePrm:      50,
-		Description: "You want to support Open Source software with a quarterly flat fee of <b>" + py.String() + " USD</b>",
-		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 5%",
+		Freq:        9125,
+		FeePrm:      35,
+		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>" + py.String() + " USD</b>",
+		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	}
 	plans = append(plans, plan)
 
@@ -629,7 +629,6 @@ func config(w http.ResponseWriter, _ *http.Request) {
 	writeJsonStr(w, `{
 			"stripePublicApi":"`+opts.StripeAPIPublicKey+`", 
 			"wsBaseUrl":"`+opts.WebSocketBaseUrl+`",
-			"restTimeout":"`+strconv.Itoa(opts.RestTimeout)+`",
             "plans": `+string(b)+`,
 			"env":"`+opts.Env+`",
 			"contractAddr":"`+opts.ContractAddr+`",
@@ -719,7 +718,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	seats, err := strconv.Atoi(s)
+	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return

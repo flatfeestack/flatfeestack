@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE users (
     id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sponsor_id            UUID CONSTRAINT fk_sponsor_id_users REFERENCES users (id),
-    invited_email         VARCHAR(64),
+    invited_email         VARCHAR(64), /*if this is set, then this email pays the amount*/
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
     stripe_last4          VARCHAR(4),
@@ -19,9 +19,9 @@ CREATE TABLE users (
 CREATE TABLE payment_cycle (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
-    seats      INTEGER DEFAULT 0,
-    freq       INTEGER DEFAULT 365,
-    days_left  INTEGER NOT NULL,
+    seats      BIGINT DEFAULT 0,
+    freq       BIGINT DEFAULT 365,
+    days_left  BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
@@ -39,7 +39,7 @@ CREATE TABLE invoice (
      outcome_amount         BIGINT,
      outcome_currency       VARCHAR(16),
      payment_status         VARCHAR(16),
-     freq                   INT NOT NULL,
+     freq                   BIGINT NOT NULL,
      invoice_url            TEXT,
      created_at             TIMESTAMP NOT NULL,
      last_update            TIMESTAMP NULL
@@ -50,7 +50,7 @@ CREATE TABLE daily_payment (
   payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
   currency          VARCHAR(16) NOT NULL,
   amount            BIGINT NOT NULL,
-  days_left         INTEGER NOT NULL,
+  days_left         BIGINT NOT NULL,
   last_update       TIMESTAMP NOT NULL
 );
 
@@ -235,11 +235,11 @@ CREATE TABLE payout_response_details (
     created_at          TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS invite (
+CREATE TABLE invite (
     email VARCHAR(64),
     invite_email VARCHAR(64),
     confirmed_at TIMESTAMP,
-    freq INTEGER NOT NULL,
+    freq BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(email, invite_email)
 );

@@ -11,7 +11,7 @@ import (
 //********************************************************************
 
 func invitations(w http.ResponseWriter, _ *http.Request, user *User) {
-	invites, err := findInvitationsByEmail(user.Email)
+	invites, err := findInvitationsByAnyEmail(user.Email)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-invite-06, insert user failed: %v", err)
 		return
@@ -25,7 +25,7 @@ func invitations(w http.ResponseWriter, _ *http.Request, user *User) {
 	w.Write(oauthEnc)
 }
 
-func inviteOtherDelete(w http.ResponseWriter, r *http.Request, user *User) {
+func inviteByDelete(w http.ResponseWriter, r *http.Request, user *User) {
 	//delete the invite from me of other users
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
@@ -62,7 +62,14 @@ func confirmInvite(w http.ResponseWriter, r *http.Request, user *User) {
 
 	err := updateConfirmInviteAt(email, user.Email, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-invite-03, update user failed: %v", err)
+		writeErr(w, http.StatusBadRequest, "cannot confirm invite: %v", err)
+		return
+	}
+
+	//try topup
+	err = topUp(user)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "cannot topUp: %v", err)
 		return
 	}
 }

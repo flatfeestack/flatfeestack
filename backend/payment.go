@@ -44,30 +44,25 @@ func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func topup(w http.ResponseWriter, r *http.Request, user *User) {
-	if len(user.Claims.InviteEmails) == 0 {
-		log.Printf("no invitations")
-		return
-	}
-
+func topUp(user *User) error {
 	pc, err := findPaymentCycle(user.PaymentCycleId)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not find user balance: %v", err)
-		return
+		return fmt.Errorf("Could not find user balance: %v", err)
 	}
 
 	if pc != nil && pc.DaysLeft > 0 {
 		log.Printf("enough funds")
-		return
+		return nil
 	}
 
-	for k, inviteEmail := range user.Claims.InviteEmails {
-		freq, err := strconv.Atoi(user.Claims.InviteMeta[k])
+	invites, err := findMyInvitations(user.Email)
+
+	for _, invite := range invites {
 		if err != nil {
 			log.Printf("findSumUserBalances: %v", err)
 			continue
 		}
-		ok, paymentCycleId := topupWithSponsor(user, freq, inviteEmail)
+		ok, paymentCycleId := topupWithSponsor(user, invite.Freq, invite.InviteEmail)
 		if !ok {
 			continue
 		}
@@ -81,9 +76,10 @@ func topup(w http.ResponseWriter, r *http.Request, user *User) {
 
 		break
 	}
+	return nil
 }
 
-func topupWithSponsor(u *User, freq int, inviteEmail string) (bool, *uuid.UUID) {
+func topupWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID) {
 	sponsor, err := findUserByEmail(inviteEmail)
 	if err != nil {
 		log.Printf("findUserByEmail: %v", err)
@@ -216,7 +212,6 @@ func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 }
 
 func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
-
 	if user.PaymentMethod == nil {
 		writeErr(w, http.StatusInternalServerError, "No payment method defined for user: %v", user.Id)
 		return
@@ -225,13 +220,13 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	p := mux.Vars(r)
 	f := p["freq"]
 	s := p["seats"]
-	seats, err := strconv.Atoi(s)
+	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number seats: %v", seats)
 		return
 	}
 
-	freq, err := strconv.Atoi(f)
+	freq, err := strconv.ParseInt(f, 10, 64)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
 		return
@@ -271,8 +266,8 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	params.Params.Metadata = map[string]string{}
 	params.Params.Metadata["userId"] = user.Id.String()
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
-	params.Params.Metadata["fee"] = strconv.Itoa(plan.FeePrm)
-	params.Params.Metadata["freq"] = strconv.Itoa(freq)
+	params.Params.Metadata["fee"] = strconv.FormatInt(plan.FeePrm, 10)
+	params.Params.Metadata["freq"] = strconv.FormatInt(freq, 10)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -325,8 +320,8 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	params.Params.Metadata = map[string]string{}
 	params.Params.Metadata["userId"] = user.Id.String()
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
-	params.Params.Metadata["fee"] = strconv.Itoa(plan.FeePrm)
-	params.Params.Metadata["freq"] = strconv.Itoa(plan.Freq)
+	params.Params.Metadata["fee"] = strconv.FormatInt(plan.FeePrm, 10)
+	params.Params.Metadata["freq"] = strconv.FormatInt(plan.Freq, 10)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -515,7 +510,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int, int, error) {
+func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int64, int64, error) {
 	var pi stripe.PaymentIntent
 	err := json.Unmarshal(data, &pi)
 	if err != nil {
@@ -531,12 +526,12 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int, in
 	if err != nil {
 		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
 	}
-	feePrm, err := strconv.Atoi(pi.Metadata["fee"])
+	feePrm, err := strconv.ParseInt(pi.Metadata["fee"], 10, 64)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
 	}
 
-	freq, err := strconv.Atoi(pi.Metadata["freq"])
+	freq, err := strconv.ParseInt(pi.Metadata["freq"], 10, 64)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
 	}
@@ -613,7 +608,7 @@ type UserBalances struct {
 	PaymentCycle PaymentCycle       `json:"paymentCycle"`
 	UserBalances []UserBalanceDto   `json:"userBalances"`
 	Total        []TotalUserBalance `json:"total"`
-	DaysLeft     int                `json:"daysLeft"`
+	DaysLeft     int64              `json:"daysLeft"`
 }
 
 type TotalUserBalance struct {
@@ -887,7 +882,7 @@ func closeCycle(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uu
 	return ubNew, nil
 }
 
-func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string, freq int, fee int64) error {
+func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string, freq int64, fee int64) error {
 	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency)
 	if err != nil {
 		return err

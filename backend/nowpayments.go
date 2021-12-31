@@ -57,15 +57,15 @@ type InvoiceDB struct {
 	OutcomeCurrency sql.NullString // in which wallet the pay-in goes
 
 	PaymentStatus string
-	Freq          int
+	Freq          int64
 	InvoiceUrl    sql.NullString
 	CreatedAt     string
 	LastUpdate    string
 }
 
 type PaymentInformation struct {
-	Freq  int
-	Seats int
+	Freq  int64
+	Seats int64
 	Plan  *Plan
 }
 
@@ -118,7 +118,7 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	writeJsonStr(w, `{ "invoice_url": "`+invoiceUrl+`" }`)
 }
 
-func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID, freq int) (string, error) {
+func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID, freq int64) (string, error) {
 	invoiceUrl := opts.NowpaymentsApiUrl + "/invoice"
 	apiToken := opts.NowpaymentsToken
 	if apiToken == "" {
@@ -415,12 +415,12 @@ func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
 	p := mux.Vars(r)
 	f := p["freq"]
 	s := p["seats"]
-	seats, err := strconv.Atoi(s)
+	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return PaymentInformation{}, errors.New(fmt.Sprintf("Cannot convert number seats: %v", +seats))
 	}
 
-	freq, err := strconv.Atoi(f)
+	freq, err := strconv.ParseInt(f, 10, 64)
 	if err != nil {
 		return PaymentInformation{}, errors.New(fmt.Sprintf("Cannot convert number freq: %v", freq))
 	}
