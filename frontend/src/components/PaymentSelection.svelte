@@ -1,7 +1,11 @@
-<script>
+<script lang="ts">
     import FiatTab from "./PaymentTabs/FiatTab.svelte";
     import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
     import Tabs from "./Tabs.svelte";
+    import {user, config, userBalances, error} from "../ts/store";
+    import {onMount} from "svelte";
+    import {API} from "../ts/api";
+    import {Plan} from "../types/users";
 
     // List of tab items with labels, values and assigned components
     let items = [
@@ -15,46 +19,54 @@
         }
     ];
 
-
-    import { user, config, userBalances } from "../ts/store";
-
-
-    let stripe;
-    let selectedPlan = 0;
-    let seats = 1;
+    let currentFreq = 0;
+    let currentSeats = 1;
     let isSubmitting = false;
-    let card; // HTML div to mount card
-    let cardElement;
     let paymentProcessing = false;
     let showSuccess = false;
-
+    let selectedPlan: Plan;
     $: {
-        if (card) {
-            if ($user.payment_method || paymentProcessing) {
-                card.style.display = "none";
-            } else {
-                showSuccess = false;
-                card.style.display = "block";
-            }
+        selectedPlan = $config.plans.find(e => e.freq == currentFreq);
+        if (!selectedPlan) {
+            selectedPlan = $config.plans[0];
         }
     }
 
-    let total;
+    let total: number;
     $: {
-        total = $config.plans[selectedPlan].price * seats;
+        total = selectedPlan.price * currentSeats;
     }
 
-    let current;
+    let current: number;
     $: {
-        current = $userBalances && $userBalances.total > 0 ? $userBalances.total / 1000000 : 0
+        if($userBalances && $userBalances.total) {
+            console.log("AAA",$userBalances.total["USD"]);
+            console.log("AAA",$userBalances.total);
+        }
+        current = $userBalances && $userBalances.total ? $userBalances.total["USD"] / 1000000 : 0
     }
 
-    let remaining;
+    let remaining: number;
     $: {
+        console.log("total", total);
+        console.log("current", current);
         const rem = total - current;
         remaining = rem > 0 ? rem:0;
     }
 
+    //$userBalances.userBalances.filter(e => e.paymentCycleId === $userBalances.paymentCycle.id)
+    //    .reduce((sum, record) => sum + record.value)
+
+    onMount(async () => {
+        try {
+            const p = API.user.paymentCycle();
+            const res = await p;
+            currentFreq = res.freq;
+            currentSeats = res.seats;
+        } catch (e) {
+            $error = e;
+        }
+    });
 
 </script>
 
@@ -72,14 +84,13 @@
 </style>
 
 <h2 class="p-2 m-2">Payment</h2>
-<p class="p-2 m-2">We request your permission that we initiate a payment or a series of {$config.plans[selectedPlan].title.toLowerCase()}
-    payments on your behalf of
+<p class="p-2 m-2">We request your permission that we initiate a payment or a series of payments on your behalf of
     {total.toFixed(2)} USD. By continuing, I authorize FlatFeeStack to send instructions to the financial institution that issued my card to
     take payments from my card account in accordance with the terms of my agreement with you.</p>
 <div class="container-stretch">
-    {#each $config.plans as { title, desc, disclaimer }, i}
-        <div class="flex-grow child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {selectedPlan === i ? 'bg-green' : ''}"
-                on:click="{() => (selectedPlan = i)}">
+    {#each $config.plans as { title, desc, disclaimer, freq }}
+        <div class="flex-grow child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {currentFreq === freq ? 'bg-green' : ''}"
+                on:click="{() => (currentFreq = freq)}">
             <h3 class="text-center font-bold text-lg">{title}</h3>
             <div class="text-center">{@html desc}</div>
             <div class="small text-center">{@html disclaimer}</div>
@@ -89,7 +100,7 @@
 
 <div class="container page">
     <div class="p-2">
-        <input size="5" type="number" min="1" bind:value={seats}> Seats
+        <input size="5" type="number" min="1" bind:value={currentSeats}> Seats
     </div>
     <div class="p-2">
         {#if remaining >= 10}
@@ -103,5 +114,5 @@
 </div>
 
 <div class="p-2 m-2">
-    <Tabs {items} total={remaining.toFixed(2)} {selectedPlan} {seats}/>
+    <Tabs {items} total={remaining.toFixed(2)}  />
 </div>

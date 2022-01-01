@@ -144,7 +144,6 @@ export const connectWs = async () => {
   try {
     const ws = await connect();
     ws.onmessage = function(event:MessageEvent) {
-      console.log("msg", event);
       try {
         userBalances.set(JSON.parse(event.data));
       } catch (e) {

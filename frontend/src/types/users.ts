@@ -39,13 +39,8 @@ export type ClientSecret = {
 export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
-  total: TotalUserBalance[];
+  total: Map<string, number>;
   daysLeft: number;
-}
-
-export type TotalUserBalance = {
-  currency: string;
-  balance: number;
 }
 
 export type UserBalanceCore = {

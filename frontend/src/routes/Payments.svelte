@@ -1,11 +1,10 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, user, userBalances, config } from "../ts/store";
+  import { error, userBalances } from "../ts/store";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type {Repo} from "../types/users";
   import { connectWs, formatDate} from "../ts/services";
-  import Dots from "../components/Dots.svelte";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repo[] = [];

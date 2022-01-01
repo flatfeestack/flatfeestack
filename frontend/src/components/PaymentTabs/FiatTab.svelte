@@ -1,14 +1,15 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {error, user, config, userBalances} from "../../ts/store";
+    import {error, user, config} from "../../ts/store";
     import Dots from "../Dots.svelte";
     import {stripePayment, stripePaymentMethod} from "../../ts/services";
     import {loadStripe} from "@stripe/stripe-js/pure";
     import {API} from "../../ts/api";
 
-    export let total;
-    export let selectedPlan;
-    export let seats;
+    export let total: number;
+    export let topUp: boolean;
+    export let seats: number;
+    export let freq: number;
 
     let stripe;
     let isSubmitting = false;
@@ -49,7 +50,7 @@
             if (!$user.payment_method) {
                 await stripePaymentMethod(stripe, cardElement);
             }
-            await stripePayment(stripe, $config.plans[selectedPlan].freq, seats, $user.payment_method);
+            await stripePayment(stripe, freq, seats, $user.payment_method);
             showSuccess = true;
         } catch (e) {
             $error = e;
@@ -96,22 +97,24 @@
 </style>
 
 <div class="container">
-<div class="p-2 m-2 w25 rounded border-primary-700" bind:this="{card}"></div>
-
-<div class="p-2">
-    <form on:submit|preventDefault="{handleSubmit}">
-        <button class="button1" disabled="{isSubmitting || total < 10}" type="submit">❤&nbsp;Support
-            {#if isSubmitting}
-                <Dots/>
-            {/if}
-        </button>
-    </form>
-</div>
     <label class="nobreak">Credit card: </label>
     <div class="container">
         <span>*** *** *** {$user.last4}</span>
         <form class="p-2" on:submit|preventDefault="{deletePaymentMethod}">
             <button class="button3" disabled="{isSubmitting}" type="submit">Cancel
+                {#if isSubmitting}
+                    <Dots/>
+                {/if}
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="container">
+    <div class="p-2 m-2 w25 rounded border-primary-700" bind:this="{card}"></div>
+    <div class="p-2">
+        <form on:submit|preventDefault="{handleSubmit}">
+            <button class="button1" disabled="{isSubmitting || total < 10}" type="submit">❤&nbsp;Support
                 {#if isSubmitting}
                     <Dots/>
                 {/if}
