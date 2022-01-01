@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -49,15 +50,16 @@ type InvoiceDB struct {
 	PriceAmount   int64  // price amount in microUSD
 	PriceCurrency string // USD
 
-	PayAmount   sql.NullInt64 // how much to pay in crypto (nanoCrypto)
-	PayCurrency string        // in which currency
+	PayAmount   *big.Int // how much to pay in crypto (nanoCrypto)
+	PayCurrency string   // in which currency
 
-	ActuallyPaid    sql.NullInt64  // how much the user really paid (incl. fees)
-	OutcomeAmount   sql.NullInt64  // how much we get in our wallet
+	ActuallyPaid    *big.Int       // how much the user really paid (incl. fees)
+	OutcomeAmount   *big.Int       // how much we get in our wallet
 	OutcomeCurrency sql.NullString // in which wallet the pay-in goes
 
 	PaymentStatus string
 	Freq          int64
+	Seats         int64
 	InvoiceUrl    sql.NullString
 	CreatedAt     string
 	LastUpdate    string
@@ -100,7 +102,7 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	priceCurrency := "USD"
 	payCurrency := data["currency"]
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, 0, paymentInformation.Seats, paymentInformation.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, paymentInformation.Seats, paymentInformation.Freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -171,7 +173,7 @@ func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID,
 	invoiceDb := InvoiceDB{
 		NowpaymentsInvoiceId: id,
 		PaymentCycleId:       paymentCycleId,
-		PriceAmount:          int64(priceAmount * cryptoFactor),
+		PriceAmount:          int64(priceAmount * usdFactor),
 		PriceCurrency:        data.PriceCurrency,
 		PayCurrency:          data.PayCurrency,
 		PaymentStatus:        "CREATED",
@@ -242,11 +244,16 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	amount := int64(data.OutcomeAmount * cryptoFactor) // nanoCrypto
+	amount, err := minCrypto(data.OutcomeCurrency, data.OutcomeAmount)
+	if err != nil {
+		log.Printf("Could not find currency: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	switch data.PaymentStatus {
 	case "FINISHED":
-		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Freq, 0)
+		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Seats, invoice.Freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -389,21 +396,43 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func minCrypto(currency string, balance float64) (*big.Int, error) {
+	i, err := getFactor(currency)
+	if err != nil {
+		return nil, err
+	}
+	f := new(big.Float).SetInt(i)
+	amount := new(big.Int)
+	amountF := new(big.Float).Mul(big.NewFloat(balance), f)
+	amountF.Int(amount)
+	return amount, nil
+}
+
 func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) error {
 	invoice, _ := getInvoice(data.InvoiceId)
 
+	var err error
 	invoice.PaymentId.Int64 = data.PaymentId
 	invoice.PriceAmount = int64(data.PriceAmount * usdFactor)
 	invoice.PriceCurrency = data.PriceCurrency
-	invoice.PayAmount.Int64 = int64(data.PayAmount * cryptoFactor)
+	invoice.PayAmount, err = minCrypto(data.PayCurrency, data.PayAmount)
+	if err != nil {
+		return err
+	}
 	invoice.PayCurrency = data.PayCurrency
-	invoice.ActuallyPaid.Int64 = int64(data.ActuallyPaid * cryptoFactor)
-	invoice.OutcomeAmount.Int64 = int64(data.OutcomeAmount * cryptoFactor)
+	invoice.ActuallyPaid, err = minCrypto(data.OutcomeCurrency, data.ActuallyPaid)
+	if err != nil {
+		return err
+	}
+	invoice.OutcomeAmount, err = minCrypto(data.OutcomeCurrency, data.OutcomeAmount)
+	if err != nil {
+		return err
+	}
 	invoice.OutcomeCurrency.String = data.OutcomeCurrency
 	invoice.PaymentStatus = data.PaymentStatus
 	invoice.LastUpdate = timeNow().Format(time.RFC3339)
 
-	err := updateInvoice(*invoice)
+	err = updateInvoice(*invoice)
 	if err != nil {
 		return err
 	}

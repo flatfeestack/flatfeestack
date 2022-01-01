@@ -65,17 +65,18 @@ type FlatFeeWeight struct {
 }
 
 type Plan struct {
-	Title       string    `json:"title"`
-	Price       big.Float `json:"price"`
-	Freq        int64     `json:"freq"`
-	Description string    `json:"desc"`
-	Disclaimer  string    `json:"disclaimer"`
-	FeePrm      int64     `json:"feePrm"`
+	Title       string     `json:"title"`
+	Price       *big.Float `json:"price"`
+	Freq        int64      `json:"freq"`
+	Description string     `json:"desc"`
+	Disclaimer  string     `json:"disclaimer"`
+	FeePrm      int64      `json:"feePrm"`
 }
 
 type CryptoCurrency struct {
 	Name      string `json:"name"`
 	ShortName string `json:"shortName"`
+	FactorPow int64  `json:"factorPow"`
 }
 
 type PayoutMeta struct {
@@ -90,52 +91,49 @@ type PayoutToService struct {
 	Meta         []PayoutMeta `json:"meta"`
 }
 
-var plans = []Plan{}
-
-var supportedCurrencies = []CryptoCurrency{
-	{Name: "Ethereum", ShortName: "ETH"},
-	{Name: "Neo", ShortName: "NEO"},
-	{Name: "Tezos", ShortName: "XTZ"},
-}
-
-func init() {
-	py := new(big.Float)
-
-	//365 * 330000 / 1-(0.04)
-	py.SetString("125.47")
-	plan := Plan{
+var plans = []Plan{
+	{
 		Title:       "Yearly",
-		Price:       *py,
+		Price:       big.NewFloat(125.47), //365 * 330000 / 1-(0.04)
 		Freq:        365,
 		FeePrm:      40,
-		Description: "By paying yearly <b>" + py.String() + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects",
+		Description: "By paying yearly <b>" + big.NewFloat(125.47).String() + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 4%",
-	}
-	plans = append(plans, plan)
-
-	//9125 * 330000 / 1-(0.035)
-	py = new(big.Float)
-	py.SetString("3120.47")
-	plan = Plan{
+	},
+	{
 		Title:       "Forever",
-		Price:       *py,
+		Price:       big.NewFloat(3120.47), //9125 * 330000 / 1-(0.035)
 		Freq:        9125,
 		FeePrm:      35,
-		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>" + py.String() + " USD</b>",
+		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>" + big.NewFloat(3120.47).String() + " USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
-	}
-	plans = append(plans, plan)
-
-	py = new(big.Float)
-	py.SetString("0.66")
-	plan = Plan{
+	},
+	{
 		Title:       "Beta",
-		Price:       *py,
+		Price:       big.NewFloat(0.66),
 		Freq:        2,
-		Description: "Beta testing: <b>" + py.String() + " USD</b>",
+		Description: "Beta testing: <b>" + big.NewFloat(0.66).String() + " USD</b>",
 		Disclaimer:  "",
+	},
+}
+
+const (
+	usdFactor = 1_000_000 // 10^6
+)
+
+var supportedCurrencies = []CryptoCurrency{
+	{Name: "Ethereum", ShortName: "ETH", FactorPow: 18},
+	{Name: "Neo Gas", ShortName: "GAS", FactorPow: 8},
+	{Name: "Tezos", ShortName: "XTZ", FactorPow: 6},
+}
+
+func getFactor(currency string) (*big.Int, error) {
+	for _, cryptoCurrency := range supportedCurrencies {
+		if cryptoCurrency.ShortName == currency {
+			return new(big.Int).Exp(big.NewInt(10), big.NewInt(cryptoCurrency.FactorPow), nil), nil
+		}
 	}
-	plans = append(plans, plan)
+	return nil, fmt.Errorf("currency not found, %v", currency)
 }
 
 const (
@@ -724,7 +722,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(u.Id, 90, seats, 90, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(u.Id, 365, seats, timeNow())
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
@@ -733,7 +731,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 	ubNew := UserBalance{
 		PaymentCycleId: *paymentCycleId,
 		UserId:         u.Id,
-		Balance:        2970,
+		Balance:        big.NewInt(2970),
 		BalanceType:    "PAY",
 		CreatedAt:      timeNow(),
 	}
@@ -908,7 +906,7 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 
 type UserBalanceCoreDto struct {
 	UserId   uuid.UUID `json:"userId"`
-	Balance  float64   `json:"balance"`
+	Balance  *big.Int  `json:"balance"`
 	Currency string    `json:"currency"`
 }
 
@@ -921,12 +919,7 @@ func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User)
 	}
 	var result []UserBalanceCoreDto
 	for _, ub := range ubs {
-		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
-		if ub.Currency == "USD" {
-			r.Balance = float64(ub.Balance) / usdFactor
-		} else {
-			r.Balance = float64(ub.Balance) / cryptoFactor
-		}
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency, Balance: ub.Balance}
 		result = append(result, r)
 	}
 	writeJson(w, result)
@@ -941,12 +934,7 @@ func totalRealizedIncome(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 	var result []UserBalanceCoreDto
 	for _, ub := range ubs {
-		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency}
-		if ub.Currency == "USD" {
-			r.Balance = float64(ub.Balance) / usdFactor
-		} else {
-			r.Balance = float64(ub.Balance) / cryptoFactor
-		}
+		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency, Balance: ub.Balance}
 		result = append(result, r)
 	}
 	writeJson(w, result)

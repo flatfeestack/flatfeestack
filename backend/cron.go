@@ -188,7 +188,7 @@ func dailyRunner(now time.Time) error {
 				log.Printf("error2 %v", err)
 				continue
 			}
-			ok, _ := topupWithSponsor(&u, pc.Freq, sponsor.Email)
+			ok, _ := topUpWithSponsor(&u, pc.Freq, sponsor.Email)
 			if ok {
 				continue
 			}

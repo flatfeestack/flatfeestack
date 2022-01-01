@@ -25,8 +25,8 @@ type ClientSecretBody struct {
 }
 
 type PayoutInfoDTO struct {
-	Currency string  `json:"currency"`
-	Amount   float64 `json:"amount"`
+	Currency string   `json:"currency"`
+	Amount   *big.Int `json:"amount"`
 }
 
 func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
@@ -62,7 +62,7 @@ func topUp(user *User) error {
 			log.Printf("findSumUserBalances: %v", err)
 			continue
 		}
-		ok, paymentCycleId := topupWithSponsor(user, invite.Freq, invite.InviteEmail)
+		ok, paymentCycleId := topUpWithSponsor(user, invite.Freq, invite.InviteEmail)
 		if !ok {
 			continue
 		}
@@ -79,7 +79,7 @@ func topUp(user *User) error {
 	return nil
 }
 
-func topupWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID) {
+func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID) {
 	sponsor, err := findUserByEmail(inviteEmail)
 	if err != nil {
 		log.Printf("findUserByEmail: %v", err)
@@ -87,38 +87,20 @@ func topupWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	//parent has enough funds go for it!
-	parentBalances, err := findSumUserBalances(sponsor.Id, sponsor.PaymentCycleId)
+	parentBalances, err := findSumUserBalanceByCurrency(sponsor.Id, sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("findSumUserBalances: %v", err)
 		return false, nil
 	}
 
-	dailyPayments, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
+	dailyPayment, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("dailyPayment: %v", err)
 		return false, nil
 	}
 
-	var currency string
-	var balance int64
-	var dailyPaymentAmount int64
-	parentHasEnoughFunds := false
-	for _, parentBalance := range parentBalances {
-		if parentHasEnoughFunds {
-			break
-		}
-		for _, dailyPayment := range dailyPayments {
-			if parentBalance.Currency == dailyPayment.Currency {
-				tempAmount := int64(freq) * dailyPayment.Amount
-				if parentBalance.Balance > tempAmount {
-					currency = parentBalance.Currency
-					balance = tempAmount
-					dailyPaymentAmount = dailyPayment.Amount
-					parentHasEnoughFunds = true
-				}
-			}
-		}
-	}
+	//now we need a strategy to find from which currency (if at all to deduct the topUp)
+	currency, balance, dailyPaymentAmount, parentHasEnoughFunds := strategyDeductRandom(parentBalances, dailyPayment, freq)
 
 	if !parentHasEnoughFunds {
 		log.Printf("parent has not enough funding")
@@ -126,26 +108,27 @@ func topupWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 		return false, nil
 	}
 
-	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, freq, 1, freq, timeNow())
+	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, 1, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", u.Id, err)
 		return false, nil
 	}
-	dp := DailyPayment{PaymentCycleId: *newPaymentCycleId, Currency: currency, Amount: dailyPaymentAmount, DaysLeft: freq, LastUpdate: timeNow()}
+
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, *newPaymentCycleId)
+	if err != nil {
+		return false, nil
+	}
+
+	dp := DailyPayment{PaymentCycleId: *newPaymentCycleId, Currency: currency, Amount: dailyPaymentAmount, LastUpdate: timeNow()}
 	err = insertDailyPayment(dp)
 	if err != nil {
 		log.Printf("dailyPayment: %v", err)
 		return false, nil
 	}
 
-	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, *newPaymentCycleId, currency)
-	if err != nil {
-		return false, nil
-	}
-
 	ubNew.PaymentCycleId = sponsor.PaymentCycleId
 	ubNew.UserId = sponsor.Id
-	ubNew.Balance = -balance
+	ubNew.Balance = new(big.Int).Sub(ubNew.Balance, balance)
 	ubNew.BalanceType = "SPONSOR"
 	ubNew.Currency = currency
 	err = insertUserBalance(*ubNew)
@@ -170,6 +153,18 @@ func topupWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	return true, newPaymentCycleId
+}
+
+func strategyDeductRandom(balances map[string]*big.Int, daily map[string]*big.Int, freq int64) (string, *big.Int, *big.Int, bool) {
+	for currency, balance := range balances {
+		if daily[currency] != nil {
+			newBalance := new(big.Int).Mul(daily[currency], big.NewInt(freq))
+			if newBalance.Cmp(balance) <= 0 {
+				return currency, newBalance, daily[currency], true
+			}
+		}
+	}
+	return "", nil, nil, false
 }
 
 //https://stripe.com/docs/payments/save-and-reuse
@@ -245,7 +240,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 
 	var f1 big.Float
 	f1.SetString("100")
-	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
+	cents, _ := f1.Mul(plan.Price, &f1).Int64()
 	cents = cents * int64(seats)
 
 	//cents := stripe.Int64(int64(plan.Price.Int64()))
@@ -257,7 +252,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)),
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, 0, seats, freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -303,7 +298,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 
 	var f1 big.Float
 	f1.SetString("100")
-	cents, _ := f1.Mul(&plan.Price, &f1).Int64()
+	cents, _ := f1.Mul(plan.Price, &f1).Int64()
 	params := &stripe.PaymentIntentParams{
 		Amount:        stripe.Int64(cents * int64(pc.Seats)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
@@ -313,7 +308,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		OffSession:    stripe.Bool(true),
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Freq, pc.Seats, pc.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Seats, pc.Freq, timeNow())
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +345,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	switch event.Type {
 	case "payment_intent.succeeded":
 
-		uid, newPaymentCycleId, amount, feePrm, freq, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, amount, feePrm, seats, freq, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -367,7 +362,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u, newPaymentCycleId, amount*10000, "USD", freq, fee*10000)
+		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", seats, freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -379,7 +374,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	case "payment_intent.requires_payment_method":
 		//again
 		fmt.Printf("CASE-STRIP: %v", event)
-		uid, newPaymentCycleId, _, _, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, _, _, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -407,7 +402,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		ubNew := UserBalance{
 			PaymentCycleId: newPaymentCycleId,
 			UserId:         uid,
-			Balance:        0,
+			Balance:        big.NewInt(0),
 			BalanceType:    "AUTHREQ",
 			Currency:       "USD",
 			CreatedAt:      timeNow(),
@@ -443,7 +438,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	//3d secure - this is handled by strip, we just get notified
 	//	log.Printf("stripe handles 3d secure for %v", event.Data)
 	case "payment_intent.insufficient_funds":
-		uid, newPaymentCycleId, _, _, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, _, _, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -471,7 +466,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		ubNew := UserBalance{
 			PaymentCycleId: newPaymentCycleId,
 			UserId:         uid,
-			Balance:        0,
+			Balance:        big.NewInt(0),
 			BalanceType:    "NOFUNDS",
 			Currency:       "USD",
 			CreatedAt:      timeNow(),
@@ -510,32 +505,37 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int64, int64, error) {
+func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int64, int64, int64, error) {
 	var pi stripe.PaymentIntent
 	err := json.Unmarshal(data, &pi)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
 	}
 	uidRaw := pi.Metadata["userId"]
 	uid, err := uuid.Parse(uidRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing uid: %v, available %v\n", err, pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing uid: %v, available %v\n", err, pi.Metadata)
 	}
 	newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
 	newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
 	}
 	feePrm, err := strconv.ParseInt(pi.Metadata["fee"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
 	}
 
 	freq, err := strconv.ParseInt(pi.Metadata["freq"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
 	}
-	return uid, newPaymentCycleId, pi.Amount, feePrm, freq, nil
+
+	seats, err := strconv.ParseInt(pi.Metadata["seats"], 10, 64)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
+	}
+	return uid, newPaymentCycleId, pi.Amount, feePrm, seats, freq, nil
 }
 
 var upgrader = websocket.Upgrader{
@@ -596,7 +596,7 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 
 type UserBalanceDto struct {
 	UserId         uuid.UUID  `json:"userId"`
-	Balance        float64    `json:"balance"`
+	Balance        *big.Int   `json:"balance"`
 	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
 	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
@@ -605,10 +605,10 @@ type UserBalanceDto struct {
 }
 
 type UserBalances struct {
-	PaymentCycle PaymentCycle       `json:"paymentCycle"`
-	UserBalances []UserBalanceDto   `json:"userBalances"`
-	Total        []TotalUserBalance `json:"total"`
-	DaysLeft     int64              `json:"daysLeft"`
+	PaymentCycle PaymentCycle        `json:"paymentCycle"`
+	UserBalances []UserBalanceDto    `json:"userBalances"`
+	Total        map[string]*big.Int `json:"total"`
+	DaysLeft     int64               `json:"daysLeft"`
 }
 
 type TotalUserBalance struct {
@@ -626,6 +626,11 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	}
 
 	userBalances, err := findUserBalances(userId)
+	if err != nil {
+		conn.Close()
+		return err
+	}
+
 	var userBalancesDto []UserBalanceDto
 	for _, ub := range userBalances {
 		r := UserBalanceDto{
@@ -633,28 +638,20 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 			PaymentCycleId: ub.PaymentCycleId,
 			FromUserId:     ub.FromUserId,
 			BalanceType:    ub.BalanceType,
+			Balance:        ub.Balance,
 			Currency:       ub.Currency,
 			CreatedAt:      ub.CreatedAt,
-		}
-		if ub.Currency == "USD" {
-			r.Balance = float64(ub.Balance) / usdFactor
-		} else {
-			r.Balance = float64(ub.Balance) / cryptoFactor
 		}
 		userBalancesDto = append(userBalancesDto, r)
 	}
 
-	if err != nil {
-		conn.Close()
-		return err
-	}
+	total := map[string]*big.Int{}
 	supportedCurrenciesAndUSD := append(supportedCurrencies, CryptoCurrency{Name: "US Dollar", ShortName: "USD"})
-	var total = make([]TotalUserBalance, 0, len(supportedCurrenciesAndUSD))
-	for i, v := range supportedCurrenciesAndUSD {
-		total = append(total, TotalUserBalance{Currency: v.ShortName, Balance: 0})
+	for _, v := range supportedCurrenciesAndUSD {
+		total[v.ShortName] = big.NewInt(0)
 		for _, ub := range userBalancesDto {
-			if ub.Currency == total[i].Currency {
-				total[i].Balance += ub.Balance
+			if ub.Currency == v.ShortName && ub.Balance != nil {
+				total[v.ShortName] = new(big.Int).Add(total[v.ShortName], ub.Balance)
 			}
 		}
 	}
@@ -709,19 +706,15 @@ func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 	for _, v := range infos {
-		r := PayoutInfoDTO{Currency: v.Currency}
-		if v.Currency == "USD" {
-			r.Amount = float64(v.Amount) / usdFactor
-		} else {
-			r.Amount = float64(v.Amount) / cryptoFactor
-		}
+		r := PayoutInfoDTO{Currency: v.Currency, Amount: v.Amount}
 		result = append(result, r)
 	}
 	writeJson(w, result)
 }
 
 func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
-	chunkSize := 100
+	//TODO: enable again
+	/*chunkSize := 100
 	var container = make([][]PayoutCrypto, len(supportedCurrencies))
 	var usdPayouts []PayoutCrypto
 
@@ -812,7 +805,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 				return
 			}
 		}
-	}
+	}*/
 }
 
 // Helper
@@ -838,37 +831,30 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 	})
 }
 
-func closeCycle(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, currency string) (*UserBalance, error) {
-	currencies, err := findAllCurrenciesFromUserBalance(oldPaymentCycleId)
+//Closes the current cycle and carries over all open currencies
+func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) (*UserBalance, error) {
+	currencies, err := findSumUserBalanceByCurrency(uid, currentPaymentCycleId)
 	if err != nil {
 		return nil, err
 	}
-	if !contains(currencies, currency) {
-		currencies = append(currencies, currency)
-	}
 
 	var ubNew *UserBalance
-	for _, currency := range currencies {
-		oldSum, err := findSumUserBalanceByCurrency(uid, oldPaymentCycleId, currency)
-		if err != nil {
-			return nil, err
-		}
-
+	for currency, balance := range currencies {
 		ubNew = &UserBalance{
-			PaymentCycleId: oldPaymentCycleId,
+			PaymentCycleId: currentPaymentCycleId,
 			UserId:         uid,
-			Balance:        -oldSum,
+			Balance:        new(big.Int).Neg(balance),
 			BalanceType:    "CLOSE_CYCLE",
 			Currency:       currency,
 			CreatedAt:      timeNow(),
 		}
+		err := insertUserBalance(*ubNew)
+		if err != nil {
+			return nil, err
+		}
 
-		if oldSum > 0 {
-			err := insertUserBalance(*ubNew)
-			if err != nil {
-				return nil, err
-			}
-			ubNew.Balance = oldSum
+		if balance.Cmp(big.NewInt(0)) > 0 {
+			ubNew.Balance = balance
 			ubNew.PaymentCycleId = newPaymentCycleId
 			ubNew.BalanceType = "CARRY_OVER"
 			ubNew.Currency = currency
@@ -882,89 +868,40 @@ func closeCycle(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uu
 	return ubNew, nil
 }
 
-func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, amount int64, currency string, freq int64, fee int64) error {
-	ub, err := findUserBalancesAndType(newPaymentCycleId, "PAYMENT", currency)
-	if err != nil {
-		return err
-	}
-	if ub != nil {
-		log.Printf("We already processed this event, we can safely ignore it: %v", ub)
-		return nil
-	}
-
-	pc, err := findPaymentCycle(newPaymentCycleId)
-	if err != nil {
-		log.Printf("Payment Cycle not found: %v", err)
-		return nil
-	}
-
-	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId, currency)
+func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string,
+	seats int64, freq int64, fee *big.Int) error {
+	//closes the current cycle and opens a new one, rolls over all currencies
+	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
 	if err != nil {
 		return err
 	}
 
 	ubNew.PaymentCycleId = newPaymentCycleId
 	ubNew.BalanceType = "PAYMENT"
-	ubNew.Balance = amount
+	ubNew.Balance = balance
 	ubNew.Currency = currency
 	err = insertUserBalance(*ubNew)
 	if err != nil {
 		return err
 	}
 
-	if currency == "USD" {
+	if fee.Cmp(big.NewInt(0)) > 0 {
 		ubNew.BalanceType = "FEE"
-		ubNew.Balance = -fee
+		ubNew.Balance = new(big.Int).Neg(fee)
 		err = insertUserBalance(*ubNew)
 		if err != nil {
 			return err
 		}
 	}
 
-	isNewCurrencyPayment := true
-	paymentCycleDaysLeft := freq * pc.Seats
-	dailyPaymentDaysLeft := freq * pc.Seats
+	newDailyPaymentAmount := new(big.Int).Div(balance, big.NewInt(freq))
+	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, timeNow()}
 
-	dailyPayments, err := findDailyPaymentByPaymentCycleId(u.PaymentCycleId)
+	err = insertDailyPayment(newDailyPayment)
 	if err != nil {
 		return err
 	}
-	// migrate remaining dailyPayments to new paymentCycle
-	for _, dailyPayment := range dailyPayments {
-		if dailyPayment.Currency == currency {
-			isNewCurrencyPayment = false
-			dailyPaymentDaysLeft += dailyPayment.DaysLeft
-		}
-		paymentCycleDaysLeft += dailyPayment.DaysLeft
-		dailyPayment.PaymentCycleId = newPaymentCycleId
-		dailyPayment.LastUpdate = timeNow()
-		err = insertDailyPayment(dailyPayment)
-	}
 
-	balance, err := findSumUserBalanceByCurrency(u.Id, newPaymentCycleId, currency)
-	if err != nil {
-		return err
-	}
-	newDailyPaymentAmount := balance / int64(dailyPaymentDaysLeft)
-
-	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, dailyPaymentDaysLeft, timeNow()}
-
-	if isNewCurrencyPayment {
-		err = insertDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = updateDailyPayment(newDailyPayment)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = updatePaymentCycleDaysLeft(newPaymentCycleId, int64(paymentCycleDaysLeft))
-	if err != nil {
-		return err
-	}
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
 	if err != nil {
 		return err

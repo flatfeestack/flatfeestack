@@ -32,11 +32,6 @@ const (
 	Inactive
 )
 
-const (
-	cryptoFactor = 1_000_000_000
-	usdFactor    = 1_000_000
-)
-
 var (
 	db        *sql.DB
 	opts      *Opts
