@@ -93,9 +93,9 @@
             width: 20rem;
         }
     }
-
 </style>
 
+{#if $user.payment_method}
 <div class="container">
     <label class="nobreak">Credit card: </label>
     <div class="container">
@@ -109,6 +109,7 @@
         </form>
     </div>
 </div>
+{/if}
 
 <div class="container">
     <div class="p-2 m-2 w25 rounded border-primary-700" bind:this="{card}"></div>

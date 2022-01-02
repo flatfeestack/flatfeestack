@@ -5,10 +5,9 @@
   import { API } from "../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";
   import {faTrash, faClock} from "@fortawesome/free-solid-svg-icons";
-  import {GitUser, PayoutAddress} from "../types/users";
+  import {GitUser, PayoutAddress, Currencies} from "../types/users";
   import {onMount} from "svelte";
   import {formatDate} from "../ts/services";
-  import {CryptoCurrency} from "../types/crypto";
 
   let nameOrig = $user.name;
   let timeoutName;
@@ -18,8 +17,8 @@
   let newEmail = "";
 
   let payoutAddresses: PayoutAddress[] = [];
-  let currenciesWithoutWallet: CryptoCurrency[] = [];
-  let newPayoutCurrency: CryptoCurrency = null;
+  let currenciesWithoutWallet: Map<string, Currencies>;
+  let newPayoutCurrency: string;
   let newPayoutAddress: ""
 
   $: {
@@ -35,20 +34,24 @@
   }
 
   $: {
-    currenciesWithoutWallet = $config.supportedCurrencies.filter((cur) => !(payoutAddresses.map(pay => pay.currency).includes(cur.shortName)))
-    if (!newPayoutCurrency) {
-      newPayoutCurrency = currenciesWithoutWallet[0];
+    let tmp:Map<string, Currencies>=new Map<string, Currencies>();
+    const e = Object.entries($config.supportedCurrencies);
+    for (const [key, value] of e) {
+      if (!payoutAddresses.find(e => e.currency === key) && value.isCrypto) {
+        tmp.set(key, value)
+      }
     }
+    currenciesWithoutWallet = tmp;
   }
 
   async function handleAddPayoutAddress() {
     try {
       let regex;
-      switch (newPayoutCurrency.shortName) {
+      switch (newPayoutCurrency) {
         case "ETH":
           regex = /^0x[a-fA-F0-9]{40}$/g
           break;
-        case "NEO":
+        case "GAS":
           break;
         case "XTZ":
           break;
@@ -60,7 +63,7 @@
         $error = "Invalid ethereum address";
       }
 
-      let confirmedPayoutAddress: PayoutAddress = await API.user.addPayoutAddress(newPayoutCurrency.shortName, newPayoutAddress);
+      let confirmedPayoutAddress: PayoutAddress = await API.user.addPayoutAddress(newPayoutCurrency, newPayoutAddress);
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = "";
     } catch (e) {
@@ -237,13 +240,13 @@
         </tr>
       {/each}
       <tr>
-        {#if currenciesWithoutWallet.length > 0}
+        {#if [...currenciesWithoutWallet].length > 0}
           <td colspan="3">
             <div class="container-small">
               <select bind:value={newPayoutCurrency}>
-                {#each currenciesWithoutWallet as currency (currency.shortName)}
-                  <option value={currency}>
-                    {currency.name}
+                {#each [...currenciesWithoutWallet] as [key, value]}
+                  <option value={key}>
+                    {value.name}
                   </option>
                 {/each}
               </select>

@@ -36,23 +36,18 @@ export const confirmEmail = async(email: string, emailToken: string) => {
 export const confirmInvite = async(email: string, password: string, emailToken: string, inviteByEmail: string) => {
   const p1 = API.auth.confirmInvite(email, password, emailToken);
   const p2 = API.config.config();
-  console.log("here2");
+
   const res = await p1;
   storeToken(res);
-  console.log("here3");
+
   const p3 = API.invite.confirmInvite(inviteByEmail);
   const p4 = API.user.get();
-  console.log("here4");
   const conf = await p2;
-  console.log("conf", conf);
-  config.set(conf);
 
-  console.log("here4.5");
   await p3;
-  console.log("here5");
+
   const u = await p4;
   user.set(u);
-  console.log("here6");
 }
 
 export const login = async (email: string, password: string) => {

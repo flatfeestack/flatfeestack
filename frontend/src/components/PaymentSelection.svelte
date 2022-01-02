@@ -19,7 +19,7 @@
         }
     ];
 
-    let currentFreq = 0;
+    let currentFreq = $config.plans[0].freq;
     let currentSeats = 1;
     let isSubmitting = false;
     let paymentProcessing = false;
@@ -61,8 +61,10 @@
         try {
             const p = API.user.paymentCycle();
             const res = await p;
-            currentFreq = res.freq;
-            currentSeats = res.seats;
+            if(res.freq && res.seats) {
+                currentFreq = res.freq;
+                currentSeats = res.seats;
+            }
         } catch (e) {
             $error = e;
         }
@@ -114,5 +116,5 @@
 </div>
 
 <div class="p-2 m-2">
-    <Tabs {items} total={remaining.toFixed(2)}  />
+    <Tabs {items} total={remaining.toFixed(2)} topup="true" seats="{currentSeats}" freq="{currentFreq}"  />
 </div>

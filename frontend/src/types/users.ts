@@ -1,5 +1,3 @@
-import {CryptoCurrency} from "./crypto";
-
 export type Users = {
   id: string;
   payment_method: string;
@@ -20,7 +18,7 @@ export type Config = {
   plans: Plan[];
   env: string;
   contractAddr: string;
-  supportedCurrencies: CryptoCurrency[];
+  supportedCurrencies: Map<string, Currencies>;
 }
 
 export type Plan = {
@@ -39,20 +37,20 @@ export type ClientSecret = {
 export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
-  total: Map<string, number>;
+  total: Map<string, BigInt>;
   daysLeft: number;
 }
 
 export type UserBalanceCore = {
   userId: string;
-  balance: number;
+  balance: BigInt;
   currency: string;
 }
 
 export type UserBalance = {
   paymentCycleId: string;
   userId: string;
-  balance: number;
+  balance: BigInt;
   currency: string;
   balanceType: string;
   createdAt: string;
@@ -69,7 +67,6 @@ export type PaymentCycle = {
   id: string;
   seats: number;
   freq: number;
-  daysLeft: number;
 }
 
 export type Repo = {
@@ -147,5 +144,11 @@ export type PayoutAddress = {
 
 export type PayoutInfo = {
   currency: string;
-  amount: number;
+  amount: BigInt;
+}
+
+export type Currencies = {
+  name: string;
+  factorPow: number;
+  isCrypto: boolean;
 }
