@@ -253,7 +253,7 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch data.PaymentStatus {
 	case "FINISHED":
-		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Seats, invoice.Freq, big.NewInt(0))
+		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)

@@ -36,6 +36,11 @@ func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	if pc == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("{}"))
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(pc)
 	if err != nil {
@@ -44,13 +49,35 @@ func paymentCycle(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func topUp(user *User) error {
-	pc, err := findPaymentCycle(user.PaymentCycleId)
+//calculates the maximum of days that is left with any currency, returns the max with currency
+func maxDaysLeft(paymentCycleId uuid.UUID) (string, int64, error) {
+	daily, err := findDailyPaymentByPaymentCycleId(paymentCycleId)
 	if err != nil {
-		return fmt.Errorf("Could not find user balance: %v", err)
+		return "", 0, err
+	}
+	balances, err := findSumUserBalanceByCurrency(paymentCycleId)
+	if err != nil {
+		return "", 0, err
 	}
 
-	if pc != nil && pc.DaysLeft > 0 {
+	max := int64(0)
+	cur := ""
+	for currency, balance := range balances {
+		if daily[currency] != nil {
+			d := new(big.Int).Div(balance, daily[currency])
+			if d.Int64() > max {
+				max = d.Int64()
+				cur = currency
+			}
+		}
+	}
+	return cur, max, nil
+}
+
+func topUp(user *User) error {
+	_, daysLeft, err := maxDaysLeft(user.PaymentCycleId)
+
+	if daysLeft > 0 {
 		log.Printf("enough funds")
 		return nil
 	}
@@ -70,7 +97,7 @@ func topUp(user *User) error {
 		go func() {
 			err = sendToBrowser(user.Id, *paymentCycleId)
 			if err != nil {
-				log.Printf("could not notify client %v", user.Id)
+				log.Printf("could not notify client %v, %v", user.Id, err)
 			}
 		}()
 
@@ -87,7 +114,7 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	//parent has enough funds go for it!
-	parentBalances, err := findSumUserBalanceByCurrency(sponsor.Id, sponsor.PaymentCycleId)
+	parentBalances, err := findSumUserBalanceByCurrency(sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("findSumUserBalances: %v", err)
 		return false, nil
@@ -146,7 +173,7 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 		log.Printf("transferBalance: %v", err)
 		return false, nil
 	}
-	err = updatePaymentCycleId(u.Id, newPaymentCycleId, &sponsor.Id)
+	err = updatePaymentCycleId(u.Id, newPaymentCycleId)
 	if err != nil {
 		log.Printf("transferBalance: %v", err)
 		return false, nil
@@ -263,6 +290,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
 	params.Params.Metadata["fee"] = strconv.FormatInt(plan.FeePrm, 10)
 	params.Params.Metadata["freq"] = strconv.FormatInt(freq, 10)
+	params.Params.Metadata["seats"] = strconv.FormatInt(seats, 10)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -317,6 +345,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	params.Params.Metadata["paymentCycleId"] = paymentCycleId.String()
 	params.Params.Metadata["fee"] = strconv.FormatInt(plan.FeePrm, 10)
 	params.Params.Metadata["freq"] = strconv.FormatInt(plan.Freq, 10)
+	params.Params.Metadata["seats"] = strconv.FormatInt(pc.Seats, 10)
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
@@ -345,7 +374,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	switch event.Type {
 	case "payment_intent.succeeded":
 
-		uid, newPaymentCycleId, amount, feePrm, seats, freq, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, amount, feePrm, _, freq, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -362,7 +391,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", seats, freq, big.NewInt(fee*10000))
+		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -528,12 +557,12 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int64, 
 
 	freq, err := strconv.ParseInt(pi.Metadata["freq"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v, %v\n", pi.Metadata["freq"], pi.Metadata, err)
 	}
 
 	seats, err := strconv.ParseInt(pi.Metadata["seats"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v\n", pi.Metadata["freq"], pi.Metadata)
+		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing seats: %v, available %v, %v\n", pi.Metadata["seats"], pi.Metadata, err)
 	}
 	return uid, newPaymentCycleId, pi.Amount, feePrm, seats, freq, nil
 }
@@ -589,7 +618,7 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 	go func() {
 		err = sendToBrowser(user.Id, user.PaymentCycleId)
 		if err != nil {
-			log.Printf("could not notify client %v", user.Id)
+			log.Printf("could not notify client %v, %v", user.Id, err)
 		}
 	}()
 }
@@ -646,12 +675,11 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 	}
 
 	total := map[string]*big.Int{}
-	supportedCurrenciesAndUSD := append(supportedCurrencies, CryptoCurrency{Name: "US Dollar", ShortName: "USD"})
-	for _, v := range supportedCurrenciesAndUSD {
-		total[v.ShortName] = big.NewInt(0)
+	for currency, _ := range supportedCurrencies {
+		total[currency] = big.NewInt(0)
 		for _, ub := range userBalancesDto {
-			if ub.Currency == v.ShortName && ub.Balance != nil {
-				total[v.ShortName] = new(big.Int).Add(total[v.ShortName], ub.Balance)
+			if ub.Currency == currency && ub.Balance != nil {
+				total[currency] = new(big.Int).Add(total[currency], ub.Balance)
 			}
 		}
 	}
@@ -666,7 +694,13 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		return nil //nothing to do
 	}
 
-	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalancesDto, Total: total, DaysLeft: pc.DaysLeft})
+	_, daysLeft, err := maxDaysLeft(paymentCycleId)
+	if err != nil {
+		conn.Close()
+		return err
+	}
+
+	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalancesDto, Total: total, DaysLeft: daysLeft})
 	if err != nil {
 		conn.Close()
 		return err
@@ -833,21 +867,22 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 
 //Closes the current cycle and carries over all open currencies
 func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) (*UserBalance, error) {
-	currencies, err := findSumUserBalanceByCurrency(uid, currentPaymentCycleId)
+	currencies, err := findSumUserBalanceByCurrency(currentPaymentCycleId)
 	if err != nil {
 		return nil, err
 	}
 
 	var ubNew *UserBalance
+	ubNew = &UserBalance{
+		PaymentCycleId: currentPaymentCycleId,
+		UserId:         uid,
+	}
 	for currency, balance := range currencies {
-		ubNew = &UserBalance{
-			PaymentCycleId: currentPaymentCycleId,
-			UserId:         uid,
-			Balance:        new(big.Int).Neg(balance),
-			BalanceType:    "CLOSE_CYCLE",
-			Currency:       currency,
-			CreatedAt:      timeNow(),
-		}
+		ubNew.Balance = new(big.Int).Neg(balance)
+		ubNew.BalanceType = "CLOSE_CYCLE"
+		ubNew.Currency = currency
+		ubNew.CreatedAt = timeNow()
+
 		err := insertUserBalance(*ubNew)
 		if err != nil {
 			return nil, err
@@ -868,8 +903,7 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 	return ubNew, nil
 }
 
-func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string,
-	seats int64, freq int64, fee *big.Int) error {
+func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, freq int64, fee *big.Int) error {
 	//closes the current cycle and opens a new one, rolls over all currencies
 	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
 	if err != nil {
@@ -894,7 +928,8 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 		}
 	}
 
-	newDailyPaymentAmount := new(big.Int).Div(balance, big.NewInt(freq))
+	total := new(big.Int).Sub(balance, fee)
+	newDailyPaymentAmount := new(big.Int).Div(total, big.NewInt(freq))
 	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, timeNow()}
 
 	err = insertDailyPayment(newDailyPayment)
@@ -902,7 +937,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 		return err
 	}
 
-	err = updatePaymentCycleId(u.Id, &newPaymentCycleId, nil)
+	err = updatePaymentCycleId(u.Id, &newPaymentCycleId)
 	if err != nil {
 		return err
 	}
@@ -910,7 +945,7 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 	go func(uid uuid.UUID) {
 		err = sendToBrowser(uid, newPaymentCycleId)
 		if err != nil {
-			log.Printf("could not notify client %v", uid)
+			log.Printf("could not notify client %v, %v", uid, err)
 		}
 	}(u.Id)
 	return nil

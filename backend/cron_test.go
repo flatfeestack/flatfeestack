@@ -271,7 +271,7 @@ func setupUser(email string) (*uuid.UUID, error) {
 		Email:    email,
 	}
 
-	err := insertUser(&u, "A")
+	err := insertUser(&u)
 	if err != nil {
 		return nil, err
 	}

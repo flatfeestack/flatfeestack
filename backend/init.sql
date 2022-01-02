@@ -7,7 +7,7 @@ CREATE TABLE users (
     invited_email         VARCHAR(64), /*if this is set, then this email pays the amount*/
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
-    stripe_last4          CHAR(4),
+    stripe_last4          VARCHAR(8),
     payment_cycle_id      UUID, /*CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)*/
     email                 VARCHAR(64) UNIQUE NOT NULL,
     name                  VARCHAR(255),
@@ -30,12 +30,12 @@ CREATE TABLE invoice (
      payment_cycle_id       UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
      payment_id             BIGINT,
      price_amount           BIGINT,
-     price_currency         CHAR(4) NOT NULL,
+     price_currency         VARCHAR(8) NOT NULL,
      pay_amount             NUMERIC(78), /*256 bits*/
-     pay_currency           CHAR(4) NOT NULL,
+     pay_currency           VARCHAR(8) NOT NULL,
      actually_paid          NUMERIC(78), /*256 bits*/
      outcome_amount         NUMERIC(78), /*256 bits*/
-     outcome_currency       CHAR(4),
+     outcome_currency       VARCHAR(8),
      payment_status         VARCHAR(16),
      freq                   BIGINT NOT NULL,
      seats                  BIGINT NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE daily_payment (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
   balance           NUMERIC(78), /*256 bits*/
-  currency          CHAR(4) NOT NULL,
+  currency          VARCHAR(8) NOT NULL,
   last_update       TIMESTAMP NULL
 );
 CREATE UNIQUE INDEX daily_payment_index ON daily_payment(payment_cycle_id, currency);
@@ -57,7 +57,7 @@ CREATE UNIQUE INDEX daily_payment_index ON daily_payment(payment_cycle_id, curre
 CREATE table wallet_address(
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
-    currency    CHAR(4) NOT NULL,
+    currency    VARCHAR(8) NOT NULL,
     address  	VARCHAR(255),
     is_deleted	BOOLEAN
 );
@@ -70,7 +70,7 @@ CREATE TABLE user_balances (
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
     from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          NUMERIC(78), /*256 bits*/
-    currency         CHAR(4) NOT NULL,
+    currency         VARCHAR(8) NOT NULL,
     balance_type     VARCHAR(16) NOT NULL,
     day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
@@ -148,7 +148,7 @@ CREATE TABLE daily_repo_balance (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     repo_id    UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
     balance    NUMERIC(78), /*256 bits*/
-    currency   CHAR(4) NOT NULL,
+    currency   VARCHAR(8) NOT NULL,
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -167,7 +167,7 @@ CREATE TABLE daily_email_payout (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email      VARCHAR(255) NOT NULL,
     balance    NUMERIC(78), /*256 bits*/
-    currency   CHAR(4) NOT NULL,
+    currency   VARCHAR(8) NOT NULL,
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -177,7 +177,7 @@ CREATE TABLE daily_user_payout (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_dup REFERENCES users (id),
     balance    NUMERIC(78), /*256 bits*/
-    currency   CHAR(4) NOT NULL,
+    currency   VARCHAR(8) NOT NULL,
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -187,7 +187,7 @@ CREATE TABLE daily_future_leftover (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     repo_id    UUID CONSTRAINT fk_repo_id_dfl REFERENCES repo (id),
     balance    NUMERIC(78), /*256 bits*/
-    currency   CHAR(4) NOT NULL,
+    currency   VARCHAR(8) NOT NULL,
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -202,7 +202,7 @@ CREATE table daily_user_contribution(
     contributor_weight  DOUBLE PRECISION,
     contributor_user_id UUID CONSTRAINT fk_contributor_user_id_duc REFERENCES users (id) ,
     balance             NUMERIC(78), /*256 bits*/
-    currency            CHAR(4) NOT NULL,
+    currency            VARCHAR(8) NOT NULL,
     balance_repo        BIGINT,
     day                 DATE NOT NULL,
     created_at          TIMESTAMP NOT NULL
@@ -213,7 +213,7 @@ CREATE TABLE payout_request (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id             UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
     batch_id            UUID NOT NULL,
-    currency            CHAR(4) NOT NULL,
+    currency            VARCHAR(8) NOT NULL,
     exchange_rate       NUMERIC,
     tea                 BIGINT NOT NULL,
     address             TEXT NOT NULL,
@@ -230,7 +230,7 @@ CREATE TABLE payout_response (
 CREATE TABLE payout_response_details (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     payout_response_id  UUID CONSTRAINT fk_payout_response_id_pres REFERENCES payout_response (id),
-    currency            CHAR(4) NOT NULL,
+    currency            VARCHAR(8) NOT NULL,
     nano_tea            BIGINT NOT NULL,
     smart_contract_tea  NUMERIC NOT NULL,
     address             VARCHAR(42),

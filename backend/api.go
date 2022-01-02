@@ -73,10 +73,17 @@ type Plan struct {
 	FeePrm      int64      `json:"feePrm"`
 }
 
-type CryptoCurrency struct {
+type Currencies struct {
 	Name      string `json:"name"`
-	ShortName string `json:"shortName"`
 	FactorPow int64  `json:"factorPow"`
+	IsCrypto  bool   `json:"isCrypto"`
+}
+
+var supportedCurrencies = map[string]Currencies{
+	"ETH": {Name: "Ethereum", FactorPow: 18, IsCrypto: true},
+	"GAS": {Name: "Neo Gas", FactorPow: 8, IsCrypto: true},
+	"XTZ": {Name: "Tezos", FactorPow: 6, IsCrypto: true},
+	"USD": {Name: "US Dollar", FactorPow: 6, IsCrypto: false},
 }
 
 type PayoutMeta struct {
@@ -121,15 +128,9 @@ const (
 	usdFactor = 1_000_000 // 10^6
 )
 
-var supportedCurrencies = []CryptoCurrency{
-	{Name: "Ethereum", ShortName: "ETH", FactorPow: 18},
-	{Name: "Neo Gas", ShortName: "GAS", FactorPow: 8},
-	{Name: "Tezos", ShortName: "XTZ", FactorPow: 6},
-}
-
 func getFactor(currency string) (*big.Int, error) {
-	for _, cryptoCurrency := range supportedCurrencies {
-		if cryptoCurrency.ShortName == currency {
+	for supportedCurrency, cryptoCurrency := range supportedCurrencies {
+		if supportedCurrency == currency {
 			return new(big.Int).Exp(big.NewInt(10), big.NewInt(cryptoCurrency.FactorPow), nil), nil
 		}
 	}
@@ -742,7 +743,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	err = updatePaymentCycleId(u.Id, paymentCycleId, nil)
+	err = updatePaymentCycleId(u.Id, paymentCycleId)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
