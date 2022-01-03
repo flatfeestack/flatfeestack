@@ -9,7 +9,7 @@ package main
 import (
 	"context"
 	"github.com/google/uuid"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 

@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha512"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,79 +18,52 @@ import (
 	"time"
 )
 
-type InvoiceRequest struct {
-	PriceAmount    float64 `json:"price_amount"`
-	PriceCurrency  string  `json:"price_currency"`
-	PayCurrency    string  `json:"pay_currency"`
-	IpnCallbackUrl string  `json:"ipn_callback_url"`
-	SuccessUrl     string  `json:"success_url"`
+type PaymentRequest struct {
+	PriceAmount      float64    `json:"price_amount"`
+	PriceCurrency    string     `json:"price_currency"`
+	PayCurrency      string     `json:"pay_currency"`
+	IpnCallbackUrl   string     `json:"ipn_callback_url"`
+	OrderId          *uuid.UUID `json:"order_id"`
+	OrderDescription string     `json:"order_description"`
 }
 
-type InvoiceResponse struct {
-	Id               string `json:"id"`
-	OrderId          string `json:"order_id"`
-	OrderDescription string `json:"order_description"`
-	PriceAmount      string `json:"price_amount"`
-	PriceCurrency    string `json:"price_currency"`
-	PayCurrency      string `json:"pay_currency"`
-	IpnCallbackUrl   string `json:"ipn_callback_url"`
-	InvoiceUrl       string `json:"invoice_url"`
-	SuccessUrl       string `json:"success_url"`
-	CancelUrl        string `json:"cancel_url"`
-	CreatedAt        string `json:"created_at"`
-	UpdatedAt        string `json:"updated_at"`
-}
-
-type InvoiceDB struct {
-	NowpaymentsInvoiceId int64
-	PaymentCycleId       *uuid.UUID
-	PaymentId            sql.NullInt64
-
-	PriceAmount   int64  // price amount in microUSD
-	PriceCurrency string // USD
-
-	PayAmount   *big.Int // how much to pay in crypto (nanoCrypto)
-	PayCurrency string   // in which currency
-
-	ActuallyPaid    *big.Int       // how much the user really paid (incl. fees)
-	OutcomeAmount   *big.Int       // how much we get in our wallet
-	OutcomeCurrency sql.NullString // in which wallet the pay-in goes
-
-	PaymentStatus string
-	Freq          int64
-	Seats         int64
-	InvoiceUrl    sql.NullString
-	CreatedAt     string
-	LastUpdate    string
-}
-
-type PaymentInformation struct {
-	Freq  int64
-	Seats int64
-	Plan  *Plan
+type PaymentResponse struct {
+	PaymentId        string  `json:"payment_id"`
+	PaymentStatus    string  `json:"payment_status"`
+	PayAddress       string  `json:"pay_address"`
+	PriceAmount      float64 `json:"price_amount"`
+	PriceCurrency    string  `json:"price_currency"`
+	PayAmount        float64 `json:"pay_amount"`
+	PayCurrency      string  `json:"pay_currency"`
+	OrderId          string  `json:"order_id"`
+	OrderDescription string  `json:"order_description"`
+	IpnCallbackUrl   string  `json:"ipn_callback_url"`
+	CreatedAt        string  `json:"created_at"`
+	UpdatedAt        string  `json:"updated_at"`
+	PurchaseId       string  `json:"purchase_id"`
 }
 
 type NowpaymentWebhookResponse struct {
-	ActuallyPaid     float64     `json:"actually_paid"`
-	InvoiceId        int64       `json:"invoice_id"`
-	OrderDescription interface{} `json:"order_description"`
-	OrderId          interface{} `json:"order_id"`
-	OutcomeAmount    float64     `json:"outcome_amount"`
-	OutcomeCurrency  string      `json:"outcome_currency"`
-	PayAddress       string      `json:"pay_address"`
-	PayAmount        float64     `json:"pay_amount"`
-	PayCurrency      string      `json:"pay_currency"`
-	PaymentId        int64       `json:"payment_id"`
-	PaymentStatus    string      `json:"payment_status"`
-	PriceAmount      float64     `json:"price_amount"`
-	PriceCurrency    string      `json:"price_currency"`
-	PurchaseId       string      `json:"purchase_id"`
+	ActuallyPaid     float64    `json:"actually_paid"`
+	InvoiceId        int64      `json:"invoice_id"`
+	OrderDescription string     `json:"order_description"`
+	OrderId          *uuid.UUID `json:"order_id"`
+	OutcomeAmount    float64    `json:"outcome_amount"`
+	OutcomeCurrency  string     `json:"outcome_currency"`
+	PayAddress       string     `json:"pay_address"`
+	PayAmount        float64    `json:"pay_amount"`
+	PayCurrency      string     `json:"pay_currency"`
+	PaymentId        int64      `json:"payment_id"`
+	PaymentStatus    string     `json:"payment_status"`
+	PriceAmount      float64    `json:"price_amount"`
+	PriceCurrency    string     `json:"price_currency"`
+	PurchaseId       string     `json:"purchase_id"`
 }
 
 func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
-	paymentInformation, err := getPaymentInformation(r)
+	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
-		log.Printf("Cannot get payment informations: %v", err)
+		log.Printf("Cannot get payment informations for now payments: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -99,53 +71,77 @@ func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	var data map[string]string
 	err = json.NewDecoder(r.Body).Decode(&data)
 
-	priceCurrency := "USD"
-	payCurrency := data["currency"]
-
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, paymentInformation.Seats, paymentInformation.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycle(user.Id, seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	price, _ := paymentInformation.Plan.Price.Float64()
-	totalPrice := price * float64(paymentInformation.Seats)
-	invoice := InvoiceRequest{totalPrice, priceCurrency, strings.ToUpper(payCurrency), "", opts.EmailLinkPrefix + "/user/search"}
-	invoiceUrl, err := createNowpaymentsInvoice(invoice, paymentCycleId, paymentInformation.Freq)
 
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not create invoice: %v", err)
+		log.Printf("Cannot get current USD balance %v: %v\n", user.Id, err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	writeJsonStr(w, `{ "invoice_url": "`+invoiceUrl+`" }`)
-}
+	price := (plan.Price * float64(seats)) - float64(currentUSDBalance)
 
-func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID, freq int64) (string, error) {
-	invoiceUrl := opts.NowpaymentsApiUrl + "/invoice"
-	apiToken := opts.NowpaymentsToken
-	if apiToken == "" {
-		return "", fmt.Errorf("now Paymenst API token is empty")
-	}
-	invoice.IpnCallbackUrl = opts.NowpaymentsIpnCallbackUrl
-	invoiceData, err := json.Marshal(invoice)
+	payCurrency := data["currency"]
+	paymentResponse, err := createNowPayment(price, payCurrency, paymentCycleId, &user.Id, freq)
 
 	if err != nil {
-		return "", err
+		writeErr(w, http.StatusInternalServerError, "could not create payment: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(paymentResponse)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+}
+
+func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UUID, uid *uuid.UUID, freq int64) (*PaymentResponse, error) {
+	paymentUrl := opts.NowpaymentsApiUrl + "/payment"
+	apiToken := opts.NowpaymentsToken
+	if apiToken == "" {
+		return nil, fmt.Errorf("now Paymenst API token is empty")
+	}
+
+	pr := PaymentRequest{
+		PriceAmount:      price,
+		PriceCurrency:    "USD",
+		PayCurrency:      payCurrency,
+		IpnCallbackUrl:   opts.NowpaymentsIpnCallbackUrl,
+		OrderId:          paymentCycleId,
+		OrderDescription: uid.String() + "#" + strconv.Itoa(int(freq)),
+	}
+
+	paymentData, err := json.Marshal(pr)
+
+	if err != nil {
+		return nil, err
 	}
 
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
 
-	req, err := http.NewRequest("POST", invoiceUrl, strings.NewReader(string(invoiceData)))
+	req, err := http.NewRequest("POST", paymentUrl, strings.NewReader(string(paymentData)))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	log.Printf("aoeu: %v", string(paymentData))
 	req.Header.Set("x-api-key", apiToken)
 	req.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	if response.StatusCode != http.StatusCreated {
+		b, err := io.ReadAll(response.Body)
+		return nil, fmt.Errorf("bad request: %v (%v)", string(b), err)
 	}
 
 	defer func(Body io.ReadCloser) {
@@ -155,37 +151,16 @@ func createNowpaymentsInvoice(invoice InvoiceRequest, paymentCycleId *uuid.UUID,
 		}
 	}(response.Body)
 
-	var data InvoiceResponse
+	var data *PaymentResponse
 	err = json.NewDecoder(response.Body).Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+
 	data.PriceCurrency = strings.ToUpper(data.PriceCurrency)
 	data.PayCurrency = strings.ToUpper(data.PayCurrency)
-	if err != nil {
-		return "", err
-	}
-	id, err := strconv.ParseInt(data.Id, 10, 64)
-	if err != nil {
-		return "", err
-	}
-	priceAmount, err := strconv.ParseFloat(data.PriceAmount, 64)
-	if err != nil {
-		return "", err
-	}
-	invoiceDb := InvoiceDB{
-		NowpaymentsInvoiceId: id,
-		PaymentCycleId:       paymentCycleId,
-		PriceAmount:          int64(priceAmount * usdFactor),
-		PriceCurrency:        data.PriceCurrency,
-		PayCurrency:          data.PayCurrency,
-		PaymentStatus:        "CREATED",
-		Freq:                 freq,
-		CreatedAt:            data.CreatedAt,
-		LastUpdate:           data.CreatedAt,
-	}
-	invoiceDb.InvoiceUrl.String = data.InvoiceUrl
 
-	err = insertNewInvoice(invoiceDb)
-
-	return data.InvoiceUrl, err
+	return data, nil
 }
 
 func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
@@ -225,18 +200,22 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	invoice, err := getInvoice(data.InvoiceId)
+	index := strings.Index(data.OrderDescription, "#")
+
+	userId, err := uuid.Parse(data.OrderDescription[:index])
 	if err != nil {
-		log.Printf("Could not get invoice: %v", err)
+		log.Printf("Could not find uuid: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	userId, err := findUserIdByInvoice(invoice.NowpaymentsInvoiceId)
+
+	freq, err := strconv.ParseInt(data.OrderDescription[index+1:], 10, 64)
 	if err != nil {
-		log.Printf("Could not find user ID by invoice: %v", err)
+		log.Printf("Could not parse freq: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	user, err := findUserById(userId)
 	if err != nil {
 		log.Printf("Could not find user: %v", err)
@@ -253,15 +232,15 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch data.PaymentStatus {
 	case "FINISHED":
-		err := paymentSuccess(user, *invoice.PaymentCycleId, amount, data.PayCurrency, invoice.Freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		err = updateInvoiceFromWebhook(data)
+
+		err = paymentSuccess(user, *data.OrderId, amount, data.PayCurrency, freq, big.NewInt(0))
 		if err != nil {
-			log.Printf("Could update Invoice: %v", err)
+			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -277,21 +256,15 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			"template-plain-payment-success_", defaultMessage,
 			"template-html-payment-success_", other["lang"])
 
+		s := *data.OrderId
 		go func() {
-			insertEmailSent(user.Id, "payment-success-"+invoice.PaymentCycleId.String(), timeNow())
+			insertEmailSent(user.Id, "payment-success-"+s.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
 		}()
 	case "EXPIRED":
-		err := updateInvoiceFromWebhook(data)
-		if err != nil {
-			log.Printf("Could update Invoice: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		email := user.Email
 		var other = map[string]string{}
 		other["email"] = email
@@ -304,48 +277,36 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			"template-plain-payment-expired_", defaultMessage,
 			"template-html-payment-expired_", other["lang"])
 
+		s := *data.OrderId
 		go func() {
-			insertEmailSent(user.Id, "payment-expired-"+invoice.PaymentCycleId.String(), timeNow())
+			insertEmailSent(user.Id, "payment-expired-"+s.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
 		}()
 	case "PARTIALLY_PAID":
-		err := updateInvoiceFromWebhook(data)
-		if err != nil {
-			log.Printf("Could update Invoice: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		email := user.Email
 		var other = map[string]string{}
 		other["email"] = email
-		other["url"] = invoice.InvoiceUrl.String
+		other["url"] = data.PayAddress
 		other["lang"] = "en"
 
-		defaultMessage := "Your payment is partially paid. Please transfer the missing amount over the following link: " + other["url"]
+		defaultMessage := "Your payment is partially paid. Please transfer the missing amount over the following address: " + other["url"]
 		e := prepareEmail(email, other,
 			"template-subject-payment-expired_", "Partially paid",
 			"template-plain-partially-paid_", defaultMessage,
 			"template-html-partially-paid_", other["lang"])
 
+		s := *data.OrderId
 		go func() {
-			insertEmailSent(user.Id, "partially-paid-"+invoice.PaymentCycleId.String(), timeNow())
+			insertEmailSent(user.Id, "partially-paid-"+s.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
 		}()
 	case "FAILED":
-		err := updateInvoiceFromWebhook(data)
-		if err != nil {
-			log.Printf("Could update Invoice: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		email := user.Email
 		var other = map[string]string{}
 		other["email"] = email
@@ -357,21 +318,15 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			"template-plain-partially-failed_", defaultMessage,
 			"template-html-partially-failed_", other["lang"])
 
+		s := *data.OrderId
 		go func() {
-			insertEmailSent(user.Id, "payment-failed-"+invoice.PaymentCycleId.String(), timeNow())
+			insertEmailSent(user.Id, "payment-failed-"+s.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
 		}()
 	case "REFUNDED":
-		err := updateInvoiceFromWebhook(data)
-		if err != nil {
-			log.Printf("Could update Invoice: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		email := user.Email
 		var other = map[string]string{}
 		other["email"] = email
@@ -383,8 +338,9 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 			"template-plain-partially-refunded_", defaultMessage,
 			"template-html-partially-refunded_", other["lang"])
 
+		s := *data.OrderId
 		go func() {
-			insertEmailSent(user.Id, "payment-refunded-"+invoice.PaymentCycleId.String(), timeNow())
+			insertEmailSent(user.Id, "payment-refunded-"+s.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
@@ -408,50 +364,19 @@ func minCrypto(currency string, balance float64) (*big.Int, error) {
 	return amount, nil
 }
 
-func updateInvoiceFromWebhook(data NowpaymentWebhookResponse) error {
-	invoice, _ := getInvoice(data.InvoiceId)
-
-	var err error
-	invoice.PaymentId.Int64 = data.PaymentId
-	invoice.PriceAmount = int64(data.PriceAmount * usdFactor)
-	invoice.PriceCurrency = data.PriceCurrency
-	invoice.PayAmount, err = minCrypto(data.PayCurrency, data.PayAmount)
-	if err != nil {
-		return err
-	}
-	invoice.PayCurrency = data.PayCurrency
-	invoice.ActuallyPaid, err = minCrypto(data.OutcomeCurrency, data.ActuallyPaid)
-	if err != nil {
-		return err
-	}
-	invoice.OutcomeAmount, err = minCrypto(data.OutcomeCurrency, data.OutcomeAmount)
-	if err != nil {
-		return err
-	}
-	invoice.OutcomeCurrency.String = data.OutcomeCurrency
-	invoice.PaymentStatus = data.PaymentStatus
-	invoice.LastUpdate = timeNow().Format(time.RFC3339)
-
-	err = updateInvoice(*invoice)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Helper
-func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
+func paymentInformation(r *http.Request) (int64, int64, *Plan, error) {
 	p := mux.Vars(r)
 	f := p["freq"]
 	s := p["seats"]
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return PaymentInformation{}, errors.New(fmt.Sprintf("Cannot convert number seats: %v", +seats))
+		return 0, 0, nil, errors.New(fmt.Sprintf("Cannot convert number seats: %v", +seats))
 	}
 
 	freq, err := strconv.ParseInt(f, 10, 64)
 	if err != nil {
-		return PaymentInformation{}, errors.New(fmt.Sprintf("Cannot convert number freq: %v", freq))
+		return 0, 0, nil, errors.New(fmt.Sprintf("Cannot convert number freq: %v", freq))
 	}
 
 	var plan *Plan
@@ -462,10 +387,10 @@ func getPaymentInformation(r *http.Request) (PaymentInformation, error) {
 		}
 	}
 	if plan == nil {
-		return PaymentInformation{}, errors.New(fmt.Sprintf("No matching plan found: %v, available: %v", freq, plans))
+		return 0, 0, nil, errors.New(fmt.Sprintf("No matching plan found: %v, available: %v", freq, plans))
 	}
 
-	return PaymentInformation{freq, seats, plan}, nil
+	return freq, seats, plan, nil
 }
 
 func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, error) {

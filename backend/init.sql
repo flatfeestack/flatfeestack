@@ -24,26 +24,6 @@ CREATE TABLE payment_cycle (
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
 
-CREATE TABLE invoice (
-     id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-     nowpayments_invoice_id BIGINT NOT NULL,
-     payment_cycle_id       UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
-     payment_id             BIGINT,
-     price_amount           BIGINT,
-     price_currency         VARCHAR(8) NOT NULL,
-     pay_amount             NUMERIC(78), /*256 bits*/
-     pay_currency           VARCHAR(8) NOT NULL,
-     actually_paid          NUMERIC(78), /*256 bits*/
-     outcome_amount         NUMERIC(78), /*256 bits*/
-     outcome_currency       VARCHAR(8),
-     payment_status         VARCHAR(16),
-     freq                   BIGINT NOT NULL,
-     seats                  BIGINT NOT NULL,
-     invoice_url            TEXT,
-     created_at             TIMESTAMP NOT NULL,
-     last_update            TIMESTAMP NULL
-);
-
 CREATE TABLE daily_payment (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
@@ -80,9 +60,8 @@ CREATE UNIQUE INDEX user_balances_index_2 ON user_balances (
     payment_cycle_id,
     user_id,
     balance_type,
-    currency,
-    day
-); /*TODO: check balance type SPONSOR, I think its not needed anymore*/
+    currency
+);
 
 CREATE TABLE user_emails_sent (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

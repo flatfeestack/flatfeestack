@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
@@ -239,40 +238,23 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	p := mux.Vars(r)
-	f := p["freq"]
-	s := p["seats"]
-	seats, err := strconv.ParseInt(s, 10, 64)
+	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Cannot convert number seats: %v", seats)
+		log.Printf("Cannot get payment informations for stripe payments: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	freq, err := strconv.ParseInt(f, 10, 64)
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Cannot convert number freq: %v", seats)
+		log.Printf("Cannot get current USD balance %v: %v\n", user.Id, err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	var plan *Plan
-	for _, v := range plans {
-		if v.Freq == freq {
-			plan = &v
-			break
-		}
-	}
-	if plan == nil {
-		writeErr(w, http.StatusInternalServerError, "No matching plan found: %v, available: %v", freq, plans)
-		return
-	}
+	cents := ((plan.Price * float64(seats)) - float64(currentUSDBalance)) * 100
 
-	var f1 big.Float
-	f1.SetString("100")
-	cents, _ := f1.Mul(plan.Price, &f1).Int64()
-	cents = cents * int64(seats)
-
-	//cents := stripe.Int64(int64(plan.Price.Int64()))
 	params := &stripe.PaymentIntentParams{
-		Amount:           stripe.Int64(cents),
+		Amount:           stripe.Int64(int64(cents)),
 		Currency:         stripe.String(string(stripe.CurrencyUSD)),
 		Customer:         user.StripeId,
 		PaymentMethod:    user.PaymentMethod,
@@ -307,6 +289,20 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+func currentUSDBalance(paymentCycleId uuid.UUID) (int64, error) {
+	total, err := findSumUserBalanceByCurrency(paymentCycleId)
+	if err != nil {
+		return 0, err
+	}
+	if total["USD"] == nil {
+		return 0, nil
+	}
+
+	f := new(big.Int).Exp(big.NewInt(10), big.NewInt(supportedCurrencies["USD"].FactorPow), nil)
+	t := new(big.Int).Div(total["USD"], f)
+	return t.Int64(), nil
+}
+
 func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 	pc, err := findPaymentCycle(user.PaymentCycleId)
 	if err != nil {
@@ -324,11 +320,14 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		return nil, fmt.Errorf("no matching plan found: %v, available: %v", pc.Freq, plans)
 	}
 
-	var f1 big.Float
-	f1.SetString("100")
-	cents, _ := f1.Mul(plan.Price, &f1).Int64()
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
+	if err != nil {
+		return nil, err
+	}
+	cents := ((plan.Price * float64(pc.Seats)) - float64(currentUSDBalance)) * 100
+
 	params := &stripe.PaymentIntentParams{
-		Amount:        stripe.Int64(cents * int64(pc.Seats)),
+		Amount:        stripe.Int64(int64(cents)),
 		Currency:      stripe.String(string(stripe.CurrencyUSD)),
 		Customer:      user.StripeId,
 		PaymentMethod: user.PaymentMethod,
@@ -876,12 +875,12 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 	ubNew = &UserBalance{
 		PaymentCycleId: currentPaymentCycleId,
 		UserId:         uid,
+		CreatedAt:      timeNow(),
 	}
 	for currency, balance := range currencies {
 		ubNew.Balance = new(big.Int).Neg(balance)
 		ubNew.BalanceType = "CLOSE_CYCLE"
 		ubNew.Currency = currency
-		ubNew.CreatedAt = timeNow()
 
 		err := insertUserBalance(*ubNew)
 		if err != nil {

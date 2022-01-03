@@ -10,16 +10,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"github.com/kjk/dailyrotate"
 	_ "github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v72"
 	"golang.org/x/crypto/ed25519"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -42,7 +40,6 @@ var (
 	admins    []string
 	hoursAdd  int
 	km        = KeyedMutex{}
-	logFile   *dailyrotate.File
 )
 
 type Opts struct {
@@ -63,7 +60,6 @@ type Opts struct {
 	EmailUrl                  string
 	EmailToken                string
 	WebSocketBaseUrl          string
-	LogPath                   string
 	ContractAddr              string
 	NowpaymentsToken          string
 	NowpaymentsIpnKey         string
@@ -107,14 +103,12 @@ func NewOpts() *Opts {
 		"http://localhost/"), "Email link prefix")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
 		"ws://localhost"), "Websocket base URL")
-	flag.StringVar(&o.LogPath, "log", lookupEnv("LOG",
-		os.TempDir()+"/ffs/"), "Log directory, default is /tmp/ffs/")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
 		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
 	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
 	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
-		"https://api.nowpayments.io/v1/"), "NOWPayments API URL")
+		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
 	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
 
 	flag.Usage = func() {
@@ -143,13 +137,6 @@ func NewOpts() *Opts {
 	if o.StripeWebhookSecretKey == "" {
 		o.StripeWebhookSecretKey = "whsec_BlO0hcHIJb82nUM9v8fpq0WP55FxKF2U"
 	}
-
-	pathFormat := filepath.Join(o.LogPath, "backend_2006-01-02.txt")
-	w, err := dailyrotate.NewFile(pathFormat, func(string, bool) {})
-	if err != nil {
-		log.Fatalf("cannot log")
-	}
-	logFile = w
 
 	return o
 }
@@ -304,7 +291,7 @@ func main() {
 
 func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.Printf(msg)
+	log.Errorf(msg)
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")

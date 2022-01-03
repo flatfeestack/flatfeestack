@@ -7,8 +7,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"math/big"
 	"time"
 )
@@ -819,123 +819,6 @@ func insertNewPaymentCycle(uid uuid.UUID, seats int64, freq int64, createdAt tim
 		return nil, err
 	}
 	return &lastInsertId, handleErrMustInsertOne(res)
-}
-
-func insertNewInvoice(invoiceDb InvoiceDB) error {
-	stmt, err := db.Prepare(`INSERT INTO invoice (nowpayments_invoice_id, 
-					 payment_cycle_id, 
-					 price_amount, 
-					 price_currency, 
-					 pay_currency, 
-					 created_at,
-                     last_update,
-                     payment_status,
-                     freq, invoice_url) 
-					 values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`)
-
-	if err != nil {
-		return fmt.Errorf("prepareINSERT INTO payment_cycle for %v statement event: %v", 123, err) //error anpassen
-	}
-	defer closeAndLog(stmt)
-
-	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(invoiceDb.NowpaymentsInvoiceId,
-		invoiceDb.PaymentCycleId,
-		invoiceDb.PriceAmount,
-		invoiceDb.PriceCurrency, invoiceDb.PayCurrency,
-		invoiceDb.CreatedAt, invoiceDb.LastUpdate, invoiceDb.PaymentStatus,
-		invoiceDb.Freq, invoiceDb.InvoiceUrl.String).Scan(&lastInsertId)
-	if err != nil {
-		return err
-	}
-	return nil
-
-	var res sql.Result
-	res, err = stmt.Exec("uid", " createdAt") //wieso braucht es hier noch das Exec??
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateInvoice(invoice InvoiceDB) error {
-	stmt, err := db.Prepare(`UPDATE invoice SET 
-                                           payment_cycle_id = $1, 
-								payment_id = $2,            
-								price_amount = $3,          
-								price_currency = $4,        
-								pay_amount = $5,            
-								pay_currency = $6,          
-								actually_paid = $7,         
-								outcome_amount = $8,        
-								outcome_currency = $9,      
-								payment_status = $10,        
-								created_at = $11,            
-								last_update = $12
-                                    WHERE nowpayments_invoice_id=$13`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", "user", err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(
-		invoice.PaymentCycleId, invoice.PaymentId.Int64, invoice.PriceAmount, invoice.PriceCurrency,
-		invoice.PayAmount.Int64, invoice.PayCurrency, invoice.ActuallyPaid.Int64, invoice.OutcomeAmount.Int64, invoice.OutcomeCurrency.String, invoice.PaymentStatus,
-		invoice.CreatedAt, invoice.LastUpdate, invoice.NowpaymentsInvoiceId)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func getInvoice(id int64) (*InvoiceDB, error) {
-	var invoice InvoiceDB
-	err := db.
-		QueryRow(`SELECT  nowpayments_invoice_id,
-								payment_cycle_id, 
-								payment_id,            
-								price_amount,          
-								price_currency,        
-								pay_amount,            
-								pay_currency,          
-								actually_paid,         
-								outcome_amount,        
-								outcome_currency,      
-								payment_status,
-       							freq,
-       							seats,
-								created_at,            
-								last_update                FROM invoice WHERE nowpayments_invoice_id=$1`, id).
-		Scan(&invoice.NowpaymentsInvoiceId, &invoice.PaymentCycleId, &invoice.PaymentId, &invoice.PriceAmount, &invoice.PriceCurrency,
-			&invoice.PayAmount, &invoice.PayCurrency, &invoice.ActuallyPaid, &invoice.OutcomeAmount, &invoice.OutcomeCurrency, &invoice.PaymentStatus,
-			&invoice.Freq, &invoice.CreatedAt, &invoice.LastUpdate)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		return &invoice, nil
-	default:
-		return nil, err
-	}
-
-}
-
-func findUserIdByInvoice(id int64) (uuid.UUID, error) {
-	var userId uuid.UUID
-
-	err := db.
-		QueryRow(`SELECT payment_cycle.user_id FROM invoice 
-    join payment_cycle on invoice.payment_cycle_id = payment_cycle.id where invoice.nowpayments_invoice_id = $1`, id).Scan(&userId)
-
-	switch err {
-	case sql.ErrNoRows:
-		return uuid.UUID{}, nil
-	case nil:
-		return userId, nil
-	default:
-		return uuid.UUID{}, err
-	}
 }
 
 func insertDailyPayment(dailyPayment DailyPayment) error {

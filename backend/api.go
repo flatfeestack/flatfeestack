@@ -9,9 +9,9 @@ import (
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
 	"golang.org/x/text/language"
-	"log"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -65,12 +65,12 @@ type FlatFeeWeight struct {
 }
 
 type Plan struct {
-	Title       string     `json:"title"`
-	Price       *big.Float `json:"price"`
-	Freq        int64      `json:"freq"`
-	Description string     `json:"desc"`
-	Disclaimer  string     `json:"disclaimer"`
-	FeePrm      int64      `json:"feePrm"`
+	Title       string  `json:"title"`
+	Price       float64 `json:"price"`
+	Freq        int64   `json:"freq"`
+	Description string  `json:"desc"`
+	Disclaimer  string  `json:"disclaimer"`
+	FeePrm      int64   `json:"feePrm"`
 }
 
 type Currencies struct {
@@ -101,23 +101,23 @@ type PayoutToService struct {
 var plans = []Plan{
 	{
 		Title:       "Yearly",
-		Price:       big.NewFloat(125.47), //365 * 330000 / 1-(0.04)
+		Price:       125.47, //365 * 330000 / 1-(0.04)
 		Freq:        365,
 		FeePrm:      40,
-		Description: "By paying yearly <b>" + big.NewFloat(125.47).String() + " USD</b>, you help us to keep payment processing costs low and more money will reach your sponsored projects",
+		Description: "You can help your sponsored projects on a yearly basis with a flat fee of <b>125.47 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 4%",
 	},
 	{
 		Title:       "Forever",
-		Price:       big.NewFloat(3120.47), //9125 * 330000 / 1-(0.035)
+		Price:       3120.47, //9125 * 330000 / 1-(0.035)
 		Freq:        9125,
 		FeePrm:      35,
-		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>" + big.NewFloat(3120.47).String() + " USD</b>",
+		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>3120.47 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	},
 	{
 		Title:       "Beta",
-		Price:       big.NewFloat(0.66),
+		Price:       0.66,
 		Freq:        2,
 		Description: "Beta testing: <b>" + big.NewFloat(0.66).String() + " USD</b>",
 		Disclaimer:  "",
