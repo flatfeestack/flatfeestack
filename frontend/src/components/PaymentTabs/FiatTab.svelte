@@ -1,13 +1,13 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {error, user, config} from "../../ts/store";
+    import {error, user, config, userBalances} from "../../ts/store";
     import Dots from "../Dots.svelte";
-    import {stripePayment, stripePaymentMethod} from "../../ts/services";
+    import {formatBalance, stripePayment, stripePaymentMethod} from "../../ts/services";
     import {loadStripe} from "@stripe/stripe-js/pure";
     import {API} from "../../ts/api";
 
-    export let total: number;
-    export let topUp: boolean;
+    export let remaining: number;
+    export let current: number;
     export let seats: number;
     export let freq: number;
 
@@ -111,16 +111,30 @@
 </div>
 {/if}
 
+{#if $userBalances && $userBalances.total}
+<div class="container">
+<label class="nobreak">Current balance: </label>
+    <div class="container">
+        {formatBalance($userBalances.total["USD"],"USD")}
+    </div>
+</div>
+{/if}
+
 <div class="container">
     <div class="p-2 m-2 w25 rounded border-primary-700" bind:this="{card}"></div>
     <div class="p-2">
         <form on:submit|preventDefault="{handleSubmit}">
-            <button class="button1" disabled="{isSubmitting || total < 10}" type="submit">❤&nbsp;Support
+            <button class="button1" disabled="{isSubmitting || remaining < (current / 2)}" type="submit">❤&nbsp;Support
                 {#if isSubmitting}
                     <Dots/>
                 {/if}
             </button>
-        </form>
+            {#if remaining < (current / 2)}
+                (No need to top-up your account, you still funds)
+            {:else}
+                for ${remaining.toFixed(2)}
+            {/if}
+            </form>
     </div>
 </div>
 

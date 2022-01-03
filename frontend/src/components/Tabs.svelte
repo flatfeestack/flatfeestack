@@ -1,8 +1,8 @@
 <script>
     export let items = [];
     export let activeTabValue = 1;
-    export let total;
-    export let topUp;
+    export let remaining;
+    export let current;
     export let seats;
     export let freq;
     const handleClick = tabValue => () => (activeTabValue = tabValue);
@@ -18,7 +18,7 @@
 {#each items as item}
     {#if activeTabValue == item.value}
         <div class="box">
-            <svelte:component this={item.component} {total} {topUp} {seats} {freq}/>
+            <svelte:component this={item.component} {remaining} {current} {seats} {freq}/>
         </div>
     {/if}
 {/each}

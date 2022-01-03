@@ -4,7 +4,7 @@
   import { API } from "../ts/api";
   import { error, user} from "../ts/store";
   import type { Contributions, Repo } from "../types/users";
-  import { formatDay, formatMUSD } from "../ts/services";
+  import { formatDay, formatBalance } from "../ts/services";
 
   let repos: Repo[] = [];
   let contributions: Contributions[] = [];
@@ -100,9 +100,9 @@
                   Unclaimed
                 {/if}
               </td>
-              <td>{formatMUSD(contribution.balance)}</td>
+              <td>{formatBalance(contribution.balance, "TODO")}</td>
             {:else}
-              <td colspan="4">Unprocessed: {formatMUSD(contribution.balanceRepo)} (analysis pending)</td>
+              <td colspan="4">Unprocessed: {formatBalance(contribution.balanceRepo, "TODO")} (analysis pending)</td>
             {/if}
             <td>{formatDay(new Date(contribution.day))}</td>
           </tr>

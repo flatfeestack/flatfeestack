@@ -16,7 +16,7 @@ import type {
   Contributions, UserBalanceCore,
   PayoutAddress
 } from "../types/users";
-import { PaymentCycle, PayoutInfo, UserStatus } from "../types/users";
+import {PaymentCycle, PaymentResponse, PayoutInfo, UserStatus} from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -110,7 +110,7 @@ export const API = {
     setImage: (image: string) => backendToken.post(`users/me/image`, { json: { image } }),
     setupStripe: () => backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) => backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
-    nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}),
+    nowpaymentsPayment: (currency: string, freq: number, seats: number) => backendToken.post(`users/me/nowpayments/${freq}/${seats}`, { json: { currency }}).json<PaymentResponse>(),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
     paymentCycle: () => backendToken.post(`users/me/payment-cycle`).json<PaymentCycle>(),

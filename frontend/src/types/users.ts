@@ -37,20 +37,20 @@ export type ClientSecret = {
 export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
-  total: Map<string, BigInt>;
+  total: Map<string, bigint>;
   daysLeft: number;
 }
 
 export type UserBalanceCore = {
   userId: string;
-  balance: BigInt;
+  balance: bigint;
   currency: string;
 }
 
 export type UserBalance = {
   paymentCycleId: string;
   userId: string;
-  balance: BigInt;
+  balance: bigint;
   currency: string;
   balanceType: string;
   createdAt: string;
@@ -144,11 +144,27 @@ export type PayoutAddress = {
 
 export type PayoutInfo = {
   currency: string;
-  amount: BigInt;
+  amount: bigint;
 }
 
 export type Currencies = {
   name: string;
   factorPow: number;
   isCrypto: boolean;
+}
+
+export type PaymentResponse = {
+  payment_id: string;
+  payment_status: string;
+  pay_address: string;
+  price_amount: number;
+  price_currency: string;
+  pay_amount: number;
+  pay_currency: string;
+  order_id: string;
+  order_description: string;
+  ipn_callback_url: string;
+  created_at: string;
+  updated_at: string;
+  purchase_id: string;
 }

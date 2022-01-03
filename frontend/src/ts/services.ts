@@ -140,7 +140,10 @@ export const connectWs = async () => {
     const ws = await connect();
     ws.onmessage = function(event:MessageEvent) {
       try {
-        userBalances.set(JSON.parse(event.data));
+        const json = JSON.parse(event.data);
+        userBalances.set(json);
+
+        console.log("AOUAEOU", json);
       } catch (e) {
         console.log(e);
       }
@@ -177,20 +180,35 @@ export const parseJwt = (token) => {
 
 //https://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
 export const formatDate = (d: Date):string => {
-  return d.getFullYear()  + "-" + ("0"+(d.getMonth())).slice(-2) + "-" +
+  return d.getFullYear()  + "-" + ("0"+(1+d.getMonth())).slice(-2) + "-" +
     ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
 }
 
+export const formatPaymentCycle = (c: string):string => {
+  return c.substring(0, 10)+"…"
+}
+
 export const formatDay = (d: Date):string => {
-  return d.getFullYear()  + "-" + ("0"+(d.getMonth())).slice(-2) + "-" +
+  return d.getFullYear()  + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" +
     ("0" + d.getDate()).slice(-2);
 }
 
-export const formatMUSD= (n: number):string => {
-  if(n > 1000000) {
-    return (n/1000000).toFixed(2);
+export const formatBalance= (n: bigint, c: string):string => {
+  if (c === "USD") {
+    if (n > BigInt(1000000) || n <= BigInt(-1000000)) {
+      const num = BigInt(n) / BigInt(1000000);
+      return '$'+Number(num).toString(10);
+    } else if (n == BigInt(0)) {
+      return '$0';
+    } else {
+      const num = BigInt(n) / BigInt(10000);
+      return Number(num).toString(10) + '¢';
+    }
   } else {
-    return (n/10000).toFixed(2)+'¢';
+    const conf = get(config);
+    const currency = conf.supportedCurrencies[c];
+    const num = BigInt(n) / (BigInt(10) ** BigInt(currency.factorPow));
+    return Number(num).toString(10) + ' ' + c;
   }
 }
 
@@ -234,3 +252,7 @@ export const stripePayment = async (stripe, freq: number, seats: number, payment
   const res = await API.user.stripePayment(freq, seats);
   await stripe.confirmCardPayment(res.client_secret, {payment_method })
 };
+
+export function isIterable (value) {
+  return Symbol.iterator in Object(value);
+}

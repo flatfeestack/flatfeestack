@@ -4,7 +4,7 @@
     import {API} from "../ts/api";
     import {error} from "../ts/store";
     import type {UserBalanceCore} from "../types/users.ts";
-    import {formatMUSD, formatDay} from "../ts/services";
+    import {formatBalance, formatDay} from "../ts/services";
     import {navigate} from "svelte-routing";
     import {Contributions} from "../types/users.ts";
     import Spinner from "../components/Spinner.svelte";
@@ -130,7 +130,7 @@
                                 Unclaimed
                             {/if}
                         </td>
-                        <td>{formatMUSD(contribution.balance)}</td>
+                        <td>{formatBalance(contribution.balance, "TODO")}</td>
                         <td>{formatDay(new Date(contribution.day))}</td>
                     </tr>
                 {:else}

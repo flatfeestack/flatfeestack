@@ -35,6 +35,7 @@
 
   $: {
     let tmp:Map<string, Currencies>=new Map<string, Currencies>();
+    //https://stackoverflow.com/questions/34913675/how-to-iterate-keys-values-in-javascript
     const e = Object.entries($config.supportedCurrencies);
     for (const [key, value] of e) {
       if (!payoutAddresses.find(e => e.currency === key) && value.isCrypto) {

@@ -4,7 +4,7 @@
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type {Repo} from "../types/users";
-  import { connectWs, formatDate} from "../ts/services";
+  import {connectWs, formatDate, formatBalance, formatPaymentCycle} from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repo[] = [];
@@ -34,27 +34,6 @@
     </div>
   </div>
 
-  {#if $userBalances && $userBalances.total}
-    <div class="container">
-      <table>
-        <thead>
-        <tr>
-          <th>Currency</th>
-          <th>My Balance</th>
-        </tr>
-        </thead>
-        <tbody>
-        {#each $userBalances.total as row}
-          <tr>
-            <td>{row.currency}</td>
-            <td>{row.balance}</td>
-          </tr>
-        {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-
   <PaymentSelection/>
 
   {#if $userBalances && $userBalances.userBalances}
@@ -63,22 +42,18 @@
       <table>
         <thead>
         <tr>
-          <th>Payment Cycle</th>
           <th>Balance</th>
-          <th>Currency</th>
-          <th>Type</th>
-          <th>Day</th>
+          <th>Date</th>
+          <th>Type / Cycle</th>
         </tr>
         </thead>
         <tbody>
 
         {#each $userBalances.userBalances as row}
           <tr>
-            <td>{row.paymentCycleId}</td>
-            <td>{row.balance}</td>
-            <td>{row.currency}</td>
-            <td>{row.balanceType}</td>
+            <td>{formatBalance(row.balance, row.currency)}</td>
             <td>{formatDate(new Date(row.createdAt))}</td>
+            <td>{row.balanceType} / {formatPaymentCycle(row.paymentCycleId)}</td>
           </tr>
         {:else}
           <tr>

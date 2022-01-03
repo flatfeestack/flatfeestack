@@ -39,17 +39,11 @@
 
     let current: number;
     $: {
-        if($userBalances && $userBalances.total) {
-            console.log("AAA",$userBalances.total["USD"]);
-            console.log("AAA",$userBalances.total);
-        }
         current = $userBalances && $userBalances.total ? $userBalances.total["USD"] / 1000000 : 0
     }
 
     let remaining: number;
     $: {
-        console.log("total", total);
-        console.log("current", current);
         const rem = total - current;
         remaining = rem > 0 ? rem:0;
     }
@@ -86,8 +80,8 @@
 </style>
 
 <h2 class="p-2 m-2">Payment</h2>
-<p class="p-2 m-2">We request your permission that we initiate a payment or a series of payments on your behalf of
-    {total.toFixed(2)} USD. By continuing, I authorize FlatFeeStack to send instructions to the financial institution that issued my card to
+<p class="p-2 m-2">We request your permission that we initiate a payment or a series of payments on your behalf.
+    By continuing, I authorize FlatFeeStack to send instructions to the financial institution that issued my card to
     take payments from my card account in accordance with the terms of my agreement with you.</p>
 <div class="container-stretch">
     {#each $config.plans as { title, desc, disclaimer, freq }}
@@ -105,16 +99,17 @@
         <input size="5" type="number" min="1" bind:value={currentSeats}> Seats
     </div>
     <div class="p-2">
-        {#if remaining >= 10}
-            Total&nbsp;Sponsoring:<span class="bold">${remaining.toFixed(2)}</span>
+        {#if remaining >= (current / 2)}
+            <div>Sponsoring Amount:<span class="bold">${remaining.toFixed(2)}</span></div>
             {#if current.toFixed(2) > 0}
-                (${total.toFixed(2)} - ${current.toFixed(2)} [current balance] = ${remaining.toFixed(2)} [remaining
-                payment])
+                <div class="small">
+                (${total.toFixed(0)} [{currentSeats} x {selectedPlan.price} {selectedPlan.freq> 365? (" x "+(selectedPlan.freq)/365): ""}] - ${current.toFixed(0)} [current balance])
+                </div>
             {/if}
         {/if}
     </div>
 </div>
 
 <div class="p-2 m-2">
-    <Tabs {items} total={remaining.toFixed(2)} topup="true" seats="{currentSeats}" freq="{currentFreq}"  />
+    <Tabs {items} remaining={remaining} current={current} seats="{currentSeats}" freq="{currentFreq}"  />
 </div>
