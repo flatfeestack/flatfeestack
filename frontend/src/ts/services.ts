@@ -197,7 +197,7 @@ export const formatBalance= (n: bigint, c: string):string => {
   if (c === "USD") {
     if (n > BigInt(1000000) || n <= BigInt(-1000000)) {
       const num = BigInt(n) / BigInt(1000000);
-      return '$'+Number(num).toString(10);
+      return Number(num).toString(10);
     } else if (n == BigInt(0)) {
       return '$0';
     } else {
@@ -208,7 +208,7 @@ export const formatBalance= (n: bigint, c: string):string => {
     const conf = get(config);
     const currency = conf.supportedCurrencies[c];
     const num = BigInt(n) / (BigInt(10) ** BigInt(currency.factorPow));
-    return Number(num).toString(10) + ' ' + c;
+    return Number(num).toString(10);
   }
 }
 

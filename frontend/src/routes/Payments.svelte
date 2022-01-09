@@ -43,6 +43,7 @@
         <thead>
         <tr>
           <th>Balance</th>
+          <th>Currency</th>
           <th>Date</th>
           <th>Type / Cycle</th>
         </tr>
@@ -52,6 +53,7 @@
         {#each $userBalances.userBalances as row}
           <tr>
             <td>{formatBalance(row.balance, row.currency)}</td>
+            <td>{row.currency}</td>
             <td>{formatDate(new Date(row.createdAt))}</td>
             <td>{row.balanceType} / {formatPaymentCycle(row.paymentCycleId)}</td>
           </tr>
