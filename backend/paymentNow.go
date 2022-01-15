@@ -60,7 +60,7 @@ type NowpaymentWebhookResponse struct {
 	PurchaseId       string     `json:"purchase_id"`
 }
 
-func nowpaymentsPayment(w http.ResponseWriter, r *http.Request, user *User) {
+func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
 		log.Printf("Cannot get payment informations for now payments: %v", err)
@@ -163,8 +163,8 @@ func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UU
 	return data, nil
 }
 
-func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
-	nowpaymentsSignature := r.Header.Get("x-nowpayments-sig")
+func nowWebhook(w http.ResponseWriter, r *http.Request) {
+	nowSignature := r.Header.Get("x-nowpayments-sig")
 	var data NowpaymentWebhookResponse
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -180,7 +180,7 @@ func nowpaymentsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isWebhookVerified, err := verifyNowpaymentsWebhook(jsonData, nowpaymentsSignature)
+	isWebhookVerified, err := verifyNowWebhook(jsonData, nowSignature)
 	if debug {
 		isWebhookVerified = true
 	}
@@ -393,7 +393,7 @@ func paymentInformation(r *http.Request) (int64, int64, *Plan, error) {
 	return freq, seats, plan, nil
 }
 
-func verifyNowpaymentsWebhook(data []byte, nowpaymentsSignature string) (bool, error) {
+func verifyNowWebhook(data []byte, nowpaymentsSignature string) (bool, error) {
 	key := opts.NowpaymentsIpnKey
 	mac := hmac.New(sha512.New, []byte(key))
 

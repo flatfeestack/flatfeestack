@@ -212,7 +212,7 @@ func main() {
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowpaymentsPayment)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/nowpayments/{freq}/{seats}", jwtAuthUser(nowPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/seats/{seats}", jwtAuthUser(updateSeats)).Methods(http.MethodPost)
@@ -239,7 +239,7 @@ func main() {
 
 	//hooks
 	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/nowpayments", nowpaymentsWebhook).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", nowWebhook).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
 
 	//admin
