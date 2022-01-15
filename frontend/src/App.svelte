@@ -174,7 +174,7 @@
         <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
         <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component="{ConfirmInvite}" />
 
-        {#if $user.id && ($route.pathname.startsWith("/user") || pathname.startsWith("/user"))}
+        {#if $user.id}
           <Route path="/user/search" component="{Search}" />
           <Route path="/user/payments" component="{Payments}" />
           <Route path="/user/settings" component="{Settings}" />
@@ -182,6 +182,14 @@
           <Route path="/user/badges" component="{Badges}" />
           <Route path="/user/admin" component="{Admin}" />
           <Route path="/user/invitations" component="{Invitations}" />
+        {:else}
+          <Route path="/user/search" component="{Signup}" />
+          <Route path="/user/payments" component="{Signup}" />
+          <Route path="/user/settings" component="{Signup}" />
+          <Route path="/user/income" component="{Signup}" />
+          <Route path="/user/badges" component="{Signup}" />
+          <Route path="/user/admin" component="{Signup}" />
+          <Route path="/user/invitations" component="{Signup}" />
         {/if}
         <Route path="*" component="{CatchAll}" />
       {/if}

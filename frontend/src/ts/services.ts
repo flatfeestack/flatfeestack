@@ -1,4 +1,4 @@
-import { token, user, loginFailed, userBalances, config } from "./store";
+import {token, user, loginFailed, userBalances, config, error} from "./store";
 import { API } from "./api";
 import { Token, Users } from "../types/users";
 import { get } from "svelte/store";
@@ -142,8 +142,6 @@ export const connectWs = async () => {
       try {
         const json = JSON.parse(event.data);
         userBalances.set(json);
-
-        console.log("AOUAEOU", json);
       } catch (e) {
         console.log(e);
       }
@@ -204,6 +202,8 @@ export const formatBalance= (n: bigint, c: string):string => {
       const num = BigInt(n) / BigInt(10000);
       return Number(num).toString(10) + '¢';
     }
+  } if (c === "---") {
+    return "---";
   } else {
     const conf = get(config);
     const currency = conf.supportedCurrencies[c];
@@ -245,12 +245,18 @@ export const stripePaymentMethod = async (stripe, cardElement) => {
     cs.client_secret,
     { payment_method: { card: cardElement } },
     { handleActions: false });
+  if(result.error) {
+    throw "Card problem: " + result.error.code + (result.error.decline_code ? (", " + result.error.decline_code) : "");
+  }
   user.set(await API.user.updatePaymentMethod(result.setupIntent.payment_method));
 };
 
 export const stripePayment = async (stripe, freq: number, seats: number, payment_method: string) => {
   const res = await API.user.stripePayment(freq, seats);
-  await stripe.confirmCardPayment(res.client_secret, {payment_method })
+  const result = await stripe.confirmCardPayment(res.client_secret, {payment_method })
+  if(result.error) {
+    throw "Payment problem: " + result.error.code + (result.error.decline_code ? (", " + result.error.decline_code) : "");
+  }
 };
 
 export function isIterable (value) {

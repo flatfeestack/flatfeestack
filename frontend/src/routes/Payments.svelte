@@ -45,7 +45,7 @@
           <th>Balance</th>
           <th>Currency</th>
           <th>Date</th>
-          <th>Type / Cycle</th>
+          <th>Type</th>
         </tr>
         </thead>
         <tbody>
@@ -55,7 +55,7 @@
             <td>{formatBalance(row.balance, row.currency)}</td>
             <td>{row.currency}</td>
             <td>{formatDate(new Date(row.createdAt))}</td>
-            <td>{row.balanceType} / {formatPaymentCycle(row.paymentCycleId)}</td>
+            <td title="Payment cycle Id: {row.paymentCycleId}">{row.balanceType}</td>
           </tr>
         {:else}
           <tr>
