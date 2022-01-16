@@ -2,12 +2,12 @@
 import Navigation from "../components/Navigation.svelte";
 import { API } from "../ts/api";
 import Spinner from "../components/Spinner.svelte";
-import { formatDate, storeToken } from "../ts/services";
+import {formatDate, formatNowUTC, storeToken} from "../ts/services";
 import { config, error, loadedSponsoredRepos, user } from "../ts/store";
 import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
 
-let promisePendingPayouts =API.payouts.payoutInfos();
+//let promisePendingPayouts =API.payouts.payoutInfos();
 let promiseTime = API.payouts.time();
 let promiseUsers = API.admin.users();
 let showSuccess = false;
@@ -25,9 +25,14 @@ const handleFakeContribution= async(json: string )=> {
 }
 
 const handleWarp = async (hours: number) => {
-  await API.user.timeWarp(hours);
-  await API.authToken.timeWarp(hours);
-  await refresh();
+  const p1 = API.user.timeWarp(hours);
+  const p2 = API.authToken.timeWarp(hours);
+  const p3 = refresh();
+
+  const res = await p2;
+  storeToken(res);
+  await p1;
+  await p3;
 }
 
 const payout = async (exchangeRate: number) => {
@@ -57,9 +62,9 @@ let json = `{
 
 const refresh = async () => {
   promiseTime = API.payouts.time();
-  promisePendingPayouts = API.payouts.pending("pending");
-  promisePaidPayouts = API.payouts.pending("paid");
-  promiseLimboPayouts= API.payouts.pending("limbo");
+  //promisePendingPayouts = API.payouts.pending("pending");
+  //promisePaidPayouts = API.payouts.pending("paid");
+  //promiseLimboPayouts= API.payouts.pending("limbo");
   promiseUsers = API.admin.users();
 }
 
@@ -89,14 +94,15 @@ async function loginAs(email: string) {
     }
 </style>
 
-
 <Navigation>
-  <h1 class="px-2">Admin</h1>
+  <h2 class="px-2">Time</h2>
   <div class="container">
   {#await promiseTime}
-    Time on the backend / UTC: ...
+    Time on the backend  / UTC: ...<br/>
+    Time on the frontend / UTC: {formatNowUTC()}
   {:then res}
-    Time on the backend / UTC: {res.time}
+    Time on the backend  / UTC: {res.time}<br/>
+    Time on the frontend / UTC: {formatNowUTC()}
   {/await}
   </div>
 
@@ -171,38 +177,6 @@ async function loginAs(email: string) {
   <h2>Fake Contribution</h2>
   <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button>
   Email: <textarea bind:value={json} rows="10" cols="50"></textarea>
-
-
-
-  <h2>Pending Payouts</h2>
-  {#await promisePendingPayouts}
-    <Spinner />
-  {:then res}
-    <table>
-      <thead>
-      <tr>
-        <th>Currency</th>
-        <th>Amount</th>
-      </tr>
-      </thead>
-      <tbody>
-      {#if res && res.length > 0}
-        {#each res as row}
-          <tr>
-            <td>{row.currency}</td>
-            <td>{row.amount}</td>
-          </tr>
-        {:else}
-          <tr><td colspan="4">No Data</td></tr>
-        {/each}
-      {:else}
-        <tr><td colspan="4">No Data</td></tr>
-      {/if}
-      </tbody>
-    </table>
-  {:catch err}
-    {error.set(err)}
-  {/await}
 
   <h2>Payout Action</h2>
   <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75" on:click={() => payout(exchangeRate)}>

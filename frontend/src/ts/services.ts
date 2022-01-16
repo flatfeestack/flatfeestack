@@ -181,7 +181,14 @@ export const parseJwt = (token) => {
 //https://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
 export const formatDate = (d: Date):string => {
   return d.getFullYear()  + "-" + ("0"+(1+d.getMonth())).slice(-2) + "-" +
-    ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    ("0" + d.getDate()).slice(-2) + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2);
+}
+
+export function formatNowUTC() {
+    const date = new Date();
+    const nowUtc = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(),
+        date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+    return formatDate(nowUtc);
 }
 
 export const formatPaymentCycle = (c: string):string => {

@@ -82,7 +82,7 @@ const search = ky.create({
 export const API = {
   authToken: {
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
-    timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`),
+    timeWarp: (hours: number) => authToken.post(`timewarp/${hours}`).json<Token>(),
     loginAs: (email: string) => authToken.post(`admin/login-as/${email}`).json<Token>()
   },
   auth: {
