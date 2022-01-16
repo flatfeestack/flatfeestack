@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
@@ -9,8 +10,9 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -41,6 +43,12 @@ type PaymentResponse struct {
 	CreatedAt        string  `json:"created_at"`
 	UpdatedAt        string  `json:"updated_at"`
 	PurchaseId       string  `json:"purchase_id"`
+}
+
+type PaymentResponse2 struct {
+	PayAddress  string   `json:"payAddress"`
+	PayAmount   *big.Int `json:"payAmount"`
+	PayCurrency string   `json:"payCurrency"`
 }
 
 type NowpaymentWebhookResponse struct {
@@ -94,8 +102,16 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
+	amount, err := minCrypto(paymentResponse.PayCurrency, paymentResponse.PayAmount)
+
+	paymentResponse2 := PaymentResponse2{
+		PayAddress:  paymentResponse.PayAddress,
+		PayAmount:   amount,
+		PayCurrency: paymentResponse.PayCurrency,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(paymentResponse)
+	err = json.NewEncoder(w).Encode(paymentResponse2)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
@@ -132,7 +148,7 @@ func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("aoeu: %v", string(paymentData))
+
 	req.Header.Set("x-api-key", apiToken)
 	req.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(req)
@@ -164,44 +180,31 @@ func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UU
 }
 
 func nowWebhook(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Could not read body: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	nowSignature := r.Header.Get("x-nowpayments-sig")
+	err = verifyNowWebhook(body, nowSignature)
+	if err != nil {
+		log.Printf("Wrong signature: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	var data NowpaymentWebhookResponse
-	err := json.NewDecoder(r.Body).Decode(&data)
+	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("Could not parse webhook data: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Printf("Could not convert to JSON: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	isWebhookVerified, err := verifyNowWebhook(jsonData, nowSignature)
-	if debug {
-		isWebhookVerified = true
-	}
-
-	data.PayCurrency = strings.ToUpper(data.PayCurrency)
-	data.PriceCurrency = strings.ToUpper(data.PriceCurrency)
-	data.OutcomeCurrency = strings.ToUpper(data.OutcomeCurrency)
-	data.PaymentStatus = strings.ToUpper(data.PaymentStatus)
-
-	if err != nil {
-		log.Printf("Could not verify Webhook data: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if !isWebhookVerified {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	index := strings.Index(data.OrderDescription, "#")
-
 	userId, err := uuid.Parse(data.OrderDescription[:index])
 	if err != nil {
 		log.Printf("Could not find uuid: %v", err)
@@ -222,7 +225,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	//outcome_amount - this parameter shows the amount that will be (or is already) received on your Outcome Wallet once the transaction is settled.
 	amount, err := minCrypto(data.OutcomeCurrency, data.OutcomeAmount)
 	if err != nil {
 		log.Printf("Could not find currency: %v", err)
@@ -231,121 +234,158 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch data.PaymentStatus {
-	case "FINISHED":
+	case "finished":
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		err = paymentSuccess(user, *data.OrderId, amount, data.PayCurrency, freq, big.NewInt(0))
+		err = paymentSuccess(user, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		email := user.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["lang"] = "en"
-
-		defaultMessage := "Your payment was successful, you can start supporting your favorit repositories!"
-		e := prepareEmail(email, other,
-			"template-subject-payment-success_", "Payment successful",
-			"template-plain-payment-success_", defaultMessage,
-			"template-html-payment-success_", other["lang"])
-
-		s := *data.OrderId
-		go func() {
-			insertEmailSent(user.Id, "payment-success-"+s.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}()
-	case "EXPIRED":
 		email := user.Email
 		var other = map[string]string{}
 		other["email"] = email
 		other["url"] = opts.EmailLinkPrefix + "/user/payments"
 		other["lang"] = "en"
 
-		defaultMessage := "Your payment expired. To start a new payment go to: " + other["url"]
+		defaultMessage := "Crypto payment successful. See your payment here: " + other["url"]
 		e := prepareEmail(email, other,
-			"template-subject-payment-expired_", "Payment expired",
-			"template-plain-payment-expired_", defaultMessage,
-			"template-html-payment-expired_", other["lang"])
+			"template-subject-success_", "Payment successful",
+			"template-plain-success_", defaultMessage,
+			"template-html-success_", other["lang"])
 
-		s := *data.OrderId
-		go func() {
-			insertEmailSent(user.Id, "payment-expired-"+s.String(), timeNow())
+		err = sendToBrowser(user.Id, *data.OrderId)
+		if err != nil {
+			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
+		}
+		go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+			insertEmailSent(uid, "success-"+paymentCycleId.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
-		}()
-	case "PARTIALLY_PAID":
-		email := user.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["url"] = data.PayAddress
-		other["lang"] = "en"
+		}(user.Id, *data.OrderId, e)
 
-		defaultMessage := "Your payment is partially paid. Please transfer the missing amount over the following address: " + other["url"]
-		e := prepareEmail(email, other,
-			"template-subject-payment-expired_", "Partially paid",
-			"template-plain-partially-paid_", defaultMessage,
-			"template-html-partially-paid_", other["lang"])
+	case "partially_paid":
+		ub, err := findUserBalancesAndType(*data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
+		if err != nil {
+			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if ub != nil {
+			log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+			return
+		}
 
-		s := *data.OrderId
-		go func() {
-			insertEmailSent(user.Id, "partially-paid-"+s.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}()
-	case "FAILED":
-		email := user.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["lang"] = "en"
+		ubNew := UserBalance{
+			PaymentCycleId: *data.OrderId,
+			UserId:         user.Id,
+			Balance:        big.NewInt(0),
+			BalanceType:    "PART_PAID",
+			Currency:       strings.ToUpper(data.PayCurrency),
+			CreatedAt:      timeNow(),
+		}
 
-		defaultMessage := "Your payment has failed. Please contact support@flatfeestack.io"
-		e := prepareEmail(email, other,
-			"template-subject-payment-failed_", "Payment failed",
-			"template-plain-partially-failed_", defaultMessage,
-			"template-html-partially-failed_", other["lang"])
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("Insert user balance for %v: %v\n", user.Id, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-		s := *data.OrderId
-		go func() {
-			insertEmailSent(user.Id, "payment-failed-"+s.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}()
-	case "REFUNDED":
-		email := user.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["lang"] = "en"
+		err = sendToBrowser(user.Id, *data.OrderId)
+		if err != nil {
+			log.Infof("browser seems offline, need to send email %v", err)
 
-		defaultMessage := "You got your money refunded."
-		e := prepareEmail(email, other,
-			"template-subject-payment-refunded_", "Payment refunded",
-			"template-plain-partially-refunded_", defaultMessage,
-			"template-html-partially-refunded_", other["lang"])
+			email := user.Email
+			var other = map[string]string{}
+			other["email"] = email
+			other["url"] = opts.EmailLinkPrefix + "/user/payments"
+			other["lang"] = "en"
 
-		s := *data.OrderId
-		go func() {
-			insertEmailSent(user.Id, "payment-refunded-"+s.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}()
+			defaultMessage := fmt.Sprintf("Only partial payment received (%v) of (%v), please send the rest (%v) to: ", data.ActuallyPaid, data.PayAmount, data.PayAmount-data.ActuallyPaid)
+			e := prepareEmail(email, other,
+				"template-subject-part_paid_", "Partially paid",
+				"template-plain-part_paid_", defaultMessage,
+				"template-html-part_paid_", other["lang"])
+
+			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+				insertEmailSent(uid, "failed-"+paymentCycleId.String(), timeNow())
+				err = sendEmail(opts.EmailUrl, e)
+				if err != nil {
+					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+			}(user.Id, *data.OrderId, e)
+		}
+	case "expired":
+	case "failed":
+	case "refunded":
+		suf := "NONE"
+		switch data.PaymentStatus {
+		case "expired":
+			suf = "EXP"
+		case "failed":
+			suf = "FAIL"
+		case "refunded":
+			suf = "REF"
+		}
+		ub, err := findUserBalancesAndType(*data.OrderId, "FAILED_"+suf, strings.ToUpper(data.PayCurrency))
+		if err != nil {
+			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if ub != nil {
+			log.Printf("We already processed this event, we can safely ignore it: %v", ub)
+			return
+		}
+
+		ubNew := UserBalance{
+			PaymentCycleId: *data.OrderId,
+			UserId:         user.Id,
+			Balance:        big.NewInt(0),
+			BalanceType:    "FAILED_" + suf,
+			Currency:       strings.ToUpper(data.PayCurrency),
+			CreatedAt:      timeNow(),
+		}
+
+		err = insertUserBalance(ubNew)
+		if err != nil {
+			log.Printf("Insert user balance for %v: %v\n", user.Id, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = sendToBrowser(user.Id, *data.OrderId)
+		if err != nil {
+			log.Infof("browser seems offline, need to send email %v", err)
+
+			email := user.Email
+			var other = map[string]string{}
+			other["email"] = email
+			other["url"] = opts.EmailLinkPrefix + "/user/payments"
+			other["lang"] = "en"
+
+			defaultMessage := fmt.Sprintf("Payment %v, please check payment: %s", data.PaymentStatus, other["url"])
+			e := prepareEmail(email, other,
+				"template-subject-failed_", "Payment "+data.PaymentStatus,
+				"template-plain-failed_", defaultMessage,
+				"template-html-failed_", other["lang"])
+
+			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+				insertEmailSent(uid, "failed-"+suf+"-"+paymentCycleId.String(), timeNow())
+				err = sendEmail(opts.EmailUrl, e)
+				if err != nil {
+					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+			}(user.Id, *data.OrderId, e)
+		}
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)
@@ -358,8 +398,9 @@ func minCrypto(currency string, balance float64) (*big.Int, error) {
 		return nil, err
 	}
 	f := new(big.Float).SetInt(i)
-	amount := new(big.Int)
 	amountF := new(big.Float).Mul(big.NewFloat(balance), f)
+
+	amount := new(big.Int)
 	amountF.Int(amount)
 	return amount, nil
 }
@@ -393,15 +434,31 @@ func paymentInformation(r *http.Request) (int64, int64, *Plan, error) {
 	return freq, seats, plan, nil
 }
 
-func verifyNowWebhook(data []byte, nowpaymentsSignature string) (bool, error) {
+func verifyNowWebhook(data []byte, sig string) error {
 	key := opts.NowpaymentsIpnKey
 	mac := hmac.New(sha512.New, []byte(key))
 
-	_, err := io.WriteString(mac, string(data))
+	var result map[string]interface{}
+	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return false, err
+		return err
 	}
-	expectedMAC := mac.Sum(nil)
+	//marshal it again, it will be sorted
+	//https://stackoverflow.com/questions/18668652/how-to-produce-json-with-sorted-keys-in-go
+	data, err = json.Marshal(result)
+	if err != nil {
+		return err
+	}
 
-	return hex.EncodeToString(expectedMAC) == nowpaymentsSignature, nil
+	_, err = mac.Write(data)
+	if err != nil {
+		return err
+	}
+
+	expectedMAC := mac.Sum(nil)
+	expected := hex.EncodeToString(expectedMAC)
+	if expected != sig {
+		return fmt.Errorf("signatures do not match calc(%s) != sent(%s)", expected, sig)
+	}
+	return nil
 }

@@ -309,7 +309,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		}
 	}
 
-	var pc *PaymentCycle
+	var pc PaymentCycle
 	if isUUIDZero(paymentCycleId) {
 		pc, err = findPaymentCycleLast(userId)
 		if err != nil {
@@ -317,11 +317,12 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 			return err
 		}
 	} else {
-		pc, err = findPaymentCycle(paymentCycleId)
+		pcp, err := findPaymentCycle(paymentCycleId)
 		if err != nil {
 			conn.Close()
 			return err
 		}
+		pc = *pcp
 	}
 
 	_, daysLeft, err := maxDaysLeft(paymentCycleId)
@@ -330,7 +331,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 		return err
 	}
 
-	err = conn.WriteJSON(UserBalances{PaymentCycle: *pc, UserBalances: userBalancesDto, Total: total, DaysLeft: daysLeft})
+	err = conn.WriteJSON(UserBalances{PaymentCycle: pc, UserBalances: userBalancesDto, Total: total, DaysLeft: daysLeft})
 	if err != nil {
 		conn.Close()
 		return err
@@ -582,15 +583,4 @@ func notifyBrowser(uid uuid.UUID, paymentCycleId uuid.UUID) {
 			log.Printf("could not notify client %v, %v", uid, err)
 		}
 	}(uid, paymentCycleId)
-}
-
-// contains checks if a string is present in a slice
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-
-	return false
 }

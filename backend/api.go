@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -75,15 +76,16 @@ type Plan struct {
 
 type Currencies struct {
 	Name      string `json:"name"`
+	Short     string `json:"short"`
+	Smallest  string `json:"smallest"`
 	FactorPow int64  `json:"factorPow"`
 	IsCrypto  bool   `json:"isCrypto"`
 }
 
 var supportedCurrencies = map[string]Currencies{
-	"ETH": {Name: "Ethereum", FactorPow: 18, IsCrypto: true},
-	"GAS": {Name: "Neo Gas", FactorPow: 8, IsCrypto: true},
-	"XTZ": {Name: "Tezos", FactorPow: 6, IsCrypto: true},
-	"USD": {Name: "US Dollar", FactorPow: 6, IsCrypto: false},
+	"ETH": {Name: "Ethereum", Short: "ETH", Smallest: "wei", FactorPow: 18, IsCrypto: true},
+	"GAS": {Name: "Neo Gas", Short: "GAS", Smallest: "mGAS", FactorPow: 8, IsCrypto: true},
+	"USD": {Name: "US Dollar", Short: "USD", Smallest: "mUSD", FactorPow: 6, IsCrypto: false},
 }
 
 type PayoutMeta struct {
@@ -130,7 +132,7 @@ const (
 
 func getFactor(currency string) (*big.Int, error) {
 	for supportedCurrency, cryptoCurrency := range supportedCurrencies {
-		if supportedCurrency == currency {
+		if supportedCurrency == strings.ToUpper(currency) {
 			return new(big.Int).Exp(big.NewInt(10), big.NewInt(cryptoCurrency.FactorPow), nil), nil
 		}
 	}

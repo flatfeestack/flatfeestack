@@ -1002,18 +1002,18 @@ func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
 	}
 }
 
-func findPaymentCycleLast(uid uuid.UUID) (*PaymentCycle, error) {
-	var pc PaymentCycle
+func findPaymentCycleLast(uid uuid.UUID) (PaymentCycle, error) {
+	pc := PaymentCycle{}
 	err := db.
 		QueryRow(`SELECT id, seats, freq FROM payment_cycle WHERE user_id=$1 ORDER BY created_at DESC`, uid).
 		Scan(&pc.Id, &pc.Seats, &pc.Freq)
 	switch err {
 	case sql.ErrNoRows:
-		return nil, nil
+		return pc, nil
 	case nil:
-		return &pc, nil
+		return pc, nil
 	default:
-		return nil, err
+		return pc, err
 	}
 }
 
