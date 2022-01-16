@@ -24,16 +24,6 @@ CREATE TABLE payment_cycle (
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
 
-CREATE TABLE daily_payment (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  payment_cycle_id  UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
-  balance           NUMERIC(78), /*256 bits*/
-  currency          VARCHAR(8) NOT NULL,
-  last_update       TIMESTAMP NULL
-);
-CREATE UNIQUE INDEX daily_payment_index ON daily_payment(payment_cycle_id, currency);
-
-
 CREATE table wallet_address(
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
@@ -50,12 +40,11 @@ CREATE TABLE user_balances (
     user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
     from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
     balance          NUMERIC(78), /*256 bits*/
+    split            NUMERIC(78), /*256 bits*/
     currency         VARCHAR(8) NOT NULL,
     balance_type     VARCHAR(16) NOT NULL,
-    day              DATE DEFAULT to_date('1970', 'YYYY') NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE INDEX user_balances_index_1 ON user_balances (currency);
 CREATE UNIQUE INDEX user_balances_index_2 ON user_balances (
     payment_cycle_id,
     user_id,

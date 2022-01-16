@@ -53,7 +53,7 @@ func maxDaysLeft(paymentCycleId uuid.UUID) (string, int64, error) {
 	cur := ""
 	for currency, balance := range balances {
 		if daily[currency] != nil {
-			d := new(big.Int).Div(balance, daily[currency])
+			d := new(big.Int).Div(balance.Balance, daily[currency])
 			if d.Int64() > max {
 				max = d.Int64()
 				cur = currency
@@ -109,6 +109,7 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 		return false, nil
 	}
 
+	//TODO: aoeuaaoeu
 	dailyPayment, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("dailyPayment: %v", err)
@@ -116,7 +117,7 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	//now we need a strategy to find from which currency (if at all to deduct the topUp)
-	currency, balance, dailyPaymentAmount, parentHasEnoughFunds := strategyDeductRandom(parentBalances, dailyPayment, freq)
+	currency, balance, dailyPaymentAmount, parentHasEnoughFunds, split := strategyDeductRandom(parentBalances, dailyPayment, freq)
 
 	if !parentHasEnoughFunds {
 		log.Printf("parent has not enough funding")
@@ -135,18 +136,12 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 		return false, nil
 	}
 
-	dp := DailyPayment{PaymentCycleId: *newPaymentCycleId, Currency: currency, Amount: dailyPaymentAmount, LastUpdate: timeNow()}
-	err = insertDailyPayment(dp)
-	if err != nil {
-		log.Printf("dailyPayment: %v", err)
-		return false, nil
-	}
-
 	ubNew.PaymentCycleId = sponsor.PaymentCycleId
 	ubNew.UserId = sponsor.Id
 	ubNew.Balance = new(big.Int).Sub(ubNew.Balance, balance)
 	ubNew.BalanceType = "SPONSOR"
 	ubNew.Currency = currency
+	ubNew.Split = split
 	err = insertUserBalance(*ubNew)
 	if err != nil {
 		log.Printf("transferBalance: %v", err)
@@ -171,16 +166,16 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	return true, newPaymentCycleId
 }
 
-func strategyDeductRandom(balances map[string]*big.Int, daily map[string]*big.Int, freq int64) (string, *big.Int, *big.Int, bool) {
+func strategyDeductRandom(balances map[string]*Balance, daily map[string]*big.Int, freq int64) (string, *big.Int, *big.Int, bool, *big.Int) {
 	for currency, balance := range balances {
 		if daily[currency] != nil {
 			newBalance := new(big.Int).Mul(daily[currency], big.NewInt(freq))
-			if newBalance.Cmp(balance) <= 0 {
-				return currency, newBalance, daily[currency], true
+			if newBalance.Cmp(balance.Balance) <= 0 {
+				return currency, newBalance, daily[currency], true, balance.Split
 			}
 		}
 	}
-	return "", nil, nil, false
+	return "", nil, nil, false, nil
 }
 
 func currentUSDBalance(paymentCycleId uuid.UUID) (int64, error) {
@@ -193,7 +188,7 @@ func currentUSDBalance(paymentCycleId uuid.UUID) (int64, error) {
 	}
 
 	f := new(big.Int).Exp(big.NewInt(10), big.NewInt(supportedCurrencies["USD"].FactorPow), nil)
-	t := new(big.Int).Div(total["USD"], f)
+	t := new(big.Int).Div(total["USD"].Balance, f)
 	return t.Int64(), nil
 }
 
@@ -509,21 +504,23 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 		UserId:         uid,
 		CreatedAt:      timeNow(),
 	}
-	for currency, balance := range currencies {
-		ubNew.Balance = new(big.Int).Neg(balance)
+	for k, currency := range currencies {
+		ubNew.Balance = new(big.Int).Neg(currency.Balance)
 		ubNew.BalanceType = "CLOSE_CYCLE"
-		ubNew.Currency = currency
+		ubNew.PaymentCycleId = currentPaymentCycleId
+		ubNew.Currency = k
+		ubNew.Split = currency.Split
 
 		err := insertUserBalance(*ubNew)
 		if err != nil {
 			return nil, err
 		}
 
-		if balance.Cmp(big.NewInt(0)) > 0 {
-			ubNew.Balance = balance
+		if currency.Balance.Cmp(big.NewInt(0)) > 0 {
+			ubNew.Balance = currency.Balance
 			ubNew.PaymentCycleId = newPaymentCycleId
 			ubNew.BalanceType = "CARRY_OVER"
-			ubNew.Currency = currency
+			ubNew.Currency = k
 			err = insertUserBalance(*ubNew)
 			if err != nil {
 				return nil, err
@@ -534,7 +531,7 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 	return ubNew, nil
 }
 
-func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, freq int64, fee *big.Int) error {
+func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
 	//closes the current cycle and opens a new one, rolls over all currencies
 	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
 	if err != nil {
@@ -545,6 +542,8 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 	ubNew.BalanceType = "PAYMENT"
 	ubNew.Balance = balance
 	ubNew.Currency = currency
+	balanceSub := new(big.Int).Sub(balance, fee)
+	ubNew.Split = new(big.Int).Div(balanceSub, big.NewInt(freq*seat))
 	err = insertUserBalance(*ubNew)
 	if err != nil {
 		return err
@@ -557,15 +556,6 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 		if err != nil {
 			return err
 		}
-	}
-
-	total := new(big.Int).Sub(balance, fee)
-	newDailyPaymentAmount := new(big.Int).Div(total, big.NewInt(freq))
-	newDailyPayment := DailyPayment{newPaymentCycleId, currency, newDailyPaymentAmount, timeNow()}
-
-	err = insertDailyPayment(newDailyPayment)
-	if err != nil {
-		return err
 	}
 
 	err = updatePaymentCycleId(u.Id, &newPaymentCycleId)

@@ -610,7 +610,7 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`"}`)
 }
 
-func users(w http.ResponseWriter, r *http.Request, email string) {
+func users(w http.ResponseWriter, r *http.Request, _ string) {
 	u, err := findAllUsers()
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "Could fetch users: %v", err)

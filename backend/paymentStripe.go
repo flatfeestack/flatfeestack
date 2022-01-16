@@ -139,7 +139,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
-		uid, newPaymentCycleId, amount, feePrm, _, freq, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleId, amount, feePrm, seat, freq, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -156,7 +156,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", freq, big.NewInt(fee*10000))
+		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)

@@ -26,7 +26,7 @@ type PaymentRequest struct {
 	PayCurrency      string     `json:"pay_currency"`
 	IpnCallbackUrl   string     `json:"ipn_callback_url"`
 	OrderId          *uuid.UUID `json:"order_id"`
-	OrderDescription string     `json:"order_description"`
+	OrderDescription *uuid.UUID `json:"order_description"`
 }
 
 type PaymentResponse struct {
@@ -54,7 +54,7 @@ type PaymentResponse2 struct {
 type NowpaymentWebhookResponse struct {
 	ActuallyPaid     float64    `json:"actually_paid"`
 	InvoiceId        int64      `json:"invoice_id"`
-	OrderDescription string     `json:"order_description"`
+	OrderDescription *uuid.UUID `json:"order_description"`
 	OrderId          *uuid.UUID `json:"order_id"`
 	OutcomeAmount    float64    `json:"outcome_amount"`
 	OutcomeCurrency  string     `json:"outcome_currency"`
@@ -95,7 +95,7 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	price := (plan.Price * float64(seats)) - float64(currentUSDBalance)
 
 	payCurrency := data["currency"]
-	paymentResponse, err := createNowPayment(price, payCurrency, paymentCycleId, &user.Id, freq)
+	paymentResponse, err := createNowPayment(price, payCurrency, paymentCycleId, &user.Id)
 
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not create payment: %v", err)
@@ -118,7 +118,7 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UUID, uid *uuid.UUID, freq int64) (*PaymentResponse, error) {
+func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UUID, uid *uuid.UUID) (*PaymentResponse, error) {
 	paymentUrl := opts.NowpaymentsApiUrl + "/payment"
 	apiToken := opts.NowpaymentsToken
 	if apiToken == "" {
@@ -131,7 +131,7 @@ func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UU
 		PayCurrency:      payCurrency,
 		IpnCallbackUrl:   opts.NowpaymentsIpnCallbackUrl,
 		OrderId:          paymentCycleId,
-		OrderDescription: uid.String() + "#" + strconv.Itoa(int(freq)),
+		OrderDescription: uid,
 	}
 
 	paymentData, err := json.Marshal(pr)
@@ -204,20 +204,16 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	index := strings.Index(data.OrderDescription, "#")
-	userId, err := uuid.Parse(data.OrderDescription[:index])
-	if err != nil {
-		log.Printf("Could not find uuid: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	userId := *data.OrderDescription
+	pc, err := findPaymentCycle(*data.OrderId)
 
-	freq, err := strconv.ParseInt(data.OrderDescription[index+1:], 10, 64)
 	if err != nil {
 		log.Printf("Could not parse freq: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	freq := pc.Freq
+	seat := pc.Seats
 
 	user, err := findUserById(userId)
 	if err != nil {
@@ -241,7 +237,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = paymentSuccess(user, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), freq, big.NewInt(0))
+		err = paymentSuccess(user, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)

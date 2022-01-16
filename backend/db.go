@@ -85,6 +85,7 @@ type UserBalanceCore struct {
 type UserBalance struct {
 	UserId         uuid.UUID  `json:"userId"`
 	Balance        *big.Int   `json:"balance"`
+	Split          *big.Int   `json:"split"`
 	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
 	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
@@ -133,6 +134,11 @@ type DailyPayment struct {
 type PayoutInfo struct {
 	Currency string   `json:"currency"`
 	Amount   *big.Int `json:"amount"`
+}
+
+type Balance struct {
+	Balance *big.Int
+	Split   *big.Int
 }
 
 //*********************************************************************************
@@ -821,47 +827,6 @@ func insertNewPaymentCycle(uid uuid.UUID, seats int64, freq int64, createdAt tim
 	return &lastInsertId, handleErrMustInsertOne(res)
 }
 
-func insertDailyPayment(dailyPayment DailyPayment) error {
-	stmt, err := db.Prepare(`
-					INSERT INTO daily_payment (payment_cycle_id, currency, balance, last_update) 
-					values($1, $2, $3, $4)`)
-
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO daily_payment statement event: %v", err)
-	}
-
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	b := dailyPayment.Amount.String()
-	res, err = stmt.Exec(dailyPayment.PaymentCycleId, dailyPayment.Currency, b, dailyPayment.LastUpdate)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func findDailyPaymentByPaymentCycleId(paymentCycleId uuid.UUID) (map[string]*big.Int, error) {
-	s := `select currency, balance from daily_payment where payment_cycle_id = $1`
-	rows, err := db.Query(s, paymentCycleId)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	dailyPayments := map[string]*big.Int{}
-	for rows.Next() {
-		var currency string
-		b := ""
-		err = rows.Scan(&currency, &b)
-		if err != nil {
-			return nil, err
-		}
-		dailyPayments[currency], _ = new(big.Int).SetString(b, 10)
-	}
-	return dailyPayments, nil
-}
-
 func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	stmt, err := db.Prepare(`UPDATE payment_cycle SET freq = $1 WHERE id=$2`)
 	if err != nil {
@@ -877,33 +842,46 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func findSumUserBalanceByCurrency(paymentCycleId uuid.UUID) (map[string]*big.Int, error) {
+func findSumUserBalanceByCurrency(paymentCycleId uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
+		Query(`SELECT currency, split, COALESCE(sum(balance), 0)
                              FROM user_balances 
                              WHERE payment_cycle_id = $1
-                             GROUP BY currency`, paymentCycleId)
+                             GROUP BY currency, split`, paymentCycleId)
 
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
 
-	balancesMap := map[string]*big.Int{}
+	m := make(map[string]*Balance)
 	for rows.Next() {
-		var currency string
-		b := ""
-		err = rows.Scan(&currency, &b)
+		var c, b, s string
+		err = rows.Scan(&c, &b, &s)
 		if err != nil {
 			return nil, err
 		}
-		balancesMap[currency], _ = new(big.Int).SetString(b, 10)
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		s1, ok := new(big.Int).SetString(s, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = &Balance{Balance: b1, Split: s1}
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
 	}
-	return balancesMap, nil
+
+	return m, nil
 }
 
 func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
-	s := `SELECT payment_cycle_id, user_id, balance, currency, balance_type, created_at FROM user_balances WHERE user_id = $1`
+	s := `SELECT payment_cycle_id, user_id, balance, currency, balance_type, created_at FROM user_bal
+    ances WHERE user_id = $1`
 	rows, err := db.Query(s, userId)
 	if err != nil {
 		return nil, err
@@ -965,26 +943,6 @@ func findSponsoredUserBalances(userId uuid.UUID) ([]UserStatus, error) {
 		userStatus = append(userStatus, userState)
 	}
 	return userStatus, nil
-}
-
-func findAllCurrenciesFromUserBalance(paymentCycleId uuid.UUID) ([]string, error) {
-	s := `select distinct currency from user_balances where payment_cycle_id = $1`
-	rows, err := db.Query(s, paymentCycleId)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	var currencies []string
-	for rows.Next() {
-		var currency string
-		err = rows.Scan(&currency)
-		if err != nil {
-			return nil, err
-		}
-		currencies = append(currencies, currency)
-	}
-	return currencies, nil
 }
 
 func findPaymentCycle(pcid uuid.UUID) (*PaymentCycle, error) {
