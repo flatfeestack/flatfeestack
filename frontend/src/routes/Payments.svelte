@@ -4,7 +4,7 @@
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type {Repo} from "../types/users";
-  import {connectWs, formatDate, formatBalance, formatPaymentCycle} from "../ts/services";
+  import {connectWs, formatDate, formatBalance} from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repo[] = [];

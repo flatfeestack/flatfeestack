@@ -10,11 +10,11 @@
     "@rollup/plugin-commonjs": "^21.0.1",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.1.1",
-    "rollup-plugin-copy": "^3.4.0",
     "@tsconfig/svelte": "^2.0.1",
     "@typechain/ethers-v5": "^8.0.5",
     "rollup": "^2.61.1",
     "rollup-plugin-brotli": "^3.1.0",
+    "rollup-plugin-copy": "^3.4.0",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-execute": "^1.1.1",
     "rollup-plugin-gzip": "^3.0.0",
@@ -39,6 +39,7 @@
     "@temple-wallet/dapp": "^6.0.1",
     "ethers": "^5.5.2",
     "ky": "^0.28.7",
+    "svelte-qrcode": "^1.0.0",
     "svelte-routing": "^1.6.0"
   }
 }

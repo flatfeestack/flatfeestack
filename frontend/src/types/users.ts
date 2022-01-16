@@ -149,22 +149,14 @@ export type PayoutInfo = {
 
 export type Currencies = {
   name: string;
+  short: string;
+  smallest: string;
   factorPow: number;
   isCrypto: boolean;
 }
 
 export type PaymentResponse = {
-  payment_id: string;
-  payment_status: string;
-  pay_address: string;
-  price_amount: number;
-  price_currency: string;
-  pay_amount: number;
-  pay_currency: string;
-  order_id: string;
-  order_description: string;
-  ipn_callback_url: string;
-  created_at: string;
-  updated_at: string;
-  purchase_id: string;
+  payAddress: string;
+  payAmount: bigint;
+  payCurrency: string;
 }

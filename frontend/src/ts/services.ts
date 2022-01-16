@@ -1,7 +1,9 @@
-import {token, user, loginFailed, userBalances, config, error} from "./store";
+import {token, user, loginFailed, userBalances, config} from "./store";
 import { API } from "./api";
 import { Token, Users } from "../types/users";
 import { get } from "svelte/store";
+import {formatUnits} from "ethers/lib/utils";
+import {BigNumber} from "ethers";
 
 export const confirmReset = async(email: string, password: string, emailToken: string) => {
   const p1 = API.auth.confirmReset(email, password, emailToken);
@@ -191,24 +193,35 @@ export const formatDay = (d: Date):string => {
     ("0" + d.getDate()).slice(-2);
 }
 
-export const formatBalance= (n: bigint, c: string):string => {
+export function minBalanceName(c: string):string {
+  const conf = get(config);
+  const currency = conf.supportedCurrencies[c.toUpperCase()];
+  if(!currency) {
+    console.debug("Unknown currency: " + c);
+    return c;
+  }
+  return currency.smallest;
+}
+
+export const formatBalance = (n: bigint, c: string):string => {
   if (c === "USD") {
     if (n > BigInt(1000000) || n <= BigInt(-1000000)) {
       const num = BigInt(n) / BigInt(1000000);
-      return Number(num).toString(10);
+      return num.toString(10);
     } else if (n == BigInt(0)) {
       return '$0';
     } else {
       const num = BigInt(n) / BigInt(10000);
-      return Number(num).toString(10) + '¢';
+      return num.toString(10) + '¢';
     }
-  } if (c === "---") {
-    return "---";
   } else {
     const conf = get(config);
-    const currency = conf.supportedCurrencies[c];
-    const num = BigInt(n) / (BigInt(10) ** BigInt(currency.factorPow));
-    return Number(num).toString(10);
+    const currency = conf.supportedCurrencies[c.toUpperCase()];
+    if(!currency) {
+      console.debug("Unknown currency: " + c);
+      return n.toString(10);
+    }
+    return formatUnits(BigNumber.from(n.toString()), currency.factorPow);
   }
 }
 
@@ -261,4 +274,15 @@ export const stripePayment = async (stripe, freq: number, seats: number, payment
 
 export function isIterable (value) {
   return Symbol.iterator in Object(value);
+}
+
+export function qrString(address, currency, value) {
+  switch (currency) {
+    case "ETH":
+      //https://ethereum.stackexchange.com/questions/66508/ethereum-qr-code-with-amount
+      return "ethereum:"+address+"?value="+value
+    case "GAS":
+      //https://github.com/nickfujita/neo-qrcode
+      return "neo:"+address+"?asset=gas&amount="+value
+  }
 }
