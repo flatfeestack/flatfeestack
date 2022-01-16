@@ -1,6 +1,6 @@
 import {token, user, loginFailed, userBalances, config} from "./store";
 import { API } from "./api";
-import { Token, Users } from "../types/users";
+import type { Token, Users } from "../types/users";
 import { get } from "svelte/store";
 import {formatUnits} from "ethers/lib/utils";
 import {BigNumber} from "ethers";

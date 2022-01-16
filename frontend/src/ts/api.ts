@@ -16,7 +16,7 @@ import type {
   Contributions, UserBalanceCore,
   PayoutAddress
 } from "../types/users";
-import {PaymentCycle, PaymentResponse, PayoutInfo, UserStatus} from "../types/users";
+import type {PaymentCycle, PaymentResponse, PayoutInfo, UserStatus} from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
