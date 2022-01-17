@@ -84,13 +84,13 @@ CREATE TABLE git_email (
 );
 
 CREATE TABLE sponsor_event (
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repo_id      UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
-    user_id      UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
-    sponsor_at   TIMESTAMP NOT NULL,
-    unsponsor_at TIMESTAMP DEFAULT to_date('9999', 'YYYY') NOT NULL
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    repo_id       UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
+    user_id       UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
+    sponsor_at    DATE NOT NULL,
+    un_sponsor_at DATE DEFAULT to_date('9999', 'YYYY') NOT NULL
 );
-CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
+CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id);
 
 CREATE TABLE analysis_request (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -112,70 +112,27 @@ CREATE TABLE analysis_response (
 );
 CREATE UNIQUE INDEX analysis_response_index ON analysis_response(analysis_request_id, git_email);
 
-CREATE TABLE daily_repo_balance (
+
+CREATE TABLE daily_user_repo (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repo_id    UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
-    balance    NUMERIC(78), /*256 bits*/
-    currency   VARCHAR(8) NOT NULL,
+    user_id    UUID CONSTRAINT fk_user_id_dur REFERENCES users (id),
+    repo_id    UUID CONSTRAINT fk_repo_id_dur REFERENCES repo (id),
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_repo_balance_index ON daily_repo_balance(repo_id, day, currency);
+CREATE UNIQUE INDEX daily_user_count_repo_index ON daily_user_count_repo(user_id, day);
 
-CREATE TABLE daily_repo_weight (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repo_id     UUID CONSTRAINT fk_repo_id_drw REFERENCES repo (id),
-    weight      DOUBLE PRECISION NOT NULL,
-    day         DATE NOT NULL,
-    created_at  TIMESTAMP NOT NULL
+CREATE TABLE daily_balance (
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id          UUID CONSTRAINT fk_user_id_dur REFERENCES users (id),
+    repo_id          UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
+    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+    balance          NUMERIC(78), /*256 bits*/
+    currency         VARCHAR(8) NOT NULL,
+    day              DATE NOT NULL,
+    created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_repo_weight_index ON daily_repo_weight(repo_id, day);
-
-CREATE TABLE daily_email_payout (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email      VARCHAR(255) NOT NULL,
-    balance    NUMERIC(78), /*256 bits*/
-    currency   VARCHAR(8) NOT NULL,
-    day        DATE NOT NULL,
-    created_at TIMESTAMP NOT NULL
-);
-CREATE UNIQUE INDEX daily_email_payout_index ON daily_email_payout(email, day, currency);
-
-CREATE TABLE daily_user_payout (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_dup REFERENCES users (id),
-    balance    NUMERIC(78), /*256 bits*/
-    currency   VARCHAR(8) NOT NULL,
-    day        DATE NOT NULL,
-    created_at TIMESTAMP NOT NULL
-);
-CREATE UNIQUE INDEX daily_user_payout_index ON daily_user_payout(user_id, day, currency);
-
-CREATE TABLE daily_future_leftover (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repo_id    UUID CONSTRAINT fk_repo_id_dfl REFERENCES repo (id),
-    balance    NUMERIC(78), /*256 bits*/
-    currency   VARCHAR(8) NOT NULL,
-    day        DATE NOT NULL,
-    created_at TIMESTAMP NOT NULL
-);
-CREATE UNIQUE INDEX daily_future_leftover_index ON daily_future_leftover(repo_id, day, currency);
-
-CREATE table daily_user_contribution(
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id             UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
-    repo_id             UUID CONSTRAINT fk_repo_id_duc REFERENCES repo (id),
-    contributor_email   VARCHAR(255),
-    contributor_name    VARCHAR(255),
-    contributor_weight  DOUBLE PRECISION,
-    contributor_user_id UUID CONSTRAINT fk_contributor_user_id_duc REFERENCES users (id) ,
-    balance             NUMERIC(78), /*256 bits*/
-    currency            VARCHAR(8) NOT NULL,
-    balance_repo        BIGINT,
-    day                 DATE NOT NULL,
-    created_at          TIMESTAMP NOT NULL
-);
-CREATE UNIQUE INDEX daily_user_contribution_index ON daily_user_contribution(user_id, repo_id, contributor_email, day, currency);
+CREATE UNIQUE INDEX daily_balance_index ON daily_balance(user_id, repo_id, day);
 
 CREATE TABLE payout_request (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

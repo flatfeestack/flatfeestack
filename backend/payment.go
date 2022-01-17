@@ -40,18 +40,18 @@ func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 
 //calculates the maximum of days that is left with any currency, returns the max with currency
 func maxDaysLeft(paymentCycleId uuid.UUID) (string, int64, error) {
-	daily, err := findDailyPaymentByPaymentCycleId(paymentCycleId)
-	if err != nil {
-		return "", 0, err
-	}
-	balances, err := findSumUserBalanceByCurrency(paymentCycleId)
+	//daily, err := findDailyPaymentByPaymentCycleId(paymentCycleId)
+	//if err != nil {
+	//	return "", 0, err
+	//}
+	_, err := findSumUserBalanceByCurrency(paymentCycleId)
 	if err != nil {
 		return "", 0, err
 	}
 
 	max := int64(0)
 	cur := ""
-	for currency, balance := range balances {
+	/*for currency, balance := range balances {
 		if daily[currency] != nil {
 			d := new(big.Int).Div(balance.Balance, daily[currency])
 			if d.Int64() > max {
@@ -59,7 +59,7 @@ func maxDaysLeft(paymentCycleId uuid.UUID) (string, int64, error) {
 				cur = currency
 			}
 		}
-	}
+	}*/
 	return cur, max, nil
 }
 
@@ -103,14 +103,14 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	//parent has enough funds go for it!
-	parentBalances, err := findSumUserBalanceByCurrency(sponsor.PaymentCycleId)
+	_, err = findSumUserBalanceByCurrency(sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("findSumUserBalances: %v", err)
 		return false, nil
 	}
 
 	//TODO: aoeuaaoeu
-	dailyPayment, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
+	/*dailyPayment, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
 	if err != nil {
 		log.Printf("dailyPayment: %v", err)
 		return false, nil
@@ -161,9 +161,9 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	if err != nil {
 		log.Printf("transferBalance: %v", err)
 		return false, nil
-	}
+	}		*/
 
-	return true, newPaymentCycleId
+	return true, &uuid.Nil
 }
 
 func strategyDeductRandom(balances map[string]*Balance, daily map[string]*big.Int, freq int64) (string, *big.Int, *big.Int, bool, *big.Int) {

@@ -93,7 +93,13 @@ func dailyRunner(now time.Time) error {
 
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
 
-	nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, now)
+	nr, err := runDailyUserRepo(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily User Repo inserted %v entries", nr)
+
+	/*nr, err = runDailyUserBalance(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
@@ -133,7 +139,7 @@ func dailyRunner(now time.Time) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Daily User Payout inserted %v entries", nr)
+	log.Printf("Daily User Payout inserted %v entries", nr)*/
 
 	/*	nr, err = runDailyUserContribution(yesterdayStart, yesterdayStop, now)
 		if err != nil {
@@ -141,7 +147,7 @@ func dailyRunner(now time.Time) error {
 		}
 		log.Printf("Daily User Contribution inserted %v entries", nr)*/
 
-	nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
+	/*nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err
 	}
@@ -172,9 +178,9 @@ func dailyRunner(now time.Time) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Daily Topup Reminder found %v entries", len(users))
+	log.Printf("Daily Topup Reminder found %v entries", len(users))*/
 
-	for _, u := range users {
+	/*for _, u := range users {
 
 		if u.SponsorId != nil {
 			//topup user
@@ -198,7 +204,7 @@ func dailyRunner(now time.Time) error {
 		if err != nil {
 			return err
 		}
-	}
+	}*/
 
 	/*	userRepo, err := runDailyMarketing(yesterdayStart)
 		if err != nil {

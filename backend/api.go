@@ -782,7 +782,7 @@ func crontester(w http.ResponseWriter, r *http.Request, _ string) {
 
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
 
-	nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, timeNow())
+	/*nr, err := runDailyUserBalance(yesterdayStart, yesterdayStop, timeNow())
 	if err != nil {
 		return
 	}
@@ -822,7 +822,7 @@ func crontester(w http.ResponseWriter, r *http.Request, _ string) {
 	if err != nil {
 		return
 	}
-	log.Printf("Daily Leftover inserted %v entries", nr)
+	log.Printf("Daily Leftover inserted %v entries", nr)*/
 }
 
 func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
