@@ -15,7 +15,7 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/stripe/stripe-go/v72 v72.81.0
+	github.com/stripe/stripe-go/v72 v72.84.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/text v0.3.7
 	gopkg.in/square/go-jose.v2 v2.6.0
