@@ -13,13 +13,13 @@ import (
 func invitations(w http.ResponseWriter, _ *http.Request, user *User) {
 	invites, err := findInvitationsByAnyEmail(user.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-invite-06, insert user failed: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return
 	}
 
 	oauthEnc, err := json.Marshal(invites)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-08, cannot verify refresh token %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-oauth-08, cannot verify refresh token %v", err)
 		return
 	}
 	w.Write(oauthEnc)
@@ -30,12 +30,12 @@ func inviteByDelete(w http.ResponseWriter, r *http.Request, user *User) {
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
 		return
 	}
 	err = deleteInvite(email, user.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-invite-06, insert user failed: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -45,12 +45,12 @@ func inviteMyDelete(w http.ResponseWriter, r *http.Request, user *User) {
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
 		return
 	}
 	err = deleteInvite(user.Email, email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-invite-06, insert user failed: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -62,14 +62,14 @@ func confirmInvite(w http.ResponseWriter, r *http.Request, user *User) {
 
 	err := updateConfirmInviteAt(email, user.Email, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "cannot confirm invite: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "cannot confirm invite: %v", err)
 		return
 	}
 
 	//try topup
 	err = topUp(user)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "cannot topUp: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "cannot topUp: %v", err)
 		return
 	}
 }
@@ -80,19 +80,19 @@ func inviteOther(w http.ResponseWriter, r *http.Request, user *User) {
 	freqStr := m["freq"]
 	freq, err := strconv.Atoi(freqStr)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "freq is not a number %v", err)
+		writeErrorf(w, http.StatusBadRequest, "freq is not a number %v", err)
 		return
 	}
 
 	err = validateEmail(email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "email address not valid %v", err)
+		writeErrorf(w, http.StatusBadRequest, "email address not valid %v", err)
 		return
 	}
 
 	err = insertInvite(user.Email, email, int64(freq), timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-invite-06, insert user failed: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return
 	}
 

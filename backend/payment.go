@@ -21,7 +21,7 @@ type PayoutInfoDTO struct {
 func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 	pc, err := findPaymentCycle(user.PaymentCycleId)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not find user balance: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not find user balance: %v", err)
 		return
 	}
 
@@ -33,7 +33,7 @@ func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(pc)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
@@ -166,16 +166,18 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	return true, &uuid.Nil
 }
 
-func strategyDeductRandom(balances map[string]*Balance, daily map[string]*big.Int, freq int64) (string, *big.Int, *big.Int, bool, *big.Int) {
+func strategyDeductRandom(balances map[string]*Balance, subs map[string]*Balance) (string, *big.Int, error) {
 	for currency, balance := range balances {
-		if daily[currency] != nil {
-			newBalance := new(big.Int).Mul(daily[currency], big.NewInt(freq))
-			if newBalance.Cmp(balance.Balance) <= 0 {
-				return currency, newBalance, daily[currency], true, balance.Split
-			}
+		newBalance := balance.Balance
+		if subs[currency] != nil {
+			newBalance = new(big.Int).Sub(balance.Balance, subs[currency].Balance)
+		}
+		freq := new(big.Int).Div(newBalance, balance.Split).Int64()
+		if freq > 0 {
+			return currency, balance.Split, nil
 		}
 	}
-	return "", nil, nil, false, nil
+	return "", nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
 }
 
 func currentUSDBalance(paymentCycleId uuid.UUID) (int64, error) {
@@ -338,7 +340,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
 func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
 	err := updateFreq(user.PaymentCycleId, 0)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
 		return
 	}
 }
@@ -346,13 +348,13 @@ func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
 func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
 	userStatus, err := findSponsoredUserBalances(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(userStatus)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
@@ -361,7 +363,7 @@ func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
 	infos, err := findPayoutInfos()
 	var result []PayoutInfoDTO
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		log.Printf("Could not find payout infos: %v", err)
 		return
 	}
@@ -381,19 +383,19 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 	m := mux.Vars(r)
 	h := m["exchangeRate"]
 	if h == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
 		return
 	}
 
 	exchangeRate, _, err := big.ParseFloat(h, 10, 128, big.ToZero)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter exchangeRate not set: %v", m)
 		return
 	}
 
 	payouts, err := findMonthlyBatchJobPayout()
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -447,7 +449,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 
 				err := insertPayoutRequest(&request)
 				if err != nil {
-					writeErr(w, http.StatusInternalServerError, err.Error())
+					writeErrorf(w, http.StatusInternalServerError, err.Error())
 					return
 				}
 
@@ -461,7 +463,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 			}
 			err := cryptoPayout(pts, batchId, currency)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, err.Error())
+				writeErrorf(w, http.StatusInternalServerError, err.Error())
 				return
 			}
 		}
@@ -492,10 +494,13 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 }
 
 //Closes the current cycle and carries over all open currencies
-func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) (*UserBalance, error) {
+func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) error {
+	if isUUIDZero(currentPaymentCycleId) {
+		return nil
+	}
 	currencies, err := findSumUserBalanceByCurrency(currentPaymentCycleId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var ubNew *UserBalance
@@ -513,7 +518,7 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 
 		err := insertUserBalance(*ubNew)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if currency.Balance.Cmp(big.NewInt(0)) > 0 {
@@ -523,28 +528,30 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 			ubNew.Currency = k
 			err = insertUserBalance(*ubNew)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return ubNew, nil
+	return nil
 }
 
-func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
+func paymentSuccess(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
 	//closes the current cycle and opens a new one, rolls over all currencies
-	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, newPaymentCycleId)
+	err := closeCycle(uid, oldPaymentCycleId, newPaymentCycleId)
 	if err != nil {
 		return err
 	}
 
+	ubNew := UserBalance{}
 	ubNew.PaymentCycleId = newPaymentCycleId
 	ubNew.BalanceType = "PAYMENT"
 	ubNew.Balance = balance
 	ubNew.Currency = currency
+	ubNew.UserId = uid
 	balanceSub := new(big.Int).Sub(balance, fee)
 	ubNew.Split = new(big.Int).Div(balanceSub, big.NewInt(freq*seat))
-	err = insertUserBalance(*ubNew)
+	err = insertUserBalance(ubNew)
 	if err != nil {
 		return err
 	}
@@ -552,13 +559,13 @@ func paymentSuccess(u *User, newPaymentCycleId uuid.UUID, balance *big.Int, curr
 	if fee.Cmp(big.NewInt(0)) > 0 {
 		ubNew.BalanceType = "FEE"
 		ubNew.Balance = new(big.Int).Neg(fee)
-		err = insertUserBalance(*ubNew)
+		err = insertUserBalance(ubNew)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = updatePaymentCycleId(u.Id, &newPaymentCycleId)
+	err = updatePaymentCycleId(uid, &newPaymentCycleId)
 	if err != nil {
 		return err
 	}

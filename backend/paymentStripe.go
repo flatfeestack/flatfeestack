@@ -28,13 +28,13 @@ func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 		params := &stripe.CustomerParams{}
 		c, err := customer.New(params)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 			return
 		}
 		user.StripeId = &c.ID
 		err = updateUser(user)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 			return
 		}
 	}
@@ -46,7 +46,7 @@ func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 	intent, err := setupintent.New(params)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
@@ -54,14 +54,14 @@ func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
 
 func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	if user.PaymentMethod == nil {
-		writeErr(w, http.StatusInternalServerError, "No payment method defined for user: %v", user.Id)
+		writeErrorf(w, http.StatusInternalServerError, "No payment method defined for user: %v", user.Id)
 		return
 	}
 
@@ -103,7 +103,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	cs := ClientSecretBody{ClientSecret: intent.ClientSecret}
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
@@ -156,7 +156,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
+		err = paymentSuccess(u.Id, u.PaymentCycleId, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)

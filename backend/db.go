@@ -805,6 +805,30 @@ func insertUserBalance(ub UserBalance) error {
 	return handleErrMustInsertOne(res)
 }
 
+func insertDailyBalance(uid uuid.UUID, rid uuid.UUID, paymentCycleId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
+	stmt, err := db.Prepare(`INSERT INTO daily_balance(           
+                          	                user_id,
+                          					repo_id,
+                          					payment_cycle_id, 
+                                            balance,
+                          					currency,
+                          					day,
+                                            created_at) 
+                                    VALUES($1, $2, $3, $4, $5, $6, $7)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO daily_balance for %v/%v statement event: %v", uid, rid, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	b := balance.String()
+	res, err = stmt.Exec(uid, rid, paymentCycleId, b, currency, day, createdAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
 func insertNewPaymentCycle(uid uuid.UUID, seats int64, freq int64, createdAt time.Time) (*uuid.UUID, error) {
 	stmt, err := db.Prepare(`INSERT INTO payment_cycle(user_id, seats, freq, created_at) 
                                     VALUES($1, $2, $3, $4)  RETURNING id`)
@@ -846,7 +870,7 @@ func updateFreq(paymentCycleId uuid.UUID, freq int) error {
 func findSumDailyBalanceCurrency(paymentCycleId uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
 		Query(`	SELECT currency, COALESCE(sum(balance), 0)
-        				FROM daily_balances 
+        				FROM daily_balance 
                         WHERE payment_cycle_id = $1
                         GROUP BY currency`, paymentCycleId)
 
@@ -891,7 +915,7 @@ func findSumUserBalanceByCurrency(paymentCycleId uuid.UUID) (map[string]*Balance
 	m := make(map[string]*Balance)
 	for rows.Next() {
 		var c, b, s string
-		err = rows.Scan(&c, &b, &s)
+		err = rows.Scan(&c, &s, &b)
 		if err != nil {
 			return nil, err
 		}

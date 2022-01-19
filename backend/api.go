@@ -168,7 +168,7 @@ func getMyUser(w http.ResponseWriter, _ *http.Request, user *User) {
 func getMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *User) {
 	emails, err := findGitEmailsByUserId(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not find git emails %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not find git emails %v", err)
 		return
 	}
 	writeJson(w, emails)
@@ -178,13 +178,13 @@ func confirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	var emailToken EmailToken
 	err := json.NewDecoder(r.Body).Decode(&emailToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
 	err = confirmGitEmail(emailToken.Email, emailToken.Token, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Invalid email: %v", err)
 		return
 	}
 }
@@ -202,20 +202,20 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	var body GitEmailRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
 	//TODO: send email to user and add email after verification
 	rnd, err := genRnd(16)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "ERR-reset-email-02, err %v", err)
+		writeErrorf(w, http.StatusBadRequest, "ERR-reset-email-02, err %v", err)
 		return
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
 	err = insertGitEmail(user.Id, body.Email, &addGitEmailToken, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save email: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save email: %v", err)
 		return
 	}
 
@@ -255,7 +255,7 @@ func removeGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 
 	err := deleteGitEmail(user.Id, email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Invalid email: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Invalid email: %v", err)
 		return
 	}
 }
@@ -265,7 +265,7 @@ func deleteMethod(w http.ResponseWriter, r *http.Request, user *User) {
 	user.Last4 = nil
 	err := updateUser(user)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could update user: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could update user: %v", err)
 		return
 	}
 }
@@ -280,14 +280,14 @@ func updateMethod(w http.ResponseWriter, r *http.Request, user *User) {
 		nil,
 	)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could update method: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could update method: %v", err)
 		return
 	}
 
 	user.Last4 = &pm.Card.Last4
 	err = updateUser(user)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could update user: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could update user: %v", err)
 		return
 	}
 
@@ -299,7 +299,7 @@ func updateName(w http.ResponseWriter, r *http.Request, user *User) {
 	a := params["name"]
 	err := updateUserName(user.Id, a)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
 }
@@ -308,13 +308,13 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 	var img ImageRequest
 	err := json.NewDecoder(r.Body).Decode(&img)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
 	err = updateUserImage(user.Id, img.Image)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
 }
@@ -324,12 +324,12 @@ func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
 	a := params["seats"]
 	seats, err := strconv.Atoi(a)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
 	err = updateDbSeats(user.PaymentCycleId, seats)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
 }
@@ -344,7 +344,7 @@ func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
 func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 	repos, err := findSponsoredReposById(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not get repos: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not get repos: %v", err)
 		return
 	}
 	writeJson(w, repos)
@@ -353,7 +353,7 @@ func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
 func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
 	userWallets, err := findActiveWalletsByUserId(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJson(w, userWallets)
@@ -363,13 +363,13 @@ func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 	var data Wallet
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	userWallets, err := findAllWalletsByUserId(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -377,7 +377,7 @@ func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 		if wallet.Currency == data.Currency && wallet.Address == data.Address {
 			err := updateWallet(wallet.Id, false)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, err.Error())
+				writeErrorf(w, http.StatusInternalServerError, err.Error())
 				return
 			}
 			writeJson(w, wallet)
@@ -388,10 +388,10 @@ func addUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 	lastInserted, err := insertWallet(user.Id, data.Currency, data.Address, false)
 	if err != nil {
 		if err.Error() == "pq: duplicate key value violates unique constraint \"wallet_address_index\"" {
-			writeErr(w, http.StatusConflict, err.Error())
+			writeErrorf(w, http.StatusConflict, err.Error())
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	data.Id = *lastInserted
@@ -405,7 +405,7 @@ func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 
 	wallets, err := findActiveWalletsByUserId(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -413,13 +413,13 @@ func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 		if v.Id == id {
 			err = updateWallet(id, true)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, err.Error())
+				writeErrorf(w, http.StatusInternalServerError, err.Error())
 			}
 			return
 		}
 	}
 
-	writeErr(w, http.StatusForbidden, "Action not allowed")
+	writeErrorf(w, http.StatusForbidden, "Action not allowed")
 }
 
 /*
@@ -438,12 +438,12 @@ func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 	q := r.URL.Query().Get("q")
 	log.Printf("query %v", q)
 	if q == "" {
-		writeErr(w, http.StatusBadRequest, "Empty search")
+		writeErrorf(w, http.StatusBadRequest, "Empty search")
 		return
 	}
 	repos, err := fetchGithubRepoSearch(q)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
 	}
 	writeJson(w, repos)
@@ -461,17 +461,17 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 	params := mux.Vars(r)
 	id, err := uuid.Parse(params["id"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
 
 	repo, err := findRepoById(id)
 	if repo == nil {
-		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", id)
+		writeErrorf(w, http.StatusNotFound, "Could not find repo with id %v", id)
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
 	writeJson(w, repo)
@@ -489,13 +489,13 @@ func tagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	var repo RepoSearch
 	err := json.NewDecoder(r.Body).Decode(&repo)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
 		return
 	}
 
 	sc, err := repo.Score.Int64()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode json/int: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode json/int: %v", err)
 		return
 	}
 	rp := &Repo{
@@ -528,7 +528,7 @@ func unTagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Not a valid id %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
 	tagRepo0(w, user, repoId, Inactive)
@@ -546,11 +546,11 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 	}
 	userErr, err := insertOrUpdateSponsor(&event)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
 		return
 	}
 	if userErr != nil {
-		writeErr(w, http.StatusConflict, "User error: %v", userErr)
+		writeErrorf(w, http.StatusConflict, "User error: %v", userErr)
 		return
 	}
 
@@ -559,11 +559,11 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 	var repo *Repo
 	repo, err = findRepoById(repoId)
 	if repo == nil {
-		writeErr(w, http.StatusNotFound, "Could not find repo with id %v", repoId)
+		writeErrorf(w, http.StatusNotFound, "Could not find repo with id %v", repoId)
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
 	// TODO: only if repo is sponsored for the first time
@@ -583,20 +583,20 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 	var data WebhookCallback
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	rid, err := uuid.Parse(data.RequestId)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "cannot parse request id: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "cannot parse request id: %v", err)
 		return
 	}
 	rowsAffected := 0
 	for _, wh := range data.Result {
 		err = insertAnalysisResponse(rid, &wh, timeNow())
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "insert error: %v", err)
+			writeErrorf(w, http.StatusInternalServerError, "insert error: %v", err)
 			return
 		}
 		rowsAffected++
@@ -613,7 +613,7 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 func users(w http.ResponseWriter, r *http.Request, _ string) {
 	u, err := findAllUsers()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could fetch users: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could fetch users: %v", err)
 		return
 	}
 	writeJson(w, u)
@@ -623,7 +623,7 @@ func config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(plans)
 	supportedCurrencies, err := json.Marshal(supportedCurrencies)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 
@@ -652,13 +652,13 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 
 	err := insertUser(&u)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 
 	err = insertGitEmail(uid, n, nil, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could write json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 }
@@ -667,31 +667,31 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 	var repoMap RepoMapping
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode fakeContribution body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode fakeContribution body: %v", err)
 		return
 	}
 
 	monthStart, err := time.Parse("2006-01-02 15:04", repoMap.StartData)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 	monthStop, err := time.Parse("2006-01-02 15:04", repoMap.EndData)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	repo, err := findRepoByName(repoMap.Name)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	aid := uuid.New()
 	err = insertAnalysisRequest(aid, repo.Id, monthStart, monthStop, "master", timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
@@ -699,7 +699,7 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 
 		err = insertAnalysisResponse(aid, &v, timeNow())
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 			return
 		}
 
@@ -715,19 +715,19 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 
 	u, err := findUserByEmail(n)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	paymentCycleId, err := insertNewPaymentCycle(u.Id, 365, seats, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
@@ -741,13 +741,13 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 
 	err = insertUserBalance(ubNew)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	err = updatePaymentCycleId(u.Id, paymentCycleId)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 	return
@@ -757,17 +757,21 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
 		return
 	}
 
-	hoursAdd += hours
+	warp(hours)
 	log.Printf("time warp: %v", timeNow())
+}
+
+func warp(hours int) {
+	hoursAdd += hours
 }
 
 func crontester(w http.ResponseWriter, r *http.Request, _ string) {
@@ -828,7 +832,7 @@ func crontester(w http.ResponseWriter, r *http.Request, _ string) {
 func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
 	cs, err := findUserContributions(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	writeJson(w, cs)
@@ -837,7 +841,7 @@ func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
 func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
 	cs, err := findMyContributions(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	if len(cs) == 0 {
@@ -851,19 +855,19 @@ func userSummary2(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	u := m["uuid"]
 	if u == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 
 	user, err := findUserById(uu)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 
@@ -879,19 +883,19 @@ func contributionsSum2(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	u := m["uuid"]
 	if u == "" {
-		writeErr(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		writeErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 
 	user, err := findUserById(uu)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 
@@ -901,7 +905,7 @@ func contributionsSum2(w http.ResponseWriter, r *http.Request) {
 func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 	r, err := findSponsoredReposByOrgId(user.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	writeJson(w, r)
@@ -917,7 +921,7 @@ func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User)
 	fmt.Println(user.Id)
 	ubs, err := getPendingDailyUserPayouts(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	var result []UserBalanceCoreDto
@@ -932,7 +936,7 @@ func totalRealizedIncome(w http.ResponseWriter, _ *http.Request, user *User) {
 	fmt.Println(user.Id)
 	ubs, err := getTotalRealizedIncome(user.Id)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
 	var result []UserBalanceCoreDto

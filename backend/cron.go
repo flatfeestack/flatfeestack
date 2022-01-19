@@ -99,6 +99,18 @@ func dailyRunner(now time.Time) error {
 	}
 	log.Printf("Daily User Repo inserted %v entries", nr)
 
+	nr, err = runDailyBalances(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Balances inserted %v entries", nr)
+
+	nr, err = runDailyContribution(yesterdayStart, yesterdayStop, now)
+	if err != nil {
+		return err
+	}
+	log.Printf("Daily Contribution inserted %v entries", nr)
+
 	/*nr, err = runDailyUserBalance(yesterdayStart, yesterdayStop, now)
 	if err != nil {
 		return err

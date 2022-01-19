@@ -90,7 +90,6 @@ CREATE TABLE sponsor_event (
     sponsor_at    DATE NOT NULL,
     un_sponsor_at DATE DEFAULT to_date('9999', 'YYYY') NOT NULL
 );
-CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id);
 
 CREATE TABLE analysis_request (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -120,7 +119,7 @@ CREATE TABLE daily_user_repo (
     day        DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_user_count_repo_index ON daily_user_count_repo(user_id, day);
+CREATE UNIQUE INDEX daily_user_repo_index ON daily_user_repo(user_id, day);
 
 CREATE TABLE daily_balance (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -3,7 +3,8 @@ package main
 import (
 	"database/sql"
 	"github.com/google/uuid"
-	"math/big"
+	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -16,7 +17,7 @@ func runDailyUserRepo(yesterdayStart time.Time, yesterdayStop time.Time, now tim
 			INSERT INTO daily_user_repo (user_id, repo_id, day, created_at)
 			SELECT user_id, repo_id, $1::date, $3 
 			FROM sponsor_event
-			WHERE sponsor_at <= $1 AND unsponsor_at > $2`)
+			WHERE sponsor_at < $1 AND un_sponsor_at >= $2`)
 	if err != nil {
 		return 0, err
 	}
@@ -44,37 +45,53 @@ func runDailyBalances(yesterdayStart time.Time, yesterdayStop time.Time, now tim
 
 	success := int64(0)
 	for rows.Next() {
-		var uid *uuid.UUID
-		var rids []*uuid.UUID
-		err = rows.Scan(uid, rids)
-		if err == nil {
-			success++
+		uid := uuid.UUID{}
+		rids := []uuid.UUID{}
+		err = rows.Scan(&uid, pq.Array(&rids))
+		if err != nil {
+			log.Warningf("cannot scan %v", err)
+			continue
 		}
 
-		u, err := findUserById(*uid)
-		if err == nil {
-			success++
+		u, err := findUserById(uid)
+		if err != nil {
+			log.Warningf("cannot find user %v", err)
+			continue
 		}
 
 		mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleId)
-		if err == nil {
-			success++
+		if err != nil {
+			log.Warningf("cannot find sum user balance %v", err)
+			continue
 		}
 
 		mSub, err := findSumDailyBalanceCurrency(u.PaymentCycleId)
-		if err == nil {
-			success++
+		if err != nil {
+			log.Warningf("cannot find sum daily balance %v", err)
+			continue
 		}
 
-		c, b, err := strategyDeductRandom(mAdd, mSub)
-		if err == nil {
-			success++
+		currency, s, err := strategyDeductRandom(mAdd, mSub)
+		if err != nil {
+			log.Warningf("no funds, notify user %v", err)
+			continue
 		}
 
 		for _, rid := range rids {
-			instertDailyBalance(c, new(big.Int).Div(b, big.NewInt(int64(len(rids)))), uid, rid, u.PaymentCycleId)
+			err = insertDailyBalance(uid, rid, u.PaymentCycleId, s, currency, now, timeNow())
+			if err != nil {
+				log.Warningf("no funds, notify user %v", err)
+				continue
+			}
 		}
 
+		success++
 	}
+	return success, nil
+}
+
+func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+	success := int64(0)
+
 	return success, nil
 }

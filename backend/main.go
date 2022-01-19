@@ -289,9 +289,9 @@ func main() {
 	cronStop()
 }
 
-func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
+func writeErrorf(w http.ResponseWriter, code int, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.Errorf(msg)
+	log.Error(msg)
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
@@ -358,10 +358,10 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth(r)
 		if claims != nil && err != nil {
-			writeErr(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
+			writeErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
 			return
 		} else if claims == nil && err != nil {
-			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
 		for _, email := range emails {
@@ -371,7 +371,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 				return
 			}
 		}
-		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		writeErrorf(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
 	}
 }
 
@@ -382,14 +382,14 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 		if claims != nil && err != nil {
 			if r.Header.Get("Sec-WebSocket-Protocol") == "" {
 				//no websocket
-				writeErr(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
+				writeErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
 			} else {
 				//we use websocket
 				wsNoAuth(w, r)
 			}
 			return
 		} else if claims == nil && err != nil {
-			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
 
@@ -399,14 +399,14 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 		// Fetch user from DB
 		user, err := findUserByEmail(claims.Subject)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
+			writeErrorf(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
 			return
 		}
 
 		if user == nil {
 			user, err = createUser(claims.Subject)
 			if err != nil {
-				writeErr(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
+				writeErrorf(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
 				return
 			}
 		}

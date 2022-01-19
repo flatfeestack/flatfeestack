@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	// pulls an image, creates a container based on it and runs it
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "postgres",
-		Tag:        "13-alpine",
+		Tag:        "14-alpine",
 		Env: []string{
 			"POSTGRES_USER=postgres",
 			"POSTGRES_PASSWORD=password",
@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Could not start resource: %s", err)
 	}
-	resource.Expire(60) //1min
+	resource.Expire(60 * 1000) //1min
 	port := resource.GetPort("5432/tcp")
 	log.Printf("DB port: %v\n", port)
 	if err = pool.Retry(func() error {

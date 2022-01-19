@@ -98,7 +98,7 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	paymentResponse, err := createNowPayment(price, payCurrency, paymentCycleId, &user.Id)
 
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not create payment: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "could not create payment: %v", err)
 		return
 	}
 
@@ -113,7 +113,7 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(paymentResponse2)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		writeErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
 }
@@ -237,7 +237,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = paymentSuccess(user, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
+		err = paymentSuccess(user.Id, user.PaymentCycleId, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
