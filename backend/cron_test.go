@@ -21,11 +21,12 @@ type EmailNumberDay struct {
 }
 
 var (
-	day0 = time.Time{}
-	day1 = time.Time{}.Add(time.Duration(1*24) * time.Hour)
-	day2 = time.Time{}.Add(time.Duration(2*24) * time.Hour)
-	day3 = time.Time{}.Add(time.Duration(3*24) * time.Hour)
-	day4 = time.Time{}.Add(time.Duration(4*24) * time.Hour)
+	day0  = time.Time{}
+	day01 = time.Time{}.Add(time.Duration(1) * time.Second)
+	day1  = time.Time{}.Add(time.Duration(1*24) * time.Hour)
+	day2  = time.Time{}.Add(time.Duration(2*24) * time.Hour)
+	day3  = time.Time{}.Add(time.Duration(3*24) * time.Hour)
+	day4  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
 )
 
 func TestDailyRunner1(t *testing.T) {
@@ -33,19 +34,37 @@ func TestDailyRunner1(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	setupFundsUSD(t, *sponsors[0], 120)
+	payId := setupFundsUSD(t, *sponsors[0], 120)
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 	setupContributor(t, *repos[0], day0, day1, []string{"ste@ste.ste"}, []float64{0.5})
 
-	setupSponsor(t, sponsors[0], repos[0], day0)
-	setupUnsponsor(t, sponsors[0], repos[0], day0)
-	setupSponsor(t, sponsors[0], repos[0], day0)
-
-	err := dailyRunner(day2)
+	err := setupSponsor(t, sponsors[0], repos[0], day0)
 	assert.Nil(t, err)
+	err = setupUnsponsor(t, sponsors[0], repos[0], day0)
+	assert.Nil(t, err)
+	err = setupSponsor(t, sponsors[0], repos[0], day0)
+	assert.Error(t, err)
+	err = setupSponsor(t, sponsors[0], repos[0], day01)
+	assert.Nil(t, err)
+
+	err = dailyRunner(day2)
+	assert.Nil(t, err)
+
+	//now check the daily_contribution
+	m1, err := findSumDailyContributionGitUserCurrency(*contributors[0], nil)
+	assert.Nil(t, err)
+	assert.Equal(t, m1["USD"].Balance.String(), "328767")
+
+	m2, err := findSumDailyContributionUserCurrency(*sponsors[0], payId)
+	assert.Nil(t, err)
+	assert.Equal(t, m2["USD"].Balance.String(), "328767")
+
+	m3, err := findSumDailyContributionGitUserCurrency(*contributors[1], nil)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(m3))
 
 }
 
@@ -72,11 +91,12 @@ func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time
 	}
 }
 
-func setupFundsUSD(t *testing.T, uid uuid.UUID, balance int64) {
+func setupFundsUSD(t *testing.T, uid uuid.UUID, balance int64) *uuid.UUID {
 	paymentCycleId, err := insertNewPaymentCycle(uid, 1, 365, timeNow())
 	assert.Nil(t, err)
-	err = paymentSuccess(uid, uuid.UUID{}, *paymentCycleId, big.NewInt(balance*1_000_000), "USD", 1, 365, big.NewInt(0))
+	err = paymentSuccess(uid, nil, paymentCycleId, big.NewInt(balance*1_000_000), "USD", 1, 365, big.NewInt(0))
 	assert.Nil(t, err)
+	return paymentCycleId
 }
 
 func setupUsers(t *testing.T, userNames ...string) []*uuid.UUID {
@@ -99,7 +119,7 @@ func setupRepos(t *testing.T, repoNames ...string) []*uuid.UUID {
 	return repos
 }
 
-func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) {
+func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
 	e := SponsorEvent{
 		Id:        uuid.New(),
 		Uid:       *userId,
@@ -107,12 +127,10 @@ func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.T
 		EventType: Active,
 		SponsorAt: day,
 	}
-	err1, err2 := insertOrUpdateSponsor(&e)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
+	return insertOrUpdateSponsor(&e)
 }
 
-func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) {
+func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
 	e := SponsorEvent{
 		Id:          uuid.New(),
 		Uid:         *userId,
@@ -120,9 +138,7 @@ func setupUnsponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time
 		EventType:   Inactive,
 		UnsponsorAt: day,
 	}
-	err1, err2 := insertOrUpdateSponsor(&e)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
+	return insertOrUpdateSponsor(&e)
 }
 
 func setupUser(email string) (*uuid.UUID, error) {

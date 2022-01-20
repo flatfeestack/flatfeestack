@@ -93,104 +93,40 @@ func dailyRunner(now time.Time) error {
 
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
 
-	nr, err := runDailyUserRepo(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily User Repo inserted %v entries", nr)
-
-	nr, err = runDailyBalances(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Balances inserted %v entries", nr)
-
-	nr, err = runDailyContribution(yesterdayStart, yesterdayStop, now)
+	nr, err := runDailyContribution(yesterdayStart, yesterdayStop)
 	if err != nil {
 		return err
 	}
 	log.Printf("Daily Contribution inserted %v entries", nr)
 
-	/*nr, err = runDailyUserBalance(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily User Balance inserted %v entries", nr)
+	/*
 
-	nr, err = runDailyDaysLeftDailyPayment()
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Days Left Daily Payment updated %v entries", nr)
-
-	nr, err = runDailyDaysLeftPaymentCycle()
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Days Left Payment Cycle updated %v entries", nr)
-
-	nr, err = runDailyRepoBalance(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Repo Balance inserted %v entries", nr)
-
-	//nr, err = runDailyEmailPayout(yesterdayStart, yesterdayStop, now)
-	//if err != nil {
-	//	return err
-	//}
-	//log.Printf("Daily Email Payout inserted %v entries", nr)
-
-	nr, err = runDailyRepoWeight(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Repo Weight inserted %v entries", nr)
-
-	nr, err = runDailyUserPayout(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily User Payout inserted %v entries", nr)*/
-
-	/*	nr, err = runDailyUserContribution(yesterdayStart, yesterdayStop, now)
+		repos, err := runDailyAnalysisCheck(now, 5)
 		if err != nil {
 			return err
 		}
-		log.Printf("Daily User Contribution inserted %v entries", nr)*/
+		log.Printf("Daily Analysis Check found %v entries", len(repos))
 
-	/*nr, err = runDailyFutureLeftover(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Leftover inserted %v entries", nr)
-
-	repos, err := runDailyAnalysisCheck(now, 5)
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Analysis Check found %v entries", len(repos))
-
-	for _, v := range repos {
-		if v.Url == nil {
-			log.Printf("URL is nil of %v", v.Id)
-			continue
+		for _, v := range repos {
+			if v.Url == nil {
+				log.Printf("URL is nil of %v", v.Id)
+				continue
+			}
+			if v.Branch == nil {
+				log.Printf("Branch is nil of %v", v.Id)
+				continue
+			}
+			err = analysisRequest(v.Id, *v.Url, *v.Branch)
+			if err != nil {
+				return err
+			}
 		}
-		if v.Branch == nil {
-			log.Printf("Branch is nil of %v", v.Id)
-			continue
-		}
-		err = analysisRequest(v.Id, *v.Url, *v.Branch)
+
+		users, err := runDailyTopupReminderUser()
 		if err != nil {
 			return err
 		}
-	}
-
-	users, err := runDailyTopupReminderUser()
-	if err != nil {
-		return err
-	}
-	log.Printf("Daily Topup Reminder found %v entries", len(users))*/
+		log.Printf("Daily Topup Reminder found %v entries", len(users))*/
 
 	/*for _, u := range users {
 

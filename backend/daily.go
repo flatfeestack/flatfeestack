@@ -1,10 +1,11 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"time"
 )
 
@@ -12,32 +13,12 @@ import (
 //******************************* Daily calculations ******************************
 //*********************************************************************************
 
-func runDailyUserRepo(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	stmt, err := db.Prepare(`
-			INSERT INTO daily_user_repo (user_id, repo_id, day, created_at)
-			SELECT user_id, repo_id, $1::date, $3 
-			FROM sponsor_event
-			WHERE sponsor_at < $1 AND un_sponsor_at >= $2`)
-	if err != nil {
-		return 0, err
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(yesterdayStart, yesterdayStop, now)
-	if err != nil {
-		return 0, err
-	}
-	return handleErr(res)
-
-}
-
-func runDailyBalances(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
+func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time) (int64, error) {
 	rows, err := db.Query(`		
 			SELECT user_id, ARRAY_AGG(repo_id)
-    		FROM daily_user_repo d JOIN users u on u.id = d.user_id
-			WHERE day = $1
-            GROUP BY user_id`, yesterdayStart)
+			FROM sponsor_event
+			WHERE sponsor_at < $1 AND un_sponsor_at >= $2
+			GROUP BY user_id`, yesterdayStart, yesterdayStop)
 	if err != nil {
 		return 0, err
 	}
@@ -53,45 +34,113 @@ func runDailyBalances(yesterdayStart time.Time, yesterdayStop time.Time, now tim
 			continue
 		}
 
-		u, err := findUserById(uid)
+		err = calcContribution(uid, rids, yesterdayStart, yesterdayStop)
 		if err != nil {
-			log.Warningf("cannot find user %v", err)
+			log.Warningf("calc error %v", err)
 			continue
 		}
-
-		mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleId)
-		if err != nil {
-			log.Warningf("cannot find sum user balance %v", err)
-			continue
-		}
-
-		mSub, err := findSumDailyBalanceCurrency(u.PaymentCycleId)
-		if err != nil {
-			log.Warningf("cannot find sum daily balance %v", err)
-			continue
-		}
-
-		currency, s, err := strategyDeductRandom(mAdd, mSub)
-		if err != nil {
-			log.Warningf("no funds, notify user %v", err)
-			continue
-		}
-
-		for _, rid := range rids {
-			err = insertDailyBalance(uid, rid, u.PaymentCycleId, s, currency, now, timeNow())
-			if err != nil {
-				log.Warningf("no funds, notify user %v", err)
-				continue
-			}
-		}
-
 		success++
 	}
+
+	rows, err = db.Query(`		
+			SELECT user_id, ARRAY_AGG(repo_id)
+			FROM future_contribution
+			WHERE day = $1
+			GROUP BY user_id`, yesterdayStart)
+	if err != nil {
+		return 0, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		uid := uuid.UUID{}
+		rids := []uuid.UUID{}
+		err = rows.Scan(&uid, pq.Array(&rids))
+		if err != nil {
+			log.Warningf("cannot scan %v", err)
+			continue
+		}
+
+		err = calcContribution(uid, rids, yesterdayStart, yesterdayStop)
+		if err != nil {
+			log.Warningf("calc error %v", err)
+			continue
+		}
+		success++
+	}
+
 	return success, nil
 }
 
-func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time, now time.Time) (int64, error) {
-	success := int64(0)
+func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, yesterdayStop time.Time) error {
+	u, err := findUserById(uid)
+	if err != nil {
+		return fmt.Errorf("cannot find user %v", err)
+	}
 
-	return success, nil
+	mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleId)
+	if err != nil {
+		return fmt.Errorf("cannot find sum user balance %v", err)
+	}
+
+	mSub, err := findSumDailyBalanceCurrency(u.PaymentCycleId)
+	if err != nil {
+		return fmt.Errorf("cannot find sum daily balance %v", err)
+	}
+
+	currency, s, err := strategyDeductRandom(mAdd, mSub)
+	if err != nil {
+		return fmt.Errorf("no funds, notify user %v", err)
+	}
+
+	//split the contribution among the repos
+	distribute := new(big.Int).Div(s, big.NewInt(int64(len(rids))))
+	for _, rid := range rids {
+
+		//get weights for the contributors
+		ars, err := findLastAnalysisResponse(rid)
+		if err != nil {
+			log.Warningf("get analysis response scan %v", err)
+			continue
+		}
+		if ars == nil || len(ars) == 0 {
+			continue
+		}
+		uidMap := map[uuid.UUID]float64{}
+		total := 0.0
+		for _, ar := range ars {
+			uidGit, err := findUserByGitEmail(ar.GitEmail)
+			if err != nil {
+				log.Warningf("get analysis response scan %v", err)
+				continue
+			}
+			if uidGit != nil {
+				uidMap[*uidGit] += ar.Weight
+				total += ar.Weight
+			} else {
+				//not in map, send marketing email
+			}
+		}
+
+		if len(uidMap) == 0 {
+			//no contribution park the sponsoring separately
+			insertFutureBalance(uid, rid, u.PaymentCycleId, distribute, currency, yesterdayStop, timeNow())
+		} else {
+			for k, v := range uidMap {
+
+				f := new(big.Float).SetInt(distribute)
+				amountF := new(big.Float).Mul(big.NewFloat(v/total), f)
+				amount := new(big.Int)
+				amountF.Int(amount)
+				uidGit, err := findUserById(k)
+				if err != nil {
+					log.Warningf("get analysis response scan %v", err)
+					continue
+				}
+
+				insertContribution(uid, k, rid, u.PaymentCycleId, uidGit.PaymentCycleId, amount, currency, yesterdayStart, timeNow())
+			}
+		}
+	}
+	return nil
 }

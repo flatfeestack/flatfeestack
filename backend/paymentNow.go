@@ -205,7 +205,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := *data.OrderDescription
-	pc, err := findPaymentCycle(*data.OrderId)
+	pc, err := findPaymentCycle(data.OrderId)
 
 	if err != nil {
 		log.Printf("Could not parse freq: %v", err)
@@ -237,7 +237,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = paymentSuccess(user.Id, user.PaymentCycleId, *data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
+		err = paymentSuccess(user.Id, user.PaymentCycleId, data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -256,7 +256,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			"template-plain-success_", defaultMessage,
 			"template-html-success_", other["lang"])
 
-		err = sendToBrowser(user.Id, *data.OrderId)
+		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
@@ -269,7 +269,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		}(user.Id, *data.OrderId, e)
 
 	case "partially_paid":
-		ub, err := findUserBalancesAndType(*data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
+		ub, err := findUserBalancesAndType(data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -281,7 +281,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: *data.OrderId,
+			PaymentCycleId: data.OrderId,
 			UserId:         user.Id,
 			Balance:        big.NewInt(0),
 			BalanceType:    "PART_PAID",
@@ -296,7 +296,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = sendToBrowser(user.Id, *data.OrderId)
+		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
 
@@ -332,7 +332,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		case "refunded":
 			suf = "REF"
 		}
-		ub, err := findUserBalancesAndType(*data.OrderId, "FAILED_"+suf, strings.ToUpper(data.PayCurrency))
+		ub, err := findUserBalancesAndType(data.OrderId, "FAILED_"+suf, strings.ToUpper(data.PayCurrency))
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -344,7 +344,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: *data.OrderId,
+			PaymentCycleId: data.OrderId,
 			UserId:         user.Id,
 			Balance:        big.NewInt(0),
 			BalanceType:    "FAILED_" + suf,
@@ -358,7 +358,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err = sendToBrowser(user.Id, *data.OrderId)
+		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
 

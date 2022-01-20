@@ -544,13 +544,9 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 		SponsorAt:   now,
 		UnsponsorAt: now,
 	}
-	userErr, err := insertOrUpdateSponsor(&event)
+	err := insertOrUpdateSponsor(&event)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
-		return
-	}
-	if userErr != nil {
-		writeErrorf(w, http.StatusConflict, "User error: %v", userErr)
 		return
 	}
 
@@ -732,7 +728,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 	}
 
 	ubNew := UserBalance{
-		PaymentCycleId: *paymentCycleId,
+		PaymentCycleId: paymentCycleId,
 		UserId:         u.Id,
 		Balance:        big.NewInt(2970),
 		BalanceType:    "PAY",

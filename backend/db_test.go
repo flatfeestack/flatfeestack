@@ -95,15 +95,12 @@ func TestSponsor(t *testing.T) {
 		UnsponsorAt: time.Time{}.Add(time.Duration(3) * time.Second),
 	}
 
-	err1, err2 := insertOrUpdateSponsor(&s1)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
-	err1, err2 = insertOrUpdateSponsor(&s2)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
-	err1, err2 = insertOrUpdateSponsor(&s3)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
+	err = insertOrUpdateSponsor(&s1)
+	assert.Nil(t, err)
+	err = insertOrUpdateSponsor(&s2)
+	assert.Nil(t, err)
+	err = insertOrUpdateSponsor(&s3)
+	assert.Nil(t, err)
 
 	rs, err := findSponsoredReposById(u.Id)
 	assert.Nil(t, err)
@@ -117,9 +114,8 @@ func TestSponsor(t *testing.T) {
 		SponsorAt:   time.Unix(4, 0),
 		UnsponsorAt: time.Unix(4, 0),
 	}
-	err1, err2 = insertOrUpdateSponsor(&s4)
-	assert.Nil(t, err1)
-	assert.Nil(t, err2)
+	err = insertOrUpdateSponsor(&s4)
+	assert.Nil(t, err)
 
 	rs, err = findSponsoredReposById(u.Id)
 	assert.Nil(t, err)

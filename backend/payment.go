@@ -39,7 +39,7 @@ func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 }
 
 //calculates the maximum of days that is left with any currency, returns the max with currency
-func maxDaysLeft(paymentCycleId uuid.UUID) (string, int64, error) {
+func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 	//daily, err := findDailyPaymentByPaymentCycleId(paymentCycleId)
 	//if err != nil {
 	//	return "", 0, err
@@ -84,7 +84,7 @@ func topUp(user *User) error {
 		}
 
 		go func() {
-			err = sendToBrowser(user.Id, *paymentCycleId)
+			err = sendToBrowser(user.Id, paymentCycleId)
 			if err != nil {
 				log.Printf("could not notify client %v, %v", user.Id, err)
 			}
@@ -180,7 +180,7 @@ func strategyDeductRandom(balances map[string]*Balance, subs map[string]*Balance
 	return "", nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
 }
 
-func currentUSDBalance(paymentCycleId uuid.UUID) (int64, error) {
+func currentUSDBalance(paymentCycleId *uuid.UUID) (int64, error) {
 	total, err := findSumUserBalanceByCurrency(paymentCycleId)
 	if err != nil {
 		return 0, err
@@ -248,7 +248,7 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 type UserBalanceDto struct {
 	UserId         uuid.UUID  `json:"userId"`
 	Balance        *big.Int   `json:"balance"`
-	PaymentCycleId uuid.UUID  `json:"paymentCycleId"`
+	PaymentCycleId *uuid.UUID `json:"paymentCycleId"`
 	FromUserId     *uuid.UUID `json:"fromUserId"`
 	BalanceType    string     `json:"balanceType"`
 	Currency       string     `json:"currency"`
@@ -267,7 +267,7 @@ type TotalUserBalance struct {
 	Balance  float64 `json:"balance"`
 }
 
-func sendToBrowser(userId uuid.UUID, paymentCycleId uuid.UUID) error {
+func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
 	lock.Lock()
 	conn := clients[userId]
 	lock.Unlock()
@@ -494,7 +494,7 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 }
 
 //Closes the current cycle and carries over all open currencies
-func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID) error {
+func closeCycle(uid uuid.UUID, currentPaymentCycleId *uuid.UUID, newPaymentCycleId *uuid.UUID) error {
 	if isUUIDZero(currentPaymentCycleId) {
 		return nil
 	}
@@ -536,7 +536,7 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId uuid.UUID, newPaymentCycleI
 	return nil
 }
 
-func paymentSuccess(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleId uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
+func paymentSuccess(uid uuid.UUID, oldPaymentCycleId *uuid.UUID, newPaymentCycleId *uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
 	//closes the current cycle and opens a new one, rolls over all currencies
 	err := closeCycle(uid, oldPaymentCycleId, newPaymentCycleId)
 	if err != nil {
@@ -565,7 +565,7 @@ func paymentSuccess(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleI
 		}
 	}
 
-	err = updatePaymentCycleId(uid, &newPaymentCycleId)
+	err = updatePaymentCycleId(uid, newPaymentCycleId)
 	if err != nil {
 		return err
 	}
@@ -573,8 +573,8 @@ func paymentSuccess(uid uuid.UUID, oldPaymentCycleId uuid.UUID, newPaymentCycleI
 	return nil
 }
 
-func notifyBrowser(uid uuid.UUID, paymentCycleId uuid.UUID) {
-	go func(uid uuid.UUID, paymentCycleId uuid.UUID) {
+func notifyBrowser(uid uuid.UUID, paymentCycleId *uuid.UUID) {
+	go func(uid uuid.UUID, paymentCycleId *uuid.UUID) {
 		err := sendToBrowser(uid, paymentCycleId)
 		if err != nil {
 			log.Printf("could not notify client %v, %v", uid, err)

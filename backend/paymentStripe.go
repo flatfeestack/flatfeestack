@@ -179,7 +179,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
-		go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+		go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
 			insertEmailSent(u.Id, "success-"+paymentCycleId.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
@@ -246,7 +246,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-plain-authreq_", defaultMessage,
 				"template-html-authreq_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
 				insertEmailSent(uid, "authreq-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
@@ -320,7 +320,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-plain-failed_", defaultMessage,
 				"template-html-failed_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
+			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
 				insertEmailSent(uid, "failed-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
@@ -334,37 +334,37 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseStripeData(data json.RawMessage) (uuid.UUID, uuid.UUID, int64, int64, int64, int64, error) {
+func parseStripeData(data json.RawMessage) (uuid.UUID, *uuid.UUID, int64, int64, int64, int64, error) {
 	var pi stripe.PaymentIntent
 	err := json.Unmarshal(data, &pi)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
 	}
 	uidRaw := pi.Metadata["userId"]
 	uid, err := uuid.Parse(uidRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing uid: %v, available %v\n", err, pi.Metadata)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing uid: %v, available %v\n", err, pi.Metadata)
 	}
 	newPaymentCycleIdRaw := pi.Metadata["paymentCycleId"]
 	newPaymentCycleId, err := uuid.Parse(newPaymentCycleIdRaw)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing newPaymentCycleId: %v, available %v\n", err, pi.Metadata)
 	}
 	feePrm, err := strconv.ParseInt(pi.Metadata["fee"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing fee: %v, available %v\n", pi.Metadata["fee"], pi.Metadata)
 	}
 
 	freq, err := strconv.ParseInt(pi.Metadata["freq"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v, %v\n", pi.Metadata["freq"], pi.Metadata, err)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing freq: %v, available %v, %v\n", pi.Metadata["freq"], pi.Metadata, err)
 	}
 
 	seats, err := strconv.ParseInt(pi.Metadata["seats"], 10, 64)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, 0, 0, 0, 0, fmt.Errorf("Error parsing seats: %v, available %v, %v\n", pi.Metadata["seats"], pi.Metadata, err)
+		return uuid.Nil, nil, 0, 0, 0, 0, fmt.Errorf("Error parsing seats: %v, available %v, %v\n", pi.Metadata["seats"], pi.Metadata, err)
 	}
-	return uid, newPaymentCycleId, pi.Amount, feePrm, seats, freq, nil
+	return uid, &newPaymentCycleId, pi.Amount, feePrm, seats, freq, nil
 }
 
 func stripePaymentRecurring(user User) (*ClientSecretBody, error) {

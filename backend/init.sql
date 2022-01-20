@@ -1,5 +1,3 @@
--- Attention: any word that contains public
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
@@ -24,15 +22,6 @@ CREATE TABLE payment_cycle (
 );
 ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
 
-CREATE table wallet_address(
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
-    currency    VARCHAR(8) NOT NULL,
-    address  	VARCHAR(255),
-    is_deleted	BOOLEAN
-);
-
-CREATE UNIQUE INDEX wallet_address_index ON wallet_address(address);
 
 CREATE TABLE user_balances (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -45,20 +34,7 @@ CREATE TABLE user_balances (
     balance_type     VARCHAR(16) NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index_2 ON user_balances (
-    payment_cycle_id,
-    user_id,
-    balance_type,
-    currency
-);
-
-CREATE TABLE user_emails_sent (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
-    email_type VARCHAR(64),
-    created_at TIMESTAMP NOT NULL
-);
-CREATE INDEX idx_user_emails_sent_email_type ON user_emails_sent(email_type); /*we do a count on email_type*/
+CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_id, user_id, balance_type, currency);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -82,14 +58,16 @@ CREATE TABLE git_email (
     confirmed_at TIMESTAMP,
     created_at   TIMESTAMP NOT NULL
 );
+CREATE UNIQUE INDEX git_email_index ON git_email(user_id, email, token);
 
 CREATE TABLE sponsor_event (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     repo_id       UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
     user_id       UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
-    sponsor_at    DATE NOT NULL,
-    un_sponsor_at DATE DEFAULT to_date('9999', 'YYYY') NOT NULL
+    sponsor_at    TIMESTAMP NOT NULL,
+    un_sponsor_at TIMESTAMP DEFAULT to_date('9999', 'YYYY') NOT NULL
 );
+CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
 
 CREATE TABLE analysis_request (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -111,27 +89,32 @@ CREATE TABLE analysis_response (
 );
 CREATE UNIQUE INDEX analysis_response_index ON analysis_response(analysis_request_id, git_email);
 
-
-CREATE TABLE daily_user_repo (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_dur REFERENCES users (id),
-    repo_id    UUID CONSTRAINT fk_repo_id_dur REFERENCES repo (id),
-    day        DATE NOT NULL,
-    created_at TIMESTAMP NOT NULL
+CREATE TABLE daily_contribution (
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id              UUID CONSTRAINT fk_user_id_dc REFERENCES users (id),
+    user_id_git          UUID CONSTRAINT fk_user_id_git_dc REFERENCES users (id),
+    repo_id              UUID CONSTRAINT fk_repo_id_dc REFERENCES repo (id),
+    payment_cycle_id     UUID CONSTRAINT fk_payment_cycle_id_dc REFERENCES payment_cycle (id) NOT NULL,
+    payment_cycle_id_git UUID CONSTRAINT fk_payment_cycle_id_git_dc REFERENCES payment_cycle (id),
+    balance              NUMERIC(78), /*256 bits*/
+    currency             VARCHAR(8) NOT NULL,
+    day                  DATE NOT NULL,
+    created_at           TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_user_repo_index ON daily_user_repo(user_id, day);
+CREATE UNIQUE INDEX daily_contribution_index ON daily_contribution(user_id, user_id_git, repo_id, currency, day);
 
-CREATE TABLE daily_balance (
+CREATE TABLE future_contribution (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id          UUID CONSTRAINT fk_user_id_dur REFERENCES users (id),
-    repo_id          UUID CONSTRAINT fk_repo_id_drb REFERENCES repo (id),
-    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
+    user_id          UUID CONSTRAINT fk_user_id_fc REFERENCES users (id),
+    repo_id          UUID CONSTRAINT fk_repo_id_fc REFERENCES repo (id),
+    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_fc REFERENCES payment_cycle (id),
     balance          NUMERIC(78), /*256 bits*/
     currency         VARCHAR(8) NOT NULL,
     day              DATE NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_balance_index ON daily_balance(user_id, repo_id, day);
+CREATE UNIQUE INDEX future_contribution_index ON future_contribution(user_id, repo_id, currency, day);
+
 
 CREATE TABLE payout_request (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -161,6 +144,15 @@ CREATE TABLE payout_response_details (
     created_at          TIMESTAMP NOT NULL
 );
 
+CREATE table wallet_address(
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
+    currency    VARCHAR(8) NOT NULL,
+    address  	VARCHAR(255),
+    is_deleted	BOOLEAN
+);
+CREATE UNIQUE INDEX wallet_address_index ON wallet_address(address);
+
 CREATE TABLE invite (
     email VARCHAR(64),
     invite_email VARCHAR(64),
@@ -169,3 +161,11 @@ CREATE TABLE invite (
     created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(email, invite_email)
 );
+
+CREATE TABLE user_emails_sent (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    email_type VARCHAR(64),
+    created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX user_emails_sent_index ON user_emails_sent(email_type); /*we do a count on email_type*/
