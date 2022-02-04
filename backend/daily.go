@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"time"
 )
@@ -30,41 +29,12 @@ func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time) (in
 		rids := []uuid.UUID{}
 		err = rows.Scan(&uid, pq.Array(&rids))
 		if err != nil {
-			log.Warningf("cannot scan %v", err)
-			continue
+			return 0, err
 		}
 
-		err = calcContribution(uid, rids, yesterdayStart, yesterdayStop)
+		err = calcContribution(uid, rids, yesterdayStart)
 		if err != nil {
-			log.Warningf("calc error %v", err)
-			continue
-		}
-		success++
-	}
-
-	rows, err = db.Query(`		
-			SELECT user_id, ARRAY_AGG(repo_id)
-			FROM future_contribution
-			WHERE day = $1
-			GROUP BY user_id`, yesterdayStart)
-	if err != nil {
-		return 0, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		uid := uuid.UUID{}
-		rids := []uuid.UUID{}
-		err = rows.Scan(&uid, pq.Array(&rids))
-		if err != nil {
-			log.Warningf("cannot scan %v", err)
-			continue
-		}
-
-		err = calcContribution(uid, rids, yesterdayStart, yesterdayStop)
-		if err != nil {
-			log.Warningf("calc error %v", err)
-			continue
+			return 0, err
 		}
 		success++
 	}
@@ -72,13 +42,18 @@ func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time) (in
 	return success, nil
 }
 
-func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, yesterdayStop time.Time) error {
+func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
 	u, err := findUserById(uid)
 	if err != nil {
 		return fmt.Errorf("cannot find user %v", err)
 	}
 
 	mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleId)
+	if err != nil {
+		return fmt.Errorf("cannot find sum user balance %v", err)
+	}
+
+	mFut, err := findSumFutureBalanceByCurrency(u.PaymentCycleId)
 	if err != nil {
 		return fmt.Errorf("cannot find sum user balance %v", err)
 	}
@@ -98,21 +73,16 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time,
 	for _, rid := range rids {
 
 		//get weights for the contributors
-		ars, err := findLastAnalysisResponse(rid)
+		ars, err := findAnalysisResponse(rid, yesterdayStart)
 		if err != nil {
-			log.Warningf("get analysis response scan %v", err)
-			continue
-		}
-		if ars == nil || len(ars) == 0 {
-			continue
+			return err
 		}
 		uidMap := map[uuid.UUID]float64{}
 		total := 0.0
 		for _, ar := range ars {
 			uidGit, err := findUserByGitEmail(ar.GitEmail)
 			if err != nil {
-				log.Warningf("get analysis response scan %v", err)
-				continue
+				return err
 			}
 			if uidGit != nil {
 				uidMap[*uidGit] += ar.Weight
@@ -124,18 +94,29 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time,
 
 		if len(uidMap) == 0 {
 			//no contribution park the sponsoring separately
-			insertFutureBalance(uid, rid, u.PaymentCycleId, distribute, currency, yesterdayStop, timeNow())
+			err = insertFutureBalance(uid, rid, u.PaymentCycleId, distribute, currency, yesterdayStart, timeNow())
+			if err != nil {
+				return err
+			}
 		} else {
 			for k, v := range uidMap {
-
+				//we can distribute more, as we may have future balances
+				if mFut[currency] != nil {
+					distribute = new(big.Int).Add(distribute, mFut[currency])
+					//if we distribute more, we need to deduct this from the future balances
+					deduct := new(big.Int).Neg(mFut[currency])
+					err = insertFutureBalance(uid, rid, u.PaymentCycleId, deduct, currency, yesterdayStart, timeNow())
+					if err != nil {
+						return err
+					}
+				}
 				f := new(big.Float).SetInt(distribute)
 				amountF := new(big.Float).Mul(big.NewFloat(v/total), f)
 				amount := new(big.Int)
 				amountF.Int(amount)
 				uidGit, err := findUserById(k)
 				if err != nil {
-					log.Warningf("get analysis response scan %v", err)
-					continue
+					return err
 				}
 
 				insertContribution(uid, k, rid, u.PaymentCycleId, uidGit.PaymentCycleId, amount, currency, yesterdayStart, timeNow())

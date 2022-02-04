@@ -896,13 +896,16 @@ func findUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	}
 }
 
-func findLastAnalysisResponse(repoId uuid.UUID) ([]Analysis, error) {
+func findAnalysisResponse(repoId uuid.UUID, yesterdayStart time.Time) ([]Analysis, error) {
 	as := []Analysis{}
+	date := yesterdayStart.Format("2006-01-02")
 	rows, err := db.
 		Query(`	SELECT req.date_from, req.date_to, res.git_email, res.git_name, res.weight
         				FROM analysis_request req 
         				    JOIN analysis_response res on req.id = res.analysis_request_id 
-                        WHERE req.repo_id = $1`, repoId)
+                        WHERE req.repo_id = $1 
+                          AND req.date_from <= $2 
+                          AND req.date_to > $2`, repoId, date)
 
 	if err != nil {
 		return nil, err
@@ -967,7 +970,7 @@ func insertContribution(uid uuid.UUID, uidGit uuid.UUID, repoId uuid.UUID, payId
 	return nil
 }
 
-func findSumDailyContributionGitUserCurrency(uid_git uuid.UUID, paymentCycleId *uuid.UUID) (map[string]*Balance, error) {
+func findSumDailyContributors(uid_git uuid.UUID, paymentCycleId *uuid.UUID) (map[string]*Balance, error) {
 
 	//hack, passing nil seems not to work...
 	var err error
@@ -1012,12 +1015,86 @@ func findSumDailyContributionGitUserCurrency(uid_git uuid.UUID, paymentCycleId *
 	return m, nil
 }
 
-func findSumDailyContributionUserCurrency(uid uuid.UUID, paymentCycleId *uuid.UUID) (map[string]*Balance, error) {
+func findSumDailySponsors(uid uuid.UUID, paymentCycleId *uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
 		Query(`	SELECT currency, COALESCE(sum(balance), 0)
         				FROM daily_contribution 
                         WHERE user_id = $1 AND payment_cycle_id = $2
                         GROUP BY currency`, uid, paymentCycleId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	m1 := make(map[string]*Balance)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m1[c] == nil {
+			m1[c] = &Balance{Balance: b1}
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	rows, err = db.
+		Query(`	SELECT currency, COALESCE(sum(balance), 0)
+        				FROM future_contribution 
+                        WHERE user_id = $1 AND payment_cycle_id = $2
+                        GROUP BY currency`, uid, paymentCycleId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	m2 := make(map[string]*Balance)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m2[c] == nil {
+			m2[c] = &Balance{Balance: b1}
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	//TODO: integrate with loop above
+	for k, _ := range m1 {
+		if m2[k] != nil {
+			m1[k].Balance = new(big.Int).Add(m2[k].Balance, m1[k].Balance)
+		}
+	}
+	for k, _ := range m2 {
+		if m1[k] == nil {
+			m1[k] = m2[k]
+		}
+	}
+
+	return m1, nil
+}
+
+func findSumDaily(paymentCycleId *uuid.UUID) (map[string]*Balance, error) {
+	rows, err := db.
+		Query(`	SELECT currency, COALESCE(sum(balance), 0)
+        				FROM daily_contribution 
+                        WHERE payment_cycle_id = $2
+                        GROUP BY currency`, paymentCycleId)
 
 	if err != nil {
 		return nil, err
@@ -1070,6 +1147,39 @@ func findSumDailyBalanceCurrency(paymentCycleId *uuid.UUID) (map[string]*Balance
 		}
 		if m[c] == nil {
 			m[c] = &Balance{Balance: b1}
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
+func findSumFutureBalanceByCurrency(paymentCycleId *uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+                             FROM future_contribution 
+                             WHERE payment_cycle_id = $1
+                             GROUP BY currency`, paymentCycleId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
 		} else {
 			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
 		}

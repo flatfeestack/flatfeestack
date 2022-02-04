@@ -34,7 +34,7 @@ CREATE TABLE user_balances (
     balance_type     VARCHAR(16) NOT NULL,
     created_at       TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_id, user_id, balance_type, currency);
+CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_id, user_id, balance_type, currency, split);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
