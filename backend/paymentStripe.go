@@ -72,7 +72,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleInId)
 	if err != nil {
 		log.Printf("Cannot get current USD balance %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -88,7 +88,7 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 		SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)),
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, seats, freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycleIn(seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -156,7 +156,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u.Id, u.PaymentCycleId, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
+		err = paymentSuccess(u.Id, u.PaymentCycleInId, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -368,7 +368,7 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, *uuid.UUID, int64, int64,
 }
 
 func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
-	pc, err := findPaymentCycle(user.PaymentCycleId)
+	pc, err := findPaymentCycle(user.PaymentCycleInId)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +384,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		return nil, fmt.Errorf("no matching plan found: %v, available: %v", pc.Freq, plans)
 	}
 
-	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleInId)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +399,7 @@ func stripePaymentRecurring(user User) (*ClientSecretBody, error) {
 		OffSession:    stripe.Bool(true),
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, pc.Seats, pc.Freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycleIn(pc.Seats, pc.Freq, timeNow())
 	if err != nil {
 		return nil, err
 	}

@@ -1,40 +1,43 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TABLE payment_cycle_in (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    seats      BIGINT DEFAULT 1,
+    freq       BIGINT DEFAULT 365,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE payment_cycle_out (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE users (
     id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     invited_email         VARCHAR(64), /*if this is set, then this email pays the amount*/
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
     stripe_last4          VARCHAR(8),
-    payment_cycle_id      UUID, /*CONSTRAINT fk_payment_cycle_id_u REFERENCES payment_cycle (id)*/
+    payment_cycle_in_id   UUID CONSTRAINT fk_payment_cycle_in_id_u REFERENCES payment_cycle_in (id),
+    payment_cycle_out_id  UUID CONSTRAINT fk_payment_cycle_out_id_u REFERENCES payment_cycle_out (id) NOT NULL,
     email                 VARCHAR(64) UNIQUE NOT NULL,
     name                  VARCHAR(255),
     image                 BYTEA,
     created_at            TIMESTAMP NOT NULL
 );
 
-CREATE TABLE payment_cycle (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
-    seats      BIGINT DEFAULT 1,
-    freq       BIGINT DEFAULT 365,
-    created_at TIMESTAMP NOT NULL
-);
-ALTER TABLE users ADD CONSTRAINT fk_payment_cycle_id_u FOREIGN KEY (payment_cycle_id) REFERENCES payment_cycle (id);
-
-
 CREATE TABLE user_balances (
-    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_ub REFERENCES payment_cycle (id),
-    user_id          UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
-    from_user_id     UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
-    balance          NUMERIC(78), /*256 bits*/
-    split            NUMERIC(78), /*256 bits*/
-    currency         VARCHAR(8) NOT NULL,
-    balance_type     VARCHAR(16) NOT NULL,
-    created_at       TIMESTAMP NOT NULL
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_cycle_in_id UUID CONSTRAINT fk_payment_cycle_in_id_ub REFERENCES payment_cycle_in (id),
+    user_id             UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    from_user_id        UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
+    balance             NUMERIC(78), /*256 bits*/
+    split               NUMERIC(78), /*256 bits*/
+    currency            VARCHAR(8) NOT NULL,
+    balance_type        VARCHAR(16) NOT NULL,
+    created_at          TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_id, user_id, balance_type, currency, split);
+CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_in_id, user_id, balance_type, currency, split);
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -65,7 +68,7 @@ CREATE TABLE sponsor_event (
     repo_id       UUID CONSTRAINT fk_repo_id_se REFERENCES repo (id),
     user_id       UUID CONSTRAINT fk_user_id_se REFERENCES users (id),
     sponsor_at    TIMESTAMP NOT NULL,
-    un_sponsor_at TIMESTAMP DEFAULT to_date('9999', 'YYYY') NOT NULL
+    un_sponsor_at TIMESTAMP
 );
 CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
 
@@ -94,8 +97,8 @@ CREATE TABLE daily_contribution (
     user_id              UUID CONSTRAINT fk_user_id_dc REFERENCES users (id),
     user_id_git          UUID CONSTRAINT fk_user_id_git_dc REFERENCES users (id),
     repo_id              UUID CONSTRAINT fk_repo_id_dc REFERENCES repo (id),
-    payment_cycle_id     UUID CONSTRAINT fk_payment_cycle_id_dc REFERENCES payment_cycle (id) NOT NULL,
-    payment_cycle_id_git UUID CONSTRAINT fk_payment_cycle_id_git_dc REFERENCES payment_cycle (id),
+    payment_cycle_in_id  UUID CONSTRAINT fk_payment_cycle_in_id_dc REFERENCES payment_cycle_in (id) NOT NULL,
+    payment_cycle_out_id UUID CONSTRAINT fk_payment_cycle_out_id_dc REFERENCES payment_cycle_out (id) NOT NULL,
     balance              NUMERIC(78), /*256 bits*/
     currency             VARCHAR(8) NOT NULL,
     day                  DATE NOT NULL,
@@ -104,14 +107,14 @@ CREATE TABLE daily_contribution (
 CREATE UNIQUE INDEX daily_contribution_index ON daily_contribution(user_id, user_id_git, repo_id, currency, day);
 
 CREATE TABLE future_contribution (
-    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id          UUID CONSTRAINT fk_user_id_fc REFERENCES users (id),
-    repo_id          UUID CONSTRAINT fk_repo_id_fc REFERENCES repo (id),
-    payment_cycle_id UUID CONSTRAINT fk_payment_cycle_id_fc REFERENCES payment_cycle (id),
-    balance          NUMERIC(78), /*256 bits*/
-    currency         VARCHAR(8) NOT NULL,
-    day              DATE NOT NULL,
-    created_at       TIMESTAMP NOT NULL
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id             UUID CONSTRAINT fk_user_id_fc REFERENCES users (id),
+    repo_id             UUID CONSTRAINT fk_repo_id_fc REFERENCES repo (id),
+    payment_cycle_in_id UUID CONSTRAINT fk_payment_cycle_in_id_fc REFERENCES payment_cycle_in (id),
+    balance             NUMERIC(78), /*256 bits*/
+    currency            VARCHAR(8) NOT NULL,
+    day                 DATE NOT NULL,
+    created_at          TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX future_contribution_index ON future_contribution(user_id, repo_id, currency, day);
 

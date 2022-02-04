@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -51,6 +51,11 @@ func TestMain(m *testing.M) {
 	}
 
 	code := m.Run()
+
+	err = db.Close()
+	if err != nil {
+		log.Warnf("Could not start resource: %s", err)
+	}
 
 	// You can't defer this because os.Exit doesn't care for defer
 	if err := pool.Purge(resource); err != nil {

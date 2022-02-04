@@ -130,6 +130,15 @@ const (
 	usdFactor = 1_000_000 // 10^6
 )
 
+func getFactorInt(currency string) (int64, error) {
+	for supportedCurrency, cryptoCurrency := range supportedCurrencies {
+		if supportedCurrency == strings.ToUpper(currency) {
+			return IntPow(10, cryptoCurrency.FactorPow), nil
+		}
+	}
+	return 0, fmt.Errorf("currency not found, %v", currency)
+}
+
 func getFactor(currency string) (*big.Int, error) {
 	for supportedCurrency, cryptoCurrency := range supportedCurrencies {
 		if supportedCurrency == strings.ToUpper(currency) {
@@ -327,7 +336,7 @@ func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
 	}
-	err = updateDbSeats(user.PaymentCycleId, seats)
+	err = updateDbSeats(user.PaymentCycleInId, seats)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
@@ -542,7 +551,7 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 		RepoId:      repoId,
 		EventType:   newEventType,
 		SponsorAt:   now,
-		UnsponsorAt: now,
+		UnSponsorAt: &now,
 	}
 	err := insertOrUpdateSponsor(&event)
 	if err != nil {
@@ -607,7 +616,7 @@ func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func users(w http.ResponseWriter, r *http.Request, _ string) {
-	u, err := findAllUsers()
+	u, err := findAllEmails()
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could fetch users: %v", err)
 		return
@@ -639,11 +648,13 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	n := m["email"]
 
 	uid := uuid.New()
+	payOutI := uuid.New()
 
 	u := User{
-		Email:     n,
-		Id:        uid,
-		CreatedAt: timeNow(),
+		Email:             n,
+		Id:                uid,
+		PaymentCycleOutId: &payOutI,
+		CreatedAt:         timeNow(),
 	}
 
 	err := insertUser(&u)
@@ -721,7 +732,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	paymentCycleId, err := insertNewPaymentCycle(u.Id, 365, seats, timeNow())
+	paymentCycleId, err := insertNewPaymentCycleIn(365, seats, timeNow())
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
@@ -899,7 +910,7 @@ func contributionsSum2(w http.ResponseWriter, r *http.Request) {
 }
 
 func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
-	r, err := findSponsoredReposByOrgId(user.Email)
+	r, err := findSponsoredReposById(user.Id)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return

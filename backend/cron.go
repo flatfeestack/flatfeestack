@@ -169,7 +169,7 @@ func dailyRunner(now time.Time) error {
 }
 
 func reminderTopup(u User) error {
-	emailCountId := "topup-" + u.PaymentCycleId.String()
+	emailCountId := "topup-" + u.PaymentCycleInId.String()
 	c, err := countEmailSent(u.Id, emailCountId)
 	if err != nil {
 		return err

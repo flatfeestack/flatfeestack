@@ -19,7 +19,7 @@ type PayoutInfoDTO struct {
 
 //returns current payment cycle that is active (there was exactly one payment for this)
 func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
-	pc, err := findPaymentCycle(user.PaymentCycleId)
+	pc, err := findPaymentCycle(user.PaymentCycleInId)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not find user balance: %v", err)
 		return
@@ -64,7 +64,7 @@ func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 }
 
 func topUp(user *User) error {
-	_, daysLeft, err := maxDaysLeft(user.PaymentCycleId)
+	_, daysLeft, err := maxDaysLeft(user.PaymentCycleInId)
 
 	if daysLeft > 0 {
 		log.Printf("enough funds")
@@ -103,7 +103,7 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	}
 
 	//parent has enough funds go for it!
-	_, err = findSumUserBalanceByCurrency(sponsor.PaymentCycleId)
+	_, err = findSumUserBalanceByCurrency(sponsor.PaymentCycleInId)
 	if err != nil {
 		log.Printf("findSumUserBalances: %v", err)
 		return false, nil
@@ -166,7 +166,11 @@ func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID
 	return true, &uuid.Nil
 }
 
-func strategyDeductRandom(balances map[string]*Balance, subs map[string]*Balance) (string, *big.Int, error) {
+func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, *big.Int, error) {
+	var maxBalance *Balance
+	var maxFreq = int64(0)
+	var maxCurrency string
+
 	for currency, balance := range balances {
 		newBalance := balance.Balance
 		if subs[currency] != nil {
@@ -174,9 +178,18 @@ func strategyDeductRandom(balances map[string]*Balance, subs map[string]*Balance
 		}
 		freq := new(big.Int).Div(newBalance, balance.Split).Int64()
 		if freq > 0 {
-			return currency, balance.Split, nil
+			if freq > maxFreq {
+				maxFreq = freq
+				maxBalance = balance
+				maxCurrency = currency
+			}
 		}
 	}
+
+	if maxBalance != nil {
+		return maxCurrency, maxBalance.Split, nil
+	}
+
 	return "", nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
 }
 
@@ -242,7 +255,7 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 		return nil
 	})
 
-	notifyBrowser(user.Id, user.PaymentCycleId)
+	notifyBrowser(user.Id, user.PaymentCycleInId)
 }
 
 type UserBalanceDto struct {
@@ -338,7 +351,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
 }
 
 func cancelSub(w http.ResponseWriter, r *http.Request, user *User) {
-	err := updateFreq(user.PaymentCycleId, 0)
+	err := updateFreq(user.PaymentCycleInId, 0)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
 		return

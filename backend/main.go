@@ -426,16 +426,16 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) 
 }
 
 func createUser(email string) (*User, error) {
-	var user User
-	uid, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-	user.Id = uid
-	user.Email = email
-	user.CreatedAt = timeNow()
+	payOutId := uuid.New()
 
-	err = insertUser(&user)
+	user := User{
+		Id:                uuid.New(),
+		PaymentCycleOutId: &payOutId,
+		Email:             email,
+		CreatedAt:         timeNow(),
+	}
+
+	err := insertUser(&user)
 	if err != nil {
 		return nil, err
 	}

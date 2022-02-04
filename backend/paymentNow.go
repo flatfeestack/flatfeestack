@@ -79,14 +79,14 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	var data map[string]string
 	err = json.NewDecoder(r.Body).Decode(&data)
 
-	paymentCycleId, err := insertNewPaymentCycle(user.Id, seats, freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycleIn(seats, freq, timeNow())
 	if err != nil {
 		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleId)
+	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleInId)
 	if err != nil {
 		log.Printf("Cannot get current USD balance %v: %v\n", user.Id, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -237,7 +237,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = paymentSuccess(user.Id, user.PaymentCycleId, data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
+		err = paymentSuccess(user.Id, user.PaymentCycleInId, data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
 		if err != nil {
 			log.Printf("Could not process nowpayment success: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)

@@ -20,3 +20,14 @@ func writeJson(w http.ResponseWriter, obj interface{}) {
 		writeErrorf(w, http.StatusBadRequest, "Could encode json: %v", err)
 	}
 }
+
+func IntPow(n int64, m int64) int64 {
+	if m == 0 {
+		return 1
+	}
+	result := n
+	for i := int64(2); i <= m; i++ {
+		result *= n
+	}
+	return result
+}

@@ -11,10 +11,12 @@ func TestUser(t *testing.T) {
 	setup()
 	defer teardown()
 
+	payOutId := uuid.New()
 	u := User{
-		Id:       uuid.New(),
-		StripeId: stringPointer("strip-id"),
-		Email:    "email",
+		Id:                uuid.New(),
+		StripeId:          stringPointer("strip-id"),
+		PaymentCycleOutId: &payOutId,
+		Email:             "email",
 	}
 
 	err := insertUser(&u)
@@ -46,10 +48,12 @@ func TestSponsor(t *testing.T) {
 	setup()
 	defer teardown()
 
+	payOutId := uuid.New()
 	u := User{
-		Id:       uuid.New(),
-		StripeId: stringPointer("strip-id"),
-		Email:    "email",
+		Id:                uuid.New(),
+		StripeId:          stringPointer("strip-id"),
+		PaymentCycleOutId: &payOutId,
+		Email:             "email",
 	}
 
 	r := Repo{
@@ -68,13 +72,18 @@ func TestSponsor(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, id)
 
+	t1 := time.Time{}.Add(time.Duration(1) * time.Second)
+	t2 := time.Time{}.Add(time.Duration(2) * time.Second)
+	t3 := time.Time{}.Add(time.Duration(3) * time.Second)
+	t4 := time.Time{}.Add(time.Duration(4) * time.Second)
+
 	s1 := SponsorEvent{
 		Id:          uuid.New(),
 		Uid:         u.Id,
 		RepoId:      r.Id,
 		EventType:   Active,
-		SponsorAt:   time.Time{}.Add(time.Duration(1) * time.Second),
-		UnsponsorAt: time.Time{}.Add(time.Duration(1) * time.Second),
+		SponsorAt:   t1,
+		UnSponsorAt: &t1,
 	}
 
 	s2 := SponsorEvent{
@@ -82,8 +91,8 @@ func TestSponsor(t *testing.T) {
 		Uid:         u.Id,
 		RepoId:      r.Id,
 		EventType:   Inactive,
-		SponsorAt:   time.Time{}.Add(time.Duration(2) * time.Second),
-		UnsponsorAt: time.Time{}.Add(time.Duration(2) * time.Second),
+		SponsorAt:   t2,
+		UnSponsorAt: &t2,
 	}
 
 	s3 := SponsorEvent{
@@ -91,8 +100,8 @@ func TestSponsor(t *testing.T) {
 		Uid:         u.Id,
 		RepoId:      r.Id,
 		EventType:   Active,
-		SponsorAt:   time.Time{}.Add(time.Duration(3) * time.Second),
-		UnsponsorAt: time.Time{}.Add(time.Duration(3) * time.Second),
+		SponsorAt:   t3,
+		UnSponsorAt: &t3,
 	}
 
 	err = insertOrUpdateSponsor(&s1)
@@ -111,8 +120,8 @@ func TestSponsor(t *testing.T) {
 		Uid:         u.Id,
 		RepoId:      r.Id,
 		EventType:   Inactive,
-		SponsorAt:   time.Unix(4, 0),
-		UnsponsorAt: time.Unix(4, 0),
+		SponsorAt:   t4,
+		UnSponsorAt: &t4,
 	}
 	err = insertOrUpdateSponsor(&s4)
 	assert.Nil(t, err)
@@ -149,10 +158,12 @@ func TestRepo(t *testing.T) {
 }
 
 func saveTestUser(t *testing.T, email string) uuid.UUID {
+	payOutId := uuid.New()
 	u := User{
-		Id:       uuid.New(),
-		StripeId: stringPointer("strip-id"),
-		Email:    email,
+		Id:                uuid.New(),
+		StripeId:          stringPointer("strip-id"),
+		PaymentCycleOutId: &payOutId,
+		Email:             email,
 	}
 
 	err := insertUser(&u)

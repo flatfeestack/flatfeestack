@@ -16,7 +16,7 @@ func runDailyContribution(yesterdayStart time.Time, yesterdayStop time.Time) (in
 	rows, err := db.Query(`		
 			SELECT user_id, ARRAY_AGG(repo_id)
 			FROM sponsor_event
-			WHERE sponsor_at < $1 AND un_sponsor_at >= $2
+			WHERE sponsor_at < $1 AND (un_sponsor_at IS NULL OR un_sponsor_at >= $2)
 			GROUP BY user_id`, yesterdayStart, yesterdayStop)
 	if err != nil {
 		return 0, err
@@ -48,22 +48,22 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 		return fmt.Errorf("cannot find user %v", err)
 	}
 
-	mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleId)
+	mAdd, err := findSumUserBalanceByCurrency(u.PaymentCycleInId)
 	if err != nil {
 		return fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
-	mFut, err := findSumFutureBalanceByCurrency(u.PaymentCycleId)
+	mFut, err := findSumFutureBalanceByCurrency(u.PaymentCycleInId)
 	if err != nil {
 		return fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
-	mSub, err := findSumDailyBalanceCurrency(u.PaymentCycleId)
+	mSub, err := findSumDailyBalanceCurrency(u.PaymentCycleInId)
 	if err != nil {
 		return fmt.Errorf("cannot find sum daily balance %v", err)
 	}
 
-	currency, s, err := strategyDeductRandom(mAdd, mSub)
+	currency, s, err := strategyDeductMax(mAdd, mSub)
 	if err != nil {
 		return fmt.Errorf("no funds, notify user %v", err)
 	}
@@ -94,7 +94,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 
 		if len(uidMap) == 0 {
 			//no contribution park the sponsoring separately
-			err = insertFutureBalance(uid, rid, u.PaymentCycleId, distribute, currency, yesterdayStart, timeNow())
+			err = insertFutureBalance(uid, rid, u.PaymentCycleInId, distribute, currency, yesterdayStart, timeNow())
 			if err != nil {
 				return err
 			}
@@ -105,7 +105,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 					distribute = new(big.Int).Add(distribute, mFut[currency])
 					//if we distribute more, we need to deduct this from the future balances
 					deduct := new(big.Int).Neg(mFut[currency])
-					err = insertFutureBalance(uid, rid, u.PaymentCycleId, deduct, currency, yesterdayStart, timeNow())
+					err = insertFutureBalance(uid, rid, u.PaymentCycleInId, deduct, currency, yesterdayStart, timeNow())
 					if err != nil {
 						return err
 					}
@@ -119,7 +119,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 					return err
 				}
 
-				insertContribution(uid, k, rid, u.PaymentCycleId, uidGit.PaymentCycleId, amount, currency, yesterdayStart, timeNow())
+				insertContribution(uid, k, rid, u.PaymentCycleInId, uidGit.PaymentCycleOutId, amount, currency, yesterdayStart, timeNow())
 			}
 		}
 	}
