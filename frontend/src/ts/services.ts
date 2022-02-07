@@ -262,7 +262,7 @@ export const timeSince = (d: Date, now:Date):string => {
 export const stripePaymentMethod = async (stripe, cardElement) => {
   const cs = await API.user.setupStripe();
   const result = await stripe.confirmCardSetup(
-    cs.client_secret,
+    cs.clientSecret,
     { payment_method: { card: cardElement } },
     { handleActions: false });
   if(result.error) {
@@ -271,9 +271,9 @@ export const stripePaymentMethod = async (stripe, cardElement) => {
   user.set(await API.user.updatePaymentMethod(result.setupIntent.payment_method));
 };
 
-export const stripePayment = async (stripe, freq: number, seats: number, payment_method: string) => {
+export const stripePayment = async (stripe, freq: number, seats: number, paymentMethod: string) => {
   const res = await API.user.stripePayment(freq, seats);
-  const result = await stripe.confirmCardPayment(res.client_secret, {payment_method })
+  const result = await stripe.confirmCardPayment(res.clientSecret, {payment_method: paymentMethod })
   if(result.error) {
     throw "Payment problem: " + result.error.code + (result.error.decline_code ? (", " + result.error.decline_code) : "");
   }

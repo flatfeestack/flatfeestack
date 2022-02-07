@@ -12,7 +12,6 @@
   let invites: Invitation[] = [];
   let inviteEmail;
   let isAddInviteSubmitting = false;
-  let selected;
   let statusSponsoredUsers: UserStatus[] = [];
 
   async function removeMyInvite(email: string, inviteEmail: string) {
@@ -61,9 +60,9 @@
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-      const res1 = API.invite.inviteAuth(inviteEmail, selected);
-      const res2 = API.invite.invite(inviteEmail, selected);
-      const inv: Invitation = { email: $user.email, inviteEmail, freq: selected, createdAt: new Date().toISOString(), confirmedAt: null };
+      const res1 = API.invite.inviteAuth(inviteEmail);
+      const res2 = API.invite.invite(inviteEmail);
+      const inv: Invitation = { email: $user.email, inviteEmail, createdAt: new Date().toISOString(), confirmedAt: null };
       invites = [...invites, inv];
       await res1
       await res2;
@@ -137,11 +136,6 @@
           <form on:submit|preventDefault="{addInvite}" class="container-small">
             <label class="p-2">Invite by email:</label>
             <input size="24" maxlength="50" type="email" bind:value="{inviteEmail}" />&nbsp;
-            <select bind:value={selected}>
-              {#each $config.plans as plan, i}
-                <option value="{plan.freq}">{plan.title}</option>
-              {/each}
-            </select>
             <button class="ml-5 p-2 button1" type="submit" disabled="{isAddInviteSubmitting}">Invite
               {#if isAddInviteSubmitting}
                 <Dots />

@@ -1,8 +1,9 @@
 export type Users = {
   id: string;
-  payment_method: string;
+  paymentMethod: string;
   last4: string;
-  paymentCycleId: string;
+  paymentCycleInId: string;
+  paymentCycleOutId: string;
   email: string;
   name: string;
   image: string;
@@ -31,7 +32,7 @@ export type Plan = {
 }
 
 export type ClientSecret = {
-  client_secret: string;
+  clientSecret: string;
 }
 
 export type UserBalances = {
@@ -97,7 +98,6 @@ export type GitUser = {
 export type Invitation = {
   email: string;
   inviteEmail: string;
-  freq: number;
   confirmedAt: string|null;
   createdAt: string;
 };
@@ -125,14 +125,15 @@ export type FlatFeeWeight = {
 }
 
 export type Contributions = {
-  userEmail: string;
-  userName: string;
   repoName: string;
+  repoUrl: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  contributorName: string;
   contributorEmail: string;
-  contributorWeight: number;
-  isFlatFeeStackUser: boolean;
-  balance: number;
-  balanceRepo: number;
+  balance: bigint;
+  currency: string;
+  paymentCycleInId: string;
   day: string;
 }
 

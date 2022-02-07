@@ -20,7 +20,7 @@
 
     $: {
         if (card) {
-            if ($user.payment_method || paymentProcessing) {
+            if ($user.paymentMethod || paymentProcessing) {
                 card.style.display = "none";
             } else {
                 showSuccess = false;
@@ -47,10 +47,10 @@
         paymentProcessing = true;
         isSubmitting = true;
         try {
-            if (!$user.payment_method) {
+            if (!$user.paymentMethod) {
                 await stripePaymentMethod(stripe, cardElement);
             }
-            await stripePayment(stripe, freq, seats, $user.payment_method);
+            await stripePayment(stripe, freq, seats, $user.paymentMethod);
             showSuccess = true;
         } catch (e) {
             $error = e;
@@ -65,7 +65,7 @@
         try {
             const p1 = API.user.deletePaymentMethod()
             const p2 = API.user.cancelSub()
-            $user.payment_method = null;
+            $user.paymentMethod = null;
             $user.last4 = null;
             await p1;
             await p2;
@@ -95,7 +95,7 @@
     }
 </style>
 
-{#if $user.payment_method}
+{#if $user.paymentMethod}
 <div class="container">
     <label class="nobreak">Credit card: </label>
     <div class="container">
