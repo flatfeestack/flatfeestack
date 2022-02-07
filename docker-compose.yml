@@ -69,8 +69,7 @@ services:
     volumes:
       - ./.db:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./backend/init_func.sql:/docker-entrypoint-initdb.d/1-init.sql
-      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
+      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
     ports:
       - 5432:5432
     env_file:
