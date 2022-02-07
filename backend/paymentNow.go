@@ -51,7 +51,7 @@ type PaymentResponse2 struct {
 	PayCurrency string   `json:"payCurrency"`
 }
 
-type NowpaymentWebhookResponse struct {
+type WebhookResponse struct {
 	ActuallyPaid     float64    `json:"actually_paid"`
 	InvoiceId        int64      `json:"invoice_id"`
 	OrderDescription *uuid.UUID `json:"order_description"`
@@ -196,7 +196,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data NowpaymentWebhookResponse
+	var data WebhookResponse
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("Could not parse webhook data: %v", err)
@@ -281,12 +281,12 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: data.OrderId,
-			UserId:         user.Id,
-			Balance:        big.NewInt(0),
-			BalanceType:    "PART_PAID",
-			Currency:       strings.ToUpper(data.PayCurrency),
-			CreatedAt:      timeNow(),
+			PaymentCycleInId: data.OrderId,
+			UserId:           user.Id,
+			Balance:          big.NewInt(0),
+			BalanceType:      "PART_PAID",
+			Currency:         strings.ToUpper(data.PayCurrency),
+			CreatedAt:        timeNow(),
 		}
 
 		err = insertUserBalance(ubNew)
@@ -344,12 +344,12 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: data.OrderId,
-			UserId:         user.Id,
-			Balance:        big.NewInt(0),
-			BalanceType:    "FAILED_" + suf,
-			Currency:       strings.ToUpper(data.PayCurrency),
-			CreatedAt:      timeNow(),
+			PaymentCycleInId: data.OrderId,
+			UserId:           user.Id,
+			Balance:          big.NewInt(0),
+			BalanceType:      "FAILED_" + suf,
+			Currency:         strings.ToUpper(data.PayCurrency),
+			CreatedAt:        timeNow(),
 		}
 
 		err = insertUserBalance(ubNew)

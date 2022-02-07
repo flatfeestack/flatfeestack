@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 //********************************************************************
@@ -66,10 +65,16 @@ func confirmInvite(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	//try topup
-	err = topUp(user)
+	//either we already confirmed, or we just did so
+	sponsor, err := findUserByEmail(email)
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "cannot topUp: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "cannot confirm invite: %v", err)
+		return
+	}
+
+	err = updateUserInviteId(user.Id, sponsor.Id)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "cannot confirm invite: %v", err)
 		return
 	}
 }
@@ -77,20 +82,14 @@ func confirmInvite(w http.ResponseWriter, r *http.Request, user *User) {
 func inviteOther(w http.ResponseWriter, r *http.Request, user *User) {
 	m := mux.Vars(r)
 	email := m["email"]
-	freqStr := m["freq"]
-	freq, err := strconv.Atoi(freqStr)
-	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "freq is not a number %v", err)
-		return
-	}
 
-	err = validateEmail(email)
+	err := validateEmail(email)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "email address not valid %v", err)
 		return
 	}
 
-	err = insertInvite(user.Email, email, int64(freq), timeNow())
+	err = insertInvite(user.Email, email, timeNow())
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return

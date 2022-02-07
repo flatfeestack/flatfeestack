@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
@@ -322,21 +321,6 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	err = updateUserImage(user.Id, img.Image)
-	if err != nil {
-		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
-		return
-	}
-}
-
-func updateSeats(w http.ResponseWriter, r *http.Request, user *User) {
-	params := mux.Vars(r)
-	a := params["seats"]
-	seats, err := strconv.Atoi(a)
-	if err != nil {
-		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
-		return
-	}
-	err = updateDbSeats(user.PaymentCycleInId, seats)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
 		return
@@ -732,18 +716,18 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	paymentCycleId, err := insertNewPaymentCycleIn(365, seats, timeNow())
+	paymentCycleInId, err := insertNewPaymentCycleIn(365, seats, timeNow())
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	ubNew := UserBalance{
-		PaymentCycleId: paymentCycleId,
-		UserId:         u.Id,
-		Balance:        big.NewInt(2970),
-		BalanceType:    "PAY",
-		CreatedAt:      timeNow(),
+		PaymentCycleInId: paymentCycleInId,
+		UserId:           u.Id,
+		Balance:          big.NewInt(2970),
+		BalanceType:      "PAY",
+		CreatedAt:        timeNow(),
 	}
 
 	err = insertUserBalance(ubNew)
@@ -752,7 +736,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	err = updatePaymentCycleId(u.Id, paymentCycleId)
+	err = updatePaymentCycleInId(u.Id, paymentCycleInId)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
@@ -837,7 +821,7 @@ func crontester(w http.ResponseWriter, r *http.Request, _ string) {
 }
 
 func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
-	cs, err := findUserContributions(user.Id)
+	cs, err := findContributions(user.Id, false)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
@@ -846,7 +830,7 @@ func contributionsSend(w http.ResponseWriter, _ *http.Request, user *User) {
 }
 
 func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
-	cs, err := findMyContributions(user.Id)
+	cs, err := findContributions(user.Id, true)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
@@ -916,53 +900,6 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 		return
 	}
 	writeJson(w, r)
-}
-
-type UserBalanceCoreDto struct {
-	UserId   uuid.UUID `json:"userId"`
-	Balance  *big.Int  `json:"balance"`
-	Currency string    `json:"currency"`
-}
-
-func pendingDailyUserPayouts(w http.ResponseWriter, _ *http.Request, user *User) {
-	fmt.Println(user.Id)
-	ubs, err := getPendingDailyUserPayouts(user.Id)
-	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-		return
-	}
-	var result []UserBalanceCoreDto
-	for _, ub := range ubs {
-		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency, Balance: ub.Balance}
-		result = append(result, r)
-	}
-	writeJson(w, result)
-}
-
-func totalRealizedIncome(w http.ResponseWriter, _ *http.Request, user *User) {
-	fmt.Println(user.Id)
-	ubs, err := getTotalRealizedIncome(user.Id)
-	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
-		return
-	}
-	var result []UserBalanceCoreDto
-	for _, ub := range ubs {
-		r := UserBalanceCoreDto{UserId: ub.UserId, Currency: ub.Currency, Balance: ub.Balance}
-		result = append(result, r)
-	}
-	writeJson(w, result)
-}
-
-func genRnd(n int) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	// Note that err == nil only if we read len(b) bytes.
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }
 
 func lang(r *http.Request) string {

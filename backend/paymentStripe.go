@@ -17,7 +17,7 @@ import (
 )
 
 type ClientSecretBody struct {
-	ClientSecret string `json:"client_secret"`
+	ClientSecret string `json:"clientSecret"`
 }
 
 //https://stripe.com/docs/payments/save-and-reuse
@@ -139,7 +139,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
-		uid, newPaymentCycleId, amount, feePrm, seat, freq, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleInId, amount, feePrm, seat, freq, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -156,7 +156,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		// amount(cent) * 10000(mUSD) * feePrm / 1000
 		fee := (amount * int64(feePrm) / 1000) + 1 //round up
 
-		err = paymentSuccess(u.Id, u.PaymentCycleInId, newPaymentCycleId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
+		err = paymentSuccess(u.Id, u.PaymentCycleInId, newPaymentCycleInId, big.NewInt(amount*10000), "USD", seat, freq, big.NewInt(fee*10000))
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -175,7 +175,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			"template-plain-success_", defaultMessage,
 			"template-html-success_", other["lang"])
 
-		err = sendToBrowser(uid, newPaymentCycleId)
+		err = sendToBrowser(uid, newPaymentCycleInId)
 		if err != nil {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
@@ -185,11 +185,11 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
-		}(u.Id, newPaymentCycleId, e)
+		}(u.Id, newPaymentCycleInId, e)
 	// ... handle other event types
 	case "payment_intent.requires_action":
 		//again
-		uid, newPaymentCycleId, _, _, _, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleInId, _, _, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -203,7 +203,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "REQACT", "USD")
+		ub, err := findUserBalancesAndType(newPaymentCycleInId, "REQACT", "USD")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -215,12 +215,12 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: newPaymentCycleId,
-			UserId:         uid,
-			Balance:        big.NewInt(0),
-			BalanceType:    "REQACT",
-			Currency:       "USD",
-			CreatedAt:      timeNow(),
+			PaymentCycleInId: newPaymentCycleInId,
+			UserId:           uid,
+			Balance:          big.NewInt(0),
+			BalanceType:      "REQACT",
+			Currency:         "USD",
+			CreatedAt:        timeNow(),
 		}
 
 		err = insertUserBalance(ubNew)
@@ -230,7 +230,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = sendToBrowser(uid, newPaymentCycleId)
+		err = sendToBrowser(uid, newPaymentCycleInId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
 
@@ -252,7 +252,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 				}
-			}(u.Id, newPaymentCycleId, e)
+			}(u.Id, newPaymentCycleInId, e)
 		}
 	//case "payment_intent.requires_action":
 	//3d secure - this is handled by strip, we just get notified
@@ -263,7 +263,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		uid, newPaymentCycleId, _, _, _, _, err := parseStripeData(event.Data.Raw)
+		uid, newPaymentCycleInId, _, _, _, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
 			log.Printf("Parer err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -277,7 +277,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		ub, err := findUserBalancesAndType(newPaymentCycleId, "FAILED", "USD")
+		ub, err := findUserBalancesAndType(newPaymentCycleInId, "FAILED", "USD")
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", uid, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -289,12 +289,12 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 
 		ubNew := UserBalance{
-			PaymentCycleId: newPaymentCycleId,
-			UserId:         uid,
-			Balance:        big.NewInt(0),
-			BalanceType:    "FAILED",
-			Currency:       "USD",
-			CreatedAt:      timeNow(),
+			PaymentCycleInId: newPaymentCycleInId,
+			UserId:           uid,
+			Balance:          big.NewInt(0),
+			BalanceType:      "FAILED",
+			Currency:         "USD",
+			CreatedAt:        timeNow(),
 		}
 
 		err = insertUserBalance(ubNew)
@@ -304,7 +304,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = sendToBrowser(uid, newPaymentCycleId)
+		err = sendToBrowser(uid, newPaymentCycleInId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
 
@@ -326,7 +326,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 				}
-			}(u.Id, newPaymentCycleId, e)
+			}(u.Id, newPaymentCycleInId, e)
 		}
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)

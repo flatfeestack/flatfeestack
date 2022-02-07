@@ -329,6 +329,49 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	assert.Equal(t, m6["USD"].Balance.String(), "657534")
 }
 
+func TestDailyRunnerSponsor(t *testing.T) {
+	setup()
+	defer teardown()
+
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
+	setupSponsorUser(t, *sponsors[0], *sponsors[1])
+
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	setupContributor(t, *repos[0], day0, day2, []string{"ste@ste.ste"}, []float64{0.5})
+	setupContributor(t, *repos[1], day0, day2, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.5, 0.5})
+
+	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	assert.Nil(t, err)
+
+	err = setupSponsor(t, sponsors[1], repos[1], day0)
+	assert.Nil(t, err)
+
+	err = dailyRunner(day2)
+	assert.Nil(t, err)
+
+	//now check the daily_contribution
+	m1, err := findSumDailyContributors(*contributors[0])
+	assert.Nil(t, err)
+	assert.Equal(t, m1["USD"].Balance.String(), "657534")
+
+	m2, err := findSumDailySponsors(*sponsors[0], *payId)
+	assert.Nil(t, err)
+	assert.Equal(t, m2["USD"].Balance.String(), "328767")
+
+	m3, err := findSumDailySponsors(*sponsors[1], *payId)
+	assert.Nil(t, err)
+	assert.Equal(t, m3["USD"].Balance.String(), "328767")
+
+}
+
+func setupSponsorUser(t *testing.T, uid1 uuid.UUID, uid2 uuid.UUID) {
+	err := updateUserInviteId(uid2, uid1)
+	assert.Nil(t, err)
+}
+
 func setupGitEmail(t *testing.T, user uuid.UUID, email string) {
 	now := timeNow()
 	err := insertGitEmail(user, email, nil, now)

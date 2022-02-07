@@ -63,110 +63,7 @@ func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 	return cur, max, nil
 }
 
-func topUp(user *User) error {
-	_, daysLeft, err := maxDaysLeft(user.PaymentCycleInId)
-
-	if daysLeft > 0 {
-		log.Printf("enough funds")
-		return nil
-	}
-
-	invites, err := findMyInvitations(user.Email)
-
-	for _, invite := range invites {
-		if err != nil {
-			log.Printf("findSumUserBalances: %v", err)
-			continue
-		}
-		ok, paymentCycleId := topUpWithSponsor(user, invite.Freq, invite.InviteEmail)
-		if !ok {
-			continue
-		}
-
-		go func() {
-			err = sendToBrowser(user.Id, paymentCycleId)
-			if err != nil {
-				log.Printf("could not notify client %v, %v", user.Id, err)
-			}
-		}()
-
-		break
-	}
-	return nil
-}
-
-func topUpWithSponsor(u *User, freq int64, inviteEmail string) (bool, *uuid.UUID) {
-	sponsor, err := findUserByEmail(inviteEmail)
-	if err != nil {
-		log.Printf("findUserByEmail: %v", err)
-		return false, nil
-	}
-
-	//parent has enough funds go for it!
-	_, err = findSumUserBalanceByCurrency(sponsor.PaymentCycleInId)
-	if err != nil {
-		log.Printf("findSumUserBalances: %v", err)
-		return false, nil
-	}
-
-	//TODO: aoeuaaoeu
-	/*dailyPayment, err := findDailyPaymentByPaymentCycleId(sponsor.PaymentCycleId)
-	if err != nil {
-		log.Printf("dailyPayment: %v", err)
-		return false, nil
-	}
-
-	//now we need a strategy to find from which currency (if at all to deduct the topUp)
-	currency, balance, dailyPaymentAmount, parentHasEnoughFunds, split := strategyDeductRandom(parentBalances, dailyPayment, freq)
-
-	if !parentHasEnoughFunds {
-		log.Printf("parent has not enough funding")
-		//TODO: notify parent
-		return false, nil
-	}
-
-	newPaymentCycleId, err := insertNewPaymentCycle(u.Id, 1, freq, timeNow())
-	if err != nil {
-		log.Printf("Cannot insert payment for %v: %v\n", u.Id, err)
-		return false, nil
-	}
-
-	ubNew, err := closeCycle(u.Id, u.PaymentCycleId, *newPaymentCycleId)
-	if err != nil {
-		return false, nil
-	}
-
-	ubNew.PaymentCycleId = sponsor.PaymentCycleId
-	ubNew.UserId = sponsor.Id
-	ubNew.Balance = new(big.Int).Sub(ubNew.Balance, balance)
-	ubNew.BalanceType = "SPONSOR"
-	ubNew.Currency = currency
-	ubNew.Split = split
-	err = insertUserBalance(*ubNew)
-	if err != nil {
-		log.Printf("transferBalance: %v", err)
-		return false, nil
-	}
-
-	ubNew.UserId = u.Id
-	ubNew.Balance = balance
-	ubNew.PaymentCycleId = *newPaymentCycleId
-	ubNew.FromUserId = &sponsor.Id
-	err = insertUserBalance(*ubNew)
-	if err != nil {
-		log.Printf("transferBalance: %v", err)
-		return false, nil
-	}
-	err = updatePaymentCycleId(u.Id, newPaymentCycleId)
-	if err != nil {
-		log.Printf("transferBalance: %v", err)
-		return false, nil
-	}		*/
-
-	return true, &uuid.Nil
-}
-
-func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, *big.Int, error) {
+func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, int64, *big.Int, error) {
 	var maxBalance *Balance
 	var maxFreq = int64(0)
 	var maxCurrency string
@@ -187,10 +84,10 @@ func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (
 	}
 
 	if maxBalance != nil {
-		return maxCurrency, maxBalance.Split, nil
+		return maxCurrency, maxFreq, maxBalance.Split, nil
 	}
 
-	return "", nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
+	return "", 0, nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
 }
 
 func currentUSDBalance(paymentCycleId *uuid.UUID) (int64, error) {
@@ -259,13 +156,13 @@ func ws(w http.ResponseWriter, r *http.Request, user *User) {
 }
 
 type UserBalanceDto struct {
-	UserId         uuid.UUID  `json:"userId"`
-	Balance        *big.Int   `json:"balance"`
-	PaymentCycleId *uuid.UUID `json:"paymentCycleId"`
-	FromUserId     *uuid.UUID `json:"fromUserId"`
-	BalanceType    string     `json:"balanceType"`
-	Currency       string     `json:"currency"`
-	CreatedAt      time.Time  `json:"createdAt"`
+	UserId           uuid.UUID  `json:"userId"`
+	Balance          *big.Int   `json:"balance"`
+	PaymentCycleInId *uuid.UUID `json:"paymentCycleInId"`
+	FromUserId       *uuid.UUID `json:"fromUserId"`
+	BalanceType      string     `json:"balanceType"`
+	Currency         string     `json:"currency"`
+	CreatedAt        time.Time  `json:"createdAt"`
 }
 
 type UserBalances struct {
@@ -280,7 +177,7 @@ type TotalUserBalance struct {
 	Balance  float64 `json:"balance"`
 }
 
-func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
+func sendToBrowser(userId uuid.UUID, paymentCycleInId *uuid.UUID) error {
 	lock.Lock()
 	conn := clients[userId]
 	lock.Unlock()
@@ -298,13 +195,13 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
 	var userBalancesDto []UserBalanceDto
 	for _, ub := range userBalances {
 		r := UserBalanceDto{
-			UserId:         ub.UserId,
-			PaymentCycleId: ub.PaymentCycleId,
-			FromUserId:     ub.FromUserId,
-			BalanceType:    ub.BalanceType,
-			Balance:        ub.Balance,
-			Currency:       ub.Currency,
-			CreatedAt:      ub.CreatedAt,
+			UserId:           ub.UserId,
+			PaymentCycleInId: ub.PaymentCycleInId,
+			FromUserId:       ub.FromUserId,
+			BalanceType:      ub.BalanceType,
+			Balance:          ub.Balance,
+			Currency:         ub.Currency,
+			CreatedAt:        ub.CreatedAt,
 		}
 		userBalancesDto = append(userBalancesDto, r)
 	}
@@ -320,14 +217,14 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
 	}
 
 	var pc PaymentCycle
-	if isUUIDZero(paymentCycleId) {
+	if isUUIDZero(paymentCycleInId) {
 		pc, err = findPaymentCycleLast(userId)
 		if err != nil {
 			conn.Close()
 			return err
 		}
 	} else {
-		pcp, err := findPaymentCycle(paymentCycleId)
+		pcp, err := findPaymentCycle(paymentCycleInId)
 		if err != nil {
 			conn.Close()
 			return err
@@ -335,7 +232,7 @@ func sendToBrowser(userId uuid.UUID, paymentCycleId *uuid.UUID) error {
 		pc = *pcp
 	}
 
-	_, daysLeft, err := maxDaysLeft(paymentCycleId)
+	_, daysLeft, err := maxDaysLeft(paymentCycleInId)
 	if err != nil {
 		conn.Close()
 		return err
@@ -507,25 +404,25 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 }
 
 //Closes the current cycle and carries over all open currencies
-func closeCycle(uid uuid.UUID, currentPaymentCycleId *uuid.UUID, newPaymentCycleId *uuid.UUID) error {
-	if isUUIDZero(currentPaymentCycleId) {
+func closeCycle(uid uuid.UUID, currentPaymentCycleInId *uuid.UUID, newPaymentCycleInId *uuid.UUID) error {
+	if isUUIDZero(currentPaymentCycleInId) {
 		return nil
 	}
-	currencies, err := findSumUserBalanceByCurrency(currentPaymentCycleId)
+	currencies, err := findSumUserBalanceByCurrency(currentPaymentCycleInId)
 	if err != nil {
 		return err
 	}
 
 	var ubNew *UserBalance
 	ubNew = &UserBalance{
-		PaymentCycleId: currentPaymentCycleId,
-		UserId:         uid,
-		CreatedAt:      timeNow(),
+		PaymentCycleInId: currentPaymentCycleInId,
+		UserId:           uid,
+		CreatedAt:        timeNow(),
 	}
 	for k, currency := range currencies {
 		ubNew.Balance = new(big.Int).Neg(currency.Balance)
 		ubNew.BalanceType = "CLOSE_CYCLE"
-		ubNew.PaymentCycleId = currentPaymentCycleId
+		ubNew.PaymentCycleInId = currentPaymentCycleInId
 		ubNew.Currency = k
 		ubNew.Split = currency.Split
 
@@ -536,7 +433,7 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId *uuid.UUID, newPaymentCycle
 
 		if currency.Balance.Cmp(big.NewInt(0)) > 0 {
 			ubNew.Balance = currency.Balance
-			ubNew.PaymentCycleId = newPaymentCycleId
+			ubNew.PaymentCycleInId = newPaymentCycleInId
 			ubNew.BalanceType = "CARRY_OVER"
 			ubNew.Currency = k
 			err = insertUserBalance(*ubNew)
@@ -549,15 +446,15 @@ func closeCycle(uid uuid.UUID, currentPaymentCycleId *uuid.UUID, newPaymentCycle
 	return nil
 }
 
-func paymentSuccess(uid uuid.UUID, oldPaymentCycleId *uuid.UUID, newPaymentCycleId *uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
+func paymentSuccess(uid uuid.UUID, oldPaymentCycleInId *uuid.UUID, newPaymentCycleInId *uuid.UUID, balance *big.Int, currency string, seat int64, freq int64, fee *big.Int) error {
 	//closes the current cycle and opens a new one, rolls over all currencies
-	err := closeCycle(uid, oldPaymentCycleId, newPaymentCycleId)
+	err := closeCycle(uid, oldPaymentCycleInId, newPaymentCycleInId)
 	if err != nil {
 		return err
 	}
 
 	ubNew := UserBalance{}
-	ubNew.PaymentCycleId = newPaymentCycleId
+	ubNew.PaymentCycleInId = newPaymentCycleInId
 	ubNew.BalanceType = "PAYMENT"
 	ubNew.Balance = balance
 	ubNew.Currency = currency
@@ -578,7 +475,7 @@ func paymentSuccess(uid uuid.UUID, oldPaymentCycleId *uuid.UUID, newPaymentCycle
 		}
 	}
 
-	err = updatePaymentCycleId(uid, newPaymentCycleId)
+	err = updatePaymentCycleInId(uid, newPaymentCycleInId)
 	if err != nil {
 		return err
 	}
@@ -590,7 +487,7 @@ func notifyBrowser(uid uuid.UUID, paymentCycleId *uuid.UUID) {
 	go func(uid uuid.UUID, paymentCycleId *uuid.UUID) {
 		err := sendToBrowser(uid, paymentCycleId)
 		if err != nil {
-			log.Printf("could not notify client %v, %v", uid, err)
+			log.Warnf("could not notify client %v, %v", uid, err)
 		}
 	}(uid, paymentCycleId)
 }

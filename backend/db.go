@@ -13,22 +13,6 @@ import (
 	"time"
 )
 
-type User struct {
-	Id                uuid.UUID `json:"id" sql:",type:uuid"`
-	InvitedEmail      *string   `json:"invited_email"`
-	StripeId          *string   `json:"-"`
-	PaymentCycleInId  *uuid.UUID
-	PaymentCycleOutId *uuid.UUID
-	Email             string  `json:"email"`
-	Name              *string `json:"name"`
-	Image             *string `json:"image"`
-	PaymentMethod     *string `json:"payment_method"`
-	Last4             *string `json:"last4"`
-	CreatedAt         time.Time
-	Claims            *TokenClaims
-	Role              *string `json:"role,omitempty"`
-}
-
 type SponsorEvent struct {
 	Id          uuid.UUID  `json:"id"`
 	Uid         uuid.UUID  `json:"uid"`
@@ -83,14 +67,14 @@ type UserBalanceCore struct {
 }
 
 type UserBalance struct {
-	UserId         uuid.UUID  `json:"userId"`
-	Balance        *big.Int   `json:"balance"`
-	Split          *big.Int   `json:"split"`
-	PaymentCycleId *uuid.UUID `json:"paymentCycleId"`
-	FromUserId     *uuid.UUID `json:"fromUserId"`
-	BalanceType    string     `json:"balanceType"`
-	Currency       string     `json:"currency"`
-	CreatedAt      time.Time  `json:"createdAt"`
+	UserId           uuid.UUID  `json:"userId"`
+	Balance          *big.Int   `json:"balance"`
+	Split            *big.Int   `json:"split"`
+	PaymentCycleInId *uuid.UUID `json:"paymentCycleInId"`
+	FromUserId       *uuid.UUID `json:"fromUserId"`
+	BalanceType      string     `json:"balanceType"`
+	Currency         string     `json:"currency"`
+	CreatedAt        time.Time  `json:"createdAt"`
 }
 
 type UserStatus struct {
@@ -107,15 +91,16 @@ type PaymentCycle struct {
 }
 
 type Contribution struct {
-	UserEmail         string    `json:"userEmail"`
-	UserName          string    `json:"userName"`
-	RepoName          string    `json:"repoName"`
-	ContributorEmail  *string   `json:"contributorEmail"`
-	ContributorWeight *float64  `json:"contributorWeight"`
-	FlatFeeStackUser  bool      `json:"isFlatFeeStackUser"`
-	Balance           *int64    `json:"balance"`
-	BalanceRepo       int64     `json:"balanceRepo"`
-	Day               time.Time `json:"day"`
+	RepoName         string    `json:"repoName"`
+	RepoUrl          string    `json:"repoUrl"`
+	SponsorName      string    `json:"sponsorName"`
+	SponsorEmail     string    `json:"sponsorEmail"`
+	ContributorName  string    `json:"contributorName"`
+	ContributorEmail string    `json:"contributorEmail"`
+	Balance          *big.Int  `json:"balance"`
+	Currency         string    `json:"currency"`
+	PaymentCycleInId uuid.UUID `json:"paymentCycleInId"`
+	Day              time.Time `json:"day"`
 }
 
 type Wallet struct {
@@ -140,177 +125,6 @@ type Analysis struct {
 	GitEmail string
 	GitName  string
 	Weight   float64
-}
-
-//*********************************************************************************
-//********************************** User *****************************************
-//*********************************************************************************
-func findAllEmails() ([]string, error) {
-	emails := []string{}
-	s := `SELECT email from users`
-	rows, err := db.Query(s)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var email string
-		err = rows.Scan(&email)
-		if err != nil {
-			return nil, err
-		}
-		emails = append(emails, email)
-	}
-	return emails, nil
-}
-
-func findUserByEmail(email string) (*User, error) {
-	var u User
-	err := db.
-		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_in_id,
-                                payment_cycle_out_id, stripe_last4, email, name, image 
-                         FROM users WHERE email=$1`, email).
-		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
-			&u.PaymentMethod, &u.PaymentCycleInId, &u.PaymentCycleOutId, &u.Last4, &u.Email, &u.Name,
-			&u.Image)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		return &u, nil
-	default:
-		return nil, err
-	}
-}
-
-func findUserById(uid uuid.UUID) (*User, error) {
-	var u User
-	err := db.
-		QueryRow(`SELECT id, stripe_id, invited_email, stripe_payment_method, payment_cycle_in_id,
-                                payment_cycle_out_id, stripe_last4, email, name, image 
-                         FROM users WHERE id=$1`, uid).
-		Scan(&u.Id, &u.StripeId, &u.InvitedEmail,
-			&u.PaymentMethod, &u.PaymentCycleInId, &u.PaymentCycleOutId, &u.Last4, &u.Email, &u.Name,
-			&u.Image)
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		return &u, nil
-	default:
-		return nil, err
-	}
-}
-
-func insertUser(user *User) error {
-
-	stmt, err := db.Prepare("INSERT INTO payment_cycle_out (id, created_at) VALUES ($1, $2)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
-	}
-	defer closeAndLog(stmt)
-
-	res, err := stmt.Exec(user.PaymentCycleOutId, user.CreatedAt)
-	if err != nil {
-		return err
-	}
-	err = handleErrMustInsertOne(res)
-	if err != nil {
-		return err
-	}
-
-	stmt, err = db.Prepare("INSERT INTO users (id, email, stripe_id, payment_cycle_out_id, created_at) VALUES ($1, $2, $3, $4, $5)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
-	}
-	defer closeAndLog(stmt)
-
-	res, err = stmt.Exec(user.Id, user.Email, user.StripeId, user.PaymentCycleOutId, user.CreatedAt)
-	if err != nil {
-		return err
-	}
-
-	return handleErrMustInsertOne(res)
-}
-
-func updateUser(user *User) error {
-	stmt, err := db.Prepare(`UPDATE users SET 
-                                           stripe_id=$1,  
-                                           stripe_payment_method=$2, 
-                                           stripe_last4=$3
-                                    WHERE id=$4`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(user.StripeId, user.PaymentMethod, user.Last4, user.Id)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updatePaymentCycleId(id uuid.UUID, paymentCycleInId *uuid.UUID) error {
-	stmt, err := db.Prepare("UPDATE users SET payment_cycle_in_id=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", id, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(paymentCycleInId, id)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateUserName(uid uuid.UUID, name string) error {
-	stmt, err := db.Prepare("UPDATE users SET name=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(name, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateUserImage(uid uuid.UUID, data string) error {
-	stmt, err := db.Prepare("UPDATE users SET image=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(data, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateDbSeats(payId *uuid.UUID, seats int) error {
-	stmt, err := db.Prepare("UPDATE payment_cycle_in SET seats=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE payment_cycle for %v statement failed: %v", payId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(seats, payId)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
 }
 
 //*********************************************************************************
@@ -500,13 +314,20 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	return repos, nil
 }
 
-func findMyContributions(contributorUserId uuid.UUID) ([]Contribution, error) {
+func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
 	cs := []Contribution{}
-	s := `SELECT u.name, r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
-            FROM daily_user_contribution d
-                INNER JOIN users u ON d.user_id = u.id
-                INNER JOIN repo r ON d.repo_id=r.id 
-			WHERE d.contributor_user_id=$1`
+	subQuery := "d.user_sponsor_id"
+	if myContribution {
+		subQuery = "d.user_contributor_id"
+	}
+	s := `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
+                 d.balance, d.currency, d.payment_cycle_in_id, d.day
+            FROM daily_contribution d
+                INNER JOIN users sp ON d.user_sponsor_id = sp.id
+                INNER JOIN users co ON d.user_contributor_id = co.id
+                INNER JOIN repo r ON d.repo_id = r.id 
+			WHERE ` + subQuery + `=$1
+            ORDER by d.day`
 	rows, err := db.Query(s, contributorUserId)
 	if err != nil {
 		return nil, err
@@ -515,60 +336,28 @@ func findMyContributions(contributorUserId uuid.UUID) ([]Contribution, error) {
 
 	for rows.Next() {
 		var c Contribution
-		var cUuid *uuid.UUID
+		var b string
 		err = rows.Scan(
-			&c.UserName,
 			&c.RepoName,
+			&c.RepoUrl,
+			&c.SponsorName,
+			&c.SponsorEmail,
+			&c.ContributorName,
 			&c.ContributorEmail,
-			&c.ContributorWeight,
-			&cUuid,
-			&c.Balance,
-			&c.BalanceRepo,
+			&b,
+			&c.Currency,
+			&c.PaymentCycleInId,
 			&c.Day)
-		if cUuid == nil {
-			c.FlatFeeStackUser = false
-		} else {
-			c.FlatFeeStackUser = true
-		}
+
 		if err != nil {
 			return nil, err
 		}
-		cs = append(cs, c)
-	}
-	return cs, nil
-}
 
-func findUserContributions(userId uuid.UUID) ([]Contribution, error) {
-	cs := []Contribution{}
-	s := `SELECT r.name, d.contributor_email, d.contributor_weight, d.contributor_user_id, d.balance, d.balance_repo, d.day
-            FROM daily_user_contribution d
-            JOIN repo r ON d.repo_id=r.id 
-			WHERE d.user_id=$1`
-	rows, err := db.Query(s, userId)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var c Contribution
-		var cUuid *uuid.UUID
-		err = rows.Scan(
-			&c.RepoName,
-			&c.ContributorEmail,
-			&c.ContributorWeight,
-			&cUuid,
-			&c.Balance,
-			&c.BalanceRepo,
-			&c.Day)
-		if cUuid == nil {
-			c.FlatFeeStackUser = false
-		} else {
-			c.FlatFeeStackUser = true
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
 		}
-		if err != nil {
-			return nil, err
-		}
+		c.Balance = b1
 		cs = append(cs, c)
 	}
 	return cs, nil
@@ -768,14 +557,14 @@ func insertUserBalance(ub UserBalance) error {
                                             created_at) 
                                     VALUES($1, $2, $3, $4, $5, $6, $7, $8)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleId, err)
+		return fmt.Errorf("prepare INSERT INTO user_balances for %v/%v statement event: %v", ub.UserId, ub.PaymentCycleInId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
 	b := ub.Balance.String()
 	s := ub.Split.String()
-	res, err = stmt.Exec(ub.PaymentCycleId, ub.UserId, ub.FromUserId, b, s, ub.BalanceType, ub.Currency, ub.CreatedAt)
+	res, err = stmt.Exec(ub.PaymentCycleInId, ub.UserId, ub.FromUserId, b, s, ub.BalanceType, ub.Currency, ub.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -879,21 +668,21 @@ func insertFutureBalance(uid uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid
 	return nil
 }
 
-func insertContribution(uid uuid.UUID, uidGit uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit *uuid.UUID,
+func insertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit *uuid.UUID,
 	balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
 
 	stmt, err := db.Prepare(`
-				INSERT INTO daily_contribution(user_id, user_id_git, repo_id, payment_cycle_in_id, payment_cycle_out_id, balance, 
+				INSERT INTO daily_contribution(user_sponsor_id, user_contributor_id, repo_id, payment_cycle_in_id, payment_cycle_out_id, balance, 
 				                               currency, day, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", uid, err)
+		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", userSponsorId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
 	b := balance.String()
-	res, err = stmt.Exec(uid, uidGit, repoId, paymentCycleInId, payOutIdGit, b, currency, day, createdAt)
+	res, err = stmt.Exec(userSponsorId, userContributorId, repoId, paymentCycleInId, payOutIdGit, b, currency, day, createdAt)
 	if err != nil {
 		return err
 	}
@@ -902,12 +691,12 @@ func insertContribution(uid uuid.UUID, uidGit uuid.UUID, repoId uuid.UUID, payme
 	return nil
 }
 
-func findSumDailyContributors(uidGit uuid.UUID) (map[string]*Balance, error) {
+func findSumDailyContributors(userContributorId uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM daily_contribution 
-                     WHERE user_id_git = $1
-                     GROUP BY currency`, uidGit)
+                     WHERE user_contributor_id = $1
+                     GROUP BY currency`, userContributorId)
 
 	if err != nil {
 		return nil, err
@@ -935,12 +724,12 @@ func findSumDailyContributors(uidGit uuid.UUID) (map[string]*Balance, error) {
 	return m, nil
 }
 
-func findSumDailySponsors(uid uuid.UUID, paymentCycleInId uuid.UUID) (map[string]*Balance, error) {
+func findSumDailySponsors(userSponsorId uuid.UUID, paymentCycleInId uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM daily_contribution 
-                     WHERE user_id = $1 AND payment_cycle_in_id = $2
-                     GROUP BY currency`, uid, paymentCycleInId)
+                     WHERE user_sponsor_id = $1 AND payment_cycle_in_id = $2
+                     GROUP BY currency`, userSponsorId, paymentCycleInId)
 
 	if err != nil {
 		return nil, err
@@ -968,8 +757,8 @@ func findSumDailySponsors(uid uuid.UUID, paymentCycleInId uuid.UUID) (map[string
 	rows, err = db.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
-                     WHERE user_id = $1 AND payment_cycle_in_id = $2
-                     GROUP BY currency`, uid, paymentCycleInId)
+                     WHERE user_sponsor_id = $1 AND payment_cycle_in_id = $2
+                     GROUP BY currency`, userSponsorId, paymentCycleInId)
 
 	if err != nil {
 		return nil, err
@@ -1124,7 +913,7 @@ func findUserBalances(userId uuid.UUID) ([]UserBalance, error) {
 	for rows.Next() {
 		var userBalance UserBalance
 		b := ""
-		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &b, &userBalance.Currency, &userBalance.BalanceType, &userBalance.CreatedAt)
+		err = rows.Scan(&userBalance.PaymentCycleInId, &userBalance.UserId, &b, &userBalance.Currency, &userBalance.BalanceType, &userBalance.CreatedAt)
 		userBalance.Balance, _ = new(big.Int).SetString(b, 10)
 		if err != nil {
 			return nil, err
@@ -1145,7 +934,7 @@ func findUserBalancesAndType(paymentCycleInId *uuid.UUID, balanceType string, cu
 	var userBalances []UserBalance
 	for rows.Next() {
 		var userBalance UserBalance
-		err = rows.Scan(&userBalance.PaymentCycleId, &userBalance.UserId, &userBalance.Balance, &userBalance.BalanceType, &userBalance.CreatedAt)
+		err = rows.Scan(&userBalance.PaymentCycleInId, &userBalance.UserId, &userBalance.Balance, &userBalance.BalanceType, &userBalance.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -1195,7 +984,9 @@ func findPaymentCycle(paymentCycleInId *uuid.UUID) (*PaymentCycle, error) {
 func findPaymentCycleLast(uid uuid.UUID) (PaymentCycle, error) {
 	pc := PaymentCycle{}
 	err := db.
-		QueryRow(`SELECT id, seats, freq FROM payment_cycle_in WHERE user_id=$1 ORDER BY created_at DESC`, uid).
+		QueryRow(`SELECT p.id, p.seats, p.freq 
+                        FROM payment_cycle_in p JOIN users u on p.id = u.payment_cycle_in_id
+                        WHERE u.id=$1`, uid).
 		Scan(&pc.Id, &pc.Seats, &pc.Freq)
 	switch err {
 	case sql.ErrNoRows:
@@ -1522,16 +1313,4 @@ func closeAndLog(c io.Closer) {
 	if err != nil {
 		log.Printf("could not close: %v", err)
 	}
-}
-
-func isUUIDZero(id *uuid.UUID) bool {
-	if id == nil {
-		return true
-	}
-	for x := 0; x < 16; x++ {
-		if id[x] != 0 {
-			return false
-		}
-	}
-	return true
 }

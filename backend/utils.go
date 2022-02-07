@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"github.com/google/uuid"
 	"net/http"
 )
 
@@ -30,4 +32,27 @@ func IntPow(n int64, m int64) int64 {
 		result *= n
 	}
 	return result
+}
+
+func isUUIDZero(id *uuid.UUID) bool {
+	if id == nil {
+		return true
+	}
+	for x := 0; x < 16; x++ {
+		if id[x] != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func genRnd(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	// Note that err == nil only if we read len(b) bytes.
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }

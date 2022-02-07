@@ -14,7 +14,7 @@ CREATE TABLE payment_cycle_out (
 
 CREATE TABLE users (
     id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    invited_email         VARCHAR(64), /*if this is set, then this email pays the amount*/
+    invited_id            UUID CONSTRAINT fk_users_id_u REFERENCES users (id), /*if this is set, then this email pays the amount*/
     stripe_id             VARCHAR(255),
     stripe_payment_method VARCHAR(255),
     stripe_last4          VARCHAR(8),
@@ -94,8 +94,8 @@ CREATE UNIQUE INDEX analysis_response_index ON analysis_response(analysis_reques
 
 CREATE TABLE daily_contribution (
     id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id              UUID CONSTRAINT fk_user_id_dc REFERENCES users (id),
-    user_id_git          UUID CONSTRAINT fk_user_id_git_dc REFERENCES users (id),
+    user_sponsor_id      UUID CONSTRAINT fk_user_sponsor_id_dc REFERENCES users (id),
+    user_contributor_id  UUID CONSTRAINT fk_user_contributor_id_dc REFERENCES users (id),
     repo_id              UUID CONSTRAINT fk_repo_id_dc REFERENCES repo (id),
     payment_cycle_in_id  UUID CONSTRAINT fk_payment_cycle_in_id_dc REFERENCES payment_cycle_in (id) NOT NULL,
     payment_cycle_out_id UUID CONSTRAINT fk_payment_cycle_out_id_dc REFERENCES payment_cycle_out (id) NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE daily_contribution (
     day                  DATE NOT NULL,
     created_at           TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX daily_contribution_index ON daily_contribution(user_id, user_id_git, repo_id, currency, day);
+CREATE UNIQUE INDEX daily_contribution_index ON daily_contribution(user_sponsor_id, user_contributor_id, repo_id, currency, day);
 
 CREATE TABLE future_contribution (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -160,7 +160,6 @@ CREATE TABLE invite (
     email VARCHAR(64),
     invite_email VARCHAR(64),
     confirmed_at TIMESTAMP,
-    freq BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL,
     PRIMARY KEY(email, invite_email)
 );
