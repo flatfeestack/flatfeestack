@@ -947,7 +947,7 @@ func findSponsoredUserBalances(userId uuid.UUID) ([]UserStatus, error) {
 	s := `SELECT u.id, u.name, u.email
           FROM users u
           INNER JOIN payment_cycle_in p ON p.id = u.payment_cycle_in_id
-          WHERE u.invited_email = $1`
+          WHERE u.invited_id = $1`
 	rows, err := db.Query(s, userId)
 	if err != nil {
 		return nil, err

@@ -15,7 +15,7 @@ type dbInvite struct {
 
 func findInvitationsByAnyEmail(email string) ([]dbInvite, error) {
 	var res []dbInvite
-	query := `SELECT email, invite_email, confirmed_at, freq, created_at 
+	query := `SELECT email, invite_email, confirmed_at, created_at 
               FROM invite 
               WHERE invite_email=$1 OR email=$1`
 	rows, err := db.Query(query, email)
