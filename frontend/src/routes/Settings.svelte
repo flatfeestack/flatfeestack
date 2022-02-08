@@ -7,7 +7,7 @@
   import {faTrash, faClock} from "@fortawesome/free-solid-svg-icons";
   import {GitUser, PayoutAddress, Currencies} from "../types/users";
   import {onMount} from "svelte";
-  import {formatDate} from "../ts/services";
+  import {formatDate, timeSince} from "../ts/services";
 
   let nameOrig = $user.name;
   let timeoutName;
@@ -178,7 +178,7 @@
       <thead>
       <tr>
         <th>Email</th>
-        <th>Confirm Date</th>
+        <th>Confirmation</th>
         <th>Delete</th>
       </tr>
       </thead>
@@ -186,13 +186,15 @@
       {#each gitEmails as email, key (email.email)}
         <tr>
           <td>{email.email}</td>
-          <td>
+
             {#if email.confirmedAt}
-              {formatDate(new Date(email.confirmedAt))}
+              <td title="{formatDate(new Date(email.confirmedAt))}">
+                {timeSince(new Date(email.confirmedAt), new Date())} ago
+              </td>
             {:else }
-              <Fa icon="{faClock}" size="md"/>
+              <td><Fa icon="{faClock}" size="md"/></td>
             {/if}
-          </td>
+
           <td class="cursor-pointer" on:click="{() => removeEmail(email.email)}">
             <Fa icon="{faTrash}" size="md"/>
           </td>
@@ -203,7 +205,7 @@
           <div class="container-small">
             <input input-size="24" id="email-input" name="email" type="text" bind:value={newEmail} placeholder="Email"/>
             <form class="p-2" on:submit|preventDefault="{handleAddEmail}">
-              <button class="button2" type="submit">Add Git Email</button>
+              <button class="ml-5 p-2 button1" type="submit">Add Git Email</button>
             </form>
           </div>
         </td>
@@ -216,10 +218,8 @@
   <p class="p-2 m-2">You need to add a wallet address for each currency to receive the funds. In the pending income
     you
     can see which currencies have been sent to you. The payout will happen every month. For an Ethereum wallet you
-    can
-    use <a href="https://metamask.io/">Metamask</a>, for NEO you can use <a
-            href="https://neoline.io/en/">NeoLine</a>, for
-    Tezos you can use <a href="https://templewallet.com/">Temple - Tezos Wallet</a>.</p>
+    can use <a href="https://metamask.io/">Metamask</a>, for NEO you can use <a
+            href="https://neoline.io/en/">NeoLine</a>.</p>
 
   <div class="container">
     <table>
@@ -254,7 +254,7 @@
               <input input-size="32" id="address-input" name="address" type="text" bind:value={newPayoutAddress}
                      placeholder="Address"/>
               <form class="p-2" on:submit|preventDefault="{handleAddPayoutAddress}">
-                <button class="button2" type="submit">Add address</button>
+                <button class="ml-5 p-2 button1" type="submit">Add address</button>
               </form>
             </div>
           </td>

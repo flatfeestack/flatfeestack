@@ -73,14 +73,6 @@
     }
   }
 
-  function daysLeft(email) {
-    const result = statusSponsoredUsers.find(e => e.email === email);
-    if(!result) {
-      return "?"
-    }
-    return result;
-  }
-
   onMount(async () => {
     const pr1 = refreshInvite();
     const pr2 = API.user.statusSponsoredUsers();
@@ -93,7 +85,7 @@
 
 <Navigation>
   <h2 class="p-2 m-2">Invite Users</h2>
-  <p class="p-2 m-2">Invite your friends or co-workers. They will be prefunded from your account on a regular basis.</p>
+  <p class="p-2 m-2">Invite your friends or co-workers. They will be charged from your account on a daily basis.</p>
 
   <div class="container">
     <table>
@@ -102,8 +94,6 @@
         <th>Invited</th>
         <th>Status</th>
         <th>Date</th>
-        <th>Plan</th>
-        <th>Days Left</th>
         <th>Remove</th>
         <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
       </tr>
@@ -123,8 +113,6 @@
           <td title="{formatDate(new Date(inv.createdAt))}">
             {timeSince(new Date(inv.createdAt), new Date())} ago
           </td>
-          <td>{$config.plans.find(plan => plan.freq == inv.freq).title}</td>
-          <td>{daysLeft(inv.email)}</td>
           <td class="text-center" colspan="2">
             <span class="cursor-pointer" on:click="{() => removeMyInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
           </td>
@@ -158,8 +146,6 @@
         <th>Invited By</th>
         <th>Status</th>
         <th>Date</th>
-        <th>Plan</th>
-        <th>Days Left</th>
         <th>Action</th>
         <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
       </tr>
@@ -179,8 +165,6 @@
           <td title="{formatDate(new Date(inv.createdAt))}">
             {timeSince(new Date(inv.createdAt), new Date())} ago
           </td>
-          <td>{$config.plans.find(plan => plan.freq == inv.freq).title}</td>
-          <td>{daysLeft(inv.email)}</td>
           <td class="text-center" colspan="2">
             <span class="cursor-pointer" on:click="{() => removeByInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
             {#if !inv.confirmedAt} <span class="cursor-pointer" on:click="{() => acceptInvite(inv.email)}"><Fa icon="{faCheck}" size="md" /></span> {/if}

@@ -45,6 +45,7 @@ export const confirmInvite = async(email: string, password: string, emailToken: 
   const p3 = API.invite.confirmInvite(inviteByEmail);
   const p4 = API.user.get();
   const conf = await p2;
+  config.set(conf);
 
   await p3;
 

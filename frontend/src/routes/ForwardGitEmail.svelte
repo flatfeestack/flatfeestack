@@ -10,7 +10,7 @@
   onMount(async () => {
     try {
       await API.user.confirmGitEmail(email, token);
-      navigate("/user/income");
+      navigate("/user/settings");
     } catch (e) {
       $error = e
     }

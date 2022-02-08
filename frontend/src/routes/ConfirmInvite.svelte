@@ -20,7 +20,7 @@
       email = "";
       password = "";
       isSubmitting = false;
-      navigate("/user/payments");
+      navigate("/user/invitations");
     } catch (e) {
       isSubmitting = false;
       error = e;
