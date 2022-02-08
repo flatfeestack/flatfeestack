@@ -137,6 +137,20 @@ export type Contributions = {
   day: string;
 }
 
+export type FilteredContributions = {
+  repoName: string;
+  repoUrl: string;
+  sponsorName: string[];
+  sponsorEmail: string[];
+  contributorName: string[];
+  contributorEmail: string[];
+  balance: bigint;
+  currency: string;
+  paymentCycleInId: string;
+  dayFrom: string;
+  dayTo: string;
+}
+
 export type PayoutAddress = {
   id: string;
   currency: string;
