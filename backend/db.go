@@ -93,9 +93,9 @@ type PaymentCycle struct {
 type Contribution struct {
 	RepoName         string    `json:"repoName"`
 	RepoUrl          string    `json:"repoUrl"`
-	SponsorName      string    `json:"sponsorName"`
+	SponsorName      *string   `json:"sponsorName,omitempty"`
 	SponsorEmail     string    `json:"sponsorEmail"`
-	ContributorName  string    `json:"contributorName"`
+	ContributorName  *string   `json:"contributorName,omitempty"`
 	ContributorEmail string    `json:"contributorEmail"`
 	Balance          *big.Int  `json:"balance"`
 	Currency         string    `json:"currency"`
@@ -619,14 +619,15 @@ func findUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 
 func findAnalysisResponse(repoId uuid.UUID, yesterdayStart time.Time) ([]Analysis, error) {
 	as := []Analysis{}
-	date := yesterdayStart.Format("2006-01-02")
+	dateFrom := yesterdayStart.Format("2006-01-02")
+	dateTo := yesterdayStart.Add(5 * time.Hour * 24).Format("2006-01-02") //result can be 5 days old
 	rows, err := db.
 		Query(`	SELECT req.date_from, req.date_to, res.git_email, res.git_name, res.weight
         				FROM analysis_request req 
         				    JOIN analysis_response res on req.id = res.analysis_request_id 
                         WHERE req.repo_id = $1 
                           AND req.date_from <= $2 
-                          AND req.date_to > $2`, repoId, date)
+                          AND req.date_to <= $3`, repoId, dateFrom, dateTo)
 
 	if err != nil {
 		return nil, err

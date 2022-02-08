@@ -63,7 +63,7 @@ func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 	return cur, max, nil
 }
 
-func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, int64, *big.Int, error) {
+func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, int64, *big.Int) {
 	var maxBalance *Balance
 	var maxFreq = int64(0)
 	var maxCurrency string
@@ -83,11 +83,10 @@ func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (
 		}
 	}
 
-	if maxBalance != nil {
-		return maxCurrency, maxFreq, maxBalance.Split, nil
+	if maxBalance == nil {
+		return "N/A", 0, nil
 	}
-
-	return "", 0, nil, fmt.Errorf("not enough balance %v, %v", balances, subs)
+	return maxCurrency, maxFreq, maxBalance.Split
 }
 
 func currentUSDBalance(paymentCycleId *uuid.UUID) (int64, error) {

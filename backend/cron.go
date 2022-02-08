@@ -168,8 +168,12 @@ func dailyRunner(now time.Time) error {
 	return nil
 }
 
-func reminderTopup(u User) error {
-	emailCountId := "topup-" + u.PaymentCycleInId.String()
+func reminderTopup(u User, sponsorEmailNotifed string) error {
+	isSponsor := u.Email == sponsorEmailNotifed
+	emailCountId := "topup-"
+	if u.PaymentCycleInId != nil {
+		emailCountId += u.PaymentCycleInId.String()
+	}
 	c, err := countEmailSent(u.Id, emailCountId)
 	if err != nil {
 		return err
@@ -185,28 +189,80 @@ func reminderTopup(u User) error {
 		return err
 	}
 
-	_, err = stripePaymentRecurring(u)
-	if err != nil {
-		return err
-	}
-
-	email := u.Email
-	var other = map[string]string{}
-	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
-	other["lang"] = "en"
-
-	e := prepareEmail(email, other,
-		"template-subject-topup_", "We are about to top up your account",
-		"template-plain-topup_", "Thanks for supporting with flatfeestack: "+other["url"],
-		"template-html-topup_", other["lang"])
-
-	go func(userId uuid.UUID, emailType string) {
-		err := sendEmail(opts.EmailUrl, e)
+	//check if user has stripe
+	if u.PaymentCycleInId != nil && u.StripeId != nil && u.PaymentMethod != nil {
+		_, err = stripePaymentRecurring(u)
 		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			return err
 		}
-	}(u.Id, emailCountId)
+
+		email := u.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/user/payments"
+		other["lang"] = "en"
+
+		e := prepareEmail(email, other,
+			"template-subject-topup-stripe_", "We are about to top up your account",
+			"template-plain-topup-stripe_", "Thanks for supporting with flatfeestack: "+other["url"],
+			"template-html-topup-stripe_", other["lang"])
+
+		go func(userId uuid.UUID, emailType string) {
+			err := sendEmail(opts.EmailUrl, e)
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+		}(u.Id, emailCountId)
+	} else {
+		//No stripe, just send email
+		email := u.Email
+		var other = map[string]string{}
+		other["email"] = email
+		other["url"] = opts.EmailLinkPrefix + "/user/payments"
+		other["lang"] = "en"
+
+		if isSponsor {
+			//we are sponser, and the user beneficiaryEmail could not donate
+			e := prepareEmail(email, other,
+				"template-subject-topup-other-sponsor_", "Your invited users could not sponsor anymore",
+				"template-plain-topup-other-sponsor_", "Please add funds at: "+other["url"],
+				"template-html-topup-other-sponsor_", other["lang"])
+
+			go func(userId uuid.UUID, emailType string) {
+				err := sendEmail(opts.EmailUrl, e)
+				if err != nil {
+					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+			}(u.Id, emailCountId)
+		} else {
+			//we are user, and the user beneficiaryEmail could not donate
+			if u.InvitedId != nil {
+				e := prepareEmail(email, other,
+					"template-subject-topup-other-user1_", sponsorEmailNotifed+" (and you) are running low on funds",
+					"template-plain-topup-other-user1_", "Please add funds at: "+other["url"],
+					"template-html-topup-other-user1_", other["lang"])
+
+				go func(userId uuid.UUID, emailType string) {
+					err := sendEmail(opts.EmailUrl, e)
+					if err != nil {
+						log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+					}
+				}(u.Id, emailCountId)
+			} else {
+				e := prepareEmail(email, other,
+					"template-subject-topup-other-user2_", "You are running low on funding",
+					"template-plain-topup-other-user2_", "Please add funds at: "+other["url"],
+					"template-html-topup-other-user2_", other["lang"])
+
+				go func(userId uuid.UUID, emailType string) {
+					err := sendEmail(opts.EmailUrl, e)
+					if err != nil {
+						log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+					}
+				}(u.Id, emailCountId)
+			}
+		}
+	}
 
 	log.Printf("TOPUP, you are running out of credit %v", u)
 	return nil

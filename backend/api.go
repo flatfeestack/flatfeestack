@@ -834,10 +834,6 @@ func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	if len(cs) == 0 {
-
-	}
-
 	writeJson(w, cs)
 }
 

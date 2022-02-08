@@ -45,6 +45,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 		return fmt.Errorf("cannot find user %v", err)
 	}
 	//first check if the sponsor has enough funds
+	var sponsorEmailNotifed string
 	if u.InvitedId != nil {
 		u1, err := findUserById(*u.InvitedId)
 		if err != nil {
@@ -59,11 +60,11 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 		if freq > 0 {
 			return doDeduct(uid, rids, yesterdayStart, u1.PaymentCycleInId, currency, distributeDeduct, distributeAdd, deductFutureContribution)
 		}
+
+		sponsorEmailNotifed = u1.Email
+		reminderTopup(*u1, sponsorEmailNotifed)
 	}
 
-	//if sponsor has no funds, use our funding
-	//TODO
-	//write email to sponsor, he is out of funds, please topup
 	currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, err := calcShare(u.PaymentCycleInId, int64(len(rids)))
 	if err != nil {
 		return fmt.Errorf("cannot calc share %v", err)
@@ -71,10 +72,8 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 
 	if freq > 0 {
 		return doDeduct(uid, rids, yesterdayStart, u.PaymentCycleInId, currency, distributeDeduct, distributeAdd, deductFutureContribution)
-	} else {
-		//TODO
-		//write email to user, out of funds, please topup
 	}
+	reminderTopup(*u, sponsorEmailNotifed)
 	return nil
 }
 
@@ -148,11 +147,11 @@ func calcShare(paymentCycleInId *uuid.UUID, rLen int64) (string, int64, *big.Int
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum daily balance %v", err)
 	}
 
-	currency, freq, s, err := strategyDeductMax(mAdd, mSub)
-	if err != nil {
-		return "", 0, nil, nil, nil, fmt.Errorf("no funds, notify user %v", err)
-	}
+	currency, freq, s := strategyDeductMax(mAdd, mSub)
 
+	if s == nil {
+		return currency, freq, nil, nil, nil, nil
+	}
 	//split the contribution among the repos
 	distributeDeduct := new(big.Int).Div(s, big.NewInt(rLen))
 	distributeAdd := distributeDeduct
