@@ -555,13 +555,23 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 		writeErrorf(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
-	// TODO: only if repo is sponsored for the first time
+
 	go func() {
 		if newEventType == Active {
-			err = analysisRequest(repo.Id, *repo.GitUrl, *repo.Branch)
+			ar, err := findLatestAnalysisRequest(repo.Id)
 			if err != nil {
-				log.Printf("Could not submit analysis request %v\n", err)
+				log.Warningf("could not find latest analysis request: %v", err)
 			}
+			if ar == nil {
+				err = analysisRequest(repo.Id, *repo.GitUrl, *repo.Branch)
+				if err != nil {
+					log.Warningf("Could not submit analysis request %v\n", err)
+				}
+			}
+		}
+		if newEventType == Inactive {
+			//TODO
+			//check if others are using it, otherwise disable fetching the metrics
 		}
 	}()
 	writeJson(w, repo)

@@ -280,6 +280,7 @@ func main() {
 
 	//scheduler
 	cronJobDay(dailyRunner, timeNow())
+	cronJobHour(hourlyRunner, timeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))

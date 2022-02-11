@@ -81,11 +81,19 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, paymentCycleInId *uuid.UUID, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
 	for _, rid := range rids {
 		//get weights for the contributors
-		ars, err := findAnalysisResponse(rid, yesterdayStart)
+		a, err := findLatestAnalysisRequest(rid)
 		if err != nil {
 			return err
 		}
-		uidMap := map[uuid.UUID]float64{}
+		if a == nil {
+			continue
+		}
+		ars, err := findAnalysisResults(a.Id)
+		if err != nil {
+			return err
+		}
+		uidInMap := map[uuid.UUID]float64{}
+		uidNotInMap := map[string]float64{}
 		total := 0.0
 		for _, ar := range ars {
 			uidGit, err := findUserByGitEmail(ar.GitEmail)
@@ -93,22 +101,23 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 				return err
 			}
 			if uidGit != nil {
-				uidMap[*uidGit] += ar.Weight
+				uidInMap[*uidGit] += ar.Weight
 				total += ar.Weight
 			} else {
-				//TODO
-				//not in map, send marketing email
+				uidNotInMap[ar.GitEmail] += ar.Weight
 			}
 		}
 
-		if len(uidMap) == 0 {
+		//TODO: calculate the share here, then finish iterating over the repos
+
+		if len(uidInMap) == 0 {
 			//no contribution park the sponsoring separately
 			err = insertFutureBalance(uid, rid, paymentCycleInId, distributeDeduct, currency, yesterdayStart, timeNow())
 			if err != nil {
 				return err
 			}
 		} else {
-			for k, v := range uidMap {
+			for k, v := range uidInMap {
 				//we can distribute more, as we may have future balances
 				if deductFutureContribution != nil {
 					err = insertFutureBalance(uid, rid, paymentCycleInId, deductFutureContribution, currency, yesterdayStart, timeNow())

@@ -119,12 +119,20 @@ type Balance struct {
 	Split   *big.Int
 }
 
-type Analysis struct {
-	DateFrom time.Time
-	DateTo   time.Time
-	GitEmail string
-	GitName  string
-	Weight   float64
+type AnalysisRequestDb struct {
+	Id     uuid.UUID
+	RepoId uuid.UUID
+	DateTo time.Time
+}
+
+type AnalysisResponse struct {
+	Id        uuid.UUID
+	RequestId uuid.UUID `json:"request_id"`
+	DateFrom  time.Time
+	DateTo    time.Time
+	GitEmail  string
+	GitName   string
+	Weight    float64
 }
 
 //*********************************************************************************
@@ -617,32 +625,79 @@ func findUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	}
 }
 
-func findAnalysisResponse(repoId uuid.UUID, yesterdayStart time.Time) ([]Analysis, error) {
-	as := []Analysis{}
-	date := yesterdayStart.Format("2006-01-02")
-	rows, err := db.
-		Query(`	SELECT req.date_from, req.date_to, res.git_email, res.git_name, res.weight
-        				FROM analysis_request req 
-        				    JOIN analysis_response res on req.id = res.analysis_request_id 
-                        WHERE req.repo_id = $1 
-                          AND req.date_from <= $2 
-                          AND req.date_to > $2`, repoId, date)
+//https://stackoverflow.com/questions/3491329/group-by-with-maxdate
+func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequestDb, error) {
+	var as AnalysisRequestDb
 
-	if err != nil {
+	err := db.
+		QueryRow(`SELECT id, repo_id, date_to FROM (
+                          SELECT id, repo_id, date_to,
+                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+                            FROM analysis_request WHERE repo_id=$1)
+                        WHERE dest_rank = 1`, repoId).Scan(as.Id, as.RepoId, as.DateTo)
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &as, nil
+	default:
 		return nil, err
 	}
-	defer closeAndLog(rows)
+}
+
+func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequestDb, error) {
+	var as []AnalysisRequestDb
+
+	rows, err := db.Query(`SELECT id, repo_id, date_to FROM (
+                          SELECT id, repo_id, date_to,
+                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+                            FROM analysis_request WHERE date_to < $1)
+                        WHERE dest_rank = 1`, dateTo)
 
 	for rows.Next() {
-		a := Analysis{}
-		err = rows.Scan(&a.DateFrom, &a.DateTo, &a.GitEmail, &a.GitName, &a.Weight)
+		var a AnalysisRequestDb
+		err = rows.Scan(&a.Id, &a.RepoId, &a.DateTo)
 		if err != nil {
 			return nil, err
 		}
 		as = append(as, a)
 	}
-
 	return as, nil
+}
+
+func findAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
+	var ars []AnalysisResponse
+
+	rows, err := db.Query(`SELECT id, git_email, git_name, weight 
+                                 FROM analysis_response 
+                                 WHERE analysis_request_id = $1`, reqId)
+
+	for rows.Next() {
+		var ar AnalysisResponse
+		err = rows.Scan(&ar.Id, &ar.GitEmail, &ar.GitName, &ar.Weight)
+		if err != nil {
+			return nil, err
+		}
+		ars = append(ars, ar)
+	}
+	return ars, nil
+}
+
+func updateAnalysisRequest(requestId uuid.UUID, now time.Time) error {
+	stmt, err := db.Prepare(`UPDATE analysis_request set received_at = $2 WHERE id = $1`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE analysis_request for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(requestId, now)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+	return nil
 }
 
 func insertFutureBalance(uid uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, balance *big.Int,

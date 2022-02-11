@@ -77,7 +77,9 @@ CREATE TABLE analysis_request (
     repo_id    UUID CONSTRAINT fk_repo_id_req REFERENCES repo (id),
     date_from  DATE NOT NULL,
     date_to    DATE NOT NULL,
-    branch     TEXT,
+    git_url    VARCHAR(255) UNIQUE NOT NULL,
+    branch     VARCHAR(16) NOT NULL,
+    received_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX analysis_request_index ON analysis_request(repo_id, date_from, date_to);

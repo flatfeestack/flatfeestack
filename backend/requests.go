@@ -17,16 +17,11 @@ import (
  *	==== Analysis Request  ====
  */
 type AnalysisRequest struct {
-	RequestId           uuid.UUID `json:"reqId"`
-	RepositoryUrl       string    `json:"repository_url"`
-	DateFrom            time.Time `json:"since"`
-	DateTo              time.Time `json:"until"`
-	PlatformInformation bool      `json:"platform_information"`
-	Branch              string    `json:"branch"`
-}
-
-type AnalysisResponse struct {
-	RequestId uuid.UUID `json:"request_id"`
+	RequestId     uuid.UUID `json:"reqId"`
+	RepositoryUrl string    `json:"repository_url"`
+	DateFrom      time.Time `json:"since"`
+	DateTo        time.Time `json:"until"`
+	Branch        string    `json:"branch"`
 }
 
 type Payout struct {
@@ -73,12 +68,11 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 	}
 	now := timeNow()
 	req := AnalysisRequest{
-		RequestId:           uuid.New(),
-		RepositoryUrl:       repoUrl,
-		DateFrom:            now.AddDate(0, -3, 0),
-		DateTo:              now,
-		PlatformInformation: false,
-		Branch:              branch,
+		RequestId:     uuid.New(),
+		RepositoryUrl: repoUrl,
+		DateFrom:      now.AddDate(0, -3, 0),
+		DateTo:        now,
+		Branch:        branch,
 	}
 
 	err := insertAnalysisRequest(req.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
@@ -99,6 +93,11 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 
 	var resp AnalysisResponse
 	err = json.NewDecoder(r.Body).Decode(&resp)
+	if err != nil {
+		return err
+	}
+
+	err = updateAnalysisRequest(req.RequestId, timeNow())
 	if err != nil {
 		return err
 	}
