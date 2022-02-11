@@ -94,6 +94,4 @@ func inviteOther(w http.ResponseWriter, r *http.Request, user *User) {
 		writeErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }

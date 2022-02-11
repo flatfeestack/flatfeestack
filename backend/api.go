@@ -214,8 +214,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		return
 	}
 
-	//TODO: send email to user and add email after verification
-	rnd, err := genRnd(16)
+	rnd, err := genRnd(20)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "ERR-reset-email-02, err %v", err)
 		return
@@ -845,10 +844,6 @@ func contributionsRcv(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	if len(cs) == 0 {
-
-	}
-
 	writeJson(w, cs)
 }
 
