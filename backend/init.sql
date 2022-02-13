@@ -73,14 +73,15 @@ CREATE TABLE sponsor_event (
 CREATE UNIQUE INDEX sponsor_event_index ON sponsor_event(repo_id, user_id, sponsor_at);
 
 CREATE TABLE analysis_request (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repo_id    UUID CONSTRAINT fk_repo_id_req REFERENCES repo (id),
-    date_from  DATE NOT NULL,
-    date_to    DATE NOT NULL,
-    git_url    VARCHAR(255) UNIQUE NOT NULL,
-    branch     VARCHAR(16) NOT NULL,
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    repo_id     UUID CONSTRAINT fk_repo_id_req REFERENCES repo (id),
+    date_from   DATE NOT NULL,
+    date_to     DATE NOT NULL,
+    git_url     VARCHAR(255) NOT NULL,
+    branch      VARCHAR(16) NOT NULL,
     received_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL
+    error       TEXT,
+    created_at  TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX analysis_request_index ON analysis_request(repo_id, date_from, date_to);
 
@@ -88,7 +89,7 @@ CREATE TABLE analysis_response (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     analysis_request_id UUID CONSTRAINT fk_analysis_request_id_c REFERENCES analysis_request (id),
     git_email           VARCHAR(255) NOT NULL,
-    git_name            VARCHAR(255),
+    git_names           VARCHAR(255)[],
     weight              DOUBLE PRECISION NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );

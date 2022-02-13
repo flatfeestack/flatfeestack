@@ -51,17 +51,18 @@ type WebhookCallback struct {
 	Result    []FlatFeeWeight `json:"result"`
 }
 
-type RepoMapping struct {
+type FakeRepoMapping struct {
 	StartData string          `json:"startDate"`
 	EndData   string          `json:"endDate"`
 	Name      string          `json:"name"`
+	Url       string          `json:"url"`
 	Weights   []FlatFeeWeight `json:"weights"`
 }
 
 type FlatFeeWeight struct {
-	Email  string  `json:"email"`
-	Name   string  `json:"name"`
-	Weight float64 `json:"weight"`
+	Names  []string `json:"names"`
+	Email  string   `json:"email"`
+	Weight float64  `json:"weight"`
 }
 
 type Plan struct {
@@ -97,6 +98,11 @@ type PayoutToService struct {
 	ExchangeRate big.Float    `json:"exchange_rate_USD_ETH"`
 	Tea          int64        `json:"nano_tea"`
 	Meta         []PayoutMeta `json:"meta"`
+}
+
+type NameWeight struct {
+	Names  []string
+	Weight float64
 }
 
 var plans = []Plan{
@@ -585,20 +591,27 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	rid, err := uuid.Parse(data.RequestId)
+	reqId, err := uuid.Parse(data.RequestId)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "cannot parse request id: %v", err)
 		return
 	}
+
 	rowsAffected := 0
-	for _, wh := range data.Result {
-		err = insertAnalysisResponse(rid, &wh, timeNow())
+	for _, v := range data.Result {
+		err = insertAnalysisResponse(reqId, v.Email, v.Names, v.Weight, timeNow())
 		if err != nil {
 			writeErrorf(w, http.StatusInternalServerError, "insert error: %v", err)
 			return
 		}
 		rowsAffected++
 	}
+
+	errA := updateAnalysisRequest(reqId, timeNow(), nil)
+	if errA != nil {
+		log.Warnf("cannot send to analyze engine %v", errA)
+	}
+
 	log.Printf("Inserted %v contributions into DB for request %v", rowsAffected, data.RequestId)
 	w.WriteHeader(http.StatusOK)
 }
@@ -664,7 +677,7 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 }
 
 func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
-	var repoMap RepoMapping
+	var repoMap FakeRepoMapping
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode fakeContribution body: %v", err)
@@ -688,16 +701,23 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	aid := uuid.New()
-	err = insertAnalysisRequest(aid, repo.Id, monthStart, monthStop, "master", timeNow())
+	a := AnalysisRequest{
+		RequestId: uuid.New(),
+		RepoId:    repo.Id,
+		DateFrom:  monthStart,
+		DateTo:    monthStop,
+		GitUrl:    "test",
+		Branch:    "master",
+	}
+
+	err = insertAnalysisRequest(a, timeNow())
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
 	for _, v := range repoMap.Weights {
-
-		err = insertAnalysisResponse(aid, &v, timeNow())
+		err = insertAnalysisResponse(a.RequestId, v.Email, v.Names, v.Weight, timeNow())
 		if err != nil {
 			writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 			return

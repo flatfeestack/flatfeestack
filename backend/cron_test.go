@@ -378,19 +378,22 @@ func setupGitEmail(t *testing.T, user uuid.UUID, email string) {
 	assert.Nil(t, err)
 }
 
-func setupContributor(t *testing.T, repo uuid.UUID, from time.Time, to time.Time, email []string, weight []float64) {
-	aid := uuid.New()
+func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Time, email []string, weight []float64) {
 	now := timeNow()
 	//id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string
-	err := insertAnalysisRequest(aid, repo, from, to, "test", now)
+	a := AnalysisRequest{
+		RequestId: uuid.New(),
+		RepoId:    repoId,
+		DateFrom:  from,
+		DateTo:    to,
+		GitUrl:    "test",
+		Branch:    "test",
+	}
+	err := insertAnalysisRequest(a, now)
 	assert.Nil(t, err)
 	for k, v := range email {
-		w1 := FlatFeeWeight{
-			Email:  v,
-			Name:   v,
-			Weight: weight[k],
-		}
-		err = insertAnalysisResponse(aid, &w1, now)
+		n := NameWeight{Name: v, Weight: weight[k]}
+		err = insertAnalysisResponse(a.RequestId, v, n, now)
 		assert.Nil(t, err)
 	}
 }

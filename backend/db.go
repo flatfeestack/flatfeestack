@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"math/big"
@@ -119,19 +120,13 @@ type Balance struct {
 	Split   *big.Int
 }
 
-type AnalysisRequestDb struct {
-	Id     uuid.UUID
-	RepoId uuid.UUID
-	DateTo time.Time
-}
-
 type AnalysisResponse struct {
 	Id        uuid.UUID
 	RequestId uuid.UUID `json:"request_id"`
 	DateFrom  time.Time
 	DateTo    time.Time
 	GitEmail  string
-	GitName   string
+	GitNames  []string
 	Weight    float64
 }
 
@@ -516,38 +511,122 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 //*********************************************************************************
 //******************************* Analysis Requests *******************************
 //*********************************************************************************
-func insertAnalysisRequest(id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string, now time.Time) error {
-	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, branch, created_at) VALUES($1, $2, $3, $4, $5, $6)")
+func insertAnalysisRequest(a AnalysisRequest, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, branch, created_at) VALUES($1, $2, $3, $4, $5, $6, $7)")
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", id, err)
+		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", a.RequestId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(id, repo_id, date_from, date_to, branch, now)
+	res, err = stmt.Exec(a.RequestId, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, a.Branch, now)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
 }
 
-func insertAnalysisResponse(aid uuid.UUID, w *FlatFeeWeight, now time.Time) error {
-	// yes, 'EXCLUDED' is weird...
-	// read stuff here before freaking out: https://www.postgresqltutorial.com/postgresql-upsert/
-	stmt, err := db.Prepare(`INSERT INTO analysis_response(id, analysis_request_id, git_email, git_name, weight, created_at) 
-									VALUES ($1, $2, $3, $4, $5, $6)
-									ON CONFLICT(analysis_request_id, git_email) DO UPDATE SET weight=EXCLUDED.weight + analysis_response.weight`)
+func insertAnalysisResponse(reqId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
+	stmt, err := db.Prepare(`INSERT INTO analysis_response(
+                                     id, analysis_request_id, git_email, git_names, weight, created_at) 
+									 VALUES ($1, $2, $3, $4, $5, $6)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO analysis_response for %v/%v statement event: %v", aid, w, err)
+		return fmt.Errorf("prepare INSERT INTO analysis_response for %v statement event: %v", reqId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uuid.New(), aid, w.Email, w.Name, w.Weight, now)
+	res, err = stmt.Exec(uuid.New(), reqId, gitEmail, pq.Array(names), weight, now)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
+}
+
+//https://stackoverflow.com/questions/3491329/group-by-with-maxdate
+//https://pganalyze.com/docs/log-insights/app-errors/U115
+func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
+	var a AnalysisRequest
+
+	err := db.
+		QueryRow(`SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error,
+                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+                            FROM analysis_request WHERE repo_id=$1) AS x
+                        WHERE dest_rank = 1`, repoId).Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.Branch, &a.ReceivedAt, &a.Error)
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &a, nil
+	default:
+		return nil, err
+	}
+}
+
+func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
+	var as []AnalysisRequest
+
+	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error,
+                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+                            FROM analysis_request WHERE date_to >= $1) AS x
+                        WHERE dest_rank = 1`, dateTo)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var a AnalysisRequest
+		err = rows.Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.Branch, &a.ReceivedAt, &a.Error)
+		if err != nil {
+			return nil, err
+		}
+		as = append(as, a)
+	}
+	return as, nil
+}
+
+func updateAnalysisRequest(requestId uuid.UUID, now time.Time, errStr *string) error {
+	stmt, err := db.Prepare(`UPDATE analysis_request set received_at = $2, error = $3 WHERE id = $1`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE analysis_request for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(requestId, now, errStr)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+	return nil
+}
+
+func findAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
+	var ars []AnalysisResponse
+
+	rows, err := db.Query(`SELECT id, git_email, git_names, weight
+                                 FROM analysis_response 
+                                 WHERE analysis_request_id = $1`, reqId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var ar AnalysisResponse
+		err = rows.Scan(&ar.Id, &ar.GitEmail, pq.Array(&ar.GitNames), &ar.Weight)
+		if err != nil {
+			return nil, err
+		}
+		ars = append(ars, ar)
+	}
+	return ars, nil
 }
 
 //*********************************************************************************
@@ -623,81 +702,6 @@ func findUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	default:
 		return nil, err
 	}
-}
-
-//https://stackoverflow.com/questions/3491329/group-by-with-maxdate
-func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequestDb, error) {
-	var as AnalysisRequestDb
-
-	err := db.
-		QueryRow(`SELECT id, repo_id, date_to FROM (
-                          SELECT id, repo_id, date_to,
-                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request WHERE repo_id=$1)
-                        WHERE dest_rank = 1`, repoId).Scan(as.Id, as.RepoId, as.DateTo)
-
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		return &as, nil
-	default:
-		return nil, err
-	}
-}
-
-func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequestDb, error) {
-	var as []AnalysisRequestDb
-
-	rows, err := db.Query(`SELECT id, repo_id, date_to FROM (
-                          SELECT id, repo_id, date_to,
-                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request WHERE date_to < $1)
-                        WHERE dest_rank = 1`, dateTo)
-
-	for rows.Next() {
-		var a AnalysisRequestDb
-		err = rows.Scan(&a.Id, &a.RepoId, &a.DateTo)
-		if err != nil {
-			return nil, err
-		}
-		as = append(as, a)
-	}
-	return as, nil
-}
-
-func findAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
-	var ars []AnalysisResponse
-
-	rows, err := db.Query(`SELECT id, git_email, git_name, weight 
-                                 FROM analysis_response 
-                                 WHERE analysis_request_id = $1`, reqId)
-
-	for rows.Next() {
-		var ar AnalysisResponse
-		err = rows.Scan(&ar.Id, &ar.GitEmail, &ar.GitName, &ar.Weight)
-		if err != nil {
-			return nil, err
-		}
-		ars = append(ars, ar)
-	}
-	return ars, nil
-}
-
-func updateAnalysisRequest(requestId uuid.UUID, now time.Time) error {
-	stmt, err := db.Prepare(`UPDATE analysis_request set received_at = $2 WHERE id = $1`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE analysis_request for statement event: %v", err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(requestId, now)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-	return nil
 }
 
 func insertFutureBalance(uid uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, balance *big.Int,

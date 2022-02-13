@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -17,11 +17,19 @@ import (
  *	==== Analysis Request  ====
  */
 type AnalysisRequest struct {
-	RequestId     uuid.UUID `json:"reqId"`
-	RepositoryUrl string    `json:"repository_url"`
-	DateFrom      time.Time `json:"since"`
-	DateTo        time.Time `json:"until"`
-	Branch        string    `json:"branch"`
+	Id         uuid.UUID
+	RequestId  uuid.UUID `json:"reqId"`
+	RepoId     uuid.UUID `json:"repoId"`
+	DateFrom   time.Time `json:"dateFrom"`
+	DateTo     time.Time `json:"dateTo"`
+	GitUrl     string    `json:"gitUrl"`
+	Branch     string    `json:"branch"`
+	ReceivedAt *time.Time
+	Error      *string
+}
+
+type AnalysisWebhookResponse struct {
+	RequestId uuid.UUID `json:"request_id"`
 }
 
 type Payout struct {
@@ -68,14 +76,15 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 	}
 	now := timeNow()
 	req := AnalysisRequest{
-		RequestId:     uuid.New(),
-		RepositoryUrl: repoUrl,
-		DateFrom:      now.AddDate(0, -3, 0),
-		DateTo:        now,
-		Branch:        branch,
+		RequestId: uuid.New(),
+		RepoId:    repoId,
+		DateFrom:  now.AddDate(0, -3, 0),
+		DateTo:    now,
+		GitUrl:    repoUrl,
+		Branch:    branch,
 	}
 
-	err := insertAnalysisRequest(req.RequestId, repoId, req.DateFrom, req.DateTo, req.Branch, timeNow())
+	err := insertAnalysisRequest(req, timeNow())
 	if err != nil {
 		return err
 	}
@@ -87,19 +96,28 @@ func analysisRequest(repoId uuid.UUID, repoUrl string, branch string) error {
 
 	r, err := client.Post(opts.AnalysisUrl+"/webhook", "application/json", bytes.NewBuffer(body))
 	if err != nil {
+		e := err.Error()
+		errA := updateAnalysisRequest(req.RequestId, timeNow(), &e)
+		if errA != nil {
+			log.Warnf("cannot send to analyze engine %v", errA)
+		}
 		return err
 	}
 	defer r.Body.Close()
 
-	var resp AnalysisResponse
-	err = json.NewDecoder(r.Body).Decode(&resp)
+	//just make sure we got the response
+	var awr AnalysisWebhookResponse
+	err = json.NewDecoder(r.Body).Decode(&awr)
 	if err != nil {
-		return err
+		e := err.Error()
+		errA := updateAnalysisRequest(req.RequestId, timeNow(), &e)
+		if errA != nil {
+			log.Warnf("cannot send to analyze engine %v", errA)
+		}
+		log.Warnf("cannot send to analyze engine %v", err)
 	}
-
-	err = updateAnalysisRequest(req.RequestId, timeNow())
-	if err != nil {
-		return err
+	if awr.RequestId != req.RequestId {
+		log.Errorf("We have a serious problem, request id does not match %v != %v", awr.RequestId, req.RequestId)
 	}
 
 	return nil
