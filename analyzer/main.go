@@ -3,25 +3,24 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/allegro/bigcache/v3"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 )
 
 var (
-	opts  *Opts
-	cache *bigcache.BigCache
+	opts *Opts
 )
 
 type Opts struct {
-	Port         int
-	BackendToken string
-	CallbackUrl  string
+	Port             int
+	BackendToken     string
+	CallbackUrl      string
+	GitBasePath      string
+	GitDefaultBranch string
 }
 
 func NewOpts() *Opts {
@@ -36,6 +35,8 @@ func NewOpts() *Opts {
 		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbmFseXNpcy1lbmdpbmVAZmxhdGZlZXN0YWNrLmlvIn0.HJInRFNeQNTZhdQghG1Ylbng23wKxFQscJTLAkf8hu8"),
 		"Backend Token")
 	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("WEBHOOK_CALLBACK_URL", "http://backend:9082/hooks/analysis-engine"), "Callback URL")
+	flag.StringVar(&o.GitBasePath, "git-base-path", lookupEnv("GO_GIT_BASE_PATH", "/tmp"), "Git base storage path")
+	flag.StringVar(&o.GitDefaultBranch, "git-default-branch", lookupEnv("GO_GIT_DEFAULT_BRANCH", "main"), "Git default branch")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -74,44 +75,9 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	return 0
 }
 
-func createCache() *bigcache.BigCache {
-	config := bigcache.Config{
-		// number of shards (must be a power of 2)
-		Shards: 1024,
-		// time after which entry can be evicted
-		LifeWindow: 10 * time.Minute,
-		// Interval between removing expired entries (clean up).
-		// If set to <= 0 then no action is performed.
-		// Setting to < 1 second is counterproductive — bigcache has a one second resolution.
-		CleanWindow: 5 * time.Minute,
-		// rps * lifeWindow, used only in initial memory allocation
-		MaxEntriesInWindow: 1000 * 10 * 60,
-		// max entry size in bytes, used only in initial memory allocation
-		MaxEntrySize: 500,
-		// prints information about additional memory allocation
-		Verbose: true,
-		// cache will not allocate more memory than this limit, value in MB
-		// if value is reached then the oldest entries can be overridden for the new ones
-		// 0 value means no size limit
-		HardMaxCacheSize: 8192,
-	}
-
-	cache, initErr := bigcache.NewBigCache(config)
-	if initErr != nil {
-		log.Fatal(initErr)
-	}
-	return cache
-}
-
 func main() {
-	cache = createCache()
 	opts = NewOpts()
-	GClientWrapper = &GithubClientWrapperClient{
-		GitHubURL: "https://api.github.com/graphql",
-	}
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/contributions", getAllContributions).Methods("GET")
-	router.HandleFunc("/weights", getContributionWeights).Methods("GET")
 	router.HandleFunc("/webhook", analyzeRepository).Methods("POST")
 	log.Println("Starting api on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))

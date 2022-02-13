@@ -2,63 +2,100 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
+	libgit "github.com/libgit2/git2go/v33"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"time"
 )
 
 // CloneOrUpdateRepository clones the repository if it is not already on the disk, else update it
-func CloneOrUpdateRepository(src string, branch string) (*git.Repository, error) {
+func cloneOrUpdateRepository(src string, branch string) (*libgit.Repository, error) {
 	// check if the repository can successfully be updated
-	repo, err := UpdateRepository(src, branch)
+	repo, err := updateRepository(src, branch)
 	// if not try to clone it
 	if err != nil {
-		fmt.Println(err.Error())
-		return CloneRepository(src, branch)
+		log.Debugf("probably new repo, %v", err)
+		return cloneRepository(src, branch)
 	}
 	return repo, nil
 }
 
 // CloneRepository clones the repository as a single branch repository with the desired branch
-func CloneRepository(src string, branch string) (*git.Repository, error) {
+func cloneRepository(src string, branch string) (*libgit.Repository, error) {
 	folderName := src[8 : len(src)-4]
 	// clone just one branch
-	return git.PlainClone(getGoGitBasePathEnv()+"/"+folderName, false, &git.CloneOptions{
+	// git clone https://github.com/torvalds/linux.git --single-branch --shallow-since="3 months ago" -n
+
+	cmd := exec.Command("git", "clone", src, "--single-branch", `--shallow-since="3 months ago"`, branch)
+
+	cmd.Dir = opts.GitBasePath + "/" + folderName
+	err := os.MkdirAll(opts.GitBasePath+"/"+folderName, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := libgit.OpenRepository(opts.GitBasePath + "/" + folderName)
+	if err != nil {
+		return nil, err
+	}
+
+	/*r, err := git.PlainClone(opts.GitBasePath+"/"+folderName, false, &git.CloneOptions{
 		URL:           src,
 		Progress:      os.Stdout,
 		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
 		SingleBranch:  true,
 	})
+	if err != nil {
+		return nil, err
+	}*/
+	if err := os.WriteFile(opts.GitBasePath+"/"+folderName+".date", []byte(time.Now().Format(time.RFC3339)), 0666); err != nil {
+		return nil, err
+	}
+	return r, nil
+
 }
 
 // CloneRepository updates the repository and checks out the desired branch
-func UpdateRepository(src string, branch string) (*git.Repository, error) {
+func updateRepository(src string, branch string) (*libgit.Repository, error) {
 	folderName := src[8 : len(src)-4]
-	repo, err := git.PlainOpen(getGoGitBasePathEnv() + "/" + folderName)
+
+	r, err := libgit.OpenRepository(opts.GitBasePath + "/" + folderName)
 	if err != nil {
 		return nil, err
 	}
+
+	content, err := ioutil.ReadFile(opts.GitBasePath + "/" + folderName + ".date")
+	if err != nil {
+		return nil, err
+	}
+	lastUpdate, err := time.Parse(time.RFC3339, string(content))
+	if err != nil {
+		return nil, err
+	}
+	if lastUpdate.After(time.Now().AddDate(0, 0, -1)) {
+		return r, nil
+	}
+	if err := os.WriteFile(opts.GitBasePath+"/"+folderName+".date", []byte(time.Now().Format(time.RFC3339)), 0666); err != nil {
+		return nil, err
+	}
+
 	// take just one remote branch and assign it to a local branch with the same name
 	firstRefSpecArgument := fmt.Sprintf("refs/heads/%s:refs/heads/%s", branch, branch)
-	err = repo.Fetch(&git.FetchOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{config.RefSpec(firstRefSpecArgument)},
-	})
-	if err != nil && err.Error() != "already up-to-date" {
-		return repo, err
-	}
-	w, err := repo.Worktree()
 
-	if err != nil {
-		return repo, err
-	}
+	l, err := r.Remotes.List()
+	remote, err := r.Remotes.Lookup(l[0])
 
-	// checkout the correct branch
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-		Force:  true,
-	})
+	options := libgit.FetchOptions{}
+	remote.Fetch([]string{firstRefSpecArgument}, &options, "")
 
-	return repo, nil
+	o := libgit.CheckoutOptions{}
+	r.CheckoutHead(&o)
+
+	return r, nil
 }

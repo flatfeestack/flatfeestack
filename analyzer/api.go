@@ -4,339 +4,36 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
-type GitAnalyzationChannel struct {
-	Result map[Contributor]Contribution
-	Reason error
+type FlatFeeWeight struct {
+	Names  []string `json:"names"`
+	Email  string   `json:"email"`
+	Weight float64  `json:"weight"`
 }
 
-type PlatformInformationChannel struct {
-	ResultIssues       []GQLIssue
-	ResultPullRequests []GQLPullRequest
-	Reason             error
+type WebhookRequest struct {
+	RequestId uuid.UUID `json:"reqId"`
+	DateFrom  time.Time `json:"dateFrom"`
+	DateTo    time.Time `json:"dateTo"`
+	GitUrl    string    `json:"gitUrl"`
+	Branch    string    `json:"branch"`
 }
 
-// getAllContributions controls the whole process of the /contribution endpoint
-func getAllContributions(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	// get the repository url from the request
-	repositoryUrl, err := getRepositoryFromRequest(r)
-	if err != nil {
-		makeHttpStatusErr(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	// detect whether the platformInformation flag in the request was set
-	analyzePlatformInformation := getShouldAnalyzePlatformInformation(r)
-
-	// detect branch to analyze
-	branch := getBranchToAnalyze(r)
-
-	commitsSince, commitsUntil, err := getTimeRange(r)
-	if err != nil {
-		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("\n\n---> contribution analysis request for repository %s on branch %s \n", repositoryUrl, branch)
-
-	// make the channels for both go routines (analyze repo / platform information)
-	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
-	platformInformationChannel := make(chan PlatformInformationChannel)
-
-	// if we don't have to analyze the platform, close the channel again since we don't need it
-	if !analyzePlatformInformation {
-		close(platformInformationChannel)
-	}
-
-	// go routine to analyze the repository using git independently from main thread
-	go func() {
-		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
-		gitAnalyzationChannel <- GitAnalyzationChannel{
-			Result: routineContributionMap,
-			Reason: routineErr,
-		}
-		close(gitAnalyzationChannel)
-	}()
-
-	// execute go routine to fetch the platform information only when the platformInformation flag is set
-	if analyzePlatformInformation {
-		go func() {
-			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl, commitsSince, commitsUntil)
-			platformInformationChannel <- PlatformInformationChannel{
-				ResultIssues:       routineIssues,
-				ResultPullRequests: routinePullRequests,
-				Reason:             routineErr,
-			}
-			close(platformInformationChannel)
-		}()
-	}
-
-	// set the openness of the to the default value
-	chanel1Open := true
-	chanel2Open := analyzePlatformInformation
-
-	// initialize the return variables for the go routines
-	var contributionMap map[Contributor]Contribution
-	var issues []GQLIssue
-	var pullRequests []GQLPullRequest
-
-	// wait for the results of both go routines
-	for chanel1Open || chanel2Open {
-		select {
-		case msg1, ok1 := <-gitAnalyzationChannel:
-			if !ok1 {
-				// if the channel is closed set the flag to false
-				chanel1Open = false
-			} else if msg1.Reason != nil {
-				// error handling
-				if strings.Contains(msg1.Reason.Error(), "authentication") {
-					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusUnauthorized)
-				} else {
-					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusInternalServerError)
-				}
-				return
-			} else {
-				// save the return value to the initialized variable
-				contributionMap = msg1.Result
-			}
-		case msg2, ok2 := <-platformInformationChannel:
-			if !ok2 {
-				// if the channel is closed set the flag to false
-				chanel2Open = false
-			} else if msg2.Reason != nil {
-				// error handling
-				makeHttpStatusErr(w, msg2.Reason.Error(), http.StatusInternalServerError)
-				return
-			} else {
-				// save the return value to the initialized variable
-				issues = msg2.ResultIssues
-				pullRequests = msg2.ResultPullRequests
-			}
-		}
-	}
-
-	if analyzePlatformInformation {
-		// if platform information is desired, filter out the platform information per git user and
-		// return the platform information and the git contribution
-
-		platformInformationMappingStart := time.Now()
-		var contributions []ContributionWithPlatformInformation
-		takenUsernames := make(map[string]string)
-		for k, v := range contributionMap {
-			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
-			if err != nil {
-				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
-				contributions = append(contributions, ContributionWithPlatformInformation{
-					GitInformation: v,
-				})
-				continue
-			}
-			if _, found := takenUsernames[userInformation.UserName]; !found {
-				takenUsernames[userInformation.UserName] = userInformation.UserName
-				contributions = append(contributions, ContributionWithPlatformInformation{
-					GitInformation:      v,
-					PlatformInformation: userInformation,
-				})
-			} else {
-				contributions = append(contributions, ContributionWithPlatformInformation{
-					GitInformation: v,
-				})
-			}
-		}
-		platformInformationMappingEnd := time.Now()
-		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
-
-		jsonErr := json.NewEncoder(w).Encode(contributions)
-		if jsonErr != nil {
-			fmt.Println("Could not encode to json", jsonErr)
-		}
-	} else {
-		// if platform information is not desired convert the map into an array and return it
-		var contributions []Contribution
-		for _, v := range contributionMap {
-			contributions = append(contributions, v)
-		}
-		jsonErr := json.NewEncoder(w).Encode(contributions)
-		if jsonErr != nil {
-			fmt.Println("Could not encode to json", jsonErr)
-		}
-	}
+type WebhookResponse struct {
+	RequestId uuid.UUID `json:"request_id"`
 }
 
-// getContributionWeights controls the whole process of the /weights endpoint
-func getContributionWeights(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	// get the repository url from the request
-	repositoryUrl, err := getRepositoryFromRequest(r)
-	if err != nil {
-		makeHttpStatusErr(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	// detect whether the platformInformation flag in the request was set
-	analyzePlatformInformation := getShouldAnalyzePlatformInformation(r)
-
-	// detect branch to analyze
-	branch := getBranchToAnalyze(r)
-
-	commitsSince, commitsUntil, err := getTimeRange(r)
-	if err != nil {
-		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("\n\n---> weight contributions request for repository %s on branch %s \n", repositoryUrl, branch)
-
-	// make the channels for both go routines (analyze repo / platform information)
-	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
-	platformInformationChannel := make(chan PlatformInformationChannel)
-
-	// if we don't have to analyze the platform, close the channel again since we don't need it
-	if !analyzePlatformInformation {
-		close(platformInformationChannel)
-	}
-
-	// go routine to analyze the repository using git independently from main thread
-	go func() {
-		routineContributionMap, routineErr := analyzeRepositoryFromString(repositoryUrl, commitsSince, commitsUntil, branch)
-		gitAnalyzationChannel <- GitAnalyzationChannel{
-			Result: routineContributionMap,
-			Reason: routineErr,
-		}
-		close(gitAnalyzationChannel)
-	}()
-
-	// execute go routine to fetch the platform information only when the platformInformation flag is set
-	if analyzePlatformInformation {
-		go func() {
-			routineIssues, routinePullRequests, routineErr := getPlatformInformation(repositoryUrl, commitsSince, commitsUntil)
-			platformInformationChannel <- PlatformInformationChannel{
-				ResultIssues:       routineIssues,
-				ResultPullRequests: routinePullRequests,
-				Reason:             routineErr,
-			}
-			close(platformInformationChannel)
-		}()
-	}
-
-	// set the openness of the to the default value
-	chanel1Open := true
-	chanel2Open := analyzePlatformInformation
-
-	// initialize the return variables for the go routines
-	var contributionMap map[Contributor]Contribution
-	var issues []GQLIssue
-	var pullRequests []GQLPullRequest
-
-	// wait for the results of both go routines
-	for chanel1Open || chanel2Open {
-		select {
-		case msg1, ok1 := <-gitAnalyzationChannel:
-			if !ok1 {
-				// if the channel is closed set the flag to false
-				chanel1Open = false
-			} else if msg1.Reason != nil {
-				// error handling
-				if strings.Contains(msg1.Reason.Error(), "authentication") {
-					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusUnauthorized)
-				} else {
-					makeHttpStatusErr(w, msg1.Reason.Error(), http.StatusInternalServerError)
-				}
-				return
-			} else {
-				// save the return value to the initialized variable
-				contributionMap = msg1.Result
-			}
-		case msg2, ok2 := <-platformInformationChannel:
-			if !ok2 {
-				// if the channel is closed set the flag to false
-				chanel2Open = false
-			} else if msg2.Reason != nil {
-				// error handling
-				makeHttpStatusErr(w, msg2.Reason.Error(), http.StatusInternalServerError)
-				return
-			} else {
-				// save the return value to the initialized variable
-				issues = msg2.ResultIssues
-				pullRequests = msg2.ResultPullRequests
-			}
-		}
-	}
-
-	if analyzePlatformInformation {
-		// if platform information is desired, filter out the platform information per git user and
-		// return the platform information and the git contribution
-
-		platformInformationMappingStart := time.Now()
-		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
-		takenUsernames := make(map[string]string)
-		for k, v := range contributionMap {
-			userInformation, err := getPlatformInformationFromUser(repositoryUrl, issues, pullRequests, k.Email)
-			if err != nil {
-				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation: v,
-				}
-				continue
-			}
-			if _, found := takenUsernames[userInformation.UserName]; !found {
-				takenUsernames[userInformation.UserName] = userInformation.UserName
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation:      v,
-					PlatformInformation: userInformation,
-				}
-			} else {
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation: v,
-				}
-			}
-		}
-		platformInformationMappingEnd := time.Now()
-		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
-
-		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
-
-		if err != nil {
-			makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var contributionWeights []FlatFeeWeight
-		for _, v := range weightsMap {
-			contributionWeights = append(contributionWeights, v)
-		}
-
-		jsonErr := json.NewEncoder(w).Encode(contributionWeights)
-		if jsonErr != nil {
-			fmt.Println("Could not encode to json", jsonErr)
-		}
-	} else {
-		weightsMap, err := weightContributions(contributionMap)
-
-		if err != nil {
-			makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var contributionWeights []FlatFeeWeight
-		for _, v := range weightsMap {
-			contributionWeights = append(contributionWeights, v)
-		}
-		jsonErr := json.NewEncoder(w).Encode(contributionWeights)
-		if jsonErr != nil {
-			fmt.Println("Could not encode to json", jsonErr)
-		}
-	}
+type WebhookCallback struct {
+	RequestId uuid.UUID       `json:"request_id"`
+	Success   bool            `json:"success"`
+	Error     string          `json:"error"`
+	Result    []FlatFeeWeight `json:"result"`
 }
 
 func analyzeRepository(w http.ResponseWriter, r *http.Request) {
@@ -346,9 +43,9 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
 	}
 
-	fmt.Println(request)
+	log.Debugf("analyze repo: %v", request)
 
-	if len(request.RepositoryUrl) == 0 {
+	if len(request.GitUrl) == 0 {
 		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
 	}
 
@@ -356,7 +53,7 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 	if len(request.Branch) > 0 {
 		branch = request.Branch
 	} else {
-		branch = getGoGitDefaultBranchEnv()
+		branch = opts.GitDefaultBranch
 	}
 
 	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: request.RequestId})
@@ -365,203 +62,38 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go analyzeForWebhookInBackground(request, branch)
-	fmt.Println("is analyzing")
+	log.Debugf("is analyzing")
 
 }
 
 func analyzeForWebhookInBackground(request WebhookRequest, branch string) {
-	fmt.Printf("\n\n---> webhook request for repository %s on branch %s \n", request.RepositoryUrl, branch)
-	fmt.Printf("Request id: %s\n", request.RequestId)
+	log.Debugf("\n\n---> webhook request for repository %s on branch %s \n", request.GitUrl, branch)
+	log.Debugf("Request id: %s\n", request.RequestId)
 
-	if entry, err := cache.Get(request.RepositoryUrl); err == nil {
-		fmt.Printf("\n\n---> Cached result for repository: %s\n", request.RepositoryUrl)
-		data := WebhookCallback{}
-		json.Unmarshal(entry, &data)
-		callbackToWebhook(request.RepositoryUrl, data)
+	contributionMap, err := analyzeRepositoryFromString(request.GitUrl, request.DateFrom, request.DateTo, branch)
+	if err != nil {
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Success: false, Error: err.Error()})
+		return
 	}
 
-	// make the channels for both go routines (analyze repo / platform information)
-	gitAnalyzationChannel := make(chan GitAnalyzationChannel)
-	platformInformationChannel := make(chan PlatformInformationChannel)
-
-	// if we don't have to analyze the platform, close the channel again since we don't need it
-	if !request.PlatformInformation {
-		close(platformInformationChannel)
+	weightsMap, err := weightContributions(contributionMap)
+	if err != nil {
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Success: false, Error: err.Error()})
+		return
 	}
 
-	// go routine to analyze the repository using git independently from main thread
-	go func() {
-		routineContributionMap, routineErr := analyzeRepositoryFromString(request.RepositoryUrl, request.DateFrom, request.DateTo, branch)
-		gitAnalyzationChannel <- GitAnalyzationChannel{
-			Result: routineContributionMap,
-			Reason: routineErr,
-		}
-		close(gitAnalyzationChannel)
-	}()
-
-	// execute go routine to fetch the platform information only when the platformInformation flag is set
-	if request.PlatformInformation {
-		go func() {
-			routineIssues, routinePullRequests, routineErr := getPlatformInformation(request.RepositoryUrl, request.DateFrom, request.DateTo)
-			platformInformationChannel <- PlatformInformationChannel{
-				ResultIssues:       routineIssues,
-				ResultPullRequests: routinePullRequests,
-				Reason:             routineErr,
-			}
-			close(platformInformationChannel)
-		}()
+	var contributionWeights []FlatFeeWeight
+	for _, v := range weightsMap {
+		contributionWeights = append(contributionWeights, v)
 	}
 
-	// set the openness of the to the default value
-	chanel1Open := true
-	chanel2Open := request.PlatformInformation
+	callbackToWebhook(WebhookCallback{
+		RequestId: request.RequestId,
+		Success:   true,
+		Result:    contributionWeights,
+	})
 
-	// initialize the return variables for the go routines
-	var contributionMap map[Contributor]Contribution
-	var issues []GQLIssue
-	var pullRequests []GQLPullRequest
-
-	// wait for the results of both go routines
-	for chanel1Open || chanel2Open {
-		select {
-		case msg1, ok1 := <-gitAnalyzationChannel:
-			if !ok1 {
-				// if the channel is closed set the flag to false
-				chanel1Open = false
-			} else if msg1.Reason != nil {
-				// error handling
-				callbackToWebhook(
-					request.RepositoryUrl,
-					WebhookCallback{
-						RequestId: request.RequestId,
-						Success:   false,
-						Error:     msg1.Reason.Error(),
-					})
-				return
-			} else {
-				// save the return value to the initialized variable
-				contributionMap = msg1.Result
-			}
-		case msg2, ok2 := <-platformInformationChannel:
-			if !ok2 {
-				// if the channel is closed set the flag to false
-				chanel2Open = false
-			} else if msg2.Reason != nil {
-				// error handling
-				callbackToWebhook(
-					request.RepositoryUrl,
-					WebhookCallback{
-						RequestId: request.RequestId,
-						Success:   false,
-						Error:     msg2.Reason.Error(),
-					})
-				return
-			} else {
-				// save the return value to the initialized variable
-				issues = msg2.ResultIssues
-				pullRequests = msg2.ResultPullRequests
-			}
-		}
-	}
-
-	if request.PlatformInformation {
-		// if platform information is desired, filter out the platform information per git user and
-		// return the platform information and the git contribution
-
-		platformInformationMappingStart := time.Now()
-		contributionWithPlatformInformation := make(map[Contributor]ContributionWithPlatformInformation)
-		takenUsernames := make(map[string]string)
-		for k, v := range contributionMap {
-			userInformation, err := getPlatformInformationFromUser(request.RepositoryUrl, issues, pullRequests, k.Email)
-			if err != nil {
-				fmt.Printf("COULD_NOT_GET_PLATFORMINFORMATION_FROM_USER: %s; %s\n", k.Email, err.Error())
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation: v,
-				}
-				continue
-			}
-			if _, found := takenUsernames[userInformation.UserName]; !found {
-				takenUsernames[userInformation.UserName] = userInformation.UserName
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation:      v,
-					PlatformInformation: userInformation,
-				}
-			} else {
-				contributionWithPlatformInformation[v.Contributor] = ContributionWithPlatformInformation{
-					GitInformation: v,
-				}
-			}
-		}
-		platformInformationMappingEnd := time.Now()
-		fmt.Printf("---> platform information mapping in %dms\n", platformInformationMappingEnd.Sub(platformInformationMappingStart).Milliseconds())
-
-		weightsMap, err := weightContributionsWithPlatformInformation(contributionWithPlatformInformation)
-
-		if err != nil {
-			callbackToWebhook(
-				request.RepositoryUrl,
-				WebhookCallback{
-					RequestId: request.RequestId,
-					Success:   false,
-					Error:     err.Error(),
-				})
-			return
-		}
-
-		var contributionWeights []FlatFeeWeight
-		for _, v := range weightsMap {
-			contributionWeights = append(contributionWeights, v)
-		}
-		var webhookCallbackResults []WebhookCallbackResult
-		for _, c := range contributionWeights {
-			r := WebhookCallbackResult{
-				Name:   c.Contributor.Name,
-				Email:  c.Contributor.Email,
-				Weight: c.Weight,
-			}
-			webhookCallbackResults = append(webhookCallbackResults, r)
-		}
-		callbackToWebhook(
-			request.RepositoryUrl,
-			WebhookCallback{
-				RequestId: request.RequestId,
-				Success:   true,
-				Result:    webhookCallbackResults,
-			})
-	} else {
-		weightsMap, err := weightContributions(contributionMap)
-
-		if err != nil {
-			callbackToWebhook(
-				request.RepositoryUrl,
-				WebhookCallback{
-					RequestId: request.RequestId,
-					Success:   false,
-					Error:     err.Error(),
-				})
-			return
-		}
-
-		var contributionWeights []FlatFeeWeight
-		for _, v := range weightsMap {
-			contributionWeights = append(contributionWeights, v)
-		}
-		var webhookCallbackResults []WebhookCallbackResult
-		for _, c := range contributionWeights {
-			r := WebhookCallbackResult{
-				Name:   c.Contributor.Name,
-				Email:  c.Contributor.Email,
-				Weight: c.Weight,
-			}
-			webhookCallbackResults = append(webhookCallbackResults, r)
-		}
-		callbackToWebhook(request.RepositoryUrl, WebhookCallback{
-			RequestId: request.RequestId,
-			Success:   true,
-			Result:    webhookCallbackResults,
-		})
-	}
-	fmt.Printf("Finished request %s\n", request.RequestId)
+	log.Debugf("Finished request %s\n", request.RequestId)
 }
 
 // getRepositoryFromRequest extracts the repository from the route parameters
@@ -603,14 +135,9 @@ func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
 // makeHttpStatusErr writes an http status error with a specific message
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
 	w.WriteHeader(httpStatusError)
-	_, fmtErr := fmt.Fprintf(w, errString)
-	if fmtErr != nil {
-		fmt.Println("Could not format", fmtErr)
-	}
 }
 
-func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
-
+func callbackToWebhook(body WebhookCallback) {
 	if body.Success {
 		log.Printf("About to returt the following data: %v", body.Result)
 	}
@@ -642,16 +169,6 @@ func callbackToWebhook(repositoryUrl string, body WebhookCallback) {
 	}
 
 	defer resp.Body.Close()
-
-	if _, err := cache.Get(repositoryUrl); err != nil {
-		cache.Set(repositoryUrl, reqBody)
-	}
-}
-
-// getShouldAnalyzePlatformInformation extracts whether platform information should be considered from the route parameters
-func getShouldAnalyzePlatformInformation(r *http.Request) bool {
-	platformInformationUrlParam := r.URL.Query()["platformInformation"]
-	return len(platformInformationUrlParam) > 0 && platformInformationUrlParam[0] == "true"
 }
 
 // getBranchToAnalyze extracts from the route parameters and env variables the correct branch to analyze
@@ -661,7 +178,7 @@ func getBranchToAnalyze(r *http.Request) string {
 	if len(branchUrlParam) > 0 {
 		return branchUrlParam[0]
 	} else {
-		return getGoGitDefaultBranchEnv()
+		return opts.GitDefaultBranch
 	}
 }
 

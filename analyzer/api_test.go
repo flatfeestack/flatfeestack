@@ -155,58 +155,6 @@ func TestGetTimeRange_SinceInvalid(t *testing.T) {
 	Testing this would just test whether the http package with the responseWriter works.
 */
 
-// getShouldAnalyzePlatformInformation
-
-func TestGetShouldAnalyzePlatformInformation(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=true")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, true, info, "they should be equal")
-}
-
-func TestGetShouldAnalyzePlatformInformation_NoParam(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "they should be equal")
-}
-
-func TestGetShouldAnalyzePlatformInformation_False(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=false")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "they should be equal")
-}
-
-func TestGetShouldAnalyzePlatformInformation_WrongContent(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "should be treated as false")
-}
-
-func TestGetShouldAnalyzePlatformInformation_MultiParam(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions?platformInformation=loremipsum&platformInformation=true")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	info := getShouldAnalyzePlatformInformation(&req)
-	assert.Equal(t, false, info, "should be treated as false")
-}
-
 // getBranchToAnalyze
 
 func TestGetBranchToAnalyze_Valid(t *testing.T) {
@@ -226,5 +174,5 @@ func TestGetBranchToAnalyze_NoParam(t *testing.T) {
 		URL:    uri,
 	}
 	branch := getBranchToAnalyze(&req)
-	assert.Equal(t, getGoGitDefaultBranchEnv(), branch)
+	assert.Equal(t, opts.GitDefaultBranch, branch)
 }

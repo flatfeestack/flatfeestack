@@ -18,7 +18,7 @@ import (
 // Helpers
 
 func RoundToDecimals(f float64, decimals int) float64 {
-	return math.Round(f*float64(10)*float64(decimals))/(float64(10)*float64(decimals))
+	return math.Round(f*float64(10)*float64(decimals)) / (float64(10) * float64(decimals))
 }
 
 func Unzip(src string, dest string) ([]string, error) {
@@ -98,202 +98,85 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 
 	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime)
 
-	expectedContributions := make(map[Contributor]Contribution)
+	expectedContributions := make(map[string]Contribution)
 
-	expectedContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 15419,
-			Deletion: 7256,
-		},
-		Merges:  11,
-		Commits: 143,
+	expectedContributions["claude@axlabs.com"] = Contribution{
+		Names:    []string{"Claude Muller", "claudemiller"},
+		Addition: 15419 + 263,
+		Deletion: 7256 + 206,
+		Merges:   11 + 0,
+		Commits:  143 + 1,
 	}
-	expectedContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "37138571+claudemiller@users.noreply.github.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "37138571+claudemiller@users.noreply.github.com",
-		},
-		Changes: CommitChange{
-			Addition: 674,
-			Deletion: 488,
-		},
-		Merges:  5,
-		Commits: 4,
+	expectedContributions["37138571+claudemiller@users.noreply.github.com"] = Contribution{
+		Names:    []string{"Claude Muller"},
+		Addition: 674,
+		Deletion: 488,
+		Merges:   5,
+		Commits:  4,
 	}
-	expectedContributions[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guil. Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 864,
-			Deletion: 315,
-		},
-		Merges:  18,
-		Commits: 0,
+	expectedContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guil. Sperb Machado", "Guilherme Sperb Machado"},
+		Addition: 864 + 29253,
+		Deletion: 315 + 4021,
+		Merges:   18 + 18,
+		Commits:  0 + 188,
 	}
-	expectedContributions[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "gsm@machados.org",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guil. Sperb Machado",
-			Email: "gsm@machados.org",
-		},
-		Changes: CommitChange{
-			Addition: 0,
-			Deletion: 0,
-		},
-		Merges:  1,
-		Commits: 0,
+	expectedContributions["gsm@machados.org"] = Contribution{
+		Names:    []string{"Guil. Sperb Machado"},
+		Addition: 0,
+		Deletion: 0,
+		Merges:   1,
+		Commits:  0,
 	}
-	expectedContributions[Contributor{
-		Name:  "Sebastian Stephan",
-		Email: "sebastian-stephan@users.noreply.github.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Sebastian Stephan",
-			Email: "sebastian-stephan@users.noreply.github.com",
-		},
-		Changes: CommitChange{
-			Addition: 1,
-			Deletion: 1,
-		},
-		Merges:  0,
-		Commits: 1,
+	expectedContributions["sebastian-stephan@users.noreply.github.com"] = Contribution{
+		Names:    []string{"Sebastian Stephan"},
+		Addition: 1,
+		Deletion: 1,
+		Merges:   0,
+		Commits:  1,
 	}
-	expectedContributions[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nimmortalz@gmail.com",
-		},
-		Changes: CommitChange{
-			Addition: 3433,
-			Deletion: 1016,
-		},
-		Merges:  4,
-		Commits: 7,
+	expectedContributions["nimmortalz@gmail.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 3433,
+		Deletion: 1016,
+		Merges:   4,
+		Commits:  7,
 	}
-	expectedContributions[Contributor{
-		Name:  "Freddy Tuxworth",
-		Email: "freddytuxworth@gmail.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Freddy Tuxworth",
-			Email: "freddytuxworth@gmail.com",
-		},
-		Changes: CommitChange{
-			Addition: 47,
-			Deletion: 0,
-		},
-		Merges:  0,
-		Commits: 1,
+	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
+		Names:    []string{"Freddy Tuxworth"},
+		Addition: 47,
+		Deletion: 0,
+		Merges:   0,
+		Commits:  1,
 	}
-	expectedContributions[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guilherme Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 29253,
-			Deletion: 4021,
-		},
-		Merges:  18,
-		Commits: 188,
+	expectedContributions["chenquanyu@ngd.neo.org"] = Contribution{
+		Names:    []string{"Krain Chen"},
+		Addition: 8,
+		Deletion: 5,
+		Merges:   0,
+		Commits:  1,
 	}
-	expectedContributions[Contributor{
-		Name:  "Krain Chen",
-		Email: "chenquanyu@ngd.neo.org",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Krain Chen",
-			Email: "chenquanyu@ngd.neo.org",
-		},
-		Changes: CommitChange{
-			Addition: 8,
-			Deletion: 5,
-		},
-		Merges:  0,
-		Commits: 1,
+	expectedContributions["nikita.andrejevs@knowledgeprice.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 242,
+		Deletion: 24,
+		Merges:   2,
+		Commits:  0,
 	}
-	expectedContributions[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nikita.andrejevs@knowledgeprice.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nikita.andrejevs@knowledgeprice.com",
-		},
-		Changes: CommitChange{
-			Addition: 242,
-			Deletion: 24,
-		},
-		Merges:  2,
-		Commits: 0,
+	expectedContributions["shipeng@aladingbank.com"] = Contribution{
+		Names:    []string{"施鹏"},
+		Addition: 4,
+		Deletion: 2,
+		Merges:   0,
+		Commits:  1,
 	}
-	expectedContributions[Contributor{
-		Name:  "施鹏",
-		Email: "shipeng@aladingbank.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "施鹏",
-			Email: "shipeng@aladingbank.com",
-		},
-		Changes: CommitChange{
-			Addition: 4,
-			Deletion: 2,
-		},
-		Merges:  0,
-		Commits: 1,
-	}
-	expectedContributions[Contributor{
-		Name:  "claudemiller",
-		Email: "claude@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "claudemiller",
-			Email: "claude@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 263,
-			Deletion: 206,
-		},
-		Merges:  0,
-		Commits: 1,
-	}
-	expectedContributions[Contributor{
-		Name:  "Krain Chen",
-		Email: "ssssu8@qq.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Krain Chen",
-			Email: "ssssu8@qq.com",
-		},
-		Changes: CommitChange{
-			Addition: 60,
-			Deletion: 3,
-		},
-		Merges:  1,
-		Commits: 0,
+
+	expectedContributions["ssssu8@qq.com"] = Contribution{
+		Names:    []string{"Krain Chen"},
+		Addition: 60,
+		Deletion: 3,
+		Merges:   1,
+		Commits:  0,
 	}
 
 	assert.Equal(t, expectedContributions, contributions)
@@ -307,57 +190,33 @@ func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
 
 	repo, _ := git.PlainOpen("./test-repository")
 
-	startDate := parseRFC3339WithoutError("2019-02-01T12:00:00Z")
-	endDate := parseRFC3339WithoutError("2019-04-30T12:00:00Z")
+	startDate, err := time.Parse(time.RFC3339, "2019-02-01T12:00:00Z")
+	endDate, err := time.Parse(time.RFC3339, "2019-04-30T12:00:00Z")
 
 	contributions, err := analyzeRepositoryFromRepository(repo, startDate, endDate)
 
-	expectedContributions := make(map[Contributor]Contribution)
+	expectedContributions := make(map[string]Contribution)
 
-	expectedContributions[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nimmortalz@gmail.com",
-		},
-		Changes: CommitChange{
-			Addition: 474,
-			Deletion: 131,
-		},
-		Merges:  0,
-		Commits: 3,
+	expectedContributions["nimmortalz@gmail.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 474,
+		Deletion: 131,
+		Merges:   0,
+		Commits:  3,
 	}
-	expectedContributions[Contributor{
-		Name:  "Freddy Tuxworth",
-		Email: "freddytuxworth@gmail.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Freddy Tuxworth",
-			Email: "freddytuxworth@gmail.com",
-		},
-		Changes: CommitChange{
-			Addition: 47,
-			Deletion: 0,
-		},
-		Merges:  0,
-		Commits: 1,
+	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
+		Names:    []string{"Freddy Tuxworth"},
+		Addition: 47,
+		Deletion: 0,
+		Merges:   0,
+		Commits:  1,
 	}
-	expectedContributions[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guilherme Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 3527,
-			Deletion: 350,
-		},
-		Merges:  0,
-		Commits: 34,
+	expectedContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guilherme Sperb Machado"},
+		Addition: 3527,
+		Deletion: 350,
+		Merges:   0,
+		Commits:  34,
 	}
 
 	assert.Equal(t, expectedContributions, contributions)
@@ -376,7 +235,7 @@ func TestAnalyzeRepositoryFromRepository_EmptyRepo(t *testing.T) {
 
 	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime)
 
-	expectedContributions := make(map[Contributor]Contribution)
+	expectedContributions := make(map[string]Contribution)
 
 	// Expect error since git logging an empty repo returns an error
 	assert.NotEqual(t, nil, err)
@@ -387,705 +246,130 @@ func TestAnalyzeRepositoryFromRepository_EmptyRepo(t *testing.T) {
 
 func TestWeightContributions(t *testing.T) {
 
-	inputContributions := make(map[Contributor]Contribution)
+	inputContributions := make(map[string]Contribution)
 
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 10245,
-			Deletion: 6405,
-		},
-		Merges:  6,
-		Commits: 64,
+	inputContributions["claude@axlabs.com"] = Contribution{
+		Names:    []string{"Claude Muller"},
+		Addition: 10245,
+		Deletion: 6405,
+		Merges:   6,
+		Commits:  64,
 	}
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "37138571+claudemiller@users.noreply.github.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "37138571+claudemiller@users.noreply.github.com",
-		},
-		Changes: CommitChange{
-			Addition: 668,
-			Deletion: 372,
-		},
-		Merges:  3,
-		Commits: 1,
+	inputContributions["37138571+claudemiller@users.noreply.github.com"] = Contribution{
+		Names:    []string{"Claude Muller"},
+		Addition: 668,
+		Deletion: 372,
+		Merges:   3,
+		Commits:  1,
 	}
-	inputContributions[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guil. Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 90,
-			Deletion: 25,
-		},
-		Merges:  3,
-		Commits: 0,
+	inputContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guil. Sperb Machado"},
+		Addition: 90,
+		Deletion: 25,
+		Merges:   3,
+		Commits:  0,
 	}
-	inputContributions[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nimmortalz@gmail.com",
-		},
-		Changes: CommitChange{
-			Addition: 2116,
-			Deletion: 729,
-		},
-		Merges:  2,
-		Commits: 2,
+	inputContributions["nimmortalz@gmail.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 2116,
+		Deletion: 729,
+		Merges:   2,
+		Commits:  2,
 	}
-	inputContributions[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Guilherme Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 2571,
-			Deletion: 1093,
-		},
-		Merges:  8,
-		Commits: 35,
+	inputContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guilherme Sperb Machado"},
+		Addition: 2571,
+		Deletion: 1093,
+		Merges:   8,
+		Commits:  35,
 	}
 
 	outputScore, err := weightContributions(inputContributions)
 
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Weight: 0.6373853058114897,
+	expectedOutput := make(map[string]FlatFeeWeight)
+	expectedOutput["claude@axlabs.com"] = FlatFeeWeight{
+		Names:  []string{"Claude Muller"},
+		Weight: 0.642448223882,
 	}
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "37138571+claudemiller@users.noreply.github.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "37138571+claudemiller@users.noreply.github.com",
-		},
-		Weight: 0.03270573643832697,
+	expectedOutput["37138571+claudemiller@users.noreply.github.com"] = FlatFeeWeight{
+		Names:  []string{"Claude Muller"},
+		Weight: 0.032936082828,
 	}
-	expectedOutput[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Guil. Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
+	expectedOutput["guil@axlabs.com"] = FlatFeeWeight{
+		Names:  []string{"Guil. Sperb Machado"},
 		Weight: 0.008049671622095021,
 	}
-	expectedOutput[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nimmortalz@gmail.com",
-		},
-		Weight: 0.08043538273343287,
+	expectedOutput["nimmortalz@gmail.com"] = FlatFeeWeight{
+		Names:  []string{"Nikita Andrejevs"},
+		Weight: 0.080929875974,
 	}
-	expectedOutput[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Guilherme Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Weight: 0.2414239033946555,
+	expectedOutput["guil@axlabs.com"] = FlatFeeWeight{
+		Names:  []string{"Guilherme Sperb Machado"},
+		Weight: 0.243685817316,
 	}
 
 	sumOfScores := 0.0
 
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
+	for _, v := range outputScore {
+		expected, found := expectedOutput[v.Email]
 		sumOfScores += v.Weight
 		assert.Equal(t, true, found)
 		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
 	}
 
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
+	assert.Equal(t, len(outputScore), len(expectedOutput))
 	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
 func TestWeightContributions_OneInput(t *testing.T) {
 
-	inputContributions := make(map[Contributor]Contribution)
+	inputContributions := make(map[string]Contribution)
 
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = Contribution{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Changes: CommitChange{
-			Addition: 10245,
-			Deletion: 6405,
-		},
-		Merges:  6,
-		Commits: 64,
+	inputContributions["claude@axlabs.com"] = Contribution{
+		Names:    []string{"Claude Muller"},
+		Addition: 10245,
+		Deletion: 6405,
+		Merges:   6,
+		Commits:  64,
 	}
 
 	outputScore, err := weightContributions(inputContributions)
 
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
+	expectedOutput := make(map[string]FlatFeeWeight)
+	expectedOutput["claude@axlabs.com"] = FlatFeeWeight{
+		Names:  []string{"Claude Muller"},
 		Weight: 1.0,
 	}
 
-
 	sumOfScores := 0.0
 
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
+	for _, v := range outputScore {
+		expected, found := expectedOutput[v.Email]
 		sumOfScores += v.Weight
 		assert.Equal(t, true, found)
 		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
 	}
 
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
+	assert.Equal(t, len(outputScore), len(expectedOutput))
 	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
 	assert.Equal(t, nil, err)
 }
 
 func TestWeightContributions_NoInput(t *testing.T) {
 
-	inputContributions := make(map[Contributor]Contribution)
+	inputContributions := make(map[string]Contribution)
 
 	outputScore, err := weightContributions(inputContributions)
 
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
+	expectedOutput := make(map[string]FlatFeeWeight)
 
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
+	for _, v := range outputScore {
+		expected, found := expectedOutput[v.Email]
 		assert.Equal(t, true, found)
 		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
 	}
 
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
+	assert.Equal(t, len(outputScore), len(expectedOutput))
 	assert.Equal(t, nil, err)
-}
-
-// weightContributionsWithPlatformInformation
-
-func TestWeightContributionsWithPlatformInformation(t *testing.T) {
-
-	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
-
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Claude Muller",
-				Email: "claude@axlabs.com",
-			},
-			Changes: CommitChange{
-				Addition: 10245,
-				Deletion: 6405,
-			},
-			Merges:  6,
-			Commits: 64},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "csmuller",
-			IssueInformation:       IssueUserInformation{
-				Author:    nil,
-				Commenter: 6,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   []PullRequestInformation{{
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: []string{
-						"CHANGES_REQUESTED",
-						"COMMENTED",
-						"APPROVED",
-					},
-				}, {
-					State:   "CLOSED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: []string{
-						"COMMENTED",
-					},
-				}},
-				Reviewer: 1,
-			},
-		},
-	}
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "37138571+claudemiller@users.noreply.github.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Claude Muller",
-				Email: "37138571+claudemiller@users.noreply.github.com",
-			},
-			Changes: CommitChange{
-				Addition: 668,
-				Deletion: 372,
-			},
-			Merges:  3,
-			Commits: 1},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "",
-			IssueInformation:       IssueUserInformation{
-				Author:    nil,
-				Commenter: 0,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   nil,
-				Reviewer: 0,
-			},
-		},
-	}
-	inputContributions[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Guil. Sperb Machado",
-				Email: "guil@axlabs.com",
-			},
-			Changes: CommitChange{
-				Addition: 90,
-				Deletion: 25,
-			},
-			Merges:  3,
-			Commits: 0},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "",
-			IssueInformation:       IssueUserInformation{
-				Author:    nil,
-				Commenter: 0,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   nil,
-				Reviewer: 0,
-			},
-		},
-	}
-	inputContributions[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Nikita Andrejevs",
-				Email: "nimmortalz@gmail.com",
-			},
-			Changes: CommitChange{
-				Addition: 2116,
-				Deletion: 729,
-			},
-			Merges:  2,
-			Commits: 2},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "nimmortal",
-			IssueInformation:       IssueUserInformation{
-				Author:    []int{1},
-				Commenter: 0,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   []PullRequestInformation{{
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "CLOSED",
-					Reviews: nil,
-				}},
-				Reviewer: 0,
-			},
-		},
-	}
-	inputContributions[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Guilherme Sperb Machado",
-				Email: "guil@axlabs.com",
-			},
-			Changes: CommitChange{
-				Addition: 2571,
-				Deletion: 1093,
-			},
-			Merges:  8,
-			Commits: 35},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "gsmachado",
-			IssueInformation:       IssueUserInformation{
-				Author:    []int{1,1,1,1,1,0},
-				Commenter: 5,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   nil,
-				Reviewer: 3,
-			},
-		},
-	}
-
-	outputScore, err := weightContributionsWithPlatformInformation(inputContributions)
-
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Weight: 0.5978468069306204,
-	}
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "37138571+claudemiller@users.noreply.github.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "37138571+claudemiller@users.noreply.github.com",
-		},
-		Weight: 0.02151927923515667,
-	}
-	expectedOutput[Contributor{
-		Name:  "Guil. Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Guil. Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Weight: 0.005331813033762895,
-	}
-	expectedOutput[Contributor{
-		Name:  "Nikita Andrejevs",
-		Email: "nimmortalz@gmail.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Nikita Andrejevs",
-			Email: "nimmortalz@gmail.com",
-		},
-		Weight: 0.098600118128269,
-	}
-	expectedOutput[Contributor{
-		Name:  "Guilherme Sperb Machado",
-		Email: "guil@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Guilherme Sperb Machado",
-			Email: "guil@axlabs.com",
-		},
-		Weight: 0.27670198267219104,
-	}
-
-	sumOfScores := 0.0
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
-		sumOfScores += v.Weight
-		assert.Equal(t, true, found)
-		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
-	}
-
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
-	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
-	assert.Equal(t, nil, err)
-}
-
-func TestWeightContributionsWithPlatformInformation_OneInput(t *testing.T) {
-
-	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
-
-	inputContributions[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = ContributionWithPlatformInformation{
-		GitInformation: Contribution{
-			Contributor: Contributor{
-				Name:  "Claude Muller",
-				Email: "claude@axlabs.com",
-			},
-			Changes: CommitChange{
-				Addition: 10245,
-				Deletion: 6405,
-			},
-			Merges:  6,
-			Commits: 64},
-		PlatformInformation: PlatformUserInformation{
-			UserName:               "csmuller",
-			IssueInformation:       IssueUserInformation{
-				Author:    nil,
-				Commenter: 6,
-			},
-			PullRequestInformation: PullRequestUserInformation{
-				Author:   []PullRequestInformation{{
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: []string{
-						"CHANGES_REQUESTED",
-						"COMMENTED",
-						"APPROVED",
-					},
-				}, {
-					State:   "CLOSED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: nil,
-				}, {
-					State:   "MERGED",
-					Reviews: []string{
-						"COMMENTED",
-					},
-				}},
-				Reviewer: 1,
-			},
-		},
-	}
-
-	outputScore, err := weightContributionsWithPlatformInformation(inputContributions)
-
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
-	expectedOutput[Contributor{
-		Name:  "Claude Muller",
-		Email: "claude@axlabs.com",
-	}] = FlatFeeWeight{
-		Contributor: Contributor{
-			Name:  "Claude Muller",
-			Email: "claude@axlabs.com",
-		},
-		Weight: 1.0,
-	}
-
-	sumOfScores := 0.0
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
-		sumOfScores += v.Weight
-		assert.Equal(t, true, found)
-		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
-	}
-
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
-	assert.Equal(t, 1.0, RoundToDecimals(sumOfScores, 12))
-	assert.Equal(t, nil, err)
-}
-
-func TestWeightContributionsWithPlatformInformation_NoInput(t *testing.T) {
-
-	inputContributions := make(map[Contributor]ContributionWithPlatformInformation)
-
-	outputScore, err := weightContributionsWithPlatformInformation(inputContributions)
-
-	expectedOutput := make(map[Contributor]FlatFeeWeight)
-
-	for k, v := range outputScore {
-		expected, found := expectedOutput[k]
-		assert.Equal(t, true, found)
-		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
-	}
-
-	for k, _ := range expectedOutput {
-		_, found := outputScore[k]
-		assert.Equal(t, true, found)
-	}
-	assert.Equal(t, nil, err)
-}
-
-// getAuthorPullRequestValue
-
-func TestGetAuthorPullRequestValue_OpenOpen(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "OPEN",
-		Reviews: nil,
-	}, {
-		State:   "OPEN",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 2.0, output)
-}
-
-func TestGetAuthorPullRequestValue_OpenClosed(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "OPEN",
-		Reviews: nil,
-	}, {
-		State:   "CLOSED",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 1.6, output)
-}
-
-func TestGetAuthorPullRequestValue_OpenMerged(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "OPEN",
-		Reviews: nil,
-	}, {
-		State:   "MERGED",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 2.5, output)
-}
-
-func TestGetAuthorPullRequestValue_OpenApproved(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "OPEN",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "OPEN",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 2.4, output)
-}
-
-func TestGetAuthorPullRequestValue_ClosedApproved(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "CLOSED",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "OPEN",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 1.84, RoundToDecimals(output, 20))
-}
-
-func TestGetAuthorPullRequestValue_MergedApproved(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "MERGED",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "OPEN",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 3.1, RoundToDecimals(output, 20))
-}
-
-func TestGetAuthorPullRequestValue_NoInfo(t *testing.T) {
-	var pullRequests []PullRequestInformation
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 0.0, RoundToDecimals(output, 20))
-}
-
-func TestGetAuthorPullRequestValue_MixedInfo(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "MERGED",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "OPEN",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "CLOSED",
-		Reviews: []string{"APPROVED"},
-	}, {
-		State:   "MERGED",
-		Reviews: nil,
-	}, {
-		State:   "OPEN",
-		Reviews: nil,
-	}, {
-		State:   "CLOSED",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 7.44, RoundToDecimals(output, 20))
-}
-
-func TestGetAuthorPullRequestValue_ImpossibleInfo(t *testing.T) {
-	pullRequests := []PullRequestInformation{{
-		State:   "OPEN",
-		Reviews: nil,
-	}, {
-		State:   "NON_EXISTING_STATE",
-		Reviews: nil,
-	}}
-	output := getAuthorPullRequestValue(pullRequests)
-	assert.Equal(t, 2.0, RoundToDecimals(output, 20))
-}
-
-// getSumOfCommentsOfIssues
-
-func TestGetSumOfCommentsOfIssues_Valid(t *testing.T) {
-	inputIssues := []int{1,4,2,5,2,6,3,0}
-
-	sum := getSumOfCommentsOfIssues(inputIssues)
-	assert.Equal(t, 23, sum)
-}
-
-func TestGetSumOfCommentsOfIssues_Empty(t *testing.T) {
-	var inputIssues []int
-
-	sum := getSumOfCommentsOfIssues(inputIssues)
-	assert.Equal(t, 0, sum)
 }
