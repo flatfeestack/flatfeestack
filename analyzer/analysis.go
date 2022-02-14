@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	libgit "github.com/libgit2/git2go/v33"
+	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
 )
@@ -46,82 +46,105 @@ func analyzeRepositoryFromRepository(repo *libgit.Repository, since time.Time, u
 
 	wlk, err := repo.Walk()
 
+	gitAnalysisStart := time.Now()
+	commitCounter := 0
 	wlk.Iterate(func(commit *libgit.Commit) bool {
+		commitCounter++
+
+		fmt.Printf("\033[2K\r%d commits", commitCounter)
+
+		merge := 0
+		commitNr := 1
+
+		if commit.ParentCount() > 1 {
+			merge = 1
+			commitNr = 0
+		}
+
+		//https://libgit2.org/libgit2/ex/HEAD/log.html
+		author := commit.Author()
+		commiter := commit.Committer()
+
+		currentTree, err := commit.Tree()
+		log.Warnf("err1 %v", err)
+
+		lineAdd := 0
+		lineDel := 0
+		for i := uint(0); i < commit.ParentCount(); i++ {
+			parentCommit := commit.Parent(i)
+			parentTree, err := parentCommit.Tree()
+			log.Warnf("err2 %v", err)
+			diffOpt, err := libgit.DefaultDiffOptions()
+			log.Warnf("err3 %v", err)
+			diff, err := repo.DiffTreeToTree(currentTree, parentTree, &diffOpt)
+			max, err := diff.NumDeltas()
+			for j := int(0); j < max; j++ {
+				d, err := diff.Delta(j)
+				log.Warnf("err4 %v", err)
+				switch d.Status {
+				case libgit.DeltaAdded:
+					lineAdd++
+				case libgit.DeltaDeleted:
+					lineDel++
+				}
+			}
+		}
+		if author != nil {
+			if _, found := authorMap[author.Email]; !found {
+				c1 := Contribution{
+					Names:    []string{author.Name},
+					Addition: lineAdd,
+					Deletion: lineDel,
+					Merges:   merge,
+					Commits:  commitNr,
+				}
+				authorMap[author.Email] = c1
+			} else {
+				names := authorMap[author.Email].Names
+				if !contains(authorMap[author.Email].Names, author.Name) {
+					names = append(names, author.Name)
+					sort.Strings(names)
+				}
+				authorMap[author.Email] = Contribution{
+					Names:    names,
+					Addition: authorMap[author.Email].Addition + lineAdd,
+					Deletion: authorMap[author.Email].Deletion + lineDel,
+					Merges:   authorMap[author.Email].Merges + merge,
+					Commits:  authorMap[author.Email].Commits + commitNr,
+				}
+			}
+		}
+		if commiter != nil {
+			if _, found := authorMap[commiter.Email]; !found {
+				c1 := Contribution{
+					Names:    []string{commiter.Name},
+					Addition: int(float64(lineAdd) * mergedLinesWeight),
+					Deletion: int(float64(lineDel) * mergedLinesWeight),
+					Merges:   merge,
+					Commits:  commitNr,
+				}
+				authorMap[commiter.Email] = c1
+			} else {
+				names := authorMap[commiter.Email].Names
+				if !contains(authorMap[commiter.Email].Names, commiter.Name) {
+					names = append(names, commiter.Name)
+					sort.Strings(names)
+				}
+				authorMap[commiter.Email] = Contribution{
+					Names:    names,
+					Addition: authorMap[commiter.Email].Addition + int(float64(lineAdd)*mergedLinesWeight),
+					Deletion: authorMap[commiter.Email].Deletion + int(float64(lineDel)*mergedLinesWeight),
+					Merges:   authorMap[commiter.Email].Merges + merge,
+					Commits:  authorMap[commiter.Email].Commits + commitNr,
+				}
+			}
+		}
 
 		return true
 	})
 
-	commits, err := repo.Log(&options)
-	if err != nil {
-		return authorMap, err
-	}
-
-	commitCounter := 0
-
-	gitAnalysisStart := time.Now()
-	err = commits.ForEach(func(c *object.Commit) error {
-		commitCounter++
-		fmt.Printf("\033[2K\r%d commits", commitCounter)
-
-		merge := 0
-		commit := 1
-
-		if len(c.ParentHashes) > 1 {
-			merge = 1
-			commit = 0
-		}
-
-		stats, err := c.Stats()
-		if err != nil {
-			if err != nil {
-				return err
-			}
-		}
-
-		lineAdd := 0
-		lineDel := 0
-		// count the lines if it's not a merge, otherwise use a factor
-		if merge == 0 {
-			for index := range stats {
-				lineAdd += stats[index].Addition
-				lineDel += stats[index].Deletion
-			}
-		} else {
-			for index := range stats {
-				lineAdd += int(float64(stats[index].Addition) * mergedLinesWeight)
-				lineDel += int(float64(stats[index].Deletion) * mergedLinesWeight)
-			}
-		}
-
-		if _, found := authorMap[c.Author.Email]; !found {
-			c1 := Contribution{
-				Names:    []string{c.Author.Name},
-				Addition: lineAdd,
-				Deletion: lineDel,
-				Merges:   merge,
-				Commits:  commit,
-			}
-
-			authorMap[c.Author.Email] = c1
-		} else {
-			names := authorMap[c.Author.Email].Names
-			if !contains(authorMap[c.Author.Email].Names, c.Author.Name) {
-				names = append(names, c.Author.Name)
-				sort.Strings(names)
-			}
-			authorMap[c.Author.Email] = Contribution{
-				Names:    names,
-				Addition: authorMap[c.Author.Email].Addition + lineAdd,
-				Deletion: authorMap[c.Author.Email].Deletion + lineDel,
-				Merges:   authorMap[c.Author.Email].Merges + merge,
-				Commits:  authorMap[c.Author.Email].Commits + commit,
-			}
-		}
-
-		return nil
-	})
-
 	fmt.Printf("---> git analysis in %dms (%d commits)\n", time.Since(gitAnalysisStart).Milliseconds(), commitCounter)
+	return authorMap, nil
 
 	if err != nil {
 		return authorMap, err
