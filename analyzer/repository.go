@@ -28,7 +28,7 @@ func cloneRepository(src string, branch string) (*libgit.Repository, error) {
 	// clone just one branch
 	// git clone https://github.com/torvalds/linux.git --single-branch --shallow-since="3 months ago" -n
 
-	cmd := exec.Command("git", "clone", src, "--single-branch", `--shallow-since="3 months ago"`, branch)
+	cmd := exec.Command("git", "clone", src, "--branch", branch, "--single-branch", `--shallow-since="3 months ago"`, "-n", ".")
 
 	cmd.Dir = opts.GitBasePath + "/" + folderName
 	err := os.MkdirAll(opts.GitBasePath+"/"+folderName, os.ModePerm)

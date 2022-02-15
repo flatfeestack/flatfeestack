@@ -3,8 +3,6 @@ package main
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"math"
@@ -14,6 +12,16 @@ import (
 	"testing"
 	"time"
 )
+
+func TestRemoteRepo(t *testing.T) {
+	opts = &Opts{}
+	opts.GitBasePath = "/tmp"
+	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git", "master")
+	r, err := cloneOrUpdateRepository("https://github.com/torvalds/linux.git", "master")
+	assert.Nil(t, err)
+	var defaultTime time.Time
+	analyzeRepositoryFromRepository(r, defaultTime, defaultTime)
+}
 
 // Helpers
 
@@ -89,7 +97,7 @@ func Unzip(src string, dest string) ([]string, error) {
 
 // analyzeRepositoryFromRepository
 
-func TestAnalyzeRepositoryFromRepository(t *testing.T) {
+/*func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 	_, _ = Unzip("test-repository.zip", "test-repository")
 
 	repo, _ := git.PlainOpen("./test-repository")
@@ -240,7 +248,7 @@ func TestAnalyzeRepositoryFromRepository_EmptyRepo(t *testing.T) {
 	// Expect error since git logging an empty repo returns an error
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, expectedContributions, contributions)
-}
+}*/
 
 // weightContributions
 
