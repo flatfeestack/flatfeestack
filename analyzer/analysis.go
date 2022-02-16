@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-git/go-git/v5"
 	libgit "github.com/libgit2/git2go/v33"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
 )
@@ -60,9 +59,10 @@ func analyzeRepositoryFromRepository(repo *libgit.Repository, since time.Time, u
 
 			parentTree, _ := parentCommit.Tree()
 			commitTree, _ := commit.Tree()
+			fmt.Printf("commit: %v\n", commit.Summary())
 
-			log.Infof("a %v, %v", commit.Author().Name, commit.Author().When)
-			log.Infof("c %v", commit.Committer().Name)
+			//log.Infof("a %v, %v", commit.Author().Name, commit.Author().When)
+			//log.Infof("c %v", commit.Committer().Name)
 
 			diff, _ := repo.DiffTreeToTree(parentTree, commitTree, nil)
 			max, _ := diff.Stats()
@@ -133,10 +133,13 @@ func analyzeRepositoryFromRepository(repo *libgit.Repository, since time.Time, u
 			}
 
 		}
-		commit1 := commit.Parent(0)
-		commit.Free()
-		commit = commit1
-		parentCommit = commit.Parent(0)
+		commit = parentCommit
+		parentCommit = parentCommit.Parent(0)
+		for i := uint(0); i < commit.ParentCount(); i++ {
+			if parentCommit != nil && parentCommit.Parent(i) != nil {
+				fmt.Printf("XXcommit: %v\n", parentCommit.Parent(i).Summary())
+			}
+		}
 	}
 
 	fmt.Printf("---> git analysis in %dms (%d commits)\n", time.Since(gitAnalysisStart).Milliseconds(), commitCounter)
