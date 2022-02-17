@@ -90,6 +90,11 @@ func updateRepository(src string, branch string) (*libgit.Repository, error) {
 	if err != nil {
 		return nil, err
 	}
+	cmd = exec.Command("git", "update-ref", "HEAD", "refs/remotes/origin/HEAD")
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
 
 	r, err = libgit.OpenRepository(opts.GitBasePath + "/" + folderName)
 	if err != nil {
