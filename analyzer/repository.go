@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	libgit "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -74,28 +73,27 @@ func updateRepository(src string, branch string) (*libgit.Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	lastUpdate, err := time.Parse(time.RFC3339, string(content))
+	_, err = time.Parse(time.RFC3339, string(content))
 	if err != nil {
 		return nil, err
 	}
-	if lastUpdate.After(time.Now().AddDate(0, 0, -1)) {
+	/*if lastUpdate.After(time.Now().AddDate(0, 0, -1)) {
 		return r, nil
-	}
+	}*/
 	if err := os.WriteFile(opts.GitBasePath+"/"+folderName+".date", []byte(time.Now().Format(time.RFC3339)), 0666); err != nil {
 		return nil, err
 	}
 
-	// take just one remote branch and assign it to a local branch with the same name
-	firstRefSpecArgument := fmt.Sprintf("refs/heads/%s:refs/heads/%s", branch, branch)
+	cmd := exec.Command("git", "fetch", `--shallow-since="3 months ago"`)
+	cmd.Dir = opts.GitBasePath + "/" + folderName
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
 
-	l, err := r.Remotes.List()
-	remote, err := r.Remotes.Lookup(l[0])
-
-	options := libgit.FetchOptions{}
-	remote.Fetch([]string{firstRefSpecArgument}, &options, "")
-
-	o := libgit.CheckoutOptions{}
-	r.CheckoutHead(&o)
-
-	return r, nil
+	r, err = libgit.OpenRepository(opts.GitBasePath + "/" + folderName)
+	if err != nil {
+		return nil, err
+	}
+	return r, err
 }

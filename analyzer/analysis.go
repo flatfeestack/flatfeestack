@@ -5,6 +5,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	libgit "github.com/libgit2/git2go/v33"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -48,102 +49,144 @@ func analyzeRepositoryFromRepository(repo *libgit.Repository, since time.Time, u
 	//https://github.com/libgit2/git2go/issues/729
 	head, _ := repo.Head()
 	commit, _ := repo.LookupCommit(head.Target())
+	seen := map[string]bool{}
+	loop(repo, authorMap, commit, seen)
+	time.Sleep(time.Minute * 2)
+	fmt.Printf("%v", authorMap)
+	fmt.Printf("---> git analysis in %dms\n", time.Since(gitAnalysisStart).Milliseconds())
+
+	return authorMap, nil
+}
+
+var commitCounter = 0
+var lock2 = sync.Mutex{}
+
+func loop(repo *libgit.Repository, authorMap map[string]Contribution, commit *libgit.Commit, seen map[string]bool) {
+
 	parentCommit := commit.Parent(0)
-	lineAdd := 0
-	lineDel := 0
-	commitCounter := 0
+
 	for commit != nil && parentCommit != nil {
+
+		lock2.Lock()
+		if _, found := seen[commit.Id().String()]; found {
+			lock2.Unlock()
+			return
+		}
+		seen[commit.Id().String()] = true
+		lock2.Unlock()
+		fmt.Printf("search %v\n", commit.Id().String())
+
 		commitCounter++
 		numParents := commit.ParentCount()
 		if numParents > 0 {
-
-			parentTree, _ := parentCommit.Tree()
-			commitTree, _ := commit.Tree()
-			fmt.Printf("commit: %v\n", commit.Summary())
-
-			//log.Infof("a %v, %v", commit.Author().Name, commit.Author().When)
-			//log.Infof("c %v", commit.Committer().Name)
-
-			diff, _ := repo.DiffTreeToTree(parentTree, commitTree, nil)
-			max, _ := diff.Stats()
-
-			lineAdd += max.Insertions()
-			lineDel += max.Deletions()
-
-			author := commit.Author()
-			commiter := commit.Committer()
-
-			merge := 0
-			commitNr := 1
-
+			collectInfo(commit, parentCommit, authorMap, repo)
 			if numParents > 1 {
-				merge = 1
-				commitNr = 0
-			}
-
-			if author != nil {
-				if _, found := authorMap[author.Email]; !found {
-					c1 := Contribution{
-						Names:    []string{author.Name},
-						Addition: lineAdd,
-						Deletion: lineDel,
-						Merges:   merge,
-						Commits:  commitNr,
-					}
-					authorMap[author.Email] = c1
-				} else {
-					names := authorMap[author.Email].Names
-					if !contains(authorMap[author.Email].Names, author.Name) {
-						names = append(names, author.Name)
-						sort.Strings(names)
-					}
-					authorMap[author.Email] = Contribution{
-						Names:    names,
-						Addition: authorMap[author.Email].Addition + lineAdd,
-						Deletion: authorMap[author.Email].Deletion + lineDel,
-						Merges:   authorMap[author.Email].Merges + merge,
-						Commits:  authorMap[author.Email].Commits + commitNr,
+				//This is a merge, go for the commits
+				for i := uint(1); i < numParents; i++ {
+					parentI := commit.Parent(i)
+					if parentI != nil {
+						go loop(repo, authorMap, parentI, seen)
 					}
 				}
 			}
-			if commiter != nil {
-				if _, found := authorMap[commiter.Email]; !found {
-					c1 := Contribution{
-						Names:    []string{commiter.Name},
-						Addition: int(float64(lineAdd) * mergedLinesWeight),
-						Deletion: int(float64(lineDel) * mergedLinesWeight),
-						Merges:   merge,
-						Commits:  commitNr,
-					}
-					authorMap[commiter.Email] = c1
-				} else {
-					names := authorMap[commiter.Email].Names
-					if !contains(authorMap[commiter.Email].Names, commiter.Name) {
-						names = append(names, commiter.Name)
-						sort.Strings(names)
-					}
-					authorMap[commiter.Email] = Contribution{
-						Names:    names,
-						Addition: authorMap[commiter.Email].Addition + int(float64(lineAdd)*mergedLinesWeight),
-						Deletion: authorMap[commiter.Email].Deletion + int(float64(lineDel)*mergedLinesWeight),
-						Merges:   authorMap[commiter.Email].Merges + merge,
-						Commits:  authorMap[commiter.Email].Commits + commitNr,
-					}
-				}
-			}
-
 		}
 		commit = parentCommit
-		parentCommit = parentCommit.Parent(0)
-		for i := uint(0); i < commit.ParentCount(); i++ {
-			if parentCommit != nil && parentCommit.Parent(i) != nil {
-				fmt.Printf("XXcommit: %v\n", parentCommit.Parent(i).Summary())
+		parentCommit = commit.Parent(0)
+		fmt.Printf("counter: %v\n", commitCounter)
+
+	}
+}
+
+var lock = sync.Mutex{}
+
+func collectInfo(commit *libgit.Commit, parentCommit *libgit.Commit, authorMap map[string]Contribution, repo *libgit.Repository) error {
+	author := commit.Author()
+	commiter := commit.Committer()
+
+	merge := 0
+	commitNr := 1
+
+	parentTree, err := parentCommit.Tree()
+	if err != nil {
+		return err
+	}
+	commitTree, err := commit.Tree()
+	if err != nil {
+		return err
+	}
+
+	start := time.Now()
+	diff, err := repo.DiffTreeToTree(parentTree, commitTree, nil)
+	fmt.Printf("time: %v\n", time.Since(start).Milliseconds())
+	if err != nil {
+		return err
+	}
+	stats, err := diff.Stats()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("commit: %v/%v | %v\n", stats.Insertions(), stats.Deletions(), commit.Summary())
+
+	if commit.ParentCount() > 1 {
+		merge = 1
+		commitNr = 0
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+	if author != nil {
+		if _, found := authorMap[author.Email]; !found {
+			c1 := Contribution{
+				Names:    []string{author.Name},
+				Addition: stats.Insertions(),
+				Deletion: stats.Deletions(),
+				Merges:   merge,
+				Commits:  commitNr,
+			}
+			authorMap[author.Email] = c1
+		} else {
+			names := authorMap[author.Email].Names
+			if !contains(authorMap[author.Email].Names, author.Name) {
+				names = append(names, author.Name)
+				sort.Strings(names)
+			}
+			authorMap[author.Email] = Contribution{
+				Names:    names,
+				Addition: authorMap[author.Email].Addition + stats.Insertions(),
+				Deletion: authorMap[author.Email].Deletion + stats.Deletions(),
+				Merges:   authorMap[author.Email].Merges + merge,
+				Commits:  authorMap[author.Email].Commits + commitNr,
+			}
+		}
+	}
+	if commiter != nil {
+		if _, found := authorMap[commiter.Email]; !found {
+			c1 := Contribution{
+				Names:    []string{commiter.Name},
+				Addition: int(float64(stats.Insertions()) * mergedLinesWeight),
+				Deletion: int(float64(stats.Deletions()) * mergedLinesWeight),
+				Merges:   merge,
+				Commits:  commitNr,
+			}
+			authorMap[commiter.Email] = c1
+		} else {
+			names := authorMap[commiter.Email].Names
+			if !contains(authorMap[commiter.Email].Names, commiter.Name) {
+				names = append(names, commiter.Name)
+				sort.Strings(names)
+			}
+			authorMap[commiter.Email] = Contribution{
+				Names:    names,
+				Addition: authorMap[commiter.Email].Addition + int(float64(stats.Insertions())*mergedLinesWeight),
+				Deletion: authorMap[commiter.Email].Deletion + int(float64(stats.Deletions())*mergedLinesWeight),
+				Merges:   authorMap[commiter.Email].Merges + merge,
+				Commits:  authorMap[commiter.Email].Commits + commitNr,
 			}
 		}
 	}
 
-	fmt.Printf("---> git analysis in %dms (%d commits)\n", time.Since(gitAnalysisStart).Milliseconds(), commitCounter)
-	return authorMap, nil
+	return nil
 }
 
 // weightContributions calculates the scores of the contributors by weighting the collected metrics (repository)
