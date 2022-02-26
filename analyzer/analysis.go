@@ -69,8 +69,11 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 
 // analyzeRepositoryFromRepository uses go-git to extract the metrics from the opened repository
 func analyzeRepositoryFromRepository(repo *libgit.Repository, startTime time.Time, stopTime time.Time) (map[string]Contribution, error) {
-	gitAnalysisStart := time.Now()
 	authorMap := map[string]Contribution{}
+	if repo == nil {
+		return authorMap, nil
+	}
+	gitAnalysisStart := time.Now()
 	authorLock := &sync.Mutex{}
 	seen := map[string]bool{}
 	seenLock := &sync.Mutex{}
