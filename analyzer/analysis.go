@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-git/go-git/v5"
 	libgit "github.com/libgit2/git2go/v33"
+	log "github.com/sirupsen/logrus"
+	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,6 +17,42 @@ type Contribution struct {
 	Deletion int
 	Merges   int
 	Commits  int
+}
+
+const (
+	// Represents the factor of the total changed lines
+	// with witch the merger gets rewarded for merging the branch.
+	// Changed lines in normal commits are considered with factor 1
+	// while the changed lines in merges (summary of the size of the merge)
+	// are considered with this factor.
+	mergedLinesWeight = 0.1
+	// Category "Changes" divided into additions and deletions.
+	// Both must sum up to 1
+	additionWeight = 0.7
+	deletionWeight = 0.3
+	// Category "GitHistory" divided into commits and merges.
+	// Both must sum up to 1
+	commitWeight = 0.7
+	mergeWeight  = 0.3
+	// Intercategory weights between categories Changes and Githistory.
+	// All must sum up to 1.
+	// Only when platformInformation IS NOT considered
+	changesWeight    = 0.7
+	gitHistoryWeight = 0.3
+)
+
+var (
+	defaultTime time.Time
+)
+
+//small contributors get more, to be encouraged, also the committer that
+//have most lines know the repository the best
+func smallCommitter(input int) float64 {
+	//https://www.desmos.com/calculator/k0f7hv7hg5
+	if input == 0 {
+		return 0
+	}
+	return (2 / math.Pow(1.02, float64(input))) + 1
 }
 
 // analyzeRepositoryFromString manages the whole analysis process (opens the repository and initialized the analysis)
@@ -30,219 +68,209 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 }
 
 // analyzeRepositoryFromRepository uses go-git to extract the metrics from the opened repository
-func analyzeRepositoryFromRepository(repo *libgit.Repository, since time.Time, until time.Time) (map[string]Contribution, error) {
-	authorMap := make(map[string]Contribution)
-
-	var timeZeroValue time.Time
-	var options git.LogOptions
-
-	if since != timeZeroValue {
-		options.Since = &since
-	}
-
-	if until != timeZeroValue {
-		options.Until = &until
-	}
-
+func analyzeRepositoryFromRepository(repo *libgit.Repository, startTime time.Time, stopTime time.Time) (map[string]Contribution, error) {
 	gitAnalysisStart := time.Now()
-
-	//https://github.com/libgit2/git2go/issues/729
-	head, _ := repo.Head()
-	commit, _ := repo.LookupCommit(head.Target())
+	authorMap := map[string]Contribution{}
+	authorLock := &sync.Mutex{}
 	seen := map[string]bool{}
-	loop(repo, authorMap, commit, seen)
-	time.Sleep(time.Minute * 2)
-	fmt.Printf("%v", authorMap)
+	seenLock := &sync.Mutex{}
+	commitCounter := int64(0)
+	wg := &sync.WaitGroup{}
+
+	revWalk, err := repo.Walk()
+	if err != nil {
+		return nil, err
+	}
+	defer revWalk.Free()
+
+	// Start out at the head
+	err = revWalk.PushHead()
+	if err != nil {
+		return nil, err
+	}
+
+	err = revWalk.Iterate(func(commit *libgit.Commit) bool {
+		if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) &&
+			(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
+			fmt.Printf("time reached: %v", commit.Id().String())
+			return false
+		}
+		wg.Add(1)
+		loop(repo, &commitCounter, authorMap, authorLock, commit, seen, seenLock, wg)
+		return true
+	})
+
+	//since we have not the full history, revision walker throws an error if we don't find an old parent. This is ok, ignore it
+	if gErr, ok := err.(*libgit.GitError); ok {
+		if gErr.Code != libgit.ErrorCodeNotFound && gErr.Class != libgit.ErrorClassOdb {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	wg.Wait()
+
 	fmt.Printf("---> git analysis in %dms\n", time.Since(gitAnalysisStart).Milliseconds())
 
 	return authorMap, nil
 }
 
-var commitCounter = 0
-var lock2 = sync.Mutex{}
+func alreadyProcessed(commit string, seen map[string]bool, seenLock *sync.Mutex) bool {
+	seenLock.Lock()
+	defer seenLock.Unlock()
+	if _, found := seen[commit]; found {
+		return true
+	}
+	seen[commit] = true
+	return false
+}
 
-func loop(repo *libgit.Repository, authorMap map[string]Contribution, commit *libgit.Commit, seen map[string]bool) {
+func loop(repo *libgit.Repository, commitCounter *int64, authorMap map[string]Contribution, authorLock *sync.Mutex, commit *libgit.Commit, seen map[string]bool, seenLock *sync.Mutex, wg *sync.WaitGroup) {
+	defer commit.Free()
+	defer wg.Done()
 
-	parentCommit := commit.Parent(0)
+	if alreadyProcessed(commit.Id().String(), seen, seenLock) {
+		return
+	}
 
-	for commit != nil && parentCommit != nil {
+	atomic.AddInt64(commitCounter, 1)
+	numParents := commit.ParentCount()
 
-		lock2.Lock()
-		if _, found := seen[commit.Id().String()]; found {
-			lock2.Unlock()
-			return
+	for i := uint(0); i < numParents; i++ {
+		parentCommit := commit.Parent(i)
+		if parentCommit == nil {
+			continue
 		}
-		seen[commit.Id().String()] = true
-		lock2.Unlock()
-		fmt.Printf("search %v\n", commit.Id().String())
-
-		commitCounter++
-		numParents := commit.ParentCount()
-		if numParents > 0 {
-			collectInfo(commit, parentCommit, authorMap, repo)
-			if numParents > 1 {
-				//This is a merge, go for the commits
-				for i := uint(1); i < numParents; i++ {
-					parentI := commit.Parent(i)
-					if parentI != nil {
-						go loop(repo, authorMap, parentI, seen)
-					}
-				}
-			}
+		if i == 0 { //if it's a merge, the author gets only credit for the parent 0
+			collectInfo(commit, parentCommit, authorMap, authorLock, repo, commitCounter)
 		}
-		commit = parentCommit
-		parentCommit = commit.Parent(0)
-		fmt.Printf("counter: %v\n", commitCounter)
-
+		wg.Add(1)
+		go loop(repo, commitCounter, authorMap, authorLock, parentCommit, seen, seenLock, wg)
 	}
 }
 
-var lock = sync.Mutex{}
-
-func collectInfo(commit *libgit.Commit, parentCommit *libgit.Commit, authorMap map[string]Contribution, repo *libgit.Repository) error {
-	author := commit.Author()
-	commiter := commit.Committer()
-
-	merge := 0
-	commitNr := 1
+func collectInfo(commit *libgit.Commit, parentCommit *libgit.Commit, authorMap map[string]Contribution, authorLock *sync.Mutex, repo *libgit.Repository, commitCounter *int64) error {
+	start := time.Now()
 
 	parentTree, err := parentCommit.Tree()
 	if err != nil {
 		return err
 	}
+	defer parentTree.Free()
+
 	commitTree, err := commit.Tree()
 	if err != nil {
 		return err
 	}
+	defer commitTree.Free()
 
-	start := time.Now()
 	diff, err := repo.DiffTreeToTree(parentTree, commitTree, nil)
-	fmt.Printf("time: %v\n", time.Since(start).Milliseconds())
 	if err != nil {
 		return err
 	}
+	defer diff.Free()
+
 	stats, err := diff.Stats()
+	defer stats.Free()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("commit: %v/%v | %v\n", stats.Insertions(), stats.Deletions(), commit.Summary())
+	log.Infof("commit: %v (%d) [%v/%v] | %v, time: %v\n", commit.Id().String(), *commitCounter, stats.Insertions(), stats.Deletions(), commit.Summary(), time.Since(start).Milliseconds())
 
-	if commit.ParentCount() > 1 {
-		merge = 1
-		commitNr = 0
-	}
-
-	lock.Lock()
-	defer lock.Unlock()
-	if author != nil {
-		if _, found := authorMap[author.Email]; !found {
-			c1 := Contribution{
-				Names:    []string{author.Name},
-				Addition: stats.Insertions(),
-				Deletion: stats.Deletions(),
-				Merges:   merge,
-				Commits:  commitNr,
-			}
-			authorMap[author.Email] = c1
-		} else {
-			names := authorMap[author.Email].Names
-			if !contains(authorMap[author.Email].Names, author.Name) {
-				names = append(names, author.Name)
-				sort.Strings(names)
-			}
-			authorMap[author.Email] = Contribution{
-				Names:    names,
-				Addition: authorMap[author.Email].Addition + stats.Insertions(),
-				Deletion: authorMap[author.Email].Deletion + stats.Deletions(),
-				Merges:   authorMap[author.Email].Merges + merge,
-				Commits:  authorMap[author.Email].Commits + commitNr,
-			}
-		}
-	}
-	if commiter != nil {
-		if _, found := authorMap[commiter.Email]; !found {
-			c1 := Contribution{
-				Names:    []string{commiter.Name},
-				Addition: int(float64(stats.Insertions()) * mergedLinesWeight),
-				Deletion: int(float64(stats.Deletions()) * mergedLinesWeight),
-				Merges:   merge,
-				Commits:  commitNr,
-			}
-			authorMap[commiter.Email] = c1
-		} else {
-			names := authorMap[commiter.Email].Names
-			if !contains(authorMap[commiter.Email].Names, commiter.Name) {
-				names = append(names, commiter.Name)
-				sort.Strings(names)
-			}
-			authorMap[commiter.Email] = Contribution{
-				Names:    names,
-				Addition: authorMap[commiter.Email].Addition + int(float64(stats.Insertions())*mergedLinesWeight),
-				Deletion: authorMap[commiter.Email].Deletion + int(float64(stats.Deletions())*mergedLinesWeight),
-				Merges:   authorMap[commiter.Email].Merges + merge,
-				Commits:  authorMap[commiter.Email].Commits + commitNr,
-			}
-		}
-	}
+	author := commit.Author()
+	committer := commit.Committer()
+	parentCount := commit.ParentCount()
+	fillAuthorMap(author, committer, parentCount, authorLock, authorMap, stats)
 
 	return nil
 }
 
+func fillAuthorMap(author *libgit.Signature, committer *libgit.Signature, parentCount uint, authorLock *sync.Mutex, authorMap map[string]Contribution, stats *libgit.DiffStats) {
+	authorFactor := 1.0
+	merge := 0
+	if parentCount > 1 {
+		//author is commiter (author merged)
+		authorFactor = mergedLinesWeight
+		merge = 1
+	}
+
+	authorLock.Lock()
+	defer authorLock.Unlock()
+	if author != nil {
+		addToMap(author, authorMap, stats, authorFactor, merge)
+		if committer != nil && committer.Email != "noreply@github.com" && author.Email != committer.Email {
+			addToMap(committer, authorMap, stats, mergedLinesWeight, merge)
+		}
+	}
+
+}
+
+func addToMap(author *libgit.Signature, authorMap map[string]Contribution, stats *libgit.DiffStats, authorFactor float64, merge int) {
+	c1, _ := authorMap[author.Email]
+
+	names := authorMap[author.Email].Names
+	if !contains(authorMap[author.Email].Names, author.Name) {
+		names = append(names, author.Name)
+		sort.Strings(names)
+	}
+	authorMap[author.Email] = Contribution{
+		Names:    names,
+		Addition: int(float64(stats.Insertions()) * authorFactor),
+		Deletion: int(float64(stats.Deletions()) * authorFactor),
+		Merges:   c1.Merges + merge,
+		Commits:  c1.Commits + 1,
+	}
+}
+
 // weightContributions calculates the scores of the contributors by weighting the collected metrics (repository)
 func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight, error) {
-	weightContributionsStart := time.Now()
-
-	authors := []FlatFeeWeight{}
-
-	totalAdd := 0
-	totalDel := 0
-	totalMerge := 0
-	totalCommit := 0
+	result := []FlatFeeWeight{}
+	var totalAdd, totalDel float64
+	var totalMerge, totalCommit int
 
 	for _, v := range contributions {
-		totalAdd += v.Addition
-		totalDel += v.Deletion
+		totalAdd += smallCommitter(v.Addition)
+		totalDel += smallCommitter(v.Deletion)
 		totalMerge += v.Merges
 		totalCommit += v.Commits
 	}
 
-	totalAmountOfAuthors := len(contributions)
-
 	for email, contribution := range contributions {
 		// calculation of changes category
-		authorChangesWeighted := float64(contribution.Addition)*additionWeight + float64(contribution.Deletion)*deletionWeight
-		totalChangesWeighted := float64(totalAdd)*additionWeight + float64(totalDel)*deletionWeight
+		totalChangesWeighted := totalAdd*additionWeight + totalDel*deletionWeight
 		var changesPercentage float64
 		if totalChangesWeighted == 0 {
-			changesPercentage = 1.0 / float64(totalAmountOfAuthors)
+			changesPercentage = 0
 		} else {
+			authorChangesWeighted := smallCommitter(contribution.Addition)*additionWeight + smallCommitter(contribution.Deletion)*deletionWeight
 			changesPercentage = authorChangesWeighted / totalChangesWeighted
 		}
 
 		// calculation of git history category
-		authorGitHistoryWeighted := float64(contribution.Merges)*mergeWeight + float64(contribution.Commits)*commitWeight
-		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
 		var gitHistoryPercentage float64
+		totalGitHistoryWeighted := float64(totalMerge)*mergeWeight + float64(totalCommit)*commitWeight
 		if totalGitHistoryWeighted == 0 {
-			gitHistoryPercentage = 1.0 / float64(totalAmountOfAuthors)
+			gitHistoryPercentage = 0
 		} else {
+			authorGitHistoryWeighted := float64(contribution.Merges)*mergeWeight + float64(contribution.Commits)*commitWeight
 			gitHistoryPercentage = authorGitHistoryWeighted / totalGitHistoryWeighted
 		}
 
-		authors = append(authors, FlatFeeWeight{
+		result = append(result, FlatFeeWeight{
 			Names:  contribution.Names,
 			Email:  email,
 			Weight: changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
 		})
 	}
 
-	weightContributionsEnd := time.Now()
-	fmt.Printf("---> weight contributions in %dms\n", weightContributionsEnd.Sub(weightContributionsStart).Milliseconds())
-	return authors, nil
+	return result, nil
 }
 
 func contains(s []string, e string) bool {
+	if s == nil {
+		return false
+	}
 	for _, a := range s {
 		if a == e {
 			return true

@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -17,10 +18,20 @@ func TestRemoteRepo(t *testing.T) {
 	opts = &Opts{}
 	opts.GitBasePath = "/tmp"
 	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git", "master")
-	r, err := cloneOrUpdateRepository("https://github.com/torvalds/linux.git", "master")
+	//r, err := cloneOrUpdateRepository("https://github.com/torvalds/linux.git", "master")
+	r, err := cloneOrUpdateRepository("https://github.com/neow3j/neow3j.git", "master-3.x")
 	assert.Nil(t, err)
 	var defaultTime time.Time
-	analyzeRepositoryFromRepository(r, defaultTime, defaultTime)
+	c, err := analyzeRepositoryFromRepository(r, defaultTime, defaultTime)
+	assert.Nil(t, err)
+	f, err := weightContributions(c)
+	assert.Nil(t, err)
+	sort.Slice(f, func(i, j int) bool {
+		return f[i].Weight > f[j].Weight
+	})
+	for _, v := range f {
+		fmt.Printf("out: %v\n", v)
+	}
 }
 
 // Helpers
