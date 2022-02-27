@@ -148,31 +148,3 @@ func TestGetTimeRange_SinceInvalid(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, expectedErr.Error(), err.Error())
 }
-
-// makeHttpStatusErr
-
-/*
-	Testing this would just test whether the http package with the responseWriter works.
-*/
-
-// getBranchToAnalyze
-
-func TestGetBranchToAnalyze_Valid(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions?branch=develop")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	branch := getBranchToAnalyze(&req)
-	assert.Equal(t, "develop", branch)
-}
-
-func TestGetBranchToAnalyze_NoParam(t *testing.T) {
-	uri, _ := url.Parse("http://localhost:8080/contributions")
-	req := http.Request{
-		Method: "GET",
-		URL:    uri,
-	}
-	branch := getBranchToAnalyze(&req)
-	assert.Equal(t, opts.GitDefaultBranch, branch)
-}

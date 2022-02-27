@@ -16,11 +16,10 @@ var (
 )
 
 type Opts struct {
-	Port             int
-	BackendToken     string
-	CallbackUrl      string
-	GitBasePath      string
-	GitDefaultBranch string
+	Port         int
+	BackendToken string
+	CallbackUrl  string
+	GitBasePath  string
 }
 
 func NewOpts() *Opts {
@@ -36,7 +35,6 @@ func NewOpts() *Opts {
 		"Backend Token")
 	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("WEBHOOK_CALLBACK_URL", "http://backend:9082/hooks/analysis-engine"), "Callback URL")
 	flag.StringVar(&o.GitBasePath, "git-base-path", lookupEnv("GO_GIT_BASE_PATH", "/tmp"), "Git base storage path")
-	flag.StringVar(&o.GitDefaultBranch, "git-default-branch", lookupEnv("GO_GIT_DEFAULT_BRANCH", "main"), "Git default branch")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])

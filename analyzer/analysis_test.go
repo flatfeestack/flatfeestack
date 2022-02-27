@@ -17,12 +17,14 @@ import (
 func TestRemoteRepo(t *testing.T) {
 	opts = &Opts{}
 	opts.GitBasePath = "/tmp"
-	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git", "master")
-	//r, err := cloneOrUpdateRepository("https://github.com/torvalds/linux.git", "master")
-	r, err := cloneOrUpdateRepository("https://github.com/neow3j/neow3j.git", "master-3.x")
+	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git")
+	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	r, err := cloneOrUpdateRepository("https://github.com/neow3j/neow3j.git")
 	assert.Nil(t, err)
 	var defaultTime time.Time
-	c, err := analyzeRepositoryFromRepository(r, defaultTime, defaultTime)
+	month3 := time.Now().AddDate(0, -3, 0)
+	c, err := analyzeRepositoryFromRepository(r, month3, defaultTime)
 	assert.Nil(t, err)
 	f, err := weightContributions(c)
 	assert.Nil(t, err)

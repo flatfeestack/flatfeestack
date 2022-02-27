@@ -22,7 +22,6 @@ type WebhookRequest struct {
 	DateFrom  time.Time `json:"dateFrom"`
 	DateTo    time.Time `json:"dateTo"`
 	GitUrl    string    `json:"gitUrl"`
-	Branch    string    `json:"branch"`
 }
 
 type WebhookResponse struct {
@@ -49,28 +48,21 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
 	}
 
-	var branch string
-	if len(request.Branch) > 0 {
-		branch = request.Branch
-	} else {
-		branch = opts.GitDefaultBranch
-	}
-
 	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: request.RequestId})
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	go analyzeForWebhookInBackground(request, branch)
+	go analyzeForWebhookInBackground(request)
 	log.Debugf("is analyzing")
 
 }
 
-func analyzeForWebhookInBackground(request WebhookRequest, branch string) {
-	log.Debugf("\n\n---> webhook request for repository %s on branch %s \n", request.GitUrl, branch)
+func analyzeForWebhookInBackground(request WebhookRequest) {
+	log.Debugf("\n\n---> webhook request for repository %s\n", request.GitUrl)
 	log.Debugf("Request id: %s\n", request.RequestId)
 
-	contributionMap, err := analyzeRepositoryFromString(request.GitUrl, request.DateFrom, request.DateTo, branch)
+	contributionMap, err := analyzeRepositoryFromString(request.GitUrl, request.DateFrom, request.DateTo)
 	if err != nil {
 		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Success: false, Error: err.Error()})
 		return
@@ -169,17 +161,6 @@ func callbackToWebhook(body WebhookCallback) {
 	}
 
 	defer resp.Body.Close()
-}
-
-// getBranchToAnalyze extracts from the route parameters and env variables the correct branch to analyze
-func getBranchToAnalyze(r *http.Request) string {
-	branchUrlParam := r.URL.Query()["branch"]
-	// check whether the param was set. If it was return this branch name, else return the default one
-	if len(branchUrlParam) > 0 {
-		return branchUrlParam[0]
-	} else {
-		return opts.GitDefaultBranch
-	}
 }
 
 // convertTimestampStringToTime is a timestamp converter to the time interpretation of go

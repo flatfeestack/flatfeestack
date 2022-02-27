@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	libgit "github.com/libgit2/git2go/v33"
+	git "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
 	"math"
+	"net/mail"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -37,12 +38,14 @@ const (
 	// Intercategory weights between categories Changes and Githistory.
 	// All must sum up to 1.
 	// Only when platformInformation IS NOT considered
-	changesWeight    = 0.7
-	gitHistoryWeight = 0.3
+	changesWeight    = 0.5
+	gitHistoryWeight = 0.5
 )
 
 var (
-	defaultTime time.Time
+	defaultTime      time.Time
+	excludeEmails    = []string{"noreply@github.com"}
+	includedTrailers = []string{"Signed-off-by", "Reviewed-by"}
 )
 
 //small contributors get more, to be encouraged, also the committer that
@@ -52,13 +55,13 @@ func smallCommitter(input int) float64 {
 	if input == 0 {
 		return 0
 	}
-	return (2 / math.Pow(1.02, float64(input))) + 1
+	return float64(input) * ((2 / math.Pow(1.02, float64(input))) + 1)
 }
 
 // analyzeRepositoryFromString manages the whole analysis process (opens the repository and initialized the analysis)
-func analyzeRepositoryFromString(src string, since time.Time, until time.Time, branch string) (map[string]Contribution, error) {
+func analyzeRepositoryFromString(location string, since time.Time, until time.Time) (map[string]Contribution, error) {
 	cloneUpdateStart := time.Now()
-	repo, err := cloneOrUpdateRepository(src, branch)
+	repo, err := cloneOrUpdateRepository(location)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +71,7 @@ func analyzeRepositoryFromString(src string, since time.Time, until time.Time, b
 }
 
 // analyzeRepositoryFromRepository uses go-git to extract the metrics from the opened repository
-func analyzeRepositoryFromRepository(repo *libgit.Repository, startTime time.Time, stopTime time.Time) (map[string]Contribution, error) {
+func analyzeRepositoryFromRepository(repo *git.Repository, startTime time.Time, stopTime time.Time) (map[string]Contribution, error) {
 	authorMap := map[string]Contribution{}
 	if repo == nil {
 		return authorMap, nil
@@ -80,42 +83,73 @@ func analyzeRepositoryFromRepository(repo *libgit.Repository, startTime time.Tim
 	commitCounter := int64(0)
 	wg := &sync.WaitGroup{}
 
-	revWalk, err := repo.Walk()
+	rc := repo.Remotes
+	list, err := rc.List()
 	if err != nil {
 		return nil, err
+	}
+
+	for _, v := range list {
+		err = walkRepo(repo, startTime, stopTime, rc, v, wg, commitCounter, authorMap, authorLock, seen, seenLock)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fmt.Printf("---> #%v git analysis in %dms\n", commitCounter, time.Since(gitAnalysisStart).Milliseconds())
+
+	return authorMap, nil
+}
+
+func walkRepo(repo *git.Repository, startTime time.Time, stopTime time.Time, rc git.RemoteCollection, v string, wg *sync.WaitGroup, commitCounter int64, authorMap map[string]Contribution, authorLock *sync.Mutex, seen map[string]bool, seenLock *sync.Mutex) error {
+	revWalk, err := repo.Walk()
+	if err != nil {
+		return err
 	}
 	defer revWalk.Free()
 
+	remote, err := rc.Lookup(v)
+	err = remote.ConnectFetch(nil, nil, nil)
+	rhs, err := remote.Ls()
+
+	if len(rhs) == 0 {
+		return nil
+	}
 	// Start out at the head
-	err = revWalk.PushHead()
+	err = revWalk.Push(rhs[0].Id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = revWalk.Iterate(func(commit *libgit.Commit) bool {
-		if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) &&
-			(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
-			fmt.Printf("time reached: %v", commit.Id().String())
+	err = revWalk.Iterate(func(commit *git.Commit) bool {
+		if expired(commit, startTime, stopTime) {
 			return false
 		}
 		wg.Add(1)
-		loop(repo, &commitCounter, authorMap, authorLock, commit, seen, seenLock, wg)
+		loop(repo, &commitCounter, authorMap, authorLock, commit, seen, seenLock, wg, startTime, stopTime)
 		return true
 	})
 
 	//since we have not the full history, revision walker throws an error if we don't find an old parent. This is ok, ignore it
-	if gErr, ok := err.(*libgit.GitError); ok {
-		if gErr.Code != libgit.ErrorCodeNotFound && gErr.Class != libgit.ErrorClassOdb {
-			return nil, err
+	if gErr, ok := err.(*git.GitError); ok {
+		if gErr.Code != git.ErrorCodeNotFound && gErr.Class != git.ErrorClassOdb {
+			return err
 		}
 	} else if err != nil {
-		return nil, err
+		return err
 	}
 	wg.Wait()
 
-	fmt.Printf("---> git analysis in %dms\n", time.Since(gitAnalysisStart).Milliseconds())
+	return nil
+}
 
-	return authorMap, nil
+func expired(commit *git.Commit, startTime time.Time, stopTime time.Time) bool {
+	if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) ||
+		(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
+		fmt.Printf("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
+		return true
+	}
+	return false
 }
 
 func alreadyProcessed(commit string, seen map[string]bool, seenLock *sync.Mutex) bool {
@@ -128,11 +162,15 @@ func alreadyProcessed(commit string, seen map[string]bool, seenLock *sync.Mutex)
 	return false
 }
 
-func loop(repo *libgit.Repository, commitCounter *int64, authorMap map[string]Contribution, authorLock *sync.Mutex, commit *libgit.Commit, seen map[string]bool, seenLock *sync.Mutex, wg *sync.WaitGroup) {
+func loop(repo *git.Repository, commitCounter *int64, authorMap map[string]Contribution, authorLock *sync.Mutex, commit *git.Commit, seen map[string]bool, seenLock *sync.Mutex, wg *sync.WaitGroup, startTime time.Time, stopTime time.Time) {
 	defer commit.Free()
 	defer wg.Done()
 
 	if alreadyProcessed(commit.Id().String(), seen, seenLock) {
+		return
+	}
+
+	if expired(commit, startTime, stopTime) {
 		return
 	}
 
@@ -145,14 +183,14 @@ func loop(repo *libgit.Repository, commitCounter *int64, authorMap map[string]Co
 			continue
 		}
 		if i == 0 { //if it's a merge, the author gets only credit for the parent 0
-			collectInfo(commit, parentCommit, authorMap, authorLock, repo, commitCounter)
+			collectInfo(commit, parentCommit, authorMap, authorLock, repo)
 		}
 		wg.Add(1)
-		go loop(repo, commitCounter, authorMap, authorLock, parentCommit, seen, seenLock, wg)
+		go loop(repo, commitCounter, authorMap, authorLock, parentCommit, seen, seenLock, wg, startTime, stopTime)
 	}
 }
 
-func collectInfo(commit *libgit.Commit, parentCommit *libgit.Commit, authorMap map[string]Contribution, authorLock *sync.Mutex, repo *libgit.Repository, commitCounter *int64) error {
+func collectInfo(commit *git.Commit, parentCommit *git.Commit, authorMap map[string]Contribution, authorLock *sync.Mutex, repo *git.Repository) error {
 	start := time.Now()
 
 	parentTree, err := parentCommit.Tree()
@@ -179,17 +217,24 @@ func collectInfo(commit *libgit.Commit, parentCommit *libgit.Commit, authorMap m
 		return err
 	}
 
-	log.Infof("commit: %v (%d) [%v/%v] | %v, time: %v\n", commit.Id().String(), *commitCounter, stats.Insertions(), stats.Deletions(), commit.Summary(), time.Since(start).Milliseconds())
-
 	author := commit.Author()
 	committer := commit.Committer()
+	ts, err := git.MessageTrailers(commit.Message())
+	if err != nil {
+		return err
+	}
+
+	log.Infof("commit: %v (%v/%v) [%v/%v] | %v, time: %v",
+		commit.Id().String(), author.Email, committer.Email, stats.Insertions(),
+		stats.Deletions(), commit.Summary(), time.Since(start).Milliseconds())
+
 	parentCount := commit.ParentCount()
-	fillAuthorMap(author, committer, parentCount, authorLock, authorMap, stats)
+	fillAuthorMap(author, committer, ts, parentCount, authorLock, authorMap, stats)
 
 	return nil
 }
 
-func fillAuthorMap(author *libgit.Signature, committer *libgit.Signature, parentCount uint, authorLock *sync.Mutex, authorMap map[string]Contribution, stats *libgit.DiffStats) {
+func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Trailer, parentCount uint, authorLock *sync.Mutex, authorMap map[string]Contribution, stats *git.DiffStats) {
 	authorFactor := 1.0
 	merge := 0
 	if parentCount > 1 {
@@ -201,26 +246,37 @@ func fillAuthorMap(author *libgit.Signature, committer *libgit.Signature, parent
 	authorLock.Lock()
 	defer authorLock.Unlock()
 	if author != nil {
-		addToMap(author, authorMap, stats, authorFactor, merge)
-		if committer != nil && committer.Email != "noreply@github.com" && author.Email != committer.Email {
-			addToMap(committer, authorMap, stats, mergedLinesWeight, merge)
+		addToMap(author.Email, author.Name, authorMap, stats, authorFactor, merge)
+		if committer != nil && !contains(excludeEmails, committer.Email) && author.Email != committer.Email {
+			addToMap(committer.Email, committer.Name, authorMap, stats, mergedLinesWeight, merge)
+		}
+		for _, v := range ts {
+			if contains(includedTrailers, v.Key) {
+				a, err := mail.ParseAddress(v.Value)
+				if err != nil {
+					log.Infof("cannot parse %v - %v", v.Value, err)
+					continue
+				}
+				addToMap(a.Address, a.Name, authorMap, stats, mergedLinesWeight, merge)
+			}
 		}
 	}
 
 }
 
-func addToMap(author *libgit.Signature, authorMap map[string]Contribution, stats *libgit.DiffStats, authorFactor float64, merge int) {
-	c1, _ := authorMap[author.Email]
+func addToMap(authorEmail string, authorName string, authorMap map[string]Contribution, stats *git.DiffStats, authorFactor float64, merge int) {
+	c1, _ := authorMap[authorEmail]
 
-	names := authorMap[author.Email].Names
-	if !contains(authorMap[author.Email].Names, author.Name) {
-		names = append(names, author.Name)
+	names := authorMap[authorEmail].Names
+	if !contains(authorMap[authorEmail].Names, authorName) {
+		names = append(names, authorName)
 		sort.Strings(names)
 	}
-	authorMap[author.Email] = Contribution{
+
+	authorMap[authorEmail] = Contribution{
 		Names:    names,
-		Addition: int(float64(stats.Insertions()) * authorFactor),
-		Deletion: int(float64(stats.Deletions()) * authorFactor),
+		Addition: c1.Addition + int(float64(stats.Insertions())*authorFactor),
+		Deletion: c1.Deletion + int(float64(stats.Deletions())*authorFactor),
 		Merges:   c1.Merges + merge,
 		Commits:  c1.Commits + 1,
 	}
@@ -246,7 +302,7 @@ func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight
 		if totalChangesWeighted == 0 {
 			changesPercentage = 0
 		} else {
-			authorChangesWeighted := smallCommitter(contribution.Addition)*additionWeight + smallCommitter(contribution.Deletion)*deletionWeight
+			authorChangesWeighted := (smallCommitter(contribution.Addition) * additionWeight) + (smallCommitter(contribution.Deletion) * deletionWeight)
 			changesPercentage = authorChangesWeighted / totalChangesWeighted
 		}
 
@@ -265,6 +321,8 @@ func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight
 			Email:  email,
 			Weight: changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
 		})
+
+		log.Infof("authors: %v=+%v/-%v, c:%v,m:%v", contribution.Names, contribution.Addition, contribution.Deletion, contribution.Commits, contribution.Merges)
 	}
 
 	return result, nil
