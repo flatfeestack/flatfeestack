@@ -1,26 +1,25 @@
-FROM golang:1.17 AS base
+FROM golang:1.17-alpine3.15 AS builder
 WORKDIR /app
 COPY go.* ./
 RUN go mod download
-
-FROM base as builder
-WORKDIR /app
-RUN apt update && apt install -y cmake libssl-dev
+RUN apk add cmake git make gcc musl-dev openssl-dev
 RUN git clone https://github.com/libgit2/libgit2.git
 WORKDIR /app/libgit2
 RUN git checkout v1.3.0
 RUN mkdir build;
 WORKDIR /app/libgit2/build
-RUN cmake ..
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CLAR=OFF
 RUN cmake --build .
 RUN cmake --build . --target install
 WORKDIR /app
 COPY *.go ./
 RUN go build
 
-FROM gcr.io/distroless/static
-WORKDIR /home/nonroot
+FROM alpine:3.15
+RUN apk add --update --no-cache git
+RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
+WORKDIR /app
 COPY --from=builder /app/analysis-engine ./
-COPY --from=builder /usr/local/lib/libgit* /usr/local/lib/
+COPY --from=builder /usr/lib/libgit* /usr/lib/
 USER nonroot
-ENTRYPOINT ["/home/nonroot/analysis-engine"]
+ENTRYPOINT ["/app/analysis-engine"]
