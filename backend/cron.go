@@ -94,7 +94,7 @@ func hourlyRunner(now time.Time) error {
 	nr := 0
 	for _, v := range a {
 		//check if we need analysis request
-		err := analysisRequest(v.RepoId, v.GitUrl, v.Branch)
+		err := analysisRequest(v.RepoId, v.GitUrls)
 		if err != nil {
 			log.Warnf("analysis request failed %v", err)
 		} else {

@@ -512,14 +512,14 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 //******************************* Analysis Requests *******************************
 //*********************************************************************************
 func insertAnalysisRequest(a AnalysisRequest, now time.Time) error {
-	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, branch, created_at) VALUES($1, $2, $3, $4, $5, $6, $7)")
+	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_urls, created_at) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", a.RequestId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(a.RequestId, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, a.Branch, now)
+	res, err = stmt.Exec(a.RequestId, a.RepoId, a.DateFrom, a.DateTo, pq.Array(a.GitUrls), now)
 	if err != nil {
 		return err
 	}
@@ -548,12 +548,13 @@ func insertAnalysisResponse(reqId uuid.UUID, gitEmail string, names []string, we
 func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 	var a AnalysisRequest
 
+	//https://stackoverflow.com/questions/47479973/golang-postgresql-array#47480256
 	err := db.
-		QueryRow(`SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error,
+		QueryRow(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request WHERE repo_id=$1) AS x
-                        WHERE dest_rank = 1`, repoId).Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.Branch, &a.ReceivedAt, &a.Error)
+                        WHERE dest_rank = 1`, repoId).Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -568,8 +569,8 @@ func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	var as []AnalysisRequest
 
-	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_url, branch, received_at, error,
+	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request WHERE date_to >= $1) AS x
                         WHERE dest_rank = 1`, dateTo)
@@ -581,7 +582,7 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 
 	for rows.Next() {
 		var a AnalysisRequest
-		err = rows.Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.Branch, &a.ReceivedAt, &a.Error)
+		err = rows.Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
 		if err != nil {
 			return nil, err
 		}

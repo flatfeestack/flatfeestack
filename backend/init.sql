@@ -41,10 +41,9 @@ CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_in_id, u
 
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    orig_id     NUMERIC,
+    link        UUID CONSTRAINT fk_repo REFERENCES repo (id), /* needs a request to the admins */
     url         VARCHAR(255) UNIQUE NOT NULL,
     git_url     VARCHAR(255) UNIQUE NOT NULL,
-    branch      VARCHAR(16) NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description TEXT,
     tags        BYTEA,
@@ -77,7 +76,7 @@ CREATE TABLE analysis_request (
     repo_id     UUID CONSTRAINT fk_repo_id_req REFERENCES repo (id),
     date_from   DATE NOT NULL,
     date_to     DATE NOT NULL,
-    git_url     VARCHAR(255) NOT NULL,
+    git_urls    VARCHAR(255)[] NOT NULL,
     branch      VARCHAR(16) NOT NULL,
     received_at TIMESTAMP,
     error       TEXT,

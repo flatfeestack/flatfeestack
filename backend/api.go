@@ -568,7 +568,7 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 				log.Warningf("could not find latest analysis request: %v", err)
 			}
 			if ar == nil {
-				err = analysisRequest(repo.Id, *repo.GitUrl, *repo.Branch)
+				err = analysisRequest(repo.Id, []string{*repo.GitUrl})
 				if err != nil {
 					log.Warningf("Could not submit analysis request %v\n", err)
 				}
@@ -706,8 +706,7 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 		RepoId:    repo.Id,
 		DateFrom:  monthStart,
 		DateTo:    monthStop,
-		GitUrl:    "test",
-		Branch:    "master",
+		GitUrls:   []string{"test"},
 	}
 
 	err = insertAnalysisRequest(a, timeNow())
