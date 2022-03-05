@@ -34,7 +34,7 @@ func cloneRepository(location []string) (*git.Repository, error) {
 	folderName = strings.ReplaceAll(folderName, ".", "")
 	// clone just one branch
 	// git clone https://github.com/torvalds/linux.git --shallow-since="3 months ago" -n
-	// git clone git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git --shallow-since="3 months ago" -n
+	// git clone git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git --shallow-since="6 months ago" -n
 	cmd := exec.Command("git", "clone", location[0], `--shallow-since="6 months ago"`, "-n", ".")
 	cmd.Dir = opts.GitBasePath + "/" + folderName
 	err = os.MkdirAll(opts.GitBasePath+"/"+folderName, os.ModePerm)
@@ -123,9 +123,5 @@ func updateRepository(location []string) (*git.Repository, error) {
 		return nil, err
 	}
 
-	r, err = git.OpenRepository(opts.GitBasePath + "/" + folderName)
-	if err != nil {
-		return nil, err
-	}
-	return r, err
+	return git.OpenRepository(opts.GitBasePath + "/" + folderName)
 }

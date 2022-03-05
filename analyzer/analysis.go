@@ -59,9 +59,9 @@ func smallCommitter(input int) float64 {
 }
 
 // analyzeRepositoryFromString manages the whole analysis process (opens the repository and initialized the analysis)
-func analyzeRepositoryFromString(location string, since time.Time, until time.Time) (map[string]Contribution, error) {
+func analyzeRepositoryFromString(since time.Time, until time.Time, location ...string) (map[string]Contribution, error) {
 	cloneUpdateStart := time.Now()
-	repo, err := cloneOrUpdateRepository(location)
+	repo, err := cloneOrUpdateRepository(location...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,23 +108,12 @@ func walkRepo(repo *git.Repository, startTime time.Time, stopTime time.Time, rc 
 	}
 	defer revWalk.Free()
 
-	remote, err := rc.Lookup(v)
-	err = remote.ConnectFetch(nil, nil, nil)
-	rhs, err := remote.Ls()
-
-	if len(rhs) == 0 {
-		return nil
-	}
-	// Start out at the head
-	err = revWalk.Push(rhs[0].Id)
+	err = revWalk.PushHead()
 	if err != nil {
 		return err
 	}
 
 	err = revWalk.Iterate(func(commit *git.Commit) bool {
-		if expired(commit, startTime, stopTime) {
-			return false
-		}
 		wg.Add(1)
 		loop(repo, &commitCounter, authorMap, authorLock, commit, seen, seenLock, wg, startTime, stopTime)
 		return true
@@ -170,10 +159,6 @@ func loop(repo *git.Repository, commitCounter *int64, authorMap map[string]Contr
 		return
 	}
 
-	if expired(commit, startTime, stopTime) {
-		return
-	}
-
 	atomic.AddInt64(commitCounter, 1)
 	numParents := commit.ParentCount()
 
@@ -183,15 +168,19 @@ func loop(repo *git.Repository, commitCounter *int64, authorMap map[string]Contr
 			continue
 		}
 		if i == 0 { //if it's a merge, the author gets only credit for the parent 0
-			collectInfo(commit, parentCommit, authorMap, authorLock, repo)
+			collectInfo(commit, parentCommit, authorMap, authorLock, repo, startTime, stopTime)
 		}
 		wg.Add(1)
 		go loop(repo, commitCounter, authorMap, authorLock, parentCommit, seen, seenLock, wg, startTime, stopTime)
 	}
 }
 
-func collectInfo(commit *git.Commit, parentCommit *git.Commit, authorMap map[string]Contribution, authorLock *sync.Mutex, repo *git.Repository) error {
+func collectInfo(commit *git.Commit, parentCommit *git.Commit, authorMap map[string]Contribution, authorLock *sync.Mutex, repo *git.Repository, startTime time.Time, stopTime time.Time) error {
 	start := time.Now()
+
+	if expired(commit, startTime, stopTime) {
+		return nil
+	}
 
 	parentTree, err := parentCommit.Tree()
 	if err != nil {

@@ -9,26 +9,6 @@ import (
 	"time"
 )
 
-// Tests
-
-// getAllContributions
-
-/*
-	Would be a integration test with a lot of requests, cloning repositories etc.
-	The part added in this project is already unit tested. Testing this would
-	additionally test the gorilla/mux the github api and go-git/go-git.
-*/
-
-// getContributionWeights
-
-/*
-	Would be a integration test with a lot of requests, cloning repositories etc.
-	The part added in this project is already unit tested. Testing this would
-	additionally test the gorilla/mux the github api and go-git/go-git.
-*/
-
-// getRepositoryFromRequest
-
 func TestGetRepositoryFromRequest_Valid(t *testing.T) {
 	uri, _ := url.Parse("http://localhost:8080/contributions?repositoryUrl=https://github.com/neow3j/neow3j.git")
 	req := http.Request{
@@ -37,7 +17,7 @@ func TestGetRepositoryFromRequest_Valid(t *testing.T) {
 	}
 	repo, err := getRepositoryFromRequest(&req)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo)
+	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo[0])
 }
 
 func TestGetRepositoryFromRequest_MultiParam(t *testing.T) {
@@ -48,7 +28,8 @@ func TestGetRepositoryFromRequest_MultiParam(t *testing.T) {
 	}
 	repo, err := getRepositoryFromRequest(&req)
 	assert.Equal(t, nil, err, "err should be nil")
-	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo, "they should be equal")
+	assert.Equal(t, "https://github.com/neow3j/neow3j.git", repo[0], "they should be equal")
+	assert.Equal(t, "https://github.com/go-git/go-git.git", repo[1], "they should be equal")
 }
 
 func TestGetRepositoryFromRequest_NoRepo(t *testing.T) {
@@ -60,7 +41,7 @@ func TestGetRepositoryFromRequest_NoRepo(t *testing.T) {
 	repo, err := getRepositoryFromRequest(&req)
 	assert.NotEqual(t, nil, err, "err should not be nil")
 	assert.Equal(t, "repository not found", err.Error(), "should throw repo not found error")
-	assert.Equal(t, "", repo, "they should be equal")
+	assert.Nil(t, repo, "they should be equal")
 }
 
 // getTimeRange

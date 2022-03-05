@@ -11,17 +11,11 @@ import (
 	"time"
 )
 
-type FlatFeeWeight struct {
-	Names  []string `json:"names"`
-	Email  string   `json:"email"`
-	Weight float64  `json:"weight"`
-}
-
 type WebhookRequest struct {
 	RequestId uuid.UUID `json:"reqId"`
 	DateFrom  time.Time `json:"dateFrom"`
 	DateTo    time.Time `json:"dateTo"`
-	GitUrl    string    `json:"gitUrl"`
+	GitUrls   []string  `json:"gitUrls"`
 }
 
 type WebhookResponse struct {
@@ -30,9 +24,14 @@ type WebhookResponse struct {
 
 type WebhookCallback struct {
 	RequestId uuid.UUID       `json:"request_id"`
-	Success   bool            `json:"success"`
-	Error     string          `json:"error"`
+	Error     string          `json:"error,omitempty"`
 	Result    []FlatFeeWeight `json:"result"`
+}
+
+type FlatFeeWeight struct {
+	Names  []string `json:"names"`
+	Email  string   `json:"email"`
+	Weight float64  `json:"weight"`
 }
 
 func analyzeRepository(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +43,7 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("analyze repo: %v", request)
 
-	if len(request.GitUrl) == 0 {
+	if len(request.GitUrls) == 0 {
 		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
 	}
 
@@ -59,18 +58,18 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 func analyzeForWebhookInBackground(request WebhookRequest) {
-	log.Debugf("\n\n---> webhook request for repository %s\n", request.GitUrl)
+	log.Debugf("\n\n---> webhook request for repository %s\n", request.GitUrls)
 	log.Debugf("Request id: %s\n", request.RequestId)
 
-	contributionMap, err := analyzeRepositoryFromString(request.GitUrl, request.DateFrom, request.DateTo)
+	contributionMap, err := analyzeRepositoryFromString(request.DateFrom, request.DateTo, request.GitUrls...)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Success: false, Error: err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: err.Error()})
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Success: false, Error: err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: err.Error()})
 		return
 	}
 
@@ -81,7 +80,6 @@ func analyzeForWebhookInBackground(request WebhookRequest) {
 
 	callbackToWebhook(WebhookCallback{
 		RequestId: request.RequestId,
-		Success:   true,
 		Result:    contributionWeights,
 	})
 
@@ -89,12 +87,12 @@ func analyzeForWebhookInBackground(request WebhookRequest) {
 }
 
 // getRepositoryFromRequest extracts the repository from the route parameters
-func getRepositoryFromRequest(r *http.Request) (string, error) {
+func getRepositoryFromRequest(r *http.Request) ([]string, error) {
 	repositoryUrl := r.URL.Query()["repositoryUrl"]
-	if len(repositoryUrl) < 1 {
-		return "", errors.New("repository not found")
+	if len(repositoryUrl) == 0 {
+		return nil, errors.New("repository not found")
 	}
-	return repositoryUrl[0], nil
+	return repositoryUrl, nil
 }
 
 // getTimeRange returns the time range in the format since, until, error from the request with time in rfc3339 format
@@ -130,12 +128,12 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 }
 
 func callbackToWebhook(body WebhookCallback) {
-	if body.Success {
+	if body.Error == "" {
 		log.Printf("About to returt the following data: %v", body.Result)
 	}
 
 	reqBody, _ := json.Marshal(body)
-	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Success)
+	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Error == "")
 
 	c := &http.Client{
 		Timeout: 15 * time.Second,
