@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -73,53 +72,12 @@ func analyzeForWebhookInBackground(request WebhookRequest) {
 		return
 	}
 
-	var contributionWeights []FlatFeeWeight
-	for _, v := range weightsMap {
-		contributionWeights = append(contributionWeights, v)
-	}
-
 	callbackToWebhook(WebhookCallback{
 		RequestId: request.RequestId,
-		Result:    contributionWeights,
+		Result:    weightsMap,
 	})
 
 	log.Debugf("Finished request %s\n", request.RequestId)
-}
-
-// getRepositoryFromRequest extracts the repository from the route parameters
-func getRepositoryFromRequest(r *http.Request) ([]string, error) {
-	repositoryUrl := r.URL.Query()["repositoryUrl"]
-	if len(repositoryUrl) == 0 {
-		return nil, errors.New("repository not found")
-	}
-	return repositoryUrl, nil
-}
-
-// getTimeRange returns the time range in the format since, until, error from the request with time in rfc3339 format
-func getTimeRange(r *http.Request) (time.Time, time.Time, error) {
-	var err error
-
-	// convert since RFC3339 into golang time
-	commitsSinceString := r.URL.Query()["since"]
-	var commitsSince time.Time
-	if len(commitsSinceString) > 0 {
-		commitsSince, err = convertTimestampStringToTime(commitsSinceString[0])
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-	}
-
-	// convert until RFC3339 into golang time
-	commitsUntilString := r.URL.Query()["until"]
-	var commitsUntil time.Time
-	if len(commitsUntilString) > 0 {
-		commitsUntil, err = convertTimestampStringToTime(commitsUntilString[0])
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-	}
-
-	return commitsSince, commitsUntil, nil
 }
 
 // makeHttpStatusErr writes an http status error with a specific message
@@ -159,13 +117,4 @@ func callbackToWebhook(body WebhookCallback) {
 	}
 
 	defer resp.Body.Close()
-}
-
-// convertTimestampStringToTime is a timestamp converter to the time interpretation of go
-func convertTimestampStringToTime(rfc3339time string) (time.Time, error) {
-	commitsSinceTime, err := time.Parse(time.RFC3339, rfc3339time)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return commitsSinceTime, nil
 }

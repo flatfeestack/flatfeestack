@@ -20,6 +20,7 @@ RUN apk add --update --no-cache git
 RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
 WORKDIR /app
 COPY --from=builder /app/analysis-engine ./
+COPY banner.txt ./
 COPY --from=builder /usr/lib/libgit* /usr/lib/
 USER nonroot
 ENTRYPOINT ["/app/analysis-engine"]

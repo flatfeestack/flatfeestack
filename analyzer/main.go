@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
@@ -50,6 +51,7 @@ func lookupEnv(key string, defaultValues ...string) string {
 	}
 	for _, v := range defaultValues {
 		if v != "" {
+			os.Setenv(key, v)
 			return v
 		}
 	}
@@ -67,6 +69,7 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	}
 	for _, v := range defaultValues {
 		if v != 0 {
+			os.Setenv(key, strconv.Itoa(v))
 			return v
 		}
 	}
@@ -74,9 +77,23 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 }
 
 func main() {
+	//the .env should be loaded before showing the banner, as the banner shows also the ENVs
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Could not find env file [%v], using defaults", err)
+	}
+	//this will set the default ENVs
 	opts = NewOpts()
+
+	f, err := os.Open("banner.txt")
+	if err == nil {
+		banner.Init(os.Stdout, true, false, f)
+	} else {
+		log.Printf("could not display banner...")
+	}
+
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/webhook", analyzeRepository).Methods("POST")
-	log.Println("Starting api on port " + strconv.Itoa(opts.Port))
+	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }

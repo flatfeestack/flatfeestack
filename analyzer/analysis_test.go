@@ -37,6 +37,28 @@ func TestRemoteRepo(t *testing.T) {
 	}
 }
 
+func TestRemoteRepo2(t *testing.T) {
+	opts = &Opts{}
+	opts.GitBasePath = "/tmp"
+	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git")
+	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	r, err := cloneOrUpdateRepository("https://github.com/flatfeestack/flatfeestack-test-itself3.git")
+	assert.Nil(t, err)
+	var defaultTime time.Time
+	month6 := time.Now().AddDate(0, -3, 0)
+	c, err := analyzeRepositoryFromRepository(r, month6, defaultTime)
+	assert.Nil(t, err)
+	f, err := weightContributions(c)
+	assert.Nil(t, err)
+	sort.Slice(f, func(i, j int) bool {
+		return f[i].Weight > f[j].Weight
+	})
+	for _, v := range f {
+		fmt.Printf("out: %v\n", v)
+	}
+}
+
 func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
 	repo, _ := git.OpenRepository("/tmp/test-repository")
