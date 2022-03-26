@@ -58,10 +58,8 @@ func TestSponsor(t *testing.T) {
 
 	r := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url"),
 		GitUrl:      stringPointer("giturl"),
-		Branch:      stringPointer("branch"),
 		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
@@ -136,10 +134,8 @@ func TestRepo(t *testing.T) {
 	defer teardown()
 	r := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url"),
 		GitUrl:      stringPointer("giturl"),
-		Branch:      stringPointer("branch"),
 		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
@@ -202,10 +198,8 @@ func TestAnalysisRequest(t *testing.T) {
 
 	r := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url"),
 		GitUrl:      stringPointer("gitUrl"),
-		Branch:      stringPointer("branch"),
 		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
@@ -222,8 +216,7 @@ func TestAnalysisRequest(t *testing.T) {
 		RepoId:    r.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrl:    *r.GitUrl,
-		Branch:    *r.Branch,
+		GitUrls:   []string{*r.GitUrl},
 	}
 	err = insertAnalysisRequest(a, timeNow())
 	assert.Nil(t, err)
@@ -242,10 +235,8 @@ func TestAnalysisRequest2(t *testing.T) {
 
 	r1 := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url"),
 		GitUrl:      stringPointer("gitUrl"),
-		Branch:      stringPointer("branch"),
 		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
@@ -255,10 +246,8 @@ func TestAnalysisRequest2(t *testing.T) {
 
 	r2 := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url2"),
 		GitUrl:      stringPointer("gitUrl2"),
-		Branch:      stringPointer("branch2"),
 		Source:      stringPointer("source2"),
 		Name:        stringPointer("name2"),
 		Description: stringPointer("desc2"),
@@ -271,8 +260,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r1.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrl:    *r1.GitUrl,
-		Branch:    *r1.Branch,
+		GitUrls:   []string{*r1.GitUrl},
 	}
 	err = insertAnalysisRequest(a1, timeNow())
 	assert.Nil(t, err)
@@ -282,8 +270,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r1.Id,
 		DateFrom:  day1,
 		DateTo:    day2,
-		GitUrl:    *r1.GitUrl,
-		Branch:    *r1.Branch,
+		GitUrls:   []string{*r1.GitUrl},
 	}
 	err = insertAnalysisRequest(a2, timeNow())
 	assert.Nil(t, err)
@@ -300,8 +287,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r2.Id,
 		DateFrom:  day2,
 		DateTo:    day3,
-		GitUrl:    *r2.GitUrl,
-		Branch:    *r2.Branch,
+		GitUrls:   []string{*r2.GitUrl},
 	}
 	err = insertAnalysisRequest(a3, timeNow())
 	assert.Nil(t, err)
@@ -318,8 +304,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r2.Id,
 		DateFrom:  day3,
 		DateTo:    day4,
-		GitUrl:    *r2.GitUrl,
-		Branch:    *r2.Branch,
+		GitUrls:   []string{*r2.GitUrl},
 	}
 	err = insertAnalysisRequest(a4, timeNow())
 	assert.Nil(t, err)
@@ -346,10 +331,8 @@ func TestAnalysisResponse(t *testing.T) {
 
 	r := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer("url"),
 		GitUrl:      stringPointer("gitUrl"),
-		Branch:      stringPointer("branch"),
 		Source:      stringPointer("source"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
@@ -362,25 +345,24 @@ func TestAnalysisResponse(t *testing.T) {
 		RepoId:    r.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrl:    *r.GitUrl,
-		Branch:    *r.Branch,
+		GitUrls:   []string{*r.GitUrl},
 	}
 	err = insertAnalysisRequest(a, timeNow())
 	assert.Nil(t, err)
 
-	err = insertAnalysisResponse(a.RequestId, "tom", NameWeight{Name: "tom", Weight: 0.5}, timeNow())
+	err = insertAnalysisResponse(a.RequestId, "tom", []string{"tom"}, 0.5, timeNow())
 	assert.Nil(t, err)
-	err = insertAnalysisResponse(a.RequestId, "tom", NameWeight{Name: "tom", Weight: 0.4}, timeNow())
+	err = insertAnalysisResponse(a.RequestId, "tom", []string{"tom"}, 0.4, timeNow())
 	assert.NotNil(t, err)
-	err = insertAnalysisResponse(a.RequestId, "tom2", NameWeight{Name: "tom2", Weight: 0.4}, timeNow())
+	err = insertAnalysisResponse(a.RequestId, "tom2", []string{"tom2"}, 0.4, timeNow())
 	assert.Nil(t, err)
 
 	ar, err := findAnalysisResults(a.RequestId)
 	assert.Equal(t, 2, len(ar))
-	assert.Equal(t, ar[0].GitName, "tom")
-	assert.Equal(t, ar[1].GitName, "tom2")
+	assert.Equal(t, ar[0].GitNames[0], "tom")
+	assert.Equal(t, ar[1].GitNames[0], "tom2")
 
-	err = updateAnalysisRequest(a.RequestId, day2, "test")
+	err = updateAnalysisRequest(a.RequestId, day2, stringPointer("test"))
 	assert.Nil(t, err)
 
 	alr, err := findLatestAnalysisRequest(r.Id)

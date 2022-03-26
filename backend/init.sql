@@ -77,7 +77,6 @@ CREATE TABLE analysis_request (
     date_from   DATE NOT NULL,
     date_to     DATE NOT NULL,
     git_urls    VARCHAR(255)[] NOT NULL,
-    branch      VARCHAR(16) NOT NULL,
     received_at TIMESTAMP,
     error       TEXT,
     created_at  TIMESTAMP NOT NULL

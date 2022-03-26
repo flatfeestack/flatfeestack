@@ -147,6 +147,7 @@ func lookupEnv(key string, defaultValues ...string) string {
 	}
 	for _, v := range defaultValues {
 		if v != "" {
+			os.Setenv(key, v)
 			return v
 		}
 	}
@@ -164,6 +165,7 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	}
 	for _, v := range defaultValues {
 		if v != 0 {
+			os.Setenv(key, strconv.Itoa(v))
 			return v
 		}
 	}
@@ -180,6 +182,8 @@ func main() {
 	if err != nil {
 		log.Printf("Could not find env file [%v], using defaults", err)
 	}
+	//this will set the default ENVs
+	opts = NewOpts()
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -188,7 +192,6 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	opts = NewOpts()
 	db = initDb()
 
 	stripe.Key = opts.StripeAPISecretKey

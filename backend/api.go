@@ -498,10 +498,8 @@ func tagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 	rp := &Repo{
 		Id:          uuid.New(),
-		OrigId:      repo.Id,
 		Url:         &repo.Url,
 		GitUrl:      &repo.GitUrl,
-		Branch:      &repo.Branch,
 		Name:        &repo.Name,
 		Description: &repo.Description,
 		Tags:        nil,

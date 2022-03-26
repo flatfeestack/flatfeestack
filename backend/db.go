@@ -25,10 +25,8 @@ type SponsorEvent struct {
 
 type Repo struct {
 	Id          uuid.UUID         `json:"uuid"`
-	OrigId      uint64            `json:"id"`
 	Url         *string           `json:"html_url"`
 	GitUrl      *string           `json:"clone_url"`
-	Branch      *string           `json:"default_branch"`
 	Name        *string           `json:"full_name"`
 	Description *string           `json:"description"`
 	Tags        map[string]string `json:"tags"`
@@ -290,7 +288,7 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	//we want to send back an empty array, don't change
 	repos := []Repo{}
-	s := `SELECT r.id, r.orig_id, r.url, r.git_url, r.branch, r.name, r.description, r.tags
+	s := `SELECT r.id,  r.url, r.git_url, r.name, r.description, r.tags
             FROM sponsor_event s
             INNER JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.un_sponsor_at IS NULL`
@@ -303,7 +301,7 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	for rows.Next() {
 		var repo Repo
 		var b []byte
-		err = rows.Scan(&repo.Id, &repo.OrigId, &repo.Url, &repo.GitUrl, &repo.Branch, &repo.Name, &repo.Description, &b)
+		err = rows.Scan(&repo.Id, &repo.Url, &repo.GitUrl, &repo.Name, &repo.Description, &b)
 		if err != nil {
 			return nil, err
 		}
@@ -370,8 +368,8 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 //******************************* Repository **************************************
 //*********************************************************************************
 func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, orig_id, url, git_url, branch, name, description, tags, score, source, created_at) 
-									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, tags, score, source, created_at) 
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 									ON CONFLICT(url) DO UPDATE SET name=$6, description=$7 RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
@@ -386,7 +384,7 @@ func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
 	}
 
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.OrigId, repo.Url, repo.GitUrl, repo.Branch, repo.Name, repo.Description, b.Bytes(), repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, b.Bytes(), repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
 	if err != nil {
 		return nil, err
 	}
@@ -397,8 +395,8 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	var r Repo
 	var b []byte
 	err := db.
-		QueryRow("SELECT id, orig_id, url, git_url, branch, name, description, tags FROM repo WHERE id=$1", repoId).
-		Scan(&r.Id, &r.OrigId, &r.Url, &r.GitUrl, &r.Branch, &r.Name, &r.Description, &b)
+		QueryRow("SELECT id, url, git_url, name, description, tags FROM repo WHERE id=$1", repoId).
+		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &b)
 
 	d := gob.NewDecoder(bytes.NewReader(b))
 	err = d.Decode(&r.Tags)
@@ -420,8 +418,8 @@ func findRepoByName(name string) (*Repo, error) {
 	var r Repo
 	var b []byte
 	err := db.
-		QueryRow("SELECT id, orig_id, url, git_url, branch, name, description, tags FROM repo WHERE name=$1", name).
-		Scan(&r.Id, &r.OrigId, &r.Url, &r.GitUrl, &r.Branch, &r.Name, &r.Description, &b)
+		QueryRow("SELECT id, url, git_url, name, description, tags FROM repo WHERE name=$1", name).
+		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &b)
 
 	d := gob.NewDecoder(bytes.NewReader(b))
 	err = d.Decode(&r.Tags)

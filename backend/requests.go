@@ -167,7 +167,6 @@ type RepoSearch struct {
 	Id          uint64      `json:"id,omitempty"`
 	Url         string      `json:"html_url,omitempty"`
 	GitUrl      string      `json:"clone_url,omitempty"`
-	Branch      string      `json:"default_branch"`
 	Name        string      `json:"full_name,omitempty"`
 	Description string      `json:"description,omitempty"`
 	Score       json.Number `json:"score,omitempty"`
