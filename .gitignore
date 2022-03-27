@@ -5,3 +5,10 @@
 .chain
 env*.tar.gz
 **/*.private.env.json
+analysis-engine
+backend
+fastauth
+frontend
+payout
+payout-nodejs
+search-proj
