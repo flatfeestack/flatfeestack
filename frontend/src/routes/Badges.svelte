@@ -55,8 +55,8 @@
         <tbody>
         {#each repos as repo}
           <tr>
-            <td>{repo.full_name}</td>
-            <td><a href="{repo.html_url}">{repo.html_url}</a></td>
+            <td>{repo.name}</td>
+            <td><a href="{repo.url}">{repo.url}</a></td>
             <td>{repo.description}</td>
           </tr>
         {:else}

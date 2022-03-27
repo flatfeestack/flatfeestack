@@ -4,13 +4,53 @@ import { API } from "../ts/api";
 import Spinner from "../components/Spinner.svelte";
 import {formatDate, formatNowUTC, storeToken} from "../ts/services";
 import { config, error, loadedSponsoredRepos, user } from "../ts/store";
-import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
+import { faSignInAlt, faCheck, faArrowsLeftRight } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
+import {PayoutAddress, Repo} from "../types/users";
+import Dots from "../components/Dots.svelte";
 
 //let promisePendingPayouts =API.payouts.payoutInfos();
 let promiseTime = API.payouts.time();
 let promiseUsers = API.admin.users();
 let showSuccess = false;
+
+/* Search */
+let search = "";
+//TODO: if we use github only, then the search name is unique and we don't need to spli
+//in case of change, make sure you split the repo according to the link id
+let repos: Repo[] = [];
+let isSearchSubmitting = false;
+let linkGitUrl = "";
+let rootUuid = null;
+const handleSearch = async () => {
+  try {
+    isSearchSubmitting = true;
+    repos = await API.repos.searchName(search);
+    rootUuid = repos.find(e => e.link === e.uuid).uuid
+  } catch (e) {
+    $error = e;
+  } finally {
+    isSearchSubmitting = false;
+  }
+};
+async function handleLinkGitUrl() {
+  console.log('here')
+  try {
+    repos = await API.repos.linkGitUrl(rootUuid, linkGitUrl);
+    rootUuid = repos.find(e => e.link === e.uuid).uuid
+    linkGitUrl = "";
+  } catch (e) {
+    $error = e;
+  }
+}
+async function makeRoot(repoId: string) {
+  try {
+    repos = await API.repos.makeRoot(repoId, rootUuid);
+    rootUuid = repos.find(e => e.link === e.uuid).uuid
+  } catch (e) {
+    $error = e;
+  }
+}
 
 const handleFakeUsers = async (email: string) => {
   return API.payouts.fakeUser(email)
@@ -163,10 +203,55 @@ async function loginAs(email: string) {
     {/await}
   </div>
 
-
-
-
-
+  <h2 class="px-2">Link Repos</h2>
+  <div class="p-2 m-2">
+    <form class="flex" on:submit|preventDefault="{handleSearch}">
+      <input type="text" bind:value="{search}" />
+      <button class="button1" type="submit" disabled="{isSearchSubmitting}">Search{#if isSearchSubmitting}<Dots />{/if}</button>
+    </form>
+  </div>
+  <div class="container">
+  {#if repos.length > 0}
+    <div>
+      <table>
+        <thead>
+        <tr>
+          <th>URL</th>
+          <th>Git URL</th>
+          <th>Source</th>
+          <th>Root</th>
+        </tr>
+        </thead>
+        {#each repos as repo, key (repo.uuid)}
+          <tr>
+            <td>{repo.url}</td>
+            <td>{repo.gitUrl}</td>
+            <td>{repo.source}</td>
+            <td>
+              {#if repo.uuid !== rootUuid}
+                <div class="cursor-pointer" on:click="{() => makeRoot(repo.uuid)}">
+                  <Fa icon="{faArrowsLeftRight}" size="md"/>
+                </div>
+              {:else}
+                <Fa icon="{faCheck}" size="md" />
+              {/if}
+            </td>
+          </tr>
+        {/each}
+        <tr>
+          <td colspan="4">
+            <form class="flex" on:submit|preventDefault="{handleLinkGitUrl}">
+              <input input-size="32" id="address-input" name="address" type="text" bind:value={linkGitUrl} placeholder="Add Git URL"/>
+              <button class="button1" type="submit">Link Git URL</button>
+            </form>
+          </td>
+        </tr>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  {/if}
+  </div>
 
   <h2>Fake User</h2>
   <button class="button2 py-2 px-3 bg-primary-500 rounded-md text-white" on:click={() => handleFakeUsers(userEmail)}>Add Fake User</button>

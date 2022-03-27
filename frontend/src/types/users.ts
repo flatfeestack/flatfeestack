@@ -72,15 +72,14 @@ export type PaymentCycle = {
 
 export type Repo = {
   uuid: string
-  id: number;
-  html_url: string;
-  clone_url: string;
-  default_branch: string;
-  full_name: string;
+  id: number //this comes from the github search
+  url: string;
+  gitUrl: string;
+  name: string;
   description: string;
-  tags: string;
   score: number;
   source: string;
+  link: string|null;
 };
 
 export type Token = {

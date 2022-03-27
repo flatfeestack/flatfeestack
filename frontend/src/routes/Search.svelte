@@ -5,7 +5,6 @@
   import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
 
   import Navigation from "../components/Navigation.svelte";
-  import { navigate } from "svelte-routing";
   import RepoCard from "../components/RepoCard.svelte";
   import SearchResult from "../components/SearchResult.svelte";
   import Dots from "../components/Dots.svelte";

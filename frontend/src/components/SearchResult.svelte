@@ -9,7 +9,7 @@
 
   const onSponsor = async () => {
     try {
-      const res = await API.repos.tag(repo);
+      const res = await API.repos.tag(repo.uuid);
       $sponsoredRepos = [...$sponsoredRepos, res];
       star = true;
     } catch (e) {
@@ -20,7 +20,7 @@
 
   sponsoredRepos.subscribe(() => {
     const tmp = $sponsoredRepos.find((r: Repo) => {
-      return r.clone_url === repo.clone_url;
+      return r.gitUrl === repo.gitUrl;
     });
 
     star = tmp !== undefined;
@@ -67,8 +67,8 @@
     {/if}
   </div>
   <div>
-    <div class="title">{repo.full_name}</div>
+    <div class="title">{repo.name}</div>
     <div>{repo.description}</div>
-    <div class="url"><a href="{repo.html_url}">{repo.html_url}</a></div>
+    <div class="url"><a href="{repo.url}">{repo.url}</a></div>
   </div>
 </div>

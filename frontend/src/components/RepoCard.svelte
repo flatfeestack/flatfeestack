@@ -65,7 +65,7 @@ svg {
 </style>
 
 <div class="child rounded">
-  <div class="color" style="background-image:radial-gradient(circle at top right,{getColor2(repo.html_url)},{getColor1(repo.html_url)});">
+  <div class="color" style="background-image:radial-gradient(circle at top right,{getColor2(repo.gitUrl)},{getColor1(repo.gitUrl)});">
 
     <div>
       {#if star}
@@ -86,11 +86,11 @@ svg {
     </div>
 
   </div>
-  <div class="center py-2">{repo.full_name}</div>
+  <div class="center py-2">{repo.name}</div>
   <div class="body">{repo.description}</div>
   <div>
-    <a href="{repo.html_url}" class="py-2 url" target="_blank" >
-      {repo.html_url}
+    <a href="{repo.url}" class="py-2 url" target="_blank" >
+      {repo.url}
     </a>
   </div>
 
