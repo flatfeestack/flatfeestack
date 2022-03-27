@@ -44,6 +44,10 @@ type EmailToken struct {
 	Token string `json:"token"`
 }
 
+type GitUrl struct {
+	GitUrl string `json:"gitUrl"`
+}
+
 type WebhookCallback struct {
 	RequestId string          `json:"request_id"`
 	Success   bool            `json:"success"`
@@ -434,12 +438,144 @@ func deleteUserWallet(w http.ResponseWriter, r *http.Request, user *User) {
 // @Router /backend/repos/search [get]
 func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 	q := r.URL.Query().Get("q")
-	log.Printf("query %v", q)
+	log.Infof("query %v", q)
 	if q == "" {
 		writeErrorf(w, http.StatusBadRequest, "Empty search")
 		return
 	}
-	repos, err := fetchGithubRepoSearch(q)
+
+	var repos []Repo
+
+	name := isValidUrl(q)
+
+	if name != nil {
+		repoId := uuid.New()
+		repo := &Repo{
+			Id:          repoId,
+			Url:         stringPointer(q),
+			GitUrl:      stringPointer(q),
+			Name:        name,
+			Description: stringPointer("n/a"),
+			Score:       0,
+			Source:      stringPointer("user-url"),
+			Link:        &repoId,
+			CreatedAt:   timeNow(),
+		}
+		insertOrUpdateRepo(repo)
+		repos = append(repos, *repo)
+	}
+
+	ghRepos, err := fetchGithubRepoSearch(q)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+		return
+	}
+
+	//write those to the DB...
+	for _, v := range ghRepos {
+		repoId := uuid.New()
+		nr, err := v.Score.Float64()
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+			return
+		}
+		repo := &Repo{
+			Id:          repoId,
+			Url:         stringPointer(v.Url),
+			GitUrl:      stringPointer(v.GitUrl),
+			Name:        stringPointer(v.Name),
+			Description: stringPointer(v.Description),
+			Score:       uint32(nr),
+			Source:      stringPointer("github"),
+			Link:        &repoId,
+			CreatedAt:   timeNow(),
+		}
+		insertOrUpdateRepo(repo)
+		repos = append(repos, *repo)
+	}
+
+	writeJson(w, repos)
+}
+
+func searchRepoNames(w http.ResponseWriter, r *http.Request, _ *User) {
+	q := r.URL.Query().Get("q")
+	log.Infof("query %v", q)
+	if q == "" {
+		writeErrorf(w, http.StatusBadRequest, "Empty search")
+		return
+	}
+	repos, err := findReposByName(q)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+		return
+	}
+	writeJson(w, repos)
+}
+
+func linkGitUrl(w http.ResponseWriter, r *http.Request, _ *User) {
+	params := mux.Vars(r)
+	repoId, err := uuid.Parse(params["repoId"])
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+	var g GitUrl
+	err = json.NewDecoder(r.Body).Decode(&g)
+	if err != nil {
+		writeErrorf(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	origRepo, err := findRepoById(repoId)
+
+	repo := &Repo{
+		Id:          uuid.New(),
+		Link:        &repoId,
+		Url:         origRepo.Url,
+		GitUrl:      stringPointer(g.GitUrl),
+		Name:        origRepo.Name,
+		Description: origRepo.Description,
+		Score:       origRepo.Score,
+		Source:      stringPointer("admin"),
+		CreatedAt:   timeNow(),
+	}
+
+	err = insertOrUpdateRepoWithLink(repo)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+		return
+	}
+
+	repos, err := findReposByName(*origRepo.Name)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
+		return
+	}
+	writeJson(w, repos)
+}
+
+func makeRoot(w http.ResponseWriter, r *http.Request, _ *User) {
+	params := mux.Vars(r)
+	repoId, err := uuid.Parse(params["repoId"])
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+
+	rootUuid, err := uuid.Parse(params["rootUuid"])
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+
+	err = updateRepoWhereLink(repoId, &rootUuid)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+
+	origRepo, err := findRepoById(repoId)
+	repos, err := findReposByName(*origRepo.Name)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
@@ -484,32 +620,13 @@ func getRepoByID(w http.ResponseWriter, r *http.Request, _ *User) {
 // @Failure 400
 // @Router /backend/repos/{id}/insertOrUpdateTag [post]
 func tagRepo(w http.ResponseWriter, r *http.Request, user *User) {
-	var repo RepoSearch
-	err := json.NewDecoder(r.Body).Decode(&repo)
+	params := mux.Vars(r)
+	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
 		return
 	}
-
-	sc, err := repo.Score.Int64()
-	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode json/int: %v", err)
-		return
-	}
-	rp := &Repo{
-		Id:          uuid.New(),
-		Url:         &repo.Url,
-		GitUrl:      &repo.GitUrl,
-		Name:        &repo.Name,
-		Description: &repo.Description,
-		Tags:        nil,
-		Score:       uint32(sc),
-		Source:      stringPointer("github"),
-		CreatedAt:   timeNow(),
-	}
-
-	repoId, err := insertOrUpdateRepo(rp)
-	tagRepo0(w, user, *repoId, Active)
+	tagRepo0(w, user, repoId, Active)
 }
 
 // @Summary Unsponsor a repo
@@ -548,25 +665,22 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 
 	//no need for transaction here, repoId is very static
 	log.Printf("repoId %v", repoId)
-	var repo *Repo
-	repo, err = findRepoById(repoId)
-	if repo == nil {
-		writeErrorf(w, http.StatusNotFound, "Could not find repo with id %v", repoId)
-		return
-	}
+
+	repos, err := findAllReposById(repoId)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
 		return
 	}
 
-	go func() {
+	go func(repos []Repo) {
 		if newEventType == Active {
-			ar, err := findLatestAnalysisRequest(repo.Id)
+			ar, err := findLatestAnalysisRequest(repos[0].Id)
 			if err != nil {
 				log.Warningf("could not find latest analysis request: %v", err)
 			}
 			if ar == nil {
-				err = analysisRequest(repo.Id, []string{*repo.GitUrl})
+				gitUrls := extractGitUrls(repos)
+				err = analysisRequest(repos[0].Id, gitUrls)
 				if err != nil {
 					log.Warningf("Could not submit analysis request %v\n", err)
 				}
@@ -576,8 +690,18 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 			//TODO
 			//check if others are using it, otherwise disable fetching the metrics
 		}
-	}()
-	writeJson(w, repo)
+	}(repos)
+	writeJson(w, repos)
+}
+
+func extractGitUrls(repos []Repo) []string {
+	gitUrls := []string{}
+	for _, v := range repos {
+		if v.GitUrl != nil {
+			gitUrls = append(gitUrls, *v.GitUrl)
+		}
+	}
+	return gitUrls
 }
 
 func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
@@ -693,7 +817,7 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	repo, err := findRepoByName(repoMap.Name)
+	repo, err := findReposByName(repoMap.Name)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
@@ -701,7 +825,7 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 
 	a := AnalysisRequest{
 		RequestId: uuid.New(),
-		RepoId:    repo.Id,
+		RepoId:    repo[0].Id,
 		DateFrom:  monthStart,
 		DateTo:    monthStop,
 		GitUrls:   []string{"test"},

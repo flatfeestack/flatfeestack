@@ -2,9 +2,7 @@ package main
 
 //https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/
 import (
-	"bytes"
 	"database/sql"
-	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -24,15 +22,15 @@ type SponsorEvent struct {
 }
 
 type Repo struct {
-	Id          uuid.UUID         `json:"uuid"`
-	Url         *string           `json:"html_url"`
-	GitUrl      *string           `json:"clone_url"`
-	Name        *string           `json:"full_name"`
-	Description *string           `json:"description"`
-	Tags        map[string]string `json:"tags"`
-	Score       uint32            `json:"score"`
-	Source      *string           `json:"source"`
-	CreatedAt   time.Time         `json:"created_at"`
+	Id          uuid.UUID  `json:"uuid"`
+	Url         *string    `json:"url"`
+	GitUrl      *string    `json:"gitUrl"`
+	Name        *string    `json:"name"`
+	Description *string    `json:"description"`
+	Score       uint32     `json:"score"`
+	Source      *string    `json:"source"`
+	Link        *uuid.UUID `json:"link"`
+	CreatedAt   time.Time
 }
 
 type PayoutRequest struct {
@@ -288,7 +286,7 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	//we want to send back an empty array, don't change
 	repos := []Repo{}
-	s := `SELECT r.id,  r.url, r.git_url, r.name, r.description, r.tags
+	s := `SELECT r.id,  r.url, r.git_url, r.name, r.description
             FROM sponsor_event s
             INNER JOIN repo r ON s.repo_id=r.id 
 			WHERE s.user_id=$1 AND s.un_sponsor_at IS NULL`
@@ -300,13 +298,7 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 
 	for rows.Next() {
 		var repo Repo
-		var b []byte
-		err = rows.Scan(&repo.Id, &repo.Url, &repo.GitUrl, &repo.Name, &repo.Description, &b)
-		if err != nil {
-			return nil, err
-		}
-		d := gob.NewDecoder(bytes.NewReader(b))
-		err = d.Decode(&repo.Tags)
+		err = rows.Scan(&repo.Id, &repo.Url, &repo.GitUrl, &repo.Name, &repo.Description)
 		if err != nil {
 			return nil, err
 		}
@@ -367,42 +359,65 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 //*********************************************************************************
 //******************************* Repository **************************************
 //*********************************************************************************
-func insertOrUpdateRepo(repo *Repo) (*uuid.UUID, error) {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, tags, score, source, created_at) 
+func insertOrUpdateRepo(repo *Repo) error {
+	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at, link) 
 									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-									ON CONFLICT(url) DO UPDATE SET name=$6, description=$7 RETURNING id`)
+									ON CONFLICT(git_url) DO UPDATE SET name=$4, description=$5 RETURNING id`)
 	if err != nil {
-		return nil, fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
 	defer closeAndLog(stmt)
 
-	b := new(bytes.Buffer)
-	e := gob.NewEncoder(b)
-	err = e.Encode(repo.Tags)
-	if err != nil {
-		return nil, err
-	}
-
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, b.Bytes(), repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
+	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt, repo.Link).Scan(&lastInsertId)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &lastInsertId, nil
+	repo.Id = lastInsertId
+	return nil
+}
+
+func insertOrUpdateRepoWithLink(repo *Repo) error {
+	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at, link) 
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+									ON CONFLICT(git_url) DO UPDATE SET link=$9, name=$4, description=$5`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+	}
+	defer closeAndLog(stmt)
+
+	res, err := stmt.Exec(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt, repo.Link)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func updateRepoWhereLink(newLinkId uuid.UUID, oldLinkId *uuid.UUID) error {
+	stmt, err := db.Prepare(`UPDATE repo SET link=$1 WHERE link=$2 OR id=$2`)
+	if err != nil {
+		return fmt.Errorf("prepare Update INTO repo for %v statement event: %v", newLinkId, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(newLinkId, oldLinkId)
+	if err != nil {
+		return err
+	}
+	nr, err := handleErr(res)
+	if err != nil {
+		return err
+	}
+	log.Infof("affected %v rows", nr)
+	return nil
 }
 
 func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	var r Repo
-	var b []byte
 	err := db.
-		QueryRow("SELECT id, url, git_url, name, description, tags FROM repo WHERE id=$1", repoId).
-		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &b)
-
-	d := gob.NewDecoder(bytes.NewReader(b))
-	err = d.Decode(&r.Tags)
-	if err != nil {
-		return nil, err
-	}
+		QueryRow("SELECT id, url, git_url, name, description, source FROM repo WHERE id=$1", repoId).
+		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -414,27 +429,51 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	}
 }
 
-func findRepoByName(name string) (*Repo, error) {
-	var r Repo
-	var b []byte
-	err := db.
-		QueryRow("SELECT id, url, git_url, name, description, tags FROM repo WHERE name=$1", name).
-		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &b)
-
-	d := gob.NewDecoder(bytes.NewReader(b))
-	err = d.Decode(&r.Tags)
+func findAllReposById(repoId uuid.UUID) ([]Repo, error) {
+	rows, err := db.
+		Query("SELECT id, url, git_url, name, description, source FROM repo WHERE link=$1", repoId)
 	if err != nil {
 		return nil, err
 	}
+	defer closeAndLog(rows)
 
-	switch err {
-	case sql.ErrNoRows:
-		return nil, nil
-	case nil:
-		return &r, nil
-	default:
+	repos := []Repo{}
+	var rFirst Repo
+	for rows.Next() {
+		var r Repo
+		err = rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+		if err != nil {
+			return nil, err
+		}
+		if r.Id == *r.Link {
+			rFirst = r
+		} else {
+			repos = append(repos, r)
+		}
+	}
+	repos = append([]Repo{rFirst}, repos...)
+
+	return repos, nil
+}
+
+func findReposByName(name string) ([]Repo, error) {
+	rs := []Repo{}
+	rows, err := db.Query("SELECT id, url, git_url, name, description, source, link FROM repo WHERE name=$1 ORDER BY link", name)
+	if err != nil {
 		return nil, err
 	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var r Repo
+		err = rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.Link)
+		if err != nil {
+			return nil, err
+		}
+		rs = append(rs, r)
+	}
+
+	return rs, nil
 }
 
 //*********************************************************************************
@@ -552,7 +591,8 @@ func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
                           SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request WHERE repo_id=$1) AS x
-                        WHERE dest_rank = 1`, repoId).Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
+                        WHERE dest_rank = 1`, repoId).
+		Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -570,7 +610,7 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
                           SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request WHERE date_to >= $1) AS x
+                            FROM analysis_request WHERE date_to < $1) AS x
                         WHERE dest_rank = 1`, dateTo)
 
 	if err != nil {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 func writeJsonStr(w http.ResponseWriter, obj string) {
@@ -55,4 +57,22 @@ func genRnd(n int) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+func isValidUrl(s string) *string {
+	_, err := url.ParseRequestURI(s)
+	if err != nil {
+		return nil
+	}
+
+	u, err := url.Parse(s)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return nil
+	}
+
+	if u.Path == "" {
+		return stringPointer(u.Host)
+	}
+	ts := strings.TrimPrefix(u.Path, "/")
+	return stringPointer(ts)
 }

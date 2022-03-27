@@ -42,15 +42,15 @@ CREATE UNIQUE INDEX user_balances_index ON user_balances (payment_cycle_in_id, u
 CREATE TABLE repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     link        UUID CONSTRAINT fk_repo REFERENCES repo (id), /* needs a request to the admins */
-    url         VARCHAR(255) UNIQUE NOT NULL,
     git_url     VARCHAR(255) UNIQUE NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description TEXT,
-    tags        BYTEA,
+    url         VARCHAR(255),
     score       NUMERIC,
     source      VARCHAR(255) NOT NULL,
     created_at  TIMESTAMP NOT NULL
 );
+CREATE INDEX repo_name_index ON repo(name);
 
 CREATE TABLE git_email (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

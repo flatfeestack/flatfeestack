@@ -232,8 +232,11 @@ func main() {
 	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
 	//repo github
 	router.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/name", jwtAuthUser(searchRepoNames)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/link/{repoId}", jwtAuthUser(linkGitUrl)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/root/{repoId}/{rootUuid}", jwtAuthUser(makeRoot)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
 	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
 	//payment
 
