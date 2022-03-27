@@ -32,9 +32,14 @@ setup_colors
 
 projects='analysis-engine backend fastauth frontend payout'
 
-git pull
+git pull &
 for name in ${projects}; do
   [ ! -d "$name" ] && git clone git@github.com:flatfeestack/"$name".git;git -C "$name" config pull.rebase false;
-  git -C "$name" pull
+  git -C "$name" pull &
+done
+
+wait
+
+for name in ${projects}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"
 done
