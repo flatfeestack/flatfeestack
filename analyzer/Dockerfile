@@ -8,9 +8,7 @@ WORKDIR /app/libgit2
 RUN git checkout v1.3.0
 RUN mkdir build;
 WORKDIR /app/libgit2/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CLAR=OFF
-RUN cmake --build .
-RUN cmake --build . --target install
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CLAR=OFF && cmake --build . && cmake --build . --target install
 WORKDIR /app
 COPY *.go ./
 RUN go build

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	git "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -140,7 +141,7 @@ func walkRepo(repo *git.Repository, startTime time.Time, stopTime time.Time, rc 
 func expired(commit *git.Commit, startTime time.Time, stopTime time.Time) bool {
 	if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) ||
 		(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
-		log.Infof("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
+		log.Debugf("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
 		return true
 	}
 	return false
@@ -218,7 +219,7 @@ func collectInfo(commit *git.Commit, parentCommit *git.Commit, authorMap map[str
 		return err
 	}
 
-	log.Infof("commit: %v (%v/%v) [%v/%v] | %v, time: %v",
+	log.Debugf("commit: %v (%v/%v) [%v/%v] | %v, time: %v",
 		commit.Id().String(), author.Email, committer.Email, stats.Insertions(),
 		stats.Deletions(), commit.Summary(), time.Since(start).Milliseconds())
 
@@ -248,7 +249,7 @@ func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Tra
 			if contains(includedTrailers, v.Key) {
 				a, err := mail.ParseAddress(v.Value)
 				if err != nil {
-					log.Infof("cannot parse %v - %v", v.Value, err)
+					log.Warnf("cannot parse %v - %v", v.Value, err)
 					continue
 				}
 				addToMap(a.Address, a.Name, authorMap, stats, mergedLinesWeight, merge)
@@ -365,7 +366,7 @@ func cloneRepository(location []string) (*git.Repository, error) {
 	}
 	err = cmd.Run()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("command [%v] error %v", cmd.String(), err)
 	}
 
 	for i := 1; i < len(location); i++ {

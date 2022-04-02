@@ -40,7 +40,7 @@ func analyzeRepository(w http.ResponseWriter, r *http.Request) {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
 	}
 
-	log.Debugf("analyze repo: %v", request)
+	log.Infof("analyze repo: %v", request)
 
 	if len(request.GitUrls) == 0 {
 		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
@@ -62,13 +62,13 @@ func analyzeForWebhookInBackground(request WebhookRequest) {
 
 	contributionMap, err := analyzeRepositoryFromString(request.DateFrom, request.DateTo, request.GitUrls...)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "analyzeRepositoryFromString: " + err.Error()})
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "weightContributions: " + err.Error()})
 		return
 	}
 
