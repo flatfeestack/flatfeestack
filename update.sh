@@ -23,7 +23,7 @@ msg() {
 
 setup_colors
 
-projects='analysis-engine backend fastauth frontend payout'
+projects='analysis-engine backend fastauth frontend payout landing-page'
 
 git pull &
 for name in ${projects}; do
@@ -32,6 +32,7 @@ for name in ${projects}; do
 done
 
 wait
+ln -s ../landing-page/ frontend/landing-page
 
 for name in ${projects}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"

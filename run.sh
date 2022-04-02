@@ -18,7 +18,7 @@ host_ip() {
       *)          host_ip="localhost";;
   esac
   export HOST_IP=$host_ip
-  msg "${GREEN}Using default ${host_ip} as host IP";
+  msg "${GREEN}Using [${host_ip}] as IP to reach docker containers";
 }
 
 usage() {
@@ -63,19 +63,19 @@ die() {
 
 parse_params() {
   # default values of variables set from params
-  hosts=''
   include_build=true
-  services='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
+  external=''
+  internal='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     --no-color) NO_COLOR=1 ;;
-    -na | --no-auth) hosts="${hosts} auth"; services="${services//auth/}";;
-    -ne | --no-engine) hosts="${hosts} analysis-engine"; services="${services//analysis-engine/}";;
-    -nb | --no-backend) hosts="${hosts} backend"; services="${services//backend/}";;
-    -np | --no-payout) hosts="${hosts} payout"; services="${services//payout /}";;
-    -nf | --no-frontend) hosts="${hosts} frontend"; services="${services//frontend/}";;
+    -na | --no-auth) external="${external} auth"; internal="${internal//auth/}";;
+    -ne | --no-engine) external="${external} analysis-engine"; internal="${internal//analysis-engine/}";;
+    -nb | --no-backend) external="${external} backend"; internal="${internal//backend/}";;
+    -np | --no-payout) external="${external} payout"; internal="${internal//payout/}";;
+    -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
     -sb | --skip-build) include_build=false;;
     -db | --db-only) compose_args='db'; break;; #if this is set everything else is ignored
     -rm | --remove-data) rm -rf .db .chain;;
@@ -94,19 +94,18 @@ setup_colors
 
 host_ip
 mkdir -p .db .chain
-now=$(date)
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
-[ -z "${hosts}" ] && hosts="localhost:127.0.0.1" || hosts="${hosts}:${host_ip}"
-msg "${GREEN}Setting DNS hosts to [${hosts}], started at ${now}"
+[ -z "${external}" ] && external="localhost:127.0.0.1" || external="${external}:${host_ip}"
+msg "${GREEN}Setting DNS hosts to [${external}], started at $(date)"
 
 if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker-compose build --parallel ${services}"
-  EXTRA_HOSTS="${hosts}" docker-compose build --parallel ${services}
+  msg "${GREEN}Run: docker-compose build --parallel ${internal}"
+  EXTRA_HOSTS="${external}" docker-compose build --parallel ${internal}
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
-msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${services}"
-EXTRA_HOSTS="${hosts}" docker-compose up --abort-on-container-exit ${services}
+msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}"
+EXTRA_HOSTS="${external}" docker-compose up --abort-on-container-exit ${internal}
