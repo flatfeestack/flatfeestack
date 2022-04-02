@@ -3,6 +3,7 @@
 .idea
 .db
 .chain
+.repos
 env*.tar.gz
 **/*.private.env.json
 /analysis-engine

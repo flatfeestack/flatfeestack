@@ -26,6 +26,8 @@ services:
 
   analysis-engine:
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
+    volumes:
+      - ./.repos:/app/repos
     build: ./analysis-engine
     ports:
       - 9083:9083
