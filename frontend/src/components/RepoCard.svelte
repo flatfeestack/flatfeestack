@@ -1,17 +1,24 @@
 <script lang="ts">
-  import type { Repo } from "src/types/users";
+  import type {Repos, Repo} from "src/types/users";
   import { API } from "../ts/api";
   import { error, sponsoredRepos } from "../ts/store";
   import { getColor1, getColor2 } from "../ts/utils";
 
-  export let repo: Repo;
+  export let repos: Repos;
   let star = true;
+  let rootRepo;
+
+  $: {
+    rootRepo = repos.repos.find((r: Repo) => {
+      return repos.uuid === r.uuid
+    })
+  }
 
   async function unTag () {
     star = false;
     try {
-      await API.repos.untag(repo.uuid);
-      $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {return r.uuid !== repo.uuid;});
+      await API.repos.untag(repos.uuid);
+      $sponsoredRepos = $sponsoredRepos.filter((r: Repos) => {return r.uuid !== repos.uuid;});
     } catch (e) {
       $error = e;
     }
@@ -35,8 +42,7 @@
     height: 3.5em;
     box-shadow: 0 3px 2px -2px black;
 }
-.center{
-    text-align: center;
+.center2{
     font-weight: bold;
     text-overflow: ellipsis;
 }
@@ -65,7 +71,7 @@ svg {
 </style>
 
 <div class="child rounded">
-  <div class="color" style="background-image:radial-gradient(circle at top right,{getColor2(repo.gitUrl)},{getColor1(repo.gitUrl)});">
+  <div class="color" style="background-image:radial-gradient(circle at top right,{getColor2(repos.uuid)},{getColor1(repos.uuid)});">
 
     <div>
       {#if star}
@@ -86,12 +92,18 @@ svg {
     </div>
 
   </div>
-  <div class="center py-2">{repo.name}</div>
-  <div class="body">{repo.description}</div>
+  {#if repos}
+  <div class="center center2 py-2">{rootRepo.name}</div>
+  <div class="body">{rootRepo.description}</div>
   <div>
-    <a href="{repo.url}" class="py-2 url" target="_blank" >
-      {repo.url}
+    <a href="{rootRepo.url}" class="py-2 url" target="_blank" >
+      {rootRepo.url}
     </a>
   </div>
-
+    <div class="small center">
+    Git URLs: ({#each repos.repos as repos2, i}
+      {i==0? repos2.gitUrl: ", "+repos2.gitUrl}
+    {/each})
+  </div>
+    {/if}
 </div>

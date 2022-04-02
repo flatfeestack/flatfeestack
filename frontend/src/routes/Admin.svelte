@@ -6,7 +6,7 @@ import {formatDate, formatNowUTC, storeToken} from "../ts/services";
 import { config, error, loadedSponsoredRepos, user } from "../ts/store";
 import { faSignInAlt, faCheck, faArrowsLeftRight } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
-import {PayoutAddress, Repo} from "../types/users";
+import {Repos} from "../types/users";
 import Dots from "../components/Dots.svelte";
 
 //let promisePendingPayouts =API.payouts.payoutInfos();
@@ -18,15 +18,20 @@ let showSuccess = false;
 let search = "";
 //TODO: if we use github only, then the search name is unique and we don't need to spli
 //in case of change, make sure you split the repo according to the link id
-let repos: Repo[] = [];
+let repos: Repos[] = [];
 let isSearchSubmitting = false;
 let linkGitUrl = "";
 let rootUuid = null;
+let warning = "";
 const handleSearch = async () => {
   try {
     isSearchSubmitting = true;
     repos = await API.repos.searchName(search);
-    rootUuid = repos.find(e => e.link === e.uuid).uuid
+    if (repos.length == 0) {
+      warning = "Repo [" + search + "] not found"
+    } else {
+      rootUuid = repos.find(e => e.link === e.uuid).uuid
+    }
   } catch (e) {
     $error = e;
   } finally {
@@ -34,10 +39,8 @@ const handleSearch = async () => {
   }
 };
 async function handleLinkGitUrl() {
-  console.log('here')
   try {
     repos = await API.repos.linkGitUrl(rootUuid, linkGitUrl);
-    rootUuid = repos.find(e => e.link === e.uuid).uuid
     linkGitUrl = "";
   } catch (e) {
     $error = e;
@@ -46,7 +49,6 @@ async function handleLinkGitUrl() {
 async function makeRoot(repoId: string) {
   try {
     repos = await API.repos.makeRoot(repoId, rootUuid);
-    rootUuid = repos.find(e => e.link === e.uuid).uuid
   } catch (e) {
     $error = e;
   }
@@ -211,7 +213,7 @@ async function loginAs(email: string) {
     </form>
   </div>
   <div class="container">
-  {#if repos.length > 0}
+  {#each repos as repos2, key (repos2.uuid)}
     <div>
       <table>
         <thead>
@@ -222,13 +224,13 @@ async function loginAs(email: string) {
           <th>Root</th>
         </tr>
         </thead>
-        {#each repos as repo, key (repo.uuid)}
+        {#each repos2.repos as repo, key (repo.uuid)}
           <tr>
             <td>{repo.url}</td>
             <td>{repo.gitUrl}</td>
             <td>{repo.source}</td>
             <td>
-              {#if repo.uuid !== rootUuid}
+              {#if repo.uuid !== repos2.uuid}
                 <div class="cursor-pointer" on:click="{() => makeRoot(repo.uuid)}">
                   <Fa icon="{faArrowsLeftRight}" size="md"/>
                 </div>
@@ -246,11 +248,10 @@ async function loginAs(email: string) {
             </form>
           </td>
         </tr>
-        <tbody>
-        </tbody>
       </table>
     </div>
-  {/if}
+    {/each}
+    {#if warning != ""}{warning}{/if}
   </div>
 
   <h2>Fake User</h2>

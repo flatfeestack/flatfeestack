@@ -3,12 +3,63 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error, user} from "../ts/store";
-  import type { Contributions, Repo } from "../types/users";
+  import type { Contributions, Repos } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
+  import Line from "svelte-chartjs/src/Line.svelte"
+  import { faPlus } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
+  import {htmlLegendPlugin} from "../ts/utils";
 
-  let repos: Repo[] = [];
+  let repos: Repos[] = [];
   let contributions: Contributions[] = [];
   let canvas;
+  let showGraph;
+
+  let test2=[htmlLegendPlugin];
+ //https://www.chartjs.org/docs/latest/configuration/tooltip.html
+  let test={plugins: {
+    tooltip: {
+      boxPadding: 6,
+      callbacks: {
+        title: function(context) {
+          let label = context[0].label || '';
+          return "Git Metrics (3 Months) Until: " + label;
+        },
+        afterTitle: function(context) {
+          let label = context[0].dataset.label || '';
+          let start = label.indexOf(";")
+          if (label && start > 0) {
+            label = label.substring(start+1)
+            return JSON.parse(label).join(", ")
+          }
+          return label;
+        },
+        label: function(context) {
+          let label = context.dataset.label || '';
+
+          let start = label.indexOf(";")
+          if (label && start > 0) {
+            let start = label.indexOf(";")
+            label = label.substring(0, start)
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += (context.parsed.y * 100).toFixed(2);
+          } else {
+            label += "0"
+          }
+          return label + "%";
+        }
+      }
+    },
+      htmlLegend: {
+        // ID of the container to put the legend in
+        containerID: 'legend-container',
+      },
+      legend: {
+        display: false,
+      }
+    }}
 
   onMount(async () => {
     try {
@@ -49,19 +100,45 @@
         <tr>
           <th>Name</th>
           <th>URL</th>
+          <th>Repos</th>
           <th>Description</th>
+          <th>Graph</th>
         </tr>
         </thead>
         <tbody>
         {#each repos as repo}
           <tr>
-            <td>{repo.name}</td>
-            <td><a href="{repo.url}">{repo.url}</a></td>
-            <td>{repo.description}</td>
+            <td>{repo.repos[0].name}</td>
+            <td><a href="{repo.repos[0].url}">{repo.repos[0].url}</a></td>
+            <td>
+              {#each repo.repos as r2}
+                <a href="{r2.gitUrl}">{r2.gitUrl}</a>
+              {/each}
+            </td>
+            <td>{repo.repos[0].description}</td>
+            <td>
+              <div class="cursor-pointer" on:click="{() => showGraph === repo.uuid? showGraph = undefined : showGraph = repo.uuid}">
+                <Fa icon="{faPlus}" size="md"/>
+              </div>
+            </td>
           </tr>
+          {#if showGraph === repo.uuid}
+            <tr id="bg-green1">
+              <td colspan="5">
+                <div id="legend-container"></div>
+                {#await API.repos.graph(repo.uuid)}
+                  ...waiting
+                {:then data}
+                  <Line data={data} options="{test}" plugins="{test2}"/>
+                {:catch error}
+                  <p style="color: red">{error.message}</p>
+                {/await}
+              </td>
+            </tr>
+          {/if}
         {:else}
           <tr>
-            <td colspan="3">No Data</td>
+            <td colspan="5">No Data</td>
           </tr>
         {/each}
         </tbody>

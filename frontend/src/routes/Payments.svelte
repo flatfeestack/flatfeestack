@@ -3,11 +3,11 @@
   import { error, userBalances } from "../ts/store";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type {Repo} from "../types/users";
+  import type {Repos} from "../types/users";
   import {connectWs, formatDate, formatBalance} from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
-  let sponsoredRepos: Repo[] = [];
+  let sponsoredRepos: Repos[] = [];
   let invite_email;
   let isSubmitting = false;
 

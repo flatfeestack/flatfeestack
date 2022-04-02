@@ -70,6 +70,11 @@ export type PaymentCycle = {
   freq: number;
 }
 
+export type Repos = {
+  uuid: string
+  repos: Repo[]
+}
+
 export type Repo = {
   uuid: string
   id: number //this comes from the github search

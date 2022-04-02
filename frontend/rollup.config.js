@@ -9,7 +9,6 @@ import json from '@rollup/plugin-json';
 import builtins from 'rollup-plugin-node-builtins';
 import globals from 'rollup-plugin-node-globals';
 import copy from 'rollup-plugin-copy'
-
 import serve from "rollup-plugin-serve";
 
 export default [
@@ -32,7 +31,7 @@ export default [
             globals(),
             builtins(),
             json(),
-            copy({targets: [{ src: 'landing-page/public/images', dest: 'public' }]})
+            copy({targets: [{ src: 'landing-page/public/images', dest: 'public' }]}),
         ]
     },
     {

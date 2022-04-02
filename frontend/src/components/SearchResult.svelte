@@ -1,30 +1,31 @@
 <script lang="ts">
-  import type { Repo } from "../types/users";
+  import type { Repos, Repo } from "../types/users";
   import { API } from "../ts/api";
   import { error, sponsoredRepos } from "../ts/store";
   import { getColor1 } from "../ts/utils";
 
-  export let repo: Repo;
+  export let repos: Repos;
   let star = false;
 
   const onSponsor = async () => {
     try {
-      const res = await API.repos.tag(repo.uuid);
+      const res = await API.repos.tag(repos.uuid);
       $sponsoredRepos = [...$sponsoredRepos, res];
       star = true;
     } catch (e) {
-      $error=e;
+      $error = e;
       star = false;
     }
   };
 
-  sponsoredRepos.subscribe(() => {
-    const tmp = $sponsoredRepos.find((r: Repo) => {
-      return r.gitUrl === repo.gitUrl;
+  $: { const tmp = $sponsoredRepos.find((r: Repos) => {
+      return r.repos.find((r2: Repo) => {
+        return r2.uuid === repos.uuid;
+      })
     });
-
     star = tmp !== undefined;
-  })
+  }
+
 </script>
 
 <style>
@@ -48,7 +49,7 @@
     }
 </style>
 
-<div class="container rounded p-2 m-2" style="border-left: solid 6px {getColor1(repo.html_url)}">
+<div class="container rounded p-2 m-2" style="border-left: solid 6px {getColor1(repos.uuid)}">
   <div>
     {#if !star}
       <a href="#" on:click|preventDefault="{onSponsor}">
@@ -67,8 +68,8 @@
     {/if}
   </div>
   <div>
-    <div class="title">{repo.name}</div>
-    <div>{repo.description}</div>
-    <div class="url"><a href="{repo.url}">{repo.url}</a></div>
+    <div class="title">{repos.repos[0].name}</div>
+    <div>{repos.repos[0].description}</div>
+    <div class="url"><a href="{repos.repos[0].url}">{repos.repos[0].url}</a></div>
   </div>
 </div>

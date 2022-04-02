@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Repo } from "../types/users";
+  import type { Repos } from "../types/users";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
@@ -10,13 +10,14 @@
   import Dots from "../components/Dots.svelte";
 
   let search = "";
-  let repos: Repo[] = [];
+  let searchRepos: Repos[] = [];
   let isSearchSubmitting = false;
 
   const handleSearch = async () => {
     try {
       isSearchSubmitting = true;
-      repos = await API.repos.search(search);
+      searchRepos = await API.repos.search(search);
+      console.log("searchRepos", searchRepos)
     } catch (e) {
       $error = e;
     } finally {
@@ -29,6 +30,7 @@
       try {
         $isSubmitting = true;
         $sponsoredRepos = await API.user.getSponsored();
+        console.log("$sponsoredRepos", $sponsoredRepos)
         $loadedSponsoredRepos = true;
       } catch (e) {
         $error = e;
@@ -40,10 +42,6 @@
 </script>
 
 <style>
-    .container {
-        display: flex;
-        flex-direction: row;
-    }
     .wrap {
         display: flex;
         flex-wrap: wrap;
@@ -55,18 +53,16 @@
   <div class="p-2">
     {#if $sponsoredRepos.length > 0}
       <div class="wrap">
-        {#each $sponsoredRepos as repo, key (repo.uuid)}
-          <RepoCard repo="{repo}" class = "child"/>
+        {#each $sponsoredRepos as repos, key (repos.uuid)}
+          <RepoCard repos="{repos}" class = "child"/>
         {/each}
       </div>
     {/if}
 
     <h2 class="p-2 m-2">Find your favorite opes source projects</h2>
     {#if $sponsoredRepos.length === 0}
-
           <p class="p-2 m-2">Search for your repositories you want to tag. Currently only GitHub search is supported. You can tag as many
             repositories as you want.</p>
-
     {/if}
     <div class="p-2 m-2">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
@@ -75,11 +71,11 @@
       </form>
     </div>
 
-    {#if repos.length > 0}
+    {#if searchRepos.length > 0}
       <h2>Results</h2>
       <div>
-        {#each repos as repo, key (repo.id)}
-          <SearchResult repo="{repo}" />
+        {#each searchRepos as repos, key (repos.uuid)}
+          <SearchResult repos="{repos}" />
         {/each}
       </div>
     {/if}

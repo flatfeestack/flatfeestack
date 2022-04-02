@@ -2,10 +2,10 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/store";
-  import type { Repo, Users } from "../types/users";
+  import type { Repos, Users } from "../types/users";
 
   export let uuid: string;
-  let repos: Repo[] = [];
+  let repos: Repos[] = [];
   let user: Users;
 
   onMount(async () => {
@@ -41,19 +41,25 @@
       <tr>
         <th>Name</th>
         <th>URL</th>
+        <th>Repos</th>
         <th>Description</th>
       </tr>
       </thead>
       <tbody>
       {#each repos as repo}
         <tr>
-          <td>{repo.full_name}</td>
-          <td><a href="{repo.html_url}">{repo.html_url}</a></td>
-          <td>{repo.description}</td>
+          <td>{repo.repos[0].name}</td>
+          <td><a href="{repo.repos[0].url}">{repo.repos[0].url}</a></td>
+          <td>
+          {#each repo.repos as r2}
+            <a href="{r2.gitUrl}">{r2.gitUrl}</a>
+          {/each}
+          </td>
+          <td>{repo.repos[0].description}</td>
         </tr>
       {:else}
         <tr>
-          <td colspan="3">No Data</td>
+          <td colspan="4">No Data</td>
         </tr>
       {/each}
       </tbody>

@@ -6,7 +6,7 @@ import type {
   ClientSecret,
   Config,
   Invitation,
-  Repo,
+  Repos,
   Token,
   Users,
   Time,
@@ -16,6 +16,7 @@ import type {
   Contributions, UserBalanceCore,
   PayoutAddress
 } from "../types/users";
+import type { ChartData } from 'chart.js';
 import type {PaymentCycle, PaymentResponse, PayoutInfo, UserStatus} from "../types/users";
 
 async function addToken(request: Request) {
@@ -105,7 +106,7 @@ export const API = {
     removePayoutAddress: (id: number) => backendToken.delete(`users/me/wallets/${id}`),
     updatePaymentMethod: (method: string) => backendToken.put(`users/me/method/${method}`).json<Users>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
-    getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getSponsored: () => backendToken.get("users/me/sponsored").json<Repos[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     setImage: (image: string) => backendToken.post(`users/me/image`, { json: { image } }),
     setupStripe: () => backendToken.post(`users/me/stripe`).json<ClientSecret>(),
@@ -118,18 +119,19 @@ export const API = {
     statusSponsoredUsers: () => backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
     contributionsSend: () => backendToken.post(`users/contrib-snd`).json<Contributions[]>(),
     contributionsRcv: () => backendToken.post(`users/contrib-rcv`).json<Contributions[]>(),
-    contributionsSummary: () => backendToken.post(`users/me/contributions-summary`).json<Repo[]>(),
-    contributionsSummary2: (uuid: string) => backendToken.post(`users/contributions-summary/${uuid}`).json<Repo[]>(),
+    contributionsSummary: () => backendToken.post(`users/me/contributions-summary`).json<Repos[]>(),
+    contributionsSummary2: (uuid: string) => backendToken.post(`users/contributions-summary/${uuid}`).json<Repos[]>(),
     summary: (uuid: string) => backendToken.post(`users/summary/${uuid}`).json<Users>(),
   },
   repos: {
-    search: (s: string) => backendToken.get(`repos/search?q=${encodeURIComponent(s)}`).json<Repo[]>(),
-    searchName: (s: string) => backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
-    linkGitUrl: (repoId: string, gitUrl: string) => backendToken.post(`repos/link/${repoId}`, {json: {gitUrl}}).json<Repo[]>(),
-    makeRoot: (repoId: string, rootUuid: string) => backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repo[]>(),
+    search: (s: string) => backendToken.get(`repos/search?q=${encodeURIComponent(s)}`).json<Repos[]>(),
+    searchName: (s: string) => backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repos[]>(),
+    linkGitUrl: (repoId: string, gitUrl: string) => backendToken.post(`repos/link/${repoId}`, {json: {gitUrl}}).json<Repos[]>(),
+    makeRoot: (repoId: string, rootUuid: string) => backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repos[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),
-    tag: (repoId: string) => backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
+    tag: (repoId: string) => backendToken.post(`repos/${repoId}/tag`).json<Repos>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
+    graph: (repoId: string) => backendToken.get(`repos/${repoId}/graph`).json<ChartData>(),
   },
   invite: {
     invites: () => backendToken.get('invite').json<Invitation[]>(),
