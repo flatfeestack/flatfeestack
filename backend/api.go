@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"github.com/spaolacci/murmur3"
 	"github.com/stripe/stripe-go/v72/paymentmethod"
 	"golang.org/x/text/language"
 	"math/big"
@@ -51,7 +52,7 @@ type GitUrl struct {
 type WebhookCallback struct {
 	RequestId string          `json:"request_id"`
 	Success   bool            `json:"success"`
-	Error     string          `json:"error"`
+	Error     *string         `json:"error"`
 	Result    []FlatFeeWeight `json:"result"`
 }
 
@@ -344,12 +345,22 @@ func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 // @Failure 400
 // @Router /backend/users/sponsored [get]
 func getSponsoredRepos(w http.ResponseWriter, r *http.Request, user *User) {
-	repos, err := findSponsoredReposById(user.Id)
+	repoMap, err := findSponsoredReposById(user.Id)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not get repos: %v", err)
 		return
 	}
+
+	repos := mapToArray(repoMap)
 	writeJson(w, repos)
+}
+
+func mapToArray(repoMap map[uuid.UUID]Repos) []Repos {
+	repos := []Repos{}
+	for _, v := range repoMap {
+		repos = append(repos, v)
+	}
+	return repos
 }
 
 func getUserWallets(w http.ResponseWriter, _ *http.Request, user *User) {
@@ -444,7 +455,7 @@ func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 		return
 	}
 
-	var repos []Repo
+	var repos []Repos
 
 	name := isValidUrl(q)
 
@@ -458,11 +469,14 @@ func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 			Description: stringPointer("n/a"),
 			Score:       0,
 			Source:      stringPointer("user-url"),
-			Link:        &repoId,
+			Link:        repoId,
 			CreatedAt:   timeNow(),
 		}
 		insertOrUpdateRepo(repo)
-		repos = append(repos, *repo)
+		repos = append(repos, Repos{
+			Id:   repo.Id,
+			Repo: []Repo{*repo},
+		})
 	}
 
 	ghRepos, err := fetchGithubRepoSearch(q)
@@ -487,11 +501,14 @@ func searchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *User) {
 			Description: stringPointer(v.Description),
 			Score:       uint32(nr),
 			Source:      stringPointer("github"),
-			Link:        &repoId,
+			Link:        repoId,
 			CreatedAt:   timeNow(),
 		}
 		insertOrUpdateRepo(repo)
-		repos = append(repos, *repo)
+		repos = append(repos, Repos{
+			Id:   repo.Id,
+			Repo: []Repo{*repo},
+		})
 	}
 
 	writeJson(w, repos)
@@ -504,15 +521,16 @@ func searchRepoNames(w http.ResponseWriter, r *http.Request, _ *User) {
 		writeErrorf(w, http.StatusBadRequest, "Empty search")
 		return
 	}
-	repos, err := findReposByName(q)
+	repoMap, err := findReposByName(q)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
 	}
+	repos := mapToArray(repoMap)
 	writeJson(w, repos)
 }
 
-func linkGitUrl(w http.ResponseWriter, r *http.Request, _ *User) {
+func linkGitUrl(w http.ResponseWriter, r *http.Request, _ string) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["repoId"])
 	if err != nil {
@@ -530,7 +548,7 @@ func linkGitUrl(w http.ResponseWriter, r *http.Request, _ *User) {
 
 	repo := &Repo{
 		Id:          uuid.New(),
-		Link:        &repoId,
+		Link:        repoId,
 		Url:         origRepo.Url,
 		GitUrl:      stringPointer(g.GitUrl),
 		Name:        origRepo.Name,
@@ -546,15 +564,17 @@ func linkGitUrl(w http.ResponseWriter, r *http.Request, _ *User) {
 		return
 	}
 
-	repos, err := findReposByName(*origRepo.Name)
+	repoMap, err := findReposByName(*origRepo.Name)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
 	}
+
+	repos := mapToArray(repoMap)
 	writeJson(w, repos)
 }
 
-func makeRoot(w http.ResponseWriter, r *http.Request, _ *User) {
+func makeRoot(w http.ResponseWriter, r *http.Request, _ string) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["repoId"])
 	if err != nil {
@@ -575,11 +595,13 @@ func makeRoot(w http.ResponseWriter, r *http.Request, _ *User) {
 	}
 
 	origRepo, err := findRepoById(repoId)
-	repos, err := findReposByName(*origRepo.Name)
+	repoMap, err := findReposByName(*origRepo.Name)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not fetch repos: %v", err)
 		return
 	}
+
+	repos := mapToArray(repoMap)
 	writeJson(w, repos)
 }
 
@@ -647,40 +669,116 @@ func unTagRepo(w http.ResponseWriter, r *http.Request, user *User) {
 	tagRepo0(w, user, repoId, Inactive)
 }
 
+func graph(w http.ResponseWriter, r *http.Request, _ *User) {
+	params := mux.Vars(r)
+	repoId, err := uuid.Parse(params["id"])
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+	contributions, err := findRepoContribution(repoId)
+
+	data := Data{}
+	previousGitEmail := ""
+	currentDataSet := Dataset{}
+	for _, v := range contributions {
+		if v.GitEmail != previousGitEmail {
+			if previousGitEmail != "" {
+				data.Datasets = append(data.Datasets, currentDataSet)
+			}
+			names, err := json.Marshal(v.GitNames)
+			if err != nil {
+				continue
+			}
+			previousGitEmail = v.GitEmail
+			currentDataSet = Dataset{}
+			currentDataSet.Fill = false
+			currentDataSet.Label = v.GitEmail + ";" + string(names)
+			currentDataSet.BackgroundColor = getColor1(v.GitEmail)
+			currentDataSet.BorderColor = getColor1(v.GitEmail)
+			currentDataSet.PointBorderWidth = 3
+		}
+		currentDataSet.Data = append(currentDataSet.Data, v.Weight)
+	}
+
+	previousGitEmail = contributions[0].GitEmail
+	for _, v := range contributions {
+		if previousGitEmail != v.GitEmail {
+			break
+		}
+		data.Labels = append(data.Labels, v.DateTo.Format("02.01.2006"))
+		previousGitEmail = v.GitEmail
+	}
+
+	writeJson(w, data)
+}
+
+func myHash(s string) float64 {
+	i := murmur3.Sum32([]byte(s))
+	const maxUint32 = ^uint32(0)
+	return float64(i) / float64(maxUint32)
+}
+
+func getColor1(input string) string {
+	a := strconv.Itoa(int(12 * (30 * myHash(input+"a"))))
+	b := strconv.Itoa(int(35 + 10*(5*myHash(input+"b"))))
+	c := strconv.Itoa(int(25 + 10*(5*myHash(input+"c"))))
+	return "hsl(" + a + "," + b + "%," + c + "%)"
+}
+
+func findAllRepos(repoId uuid.UUID) (*Repos, error) {
+	repoMap, err := findAllReposById(repoId)
+	if err != nil {
+		return nil, err
+	}
+
+	repos, ok := repoMap[repoId]
+	if !ok {
+		for k, _ := range repoMap {
+			repoMap, err = findAllReposById(k)
+			if err != nil {
+				return nil, err
+			}
+			repos = repoMap[k]
+		}
+	}
+	return &repos, nil
+}
+
 func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType uint8) {
+	repos, err := findAllRepos(repoId)
+	if err != nil {
+		writeErrorf(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
+		return
+	}
+
 	now := timeNow()
 	event := SponsorEvent{
 		Id:          uuid.New(),
 		Uid:         user.Id,
-		RepoId:      repoId,
+		RepoId:      repos.Id,
 		EventType:   newEventType,
 		SponsorAt:   now,
 		UnSponsorAt: &now,
 	}
-	err := insertOrUpdateSponsor(&event)
+	err = insertOrUpdateSponsor(&event)
 	if err != nil {
 		writeErrorf(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
 		return
 	}
 
 	//no need for transaction here, repoId is very static
-	log.Printf("repoId %v", repoId)
+	log.Printf("repoId %v", repos.Id)
 
-	repos, err := findAllReposById(repoId)
-	if err != nil {
-		writeErrorf(w, http.StatusInternalServerError, "Could not fetch DB %v", err)
-		return
-	}
-
-	go func(repos []Repo) {
+	go func(repos Repos) {
 		if newEventType == Active {
-			ar, err := findLatestAnalysisRequest(repos[0].Id)
+			ar, err := findLatestAnalysisRequest(repos.Id)
 			if err != nil {
 				log.Warningf("could not find latest analysis request: %v", err)
 			}
 			if ar == nil {
-				gitUrls := extractGitUrls(repos)
-				err = analysisRequest(repos[0].Id, gitUrls)
+				gitUrls := extractGitUrls(repos.Repo)
+				err = analysisRequest(repos.Id, gitUrls)
 				if err != nil {
 					log.Warningf("Could not submit analysis request %v\n", err)
 				}
@@ -690,7 +788,8 @@ func tagRepo0(w http.ResponseWriter, user *User, repoId uuid.UUID, newEventType 
 			//TODO
 			//check if others are using it, otherwise disable fetching the metrics
 		}
-	}(repos)
+	}(*repos)
+
 	writeJson(w, repos)
 }
 
@@ -729,7 +828,7 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 		rowsAffected++
 	}
 
-	errA := updateAnalysisRequest(reqId, timeNow(), nil)
+	errA := updateAnalysisRequest(reqId, timeNow(), data.Error)
 	if errA != nil {
 		log.Warnf("cannot send to analyze engine %v", errA)
 	}
@@ -817,15 +916,20 @@ func fakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	repo, err := findReposByName(repoMap.Name)
+	repoMap2, err := findReposByName(repoMap.Name)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
 	}
 
+	var repos Repos
+	for _, v := range repoMap2 {
+		repos = v
+	}
+
 	a := AnalysisRequest{
 		RequestId: uuid.New(),
-		RepoId:    repo[0].Id,
+		RepoId:    repos.Id,
 		DateFrom:  monthStart,
 		DateTo:    monthStop,
 		GitUrls:   []string{"test"},
@@ -1040,12 +1144,13 @@ func contributionsSum2(w http.ResponseWriter, r *http.Request) {
 }
 
 func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
-	r, err := findSponsoredReposById(user.Id)
+	repoMap, err := findSponsoredReposById(user.Id)
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	writeJson(w, r)
+	repos := mapToArray(repoMap)
+	writeJson(w, repos)
 }
 
 func lang(r *http.Request) string {

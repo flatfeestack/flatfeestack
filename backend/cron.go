@@ -22,9 +22,9 @@ var (
 )
 
 type Job struct {
-	job        func(now time.Time) error
-	nextExecAt time.Time
-	nextExec   func(now time.Time) time.Time
+	job          func(now time.Time) error
+	nextExecAt   time.Time
+	nextExecFunc func(now time.Time) time.Time
 }
 
 func init() {
@@ -44,7 +44,7 @@ func init() {
 							if err != nil {
 								log.Printf("Error in job [daily] run at %v: %v", job.nextExecAt, err)
 							}
-							nextExecAt := job.nextExec(job.nextExecAt)
+							nextExecAt := job.nextExecFunc(job.nextExecAt)
 							jobs[k].nextExecAt = nextExecAt
 							again = true
 						}
@@ -63,9 +63,9 @@ func cronStop() {
 
 func cronJobDay(job func(now time.Time) error, now time.Time) {
 	jobs = append(jobs, Job{
-		job:        job,
-		nextExec:   timeDayPlusOne,
-		nextExecAt: timeDayPlusOne(now)})
+		job:          job,
+		nextExecFunc: timeDayPlusOne,
+		nextExecAt:   now}) //run this job at startup
 }
 
 func timeDayPlusOne(now time.Time) time.Time {
@@ -74,9 +74,9 @@ func timeDayPlusOne(now time.Time) time.Time {
 
 func cronJobHour(job func(now time.Time) error, now time.Time) {
 	jobs = append(jobs, Job{
-		job:        job,
-		nextExec:   timeHourPlusOne,
-		nextExecAt: timeHourPlusOne(now)})
+		job:          job,
+		nextExecFunc: timeHourPlusOne,
+		nextExecAt:   now}) //run this job at startup
 }
 
 func timeHourPlusOne(now time.Time) time.Time {
@@ -85,7 +85,7 @@ func timeHourPlusOne(now time.Time) time.Time {
 
 func hourlyRunner(now time.Time) error {
 	//find repos that have an analysis older than 2 days
-	a, err := findAllLatestAnalysisRequest(now.AddDate(0, 0, -2))
+	a, err := findAllLatestAnalysisRequest(now.AddDate(0, 0, -1))
 	if err != nil {
 		return err
 	}

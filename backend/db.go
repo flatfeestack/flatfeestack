@@ -21,15 +21,20 @@ type SponsorEvent struct {
 	UnSponsorAt *time.Time `json:"un_sponsor_at"`
 }
 
+type Repos struct {
+	Id   uuid.UUID `json:"uuid"`
+	Repo []Repo    `json:"repos"`
+}
+
 type Repo struct {
-	Id          uuid.UUID  `json:"uuid"`
-	Url         *string    `json:"url"`
-	GitUrl      *string    `json:"gitUrl"`
-	Name        *string    `json:"name"`
-	Description *string    `json:"description"`
-	Score       uint32     `json:"score"`
-	Source      *string    `json:"source"`
-	Link        *uuid.UUID `json:"link"`
+	Id          uuid.UUID `json:"uuid"`
+	Url         *string   `json:"url"`
+	GitUrl      *string   `json:"gitUrl"`
+	Name        *string   `json:"name"`
+	Description *string   `json:"description"`
+	Score       uint32    `json:"score"`
+	Source      *string   `json:"source"`
+	Link        uuid.UUID `json:"link"`
 	CreatedAt   time.Time
 }
 
@@ -220,7 +225,7 @@ func insertOrUpdateSponsor(event *SponsorEvent) error {
 
 	if id != nil && event.EventType == Active && (unSponsorAt == nil || event.SponsorAt.Before(*unSponsorAt)) {
 		return fmt.Errorf("we want to insertOrUpdateSponsor, but we are already sponsoring this repo: "+
-			"sponsor_at: %v, un_sponsor_at: %v, %v", event.SponsorAt, unSponsorAt, event.SponsorAt.Before(*unSponsorAt))
+			"sponsor_at: %v, un_sponsor_at: %v", event.SponsorAt, unSponsorAt)
 	}
 
 	if id != nil && event.EventType == Active && !sponsorAt.Before(event.SponsorAt) {
@@ -283,28 +288,18 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 
 // Repositories and Sponsors
 
-func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
+func findSponsoredReposById(userId uuid.UUID) (map[uuid.UUID]Repos, error) {
 	//we want to send back an empty array, don't change
-	repos := []Repo{}
-	s := `SELECT r.id,  r.url, r.git_url, r.name, r.description
+	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, r.link
             FROM sponsor_event s
-            INNER JOIN repo r ON s.repo_id=r.id 
+            INNER JOIN repo r ON s.repo_id=r.link
 			WHERE s.user_id=$1 AND s.un_sponsor_at IS NULL`
 	rows, err := db.Query(s, userId)
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var repo Repo
-		err = rows.Scan(&repo.Id, &repo.Url, &repo.GitUrl, &repo.Name, &repo.Description)
-		if err != nil {
-			return nil, err
-		}
-		repos = append(repos, repo)
-	}
-	return repos, nil
+	return scanRepo(rows)
 }
 
 func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
@@ -362,7 +357,7 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 func insertOrUpdateRepo(repo *Repo) error {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at, link) 
 									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-									ON CONFLICT(git_url) DO UPDATE SET name=$4, description=$5 RETURNING id`)
+									ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
@@ -429,51 +424,44 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	}
 }
 
-func findAllReposById(repoId uuid.UUID) ([]Repo, error) {
+func findAllReposById(repoId uuid.UUID) (map[uuid.UUID]Repos, error) {
 	rows, err := db.
-		Query("SELECT id, url, git_url, name, description, source FROM repo WHERE link=$1", repoId)
+		Query("SELECT id, url, git_url, name, description, source, link FROM repo WHERE id=$1 OR link=$1", repoId)
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
+	return scanRepo(rows)
+}
 
-	repos := []Repo{}
-	var rFirst Repo
+func scanRepo(rows *sql.Rows) (map[uuid.UUID]Repos, error) {
+	repoMap := map[uuid.UUID]Repos{}
 	for rows.Next() {
 		var r Repo
-		err = rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.Link)
 		if err != nil {
 			return nil, err
 		}
-		if r.Id == *r.Link {
-			rFirst = r
-		} else {
-			repos = append(repos, r)
-		}
-	}
-	repos = append([]Repo{rFirst}, repos...)
 
-	return repos, nil
+		repos, ok := repoMap[r.Link]
+		if !ok {
+			repos.Id = r.Link
+			repos.Repo = []Repo{r}
+		} else {
+			repos.Repo = append(repos.Repo, r)
+		}
+		repoMap[r.Link] = repos
+	}
+	return repoMap, nil
 }
 
-func findReposByName(name string) ([]Repo, error) {
-	rs := []Repo{}
+func findReposByName(name string) (map[uuid.UUID]Repos, error) {
 	rows, err := db.Query("SELECT id, url, git_url, name, description, source, link FROM repo WHERE name=$1 ORDER BY link", name)
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var r Repo
-		err = rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.Link)
-		if err != nil {
-			return nil, err
-		}
-		rs = append(rs, r)
-	}
-
-	return rs, nil
+	return scanRepo(rows)
 }
 
 //*********************************************************************************
@@ -610,8 +598,8 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
                           SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request WHERE date_to < $1) AS x
-                        WHERE dest_rank = 1`, dateTo)
+                            FROM analysis_request) AS x
+                        WHERE dest_rank = 1 AND date_to <= $1`, dateTo)
 
 	if err != nil {
 		return nil, err
@@ -627,6 +615,38 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 		as = append(as, a)
 	}
 	return as, nil
+}
+
+type Contributions struct {
+	DateFrom time.Time
+	DateTo   time.Time
+	GitEmail string
+	GitNames []string
+	Weight   float64
+}
+
+func findRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
+	var cs []Contributions
+
+	rows, err := db.Query(`SELECT a.date_from, a.date_to, ar.git_email, ar.git_names, ar.weight
+                        FROM analysis_request a
+                        INNER JOIN analysis_response ar on a.id = ar.analysis_request_id
+                        WHERE a.repo_id=$1 AND a.error IS NULL ORDER BY ar.git_email, a.date_to`, repoId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var c Contributions
+		err = rows.Scan(&c.DateFrom, &c.DateTo, &c.GitEmail, pq.Array(&c.GitNames), &c.Weight)
+		if err != nil {
+			return nil, err
+		}
+		cs = append(cs, c)
+	}
+	return cs, nil
 }
 
 func updateAnalysisRequest(requestId uuid.UUID, now time.Time, errStr *string) error {

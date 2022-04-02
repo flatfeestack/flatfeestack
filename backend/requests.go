@@ -82,7 +82,7 @@ func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
 		GitUrls:   repoUrls,
 	}
 
-	err := insertAnalysisRequest(req, timeNow())
+	err := insertAnalysisRequest(req, now)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
 	r, err := client.Post(opts.AnalysisUrl+"/webhook", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		e := err.Error()
-		errA := updateAnalysisRequest(req.RequestId, timeNow(), &e)
+		errA := updateAnalysisRequest(req.RequestId, now, &e)
 		if errA != nil {
 			log.Warnf("cannot send to analyze engine %v", errA)
 		}

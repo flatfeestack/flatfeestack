@@ -233,11 +233,12 @@ func main() {
 	//repo github
 	router.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/name", jwtAuthUser(searchRepoNames)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/link/{repoId}", jwtAuthUser(linkGitUrl)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/root/{repoId}/{rootUuid}", jwtAuthUser(makeRoot)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/link/{repoId}", jwtAuthAdmin(linkGitUrl, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/root/{repoId}/{rootUuid}", jwtAuthAdmin(makeRoot, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
 	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/graph", jwtAuthUser(graph)).Methods(http.MethodGet)
 	//payment
 
 	//hooks
