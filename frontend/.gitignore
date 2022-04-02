@@ -3,8 +3,10 @@
 /public/server
 /public/dependencies.txt
 /public/index.html
+/public/images
 /.vscode
 
 .DS_Store
 
 /.idea
+/landing-page/
