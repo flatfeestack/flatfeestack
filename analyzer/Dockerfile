@@ -20,5 +20,6 @@ WORKDIR /app
 COPY --from=builder /app/analysis-engine ./
 COPY banner.txt ./
 COPY --from=builder /usr/lib/libgit* /usr/lib/
-USER nonroot
+#USER nonroot
+VOLUME /app/repos
 ENTRYPOINT ["/app/analysis-engine"]
