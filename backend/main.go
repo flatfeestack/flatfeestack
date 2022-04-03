@@ -59,6 +59,7 @@ type Opts struct {
 	EmailFromName             string
 	EmailUrl                  string
 	EmailToken                string
+	EmailMarketing            string
 	WebSocketBaseUrl          string
 	ContractAddr              string
 	NowpaymentsToken          string
@@ -101,6 +102,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
 	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
+	flag.StringVar(&o.EmailMarketing, "email-marketing", lookupEnv("EMAIL_MARKETING",
+		"info@flatfeestack.com"), "Email marketing email. Set the value to 'live' to send out real emails")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
 		"ws://localhost"), "Websocket base URL")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",

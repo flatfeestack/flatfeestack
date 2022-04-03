@@ -180,7 +180,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
 		go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-			insertEmailSent(u.Id, "success-"+paymentCycleId.String(), timeNow())
+			insertEmailSent(&u.Id, email, "success-"+paymentCycleId.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
@@ -247,7 +247,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-html-authreq_", other["lang"])
 
 			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-				insertEmailSent(uid, "authreq-"+paymentCycleId.String(), timeNow())
+				insertEmailSent(&uid, email, "authreq-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
@@ -321,7 +321,7 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-html-failed_", other["lang"])
 
 			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-				insertEmailSent(uid, "failed-"+paymentCycleId.String(), timeNow())
+				insertEmailSent(&uid, email, "failed-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)

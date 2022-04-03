@@ -251,7 +251,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		"template-html-addgitemail_", other["lang"])
 
 	go func() {
-		insertEmailSent(user.Id, "gitemail-"+email, timeNow())
+		insertEmailSent(&user.Id, user.Email, "gitemail-"+email, timeNow())
 		err = sendEmail(opts.EmailUrl, e)
 		if err != nil {
 			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)

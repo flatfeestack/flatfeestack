@@ -168,7 +168,9 @@ CREATE TABLE invite (
 CREATE TABLE user_emails_sent (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id    UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
+    email      VARCHAR(64),
     email_type VARCHAR(64),
     created_at TIMESTAMP NOT NULL
 );
-CREATE INDEX user_emails_sent_index ON user_emails_sent(email_type); /*we do a count on email_type*/
+CREATE INDEX user_emails_sent_index1 ON user_emails_sent(email_type); /*we do a count on email_type*/
+CREATE INDEX user_emails_sent_index2 ON user_emails_sent(email); /*we do a count on email*/

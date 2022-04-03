@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"math/big"
+	"strconv"
 	"time"
 )
 
@@ -212,6 +213,15 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 		}
 
 		//TODO: write marketing email to uidNotInMap with distributeAdd*w/total
+		for email, v := range uidNotInMap {
+			amount := calcSharePerUser(distributeAdd, v, total)
+			go func(email string, amount *big.Int) {
+				err := sendMarketingEmail(email, amount)
+				if err != nil {
+					log.Printf("ERR-signup-07, send marketing email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+			}(email, amount)
+		}
 
 		if len(uidInMap) == 0 {
 			//no contribution park the sponsoring separately
@@ -228,15 +238,13 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 						return err
 					}
 				}
-				distributeAddF := new(big.Float).SetInt(distributeAdd)
-				amountF := new(big.Float).Mul(big.NewFloat(v/total), distributeAddF)
-				amount := new(big.Int)
-				amountF.Int(amount)
+
 				uidGit, err := findUserById(k)
 				if err != nil {
 					return err
 				}
 
+				amount := calcSharePerUser(distributeAdd, v, total)
 				insertContribution(uid, k, rid, paymentCycleInId, uidGit.PaymentCycleOutId, amount, currency, yesterdayStart, timeNow())
 
 				//TODO: notify users that they have funds, use the following steps
@@ -246,6 +254,14 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 		}
 	}
 	return nil
+}
+
+func calcSharePerUser(distributeAdd *big.Int, v float64, total float64) *big.Int {
+	distributeAddF := new(big.Float).SetInt(distributeAdd)
+	amountF := new(big.Float).Mul(big.NewFloat(v/total), distributeAddF)
+	amount := new(big.Int)
+	amountF.Int(amount)
+	return amount
 }
 
 func calcShare(paymentCycleInId *uuid.UUID, rLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
@@ -281,13 +297,59 @@ func calcShare(paymentCycleInId *uuid.UUID, rLen int64) (string, int64, *big.Int
 	return currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, nil
 }
 
+func sendMarketingEmail(email string, amount *big.Int) error {
+	weekly := int(timeNow().Unix() / 60 / 60 / 24)
+	emailCountId := "marketing-" + email + strconv.Itoa(weekly)
+	c, err := countEmailSentByEmail(email, emailCountId)
+	if err != nil {
+		return err
+	}
+
+	if c > 0 {
+		log.Printf("Marketing, but we already sent a notification %v", email)
+		return nil
+	}
+
+	err = insertEmailSent(nil, email, emailCountId, timeNow())
+	if err != nil {
+		return err
+	}
+
+	//dont spam in testing...
+	if opts.EmailMarketing != "live" {
+		email = opts.EmailMarketing
+	}
+
+	var other = map[string]string{}
+	other["email"] = email
+	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["lang"] = "en"
+
+	e := prepareEmail(email, other,
+		"template-subject-marketing_",
+		"[Marketing] Someone Likes Your Contribution for (xyz)",
+		"template-plain-marketing_",
+		"Thanks for maintaining (xyz). Someone sponsored you with "+fmt.Sprintf("%.2f", amount)+other["url"],
+		"template-html-marketing_",
+		other["lang"])
+
+	go func(emailType string) {
+		err := sendEmail(opts.EmailUrl, e)
+		if err != nil {
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+		}
+	}(emailCountId)
+
+	return nil
+}
+
 func reminderTopUp(u User, sponsorEmailNotifed string) error {
 	isSponsor := u.Email == sponsorEmailNotifed
 	emailCountId := "topup-"
 	if u.PaymentCycleInId != nil {
 		emailCountId += u.PaymentCycleInId.String()
 	}
-	c, err := countEmailSent(u.Id, emailCountId)
+	c, err := countEmailSentById(u.Id, emailCountId)
 	if err != nil {
 		return err
 	}
@@ -297,7 +359,7 @@ func reminderTopUp(u User, sponsorEmailNotifed string) error {
 		return nil
 	}
 
-	err = insertEmailSent(u.Id, emailCountId, timeNow())
+	err = insertEmailSent(&u.Id, u.Email, emailCountId, timeNow())
 	if err != nil {
 		return err
 	}

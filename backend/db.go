@@ -1351,27 +1351,42 @@ func findPayoutInfos() ([]PayoutInfo, error) {
 	return payoutInfos, nil
 }
 
-func insertEmailSent(userId uuid.UUID, emailType string, now time.Time) error {
+func insertEmailSent(userId *uuid.UUID, email string, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`
-			INSERT INTO user_emails_sent(user_id, email_type, created_at) 
-			VALUES($1, $2, $3)`)
+			INSERT INTO user_emails_sent(user_id, email, email_type, created_at) 
+			VALUES($1, $2, $3, $4)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_emails_sent for %v statement event: %v", userId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(userId, emailType, now)
+	res, err = stmt.Exec(userId, email, emailType, now)
 	if err != nil {
 		return err
 	}
 	return handleErrMustInsertOne(res)
 }
 
-func countEmailSent(userId uuid.UUID, emailType string) (int, error) {
+func countEmailSentById(userId uuid.UUID, emailType string) (int, error) {
 	var c int
 	err := db.
 		QueryRow(`SELECT count(*) AS c FROM user_emails_sent WHERE user_id=$1 and email_type=$2`, userId, emailType).
+		Scan(&c)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return c, nil
+	default:
+		return 0, err
+	}
+}
+
+func countEmailSentByEmail(email string, emailType string) (int, error) {
+	var c int
+	err := db.
+		QueryRow(`SELECT count(*) AS c FROM user_emails_sent WHERE email=$1 and email_type=$2`, email, emailType).
 		Scan(&c)
 	switch err {
 	case sql.ErrNoRows:

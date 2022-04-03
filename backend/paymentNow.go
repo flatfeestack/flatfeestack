@@ -261,7 +261,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
 		go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-			insertEmailSent(uid, "success-"+paymentCycleId.String(), timeNow())
+			insertEmailSent(&uid, email, "success-"+paymentCycleId.String(), timeNow())
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
@@ -313,7 +313,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 				"template-html-part_paid_", other["lang"])
 
 			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-				insertEmailSent(uid, "failed-"+paymentCycleId.String(), timeNow())
+				insertEmailSent(&uid, email, "failed-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
@@ -375,7 +375,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 				"template-html-failed_", other["lang"])
 
 			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-				insertEmailSent(uid, "failed-"+suf+"-"+paymentCycleId.String(), timeNow())
+				insertEmailSent(&uid, email, "failed-"+suf+"-"+paymentCycleId.String(), timeNow())
 				err = sendEmail(opts.EmailUrl, e)
 				if err != nil {
 					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
