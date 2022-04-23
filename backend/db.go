@@ -631,7 +631,7 @@ func findRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 	rows, err := db.Query(`SELECT a.date_from, a.date_to, ar.git_email, ar.git_names, ar.weight
                         FROM analysis_request a
                         INNER JOIN analysis_response ar on a.id = ar.analysis_request_id
-                        WHERE a.repo_id=$1 AND a.error IS NULL ORDER BY ar.git_email, a.date_to`, repoId)
+                        WHERE a.repo_id=$1 AND a.error IS NULL ORDER BY a.date_to, ar.weight DESC, ar.git_email`, repoId)
 
 	if err != nil {
 		return nil, err

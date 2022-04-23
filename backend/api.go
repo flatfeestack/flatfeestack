@@ -20,6 +20,10 @@ import (
 	"time"
 )
 
+const (
+	maxTopContributors = 20
+)
+
 var matcher = language.NewMatcher([]language.Tag{
 	language.English,
 	language.German,
@@ -120,11 +124,11 @@ var plans = []Plan{
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 4%",
 	},
 	{
-		Title:       "Forever",
-		Price:       3120.47, //9125 * 330000 / 1-(0.035)
-		Freq:        9125,
+		Title:       "5 Years",
+		Price:       624.09, //1825 * 330000 / 1-(0.035)
+		Freq:        1825,
 		FeePrm:      35,
-		Description: "You want to support Open Source software forever (25 years) with a flat fee of <b>3120.47 USD</b>",
+		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	},
 	{
@@ -678,37 +682,56 @@ func graph(w http.ResponseWriter, r *http.Request, _ *User) {
 	}
 	contributions, err := findRepoContribution(repoId)
 
+	offsetString := params["offset"]
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Not a valid id %v", err)
+		return
+	}
+
 	data := Data{}
-	previousGitEmail := ""
-	currentDataSet := Dataset{}
+	data.Total = len(contributions)
+
+	perDay := make(map[string]*Dataset)
+	previousDay := time.Time{}
+	days := 0
+	nrDay := 0
+
 	for _, v := range contributions {
-		if v.GitEmail != previousGitEmail {
-			if previousGitEmail != "" {
-				data.Datasets = append(data.Datasets, currentDataSet)
-			}
+		if v.DateTo != previousDay {
+			data.Labels = append(data.Labels, v.DateTo.Format("02.01.2006"))
+			days++
+			nrDay = 0
+			previousDay = v.DateTo
+		}
+		nrDay++
+		if nrDay-offset < 0 || nrDay-offset > maxTopContributors {
+			continue
+		}
+
+		d := perDay[v.GitEmail]
+		if d == nil {
+			d = &Dataset{}
+			d.Fill = false
 			names, err := json.Marshal(v.GitNames)
 			if err != nil {
 				continue
 			}
-			previousGitEmail = v.GitEmail
-			currentDataSet = Dataset{}
-			currentDataSet.Fill = false
-			currentDataSet.Label = v.GitEmail + ";" + string(names)
-			currentDataSet.BackgroundColor = getColor1(v.GitEmail)
-			currentDataSet.BorderColor = getColor1(v.GitEmail)
-			currentDataSet.PointBorderWidth = 3
+			d.Label = v.GitEmail + ";" + string(names)
+			d.BackgroundColor = getColor1(v.GitEmail)
+			d.BorderColor = getColor1(v.GitEmail)
+			d.PointBorderWidth = 3
+			perDay[v.GitEmail] = d
 		}
-		currentDataSet.Data = append(currentDataSet.Data, v.Weight)
+		d.Data = append(d.Data, v.Weight)
 	}
 
-	previousGitEmail = contributions[0].GitEmail
-	for _, v := range contributions {
-		if previousGitEmail != v.GitEmail {
-			break
-		}
-		data.Labels = append(data.Labels, v.DateTo.Format("02.01.2006"))
-		previousGitEmail = v.GitEmail
+	m := make([]Dataset, 0, len(perDay))
+	for _, val := range perDay {
+		m = append(m, *val)
 	}
+	data.Days = days
+	data.Datasets = m
 
 	writeJson(w, data)
 }

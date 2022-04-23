@@ -2,6 +2,8 @@ package main
 
 // Data wraps the "data" JSON
 type Data struct {
+	Days     int       `json:"days"`
+	Total    int       `json:"total"`
 	Datasets []Dataset `json:"datasets"`
 	Labels   []string  `json:"labels"`
 }

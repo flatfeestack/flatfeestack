@@ -241,7 +241,7 @@ func main() {
 	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
 	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/graph", jwtAuthUser(graph)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/{id}/{offset}/graph", jwtAuthUser(graph)).Methods(http.MethodGet)
 	//payment
 
 	//hooks
