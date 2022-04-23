@@ -13,11 +13,11 @@ import type {
   UserAggBalance,
   GitUser,
   RepoMapping,
-  Contributions, UserBalanceCore,
+  Contributions,
   PayoutAddress
 } from "../types/users";
-import type { ChartData } from 'chart.js';
 import type {PaymentCycle, PaymentResponse, PayoutInfo, UserStatus} from "../types/users";
+import type {ChartDataTotal} from "../types/users";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -131,7 +131,7 @@ export const API = {
     get: (id: number) => backendToken.get(`repos/${id}`),
     tag: (repoId: string) => backendToken.post(`repos/${repoId}/tag`).json<Repos>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
-    graph: (repoId: string) => backendToken.get(`repos/${repoId}/graph`).json<ChartData>(),
+    graph: (repoId: string, offset: number) => backendToken.get(`repos/${repoId}/${offset}/graph`).json<ChartDataTotal>(),
   },
   invite: {
     invites: () => backendToken.get('invite').json<Invitation[]>(),

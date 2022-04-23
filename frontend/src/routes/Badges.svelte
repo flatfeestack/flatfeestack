@@ -6,7 +6,8 @@
   import type { Contributions, Repos } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
   import Line from "svelte-chartjs/src/Line.svelte"
-  import { faPlus } from "@fortawesome/free-solid-svg-icons";
+  import Bar from "svelte-chartjs/src/Bar.svelte"
+  import { faPlus, faArrowRight, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import {htmlLegendPlugin} from "../ts/utils";
 
@@ -14,10 +15,10 @@
   let contributions: Contributions[] = [];
   let canvas;
   let showGraph;
+  let offset = 0;
 
-  let test2=[htmlLegendPlugin];
  //https://www.chartjs.org/docs/latest/configuration/tooltip.html
-  let test={plugins: {
+  let dataOptions={plugins: {
     tooltip: {
       boxPadding: 6,
       callbacks: {
@@ -126,10 +127,24 @@
             <tr id="bg-green1">
               <td colspan="5">
                 <div id="legend-container"></div>
-                {#await API.repos.graph(repo.uuid)}
+                {#await API.repos.graph(repo.uuid, offset)}
                   ...waiting
                 {:then data}
-                  <Line data={data} options="{test}" plugins="{test2}"/>
+                  {#if data.days > 1}
+                    <Line data={data} options="{dataOptions}" plugins="{[htmlLegendPlugin]}"/>
+                  {:else}
+                    <Bar data={data} options="{dataOptions}" plugins="{[htmlLegendPlugin]}"/>
+                  {/if}
+                  {#if offset > 0}
+                    <span class="cursor-pointer" on:click="{() => offset-=20}">
+                      Previous 20 <Fa icon="{faArrowLeft}" size="md"/>
+                    </span>
+                  {/if}
+                  {#if data.total > offset + 20}
+                    <span class="cursor-pointer" on:click="{() => offset+=20}">
+                      <Fa icon="{faArrowRight}" size="md"/> Next 20
+                    </span>
+                  {/if}
                 {:catch error}
                   <p style="color: red">{error.message}</p>
                 {/await}

@@ -1,3 +1,5 @@
+import type {ChartData} from "chart.js";
+
 export type Users = {
   id: string;
   paymentMethod: string;
@@ -178,4 +180,9 @@ export type PaymentResponse = {
   payAddress: string;
   payAmount: bigint;
   payCurrency: string;
+}
+
+export type ChartDataTotal = ChartData & {
+  total: number;
+  days: number;
 }
