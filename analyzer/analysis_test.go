@@ -16,6 +16,7 @@ import (
 )
 
 func TestRemoteRepo(t *testing.T) {
+	start := time.Now()
 	opts = &Opts{}
 	opts.GitBasePath = "/tmp"
 	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git")
@@ -25,8 +26,11 @@ func TestRemoteRepo(t *testing.T) {
 	assert.Nil(t, err)
 	var defaultTime time.Time
 	month3 := time.Now().AddDate(0, -3, 0)
+	start = time.Now()
 	c, err := analyzeRepositoryFromRepository(r, month3, defaultTime)
+	fmt.Printf(" elpased2 %vs\n", time.Since(start).Seconds())
 	assert.Nil(t, err)
+	start = time.Now()
 	f, err := weightContributions(c)
 	assert.Nil(t, err)
 	sort.Slice(f, func(i, j int) bool {
@@ -35,6 +39,7 @@ func TestRemoteRepo(t *testing.T) {
 	for _, v := range f {
 		fmt.Printf("out: %v\n", v)
 	}
+	fmt.Printf(" elpased3 %vs\n", time.Since(start).Seconds())
 }
 
 func TestRemoteRepo2(t *testing.T) {

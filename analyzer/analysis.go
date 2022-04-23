@@ -4,12 +4,14 @@ import (
 	"fmt"
 	git "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
+	cases "golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"io/ioutil"
 	"math"
-	"net/mail"
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +54,11 @@ var (
 	defaultTime      time.Time
 	excludeEmails    = []string{"noreply@github.com"}
 	includedTrailers = []string{"Signed-off-by", "Reviewed-by"}
+	//https://github.com/mcnijman/go-emailaddress/blob/master/emailaddress.go
+	findAmpersandRegexp = regexp.MustCompile("(?i)([&][A-Z0-9%]+[;])")
+	findCommonRegexp    = regexp.MustCompile("(?i)([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,24})")
+	rfc5322             = "(?i)(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"
+	validRfc5322Regexp  = regexp.MustCompile(fmt.Sprintf("^%s*$", rfc5322))
 )
 
 //small contributors get more, to be encouraged, also the committer that
@@ -247,16 +254,49 @@ func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Tra
 		}
 		for _, v := range ts {
 			if contains(includedTrailers, v.Key) {
-				a, err := mail.ParseAddress(v.Value)
-				if err != nil {
-					log.Warnf("cannot parse %v - %v", v.Value, err)
-					continue
+				n := strings.ReplaceAll(v.Value, "@@", "@")
+				e := findEmail(n)
+				i := strings.IndexByte(v.Value, '<')
+				if e == "" && i < 0 { //no email, and no <>
+					e = "no-email-found@flatfeestack.com"
+					log.Warnf("no email found in [%v]", v.Value)
+				} else if e != "" && i < 0 {
+					var err error
+					n, err = emailToName(e)
+					if err != nil {
+						log.Warnf("no name found, using email as name [%v]", v.Value)
+					}
+				} else {
+					n = strings.TrimSpace(v.Value[:i])
 				}
-				addToMap(a.Address, a.Name, authorMap, stats, mergedLinesWeight, merge)
+
+				n = findAmpersandRegexp.ReplaceAllString(n, "")
+				addToMap(e, n, authorMap, stats, mergedLinesWeight, merge)
 			}
 		}
 	}
+}
 
+func emailToName(email string) (string, error) {
+	i := strings.IndexByte(email, '@')
+	if i < 0 {
+		return "", fmt.Errorf("not an email %v", email)
+	}
+	name := email[:i]
+	name = strings.ReplaceAll(name, ".", " ")
+	caser := cases.Title(language.Und)
+	name = caser.String(name)
+	return name, nil
+}
+
+func findEmail(haystack string) string {
+	result := findCommonRegexp.FindString(haystack)
+	if result != "" {
+		if validRfc5322Regexp.MatchString(result) {
+			return result
+		}
+	}
+	return ""
 }
 
 func addToMap(authorEmail string, authorName string, authorMap map[string]Contribution, stats *git.DiffStats, authorFactor float64, merge int) {
