@@ -5,9 +5,6 @@ import typescript from "rollup-plugin-typescript2";
 import css from "rollup-plugin-css-only";
 import commonjs from "@rollup/plugin-commonjs";
 import execute from "rollup-plugin-execute";
-import json from '@rollup/plugin-json';
-import builtins from 'rollup-plugin-node-builtins';
-import globals from 'rollup-plugin-node-globals';
 import copy from 'rollup-plugin-copy'
 import serve from "rollup-plugin-serve";
 
@@ -28,9 +25,6 @@ export default [
             typescript({sourceMap: true}),
             css({output: "bundle.css"}),
             commonjs({transformMixedEsModules: true}),
-            globals(),
-            builtins(),
-            json(),
             copy({targets: [{ src: 'landing-page/public/images', dest: 'public' }]}),
         ]
     },

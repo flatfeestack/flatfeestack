@@ -145,8 +145,8 @@
                       <Fa icon="{faArrowRight}" size="md"/> Next 20
                     </span>
                   {/if}
-                {:catch error}
-                  <p style="color: red">{error.message}</p>
+                {:catch err}
+                  {$error = err.message}
                 {/await}
               </td>
             </tr>

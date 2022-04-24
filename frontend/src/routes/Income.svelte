@@ -12,42 +12,34 @@
     let contributions: Contributions[] = [];
     let pendingPayouts: UserBalanceCore;
 
-    function aggregate(contributions: Contributions[]): (string[]) {
-        return [];
-    }
-
-    onMount(async () => {
-        try {
-            const pr1 = API.user.contributionsRcv();
-            const res1 = await pr1;
-            contributions = res1 ? res1 : contributions;
-            contributions = aggregate(contributions)
-        } catch (e) {
-            $error = e;
-        }
-    });
-
 </script>
 
 <Navigation>
-    {#if contributions && contributions.length > 0}
-        <div class="container">
-            <table>
-                <thead>
-                <tr>
-                    <th>Repository</th>
-                    <th>From</th>
-                    <th>Balance</th>
-                    <th>Currency</th>
-                    <th>Realized</th>
-                    <th>Date</th>
-                </tr>
-                </thead>
-                <tbody>
+    <h2 class="p-2 m-2">Income</h2>
+    <p class="p-2 m-2">If you are an open-source contributor, and someone sponsored the respective repository, you can
+        claim it here.</p>
+
+    <div class="container">
+        <table>
+            <thead>
+            <tr>
+                <th>Repository</th>
+                <th>From</th>
+                <th>Balance</th>
+                <th>Currency</th>
+                <th>Realized</th>
+                <th>Date</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {#await API.user.contributionsRcv()}
+                ...waiting
+            {:then contributions}
                 {#each contributions as contribution}
                     <tr>
                         <td><a href="{contribution.repoUrl}">{contribution.repoName}</a></td>
-                        <td>{contribution.sponsorName?contribution.sponsorName:"[no name]"}</td>
+                        <td>{contribution.sponsorName ? contribution.sponsorName : "[no name]"}</td>
                         <td>{contribution.balance}</td>
                         <td>{contribution.currency}</td>
                         <td>
@@ -63,12 +55,14 @@
                     </tr>
                 {:else}
                     <tr>
-                        <td colspan="3">No Data</td>
+                        <td colspan="6">No Data</td>
                     </tr>
                 {/each}
-                </tbody>
-            </table>
-        </div>
-    {/if}
+            {:catch err}
+                {$error = err.message}
+            {/await}
+            </tbody>
+        </table>
+    </div>
 
 </Navigation>

@@ -60,10 +60,8 @@
     {/if}
 
     <h2 class="p-2 m-2">Find your favorite opes source projects</h2>
-    {#if $sponsoredRepos.length === 0}
-          <p class="p-2 m-2">Search for your repositories you want to tag. Currently only GitHub search is supported. You can tag as many
-            repositories as you want.</p>
-    {/if}
+    <p class="p-2 m-2">Search for your repositories you want to tag. Currently only GitHub search is supported. You can tag as many repositories as you want.</p>
+
     <div class="p-2 m-2">
       <form class="flex" on:submit|preventDefault="{handleSearch}">
         <input type="text" bind:value="{search}" />
