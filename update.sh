@@ -30,13 +30,13 @@ for name in ${projects}; do
   [ ! -d "$name" ] && git clone git@github.com:flatfeestack/"$name".git;git -C "$name" config pull.rebase false;
   git -C "$name" pull &
 done
-wait
 #landing page
-cd frontend
-[ ! -d "landing-page" ] && git clone git@github.com:flatfeestack/landing-page.git;git -C landing-page config pull.rebase false;
-git -C landing-page pull
-cd ..
+[ ! -d "frontend/landing-page" ] && git -C "frontend" clone git@github.com:flatfeestack/landing-page.git;git -C "frontend/landing-page" config pull.rebase false;
+git -C "frontend/landing-page" pull &
+wait
 
 for name in ${projects}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"
 done
+#landing page
+msg "${GREEN}[$(git -C "frontend/landing-page" symbolic-ref --short HEAD)]${NOFORMAT}-> frontend/landing-page"
