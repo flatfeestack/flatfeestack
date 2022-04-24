@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"math"
 	"math/big"
 	"strconv"
 	"time"
@@ -141,7 +142,50 @@ func dailyRunner(now time.Time) error {
 	}
 
 	log.Printf("Daily runner inserted %v entries", nr)
+
+	//aggregate marketing emails
+	ms, err := findMarketingEmails()
+	for _, v := range ms {
+		balanceMap, err := addUp(v.Balances, v.Currencies)
+		if err != nil {
+			return err
+		}
+		repoNames := []string{}
+		for _, v := range v.RepoIds {
+			m1, err := findAllReposById(v)
+			if err != nil {
+				return err
+			}
+			for _, v2 := range m1 {
+				for _, v3 := range v2.Repo {
+					repoNames = append(repoNames, *v3.Name)
+				}
+			}
+		}
+		sendMarketingEmail(v.Email, balanceMap, repoNames)
+	}
+
 	return nil
+}
+
+func addUp(balances []string, currencies []string) (map[string]*big.Int, error) {
+	balanceMap := map[string]*big.Int{}
+	if len(balances) != len(currencies) {
+		return nil, fmt.Errorf("need the same len")
+	}
+	for k, v := range balances {
+		v1, ok := new(big.Int).SetString(v, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", v1)
+		}
+		current := balanceMap[currencies[k]]
+		if current == nil {
+			balanceMap[currencies[k]] = v1
+		} else {
+			balanceMap[currencies[k]] = new(big.Int).Add(v1, current)
+		}
+	}
+	return balanceMap, nil
 }
 
 func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
@@ -212,15 +256,12 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 			}
 		}
 
-		//TODO: write marketing email to uidNotInMap with distributeAdd*w/total
 		for email, v := range uidNotInMap {
-			amount := calcSharePerUser(distributeAdd, v, total)
-			go func(email string, amount *big.Int) {
-				err := sendMarketingEmail(email, amount)
-				if err != nil {
-					log.Printf("ERR-signup-07, send marketing email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(email, amount)
+			amount := calcSharePerUser(distributeAdd, v, math.Max(total, v))
+			err = insertUnclaimed(email, rid, amount, currency, yesterdayStart, timeNow())
+			if err != nil {
+				log.Errorf("insertUnclaimed failed: %v, %v\n", opts.EmailUrl, err)
+			}
 		}
 
 		if len(uidInMap) == 0 {
@@ -297,24 +338,8 @@ func calcShare(paymentCycleInId *uuid.UUID, rLen int64) (string, int64, *big.Int
 	return currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, nil
 }
 
-func sendMarketingEmail(email string, amount *big.Int) error {
-	weekly := int(timeNow().Unix() / 60 / 60 / 24)
-	emailCountId := "marketing-" + email + strconv.Itoa(weekly)
-	c, err := countEmailSentByEmail(email, emailCountId)
-	if err != nil {
-		return err
-	}
-
-	if c > 0 {
-		log.Printf("Marketing, but we already sent a notification %v", email)
-		return nil
-	}
-
-	err = insertEmailSent(nil, email, emailCountId, timeNow())
-	if err != nil {
-		return err
-	}
-
+func sendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames []string) error {
+	doNotSpamThis := email
 	//dont spam in testing...
 	if opts.EmailMarketing != "live" {
 		email = opts.EmailMarketing
@@ -322,51 +347,43 @@ func sendMarketingEmail(email string, amount *big.Int) error {
 
 	var other = map[string]string{}
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = opts.EmailLinkPrefix
 	other["lang"] = "en"
 
 	e := prepareEmail(email, other,
 		"template-subject-marketing_",
-		"[Marketing] Someone Likes Your Contribution for (xyz)",
+		"[Marketing] Someone Likes Your Contribution for "+fmt.Sprint(repoNames),
 		"template-plain-marketing_",
-		"Thanks for maintaining (xyz). Someone sponsored you with "+fmt.Sprintf("%.2f", amount)+other["url"],
+		"Thanks for maintaining "+fmt.Sprint(repoNames)+". Someone sponsored you with "+
+			printMap(balanceMap)+". \nGo to "+other["url"]+" and claim your support.",
 		"template-html-marketing_",
 		other["lang"])
 
-	go func(emailType string) {
-		err := sendEmail(opts.EmailUrl, e)
-		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-		}
-	}(emailCountId)
+	weekly := int(timeNow().Unix() / 60 / 60 / 24) //7
+	emailCountId := "marketing-" + doNotSpamThis + strconv.Itoa(weekly)
+	c, err := countEmailSentByEmail(doNotSpamThis, emailCountId)
+	if err != nil {
+		return err
+	}
+	if c > 0 {
+		log.Printf("Marketing, but we already sent a notification %v", email)
+		return nil
+	}
+	err = insertEmailSent(nil, doNotSpamThis, emailCountId, timeNow())
+	if err != nil {
+		log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+	}
 
+	sendEmail(&e)
 	return nil
 }
 
 func reminderTopUp(u User, sponsorEmailNotifed string) error {
 	isSponsor := u.Email == sponsorEmailNotifed
-	emailCountId := "topup-"
-	if u.PaymentCycleInId != nil {
-		emailCountId += u.PaymentCycleInId.String()
-	}
-	c, err := countEmailSentById(u.Id, emailCountId)
-	if err != nil {
-		return err
-	}
-
-	if c > 0 {
-		log.Printf("TOPUP, but we already sent a notification %v", u)
-		return nil
-	}
-
-	err = insertEmailSent(&u.Id, u.Email, emailCountId, timeNow())
-	if err != nil {
-		return err
-	}
 
 	//check if user has stripe
 	if u.PaymentCycleInId != nil && u.StripeId != nil && u.PaymentMethod != nil {
-		_, err = stripePaymentRecurring(u)
+		_, err := stripePaymentRecurring(u)
 		if err != nil {
 			return err
 		}
@@ -382,12 +399,23 @@ func reminderTopUp(u User, sponsorEmailNotifed string) error {
 			"template-plain-topup-stripe_", "Thanks for supporting with flatfeestack: "+other["url"],
 			"template-html-topup-stripe_", other["lang"])
 
-		go func(userId uuid.UUID, emailType string) {
-			err := sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}(u.Id, emailCountId)
+		emailCountId := "topup-stripe-"
+		if u.PaymentCycleInId != nil {
+			emailCountId += u.PaymentCycleInId.String()
+		}
+		c, err := countEmailSentById(u.Id, emailCountId)
+		if err != nil {
+			return err
+		}
+		if c > 0 {
+			log.Printf("TOPUP, but we already sent a notification %v", u)
+			return nil
+		}
+		err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+		if err != nil {
+			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+		}
+		sendEmail(&e)
 	} else {
 		//No stripe, just send email
 		email := u.Email
@@ -403,12 +431,23 @@ func reminderTopUp(u User, sponsorEmailNotifed string) error {
 				"template-plain-topup-other-sponsor_", "Please add funds at: "+other["url"],
 				"template-html-topup-other-sponsor_", other["lang"])
 
-			go func(userId uuid.UUID, emailType string) {
-				err := sendEmail(opts.EmailUrl, e)
-				if err != nil {
-					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(u.Id, emailCountId)
+			emailCountId := "topup-no-stripe-"
+			if u.PaymentCycleInId != nil {
+				emailCountId += u.PaymentCycleInId.String()
+			}
+			c, err := countEmailSentById(u.Id, emailCountId)
+			if err != nil {
+				return err
+			}
+			if c > 0 {
+				log.Printf("TOPUP, but we already sent a notification %v", u)
+				return nil
+			}
+			err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+			if err != nil {
+				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			}
+			sendEmail(&e)
 		} else {
 			//we are user, and the user beneficiaryEmail could not donate
 			if u.InvitedId != nil {
@@ -417,24 +456,46 @@ func reminderTopUp(u User, sponsorEmailNotifed string) error {
 					"template-plain-topup-other-user1_", "Please add funds at: "+other["url"],
 					"template-html-topup-other-user1_", other["lang"])
 
-				go func(userId uuid.UUID, emailType string) {
-					err := sendEmail(opts.EmailUrl, e)
-					if err != nil {
-						log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-					}
-				}(u.Id, emailCountId)
+				emailCountId := "topup-no-other-"
+				if u.PaymentCycleInId != nil {
+					emailCountId += u.PaymentCycleInId.String()
+				}
+				c, err := countEmailSentById(u.Id, emailCountId)
+				if err != nil {
+					return err
+				}
+				if c > 0 {
+					log.Printf("TOPUP, but we already sent a notification %v", u)
+					return nil
+				}
+				err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+				if err != nil {
+					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+				sendEmail(&e)
 			} else {
 				e := prepareEmail(email, other,
 					"template-subject-topup-other-user2_", "You are running low on funding",
 					"template-plain-topup-other-user2_", "Please add funds at: "+other["url"],
 					"template-html-topup-other-user2_", other["lang"])
 
-				go func(userId uuid.UUID, emailType string) {
-					err := sendEmail(opts.EmailUrl, e)
-					if err != nil {
-						log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-					}
-				}(u.Id, emailCountId)
+				emailCountId := "topup-no-other2-"
+				if u.PaymentCycleInId != nil {
+					emailCountId += u.PaymentCycleInId.String()
+				}
+				c, err := countEmailSentById(u.Id, emailCountId)
+				if err != nil {
+					return err
+				}
+				if c > 0 {
+					log.Printf("TOPUP, but we already sent a notification %v", u)
+					return nil
+				}
+				err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+				if err != nil {
+					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				}
+				sendEmail(&e)
 			}
 		}
 	}

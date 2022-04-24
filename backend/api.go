@@ -254,13 +254,13 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 		"template-plain-addgitemail_", defaultMessage,
 		"template-html-addgitemail_", other["lang"])
 
-	go func() {
-		insertEmailSent(&user.Id, user.Email, "gitemail-"+email, timeNow())
-		err = sendEmail(opts.EmailUrl, e)
-		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-		}
-	}()
+	emailCountId := "gitemail-" + email
+	err = insertEmailSent(&user.Id, user.Email, emailCountId, timeNow())
+	if err != nil {
+		writeErrorf(w, http.StatusInternalServerError, "insert email sent failed: %v", err)
+		return
+	}
+	sendEmail(&e)
 }
 
 // @Summary Delete git email
@@ -1172,6 +1172,8 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
+	//TODO: add future contribution, so that it is seen how much the repo has if no user claimed it
+	//TODO: add when the support starts
 	repos := mapToArray(repoMap)
 	writeJson(w, repos)
 }

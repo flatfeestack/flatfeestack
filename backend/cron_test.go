@@ -386,14 +386,12 @@ func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Ti
 		RepoId:    repoId,
 		DateFrom:  from,
 		DateTo:    to,
-		GitUrl:    "test",
-		Branch:    "test",
+		GitUrls:   []string{"test"},
 	}
 	err := insertAnalysisRequest(a, now)
 	assert.Nil(t, err)
 	for k, v := range email {
-		n := NameWeight{Name: v, Weight: weight[k]}
-		err = insertAnalysisResponse(a.RequestId, v, n, now)
+		err = insertAnalysisResponse(a.RequestId, v, []string{v}, weight[k], now)
 		assert.Nil(t, err)
 	}
 }
@@ -469,18 +467,16 @@ func setupUser(email string) (*uuid.UUID, error) {
 func setupRepo(url string) (*uuid.UUID, error) {
 	r := Repo{
 		Id:          uuid.New(),
-		OrigId:      0,
 		Url:         stringPointer(url),
 		GitUrl:      stringPointer(url),
-		Branch:      stringPointer("main"),
 		Source:      stringPointer("github"),
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 		CreatedAt:   time.Time{},
 	}
-	id, err := insertOrUpdateRepo(&r)
+	err := insertOrUpdateRepo(&r)
 	if err != nil {
 		return nil, err
 	}
-	return id, nil
+	return &r.Id, nil
 }

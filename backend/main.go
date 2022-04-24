@@ -66,6 +66,7 @@ type Opts struct {
 	NowpaymentsIpnKey         string
 	NowpaymentsApiUrl         string
 	NowpaymentsIpnCallbackUrl string
+	EmailParallel             int
 }
 
 type TokenClaims struct {
@@ -103,7 +104,7 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
 	flag.StringVar(&o.EmailMarketing, "email-marketing", lookupEnv("EMAIL_MARKETING",
-		"info@flatfeestack.com"), "Email marketing email. Set the value to 'live' to send out real emails")
+		"tom.marketing@bocek.ch"), "Email marketing email. Set the value to 'live' to send out real emails")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
 		"ws://localhost"), "Websocket base URL")
 	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
@@ -113,6 +114,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
 		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
 	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
+	flag.IntVar(&o.EmailParallel, "email-parallel", lookupEnvInt("EMAIL_PARALLEL",
+		4), "How many email queues should be active")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])

@@ -649,6 +649,37 @@ func findRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 	return cs, nil
 }
 
+type Marketing struct {
+	Email      string
+	RepoIds    []uuid.UUID
+	Balances   []string
+	Currencies []string
+}
+
+func findMarketingEmails() ([]Marketing, error) {
+	ms := []Marketing{}
+	rows, err := db.Query(`SELECT u.email, array_agg(DISTINCT u.repo_id) as repo_ids, array_agg(u.balance) as balances,  array_agg(u.currency) as currencies
+                        FROM unclaimed u
+                        LEFT JOIN git_email g ON u.email = g.email 
+                        WHERE g.email IS NULL 
+                        GROUP BY u.email`)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var m Marketing
+		err = rows.Scan(&m.Email, pq.Array(&m.RepoIds), pq.Array(&m.Balances), pq.Array(&m.Currencies))
+		if err != nil {
+			return nil, err
+		}
+		ms = append(ms, m)
+	}
+	return ms, nil
+}
+
 func updateAnalysisRequest(requestId uuid.UUID, now time.Time, errStr *string) error {
 	stmt, err := db.Prepare(`UPDATE analysis_request set received_at = $2, error = $3 WHERE id = $1`)
 	if err != nil {
@@ -782,8 +813,25 @@ func insertFutureBalance(uid uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid
 		return err
 	}
 	return handleErrMustInsertOne(res)
+}
 
-	return nil
+func insertUnclaimed(email string, rid uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
+	stmt, err := db.Prepare(`
+				INSERT INTO unclaimed(email, repo_id, balance, currency, day, created_at) 
+				VALUES($1, $2, $3, $4, $5, $6)
+				ON CONFLICT(email, repo_id, currency) DO UPDATE SET balance=$3, day=$5, created_at=$6`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO unclaimed for %v statement event: %v", email, err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	b := balance.String()
+	res, err = stmt.Exec(email, rid, b, currency, day, createdAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
 }
 
 func insertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit *uuid.UUID,

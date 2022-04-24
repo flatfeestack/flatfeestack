@@ -61,6 +61,7 @@ CREATE TABLE git_email (
     created_at   TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX git_email_index ON git_email(user_id, email, token);
+CREATE INDEX git_email_email_index ON git_email(email); /*we do a count on email*/
 
 CREATE TABLE sponsor_event (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -106,6 +107,18 @@ CREATE TABLE daily_contribution (
     created_at           TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX daily_contribution_index ON daily_contribution(user_sponsor_id, user_contributor_id, repo_id, currency, day);
+
+CREATE TABLE unclaimed (
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email                VARCHAR(64),
+    repo_id              UUID CONSTRAINT fk_repo_id_dc REFERENCES repo (id),
+    balance              NUMERIC(78), /*256 bits*/
+    currency             VARCHAR(8) NOT NULL,
+    day                  DATE NOT NULL,
+    created_at           TIMESTAMP NOT NULL
+);
+CREATE UNIQUE INDEX unclaimed_index ON unclaimed(email, repo_id, currency);
+CREATE INDEX unclaimed_email_index ON unclaimed(email); /*we do a count on email*/
 
 CREATE TABLE future_contribution (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

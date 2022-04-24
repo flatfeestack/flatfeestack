@@ -179,13 +179,24 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
-		go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-			insertEmailSent(&u.Id, email, "success-"+paymentCycleId.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}(u.Id, newPaymentCycleInId, e)
+
+		emailCountId := "success-" + newPaymentCycleInId.String()
+		var c int
+		c, err = countEmailSentByEmail(email, emailCountId)
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
+			return
+		}
+		if c > 0 {
+			log.Printf("Marketing, but we already sent a notification %v", email)
+			return
+		}
+		err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+			return
+		}
+		sendEmail(&e)
 	// ... handle other event types
 	case "payment_intent.requires_action":
 		//again
@@ -246,13 +257,23 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-plain-authreq_", defaultMessage,
 				"template-html-authreq_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-				insertEmailSent(&uid, email, "authreq-"+paymentCycleId.String(), timeNow())
-				err = sendEmail(opts.EmailUrl, e)
-				if err != nil {
-					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(u.Id, newPaymentCycleInId, e)
+			emailCountId := "authreq-" + newPaymentCycleInId.String()
+			var c int
+			c, err = countEmailSentByEmail(email, emailCountId)
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
+				return
+			}
+			if c > 0 {
+				log.Printf("Marketing, but we already sent a notification %v", email)
+				return
+			}
+			err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+				return
+			}
+			sendEmail(&e)
 		}
 	//case "payment_intent.requires_action":
 	//3d secure - this is handled by strip, we just get notified
@@ -320,13 +341,23 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 				"template-plain-failed_", defaultMessage,
 				"template-html-failed_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId *uuid.UUID, e EmailRequest) {
-				insertEmailSent(&uid, email, "failed-"+paymentCycleId.String(), timeNow())
-				err = sendEmail(opts.EmailUrl, e)
-				if err != nil {
-					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(u.Id, newPaymentCycleInId, e)
+			emailCountId := "failed-" + newPaymentCycleInId.String()
+			var c int
+			c, err = countEmailSentByEmail(email, emailCountId)
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
+				return
+			}
+			if c > 0 {
+				log.Printf("Marketing, but we already sent a notification %v", email)
+				return
+			}
+			err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+				return
+			}
+			sendEmail(&e)
 		}
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)

@@ -9,14 +9,37 @@ import (
 	"time"
 )
 
-func sendEmail(url string, e EmailRequest) error {
+var queue chan *EmailRequest
+
+func initQueue() {
+	queue = make(chan *EmailRequest)
+	for i := 0; i < opts.EmailParallel; i++ {
+		go func() {
+			for {
+				select {
+				case e := <-queue:
+					sendEmailQueue(e)
+				}
+			}
+		}()
+	}
+}
+
+func sendEmail(e *EmailRequest) {
+	if queue == nil {
+		initQueue()
+	}
+	queue <- e
+}
+
+func sendEmailQueue(e *EmailRequest) error {
 	c := &http.Client{
 		Timeout: 15 * time.Second,
 	}
 
 	var jsonData []byte
 	var err error
-	if strings.Contains(url, "sendgrid") {
+	if strings.Contains(opts.EmailUrl, "sendgrid") {
 		sendGridReq := NewSingleEmailPlainText(
 			NewEmail(opts.EmailFromName, opts.EmailFrom),
 			e.Subject,
@@ -31,7 +54,7 @@ func sendEmail(url string, e EmailRequest) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", opts.EmailUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}

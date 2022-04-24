@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -75,4 +77,19 @@ func isValidUrl(s string) *string {
 	}
 	ts := strings.TrimPrefix(u.Path, "/")
 	return stringPointer(ts)
+}
+
+func printMap(balanceMap map[string]*big.Int) string {
+	s := ""
+	for k, c := range supportedCurrencies {
+		v := balanceMap[k]
+		if v != nil {
+			vf := new(big.Float).SetInt(v)
+			fi := new(big.Int).Exp(big.NewInt(10), big.NewInt(c.FactorPow), nil)
+			ff := new(big.Float).SetInt(fi)
+			rs := new(big.Float).Quo(vf, ff)
+			s += fmt.Sprintf("%v", rs) + " " + k
+		}
+	}
+	return s
 }

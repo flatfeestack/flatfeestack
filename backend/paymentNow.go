@@ -71,8 +71,7 @@ type WebhookResponse struct {
 func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
-		log.Printf("Cannot get payment informations for now payments: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Cannot get payment informations for now payments: %v", err)
 		return
 	}
 
@@ -81,15 +80,13 @@ func nowPayment(w http.ResponseWriter, r *http.Request, user *User) {
 
 	paymentCycleId, err := insertNewPaymentCycleIn(seats, freq, timeNow())
 	if err != nil {
-		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
-		w.WriteHeader(http.StatusBadRequest)
+		writeErrorf(w, http.StatusInternalServerError, "Cannot insert payment for %v: %v\n", user.Id, err)
 		return
 	}
 
 	currentUSDBalance, err := currentUSDBalance(user.PaymentCycleInId)
 	if err != nil {
-		log.Printf("Cannot get current USD balance %v: %v\n", user.Id, err)
-		w.WriteHeader(http.StatusBadRequest)
+		writeErrorf(w, http.StatusBadRequest, "Cannot get current USD balance %v: %v\n", user.Id, err)
 		return
 	}
 	price := (plan.Price * float64(seats)) - float64(currentUSDBalance)
@@ -182,8 +179,7 @@ func createNowPayment(price float64, payCurrency string, paymentCycleId *uuid.UU
 func nowWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Could not read body: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Could not read body: %v", err)
 		return
 	}
 
@@ -191,16 +187,14 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 	nowSignature := r.Header.Get("x-nowpayments-sig")
 	err = verifyNowWebhook(body, nowSignature)
 	if err != nil {
-		log.Printf("Wrong signature: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Wrong signature: %v", err)
 		return
 	}
 
 	var data WebhookResponse
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		log.Printf("Could not parse webhook data: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Could not parse webhook data: %v", err)
 		return
 	}
 
@@ -208,8 +202,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 	pc, err := findPaymentCycle(data.OrderId)
 
 	if err != nil {
-		log.Printf("Could not parse freq: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Could not parse freq: %v", err)
 		return
 	}
 	freq := pc.Freq
@@ -217,30 +210,21 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 
 	user, err := findUserById(userId)
 	if err != nil {
-		log.Printf("Could not find user: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Could not find user: %v", err)
 		return
 	}
 	//outcome_amount - this parameter shows the amount that will be (or is already) received on your Outcome Wallet once the transaction is settled.
 	amount, err := minCrypto(data.OutcomeCurrency, data.OutcomeAmount)
 	if err != nil {
-		log.Printf("Could not find currency: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		writeErrorf(w, http.StatusInternalServerError, "Could not find currency: %v", err)
 		return
 	}
 
 	switch data.PaymentStatus {
 	case "finished":
-		if err != nil {
-			log.Printf("Could not process nowpayment success: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		err = paymentSuccess(user.Id, user.PaymentCycleInId, data.OrderId, amount, strings.ToUpper(data.PayCurrency), seat, freq, big.NewInt(0))
 		if err != nil {
-			log.Printf("Could not process nowpayment success: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			writeErrorf(w, http.StatusInternalServerError, "Could not process nowpayment success: %v", err)
 			return
 		}
 
@@ -260,19 +244,29 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
 		}
-		go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-			insertEmailSent(&uid, email, "success-"+paymentCycleId.String(), timeNow())
-			err = sendEmail(opts.EmailUrl, e)
-			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-			}
-		}(user.Id, *data.OrderId, e)
 
-	case "partially_paid":
-		ub, err := findUserBalancesAndType(data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
+		emailCountId := "success-" + data.OrderId.String()
+		var c int
+		c, err = countEmailSentByEmail(email, emailCountId)
 		if err != nil {
-			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
-			w.WriteHeader(http.StatusBadRequest)
+			writeErrorf(w, http.StatusInternalServerError, "Could not get countEmailSentByEmail: %v", err)
+			return
+		}
+		if c > 0 {
+			log.Printf("Marketing, but we already sent a notification %v", email)
+			return
+		}
+		err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+			return
+		}
+		sendEmail(&e)
+	case "partially_paid":
+		var ub []UserBalance
+		ub, err = findUserBalancesAndType(data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Error find user balance: %v, %v\n", user.Id, err)
 			return
 		}
 		if ub != nil {
@@ -291,8 +285,7 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 
 		err = insertUserBalance(ubNew)
 		if err != nil {
-			log.Printf("Insert user balance for %v: %v\n", user.Id, err)
-			w.WriteHeader(http.StatusBadRequest)
+			writeErrorf(w, http.StatusBadRequest, "Insert user balance for %v: %v\n", user.Id, err)
 			return
 		}
 
@@ -312,13 +305,23 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 				"template-plain-part_paid_", defaultMessage,
 				"template-html-part_paid_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-				insertEmailSent(&uid, email, "failed-"+paymentCycleId.String(), timeNow())
-				err = sendEmail(opts.EmailUrl, e)
-				if err != nil {
-					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(user.Id, *data.OrderId, e)
+			emailCountId := "failed-" + data.OrderId.String()
+			var c int
+			c, err = countEmailSentByEmail(email, emailCountId)
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", user.Id, err)
+				return
+			}
+			if c > 0 {
+				log.Printf("Marketing, but we already sent a notification %v", email)
+				return
+			}
+			err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+				return
+			}
+			sendEmail(&e)
 		}
 	case "expired":
 	case "failed":
@@ -332,7 +335,8 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		case "refunded":
 			suf = "REF"
 		}
-		ub, err := findUserBalancesAndType(data.OrderId, "FAILED_"+suf, strings.ToUpper(data.PayCurrency))
+		var ub []UserBalance
+		ub, err = findUserBalancesAndType(data.OrderId, "FAILED_"+suf, strings.ToUpper(data.PayCurrency))
 		if err != nil {
 			log.Printf("Error find user balance: %v, %v\n", user.Id, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -374,13 +378,23 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 				"template-plain-failed_", defaultMessage,
 				"template-html-failed_", other["lang"])
 
-			go func(uid uuid.UUID, paymentCycleId uuid.UUID, e EmailRequest) {
-				insertEmailSent(&uid, email, "failed-"+suf+"-"+paymentCycleId.String(), timeNow())
-				err = sendEmail(opts.EmailUrl, e)
-				if err != nil {
-					log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
-				}
-			}(user.Id, *data.OrderId, e)
+			emailCountId := "failed-" + suf + "-" + data.OrderId.String()
+			var c int
+			c, err = countEmailSentByEmail(email, emailCountId)
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", user.Id, err)
+				return
+			}
+			if c > 0 {
+				log.Printf("Marketing, but we already sent a notification %v", email)
+				return
+			}
+			err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
+			if err != nil {
+				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
+				return
+			}
+			sendEmail(&e)
 		}
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
