@@ -73,13 +73,14 @@ export type PaymentCycle = {
 }
 
 export type Repos = {
-  uuid: string
-  repos: Repo[]
+  uuid: string;
+  repos: Repo[];
+  balances: Map<string, bigint>;
 }
 
 export type Repo = {
-  uuid: string
-  id: number //this comes from the github search
+  uuid: string;
+  id: number; //this comes from the github search
   url: string;
   gitUrl: string;
   name: string;

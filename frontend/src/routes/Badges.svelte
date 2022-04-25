@@ -103,6 +103,7 @@
           <th>URL</th>
           <th>Repos</th>
           <th>Description</th>
+          <th>Unclaimed Sponsoring</th>
           <th>Graph</th>
         </tr>
         </thead>
@@ -117,6 +118,7 @@
               {/each}
             </td>
             <td>{repo.repos[0].description}</td>
+            <td>{#each Object.entries(repo.balances) as [key, value]}{formatBalance(value, key)}{/each}</td>
             <td>
               <div class="cursor-pointer" on:click="{() => showGraph === repo.uuid? showGraph = undefined : showGraph = repo.uuid}">
                 <Fa icon="{faPlus}" size="md"/>
@@ -125,7 +127,7 @@
           </tr>
           {#if showGraph === repo.uuid}
             <tr id="bg-green1">
-              <td colspan="5">
+              <td colspan="6">
                 <div id="legend-container"></div>
                 {#await API.repos.graph(repo.uuid, offset)}
                   ...waiting
