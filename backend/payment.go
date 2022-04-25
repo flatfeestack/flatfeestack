@@ -63,7 +63,7 @@ func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 	return cur, max, nil
 }
 
-func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (string, int64, *big.Int) {
+func strategyDeductMax(balances map[string]*Balance, subs map[string]*big.Int, futSub map[string]*big.Int) (string, int64, *big.Int) {
 	var maxBalance *Balance
 	var maxFreq = int64(0)
 	var maxCurrency string
@@ -71,7 +71,10 @@ func strategyDeductMax(balances map[string]*Balance, subs map[string]*Balance) (
 	for currency, balance := range balances {
 		newBalance := balance.Balance
 		if subs[currency] != nil {
-			newBalance = new(big.Int).Sub(balance.Balance, subs[currency].Balance)
+			newBalance = new(big.Int).Sub(newBalance, subs[currency])
+		}
+		if futSub[currency] != nil {
+			newBalance = new(big.Int).Sub(newBalance, futSub[currency])
 		}
 		freq := new(big.Int).Div(newBalance, balance.Split).Int64()
 		if freq > 0 {

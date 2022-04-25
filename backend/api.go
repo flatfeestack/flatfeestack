@@ -1172,9 +1172,17 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 		writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 		return
 	}
-	//TODO: add future contribution, so that it is seen how much the repo has if no user claimed it
-	//TODO: add when the support starts
+
 	repos := mapToArray(repoMap)
+	for k, v := range repos {
+		repoBalances, err := findSumFutureBalanceByRepoId(&v.Id)
+		if err != nil {
+			writeErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			return
+		}
+		repos[k].Balances = repoBalances
+	}
+
 	writeJson(w, repos)
 }
 

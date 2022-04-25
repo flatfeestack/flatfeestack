@@ -305,29 +305,32 @@ func calcSharePerUser(distributeAdd *big.Int, v float64, total float64) *big.Int
 	return amount
 }
 
-func calcShare(paymentCycleInId *uuid.UUID, rLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
+func calcShare(paymentCycleInId *uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
+	//mAdd is what the user paid in the current cycle
 	mAdd, err := findSumUserBalanceByCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
+	//either the user spent it on a repo that does not have any devs who can claim
 	mFut, err := findSumFutureBalanceByCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
+	//or the user spent it on for a repo with a dev who can claim
 	mSub, err := findSumDailyBalanceCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum daily balance %v", err)
 	}
 
-	currency, freq, s := strategyDeductMax(mAdd, mSub)
+	currency, freq, s := strategyDeductMax(mAdd, mSub, mFut)
 
 	if s == nil {
 		return currency, freq, nil, nil, nil, nil
 	}
 	//split the contribution among the repos
-	distributeDeduct := new(big.Int).Div(s, big.NewInt(rLen))
+	distributeDeduct := new(big.Int).Div(s, big.NewInt(repoLen))
 	distributeAdd := distributeDeduct
 	var deductFutureContribution *big.Int
 	if mFut[currency] != nil {

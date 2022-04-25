@@ -22,8 +22,9 @@ type SponsorEvent struct {
 }
 
 type Repos struct {
-	Id   uuid.UUID `json:"uuid"`
-	Repo []Repo    `json:"repos"`
+	Id       uuid.UUID           `json:"uuid"`
+	Repo     []Repo              `json:"repos"`
+	Balances map[string]*big.Int `json:"balances"`
 }
 
 type Repo struct {
@@ -964,7 +965,7 @@ func findSumDailySponsors(userSponsorId uuid.UUID, paymentCycleInId uuid.UUID) (
 	return m1, nil
 }
 
-func findSumDailyBalanceCurrency(paymentCycleInId *uuid.UUID) (map[string]*Balance, error) {
+func findSumDailyBalanceCurrency(paymentCycleInId *uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := db.
 		Query(`	SELECT currency, COALESCE(sum(balance), 0)
         				FROM daily_contribution 
@@ -976,7 +977,7 @@ func findSumDailyBalanceCurrency(paymentCycleInId *uuid.UUID) (map[string]*Balan
 	}
 	defer closeAndLog(rows)
 
-	m := make(map[string]*Balance)
+	m := make(map[string]*big.Int)
 	for rows.Next() {
 		var c, b string
 		err = rows.Scan(&c, &b)
@@ -988,7 +989,40 @@ func findSumDailyBalanceCurrency(paymentCycleInId *uuid.UUID) (map[string]*Balan
 			return nil, fmt.Errorf("not a big.int %v", b1)
 		}
 		if m[c] == nil {
-			m[c] = &Balance{Balance: b1}
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
+func findSumFutureBalanceByRepoId(repoId *uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+                             FROM future_contribution 
+                             WHERE repo_id = $1
+                             GROUP BY currency`, repoId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
 		} else {
 			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
 		}
