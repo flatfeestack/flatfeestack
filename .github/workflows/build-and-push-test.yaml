@@ -25,7 +25,7 @@ jobs:
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
-          key: ${{ secrets.FLATFEESTACK1_NODE_PRIVATE_KEY }}
+          key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
           known_hosts: unnecessary
       - name: Pull Current Images
         run: docker-compose -f docker-compose.build.yml pull || true
