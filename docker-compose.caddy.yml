@@ -17,4 +17,3 @@ services:
 
 networks:
   test:
-  prod:

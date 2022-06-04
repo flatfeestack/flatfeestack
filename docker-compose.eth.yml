@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+
+  #https://openethereum.wiki/Private-development-chain/
+  openethereum:
+    image: openethereum/openethereum:v3.1.1
+    ports:
+      - 8545:8545
+    user: root
+    volumes:
+      - ./.chain:/tmp/chain
+    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain

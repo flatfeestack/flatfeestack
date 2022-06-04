@@ -22,6 +22,10 @@ services:
     ports:
       - 19085:9085
 
+  reverse-proxy:
+    ports:
+      - 8080:80
+
   db:
     volumes:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
