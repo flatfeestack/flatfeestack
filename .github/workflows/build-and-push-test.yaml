@@ -30,11 +30,11 @@ jobs:
       - name: Update (fetch micro-services)
         run: bash update.sh
       - name: Pull Current Images
-        run: docker-compose -f docker-compose.yml pull || true
+        run: docker-compose -f docker-compose.build.yml pull || true
       - name: Build Images
-        run: docker-compose -f docker-compose.yml build
+        run: docker-compose -f docker-compose.build.yml build
       - name: Push Images
-        run: docker-compose -f docker-compose.yml push
+        run: docker-compose -f docker-compose.build.yml push
       - name: Context - TEST
         run: docker context create flatfee-test --docker "host=ssh://sibex@axelra.net:2222"
       - name: Deploy - TEST
