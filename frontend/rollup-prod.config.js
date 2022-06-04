@@ -10,9 +10,6 @@ import {terser} from "rollup-plugin-terser";
 import license from "rollup-plugin-license";
 import brotli from "rollup-plugin-brotli";
 import gzipPlugin from "rollup-plugin-gzip";
-import globals from "rollup-plugin-node-globals";
-import builtins from "rollup-plugin-node-builtins";
-import json from "@rollup/plugin-json";
 import copy from 'rollup-plugin-copy'
 
 export default [
