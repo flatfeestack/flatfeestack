@@ -2,94 +2,29 @@ version: "3"
 
 services:
 
-  #######################
-  # Applications:
-  #######################
+  auth:
+    ports:
+      - 19081:9081
 
-  test-auth:
-    hostname: test-auth
-    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE}
-#    volumes:
-#      - ./logs/test:/tmp/ffs:rw
-    networks:
-      - test
-    env_file:
-      - .test.fastauth.env
-    depends_on:
-      - test-db
+  backend:
+    ports:
+      - 19082:9082
 
-  test-backend:
-    hostname: test-backend
-    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE}
-#    volumes:
-#      - ./logs/test:/tmp/ffs:rw
-    networks:
-      - test
-    env_file:
-      - .test.backend.env
-    depends_on:
-      - test-db
+  analysis-engine:
+    ports:
+      - 19083:9083
 
-  test-analysis-engine:
-    hostname: test-analysis-engine
-    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE}
-#    volumes:
-#      - ./logs/test:/tmp/ffs:rw
-    networks:
-      - test
-    env_file:
-      - .test.analysis-engine.env
-
-  test-payout:
-    hostname: test-payout
+  payout:
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE}
-#    volumes:
-#      - ./logs/test:/tmp/ffs:rw
-    networks:
-      - test
-    env_file:
-      - .test.payout.env
-    depends_on:
-      - test-payout-nodejs
+    ports:
+      - 19084:9084
 
-  test-payout-nodejs:
-    hostname: test-payout-nodejs
-    image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE}
-    networks:
-      - test
-    env_file:
-      - .test.payout-nodejs.env
+  frontend:
+    ports:
+      - 19085:9085
 
-  test-frontend:
-    hostname: test-frontend
-    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE}
-    networks:
-      - test
-    environment:
-      - PORT=9085
-
-  #######################
-  # Infrastructure:
-  #######################
-
-  test-db:
-    hostname: test-db
-    image: postgres:13-alpine
+  db:
     volumes:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./backend/init_func.sql:/docker-entrypoint-initdb.d/1-init.sql
-      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
-    #https://docs.docker.com/engine/reference/builder/#healthcheck
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
     ports:
-      - 25432:5432
-    networks:
-      - test
-    env_file:
-      - .test.db.env
-
-networks:
-  test:
+      - 15432:5432
