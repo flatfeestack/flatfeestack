@@ -28,7 +28,7 @@ jobs:
           key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
           known_hosts: unnecessary
       - name: Update (fetch micro-services)
-        run: sh update.sh
+        run: bash update.sh
       - name: Pull Current Images
         run: docker-compose -f docker-compose.build.yml pull || true
       - name: Build Images
