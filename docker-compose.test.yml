@@ -15,7 +15,6 @@ services:
       - 19083:9083
 
   payout:
-    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE}
     ports:
       - 19084:9084
 
