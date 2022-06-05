@@ -8,7 +8,7 @@ WORKDIR /app/libgit2
 RUN git checkout v1.3.0
 RUN mkdir build;
 WORKDIR /app/libgit2/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CLAR=OFF && cmake --build . && cmake --build . --target install
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CLAR=OFF && cmake --build . --target install -j 8
 WORKDIR /app
 COPY *.go ./
 RUN go build
@@ -22,4 +22,5 @@ COPY banner.txt ./
 COPY --from=builder /usr/lib/libgit* /usr/lib/
 #USER nonroot
 VOLUME /app/repos
+#https://stackoverflow.com/questions/19331497/set-environment-variables-from-file-of-key-value-pairs/30969768#30969768
 ENTRYPOINT ["/app/analysis-engine"]
