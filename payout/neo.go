@@ -67,7 +67,11 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	err = acc.SignTx(c.GetNetwork(), tx)
+	net, err := c.GetNetwork()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	err = acc.SignTx(net, tx)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}

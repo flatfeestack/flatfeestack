@@ -161,13 +161,23 @@ func main() {
 	opts = NewOpts()
 
 	var eth = opts.Blockchains["eth"]
+	now := time.Now()
 	ethClient, err = getEthClient(eth.Url, eth.PrivateKey, eth.Deploy, eth.Contract)
+	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
+		time.Sleep(time.Second)
+		ethClient, err = getEthClient(eth.Url, eth.PrivateKey, eth.Deploy, eth.Contract)
+	}
 	if err != nil {
 		log.Fatal("Could not initialize ETH network", err)
 	}
 
 	var neo = opts.Blockchains["neo"]
+	now = time.Now()
 	neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
+	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
+		time.Sleep(time.Second)
+		neoClient, err = client.New(context.TODO(), neo.Url, client.Options{})
+	}
 	if err != nil {
 		log.Fatalf("Could not create a new NEO client", err)
 	}

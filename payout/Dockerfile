@@ -1,4 +1,4 @@
-FROM golang:1.17 AS base
+FROM golang:1.18 AS base
 WORKDIR /app
 COPY go.* Makefile ./
 RUN make dep
