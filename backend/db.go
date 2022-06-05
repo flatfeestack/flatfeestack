@@ -1509,11 +1509,10 @@ func initDb() *sql.DB {
 
 	//we wait for ten seconds to connect
 	err = db.Ping()
-	now := timeNow()
+	now := time.Now()
 	for err != nil && now.Add(time.Duration(10)*time.Second).After(timeNow()) {
-		// check the connection
-		err = db.Ping()
 		time.Sleep(time.Second)
+		err = db.Ping()
 	}
 	if err != nil {
 		panic(err)
