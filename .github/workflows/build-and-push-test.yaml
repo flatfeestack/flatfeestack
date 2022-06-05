@@ -27,15 +27,14 @@ jobs:
         with:
           key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
           known_hosts: unnecessary
+
       - name: Update (fetch micro-services)
         run: bash update.sh
       - name: Pull Current Images
-        run: docker-compose -f docker-compose.build.yml pull || true
+        run: docker-compose -f docker-compose.yml pull || true
       - name: Build Images
-        run: docker-compose -f docker-compose.build.yml build
+        run: docker-compose -f docker-compose.yml build
       - name: Push Images
-        run: docker-compose -f docker-compose.build.yml push
-      - name: Context - TEST
-        run: docker context create flatfee-test --docker "host=ssh://sibex@axelra.net:2222"
+        run: docker-compose -f docker-compose.yml push
       - name: Deploy - TEST
-        run: docker --context flatfee-test stack deploy -c docker-compose.yml flatfee-test --with-registry-auth
+        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth

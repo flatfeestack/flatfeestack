@@ -1,4 +1,4 @@
-version: "3"
+version: "3.9"
 
 services:
 
@@ -7,8 +7,9 @@ services:
     build: ./fastauth
     ports:
       - 9081:9081
-    env_file:
-      - fastauth/.env
+    configs:
+      - source: auth_env
+        target: /home/nonroot/.env
     depends_on:
       - db
 
@@ -17,8 +18,9 @@ services:
     build: ./backend
     ports:
       - 9082:9082
-    env_file:
-      - backend/.env
+    configs:
+      - source: backend_env
+        target: /app/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
@@ -31,22 +33,24 @@ services:
     build: ./analysis-engine
     ports:
       - 9083:9083
+    configs:
+      - source: analysis_env
+        target: /app/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
-    env_file:
-      - analysis-engine/.env
+
 
   payout:
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
     ports:
       - 9084:9084
+    configs:
+      - source: payout_env
+        target: /home/nonroot/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
-    depends_on:
-      - openethereum
-    env_file:
-      - payout/.env
+
 
   #payout-nodejs:
   #  image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
@@ -68,10 +72,13 @@ services:
 
   db:
     image: postgres:14-alpine
+    configs:
+      - source: db_env
+        target: /docker-entrypoint-initdb.d/0-init.sh
     volumes:
       - ./.db:/var/lib/postgresql/data
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/0-init.sql
-      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
     ports:
       - 5432:5432
     env_file:
@@ -88,6 +95,31 @@ services:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     ports:
       - 80:80
+
+
+  #https://openethereum.wiki/Private-development-chain/
+  openethereum:
+    #https://stackoverflow.com/questions/30233105/docker-compose-up-for-only-certain-containers
+    profiles: [ "local" ]
+    image: openethereum/openethereum:v3.1.1
+    ports:
+      - 8545:8545
+    user: root
+    volumes:
+      - ./.chain:/tmp/chain
+    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+
+configs:
+  auth_env:
+    file: fastauth/.env
+  backend_env:
+    file: backend/.env
+  analysis_env:
+    file: analysis-engine/.env
+  payout_env:
+    file: payout/.env
+  db_env:
+    file: .env
 
   # https://assets.tqtezos.com/docs/setup/2-sandbox/
   #flextesa:

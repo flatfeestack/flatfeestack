@@ -1,4 +1,4 @@
-version: "3"
+version: "3.9"
 
 services:
 
@@ -31,3 +31,15 @@ services:
       - ${DATABASE_LOCAL_DIR}:/var/lib/postgresql/data
     ports:
       - 15432:5432
+
+configs:
+  auth_env:
+    external: true
+  backend_env:
+    external: true
+  analysis_env:
+    external: true
+  payout_env:
+    external: true
+  db_env:
+    external: true

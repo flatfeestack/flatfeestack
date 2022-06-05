@@ -108,4 +108,4 @@ fi
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}"
-EXTRA_HOSTS="${external}" docker-compose up --abort-on-container-exit ${internal}
+EXTRA_HOSTS="${external}" docker-compose --profile local up --abort-on-container-exit ${internal}
