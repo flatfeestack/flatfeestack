@@ -7,6 +7,9 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
   # script cleanup here
+  if [ -n "${PID-}" ]; then
+    kill $PID
+  fi
 }
 
 host_ip() {
@@ -89,11 +92,24 @@ parse_params() {
   return 0
 }
 
+run_cmd() {
+  if [ -f .env ]; then
+    source .env
+    if [ -n "${CMD-}" ]; then
+      msg "${GREEN}Running command [$CMD]"
+      eval "$CMD" &
+      PID=$!
+    fi
+  fi
+}
+
 parse_params "$@"
 setup_colors
 
 host_ip
+run_cmd
 mkdir -p .db .chain
+
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
