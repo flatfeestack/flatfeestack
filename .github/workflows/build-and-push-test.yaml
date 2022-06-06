@@ -12,6 +12,7 @@ jobs:
     env:
       TAG_IMAGE: latest-test
     steps:
+      #https://stackoverflow.com/questions/59363727/using-a-specific-docker-version-in-github-actions
       - name: Check Docker Version
         run: docker --version
       - name: Install Latest Docker
@@ -22,6 +23,9 @@ jobs:
           sudo apt-get install docker-ce
       - name: Check Docker Version
         run: docker --version
+
+      - name: yq - portable yaml processor
+        uses: mikefarah/yq@v4.25.2
 
       - uses: actions/checkout@v2
         with:
@@ -49,5 +53,8 @@ jobs:
         run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
       - name: Push Images
         run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
+      - name: Remove any profile from docker-compose
+        #otherwise we see this error: Additional property profiles is not allowed
+        run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
       - name: Deploy - TEST
-        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth
+        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.base.yml -c docker-compose.test.yml flatfee --with-registry-auth
