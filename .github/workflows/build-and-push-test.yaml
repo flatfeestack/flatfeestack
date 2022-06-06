@@ -31,10 +31,10 @@ jobs:
       - name: Update (fetch micro-services)
         run: bash update.sh
       - name: Pull Current Images
-        run: docker-compose -f docker-compose.yml pull || true
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
       - name: Build Images
-        run: docker-compose -f docker-compose.yml build
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
       - name: Push Images
-        run: docker-compose -f docker-compose.yml push
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
       - name: Deploy - TEST
         run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth
