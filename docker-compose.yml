@@ -5,8 +5,6 @@ services:
   auth:
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
-    ports:
-      - 9081:9081
     configs:
       - source: auth_env
         target: /home/nonroot/.env
@@ -16,8 +14,6 @@ services:
   backend:
     image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-latest}
     build: ./backend
-    ports:
-      - 9082:9082
     configs:
       - source: backend_env
         target: /app/.env
@@ -31,26 +27,20 @@ services:
     volumes:
       - ./.repos:/app/repos
     build: ./analysis-engine
-    ports:
-      - 9083:9083
     configs:
       - source: analysis_env
         target: /app/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
-
   payout:
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
-    ports:
-      - 9084:9084
     configs:
       - source: payout_env
         target: /home/nonroot/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
-
 
   #payout-nodejs:
   #  image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
@@ -67,8 +57,6 @@ services:
   frontend:
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-latest}
     build: ./frontend
-    ports:
-      - 9085:9085
 
   db:
     image: postgres:14-alpine
@@ -76,11 +64,8 @@ services:
       - source: db_env
         target: /docker-entrypoint-initdb.d/0-init.sh
     volumes:
-      - ./.db:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/1-init.sql
       - ./fastauth/init.sql:/docker-entrypoint-initdb.d/2-init.sql
-    ports:
-      - 5432:5432
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -91,21 +76,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
-    ports:
-      - 80:80
-
-
-  #https://openethereum.wiki/Private-development-chain/
-  openethereum:
-    #https://stackoverflow.com/questions/30233105/docker-compose-up-for-only-certain-containers
-    profiles: [ "local" ]
-    image: openethereum/openethereum:v3.1.1
-    ports:
-      - 8545:8545
-    user: root
-    volumes:
-      - ./.chain:/tmp/chain
-    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
 
 configs:
   auth_env:

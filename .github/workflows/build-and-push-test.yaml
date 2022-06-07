@@ -53,4 +53,4 @@ jobs:
         run: docker-compose -f docker-compose.yml -f docker-compose.test.yml config >> docker-compose.base.yml
 
       - name: Deploy - TEST
-        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.base.yml flatfee --with-registry-auth
+        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth

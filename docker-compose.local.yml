@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+
+  auth:
+    ports:
+      - "9081:9081"
+  backend:
+    ports:
+      - "9082:9082"
+  analysis-engine:
+    ports:
+      - "9083:9083"
+  payout:
+    ports:
+      - "9084:9084"
+  frontend:
+    ports:
+      - "9085:9085"
+  reverse-proxy:
+    ports:
+      - "80:80"
+  db:
+    volumes:
+      - ./.db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  #https://openethereum.wiki/Private-development-chain/
+  openethereum:
+    #https://stackoverflow.com/questions/30233105/docker-compose-up-for-only-certain-containers
+    #profiles: [ "local" ]
+    image: openethereum/openethereum:v3.1.1
+    ports:
+      - 8545:8545
+    user: root
+    volumes:
+      - ./.chain:/tmp/chain
+    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
