@@ -43,7 +43,7 @@ configs:
     #docker --context flatfee config create payout_env env/payout.env.test
   db_env:
     external: true
-    #docker --context flatfee config create db_env env/db.env.test
+    #docker --context flatfee config create db_env env/db_pw.txt.test
   caddy_env:
     external: true
     #docker --context flatfee config create caddy_env Caddyfile
