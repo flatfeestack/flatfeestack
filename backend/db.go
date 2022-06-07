@@ -8,7 +8,11 @@ import (
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
 	"math/big"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -1500,11 +1504,11 @@ func handleErr(res sql.Result) (int64, error) {
 }
 
 // stringPointer connection with postgres db
-func initDb() *sql.DB {
+func initDb() (*sql.DB, error) {
 	// Open the connection
 	db, err := sql.Open(opts.DBDriver, opts.DBPath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	//we wait for ten seconds to connect
@@ -1515,11 +1519,43 @@ func initDb() *sql.DB {
 		err = db.Ping()
 	}
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	log.Println("Successfully connected!")
-	return db
+	//this will create or alter tables
+	//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+	for _, file := range strings.Split(opts.DBScripts, ":") {
+		if file == "" {
+			continue
+		}
+		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+		if _, err := os.Stat(file); err == nil {
+			fileBytes, err := ioutil.ReadFile(file)
+			if err != nil {
+				return nil, err
+			}
+
+			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
+			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+			newBytes := re.ReplaceAll(fileBytes, nil)
+
+			requests := strings.Split(string(newBytes), ";")
+			for _, request := range requests {
+				request = strings.TrimSpace(request)
+				if len(request) > 0 {
+					_, err := db.Exec(request)
+					if err != nil {
+						return nil, fmt.Errorf("[%v] %v", request, err)
+					}
+				}
+			}
+		} else {
+			log.Infof("ignoring file [%v] (%v)", file, err)
+		}
+	}
+
+	log.Infof("Successfully connected!")
+	return db, nil
 }
 
 func closeAndLog(c io.Closer) {

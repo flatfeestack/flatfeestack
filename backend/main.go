@@ -51,6 +51,7 @@ type Opts struct {
 	StripeWebhookSecretKey    string
 	DBPath                    string
 	DBDriver                  string
+	DBScripts                 string
 	AnalysisUrl               string
 	PayoutUrl                 string
 	Admins                    string
@@ -91,6 +92,7 @@ func NewOpts() *Opts {
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
+	flag.StringVar(&opts.DBScripts, "db-scripts", lookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
 	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS_URL",
 		"http://analysis-engine:9083"), "Analysis Url")
 	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT_URL",
@@ -198,7 +200,10 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	db = initDb()
+	db, err = initDb()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	stripe.Key = opts.StripeAPISecretKey
 
