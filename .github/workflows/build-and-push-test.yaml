@@ -28,16 +28,16 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
-          known_hosts: unnecessary
+          known_hosts: ${{ secrets.FLATFEESTACK_KNOWN_HOSTS }}
 
-      - name: Update (fetch micro-services)
-        run: bash update.sh
-      - name: Pull Current Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
-      - name: Build Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
-      - name: Push Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
+      #- name: Update (fetch micro-services)
+      #  run: bash update.sh
+      #- name: Pull Current Images
+      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
+      #- name: Build Images
+      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
+      #- name: Push Images
+      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
       - name: Remove any profile from docker-compose
         #otherwise we see this error: Additional property profiles is not allowed. docker stack does not seem to understad --profiles yet.
         run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
