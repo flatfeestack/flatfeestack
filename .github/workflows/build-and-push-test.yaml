@@ -38,10 +38,12 @@ jobs:
       #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
       #- name: Push Images
       #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
+      - name: du
+        run: curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
       - name: Version
           #otherwise we see this error: Additional property profiles is not allowed. docker stack does not seem to understad --profiles yet.
           #run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
-        run: docker-compose -v
+        run: docker-compose -v && which docker-compose
       - name: Remove any profile from docker-compose
         #otherwise we see this error: Additional property profiles is not allowed. docker stack does not seem to understad --profiles yet.
         #run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
