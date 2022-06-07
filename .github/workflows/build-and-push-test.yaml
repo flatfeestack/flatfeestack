@@ -28,15 +28,15 @@ jobs:
           key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.FLATFEESTACK_KNOWN_HOSTS }}
 
-      #- name: Update (fetch micro-services)
-      #  run: bash update.sh
-      #- name: Pull Current Images
-      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
-      #- name: Build Images
-      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
-      #- name: Push Images
-      #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
+      - name: Update (fetch micro-services)
+        run: bash update.sh
       - name: Update docker-compose to 2.5, github actions still as 1.x
         run: curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
+      - name: Pull Current Images
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
+      - name: Build Images
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
+      - name: Push Images
+        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
       - name: Deploy - TEST
         run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth

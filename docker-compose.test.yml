@@ -52,3 +52,7 @@ secrets:
   db_pw:
     external: true
     #docker --context flatfee secret create db_pw .db_pw.txt
+
+# update with a script
+# ./cfgup.sh -n backend_env -m env/backend.env.test:/app/.env -s flatfee_backend -c flatfee
+# ./cfgup.sh -n auth_env -m env/fastauth.env.test:/home/nonroot/.env -s flatfee_auth -c flatfee

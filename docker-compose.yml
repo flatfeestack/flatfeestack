@@ -40,18 +40,6 @@ services:
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
-  #payout-nodejs:
-  #  image: ghcr.io/flatfeestack/flatfeestack/payout-nodejs:${TAG_IMAGE:-latest}
-  #  build: ./payout-nodejs
-  #  ports:
-  #    - 9086:9086
-  #  extra_hosts:
-  #    - ${EXTRA_HOSTS:-localhost:127.0.0.1}
-  #  env_file:
-  #    payout-nodejs/.env
-  #  depends_on:
-  #    - flextesa
-
   frontend:
     image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-latest}
     build: ./frontend
@@ -92,11 +80,4 @@ configs:
 secrets:
   db_pw:
     file: .db_pw.txt
-  # https://assets.tqtezos.com/docs/setup/2-sandbox/
-  #flextesa:
-  #  image: tqtezos/flextesa:20211206
-  #  environment:
-  #    - block_time=15
-  #  ports:
-  #    - 20000:20000
-  #  command: hangzbox start
+
