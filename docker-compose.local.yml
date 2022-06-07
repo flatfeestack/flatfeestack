@@ -9,6 +9,8 @@ services:
     ports:
       - "9082:9082"
   analysis-engine:
+    volumes:
+      - ./.repos:/app/repos
     ports:
       - "9083:9083"
   payout:
