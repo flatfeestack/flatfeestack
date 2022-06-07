@@ -47,3 +47,8 @@ configs:
   caddy_env:
     external: true
     #docker --context flatfee config create caddy_env Caddyfile
+
+secrets:
+  db_pw:
+    external: true
+    #docker --context flatfee secret create db_pw .db_pw.txt

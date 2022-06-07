@@ -24,7 +24,6 @@ services:
 
   analysis-engine:
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
-
     build: ./analysis-engine
     configs:
       - source: analysis_env
@@ -59,9 +58,13 @@ services:
 
   db:
     image: postgres:14-alpine
-    configs:
-      - source: db_env
-        target: /docker-entrypoint-initdb.d/0-init.sh
+    secrets:
+      - source: db_pw
+        target: /run/secrets/db_pw.txt
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: flatfeestack
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_pw.txt
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -83,11 +86,12 @@ configs:
     file: analysis-engine/.env
   payout_env:
     file: payout/.env
-  db_env:
-    file: .env
   caddy_env:
     file: Caddyfile
 
+secrets:
+  db_pw:
+    file: .db_pw.txt
   # https://assets.tqtezos.com/docs/setup/2-sandbox/
   #flextesa:
   #  image: tqtezos/flextesa:20211206
