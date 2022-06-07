@@ -1,4 +1,4 @@
-# Fleuaaatfeestack Docker
+# Flatfeestack Installation
 This repo combines all Flatfeestack packages using `docker-compose`.
 
 ## Build / Start / Stop
