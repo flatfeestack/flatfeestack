@@ -12,8 +12,6 @@ jobs:
     env:
       TAG_IMAGE: latest-test
     steps:
-      - name: yq - portable yaml processor
-        uses: mikefarah/yq@v4.25.2
       - uses: actions/checkout@v2
         with:
           token: ${{ secrets.CR_PAT_TOKEN }}
@@ -38,19 +36,7 @@ jobs:
       #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
       #- name: Push Images
       #  run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
-      - name: du
-        run: curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
-      - name: Version
-          #otherwise we see this error: Additional property profiles is not allowed. docker stack does not seem to understad --profiles yet.
-          #run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
-        run: docker-compose -v && which docker-compose
-      - name: Patch
-        run: |
-          echo version: "3.9" > docker-compose.base.yml
-      - name: Remove any profile from docker-compose
-        #otherwise we see this error: Additional property profiles is not allowed. docker stack does not seem to understad --profiles yet.
-        #run: yq e '.services|=with_entries(select(.value|has("profiles")|not))' docker-compose.yml > docker-compose.base.yml
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml config >> docker-compose.base.yml
-
+      - name: Update docker-compose to 2.5, github actions still as 1.x
+        run: curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
       - name: Deploy - TEST
         run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth
