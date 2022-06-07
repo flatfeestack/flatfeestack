@@ -7,5 +7,5 @@ tar cfz "flatfeestack-env-${now}.tar.gz" \
  fastauth/.env \
  payout/.env \
  Caddyfile \
- .db_pw.txt
+ .db_pw.txt \
  .env
