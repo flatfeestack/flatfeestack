@@ -1,0 +1,12 @@
+{
+  "name": "daa",
+  "description": "Code for the FlatFeeStack DAA",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "hardhat": "^2.11.2"
+  },
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  }
+}
