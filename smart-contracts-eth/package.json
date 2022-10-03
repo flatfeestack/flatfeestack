@@ -3,8 +3,8 @@
   "description": "Code for the FlatFeeStack DAA",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@openzeppelin/contracts": "^4.7.3",
     "hardhat": "^2.11.2",
-    "openzeppelin-solidity": "^4.6.0",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24"
   },
