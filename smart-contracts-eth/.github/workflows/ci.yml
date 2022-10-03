@@ -11,6 +11,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-          cache: 'npm'
+          cache: "npm"
       - run: npm ci
+      - run: "npm run prettify:check"
       - run: npm run test
