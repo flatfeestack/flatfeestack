@@ -4,6 +4,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "hardhat": "^2.11.2",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24"
@@ -13,5 +14,8 @@
     "prettify": "prettier --write .",
     "prettify:check": "prettier --check .",
     "test": "hardhat test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^4.8.0-rc.1"
   }
 }
