@@ -66,7 +66,7 @@ parse_params "$@"
 setup_colors
 
 command -v semver >/dev/null || {
-  die "${RED}Command 'semver' not found in \$PATH. Please, first install it"
+  die "${RED}Command 'semver' not found in \$PATH. Please, first install it${RED}"
 }
 
 if [ -z "${ACTION-}" ]; then
@@ -76,5 +76,6 @@ fi
 msg "${GREEN}Tagging and deploying..."
 CURRENT=$(git tag --sort=v:refname | tail -1)
 NEXT=$(semver "$CURRENT" -i $ACTION)
+msg "${GREEN}Deploy from $CURRENT to $NEXT"
 git tag "$NEXT"
 git push origin "$NEXT"

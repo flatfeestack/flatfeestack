@@ -29,7 +29,7 @@ jobs:
           known_hosts: ${{ secrets.FLATFEESTACK_KNOWN_HOSTS }}
 
       - name: Fetch latest source code
-        run: bash update.sh
+        run: bash update.sh --pat ${{ secrets.DEPLOY_PAT_TOM }}
       - name: Update docker-compose to 2.5, github actions still as 1.x
         run: curl -SL https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
       - name: Pull Current Images

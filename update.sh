@@ -9,6 +9,18 @@ cleanup() {
   # script cleanup here
 }
 
+usage() {
+  cat <<EOF
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [--no-color] [-p] [-d] [-t]
+Build and run Flatfeestack.
+Available options:
+-h, --help            Print this help and exit
+--no-color            Disable color in console
+-p, --pat             Use a personal access token (PAT) to clone the repo
+EOF
+  exit
+}
+
 setup_colors() {
   if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
     NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
@@ -19,6 +31,24 @@ setup_colors() {
 
 msg() {
   echo >&2 -e "${1-}"
+}
+
+parse_params() {
+  pat=''
+
+  while :; do
+    case "${1-}" in
+    -h | --help) usage ;;
+    --no-color) NO_COLOR=1 ;;
+    -p | --pat) pat="${2-}"; shift ;;
+    -?*) die "Unknown option: $1" ;;
+    *) break ;;
+    esac
+    shift
+  done
+
+  args=("$@")
+  return 0
 }
 
 check_update() {
@@ -37,16 +67,29 @@ check_update() {
   fi
 }
 
+git_clone(){
+  START_URL="git@github.com:"
+  START_URL_CONSOLE="${START_URL}"
+  if [ -n "${pat-}" ]; then
+    START_URL="https://${pat}@github.com/"
+    START_URL_CONSOLE="https://[PAT]@github.com/" #do not display sensitive information in the console
+  fi
+
+  msg "${GREEN}Cloning ${START_URL_CONSOLE}${REPO}/${name}.git${NOFORMAT}"
+  git clone "${START_URL}${REPO}/${name}".git
+  git -C "${name}" config pull.rebase false
+}
+
 setup_colors
 check_update "$0" "$@"
+parse_params "$@"
 
 REPO='flatfeestack'
 PROJECTS='analysis-engine backend fastauth frontend payout'
 
 for name in ${PROJECTS}; do
   if [ ! -d "$name" ]; then
-    git clone git@github.com:"$REPO"/"$name".git
-    git -C "$name" config pull.rebase false;
+    git_clone &
   else
     git -C "$name" pull &
   fi
@@ -54,7 +97,7 @@ done
 wait
 
 #landing page
-if [ ! -d "$name" ]; then
+if [ ! -d "frontend/landing-page" ]; then
   git -C "frontend" clone git@github.com:flatfeestack/landing-page.git
   git -C "frontend/landing-page" config pull.rebase false
 else
