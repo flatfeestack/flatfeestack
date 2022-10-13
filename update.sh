@@ -75,9 +75,9 @@ git_clone(){
     START_URL_CONSOLE="https://[PAT]@github.com/" #do not display sensitive information in the console
   fi
 
-  msg "${GREEN}Cloning ${START_URL_CONSOLE}${REPO}/${name}.git${NOFORMAT}"
-  git clone "${START_URL}${REPO}/${name}".git
-  git -C "${name}" config pull.rebase false
+  msg "${GREEN}Cloning ${START_URL_CONSOLE}${REPO}/$1.git${NOFORMAT}"
+  git clone "${START_URL}${REPO}/$1".git
+  git -C "$1" config pull.rebase false
 }
 
 setup_colors
@@ -89,7 +89,7 @@ PROJECTS='analysis-engine backend fastauth frontend payout'
 
 for name in ${PROJECTS}; do
   if [ ! -d "$name" ]; then
-    git_clone &
+    git_clone "$name" &
   else
     git -C "$name" pull &
   fi
@@ -97,12 +97,14 @@ done
 wait
 
 #landing page
-if [ ! -d "frontend/landing-page" ]; then
-  git_clone &
+cd frontend
+if [ ! -d "landing-page" ]; then
+  git_clone "landing-page" &
 else
-  git -C "frontend/landing-page" pull &
+  git -C "landing-page" pull &
 fi
 wait
+cd -
 
 for name in ${PROJECTS}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"
