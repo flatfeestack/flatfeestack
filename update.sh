@@ -98,8 +98,7 @@ wait
 
 #landing page
 if [ ! -d "frontend/landing-page" ]; then
-  git -C "frontend" clone git@github.com:flatfeestack/landing-page.git
-  git -C "frontend/landing-page" config pull.rebase false
+  git_clone &
 else
   git -C "frontend/landing-page" pull &
 fi
