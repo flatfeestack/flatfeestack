@@ -74,6 +74,7 @@ if [ -z "${ACTION-}" ]; then
 fi
 
 msg "${GREEN}Tagging and deploying..."
+git fetch --tags
 CURRENT=$(git tag --sort=v:refname | tail -1)
 NEXT=$(semver "$CURRENT" -i $ACTION)
 msg "${GREEN}Deploy from $CURRENT to $NEXT"
