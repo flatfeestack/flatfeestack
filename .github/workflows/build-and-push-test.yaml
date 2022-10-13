@@ -39,4 +39,4 @@ jobs:
       - name: Push Images
         run: docker-compose push
       - name: Deploy - TEST
-        run: BASE_PATH=/home/deploy/config/flatfeestack DOCKER_HOST="ssh://sibex@axelra.net:225" docker-compose-linux-x86_64  up -d --force-recreate
+        run: BASE_PATH=/home/deploy/config/flatfeestack DOCKER_HOST="ssh://deploy@axelra.net:225" docker-compose  up -d --force-recreate
