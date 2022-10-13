@@ -13,9 +13,6 @@ jobs:
       TAG_IMAGE: latest-test
     steps:
       - uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.CR_PAT_TOKEN }}
-          submodules: recursive
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
@@ -29,7 +26,7 @@ jobs:
           known_hosts: ${{ secrets.FLATFEESTACK_KNOWN_HOSTS }}
 
       - name: Fetch latest source code
-        run: bash update.sh --pat ${{ secrets.DEPLOY_PAT_TOM }}
+        run: bash update.sh --pat ${{ secrets.CR_PAT_TOKEN }}
       - name: Update docker-compose to 2.5, github actions still as 1.x
         run: curl -SL https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
       - name: Pull Current Images
