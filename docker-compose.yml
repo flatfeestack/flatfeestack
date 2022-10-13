@@ -73,8 +73,7 @@ services:
     env_file:
       - ${BASE_PATH:-.}/caddy/.env
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
