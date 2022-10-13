@@ -39,4 +39,7 @@ jobs:
       - name: Push Images
         run: docker-compose push
       - name: Deploy - TEST
-        run: BASE_PATH=/home/deploy/config/flatfeestack DOCKER_HOST="ssh://deploy@axelra.net:225" docker-compose  up -d --force-recreate
+        run: |
+          scp -P 225 docker-compose.yml deploy@axelra.net:/home/deploy
+          ssh -p 225 deploy@axelra.net "docker login -u ${{ secrets.CR_PAT_USERNAME }} -p ${{ secrets.CR_PAT_TOKEN }} ghcr.io"
+          ssh -p 225 deploy@axelra.net "BASE_PATH=/home/deploy/config/flatfeestack docker-compose up -d --force-recreate --no-build
