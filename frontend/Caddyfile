@@ -1,108 +1,15 @@
+{
+    admin off
+    auto_https off
+}
+
 :9085
-root * /var/www/html
 
-#https://caddy.community/t/solved-serving-pre-compressed-files-spa/10684
-##################################
-# *.html pre-compressed files
-##################################
-  @htmlBr {
-    path *.html
-    header Accept-Encoding *br*
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @htmlBr {
-    rewrite {path}.br
-    header Content-Encoding br
-    header Content-Type text/html
-  }
-  @htmlGzip {
-    path *.html
-    header Accept-Encoding *gzip*
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @htmlGzip {
-    rewrite {path}.gz
-    header Content-Encoding gzip
-    header Content-Type text/html
-  }
-  @html {
-    path *.html
-  }
-##################################
-
-
-##################################
-# *.js pre-compressed files
-##################################
-  @jsBr {
-    header Accept-Encoding *br*
-    path *.js
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @jsBr {
-    rewrite {path}.br
-    header Content-Encoding br
-    header Content-Type application/javascript
-  }
-  @jsGzip {
-    header Accept-Encoding *gzip*
-    path *.js
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @jsGzip {
-    rewrite {path}.gz
-    header Content-Encoding gzip
-    header Content-Type application/javascript
-  }
-  @js {
-    path *.js
-  }
-##################################
-
-
-##################################
-# *.css pre-compressed files
-##################################
-  @cssBr {
-    header Accept-Encoding *br*
-    path *.css
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @cssBr {
-    rewrite {path}.br
-    header Content-Encoding br
-    header Content-Type "text/css; charset=utf-8"
-  }
-  @cssGzip {
-    header Accept-Encoding *gzip*
-    path *.css
-    file {
-      try_files {path}.br
-    }
-  }
-  handle @cssGzip {
-    rewrite {path}.gz
-    header Content-Encoding gzip
-    header Content-Type "text/css; charset=utf-8"
-  }
-  @css {
-    path *.css
-  }
-##################################
-
-
-##################################
 # Support for SPA.
-try_files {path} /index.html
+try_files {path} {file} /index.html
 
-file_server
+file_server {
+    #https://misterorion.com/caddy-server-brotli/
+	#precompressed br gzip zstd
+	root /var/www/html
+}

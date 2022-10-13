@@ -1,12 +1,6 @@
 /node_modules
-/public/build
-/public/server
-/public/dependencies.txt
-/public/index.html
-/public/images
+/public
 /.vscode
-
 .DS_Store
-
 /.idea
 /landing-page
