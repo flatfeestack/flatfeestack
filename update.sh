@@ -21,21 +21,48 @@ msg() {
   echo >&2 -e "${1-}"
 }
 
+check_update() {
+  git fetch
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  HEADHASH=$(git rev-parse HEAD)
+  UPSTREAMHASH=$(git rev-parse $BRANCH@{upstream})
+  if [ "$HEADHASH" != "$UPSTREAMHASH" ]; then
+    msg "${BLUE}Updating the current repo first${NOFORMAT}"
+    git pull
+    msg "${GREEN}Running $0 again${NOFORMAT}"
+    exec "$@"
+    exit 0
+  else
+    msg "${GREEN}Repo is up to date${NOFORMAT}"
+  fi
+}
+
 setup_colors
+check_update "$0" "$@"
 
-projects='analysis-engine backend fastauth frontend payout'
+REPO='flatfeestack'
+PROJECTS='analysis-engine backend fastauth frontend payout'
 
-git pull &
-for name in ${projects}; do
-  [ ! -d "$name" ] && git clone git@github.com:flatfeestack/"$name".git;git -C "$name" config pull.rebase false;
-  git -C "$name" pull &
+for name in ${PROJECTS}; do
+  if [ ! -d "$name" ]; then
+    git clone git@github.com:"$REPO"/"$name".git
+    git -C "$name" config pull.rebase false;
+  else
+    git -C "$name" pull &
+  fi
 done
-#landing page
-[ ! -d "frontend/landing-page" ] && git -C "frontend" clone git@github.com:flatfeestack/landing-page.git;git -C "frontend/landing-page" config pull.rebase false;
-git -C "frontend/landing-page" pull &
 wait
 
-for name in ${projects}; do
+#landing page
+if [ ! -d "$name" ]; then
+  git -C "frontend" clone git@github.com:flatfeestack/landing-page.git
+  git -C "frontend/landing-page" config pull.rebase false
+else
+  git -C "frontend/landing-page" pull &
+fi
+wait
+
+for name in ${PROJECTS}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"
 done
 #landing page

@@ -1,0 +1,47 @@
+{
+    admin off
+}
+
+{$HOST} {
+  handle_path /auth/* {
+    reverse_proxy auth:9081 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
+  handle_path /backend/* {
+    reverse_proxy backend:9082 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
+  handle_path /ws/* {
+    reverse_proxy backend:9082 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
+  handle_path /analysis/* {
+    reverse_proxy analysis-engine:9083 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
+  handle /hooks/* {
+    reverse_proxy backend:9082 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
+  handle {
+    reverse_proxy frontend:9085 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+}

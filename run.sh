@@ -68,7 +68,7 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db reverse-proxy openethereum auth analysis-engine backend payout frontend'
+  internal='db caddy openethereum auth analysis-engine backend payout frontend'
 
   while :; do
     case "${1-}" in
@@ -124,4 +124,4 @@ fi
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
 msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}"
-EXTRA_HOSTS="${external}" docker-compose -f docker-compose-yml -f docker-compose.local.yml up --abort-on-container-exit ${internal}
+EXTRA_HOSTS="${external}" docker-compose up --abort-on-container-exit ${internal}

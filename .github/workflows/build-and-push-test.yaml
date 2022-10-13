@@ -28,15 +28,15 @@ jobs:
           key: ${{ secrets.FLATFEESTACK_SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.FLATFEESTACK_KNOWN_HOSTS }}
 
-      - name: Update (fetch micro-services)
+      - name: Fetch latest source code
         run: bash update.sh
       - name: Update docker-compose to 2.5, github actions still as 1.x
-        run: curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
+        run: curl -SL https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
       - name: Pull Current Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml pull || true
+        run: docker-compose pull || true
       - name: Build Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml build
+        run: docker-compose build
       - name: Push Images
-        run: docker-compose -f docker-compose.yml -f docker-compose.test.yml push
+        run: docker-compose push
       - name: Deploy - TEST
-        run: DOCKER_HOST="ssh://sibex@axelra.net:2222" docker stack deploy -c docker-compose.yml -c docker-compose.test.yml flatfee --with-registry-auth
+        run: BASE_PATH=/home/deploy/config/flatfeestack DOCKER_HOST="ssh://sibex@axelra.net:225" docker-compose-linux-x86_64  up -d --force-recreate
