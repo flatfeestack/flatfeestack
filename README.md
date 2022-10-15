@@ -1,21 +1,39 @@
 # Flatfeestack Installation
 This repo combines all Flatfeestack packages using `docker-compose`.
 
-## Build / Start / Stop
+## Build / Start / Stop (local development)
 
 ```shell script
-git clone --recurse-submodules https://github.com/flatfeestack/flatfeestack.git
-cd flatfeestack
-docker-compose up -d --build
+./update.sh
+
+# Create example .env files
+cp analysis-engine/example.env analysis-engine/.env
+cp backend/example.env backend/.env
+cp fastauth/example.env fastauth/.env
+cp payout/.example.env payout/.env
+echo "HOST=http://localhost:8080" >> caddy/.env
+
+mkdir db
+echo "POSTGRES_PASSWORD=password" > db/.env
+echo "POSTGRES_USER=postgres" >> db/.env
+echo "POSTGRES_DB=flatfeestack" >> db/.env
+
+# Build and run FlatFeeStack
+docker compose build
+docker compose up -d db
+docker compose up
 ```
 
-For ubuntu, install:
+To register a user:
 
-```shell script
-sudo apt install net-tools
-```
+1. Open `localhost:8080` and register a new user.
+2. Connect to the database: `docker exec -it flatfeestack-db-1 psql -U postgres`
+3. Switch to the FlatFeeStack database: `\c flatfeestack`
+4. Show content of the `auth` table: `TABLE auth;`.
+5. Get the token for the user you just registered.
+6. Exit the PSQL session and confirm the user registration: `curl "http://localhost:9081/confirm/signup/{email}/{token}"`
 
-if you want to stop, and clean everything up:
+If you want to stop, and clean everything up:
 
 ```shell script
 docker-compose down -v
