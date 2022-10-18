@@ -16,6 +16,33 @@ describe("Membership", () => {
     return { delegate, whitelisterOne, whitelisterTwo, newUser, membership };
   }
 
+  async function deployFixtureWhitelisted() {
+    const [delegate, whitelisterOne, whitelisterTwo, newUserWhitelisted] =
+      await ethers.getSigners();
+    const Membership = await ethers.getContractFactory("Membership");
+    const membership = await upgrades.deployProxy(Membership, [
+      delegate.address,
+      whitelisterOne.address,
+      whitelisterTwo.address,
+    ]);
+    await membership.deployed();
+
+    await membership.connect(newUserWhitelisted).requestMembership();
+    await membership
+      .connect(whitelisterOne)
+      .whitelistMember(newUserWhitelisted.address);
+    await membership
+      .connect(whitelisterTwo)
+      .whitelistMember(newUserWhitelisted.address);
+    return {
+      delegate,
+      whitelisterOne,
+      whitelisterTwo,
+      newUserWhitelisted,
+      membership,
+    };
+  }
+
   describe("requestMembership", () => {
     it("request membership emits event", async () => {
       const { newUser, membership } = await deployFixture();
@@ -73,14 +100,13 @@ describe("Membership", () => {
     });
 
     it("member can be added as whitelister by delegate", async () => {
-      const { delegate, whitelisterOne, whitelisterTwo, newUser, membership } =
-        await deployFixture();
-      await membership.connect(newUser).requestMembership();
-      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
-      await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
-      await expect(membership.connect(delegate).addWhitelister(newUser.address))
+      const { delegate, newUserWhitelisted, membership } =
+        await deployFixtureWhitelisted();
+      await expect(
+        membership.connect(delegate).addWhitelister(newUserWhitelisted.address)
+      )
         .to.emit(membership, "ChangeInWhiteLister")
-        .withArgs(newUser.address, true);
+        .withArgs(newUserWhitelisted.address, true);
     });
   });
 
@@ -148,12 +174,11 @@ describe("Membership", () => {
     });
 
     it("whitelister can be removed by delegate", async () => {
-      const { delegate, whitelisterOne, whitelisterTwo, newUser, membership } =
-        await deployFixture();
-      await membership.connect(newUser).requestMembership();
-      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
-      await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
-      await membership.connect(delegate).addWhitelister(newUser.address);
+      const { delegate, whitelisterOne, newUserWhitelisted, membership } =
+        await deployFixtureWhitelisted();
+      await membership
+        .connect(delegate)
+        .addWhitelister(newUserWhitelisted.address);
       await expect(
         membership.connect(delegate).removeWhitelister(whitelisterOne.address)
       )
@@ -163,7 +188,9 @@ describe("Membership", () => {
       expect(await membership.isWhitelister(whitelisterOne.address)).to.equal(
         false
       );
-      expect(await membership.isWhitelister(newUser.address)).to.equal(true);
+      expect(
+        await membership.isWhitelister(newUserWhitelisted.address)
+      ).to.equal(true);
     });
   });
 
@@ -232,6 +259,49 @@ describe("Membership", () => {
       expect(await membership.membershipFee()).to.eq(
         ethers.utils.parseUnits("1", 1)
       );
+    });
+  });
+
+  describe("setDelegate", () => {
+    it("non member can't become delegate", async () => {
+      const { newUser, membership } = await deployFixture();
+      await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
+        "Has to be member to become delegate"
+      );
+    });
+
+    it("requesting member can't become delegate", async () => {
+      const { newUser, membership } = await deployFixture();
+      await membership.connect(newUser).requestMembership();
+      await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
+        "Has to be member to become delegate"
+      );
+    });
+
+    it("requesting member whitelisted by one can't become delegate", async () => {
+      const { newUser, whitelisterOne, membership } = await deployFixture();
+      await membership.connect(newUser).requestMembership();
+      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
+      await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
+        "Has to be member to become delegate"
+      );
+    });
+
+    it("delegate can't become delegate", async () => {
+      const { delegate, membership } = await deployFixture();
+      await expect(membership.setDelegate(delegate.address)).to.be.revertedWith(
+        "Can't set the delegate to the same delegate again"
+      );
+    });
+
+    it("set new delegate emits event", async () => {
+      const { delegate, newUserWhitelisted, membership } =
+        await deployFixtureWhitelisted();
+      await expect(membership.setDelegate(newUserWhitelisted.address))
+        .to.emit(membership, "ChangeInDelegate")
+        .withArgs(newUserWhitelisted.address, true)
+        .and.to.emit(membership, "ChangeInDelegate")
+        .withArgs(delegate.address, false);
     });
   });
 });
