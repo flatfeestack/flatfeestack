@@ -214,4 +214,18 @@ describe("Membership", () => {
       );
     });
   });
+
+  describe("setMembershipFee", () => {
+    it("allows to set the membership fee", async () => {
+      const { delegate, membership } = await deployFixture();
+
+      await membership
+        .connect(delegate)
+        .setMembershipFee(ethers.utils.parseUnits("1", 1));
+
+      expect(await membership.membershipFee()).to.eq(
+        ethers.utils.parseUnits("1", 1)
+      );
+    });
+  });
 });

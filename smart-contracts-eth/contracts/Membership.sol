@@ -201,4 +201,8 @@ contract Membership is Initializable {
         nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
         // TODO: Forward payment to treasury
     }
+
+    function setMembershipFee(uint256 newMembershipFee) public delegateOnly {
+        membershipFee = newMembershipFee;
+    }
 }
