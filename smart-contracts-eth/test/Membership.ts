@@ -326,4 +326,103 @@ describe("Membership", () => {
         .withArgs(delegate.address, false);
     });
   });
+
+  describe("removeMember", () => {
+    it("cannot leave association if they're no member", async () => {
+      const { newUser, membership } = await deployFixture();
+
+      await expect(
+        membership.connect(newUser).removeMember(newUser.address)
+      ).to.be.revertedWith("Address is not a member!");
+    });
+
+    it("can leave association if they request membership", async () => {
+      const { newUser, membership } = await deployFixture();
+
+      await membership.connect(newUser).requestMembership();
+      await expect(membership.connect(newUser).removeMember(newUser.address))
+        .to.emit(membership, "ChangeInMembershipStatus")
+        .withArgs(newUser.address, 0);
+    });
+
+    it("can leave association if they were whitelisted by one member", async () => {
+      const { newUser, membership, whitelisterOne } = await deployFixture();
+
+      await membership.connect(newUser).requestMembership();
+      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
+
+      await expect(membership.connect(newUser).removeMember(newUser.address))
+        .to.emit(membership, "ChangeInMembershipStatus")
+        .withArgs(newUser.address, 0);
+    });
+
+    it("can leave association if they are member", async () => {
+      const { newUserWhitelisted, membership } =
+        await deployFixtureWhitelisted();
+
+      await expect(
+        membership
+          .connect(newUserWhitelisted)
+          .removeMember(newUserWhitelisted.address)
+      )
+        .to.emit(membership, "ChangeInMembershipStatus")
+        .withArgs(newUserWhitelisted.address, 0);
+    });
+
+    it("can leave association if they are whitelister", async () => {
+      const { whitelisterOne, membership, delegate, newUserWhitelisted } =
+        await deployFixtureWhitelisted();
+
+      // delegate a replacement for our whitelisterOne
+      await membership
+        .connect(delegate)
+        .addWhitelister(newUserWhitelisted.address);
+
+      await expect(
+        membership.connect(whitelisterOne).removeMember(whitelisterOne.address)
+      )
+        .to.emit(membership, "ChangeInMembershipStatus")
+        .withArgs(whitelisterOne.address, 0)
+        .and.to.emit(membership, "ChangeInWhiteLister")
+        .withArgs(whitelisterOne.address, false);
+    });
+
+    it("cannot remove other members if they're a normal member", async () => {
+      const { newUserWhitelisted, membership, whitelisterOne } =
+        await deployFixtureWhitelisted();
+
+      await expect(
+        membership
+          .connect(newUserWhitelisted)
+          .removeMember(whitelisterOne.address)
+      ).to.be.revertedWith("Restricted to delegate!");
+    });
+
+    it("can remove other members if they're a delegate", async () => {
+      const { newUserWhitelisted, membership, delegate } =
+        await deployFixtureWhitelisted();
+
+      await expect(
+        membership.connect(delegate).removeMember(newUserWhitelisted.address)
+      )
+        .to.emit(membership, "ChangeInMembershipStatus")
+        .withArgs(newUserWhitelisted.address, 0);
+    });
+
+    it("delegate cannot leave association", async () => {
+      const { membership, delegate } = await deployFixtureWhitelisted();
+
+      await expect(
+        membership.connect(delegate).removeMember(delegate.address)
+      ).to.be.revertedWith("Delegate cannot leave!");
+    });
+
+    it("whitelister cannot leave if minimum is not met", async () => {
+      const { membership, whitelisterOne } = await deployFixtureWhitelisted();
+
+      await expect(
+        membership.connect(whitelisterOne).removeMember(whitelisterOne.address)
+      ).to.be.revertedWith("Minimum whitelister not met!");
+    });
+  });
 });

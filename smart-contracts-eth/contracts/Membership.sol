@@ -70,6 +70,14 @@ contract Membership is Initializable {
         _;
     }
 
+    modifier delegateOrWhitelisterOnly() {
+        require(
+            msg.sender == delegate || isWhitelister(msg.sender),
+            "whitelister / represetative only"
+        );
+        _;
+    }
+
     function initialize(
         address _delegate,
         address _whitelisterOne,
@@ -146,9 +154,9 @@ contract Membership is Initializable {
         return true;
     }
 
-    function removeWhitelister(address _adr)
-        public
-        delegateOnly
+    function _removeWhitelister(address _adr)
+        internal
+        delegateOrWhitelisterOnly
         returns (bool)
     {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
@@ -156,6 +164,7 @@ contract Membership is Initializable {
             whitelisterListLength > minimumWhitelister,
             "Minimum whitelister not met!"
         );
+
         uint256 i;
         for (i = 0; i < whitelisterListLength - 1; i++) {
             if (whitelisterList[i] == _adr) {
@@ -168,6 +177,16 @@ contract Membership is Initializable {
         whitelisterListLength--;
         emit ChangeInWhiteLister(_adr, false);
         return true;
+    }
+
+    function removeWhitelister(address _adr)
+        public
+        delegateOnly
+        returns (bool)
+    {
+        require(isWhitelister(_adr) == true, "Is no whitelister!");
+
+        return _removeWhitelister(_adr);
     }
 
     function whitelistMember(address _adr)
@@ -225,6 +244,29 @@ contract Membership is Initializable {
         emit ChangeInDelegate(oldDelegate, false);
         emit ChangeInDelegate(delegate, true);
         return true;
+    }
+
+    function removeMember(address _adr) public {
+        require(
+            membershipList[_adr] != MembershipStatus.nonMember,
+            "Address is not a member!"
+        );
+
+        require(delegate != _adr, "Delegate cannot leave!");
+
+        if (msg.sender != _adr) {
+            require(msg.sender == delegate, "Restricted to delegate!");
+        }
+
+        if (isWhitelister(_adr)) {
+            _removeWhitelister(_adr);
+        }
+
+        membershipList[_adr] = MembershipStatus.nonMember;
+        emit ChangeInMembershipStatus(
+            _adr,
+            uint256(MembershipStatus.nonMember)
+        );
     }
 }
 /* solhint-enable not-rely-on-time */
