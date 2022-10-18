@@ -183,7 +183,7 @@ describe("Membership", () => {
       ).to.be.revertedWith("This function can only be called by members.");
     });
 
-    it("cannot be called by members with one membership approval", async () => {
+    it("cannot be called by members with one whitelister approval", async () => {
       const { newUser, membership, whitelisterOne } = await deployFixture();
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
@@ -192,25 +192,31 @@ describe("Membership", () => {
       ).to.be.revertedWith("This function can only be called by members.");
     });
 
-    it("allows to membership fees", async () => {
-      const { newUser, membership, whitelisterOne, whitelisterTwo } =
-        await deployFixture();
+    it("reverts if payment amount doesn't cover membership fee", async () => {
+      const { delegate, membership } = await deployFixture();
 
-      await membership.connect(newUser).requestMembership();
-      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
-      await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
+      await expect(
+        membership.connect(delegate).payMembershipFee({
+          value: ethers.utils.parseUnits("3", 3),
+        })
+      ).to.be.revertedWith("Membership fee not fully covered.");
+    });
 
-      await membership.connect(newUser).payMembershipFee({
-        value: ethers.utils.parseUnits("3", 6),
+    it("allows to pay membership fees", async () => {
+      const { delegate, membership } = await deployFixture();
+      const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
+
+      await membership.connect(delegate).payMembershipFee({
+        value: toBePaid,
       });
 
       const blockNumBefore = await ethers.provider.getBlockNumber();
       const blockBefore = await ethers.provider.getBlock(blockNumBefore);
       expect(
-        await membership.nextMembershipFeePayment(newUser.address)
+        await membership.nextMembershipFeePayment(delegate.address)
       ).to.greaterThan(blockBefore.timestamp);
       expect(await membership.provider.getBalance(membership.address)).to.eq(
-        ethers.utils.parseUnits("3", 6)
+        toBePaid
       );
     });
   });

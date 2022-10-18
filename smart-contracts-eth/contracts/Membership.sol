@@ -78,6 +78,10 @@ contract Membership is Initializable {
         membershipList[_whitelisterOne] = membershipStatus.isMember;
         membershipList[_whitelisterTwo] = membershipStatus.isMember;
 
+        nextMembershipFeePayment[_delegate] = block.timestamp;
+        nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
+        nextMembershipFeePayment[_whitelisterTwo] = block.timestamp;
+
         emit ChangeInMembershipStatus(
             delegate,
             uint256(membershipStatus.isMember)
