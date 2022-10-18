@@ -75,29 +75,29 @@ describe("Wallet", () => {
         expectedContribution
       );
     });
+  });
 
-    describe("withdrawMoney", () => {
-      it("cannot withdraw without allowance", async () => {
-        const { otherAccount, wallet } = await deployFixture();
+  describe("withdrawMoney", () => {
+    it("cannot withdraw without allowance", async () => {
+      const { otherAccount, wallet } = await deployFixture();
 
-        await expect(
-          wallet.withdrawMoney(otherAccount.address)
-        ).to.be.revertedWith("cannot withdraw without any allowance!");
-      });
+      await expect(
+        wallet.withdrawMoney(otherAccount.address)
+      ).to.be.revertedWith("cannot withdraw without any allowance!");
+    });
 
-      it("can withdraw allowance", async () => {
-        const { otherAccount, wallet } = await deployFixture();
-        const withdrawAmount = ethers.utils.parseEther("0.5");
+    it("can withdraw allowance", async () => {
+      const { otherAccount, wallet } = await deployFixture();
+      const withdrawAmount = ethers.utils.parseEther("0.5");
 
-        await wallet.increaseAllowance(otherAccount.address, withdrawAmount);
+      await wallet.increaseAllowance(otherAccount.address, withdrawAmount);
 
-        await expect(
-          wallet.withdrawMoney(otherAccount.address)
-        ).to.changeEtherBalances(
-          [otherAccount, wallet],
-          [withdrawAmount, withdrawAmount.mul(BigInt(-1))]
-        );
-      });
+      await expect(
+        wallet.withdrawMoney(otherAccount.address)
+      ).to.changeEtherBalances(
+        [otherAccount, wallet],
+        [withdrawAmount, withdrawAmount.mul(BigInt(-1))]
+      );
     });
   });
 });
