@@ -32,6 +32,11 @@ contract Membership is Initializable {
         bool removedOrAdded
     );
 
+    event ChangeInDelegate(
+        address indexed concernedDelegate,
+        bool removedOrAdded
+    );
+
     modifier nonMemberOnly() {
         require(
             membershipList[msg.sender] == membershipStatus.nonMember,
@@ -208,5 +213,22 @@ contract Membership is Initializable {
 
     function setMembershipFee(uint256 newMembershipFee) public delegateOnly {
         membershipFee = newMembershipFee;
+    }
+
+    function setDelegate(address _adr) public returns (bool) {
+        // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
+        require(
+            membershipList[_adr] == membershipStatus.isMember,
+            "Has to be member to become delegate"
+        );
+        require(
+            delegate != _adr,
+            "Can't set the delegate to the same delegate again"
+        );
+        address oldDelegate = delegate;
+        delegate = _adr;
+        emit ChangeInDelegate(oldDelegate, false);
+        emit ChangeInDelegate(delegate, true);
+        return true;
     }
 }
