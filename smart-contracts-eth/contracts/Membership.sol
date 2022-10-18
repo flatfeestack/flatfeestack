@@ -3,12 +3,16 @@ pragma solidity ^0.8.17;
 
 import "./Wallet.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
 // we rely on time to track membership payments
 // however, we don't care about second-level precision, as we deal with a much longer time period
 // there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
 /* solhint-disable not-rely-on-time */
-contract Membership is Initializable {
+contract Membership is Initializable, IVotesUpgradeable {
+    using CheckpointsUpgradeable for CheckpointsUpgradeable.History;
+
     enum MembershipStatus {
         nonMember,
         requesting,
@@ -16,7 +20,7 @@ contract Membership is Initializable {
         isMember
     }
 
-    address public delegate;
+    address public representative;
     uint256 public minimumWhitelister;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
@@ -29,6 +33,10 @@ contract Membership is Initializable {
 
     mapping(address => uint256) public nextMembershipFeePayment;
 
+    // used for IVotes
+    mapping(address => CheckpointsUpgradeable.History) private _voteCheckpoints;
+    CheckpointsUpgradeable.History private _totalCheckpoints;
+
     event ChangeInMembershipStatus(
         address indexed accountAddress,
         uint256 currentStatus
@@ -39,8 +47,8 @@ contract Membership is Initializable {
         bool removedOrAdded
     );
 
-    event ChangeInDelegate(
-        address indexed concernedDelegate,
+    event ChangeInRepresentative(
+        address indexed concernedRepresentative,
         bool removedOrAdded
     );
 
@@ -60,8 +68,8 @@ contract Membership is Initializable {
         _;
     }
 
-    modifier delegateOnly() {
-        require(msg.sender == delegate, "only delegate");
+    modifier representativeOnly() {
+        require(msg.sender == representative, "only representative");
         _;
     }
 
@@ -70,39 +78,44 @@ contract Membership is Initializable {
         _;
     }
 
-    modifier delegateOrWhitelisterOnly() {
+    modifier representativeOrWhitelisterOnly() {
         require(
-            msg.sender == delegate || isWhitelister(msg.sender),
+            msg.sender == representative || isWhitelister(msg.sender),
             "whitelister / represetative only"
         );
         _;
     }
 
     function initialize(
-        address _delegate,
+        address _representative,
         address _whitelisterOne,
         address _whitelisterTwo,
         Wallet _walletContract
     ) public initializer {
         minimumWhitelister = 2;
         whitelisterListLength = 2;
-        delegate = _delegate;
+        representative = _representative;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
 
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
 
-        membershipList[_delegate] = MembershipStatus.isMember;
+        membershipList[_representative] = MembershipStatus.isMember;
         membershipList[_whitelisterOne] = MembershipStatus.isMember;
         membershipList[_whitelisterTwo] = MembershipStatus.isMember;
 
-        nextMembershipFeePayment[_delegate] = block.timestamp;
+        nextMembershipFeePayment[_representative] = block.timestamp;
         nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
         nextMembershipFeePayment[_whitelisterTwo] = block.timestamp;
 
+        _totalCheckpoints.push(_add, 3);
+        _voteCheckpoints[_representative].push(_add, 1);
+        _voteCheckpoints[_whitelisterOne].push(_add, 1);
+        _voteCheckpoints[_whitelisterTwo].push(_add, 1);
+
         emit ChangeInMembershipStatus(
-            delegate,
+            representative,
             uint256(MembershipStatus.isMember)
         );
 
@@ -141,8 +154,12 @@ contract Membership is Initializable {
         return check;
     }
 
-    function addWhitelister(address _adr) public delegateOnly returns (bool) {
-        require(delegate != _adr, "Can't become whitelister!");
+    function addWhitelister(address _adr)
+        public
+        representativeOnly
+        returns (bool)
+    {
+        require(representative != _adr, "Can't become whitelister!");
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
@@ -156,7 +173,7 @@ contract Membership is Initializable {
 
     function _removeWhitelister(address _adr)
         internal
-        delegateOrWhitelisterOnly
+        representativeOrWhitelisterOnly
         returns (bool)
     {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
@@ -181,7 +198,7 @@ contract Membership is Initializable {
 
     function removeWhitelister(address _adr)
         public
-        delegateOnly
+        representativeOnly
         returns (bool)
     {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
@@ -210,6 +227,10 @@ contract Membership is Initializable {
         } else {
             membershipList[_adr] = MembershipStatus.isMember;
             nextMembershipFeePayment[_adr] = block.timestamp;
+
+            _totalCheckpoints.push(_add, 1);
+            _voteCheckpoints[_adr].push(_add, 1);
+
             emit ChangeInMembershipStatus(
                 _adr,
                 uint256(MembershipStatus.isMember)
@@ -228,21 +249,24 @@ contract Membership is Initializable {
         _wallet.payContribution{value: msg.value}(msg.sender);
     }
 
-    function setMembershipFee(uint256 newMembershipFee) public delegateOnly {
+    function setMembershipFee(uint256 newMembershipFee)
+        public
+        representativeOnly
+    {
         membershipFee = newMembershipFee;
     }
 
-    function setDelegate(address _adr) public returns (bool) {
+    function setRepresentative(address _adr) public returns (bool) {
         // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
         require(
             membershipList[_adr] == MembershipStatus.isMember,
-            "Only members can become delegate"
+            "Address is not a member!"
         );
-        require(delegate != _adr, "Address is already the delegate!");
-        address oldDelegate = delegate;
-        delegate = _adr;
-        emit ChangeInDelegate(oldDelegate, false);
-        emit ChangeInDelegate(delegate, true);
+        require(representative != _adr, "Address is the representative!");
+        address oldRepresentative = representative;
+        representative = _adr;
+        emit ChangeInRepresentative(oldRepresentative, false);
+        emit ChangeInRepresentative(representative, true);
         return true;
     }
 
@@ -252,14 +276,22 @@ contract Membership is Initializable {
             "Address is not a member!"
         );
 
-        require(delegate != _adr, "Delegate cannot leave!");
+        require(representative != _adr, "Representative cannot leave!");
 
         if (msg.sender != _adr) {
-            require(msg.sender == delegate, "Restricted to delegate!");
+            require(
+                msg.sender == representative,
+                "Restricted to representative!"
+            );
         }
 
         if (isWhitelister(_adr)) {
             _removeWhitelister(_adr);
+        }
+
+        if (membershipList[_adr] == MembershipStatus.isMember) {
+            _totalCheckpoints.push(_subtract, 1);
+            _voteCheckpoints[_adr].push(_subtract, 1);
         }
 
         membershipList[_adr] = MembershipStatus.nonMember;
@@ -267,6 +299,67 @@ contract Membership is Initializable {
             _adr,
             uint256(MembershipStatus.nonMember)
         );
+    }
+
+    function getVotes(address account)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _voteCheckpoints[account].latest();
+    }
+
+    function getPastVotes(address account, uint256 blockNumber)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _voteCheckpoints[account].getAtProbablyRecentBlock(blockNumber);
+    }
+
+    function getPastTotalSupply(uint256 blockNumber)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        require(blockNumber < block.number, "Votes: block not yet mined");
+        return _totalCheckpoints.getAtProbablyRecentBlock(blockNumber);
+    }
+
+    /* solhint-disable no-empty-blocks */
+    function delegate(address delegatee) public virtual override {
+        // doesnt need to anything
+    }
+
+    function delegateBySig(
+        address delegatee,
+        uint256 nonce,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        // is fine to be empty
+    }
+
+    /* solhint-enable no-empty-blocks */
+
+    function delegates(address account) external pure returns (address) {
+        return account;
+    }
+
+    function _add(uint256 a, uint256 b) private pure returns (uint256) {
+        return a + b;
+    }
+
+    function _subtract(uint256 a, uint256 b) private pure returns (uint256) {
+        return a - b;
     }
 }
 /* solhint-enable not-rely-on-time */
