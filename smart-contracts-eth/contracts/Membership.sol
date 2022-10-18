@@ -14,10 +14,13 @@ contract Membership is Initializable {
     address public delegate;
     uint256 MINIMUM_WHITELISTER;
     uint256 public whitelisterListLength;
+    uint256 public membershipFee;
 
     mapping(uint256 => address) public whitelisterList;
     mapping(address => membershipStatus) internal membershipList;
     mapping(address => address) internal firstWhiteLister;
+
+    mapping(address => uint256) public nextMembershipFeePayment;
 
     event ChangeInMembershipStatus(
         address indexed accountAddress,
@@ -33,6 +36,14 @@ contract Membership is Initializable {
         require(
             membershipList[msg.sender] == membershipStatus.nonMember,
             "This function can only be called by non-members"
+        );
+        _;
+    }
+
+    modifier memberOnly() {
+        require(
+            membershipList[msg.sender] == membershipStatus.isMember,
+            "This function can only be called by members."
         );
         _;
     }
@@ -58,19 +69,25 @@ contract Membership is Initializable {
         MINIMUM_WHITELISTER = 2;
         whitelisterListLength = 2;
         delegate = _delegate;
+        membershipFee = 30000 wei;
+
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
+
         membershipList[_delegate] = membershipStatus.isMember;
         membershipList[_whitelisterOne] = membershipStatus.isMember;
         membershipList[_whitelisterTwo] = membershipStatus.isMember;
+
         emit ChangeInMembershipStatus(
             delegate,
             uint256(membershipStatus.isMember)
         );
+
         emit ChangeInMembershipStatus(
             _whitelisterOne,
             uint256(membershipStatus.isMember)
         );
+
         emit ChangeInMembershipStatus(
             _whitelisterTwo,
             uint256(membershipStatus.isMember)
@@ -163,11 +180,25 @@ contract Membership is Initializable {
             );
         } else {
             membershipList[_adr] = membershipStatus.isMember;
+            nextMembershipFeePayment[_adr] = block.timestamp;
             emit ChangeInMembershipStatus(
                 _adr,
                 uint256(membershipStatus.isMember)
             );
         }
         return true;
+    }
+
+    function payMembershipFee() public payable memberOnly {
+        uint256 nextDueDate = nextMembershipFeePayment[msg.sender];
+        require(nextDueDate <= block.timestamp, "Membership fee not due yet.");
+        // we don't say "no" if somebody pays more than they should :)
+        require(
+            msg.value >= membershipFee,
+            "Membership fee not fully covered."
+        );
+
+        nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
+        // TODO: Forward payment to treasury
     }
 }
