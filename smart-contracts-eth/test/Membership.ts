@@ -54,7 +54,7 @@ describe("Membership", () => {
     it("member can't request membership again", async () => {
       const { membership } = await deployFixture();
       await expect(membership.requestMembership()).to.be.revertedWith(
-        "This function can only be called by non-members"
+        "only non-members"
       );
     });
   });
@@ -199,7 +199,7 @@ describe("Membership", () => {
       const { membership, newUser } = await deployFixture();
       await expect(
         membership.connect(newUser).payMembershipFee()
-      ).to.be.revertedWith("This function can only be called by members.");
+      ).to.be.revertedWith("only members");
     });
 
     it("cannot be called by requesting members", async () => {
@@ -207,7 +207,7 @@ describe("Membership", () => {
       await membership.connect(newUser).requestMembership();
       await expect(
         membership.connect(newUser).payMembershipFee()
-      ).to.be.revertedWith("This function can only be called by members.");
+      ).to.be.revertedWith("only members");
     });
 
     it("cannot be called by members with one whitelister approval", async () => {
@@ -216,7 +216,7 @@ describe("Membership", () => {
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await expect(
         membership.connect(newUser).payMembershipFee()
-      ).to.be.revertedWith("This function can only be called by members.");
+      ).to.be.revertedWith("only members");
     });
 
     it("reverts if payment amount doesn't cover membership fee", async () => {

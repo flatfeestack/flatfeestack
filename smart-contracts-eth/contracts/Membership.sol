@@ -12,7 +12,7 @@ contract Membership is Initializable {
     }
 
     address public delegate;
-    uint256 MINIMUM_WHITELISTER;
+    uint256 public MINIMUM_WHITELISTER;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
 
@@ -40,7 +40,7 @@ contract Membership is Initializable {
     modifier nonMemberOnly() {
         require(
             membershipList[msg.sender] == membershipStatus.nonMember,
-            "This function can only be called by non-members"
+            "only non-members"
         );
         _;
     }
@@ -48,21 +48,18 @@ contract Membership is Initializable {
     modifier memberOnly() {
         require(
             membershipList[msg.sender] == membershipStatus.isMember,
-            "This function can only be called by members."
+            "only members"
         );
         _;
     }
 
     modifier delegateOnly() {
-        require(
-            msg.sender == delegate,
-            "This function can only be called by a delegate"
-        );
+        require(msg.sender == delegate, "only delegate");
         _;
     }
 
     modifier whitelisterOnly() {
-        require(isWhitelister(msg.sender) == true);
+        require(isWhitelister(msg.sender) == true, "only whitelisters");
         _;
     }
 
