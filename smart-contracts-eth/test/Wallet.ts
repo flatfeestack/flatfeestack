@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 
 describe("Wallet", () => {
@@ -6,7 +6,8 @@ describe("Wallet", () => {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
     const Wallet = await ethers.getContractFactory("Wallet");
-    const wallet = await Wallet.deploy();
+    const wallet = await upgrades.deployProxy(Wallet);
+    await wallet.deployed();
 
     await owner.sendTransaction({
       to: wallet.address,

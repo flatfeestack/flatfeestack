@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Wallet is Ownable {
+contract Wallet is Initializable, OwnableUpgradeable {
     uint256 public totalBalance;
     uint256 public totalAllowance;
 
@@ -26,6 +27,10 @@ contract Wallet is Ownable {
         uint256 Amount,
         uint256 Timestamp
     );
+
+    function initialize() public initializer {
+        __Ownable_init();
+    }
 
     receive() external payable {
         totalBalance += msg.value;
@@ -84,15 +89,5 @@ contract Wallet is Ownable {
             withdrawingAllowance[_adr] = 0;
             return false;
         }
-    }
-
-    // TODO: How would this interract with upgradable?
-    function changeWalletAddress(address payable _newAdr)
-        public
-        onlyOwner
-        returns (bool)
-    {
-        selfdestruct(_newAdr);
-        return true;
     }
 }
