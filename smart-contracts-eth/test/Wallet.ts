@@ -101,4 +101,18 @@ describe("Wallet", () => {
       );
     });
   });
+
+  describe("knownSender", () => {
+    it("should add and remove known sender", async () => {
+      const { owner, otherAccount, wallet } = await deployFixture();
+      expect(await wallet.isKnownSender(owner.address)).to.be.true;
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.false;
+
+      await wallet.addKnownSender(otherAccount.address);
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.true;
+
+      await wallet.removeKnownSender(otherAccount.address);
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.false;
+    });
+  });
 });

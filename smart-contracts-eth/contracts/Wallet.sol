@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract Wallet is Initializable, OwnableUpgradeable {
     uint256 public totalBalance;
     uint256 public totalAllowance;
+    address[] private _knownSender;
 
     mapping(address => uint256) public individualContribution;
     mapping(address => uint256) public allowance;
@@ -28,13 +29,50 @@ contract Wallet is Initializable, OwnableUpgradeable {
         uint256 Timestamp
     );
 
+    modifier knownSender() {
+        require(isKnownSender(msg.sender) == true, "only known senders");
+        _;
+    }
+
     function initialize() public initializer {
         __Ownable_init();
+        addKnownSender(msg.sender);
     }
 
     receive() external payable {
         totalBalance += msg.value;
         individualContribution[msg.sender] += msg.value;
+    }
+
+    function addKnownSender(address _adr) public onlyOwner {
+        _knownSender.push(_adr);
+    }
+
+    function isKnownSender(address _adr) public view returns (bool) {
+        bool check = false;
+        for (uint256 i = 0; i < _knownSender.length; i++) {
+            if (_knownSender[i] == _adr) {
+                check = true;
+                break;
+            }
+        }
+        return check;
+    }
+
+    function removeKnownSender(address _adr) public onlyOwner {
+        uint256 i;
+        
+        for (i = 0; i < _knownSender.length - 1; i++) {
+            if (_knownSender[i] == _adr) {
+                break;
+            }
+        }
+        
+        if (i != _knownSender.length - 1) {
+            _knownSender[i] = _knownSender[_knownSender.length - 1];
+        }
+        
+        _knownSender.pop();
     }
 
     function increaseAllowance(address _adr, uint256 _amount)
@@ -55,7 +93,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
     function payContribution(address _adr)
         public
         payable
-        onlyOwner
+        knownSender
         returns (bool)
     {
         uint256 _amount = msg.value;
