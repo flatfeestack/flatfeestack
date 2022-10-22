@@ -1,13 +1,20 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
+export async function deployWalletContract(owner: SignerWithAddress) {
+  const Wallet = await ethers.getContractFactory("Wallet", { signer: owner });
+  const wallet = await upgrades.deployProxy(Wallet, []);
+  await wallet.deployed();
+
+  return wallet;
+}
 
 describe("Wallet", () => {
   async function deployFixture() {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
-    const Wallet = await ethers.getContractFactory("Wallet");
-    const wallet = await upgrades.deployProxy(Wallet);
-    await wallet.deployed();
+    const wallet = await deployWalletContract(owner);
 
     await owner.sendTransaction({
       to: wallet.address,

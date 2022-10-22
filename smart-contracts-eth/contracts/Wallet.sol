@@ -13,21 +13,9 @@ contract Wallet is Initializable, OwnableUpgradeable {
     mapping(address => uint256) public allowance;
     mapping(address => uint256) public withdrawingAllowance;
 
-    event IncreaseAllowance(
-        address indexed Account,
-        uint256 Amount,
-        uint256 Timestamp
-    );
-    event AcceptPayment(
-        address indexed Account,
-        uint256 Amount,
-        uint256 Timestamp
-    );
-    event WithdrawFunds(
-        address indexed Account,
-        uint256 Amount,
-        uint256 Timestamp
-    );
+    event IncreaseAllowance(address indexed Account, uint256 Amount);
+    event AcceptPayment(address indexed Account, uint256 Amount);
+    event WithdrawFunds(address indexed Account, uint256 Amount);
 
     modifier knownSender() {
         require(isKnownSender(msg.sender) == true, "only known senders");
@@ -61,17 +49,17 @@ contract Wallet is Initializable, OwnableUpgradeable {
 
     function removeKnownSender(address _adr) public onlyOwner {
         uint256 i;
-        
+
         for (i = 0; i < _knownSender.length - 1; i++) {
             if (_knownSender[i] == _adr) {
                 break;
             }
         }
-        
+
         if (i != _knownSender.length - 1) {
             _knownSender[i] = _knownSender[_knownSender.length - 1];
         }
-        
+
         _knownSender.pop();
     }
 
@@ -86,7 +74,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
         );
         allowance[_adr] += _amount;
         totalAllowance += _amount;
-        emit IncreaseAllowance(_adr, _amount, block.timestamp);
+        emit IncreaseAllowance(_adr, _amount);
         return true;
     }
 
@@ -100,7 +88,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
         totalBalance += _amount;
         individualContribution[_adr] += _amount;
 
-        emit AcceptPayment(_adr, _amount, block.timestamp);
+        emit AcceptPayment(_adr, _amount);
 
         return true;
     }
@@ -120,7 +108,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
             totalAllowance -= withdrawingAllowance[_adr];
             totalBalance -= withdrawingAllowance[_adr];
             withdrawingAllowance[_adr] = 0;
-            emit WithdrawFunds(_adr, totalAllowance, block.timestamp);
+            emit WithdrawFunds(_adr, totalAllowance);
             return true;
         } else {
             allowance[_adr] += withdrawingAllowance[_adr];
