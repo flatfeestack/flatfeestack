@@ -121,5 +121,12 @@ describe("Wallet", () => {
       await wallet.removeKnownSender(otherAccount.address);
       expect(await wallet.isKnownSender(otherAccount.address)).to.be.false;
     });
+
+    it("should not allow to remove owner from known senders", async () => {
+      const { owner, wallet } = await deployFixture();
+      await expect(wallet.removeKnownSender(owner.address)).to.be.revertedWith(
+        "Owner cannot be removed from known senders!"
+      );
+    });
   });
 });
