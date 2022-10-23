@@ -15,9 +15,9 @@ contract Wallet is Initializable, OwnableUpgradeable {
     mapping(address => uint256) public allowance;
     mapping(address => uint256) public withdrawingAllowance;
 
-    event IncreaseAllowance(address indexed Account, uint256 Amount);
-    event AcceptPayment(address indexed Account, uint256 Amount);
-    event WithdrawFunds(address indexed Account, uint256 Amount);
+    event IncreaseAllowance(address indexed account, uint256 amount);
+    event AcceptPayment(address indexed account, uint256 amount);
+    event WithdrawFunds(address indexed account, uint256 amount);
 
     modifier knownSender() {
         require(isKnownSender(msg.sender) == true, "only known senders");

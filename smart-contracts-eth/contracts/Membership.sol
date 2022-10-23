@@ -5,7 +5,7 @@ import "./Wallet.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract Membership is Initializable {
-    enum membershipStatus {
+    enum MembershipStatus {
         nonMember,
         requesting,
         whitelistedByOne,
@@ -13,14 +13,14 @@ contract Membership is Initializable {
     }
 
     address public delegate;
-    uint256 public MINIMUM_WHITELISTER;
+    uint256 public minimumWhitelister;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
 
     Wallet private _wallet;
 
     mapping(uint256 => address) public whitelisterList;
-    mapping(address => membershipStatus) internal membershipList;
+    mapping(address => MembershipStatus) internal membershipList;
     mapping(address => address) internal firstWhiteLister;
 
     mapping(address => uint256) public nextMembershipFeePayment;
@@ -42,7 +42,7 @@ contract Membership is Initializable {
 
     modifier nonMemberOnly() {
         require(
-            membershipList[msg.sender] == membershipStatus.nonMember,
+            membershipList[msg.sender] == MembershipStatus.nonMember,
             "only non-members"
         );
         _;
@@ -50,7 +50,7 @@ contract Membership is Initializable {
 
     modifier memberOnly() {
         require(
-            membershipList[msg.sender] == membershipStatus.isMember,
+            membershipList[msg.sender] == MembershipStatus.isMember,
             "only members"
         );
         _;
@@ -72,7 +72,7 @@ contract Membership is Initializable {
         address _whitelisterTwo,
         Wallet _walletContract
     ) public initializer {
-        MINIMUM_WHITELISTER = 2;
+        minimumWhitelister = 2;
         whitelisterListLength = 2;
         delegate = _delegate;
         membershipFee = 30000 wei;
@@ -81,9 +81,9 @@ contract Membership is Initializable {
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
 
-        membershipList[_delegate] = membershipStatus.isMember;
-        membershipList[_whitelisterOne] = membershipStatus.isMember;
-        membershipList[_whitelisterTwo] = membershipStatus.isMember;
+        membershipList[_delegate] = MembershipStatus.isMember;
+        membershipList[_whitelisterOne] = MembershipStatus.isMember;
+        membershipList[_whitelisterTwo] = MembershipStatus.isMember;
 
         nextMembershipFeePayment[_delegate] = block.timestamp;
         nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
@@ -91,25 +91,25 @@ contract Membership is Initializable {
 
         emit ChangeInMembershipStatus(
             delegate,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
 
         emit ChangeInMembershipStatus(
             _whitelisterOne,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
 
         emit ChangeInMembershipStatus(
             _whitelisterTwo,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
     }
 
     function requestMembership() public nonMemberOnly returns (bool) {
-        membershipList[msg.sender] = membershipStatus.requesting;
+        membershipList[msg.sender] = MembershipStatus.requesting;
         emit ChangeInMembershipStatus(
             msg.sender,
-            uint256(membershipStatus.requesting)
+            uint256(MembershipStatus.requesting)
         );
         return true;
     }
@@ -132,7 +132,7 @@ contract Membership is Initializable {
     function addWhitelister(address _adr) public delegateOnly returns (bool) {
         require(delegate != _adr, "The delegate can't become a whitelister");
         require(
-            membershipList[_adr] == membershipStatus.isMember,
+            membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
         );
         require(
@@ -155,7 +155,7 @@ contract Membership is Initializable {
             "This address is not a whitelister"
         );
         require(
-            whitelisterListLength > MINIMUM_WHITELISTER,
+            whitelisterListLength > minimumWhitelister,
             "Can't remove because there is a minimum of 2 whitelisters"
         );
         uint256 i;
@@ -178,23 +178,23 @@ contract Membership is Initializable {
         returns (bool)
     {
         require(
-            membershipList[_adr] == membershipStatus.requesting ||
-                (membershipList[_adr] == membershipStatus.whitelistedByOne &&
+            membershipList[_adr] == MembershipStatus.requesting ||
+                (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
                     firstWhiteLister[_adr] != msg.sender)
         );
-        if (membershipList[_adr] == membershipStatus.requesting) {
-            membershipList[_adr] = membershipStatus.whitelistedByOne;
+        if (membershipList[_adr] == MembershipStatus.requesting) {
+            membershipList[_adr] = MembershipStatus.whitelistedByOne;
             firstWhiteLister[_adr] = msg.sender;
             emit ChangeInMembershipStatus(
                 _adr,
-                uint256(membershipStatus.whitelistedByOne)
+                uint256(MembershipStatus.whitelistedByOne)
             );
         } else {
-            membershipList[_adr] = membershipStatus.isMember;
+            membershipList[_adr] = MembershipStatus.isMember;
             nextMembershipFeePayment[_adr] = block.timestamp;
             emit ChangeInMembershipStatus(
                 _adr,
-                uint256(membershipStatus.isMember)
+                uint256(MembershipStatus.isMember)
             );
         }
         return true;
@@ -220,7 +220,7 @@ contract Membership is Initializable {
     function setDelegate(address _adr) public returns (bool) {
         // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
         require(
-            membershipList[_adr] == membershipStatus.isMember,
+            membershipList[_adr] == MembershipStatus.isMember,
             "Has to be member to become delegate"
         );
         require(
