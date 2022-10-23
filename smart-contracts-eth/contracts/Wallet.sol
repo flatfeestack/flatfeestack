@@ -109,19 +109,15 @@ contract Wallet is Initializable, OwnableUpgradeable {
         require(allowance[_adr] > 0, "no allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];
-        withdrawingAllowance[_adr] = operatingAmount;
-        allowance[_adr] -= operatingAmount;
 
-        if (_adr.send(withdrawingAllowance[_adr]) == true) {
-            totalAllowance -= withdrawingAllowance[_adr];
-            totalBalance -= withdrawingAllowance[_adr];
-            withdrawingAllowance[_adr] = 0;
-            emit WithdrawFunds(_adr, totalAllowance);
-            return true;
-        } else {
-            allowance[_adr] += withdrawingAllowance[_adr];
-            withdrawingAllowance[_adr] = 0;
-            return false;
-        }
+        allowance[_adr] -= operatingAmount;
+        totalAllowance -= withdrawingAllowance[_adr];
+        totalBalance -= withdrawingAllowance[_adr];
+        withdrawingAllowance[_adr] = 0;
+
+        _adr.transfer(operatingAmount);
+
+        emit WithdrawFunds(_adr, totalAllowance);
+        return true;
     }
 }
