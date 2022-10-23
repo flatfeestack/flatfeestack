@@ -4,6 +4,10 @@ pragma solidity ^0.8.17;
 import "./Wallet.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+// we rely on time to track membership payments
+// however, we don't care about second-level precision, as we deal with a much longer time period
+// there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
+/* solhint-disable not-rely-on-time */
 contract Membership is Initializable {
     enum MembershipStatus {
         nonMember,
@@ -223,3 +227,4 @@ contract Membership is Initializable {
         return true;
     }
 }
+/* solhint-enable not-rely-on-time */
