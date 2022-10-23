@@ -54,7 +54,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
     }
 
     function removeKnownSender(address _adr) public onlyOwner {
-        require(_adr != owner(), "Owner cannot be removed from known senders!");
+        require(_adr != owner(), "Owner cannot be removed!");
 
         uint256 i;
 
@@ -78,7 +78,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
     {
         require(
             (totalAllowance + _amount) <= totalBalance,
-            "Cannot increase allowance over total balance of wallet!"
+            "Keep allowance below balance!"
         );
         allowance[_adr] += _amount;
         totalAllowance += _amount;
@@ -106,7 +106,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
         onlyOwner
         returns (bool)
     {
-        require(allowance[_adr] > 0, "cannot withdraw without any allowance!");
+        require(allowance[_adr] > 0, "no allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];
         withdrawingAllowance[_adr] = operatingAmount;

@@ -130,15 +130,12 @@ contract Membership is Initializable {
     }
 
     function addWhitelister(address _adr) public delegateOnly returns (bool) {
-        require(delegate != _adr, "The delegate can't become a whitelister");
+        require(delegate != _adr, "Can't become whitelistener!");
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
         );
-        require(
-            isWhitelister(_adr) == false,
-            "This address is already a whitelister"
-        );
+        require(isWhitelister(_adr) == false, "Is already whitelistener!");
         whitelisterList[whitelisterListLength] = _adr;
         whitelisterListLength++;
         emit ChangeInWhiteLister(_adr, true);
@@ -150,13 +147,10 @@ contract Membership is Initializable {
         delegateOnly
         returns (bool)
     {
-        require(
-            isWhitelister(_adr) == true,
-            "This address is not a whitelister"
-        );
+        require(isWhitelister(_adr) == true, "Is no whitelistener!");
         require(
             whitelisterListLength > minimumWhitelister,
-            "Can't remove because there is a minimum of 2 whitelisters"
+            "Minimum whitelistener not met!"
         );
         uint256 i;
         for (i = 0; i < whitelisterListLength - 1; i++) {
@@ -180,7 +174,8 @@ contract Membership is Initializable {
         require(
             membershipList[_adr] == MembershipStatus.requesting ||
                 (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
-                    firstWhiteLister[_adr] != msg.sender)
+                    firstWhiteLister[_adr] != msg.sender),
+            "invalid member status!"
         );
         if (membershipList[_adr] == MembershipStatus.requesting) {
             membershipList[_adr] = MembershipStatus.whitelistedByOne;
@@ -204,10 +199,7 @@ contract Membership is Initializable {
         uint256 nextDueDate = nextMembershipFeePayment[msg.sender];
         require(nextDueDate <= block.timestamp, "Membership fee not due yet.");
         // we don't say "no" if somebody pays more than they should :)
-        require(
-            msg.value >= membershipFee,
-            "Membership fee not fully covered."
-        );
+        require(msg.value >= membershipFee, "Membership fee not covered!");
 
         nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
         _wallet.payContribution{value: msg.value}(msg.sender);
@@ -221,12 +213,9 @@ contract Membership is Initializable {
         // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
         require(
             membershipList[_adr] == MembershipStatus.isMember,
-            "Has to be member to become delegate"
+            "Only members can become delegate"
         );
-        require(
-            delegate != _adr,
-            "Can't set the delegate to the same delegate again"
-        );
+        require(delegate != _adr, "Address is already the delegate!");
         address oldDelegate = delegate;
         delegate = _adr;
         emit ChangeInDelegate(oldDelegate, false);

@@ -33,9 +33,7 @@ describe("Wallet", () => {
           otherAccount.address,
           ethers.utils.parseEther("200.0")
         )
-      ).to.be.revertedWith(
-        "Cannot increase allowance over total balance of wallet!"
-      );
+      ).to.be.revertedWith("Keep allowance below balance!");
     });
 
     it("increases allowance for given address", async () => {
@@ -91,7 +89,7 @@ describe("Wallet", () => {
 
       await expect(
         wallet.withdrawMoney(otherAccount.address)
-      ).to.be.revertedWith("cannot withdraw without any allowance!");
+      ).to.be.revertedWith("no allowance for this account!");
     });
 
     it("can withdraw allowance", async () => {
@@ -125,7 +123,7 @@ describe("Wallet", () => {
     it("should not allow to remove owner from known senders", async () => {
       const { owner, wallet } = await deployFixture();
       await expect(wallet.removeKnownSender(owner.address)).to.be.revertedWith(
-        "Owner cannot be removed from known senders!"
+        "Owner cannot be removed!"
       );
     });
   });

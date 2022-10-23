@@ -101,7 +101,7 @@ describe("Membership", () => {
       const { delegate, whitelisterOne, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).addWhitelister(whitelisterOne.address)
-      ).to.be.revertedWith("This address is already a whitelister");
+      ).to.be.revertedWith("Is already whitelistener!");
     });
 
     it("to become whitelister you must be a member", async () => {
@@ -115,7 +115,7 @@ describe("Membership", () => {
       const { delegate, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).addWhitelister(delegate.address)
-      ).to.be.revertedWith("The delegate can't become a whitelister");
+      ).to.be.revertedWith("Can't become whitelistener!");
     });
 
     it("member can be added as whitelister by delegate", async () => {
@@ -134,7 +134,7 @@ describe("Membership", () => {
       const { whitelisterOne, newUser, membership } = await deployFixture();
       await expect(
         membership.connect(whitelisterOne).whitelistMember(newUser.address)
-      ).to.be.revertedWithoutReason();
+      ).to.be.revertedWith("invalid member status!");
     });
 
     it("requesting member gets whitelisted by one whitelister", async () => {
@@ -171,7 +171,7 @@ describe("Membership", () => {
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await expect(
         membership.connect(whitelisterOne).whitelistMember(newUser.address)
-      ).to.be.revertedWithoutReason();
+      ).to.be.revertedWith("invalid member status!");
     });
   });
 
@@ -180,16 +180,14 @@ describe("Membership", () => {
       const { delegate, newUser, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).removeWhitelister(newUser.address)
-      ).to.be.revertedWith("This address is not a whitelister");
+      ).to.be.revertedWith("Is no whitelistener!");
     });
 
     it("can not remove whitelister if number of whitelisters becomes less than minimum number of whitelisters", async () => {
       const { delegate, whitelisterOne, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).removeWhitelister(whitelisterOne.address)
-      ).to.be.revertedWith(
-        "Can't remove because there is a minimum of 2 whitelisters"
-      );
+      ).to.be.revertedWith("Minimum whitelistener not met!");
     });
 
     it("whitelister can be removed by delegate", async () => {
@@ -245,7 +243,7 @@ describe("Membership", () => {
         membership.connect(delegate).payMembershipFee({
           value: ethers.utils.parseUnits("3", 3),
         })
-      ).to.be.revertedWith("Membership fee not fully covered.");
+      ).to.be.revertedWith("Membership fee not covered!");
     });
 
     it("allows to pay membership fees", async () => {
@@ -290,7 +288,7 @@ describe("Membership", () => {
     it("non member can't become delegate", async () => {
       const { newUser, membership } = await deployFixture();
       await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
-        "Has to be member to become delegate"
+        "Only members can become delegate"
       );
     });
 
@@ -298,7 +296,7 @@ describe("Membership", () => {
       const { newUser, membership } = await deployFixture();
       await membership.connect(newUser).requestMembership();
       await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
-        "Has to be member to become delegate"
+        "Only members can become delegate"
       );
     });
 
@@ -307,14 +305,14 @@ describe("Membership", () => {
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await expect(membership.setDelegate(newUser.address)).to.be.revertedWith(
-        "Has to be member to become delegate"
+        "Only members can become delegate"
       );
     });
 
     it("delegate can't become delegate", async () => {
       const { delegate, membership } = await deployFixture();
       await expect(membership.setDelegate(delegate.address)).to.be.revertedWith(
-        "Can't set the delegate to the same delegate again"
+        "Address is already the delegate!"
       );
     });
 
