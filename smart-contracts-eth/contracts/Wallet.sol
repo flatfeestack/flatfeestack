@@ -15,9 +15,9 @@ contract Wallet is Initializable, OwnableUpgradeable {
     mapping(address => uint256) public allowance;
     mapping(address => uint256) public withdrawingAllowance;
 
-    event IncreaseAllowance(address indexed Account, uint256 Amount);
-    event AcceptPayment(address indexed Account, uint256 Amount);
-    event WithdrawFunds(address indexed Account, uint256 Amount);
+    event IncreaseAllowance(address indexed account, uint256 amount);
+    event AcceptPayment(address indexed account, uint256 amount);
+    event WithdrawFunds(address indexed account, uint256 amount);
 
     modifier knownSender() {
         require(isKnownSender(msg.sender) == true, "only known senders");
@@ -54,7 +54,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
     }
 
     function removeKnownSender(address _adr) public onlyOwner {
-        require(_adr != owner(), "Owner cannot be removed from known senders!");
+        require(_adr != owner(), "Owner cannot be removed!");
 
         uint256 i;
 
@@ -78,7 +78,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
     {
         require(
             (totalAllowance + _amount) <= totalBalance,
-            "Cannot increase allowance over total balance of wallet!"
+            "Keep allowance below balance!"
         );
         allowance[_adr] += _amount;
         totalAllowance += _amount;
@@ -106,22 +106,18 @@ contract Wallet is Initializable, OwnableUpgradeable {
         onlyOwner
         returns (bool)
     {
-        require(allowance[_adr] > 0, "cannot withdraw without any allowance!");
+        require(allowance[_adr] > 0, "No allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];
-        withdrawingAllowance[_adr] = operatingAmount;
-        allowance[_adr] -= operatingAmount;
 
-        if (_adr.send(withdrawingAllowance[_adr]) == true) {
-            totalAllowance -= withdrawingAllowance[_adr];
-            totalBalance -= withdrawingAllowance[_adr];
-            withdrawingAllowance[_adr] = 0;
-            emit WithdrawFunds(_adr, totalAllowance);
-            return true;
-        } else {
-            allowance[_adr] += withdrawingAllowance[_adr];
-            withdrawingAllowance[_adr] = 0;
-            return false;
-        }
+        allowance[_adr] -= operatingAmount;
+        totalAllowance -= withdrawingAllowance[_adr];
+        totalBalance -= withdrawingAllowance[_adr];
+        withdrawingAllowance[_adr] = 0;
+
+        _adr.transfer(operatingAmount);
+
+        emit WithdrawFunds(_adr, totalAllowance);
+        return true;
     }
 }

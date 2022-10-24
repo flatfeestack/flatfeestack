@@ -4,8 +4,12 @@ pragma solidity ^0.8.17;
 import "./Wallet.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+// we rely on time to track membership payments
+// however, we don't care about second-level precision, as we deal with a much longer time period
+// there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
+/* solhint-disable not-rely-on-time */
 contract Membership is Initializable {
-    enum membershipStatus {
+    enum MembershipStatus {
         nonMember,
         requesting,
         whitelistedByOne,
@@ -13,14 +17,14 @@ contract Membership is Initializable {
     }
 
     address public delegate;
-    uint256 public MINIMUM_WHITELISTER;
+    uint256 public minimumWhitelister;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
 
     Wallet private _wallet;
 
     mapping(uint256 => address) public whitelisterList;
-    mapping(address => membershipStatus) internal membershipList;
+    mapping(address => MembershipStatus) internal membershipList;
     mapping(address => address) internal firstWhiteLister;
 
     mapping(address => uint256) public nextMembershipFeePayment;
@@ -42,7 +46,7 @@ contract Membership is Initializable {
 
     modifier nonMemberOnly() {
         require(
-            membershipList[msg.sender] == membershipStatus.nonMember,
+            membershipList[msg.sender] == MembershipStatus.nonMember,
             "only non-members"
         );
         _;
@@ -50,7 +54,7 @@ contract Membership is Initializable {
 
     modifier memberOnly() {
         require(
-            membershipList[msg.sender] == membershipStatus.isMember,
+            membershipList[msg.sender] == MembershipStatus.isMember,
             "only members"
         );
         _;
@@ -72,7 +76,7 @@ contract Membership is Initializable {
         address _whitelisterTwo,
         Wallet _walletContract
     ) public initializer {
-        MINIMUM_WHITELISTER = 2;
+        minimumWhitelister = 2;
         whitelisterListLength = 2;
         delegate = _delegate;
         membershipFee = 30000 wei;
@@ -81,9 +85,9 @@ contract Membership is Initializable {
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
 
-        membershipList[_delegate] = membershipStatus.isMember;
-        membershipList[_whitelisterOne] = membershipStatus.isMember;
-        membershipList[_whitelisterTwo] = membershipStatus.isMember;
+        membershipList[_delegate] = MembershipStatus.isMember;
+        membershipList[_whitelisterOne] = MembershipStatus.isMember;
+        membershipList[_whitelisterTwo] = MembershipStatus.isMember;
 
         nextMembershipFeePayment[_delegate] = block.timestamp;
         nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
@@ -91,25 +95,25 @@ contract Membership is Initializable {
 
         emit ChangeInMembershipStatus(
             delegate,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
 
         emit ChangeInMembershipStatus(
             _whitelisterOne,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
 
         emit ChangeInMembershipStatus(
             _whitelisterTwo,
-            uint256(membershipStatus.isMember)
+            uint256(MembershipStatus.isMember)
         );
     }
 
     function requestMembership() public nonMemberOnly returns (bool) {
-        membershipList[msg.sender] = membershipStatus.requesting;
+        membershipList[msg.sender] = MembershipStatus.requesting;
         emit ChangeInMembershipStatus(
             msg.sender,
-            uint256(membershipStatus.requesting)
+            uint256(MembershipStatus.requesting)
         );
         return true;
     }
@@ -130,15 +134,12 @@ contract Membership is Initializable {
     }
 
     function addWhitelister(address _adr) public delegateOnly returns (bool) {
-        require(delegate != _adr, "The delegate can't become a whitelister");
+        require(delegate != _adr, "Can't become whitelister!");
         require(
-            membershipList[_adr] == membershipStatus.isMember,
+            membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
         );
-        require(
-            isWhitelister(_adr) == false,
-            "This address is already a whitelister"
-        );
+        require(isWhitelister(_adr) == false, "Is already whitelister!");
         whitelisterList[whitelisterListLength] = _adr;
         whitelisterListLength++;
         emit ChangeInWhiteLister(_adr, true);
@@ -150,13 +151,10 @@ contract Membership is Initializable {
         delegateOnly
         returns (bool)
     {
+        require(isWhitelister(_adr) == true, "Is no whitelister!");
         require(
-            isWhitelister(_adr) == true,
-            "This address is not a whitelister"
-        );
-        require(
-            whitelisterListLength > MINIMUM_WHITELISTER,
-            "Can't remove because there is a minimum of 2 whitelisters"
+            whitelisterListLength > minimumWhitelister,
+            "Minimum whitelister not met!"
         );
         uint256 i;
         for (i = 0; i < whitelisterListLength - 1; i++) {
@@ -178,23 +176,24 @@ contract Membership is Initializable {
         returns (bool)
     {
         require(
-            membershipList[_adr] == membershipStatus.requesting ||
-                (membershipList[_adr] == membershipStatus.whitelistedByOne &&
-                    firstWhiteLister[_adr] != msg.sender)
+            membershipList[_adr] == MembershipStatus.requesting ||
+                (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
+                    firstWhiteLister[_adr] != msg.sender),
+            "Invalid member status!"
         );
-        if (membershipList[_adr] == membershipStatus.requesting) {
-            membershipList[_adr] = membershipStatus.whitelistedByOne;
+        if (membershipList[_adr] == MembershipStatus.requesting) {
+            membershipList[_adr] = MembershipStatus.whitelistedByOne;
             firstWhiteLister[_adr] = msg.sender;
             emit ChangeInMembershipStatus(
                 _adr,
-                uint256(membershipStatus.whitelistedByOne)
+                uint256(MembershipStatus.whitelistedByOne)
             );
         } else {
-            membershipList[_adr] = membershipStatus.isMember;
+            membershipList[_adr] = MembershipStatus.isMember;
             nextMembershipFeePayment[_adr] = block.timestamp;
             emit ChangeInMembershipStatus(
                 _adr,
-                uint256(membershipStatus.isMember)
+                uint256(MembershipStatus.isMember)
             );
         }
         return true;
@@ -204,10 +203,7 @@ contract Membership is Initializable {
         uint256 nextDueDate = nextMembershipFeePayment[msg.sender];
         require(nextDueDate <= block.timestamp, "Membership fee not due yet.");
         // we don't say "no" if somebody pays more than they should :)
-        require(
-            msg.value >= membershipFee,
-            "Membership fee not fully covered."
-        );
+        require(msg.value >= membershipFee, "Membership fee not covered!");
 
         nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
         _wallet.payContribution{value: msg.value}(msg.sender);
@@ -220,13 +216,10 @@ contract Membership is Initializable {
     function setDelegate(address _adr) public returns (bool) {
         // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
         require(
-            membershipList[_adr] == membershipStatus.isMember,
-            "Has to be member to become delegate"
+            membershipList[_adr] == MembershipStatus.isMember,
+            "Only members can become delegate"
         );
-        require(
-            delegate != _adr,
-            "Can't set the delegate to the same delegate again"
-        );
+        require(delegate != _adr, "Address is already the delegate!");
         address oldDelegate = delegate;
         delegate = _adr;
         emit ChangeInDelegate(oldDelegate, false);
@@ -234,3 +227,4 @@ contract Membership is Initializable {
         return true;
     }
 }
+/* solhint-enable not-rely-on-time */
