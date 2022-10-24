@@ -89,7 +89,7 @@ describe("Wallet", () => {
 
       await expect(
         wallet.withdrawMoney(otherAccount.address)
-      ).to.be.revertedWith("no allowance for this account!");
+      ).to.be.revertedWith("No allowance for this account!");
     });
 
     it("can withdraw allowance", async () => {

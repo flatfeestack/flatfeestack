@@ -134,12 +134,12 @@ contract Membership is Initializable {
     }
 
     function addWhitelister(address _adr) public delegateOnly returns (bool) {
-        require(delegate != _adr, "Can't become whitelistener!");
+        require(delegate != _adr, "Can't become whitelister!");
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
         );
-        require(isWhitelister(_adr) == false, "Is already whitelistener!");
+        require(isWhitelister(_adr) == false, "Is already whitelister!");
         whitelisterList[whitelisterListLength] = _adr;
         whitelisterListLength++;
         emit ChangeInWhiteLister(_adr, true);
@@ -151,10 +151,10 @@ contract Membership is Initializable {
         delegateOnly
         returns (bool)
     {
-        require(isWhitelister(_adr) == true, "Is no whitelistener!");
+        require(isWhitelister(_adr) == true, "Is no whitelister!");
         require(
             whitelisterListLength > minimumWhitelister,
-            "Minimum whitelistener not met!"
+            "Minimum whitelister not met!"
         );
         uint256 i;
         for (i = 0; i < whitelisterListLength - 1; i++) {
@@ -179,7 +179,7 @@ contract Membership is Initializable {
             membershipList[_adr] == MembershipStatus.requesting ||
                 (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
                     firstWhiteLister[_adr] != msg.sender),
-            "invalid member status!"
+            "Invalid member status!"
         );
         if (membershipList[_adr] == MembershipStatus.requesting) {
             membershipList[_adr] = MembershipStatus.whitelistedByOne;

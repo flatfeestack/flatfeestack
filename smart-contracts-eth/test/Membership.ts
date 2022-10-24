@@ -101,7 +101,7 @@ describe("Membership", () => {
       const { delegate, whitelisterOne, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).addWhitelister(whitelisterOne.address)
-      ).to.be.revertedWith("Is already whitelistener!");
+      ).to.be.revertedWith("Is already whitelister!");
     });
 
     it("to become whitelister you must be a member", async () => {
@@ -115,7 +115,7 @@ describe("Membership", () => {
       const { delegate, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).addWhitelister(delegate.address)
-      ).to.be.revertedWith("Can't become whitelistener!");
+      ).to.be.revertedWith("Can't become whitelister!");
     });
 
     it("member can be added as whitelister by delegate", async () => {
@@ -134,7 +134,7 @@ describe("Membership", () => {
       const { whitelisterOne, newUser, membership } = await deployFixture();
       await expect(
         membership.connect(whitelisterOne).whitelistMember(newUser.address)
-      ).to.be.revertedWith("invalid member status!");
+      ).to.be.revertedWith("Invalid member status!");
     });
 
     it("requesting member gets whitelisted by one whitelister", async () => {
@@ -171,7 +171,7 @@ describe("Membership", () => {
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await expect(
         membership.connect(whitelisterOne).whitelistMember(newUser.address)
-      ).to.be.revertedWith("invalid member status!");
+      ).to.be.revertedWith("Invalid member status!");
     });
   });
 
@@ -180,14 +180,14 @@ describe("Membership", () => {
       const { delegate, newUser, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).removeWhitelister(newUser.address)
-      ).to.be.revertedWith("Is no whitelistener!");
+      ).to.be.revertedWith("Is no whitelister!");
     });
 
     it("can not remove whitelister if number of whitelisters becomes less than minimum number of whitelisters", async () => {
       const { delegate, whitelisterOne, membership } = await deployFixture();
       await expect(
         membership.connect(delegate).removeWhitelister(whitelisterOne.address)
-      ).to.be.revertedWith("Minimum whitelistener not met!");
+      ).to.be.revertedWith("Minimum whitelister not met!");
     });
 
     it("whitelister can be removed by delegate", async () => {

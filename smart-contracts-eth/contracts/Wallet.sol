@@ -106,7 +106,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
         onlyOwner
         returns (bool)
     {
-        require(allowance[_adr] > 0, "no allowance for this account!");
+        require(allowance[_adr] > 0, "No allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];
 
