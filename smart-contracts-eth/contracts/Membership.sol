@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
+import "./Wallet.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract Membership is Initializable {
@@ -15,6 +16,8 @@ contract Membership is Initializable {
     uint256 public MINIMUM_WHITELISTER;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
+
+    Wallet private _wallet;
 
     mapping(uint256 => address) public whitelisterList;
     mapping(address => membershipStatus) internal membershipList;
@@ -66,12 +69,14 @@ contract Membership is Initializable {
     function initialize(
         address _delegate,
         address _whitelisterOne,
-        address _whitelisterTwo
+        address _whitelisterTwo,
+        Wallet _walletContract
     ) public initializer {
         MINIMUM_WHITELISTER = 2;
         whitelisterListLength = 2;
         delegate = _delegate;
         membershipFee = 30000 wei;
+        _wallet = _walletContract;
 
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
@@ -205,7 +210,7 @@ contract Membership is Initializable {
         );
 
         nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
-        // TODO: Forward payment to treasury
+        _wallet.payContribution{value: msg.value}(msg.sender);
     }
 
     function setMembershipFee(uint256 newMembershipFee) public delegateOnly {

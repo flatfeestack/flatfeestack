@@ -1,12 +1,20 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
+export async function deployWalletContract(owner: SignerWithAddress) {
+  const Wallet = await ethers.getContractFactory("Wallet", { signer: owner });
+  const wallet = await upgrades.deployProxy(Wallet, []);
+  await wallet.deployed();
+
+  return wallet;
+}
 
 describe("Wallet", () => {
   async function deployFixture() {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
-    const Wallet = await ethers.getContractFactory("Wallet");
-    const wallet = await Wallet.deploy();
+    const wallet = await deployWalletContract(owner);
 
     await owner.sendTransaction({
       to: wallet.address,
@@ -97,6 +105,27 @@ describe("Wallet", () => {
       ).to.changeEtherBalances(
         [otherAccount, wallet],
         [withdrawAmount, withdrawAmount.mul(BigInt(-1))]
+      );
+    });
+  });
+
+  describe("knownSender", () => {
+    it("should add and remove known sender", async () => {
+      const { owner, otherAccount, wallet } = await deployFixture();
+      expect(await wallet.isKnownSender(owner.address)).to.be.true;
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.false;
+
+      await wallet.addKnownSender(otherAccount.address);
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.true;
+
+      await wallet.removeKnownSender(otherAccount.address);
+      expect(await wallet.isKnownSender(otherAccount.address)).to.be.false;
+    });
+
+    it("should not allow to remove owner from known senders", async () => {
+      const { owner, wallet } = await deployFixture();
+      await expect(wallet.removeKnownSender(owner.address)).to.be.revertedWith(
+        "Owner cannot be removed from known senders!"
       );
     });
   });

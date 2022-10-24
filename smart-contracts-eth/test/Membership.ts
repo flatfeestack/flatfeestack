@@ -1,31 +1,49 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
+import { deployWalletContract } from "./Wallet";
 
 describe("Membership", () => {
   async function deployFixture() {
     const [delegate, whitelisterOne, whitelisterTwo, newUser] =
       await ethers.getSigners();
+    const wallet = await deployWalletContract(delegate);
+
     const Membership = await ethers.getContractFactory("Membership");
     const membership = await upgrades.deployProxy(Membership, [
       delegate.address,
       whitelisterOne.address,
       whitelisterTwo.address,
+      wallet.address,
     ]);
-    await membership.deployed();
 
-    return { delegate, whitelisterOne, whitelisterTwo, newUser, membership };
+    await membership.deployed();
+    await wallet.addKnownSender(membership.address);
+
+    return {
+      delegate,
+      whitelisterOne,
+      whitelisterTwo,
+      newUser,
+      membership,
+      wallet,
+    };
   }
 
   async function deployFixtureWhitelisted() {
     const [delegate, whitelisterOne, whitelisterTwo, newUserWhitelisted] =
       await ethers.getSigners();
+    const wallet = await deployWalletContract(delegate);
+
     const Membership = await ethers.getContractFactory("Membership");
     const membership = await upgrades.deployProxy(Membership, [
       delegate.address,
       whitelisterOne.address,
       whitelisterTwo.address,
+      wallet.address,
     ]);
+
     await membership.deployed();
+    await wallet.addKnownSender(membership.address);
 
     await membership.connect(newUserWhitelisted).requestMembership();
     await membership
@@ -40,6 +58,7 @@ describe("Membership", () => {
       whitelisterTwo,
       newUserWhitelisted,
       membership,
+      wallet,
     };
   }
 
@@ -230,19 +249,24 @@ describe("Membership", () => {
     });
 
     it("allows to pay membership fees", async () => {
-      const { delegate, membership } = await deployFixture();
+      const { delegate, membership, wallet } = await deployFixture();
       const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
 
-      await membership.connect(delegate).payMembershipFee({
-        value: toBePaid,
-      });
+      await expect(
+        membership.connect(delegate).payMembershipFee({
+          value: toBePaid,
+        })
+      )
+        .to.emit(wallet, "AcceptPayment")
+        .withArgs(delegate.address, toBePaid);
 
       const blockNumBefore = await ethers.provider.getBlockNumber();
       const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+
       expect(
         await membership.nextMembershipFeePayment(delegate.address)
       ).to.greaterThan(blockBefore.timestamp);
-      expect(await membership.provider.getBalance(membership.address)).to.eq(
+      expect(await wallet.individualContribution(delegate.address)).to.eq(
         toBePaid
       );
     });
