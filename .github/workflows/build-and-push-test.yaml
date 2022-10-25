@@ -35,5 +35,8 @@ jobs:
       - name: Deploy - TEST
         run: |
           scp -P 225 docker-compose.yml deploy@axelra.net:/home/deploy
+          ssh -p 225 deploy@axelra.net "docker-compose down"
+          ssh -p 225 deploy@axelra.net "docker-compose rm -fsv"
           ssh -p 225 deploy@axelra.net "docker login -u ${{ secrets.CR_PAT_USERNAME }} -p ${{ secrets.CR_PAT_TOKEN }} ghcr.io"
           ssh -p 225 deploy@axelra.net "TAG_IMAGE=latest-test BASE_PATH=/home/deploy/config/flatfeestack docker-compose up -d --force-recreate --no-build"
+          ssh -p 225 deploy@axelra.net "rm /home/deploy/docker-compose.yml"
