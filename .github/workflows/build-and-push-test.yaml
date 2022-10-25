@@ -21,7 +21,7 @@ jobs:
       - name: Update docker-compose to 2.11.2, github actions still as 1.x
         run: curl -SL https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && docker-compose -v
       - name: Create empty .env for building (actually not needed)
-        run: touch caddy/.env && touch fastauth/.env && touch analysis-engine/.env && touch backend/.env && touch payout/.env
+        run: touch caddy/.env fastauth/.env analysis-engine/.env backend/.env payout/.env db/.env
       - name: Build, login and push
         run: |
           docker-compose build
