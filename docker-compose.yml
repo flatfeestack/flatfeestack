@@ -5,16 +5,19 @@ services:
   auth:
     image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
+    restart: always
     env_file:
       - ${BASE_PATH:-.}/fastauth/.env
     ports:
       - "9081:9081"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   backend:
     image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-latest}
     build: ./backend
+    restart: always
     env_file:
       - ${BASE_PATH:-.}/backend/.env
     ports:
@@ -22,11 +25,13 @@ services:
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   analysis-engine:
     image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
     build: ./analysis-engine
+    restart: always
     env_file:
       - ${BASE_PATH:-.}/analysis-engine/.env
     volumes:
@@ -39,6 +44,7 @@ services:
   payout:
     image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
+    restart: always
     env_file:
       - ${BASE_PATH:-.}/payout/.env
     ports:
@@ -53,7 +59,7 @@ services:
       - "9085:9085"
 
   db:
-    image: postgres:15rc2-alpine
+    image: postgres:15-alpine
     volumes:
       - ${BASE_PATH:-.}db_pw.txt:/run/secrets/db_pw.txt
       - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data
@@ -63,9 +69,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: flatfeestack
       POSTGRES_PASSWORD_FILE: /run/secrets/db_pw.txt
+    restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 3s
+      timeout: 5s
+      retries: 30
 
   caddy:
     image: ghcr.io/flatfeestack/flatfeestack/caddy:${TAG_IMAGE:-latest}
