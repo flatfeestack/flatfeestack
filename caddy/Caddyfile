@@ -3,7 +3,7 @@
     auto_https off
 }
 
-{$HOST} {
+:8080 {
   handle_path /auth/* {
     reverse_proxy auth:9081 {
       header_up Host {upstream_hostport}
