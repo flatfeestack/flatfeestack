@@ -5,6 +5,7 @@ RUN curl -fsSL "https://github.com/pnpm/pnpm/releases/latest/download/pnpm-linux
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 COPY index.html tsconfig.json tsconfig.node.json vite.config.ts svelte.config.js ./
+COPY ./public ./public
 COPY ./src ./src
 RUN pnpm build
 

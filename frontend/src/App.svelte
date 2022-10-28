@@ -197,5 +197,5 @@
     </Router>
   </main>
 
-  <footer class="text-center">We used the following <a href="dependencies.txt">dependencies</a></footer>
+  <footer class="text-center">We used the following <a href="stats.html">dependencies</a></footer>
 </div>
