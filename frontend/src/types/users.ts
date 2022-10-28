@@ -1,5 +1,5 @@
 import type {ChartData} from "chart.js";
-
+//Type vs. Interfaces: https://stackoverflow.com/questions/37233735/interfaces-vs-types-in-typescript
 export type Users = {
   id: string;
   paymentMethod: string;

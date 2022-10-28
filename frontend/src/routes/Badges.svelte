@@ -5,10 +5,10 @@
   import { error, user} from "../ts/store";
   import type { Contributions, Repos } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
-  import Line from "svelte-chartjs/src/Line.svelte"
-  import Bar from "svelte-chartjs/src/Bar.svelte"
-  import { faPlus, faArrowRight, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+  import {Line, Bar} from "svelte-chartjs";
+  //import Bar from "../components/Bar.svelte";
   import Fa from "svelte-fa";
+  import { faPlus, faArrowRight, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
   import {htmlLegendPlugin} from "../ts/utils";
 
   let repos: Repos[] = [];

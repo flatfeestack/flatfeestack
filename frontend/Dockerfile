@@ -1,13 +1,13 @@
 FROM node:16-alpine AS base
 WORKDIR /app
-COPY package.json tsconfig.json rollup-prod.config.js generate-index.js ./
-RUN npm install
-
-FROM base as builder
+RUN apk --no-cache add curl
+RUN curl -fsSL "https://github.com/pnpm/pnpm/releases/latest/download/pnpm-linuxstatic-x64" -o /bin/pnpm; chmod +x /bin/pnpm;
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
+COPY index.html tsconfig.json tsconfig.node.json vite.config.ts svelte.config.js ./
 COPY ./src ./src
-COPY ./landing-page ./landing-page
-RUN npm run prod
+RUN pnpm build
 
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
-COPY --from=builder /app/public /var/www/html
+COPY --from=base /app/dist /var/www/html

@@ -1,16 +1,11 @@
 <script lang="ts">
     import Navigation from "../components/Navigation.svelte";
-    import {onMount} from "svelte";
     import {API} from "../ts/api";
     import {error} from "../ts/store";
-    import type {UserBalanceCore} from "../types/users.ts";
-    import {formatBalance, formatDate, formatDay, timeSince} from "../ts/services";
-    import {Contributions} from "../types/users.ts";
+    import {formatDate, timeSince} from "../ts/services";
 
     let address = "";
     let isSubmitting = false;
-    let contributions: Contributions[] = [];
-    let pendingPayouts: UserBalanceCore;
 
 </script>
 

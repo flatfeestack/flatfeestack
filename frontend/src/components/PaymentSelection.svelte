@@ -5,7 +5,7 @@
     import {user, config, userBalances, error} from "../ts/store";
     import {onMount} from "svelte";
     import {API} from "../ts/api";
-    import {Plan} from "../types/users";
+    import type {Plan} from "../types/users";
 
     // List of tab items with labels, values and assigned components
     let items = [

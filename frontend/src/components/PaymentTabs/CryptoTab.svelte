@@ -2,9 +2,9 @@
     import {config, error} from "../../ts/store";
     import {API} from "../../ts/api";
     // noinspection TypeScriptCheckImport
-    import QrCode from "svelte-qrcode";
+    //import QrCode from "svelte-qrcode";
     import {formatBalance, minBalanceName, qrString} from "../../ts/services";
-    import {PaymentResponse} from "../../types/users";
+    import type {PaymentResponse} from "../../types/users";
 
     export let remaining: number;
     export let current: number;

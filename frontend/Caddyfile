@@ -10,6 +10,6 @@ try_files {path} {file} /index.html
 
 file_server {
     #https://misterorion.com/caddy-server-brotli/
-	#precompressed br gzip zstd
+	precompressed br gzip
 	root /var/www/html
 }

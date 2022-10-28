@@ -5,7 +5,7 @@
   import { API } from "../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";
   import {faTrash, faClock} from "@fortawesome/free-solid-svg-icons";
-  import {GitUser, PayoutAddress, Currencies} from "../types/users";
+  import type {GitUser, PayoutAddress, Currencies} from "../types/users";
   import {onMount} from "svelte";
   import {formatDate, timeSince} from "../ts/services";
 

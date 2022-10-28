@@ -6,7 +6,7 @@ import {formatDate, formatNowUTC, storeToken} from "../ts/services";
 import { config, error, loadedSponsoredRepos, user } from "../ts/store";
 import { faSignInAlt, faCheck, faArrowsLeftRight } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
-import {Repos} from "../types/users";
+import type {Repos} from "../types/users";
 import Dots from "../components/Dots.svelte";
 
 //let promisePendingPayouts =API.payouts.payoutInfos();
