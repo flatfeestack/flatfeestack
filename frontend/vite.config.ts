@@ -8,7 +8,10 @@ export default defineConfig({
   plugins: [
     svelte(),
     splitVendorChunkPlugin(),
-    visualizer() as PluginOption,
+    visualizer({
+      emitFile: true,
+      filename: "stats.html"
+    }) as PluginOption,
     compress({
       algorithm:'brotliCompress'
     }),
