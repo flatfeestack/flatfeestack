@@ -16,7 +16,7 @@
     "compile": "hardhat compile",
     "prettify": "prettier --write .",
     "prettify:check": "prettier --check .",
-    "lint": "solhint 'contracts/*.sol'",
+    "lint": "solhint 'contracts/**/*.sol'",
     "test": "hardhat test",
     "coverage": "hardhat coverage"
   }
