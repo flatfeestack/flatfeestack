@@ -1,24 +1,18 @@
-import { ethers, upgrades } from "hardhat";
-import { expect } from "chai";
-import { deployWalletContract } from "./Wallet";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("Membership", () => {
   async function deployFixture() {
     const [representative, whitelisterOne, whitelisterTwo, newUser] =
       await ethers.getSigners();
-    const wallet = await deployWalletContract(representative);
 
-    const Membership = await ethers.getContractFactory("Membership");
-    const membership = await upgrades.deployProxy(Membership, [
-      representative.address,
-      whitelisterOne.address,
-      whitelisterTwo.address,
-      wallet.address,
-    ]);
-
-    await membership.deployed();
-    await wallet.addKnownSender(membership.address);
+    const { membership, wallet } = await deployMembershipContract(
+      representative,
+      whitelisterOne,
+      whitelisterTwo
+    );
 
     return {
       representative,
@@ -33,18 +27,11 @@ describe("Membership", () => {
   async function deployFixtureWhitelisted() {
     const [representative, whitelisterOne, whitelisterTwo, newUserWhitelisted] =
       await ethers.getSigners();
-    const wallet = await deployWalletContract(representative);
-
-    const Membership = await ethers.getContractFactory("Membership");
-    const membership = await upgrades.deployProxy(Membership, [
-      representative.address,
-      whitelisterOne.address,
-      whitelisterTwo.address,
-      wallet.address,
-    ]);
-
-    await membership.deployed();
-    await wallet.addKnownSender(membership.address);
+    const { membership, wallet } = await deployMembershipContract(
+      representative,
+      whitelisterOne,
+      whitelisterTwo
+    );
 
     await membership.connect(newUserWhitelisted).requestMembership();
     await membership
@@ -53,6 +40,7 @@ describe("Membership", () => {
     await membership
       .connect(whitelisterTwo)
       .whitelistMember(newUserWhitelisted.address);
+
     return {
       representative,
       whitelisterOne,

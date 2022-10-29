@@ -1,14 +1,6 @@
-import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-
-export async function deployWalletContract(owner: SignerWithAddress) {
-  const Wallet = await ethers.getContractFactory("Wallet", { signer: owner });
-  const wallet = await upgrades.deployProxy(Wallet, []);
-  await wallet.deployed();
-
-  return wallet;
-}
+import { ethers } from "hardhat";
+import { deployWalletContract } from "./helpers/deployContracts";
 
 describe("Wallet", () => {
   async function deployFixture() {
