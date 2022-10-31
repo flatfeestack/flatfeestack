@@ -6,7 +6,7 @@
 :9085
 
 # Support for SPA.
-try_files {path} {file} /index.html
+try_files {path} {path}/ {file} /index.html
 
 file_server {
     #https://misterorion.com/caddy-server-brotli/
