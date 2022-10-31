@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build image
+        uses: docker/build-push-action@v3
+        with:
+          tags: flatfeestack/frontend
+          load: true
+
+      - name: Start container
+        run: docker run -d -p 9085:9085 flatfeestack/frontend
+
+      - name: Check if frontend is reachable
+        uses: nick-fields/retry@v2
+        with:
+          timeout_seconds: 15
+          max_attempts: 5
+          command: curl -v localhost:9085
