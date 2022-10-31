@@ -17,7 +17,7 @@ Then, install the dependencies and check if the tests run.
 
 ```shell
 npm i
-npm run test
+npm run hardhat:test
 ```
 
 ## Deployment
@@ -55,7 +55,7 @@ npx ganache --database.dbPath "./ganache" --logging.verbose --wallet.accounts "0
 Deploy the smart contracts:
 
 ```shell
-npm run deploy -- --network localhost
+npm run hardhat:deploy -- --network localhost
 ```
 
 Deployment is necessary each time the contracts change.
@@ -63,13 +63,13 @@ Deployment is necessary each time the contracts change.
 Additionally, if you run this setup the first time, you need to run a script that confirms the reserved member address:
 
 ```shell
-npm run script -- --network localhost scripts/addMember.ts
+npm run hardhat:script -- --network localhost scripts/addMember.ts
 ```
 
 Now, you can export the ABIs of the smart contracts and the addresses of the proxies to the frontend:
 
 ```shell
-FRONTEND_PATH="../frontend" npm run script -- scripts/exportInterfacesToFrontend.ts
+FRONTEND_PATH="../frontend" npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
 ```
 
 - The contracts' ABI will be written to `src/contracts`.

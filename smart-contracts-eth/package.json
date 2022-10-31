@@ -15,13 +15,13 @@
     "solidity-coverage": "^0.8.2"
   },
   "scripts": {
-    "compile": "hardhat compile",
-    "prettify": "prettier --write .",
-    "prettify:check": "prettier --check .",
+    "hardhat:test": "hardhat test",
+    "hardhat:compile": "hardhat compile",
+    "hardhat:coverage": "hardhat coverage",
+    "hardhat:deploy": "hardhat deploy",
+    "hardhat:script": "hardhat run",
     "lint": "solhint 'contracts/**/*.sol'",
-    "test": "hardhat test",
-    "coverage": "hardhat coverage",
-    "deploy": "hardhat deploy",
-    "script": "hardhat run"
+    "prettify": "prettier --write .",
+    "prettify:check": "prettier --check ."
   }
 }
