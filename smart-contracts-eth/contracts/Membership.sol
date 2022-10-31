@@ -294,7 +294,9 @@ contract Membership is Initializable, IVotesUpgradeable {
             _voteCheckpoints[_adr].push(_subtract, 1);
         }
 
+        delete firstWhiteLister[_adr];
         membershipList[_adr] = MembershipStatus.nonMember;
+
         emit ChangeInMembershipStatus(
             _adr,
             uint256(MembershipStatus.nonMember)
