@@ -25,6 +25,8 @@
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
 
+  import DaaHome from "../components/DAA/Home.svelte"
+
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import {globalHistory} from 'svelte-routing/src/history';
   $route = globalHistory.location;
@@ -162,6 +164,8 @@
       <Route path="/user/badges" component="{Badges}" />
       <Route path="/user/admin" component="{Admin}" />
       <Route path="/user/invitations" component="{Invitations}" />
+
+      <Route path="/daa" component="{DaaHome}">
 
       <Route path="/badges/:uuid" component="{PublicBadges}" />
       <Route path="/forgot" component="{Forgot}" />
