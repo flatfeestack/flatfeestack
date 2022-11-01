@@ -1,5 +1,6 @@
 artifacts
 cache
+deployments
 node_modules
 typechain-types
 coverage
