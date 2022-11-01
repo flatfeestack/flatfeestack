@@ -453,3 +453,7 @@ tbody tr:last-of-type {
   padding: 0.5em;
   margin: 0.5em;
 }
+
+#app {
+  height: 100%;
+}
