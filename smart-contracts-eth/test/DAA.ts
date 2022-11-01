@@ -62,6 +62,7 @@ describe("DAA", () => {
         nonMember,
         representative,
         whitelisterOne,
+        whitelisterTwo,
       },
       proposal: {
         callData: transferCalldata,
@@ -93,7 +94,7 @@ describe("DAA", () => {
             [transferCalldata],
             "I would like to have some money to expand my island in Animal crossing."
           )
-      ).to.revertedWith("Governor: proposer votes below proposal threshold");
+      ).to.revertedWith("Proposer votes below threshold");
     });
 
     it("can propose a proposal", async () => {
@@ -134,6 +135,90 @@ describe("DAA", () => {
     });
   });
 
+  describe("getVotes", () => {
+    it("account has votes", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+
+      const blockNumber = await ethers.provider.getBlockNumber();
+
+      await mine(await daa.votingDelay());
+
+      expect(
+        await daa
+          .connect(whitelisterOne)
+          .getVotes(whitelisterOne.address, blockNumber)
+      ).to.equal(1);
+    });
+  });
+
+  describe("getVotesWithParams", () => {
+    it("account has votes", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+
+      const blockNumber = await ethers.provider.getBlockNumber();
+
+      await mine(await daa.votingDelay());
+
+      expect(
+        await daa
+          .connect(whitelisterOne)
+          .getVotesWithParams(whitelisterOne.address, blockNumber, 0xaa)
+      ).to.equal(1);
+    });
+  });
+
+  describe("castVoteBySig", () => {
+    it("member can not cast vote by a signature", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      await mine(await daa.votingDelay());
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          .castVoteBySig(
+            proposalId,
+            0,
+            5,
+            keccak256(toUtf8Bytes("abc")),
+            keccak256(toUtf8Bytes("def"))
+          )
+      ).to.revertedWith("not possible");
+    });
+  });
+
+  describe("castVoteWithReasonAndParamsBySig", () => {
+    it("member can not cast vote with reason by a signature", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      await mine(await daa.votingDelay());
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          .castVoteWithReasonAndParamsBySig(
+            proposalId,
+            0,
+            "reason",
+            0xaa,
+            5,
+            keccak256(toUtf8Bytes("abc")),
+            keccak256(toUtf8Bytes("def"))
+          )
+      ).to.revertedWith("not possible");
+    });
+  });
+
   describe("castVoteWithReason", () => {
     it("member cannot cast vote before voting starts", async () => {
       const fixtures = await deployFixture();
@@ -145,7 +230,7 @@ describe("DAA", () => {
         daa
           .connect(whitelisterOne)
           .castVoteWithReason(proposalId, 0, "No power to the president!")
-      ).to.revertedWith("Governor: vote not currently active");
+      ).to.revertedWith("Vote not currently active");
     });
 
     it("member can cast vote with reason", async () => {
@@ -180,7 +265,69 @@ describe("DAA", () => {
         daa
           .connect(whitelisterOne)
           .castVoteWithReason(proposalId, 0, "No power to the president!")
-      ).to.revertedWith("Governor: vote not currently active");
+      ).to.revertedWith("Vote not currently active");
+    });
+  });
+
+  describe("castVoteWithReasonAndParams", () => {
+    it("member cannot cast vote with params before voting starts", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          .castVoteWithReasonAndParams(
+            proposalId,
+            0,
+            "No power to the president!",
+            0xaa
+          )
+      ).to.revertedWith("Vote not currently active");
+    });
+
+    it("member can cast vote with reason and params", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      const reason =
+        "I think it's good that we pay the president a fair share.";
+
+      const param = 0xaa;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          .castVoteWithReasonAndParams(proposalId, 0, reason, param)
+      ).to.emit(daa, "VoteCastWithParams");
+    });
+
+    it("member cannot cast vote with params after voting ends", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      const delay = (await daa.votingDelay()) + (await daa.votingPeriod()) + 1;
+      mine(delay);
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          .castVoteWithReasonAndParams(
+            proposalId,
+            0,
+            "No power to the president!",
+            0xaa
+          )
+      ).to.revertedWith("Vote not currently active");
     });
   });
 
@@ -209,6 +356,156 @@ describe("DAA", () => {
       )
         .to.emit(daa, "ProposalExecuted")
         .withArgs(proposalId);
+    });
+  });
+
+  describe("state", () => {
+    it("unknown proposal id should revert ", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = 123;
+
+      await expect(
+        daa.connect(representative).state(proposalId)
+      ).to.revertedWith("Governor: unknown proposal id");
+    });
+
+    it("executed proposal has state exectuted", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+      await daa.connect(representative).castVote(proposalId, 1);
+
+      // voting period
+      await mine(await daa.votingPeriod());
+      await daa
+        .connect(representative)
+        .execute(
+          fixtures.proposal.targets,
+          fixtures.proposal.values,
+          fixtures.proposal.callData,
+          keccak256(toUtf8Bytes(fixtures.proposal.description))
+        );
+
+      expect(await daa.connect(representative).state(proposalId)).to.equal(7);
+    });
+  });
+
+  describe("hasVoted", () => {
+    it("vote should be persistent", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+      await daa.connect(representative).castVote(proposalId, 1);
+
+      expect(
+        await daa
+          .connect(representative)
+          .hasVoted(proposalId, representative.address)
+      ).to.eq(true);
+    });
+
+    it("if user hasn't voted, he hasn't voted", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative, whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+      await daa.connect(representative).castVote(proposalId, 1);
+
+      expect(
+        await daa
+          .connect(representative)
+          .hasVoted(proposalId, whitelisterOne.address)
+      ).to.eq(false);
+    });
+  });
+
+  describe("proposalVotes", () => {
+    it("should load correct proposal votes with one voting", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+      await daa.connect(representative).castVote(proposalId, 1);
+
+      const result = await daa
+        .connect(representative)
+        .proposalVotes(proposalId);
+
+      expect(result.againstVotes).to.eq(0);
+      expect(result.forVotes).to.eq(1);
+      expect(result.abstainVotes).to.eq(0);
+    });
+
+    it("should load correct proposal votes with three votings", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative, whitelisterOne, whitelisterTwo } =
+        fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+
+      // votingDelay
+      await mine(await daa.votingDelay());
+      await daa.connect(representative).castVote(proposalId, 0);
+      await daa.connect(whitelisterOne).castVote(proposalId, 1);
+      await daa.connect(whitelisterTwo).castVote(proposalId, 2);
+
+      const result = await daa
+        .connect(representative)
+        .proposalVotes(proposalId);
+
+      expect(result.againstVotes).to.eq(1);
+      expect(result.forVotes).to.eq(1);
+      expect(result.abstainVotes).to.eq(1);
+    });
+  });
+
+  describe("relay", () => {
+    it("representative can not call the function because he is not the governance", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      await expect(
+        daa.connect(representative).relay(representative.address, 5, 0xaa)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
+
+  describe("countingMode", () => {
+    it("counting mode is correct", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      expect(await daa.connect(representative).COUNTING_MODE()).to.eq(
+        "support=bravo&quorum=for,abstain"
+      );
+    });
+  });
+
+  describe("name", () => {
+    it("name is correct", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      expect(await daa.connect(representative).name()).to.eq("FlatFeeStack");
     });
   });
 });

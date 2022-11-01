@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts-upgradeable/governance/GovernorUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorVotesUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorCountingSimpleUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorVotesQuorumFractionUpgradeable.sol";
+import "./governor/GovernorUpgradeable.sol";
+import "./governor/GovernorVotesUpgradeable.sol";
+import "./governor/GovernorCountingSimpleUpgradeable.sol";
+import "./governor/GovernorVotesQuorumFractionUpgradeable.sol";
 
 contract DAA is
     Initializable,
@@ -14,10 +14,10 @@ contract DAA is
     GovernorVotesQuorumFractionUpgradeable
 {
     function initialize(IVotesUpgradeable _membership) public initializer {
-        __Governor_init("FlatFeeStack");
-        __GovernorVotes_init(_membership);
-        __GovernorCountingSimple_init();
-        __GovernorVotesQuorumFraction_init(0);
+        governorInit("FlatFeeStack");
+        governorVotesInit(_membership);
+        governorCountingSimpleInit();
+        governorVotesQuorumFractionInit(0);
     }
 
     function votingDelay() public pure override returns (uint256) {
@@ -94,14 +94,5 @@ contract DAA is
         returns (address)
     {
         return super._executor();
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(GovernorUpgradeable)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
     }
 }
