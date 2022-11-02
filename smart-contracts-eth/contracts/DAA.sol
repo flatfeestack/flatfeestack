@@ -21,11 +21,11 @@ contract DAA is
     }
 
     function votingDelay() public pure override returns (uint256) {
-        return 6575; // 1 day
+        return 0; // Votes get assigned to slots, so delay is differt ervery time
     }
 
     function votingPeriod() public pure override returns (uint256) {
-        return 46027; // 1 week
+        return 6495; // 1 day in blocks
     }
 
     function proposalThreshold() public pure override returns (uint256) {
@@ -94,5 +94,23 @@ contract DAA is
         returns (address)
     {
         return super._executor();
+    }
+
+    // Sets a new voting slot
+    // the voting slot has to be four weeks from now
+    // it is calculated in blocks and we assume that 6495 blocks will be mined in a day
+    function setVotingSlot(uint256 blockNumber) external returns (uint256) {
+        require(
+            blockNumber >= block.number + 181860,
+            "Must be a least a month from now"
+        );
+        for (uint256 i = 0; i < slots.length; i++) {
+            if (slots[i] == blockNumber) {
+                revert("Vote slot already exists");
+            }
+        }
+        slots.push(blockNumber);
+        emit NewTimeslotSet(blockNumber);
+        return blockNumber;
     }
 }

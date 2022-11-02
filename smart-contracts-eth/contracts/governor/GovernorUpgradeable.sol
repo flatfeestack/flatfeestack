@@ -40,7 +40,15 @@ abstract contract GovernorUpgradeable is
 
     mapping(uint256 => ProposalCore) private _proposals;
 
+    uint256[] public slots;
+    // BlockNumber => ProposalId[]
+    mapping(uint256 => uint256[]) public votingSlots;
+
+    uint256 public slotCloseTime;
+
     DoubleEndedQueueUpgradeable.Bytes32Deque private _governanceCall;
+
+    event NewTimeslotSet(uint256 timeslot);
 
     modifier onlyGovernance() {
         require(_msgSender() == _executor(), "Governor: onlyGovernance");
@@ -56,6 +64,7 @@ abstract contract GovernorUpgradeable is
     function governorInit(string memory name_) internal onlyInitializing {
         __EIP712_init_unchained(name_, version());
         governorInitUnchained(name_);
+        slotCloseTime = 45465; // 1 week before
     }
 
     function governorInitUnchained(string memory name_)
@@ -124,13 +133,13 @@ abstract contract GovernorUpgradeable is
             return ProposalState.Canceled;
         }
 
-        uint256 snapshot = proposalSnapshot(proposalId);
+        uint256 proposalStart = proposalSnapshot(proposalId);
 
-        if (snapshot == 0) {
+        if (proposalStart == 0) {
             revert("Governor: unknown proposal id");
         }
 
-        if (snapshot >= block.number) {
+        if (proposalStart >= block.number) {
             return ProposalState.Pending;
         }
 
@@ -226,11 +235,13 @@ abstract contract GovernorUpgradeable is
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
-        uint64 snapshot = block.number.toUint64() + votingDelay().toUint64();
-        uint64 deadline = snapshot + votingPeriod().toUint64();
+        uint256 nextSlot = _getNextPossibleVotingSlot();
 
-        proposal.voteStart.setDeadline(snapshot);
-        proposal.voteEnd.setDeadline(deadline);
+        uint64 start = nextSlot.toUint64();
+        uint64 end = start + votingPeriod().toUint64();
+
+        proposal.voteStart.setDeadline(start);
+        proposal.voteEnd.setDeadline(end);
 
         emit ProposalCreated(
             proposalId,
@@ -239,10 +250,12 @@ abstract contract GovernorUpgradeable is
             values,
             new string[](targets.length),
             calldatas,
-            snapshot,
-            deadline,
+            start,
+            end,
             description
         );
+
+        votingSlots[nextSlot].push(proposalId);
 
         return proposalId;
     }
@@ -479,12 +492,29 @@ abstract contract GovernorUpgradeable is
         address target,
         uint256 value,
         bytes calldata data
-    ) external virtual onlyGovernance {
-        AddressUpgradeable.functionCallWithValue(target, data, value);
+    ) external payable virtual onlyGovernance {
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory returndata) = target.call{value: value}(
+            data
+        );
+        AddressUpgradeable.verifyCallResult(
+            success,
+            returndata,
+            "Relay reverted without message"
+        );
     }
 
     function _executor() internal view virtual returns (address) {
         return address(this);
+    }
+
+    function _getNextPossibleVotingSlot() internal returns (uint256) {
+        for (uint256 i = 0; i < slots.length; i++) {
+            if (block.number < (slots[i] - slotCloseTime)) {
+                return slots[i];
+            }
+        }
+        revert("No voting slot found");
     }
 
     uint256[46] private __gap;

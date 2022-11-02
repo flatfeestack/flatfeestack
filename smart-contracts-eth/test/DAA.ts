@@ -1,11 +1,13 @@
 import { keccak256 } from "@ethersproject/keccak256";
 import { toUtf8Bytes } from "@ethersproject/strings";
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { mine, time, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("DAA", () => {
+  const blocksInAMonth = 181860;
+  const blocksInAWeek = 45465;
   async function deployFixture() {
     const [nonMember, representative, whitelisterOne, whitelisterTwo] =
       await ethers.getSigners();
@@ -27,6 +29,11 @@ describe("DAA", () => {
 
     // transfer wallet ownership
     await wallet.connect(representative).transferOwnership(daa.address);
+
+    // create proposal slot
+    const firstVotingSlot =
+      (await time.latestBlock()) + blocksInAMonth + blocksInAWeek;
+    await daa.connect(representative).setVotingSlot(firstVotingSlot);
 
     // create proposal
     const transferCalldata = [
@@ -71,6 +78,7 @@ describe("DAA", () => {
         targets: targets,
         values: values,
       },
+      firstVotingSlot,
     };
   }
 
@@ -118,6 +126,101 @@ describe("DAA", () => {
           )
       ).to.emit(daa, "ProposalCreated");
     });
+
+    it("proposals get assigned to the correct voting slots", async () => {
+      const fixtures = await deployFixture();
+      const { daa, wallet } = fixtures.contracts;
+      const { representative, whitelisterOne } = fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+      const proposalId1 = fixtures.proposal.id;
+
+      const transferCalldata = wallet.interface.encodeFunctionData(
+        "increaseAllowance",
+        [whitelisterOne.address, ethers.utils.parseEther("1.0")]
+      );
+
+      await mineUpTo(firstVotingSlot);
+
+      const latestBlock = await time.latestBlock();
+      const secondVotingSlot = latestBlock + 2 * blocksInAMonth;
+      await daa.connect(representative).setVotingSlot(secondVotingSlot);
+      const thirdVotingSlot = latestBlock + 4 * blocksInAMonth;
+      await daa.connect(representative).setVotingSlot(thirdVotingSlot);
+
+      const proposal2 = await daa
+        .connect(whitelisterOne)
+        ["propose(address[],uint256[],bytes[],string)"](
+          [wallet.address],
+          [0],
+          [transferCalldata],
+          "I would like to have some money to buy new plants for the office."
+        );
+      const receiptProposal2 = await proposal2.wait();
+      const [proposalId2] = receiptProposal2.events.find(
+        (event: any) => event.event === "ProposalCreated"
+      ).args;
+
+      const proposal3 = await daa
+        .connect(whitelisterOne)
+        ["propose(address[],uint256[],bytes[],string)"](
+          [wallet.address],
+          [0],
+          [transferCalldata],
+          "I would like to have some money to buy me a better pc."
+        );
+      const receiptProposal3 = await proposal3.wait();
+      const [proposalId3] = receiptProposal3.events.find(
+        (event: any) => event.event === "ProposalCreated"
+      ).args;
+
+      await mineUpTo(secondVotingSlot);
+
+      const proposal4 = await daa
+        .connect(whitelisterOne)
+        ["propose(address[],uint256[],bytes[],string)"](
+          [wallet.address],
+          [0],
+          [transferCalldata],
+          "I would like to have some money to build a new feature."
+        );
+      const receiptProposal4 = await proposal4.wait();
+      const [proposalId4] = receiptProposal4.events.find(
+        (event: any) => event.event === "ProposalCreated"
+      ).args;
+
+      expect(await daa.slots(0)).to.eq(firstVotingSlot);
+      expect(await daa.slots(1)).to.eq(secondVotingSlot);
+      expect(await daa.slots(2)).to.eq(thirdVotingSlot);
+      expect(await daa.votingSlots(firstVotingSlot, 0)).to.eq(proposalId1);
+      expect(await daa.votingSlots(secondVotingSlot, 0)).to.eq(proposalId2);
+      expect(await daa.votingSlots(secondVotingSlot, 1)).to.eq(proposalId3);
+      expect(await daa.votingSlots(thirdVotingSlot, 0)).to.eq(proposalId4);
+    });
+
+    it("can not propose if there is no voting slot announced", async () => {
+      const fixtures = await deployFixture();
+      const { daa, wallet } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const transferCalldata = wallet.interface.encodeFunctionData(
+        "increaseAllowance",
+        [whitelisterOne.address, ethers.utils.parseEther("1.0")]
+      );
+
+      await mineUpTo(firstVotingSlot);
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          ["propose(address[],uint256[],bytes[],string)"](
+            [wallet.address],
+            [0],
+            [transferCalldata],
+            "I would like to have some money to expand my island in Animal crossing."
+          )
+      ).to.revertedWith("No voting slot found");
+    });
   });
 
   describe("castVote", () => {
@@ -126,8 +229,9 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       await expect(daa.connect(whitelisterOne).castVote(proposalId, 0))
         .to.emit(daa, "VoteCast")
@@ -140,10 +244,11 @@ describe("DAA", () => {
       const fixtures = await deployFixture();
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
+      const { firstVotingSlot } = fixtures;
 
-      const blockNumber = await ethers.provider.getBlockNumber();
+      const blockNumber = await time.latestBlock();
 
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       expect(
         await daa
@@ -158,10 +263,11 @@ describe("DAA", () => {
       const fixtures = await deployFixture();
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
+      const { firstVotingSlot } = fixtures;
 
-      const blockNumber = await ethers.provider.getBlockNumber();
+      const blockNumber = await time.latestBlock();
 
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       expect(
         await daa
@@ -177,8 +283,9 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       await expect(
         daa
@@ -200,8 +307,9 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       await expect(
         daa
@@ -238,12 +346,13 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       const reason =
         "I think it's good that we pay the president a fair share.";
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       await expect(
         daa.connect(whitelisterOne).castVoteWithReason(proposalId, 0, reason)
@@ -257,9 +366,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
-      const delay = (await daa.votingDelay()) + (await daa.votingPeriod()) + 1;
-      mine(delay);
+      const delay = firstVotingSlot + (await daa.votingPeriod()) + 1;
+      mineUpTo(delay);
 
       await expect(
         daa
@@ -293,6 +403,7 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       const reason =
         "I think it's good that we pay the president a fair share.";
@@ -300,7 +411,7 @@ describe("DAA", () => {
       const param = 0xaa;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
 
       await expect(
         daa
@@ -314,9 +425,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
-      const delay = (await daa.votingDelay()) + (await daa.votingPeriod()) + 1;
-      mine(delay);
+      const delay = firstVotingSlot + (await daa.votingPeriod()) + 1;
+      mineUpTo(delay);
 
       await expect(
         daa
@@ -337,9 +449,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { representative } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 1);
 
       // voting period
@@ -376,9 +489,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { representative } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 1);
 
       // voting period
@@ -402,9 +516,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { representative } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 1);
 
       expect(
@@ -419,9 +534,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { representative, whitelisterOne } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 1);
 
       expect(
@@ -438,9 +554,10 @@ describe("DAA", () => {
       const { daa } = fixtures.contracts;
       const { representative } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 1);
 
       const result = await daa
@@ -458,9 +575,10 @@ describe("DAA", () => {
       const { representative, whitelisterOne, whitelisterTwo } =
         fixtures.entities;
       const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mine(await daa.votingDelay());
+      await mineUpTo(firstVotingSlot);
       await daa.connect(representative).castVote(proposalId, 0);
       await daa.connect(whitelisterOne).castVote(proposalId, 1);
       await daa.connect(whitelisterTwo).castVote(proposalId, 2);
@@ -506,6 +624,59 @@ describe("DAA", () => {
       const { representative } = fixtures.entities;
 
       expect(await daa.connect(representative).name()).to.eq("FlatFeeStack");
+    });
+  });
+
+  describe("setVotingSlot", () => {
+    // Disabled because DAA doesn't know the delegate
+    // it("can not be set by non delegate", async () => {
+    //   const fixtures = await deployFixture();
+    //   const { daa } = fixtures.contracts;
+    //   const { whitelisterOne } = fixtures.entities;
+    //
+    //   const slot = (await time.latestBlock()) + blocksInAMonth + 1;
+    //
+    //   await expect(
+    //     daa.connect(whitelisterOne).setVotingSlot(slot)
+    //   ).to.revertedWith("Only Governor");
+    // });
+
+    it("can not set same slot twice", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      const slot = (await time.latestBlock()) + 3 * blocksInAMonth;
+
+      await daa.connect(representative).setVotingSlot(slot);
+
+      await expect(
+        daa.connect(representative).setVotingSlot(slot)
+      ).to.revertedWith("Vote slot already exists");
+    });
+
+    it("can not set slot who is less than one month from now", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      const slot = (await time.latestBlock()) + blocksInAWeek + 1;
+
+      await expect(
+        daa.connect(representative).setVotingSlot(slot)
+      ).to.revertedWith("Must be a least a month from now");
+    });
+
+    it("emits event after setting new slot", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+
+      const slot = (await time.latestBlock()) + blocksInAMonth + 1;
+
+      await expect(daa.connect(representative).setVotingSlot(slot))
+        .to.emit(daa, "NewTimeslotSet")
+        .withArgs(slot);
     });
   });
 });
