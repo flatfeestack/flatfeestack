@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {navigate} from "svelte-routing";
+import {navigate} from "svelte-routing";
 </script>
 
 <style>
@@ -35,7 +35,7 @@
     .parallax {
         text-align: center;
         justify-content: center;
-        background-image: url("/images/code-dark2.jpg");
+        background-image: url(/images/code-dark2.jpg);
         color: #fff;
         background-attachment: fixed;
         background-position: center;

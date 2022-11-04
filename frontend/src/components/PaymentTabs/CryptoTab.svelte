@@ -2,7 +2,7 @@
     import {config, error} from "../../ts/store";
     import {API} from "../../ts/api";
     // noinspection TypeScriptCheckImport
-    //import QrCode from "svelte-qrcode";
+    import QrCode from "svelte-qrcode";
     import {formatBalance, minBalanceName, qrString} from "../../ts/services";
     import type {PaymentResponse} from "../../types/users";
 

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { Link } from "svelte-routing";
-  import { navigate } from "svelte-routing";
   import { login } from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import {navigate, link} from "svelte-routing";
 
   let email = "";
   let password = "";
@@ -73,7 +72,7 @@
       <div class="flex py-1">
         <label for="password" class="">Password</label>
         <label for="password" class="">
-          <Link to="/forgot">Forgot password?</Link>
+          <a href="/forgot" use:link>Forgot password?</a>
         </label>
       </div>
 
@@ -90,7 +89,7 @@
 
     <div class="divider"></div>
     <div class="flex">
-      New to FlatFeeStack?&nbsp;<Link to="/signup">Sign up</Link>
+      New to FlatFeeStack?&nbsp;<a href="/signup" use:link>Sign up</a>
     </div>
 
   </div>

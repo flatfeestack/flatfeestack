@@ -5,11 +5,6 @@
   import { isSubmitting, user, route } from "../ts/store";
   import Spinner from "./Spinner.svelte";
 
-  let pathname="/";
-  if (typeof window !== "undefined") {
-    pathname = window.location.pathname;
-  }
-
 </script>
 
 <style>

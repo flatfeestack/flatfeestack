@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Link, navigate } from "svelte-routing";
   import Dots from "../components/Dots.svelte";
   import { confirmInvite } from "../ts/services";
   import { API } from "../ts/api";
+  import {navigate, link} from "svelte-routing";
 
   export let email;
   export let emailToken;
@@ -78,7 +78,7 @@
 
     <div class="divider"></div>
     <div class="flex">
-      Already have an account?&nbsp;<Link to="/signin">Log in</Link>
+      Already have an account?&nbsp;<a href="/signin" use:link>Log in</a>
     </div>
 
   </div>

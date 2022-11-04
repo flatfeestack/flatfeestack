@@ -6,7 +6,6 @@
   import type { Contributions, Repos } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
   import {Line, Bar} from "svelte-chartjs";
-  //import Bar from "../components/Bar.svelte";
   import Fa from "svelte-fa";
   import { faPlus, faArrowRight, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
   import {htmlLegendPlugin} from "../ts/utils";

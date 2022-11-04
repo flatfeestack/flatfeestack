@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Link } from "svelte-routing";
+  import { link } from "svelte-routing";
   import { API } from "./../ts/api";
   import Dots from "../components/Dots.svelte";
 
@@ -86,7 +86,7 @@
 
     <div class="divider"></div>
     <div class="flex">
-      Already have an account?&nbsp;<Link to="/signin">Log in</Link>
+      Already have an account?&nbsp;<a href="/signin" use:link>Log in</a>
     </div>
 
   </div>

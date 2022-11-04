@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type {Repos, Repo} from "src/types/users";
+  import type {Repos, Repo} from "../types/users";
   import { API } from "../ts/api";
   import { error, sponsoredRepos } from "../ts/store";
   import { getColor1, getColor2 } from "../ts/utils";
