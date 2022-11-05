@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers, upgrades } from "hardhat";
+import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
 export async function deployWalletContract(owner: SignerWithAddress) {
   const Wallet = await ethers.getContractFactory("Wallet", { signer: owner });
@@ -25,6 +26,21 @@ export async function deployMembershipContract(
 
   await membership.deployed();
   await wallet.addKnownSender(membership.address);
+
+  // pay membership fees
+  const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
+
+  await membership.connect(representative).payMembershipFee({
+    value: toBePaid,
+  });
+  await membership.connect(whitelisterOne).payMembershipFee({
+    value: toBePaid,
+  });
+  await membership.connect(whitelisterTwo).payMembershipFee({
+    value: toBePaid,
+  });
+
+  await mine(2);
 
   return { membership: membership, wallet: wallet };
 }

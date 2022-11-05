@@ -470,6 +470,7 @@ abstract contract GovernorUpgradeable is
             proposal.voteStart.getDeadline(),
             params
         );
+        require(weight > 0, "no voting rights");
         _countVote(proposalId, account, support, weight, params);
 
         if (params.length == 0) {

@@ -166,10 +166,6 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
             );
         } else {
             membershipList[_adr] = MembershipStatus.isMember;
-            nextMembershipFeePayment[_adr] = block.timestamp;
-
-            _totalCheckpoints.push(_add, 1);
-            _voteCheckpoints[_adr].push(_add, 1);
 
             emit ChangeInMembershipStatus(
                 _adr,
@@ -185,8 +181,13 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         // we don't say "no" if somebody pays more than they should :)
         require(msg.value >= membershipFee, "Membership fee not covered!");
 
-        nextMembershipFeePayment[msg.sender] = nextDueDate + 365 days;
+        nextMembershipFeePayment[msg.sender] = block.timestamp + 365 days;
         _wallet.payContribution{value: msg.value}(msg.sender);
+
+        if (nextDueDate == 0) {
+            _totalCheckpoints.push(_add, 1);
+            _voteCheckpoints[msg.sender].push(_add, 1);
+        }
     }
 
     function setMembershipFee(uint256 newMembershipFee)
@@ -229,7 +230,10 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
             _removeWhitelister(_adr);
         }
 
-        if (membershipList[_adr] == MembershipStatus.isMember) {
+        if (
+            membershipList[_adr] == MembershipStatus.isMember &&
+            nextMembershipFeePayment[_adr] > 0
+        ) {
             _totalCheckpoints.push(_subtract, 1);
             _voteCheckpoints[_adr].push(_subtract, 1);
         }
