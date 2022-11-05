@@ -6,6 +6,7 @@
   import { API } from "../ts/api";
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
+  import Modal from 'svelte-simple-modal';
 
   import Landing from "../routes/Landing.svelte";
   import Badges from "../routes/Badges.svelte";
@@ -151,29 +152,31 @@
   {#if $error}<div class="bg-red p-2 parent err-container"><div class="w-100">{@html $error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
 
   <main>
-    <Router url="{urlOriginal}">
-      <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
-      <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
-      <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
-      <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component="{ConfirmInvite}" />
+    <Modal>
+      <Router url="{urlOriginal}">
+        <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
+        <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
+        <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />
+        <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component="{ConfirmInvite}" />
 
-      <Route path="/user/search" component="{Search}" />
-      <Route path="/user/payments" component="{Payments}" />
-      <Route path="/user/settings" component="{Settings}" />
-      <Route path="/user/income" component="{Income}" />
-      <Route path="/user/badges" component="{Badges}" />
-      <Route path="/user/admin" component="{Admin}" />
-      <Route path="/user/invitations" component="{Invitations}" />
+        <Route path="/user/search" component="{Search}" />
+        <Route path="/user/payments" component="{Payments}" />
+        <Route path="/user/settings" component="{Settings}" />
+        <Route path="/user/income" component="{Income}" />
+        <Route path="/user/badges" component="{Badges}" />
+        <Route path="/user/admin" component="{Admin}" />
+        <Route path="/user/invitations" component="{Invitations}" />
 
-      <Route path="/daa/votes" component="{DaaVotes}" />
+        <Route path="/daa/votes" component="{DaaVotes}" />
 
-      <Route path="/badges/:uuid" component="{PublicBadges}" />
-      <Route path="/forgot" component="{Forgot}" />
-      <Route path="/signup" component="{Signup}" />
-      <Route path="/login" component="{Login}" />
-      <Route path="/" component="{Landing}" />
-      <Route path="*" component="{CatchAll}" />
-    </Router>
+        <Route path="/badges/:uuid" component="{PublicBadges}" />
+        <Route path="/forgot" component="{Forgot}" />
+        <Route path="/signup" component="{Signup}" />
+        <Route path="/login" component="{Login}" />
+        <Route path="/" component="{Landing}" />
+        <Route path="*" component="{CatchAll}" />
+      </Router>
+    </Modal>
   </main>
 
   <footer class="text-center">We used the following <a href="stats.html">dependencies</a></footer>
