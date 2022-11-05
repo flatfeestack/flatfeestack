@@ -43,7 +43,7 @@
             $membershipContract = new ethers.Contract(
                 import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
                 MembershipABI,
-                $provider
+                $signer
             )
 
             membershipStatus = membershipStatusMapping[await $membershipContract.getMembershipStatus(ethereumAddress)];

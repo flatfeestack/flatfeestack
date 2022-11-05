@@ -441,6 +441,10 @@ tbody tr:last-of-type {
   text-align: center;
 }
 
+.right {
+  text-align: right;
+}
+
 .bold {
   font-weight: bold;
 }
