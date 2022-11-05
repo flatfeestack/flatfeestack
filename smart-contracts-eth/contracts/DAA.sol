@@ -5,6 +5,7 @@ import "./governor/GovernorUpgradeable.sol";
 import "./governor/GovernorVotesUpgradeable.sol";
 import "./governor/GovernorCountingSimpleUpgradeable.sol";
 import "./governor/GovernorVotesQuorumFractionUpgradeable.sol";
+import "./Membership.sol";
 
 contract DAA is
     Initializable,
@@ -13,7 +14,10 @@ contract DAA is
     GovernorCountingSimpleUpgradeable,
     GovernorVotesQuorumFractionUpgradeable
 {
-    function initialize(IVotesUpgradeable _membership) public initializer {
+    Membership public membershipContract;
+
+    function initialize(Membership _membership) public initializer {
+        membershipContract = Membership(_membership);
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
@@ -99,7 +103,11 @@ contract DAA is
     // Sets a new voting slot
     // the voting slot has to be four weeks from now
     // it is calculated in blocks and we assume that 6495 blocks will be mined in a day
-    function setVotingSlot(uint256 blockNumber) external returns (uint256) {
+    function setVotingSlot(uint256 blockNumber) public returns (uint256) {
+        require(
+            msg.sender == membershipContract.representative(),
+            "only representative"
+        );
         require(
             blockNumber >= block.number + 181860,
             "Must be a least a month from now"

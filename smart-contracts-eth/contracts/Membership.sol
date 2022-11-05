@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "./Wallet.sol";
+import "./Accessible.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
@@ -10,26 +11,10 @@ import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.s
 // however, we don't care about second-level precision, as we deal with a much longer time period
 // there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
 /* solhint-disable not-rely-on-time */
-contract Membership is Initializable, IVotesUpgradeable {
+contract Membership is Initializable, IVotesUpgradeable, Accessible {
     using CheckpointsUpgradeable for CheckpointsUpgradeable.History;
 
-    enum MembershipStatus {
-        nonMember,
-        requesting,
-        whitelistedByOne,
-        isMember
-    }
-
-    address public representative;
-    uint256 public minimumWhitelister;
-    uint256 public whitelisterListLength;
-    uint256 public membershipFee;
-
     Wallet private _wallet;
-
-    mapping(uint256 => address) public whitelisterList;
-    mapping(address => MembershipStatus) internal membershipList;
-    mapping(address => address) internal firstWhiteLister;
 
     mapping(address => uint256) public nextMembershipFeePayment;
 
@@ -51,40 +36,6 @@ contract Membership is Initializable, IVotesUpgradeable {
         address indexed concernedRepresentative,
         bool removedOrAdded
     );
-
-    modifier nonMemberOnly() {
-        require(
-            membershipList[msg.sender] == MembershipStatus.nonMember,
-            "only non-members"
-        );
-        _;
-    }
-
-    modifier memberOnly() {
-        require(
-            membershipList[msg.sender] == MembershipStatus.isMember,
-            "only members"
-        );
-        _;
-    }
-
-    modifier representativeOnly() {
-        require(msg.sender == representative, "only representative");
-        _;
-    }
-
-    modifier whitelisterOnly() {
-        require(isWhitelister(msg.sender) == true, "only whitelisters");
-        _;
-    }
-
-    modifier representativeOrWhitelisterOnly() {
-        require(
-            msg.sender == representative || isWhitelister(msg.sender),
-            "whitelister / represetative only"
-        );
-        _;
-    }
 
     function initialize(
         address _representative,
@@ -141,17 +92,6 @@ contract Membership is Initializable, IVotesUpgradeable {
 
     function getMembershipStatus(address _adr) public view returns (uint256) {
         return uint256(membershipList[_adr]);
-    }
-
-    function isWhitelister(address _adr) public view returns (bool) {
-        bool check = false;
-        for (uint256 i = 0; i < whitelisterListLength; i++) {
-            if (whitelisterList[i] == _adr) {
-                check = true;
-                break;
-            }
-        }
-        return check;
     }
 
     function addWhitelister(address _adr)

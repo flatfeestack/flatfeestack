@@ -628,18 +628,17 @@ describe("DAA", () => {
   });
 
   describe("setVotingSlot", () => {
-    // Disabled because DAA doesn't know the delegate
-    // it("can not be set by non delegate", async () => {
-    //   const fixtures = await deployFixture();
-    //   const { daa } = fixtures.contracts;
-    //   const { whitelisterOne } = fixtures.entities;
-    //
-    //   const slot = (await time.latestBlock()) + blocksInAMonth + 1;
-    //
-    //   await expect(
-    //     daa.connect(whitelisterOne).setVotingSlot(slot)
-    //   ).to.revertedWith("Only Governor");
-    // });
+    it("can not be set by non delegate", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+
+      const slot = (await time.latestBlock()) + blocksInAMonth + 1;
+
+      await expect(
+        daa.connect(whitelisterOne).setVotingSlot(slot)
+      ).to.revertedWith("only representative");
+    });
 
     it("can not set same slot twice", async () => {
       const fixtures = await deployFixture();
