@@ -2,7 +2,7 @@
   import { faUserFriends, faSearch, faMedal, faUserCog, faCreditCard, faHandHoldingUsd, faShieldAlt } from "@fortawesome/free-solid-svg-icons";
   import { links } from "svelte-routing";
   import Fa from "svelte-fa";
-  import { isSubmitting, user, route } from "../ts/store";
+  import { isSubmitting, user, route } from "../ts/mainStore";
   import Spinner from "./Spinner.svelte";
 
 </script>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {config, error} from "../../ts/store";
+    import {config, error} from "../../ts/mainStore";
     import {API} from "../../ts/api";
     // noinspection TypeScriptCheckImport
     import QR from 'svelte-qr'

@@ -3,7 +3,7 @@ import Navigation from "../components/Navigation.svelte";
 import { API } from "../ts/api";
 import Spinner from "../components/Spinner.svelte";
 import {formatDate, formatNowUTC, storeToken} from "../ts/services";
-import { config, error, loadedSponsoredRepos, user } from "../ts/store";
+import { config, error, loadedSponsoredRepos, user } from "../ts/mainStore";
 import { faSignInAlt, faCheck, faArrowsLeftRight } from "@fortawesome/free-solid-svg-icons";
 import Fa from "svelte-fa";
 import type {Repos} from "../types/users";

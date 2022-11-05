@@ -1,5 +1,5 @@
 import ky from "ky";
-import { config, token } from "./store";
+import { config, token } from "./mainStore";
 import { get } from "svelte/store";
 import { refresh } from "./services";
 import type {

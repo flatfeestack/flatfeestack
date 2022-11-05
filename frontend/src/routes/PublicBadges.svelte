@@ -1,7 +1,7 @@
 <script type="ts">
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { error } from "../ts/store";
+  import { error } from "../ts/mainStore";
   import type { Repos, Users } from "../types/users";
 
   export let uuid: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, userBalances } from "../ts/store";
+  import { error, userBalances } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type {Repos} from "../types/users";

@@ -2,7 +2,7 @@
     import FiatTab from "./PaymentTabs/FiatTab.svelte";
     import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
     import Tabs from "./Tabs.svelte";
-    import {user, config, userBalances, error} from "../ts/store";
+    import {user, config, userBalances, error} from "../ts/mainStore";
     import {onMount} from "svelte";
     import {API} from "../ts/api";
     import type {Plan} from "../types/users";

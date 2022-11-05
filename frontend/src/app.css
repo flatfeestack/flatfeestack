@@ -161,6 +161,14 @@ h1 {
   color: var(--primary-500);
 }
 
+.text-red {
+  color: rgba(252, 165, 165, 1);
+}
+
+.text-secondary-900 {
+  color: var(--secondary-900);
+}
+
 .max-w20 {
   max-width: 20em;
 }

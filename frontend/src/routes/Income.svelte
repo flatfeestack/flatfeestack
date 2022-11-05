@@ -1,7 +1,7 @@
 <script lang="ts">
     import Navigation from "../components/Navigation.svelte";
     import {API} from "../ts/api";
-    import {error} from "../ts/store";
+    import {error} from "../ts/mainStore";
     import {formatDate, timeSince} from "../ts/services";
 
     let address = "";

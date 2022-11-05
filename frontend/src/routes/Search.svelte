@@ -2,7 +2,7 @@
   import type { Repos } from "../types/users";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/store";
+  import { error, isSubmitting, loadedSponsoredRepos, sponsoredRepos } from "../ts/mainStore";
 
   import Navigation from "../components/Navigation.svelte";
   import RepoCard from "../components/RepoCard.svelte";

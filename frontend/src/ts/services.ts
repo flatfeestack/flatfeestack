@@ -1,4 +1,4 @@
-import {token, user, loginFailed, userBalances, config} from "./store";
+import {token, user, loginFailed, userBalances, config} from "./mainStore";
 import { API } from "./api";
 import type { Token, Users } from "../types/users";
 import { get } from "svelte/store";

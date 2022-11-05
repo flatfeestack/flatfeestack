@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, isSubmitting, user, config } from "../ts/store";
+  import { error, isSubmitting, user, config } from "../ts/mainStore";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";

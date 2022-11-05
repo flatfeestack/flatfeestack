@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { API } from "./../ts/api";
-  import { error } from "../ts/store";
+  import { error } from "../ts/mainStore";
   import {navigate} from "svelte-routing";
 
   export let email;

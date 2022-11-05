@@ -1,7 +1,7 @@
 <script type="ts">
     import {faHand, faHippo, faList, faMoneyBill, faUserAstronaut} from "@fortawesome/free-solid-svg-icons";
     import {links} from "svelte-routing";
-    import {error, isSubmitting} from "../../ts/store";
+    import {error, isSubmitting} from "../../ts/mainStore";
     import Spinner from "../Spinner.svelte";
     import NavItem from "../NavItem.svelte";
     import detectEthereumProvider from "@metamask/detect-provider";
@@ -9,6 +9,9 @@
     import {ethers} from "ethers";
     import {MembershipABI} from "../../contracts/Membership";
     import Fa from "svelte-fa";
+    import {getContext} from "svelte";
+    import MembershipStatus from "./MembershipStatus.svelte";
+    import {membershipContract, provider, signer} from "../../ts/daaStore";
 
     let pathname = "/";
     if (typeof window !== "undefined") {
@@ -25,22 +28,25 @@
     export let ethereumAddress = null;
     export let membershipStatus;
 
+    const { open } = getContext('simple-modal');
+    const showMembershipStatus = () => open(MembershipStatus);
+
     async function connectWallet() {
         let ethProv = await detectEthereumProvider();
 
         if (ethProv) {
-            const provider = new Web3Provider(<any>ethProv);
-            await provider.send("eth_requestAccounts", []);
-            const signer = provider.getSigner();
-            ethereumAddress = await signer.getAddress();
+            $provider = new Web3Provider(<any>ethProv);
+            await $provider.send("eth_requestAccounts", []);
+            $signer = $provider.getSigner();
+            ethereumAddress = await $signer.getAddress();
 
-            const membershipContract = new ethers.Contract(
+            $membershipContract = new ethers.Contract(
                 import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
                 MembershipABI,
-                provider
+                $provider
             )
 
-            membershipStatus = membershipStatusMapping[await membershipContract.getMembershipStatus(ethereumAddress)];
+            membershipStatus = membershipStatusMapping[await $membershipContract.getMembershipStatus(ethereumAddress)];
         } else {
             $error = "MetaMask not detected in your browser."
         }
@@ -132,7 +138,8 @@
             <button class="button1" on:click={connectWallet}>Connect wallet</button>
         {:else}
             Hello {ethereumAddress}! <br>
-            Your status: {membershipStatus}
+            Your status: {membershipStatus} <br>
+            <a on:click={showMembershipStatus}>Approval process</a>
         {/if}
     </div>
 </div>

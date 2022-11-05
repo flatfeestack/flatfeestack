@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import {error, user, config} from "../ts/store";
+  import {error, user, config} from "../ts/mainStore";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";

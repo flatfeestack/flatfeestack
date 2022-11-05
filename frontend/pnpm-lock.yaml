@@ -19,6 +19,7 @@ specifiers:
   svelte-preprocess: ^4.10.7
   svelte-qr: ^1.0.0
   svelte-routing: ^1.6.0
+  svelte-simple-modal: ^1.4.1
   tslib: ^2.4.1
   typescript: ^4.8.4
   vite: ^3.2.2
@@ -34,6 +35,7 @@ dependencies:
   svelte-chartjs: 3.0.1_35lyr3fljcb5qq3m6uq3smzvke
   svelte-qr: 1.0.0
   svelte-routing: 1.6.0_besnmoibwkhwtentvwuriss7pa
+  svelte-simple-modal: 1.4.1_svelte@3.52.0
 
 devDependencies:
   '@fortawesome/free-solid-svg-icons': 6.2.0
@@ -2023,6 +2025,14 @@ packages:
       svelte2tsx: 0.1.193_besnmoibwkhwtentvwuriss7pa
     transitivePeerDependencies:
       - typescript
+    dev: false
+
+  /svelte-simple-modal/1.4.1_svelte@3.52.0:
+    resolution: {integrity: sha512-em/uxH1xvQZoXTOq81Kk0u9ltjf/EyQkNiKTQJQmdCygDMqyUfMCFzLnbIQ4ApfV4BcRh6eYbwbCeeWTOyfpsg==}
+    peerDependencies:
+      svelte: ^3.31.2
+    dependencies:
+      svelte: 3.52.0
     dev: false
 
   /svelte/3.52.0:

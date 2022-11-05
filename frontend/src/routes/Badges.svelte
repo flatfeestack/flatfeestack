@@ -2,7 +2,7 @@
   import Navigation from "../components/Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { error, user} from "../ts/store";
+  import { error, user} from "../ts/mainStore";
   import type { Contributions, Repos } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
   import {Line, Bar} from "svelte-chartjs";

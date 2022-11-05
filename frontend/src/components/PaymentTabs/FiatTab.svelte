@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {error, user, config, userBalances} from "../../ts/store";
+    import {error, user, config, userBalances} from "../../ts/mainStore";
     import Dots from "../Dots.svelte";
     import {formatBalance, stripePayment, stripePaymentMethod} from "../../ts/services";
     import {loadStripe} from "@stripe/stripe-js/pure";

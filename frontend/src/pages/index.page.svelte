@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Router, Route, navigate, link } from "svelte-routing";
-  import { user, route, loginFailed, error } from "../ts/store";
+  import { user, route, loginFailed, error } from "../ts/mainStore";
   import { removeSession } from "../ts/services";
   import {onMount} from "svelte";
   import { API } from "../ts/api";

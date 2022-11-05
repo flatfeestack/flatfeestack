@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {route} from "../ts/store";
+    import {route} from "../ts/mainStore";
     import Fa from "svelte-fa";
 
     export let href;
