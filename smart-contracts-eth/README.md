@@ -74,3 +74,8 @@ FRONTEND_PATH="../frontend" npm run hardhat:script -- scripts/exportInterfacesTo
 
 - The contracts' ABI will be written to `src/contracts`.
 - The contracts' addresses will be written to a `.env` file. You can retrieve them via `VITE_${Contract name}_CONTRACT_ADDRESS` in the frontend.
+- Always restart vite after a new interface export
+
+# MetaMask
+
+Make sure you are connect you wallet to localhost

@@ -156,10 +156,8 @@ describe("Membership", () => {
         .to.emit(membership, "ChangeInMembershipStatus")
         .withArgs(newUser.address, 3);
 
-      const blockNumBefore = await ethers.provider.getBlockNumber();
-      const blockBefore = await ethers.provider.getBlock(blockNumBefore);
       expect(await membership.nextMembershipFeePayment(newUser.address)).to.eq(
-        blockBefore.timestamp
+        0
       );
     });
 
@@ -240,34 +238,45 @@ describe("Membership", () => {
     });
 
     it("reverts if payment amount doesn't cover membership fee", async () => {
-      const { representative, membership } = await deployFixture();
+      const { newUser, membership, whitelisterOne, whitelisterTwo } =
+        await deployFixture();
+
+      await membership.connect(newUser).requestMembership();
+      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
+      await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
 
       await expect(
-        membership.connect(representative).payMembershipFee({
+        membership.connect(newUser).payMembershipFee({
           value: ethers.utils.parseUnits("3", 3),
         })
       ).to.be.revertedWith("Membership fee not covered!");
     });
 
     it("allows to pay membership fees", async () => {
-      const { representative, membership, wallet } = await deployFixture();
+      const { newUser, membership, wallet, whitelisterOne, whitelisterTwo } =
+        await deployFixture();
       const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
 
+      await membership.connect(newUser).requestMembership();
+      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
+      await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
+
       await expect(
-        membership.connect(representative).payMembershipFee({
+        membership.connect(newUser).payMembershipFee({
           value: toBePaid,
         })
       )
         .to.emit(wallet, "AcceptPayment")
-        .withArgs(representative.address, toBePaid);
+        .withArgs(newUser.address, toBePaid);
 
       const blockNumBefore = await ethers.provider.getBlockNumber();
       const blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
       expect(
-        await membership.nextMembershipFeePayment(representative.address)
+        await membership.nextMembershipFeePayment(newUser.address)
       ).to.greaterThan(blockBefore.timestamp);
-      expect(await wallet.individualContribution(representative.address)).to.eq(
+
+      expect(await wallet.individualContribution(newUser.address)).to.eq(
         toBePaid
       );
     });
@@ -464,6 +473,10 @@ describe("Membership", () => {
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
+
+      await membership.connect(newUser).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
       expect(await membership.getVotes(newUser.address)).to.equal(1);
     });
   });
@@ -479,7 +492,11 @@ describe("Membership", () => {
       const thirdBlock = await ethers.provider.getBlockNumber();
       await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
       const fourthBlock = await ethers.provider.getBlockNumber();
-      await mine(4);
+      await membership.connect(newUser).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
+      const fifthBlock = await ethers.provider.getBlockNumber();
+      await mine(5);
       expect(
         await membership.getPastVotes(newUser.address, firstBlock)
       ).to.equal(0);
@@ -491,12 +508,18 @@ describe("Membership", () => {
       ).to.equal(0);
       expect(
         await membership.getPastVotes(newUser.address, fourthBlock)
+      ).to.equal(0);
+      expect(
+        await membership.getPastVotes(newUser.address, fifthBlock)
       ).to.equal(1);
     });
 
     it("removed member had voting power in the past but not now", async () => {
       const { newUserWhitelisted, membership } =
         await deployFixtureWhitelisted();
+      await membership.connect(newUserWhitelisted).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
       const firstBlock = await ethers.provider.getBlockNumber();
       await membership
         .connect(newUserWhitelisted)
@@ -528,6 +551,9 @@ describe("Membership", () => {
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
       await membership.connect(whitelisterTwo).whitelistMember(newUser.address);
+      await membership.connect(newUser).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
       const secondBlock = await ethers.provider.getBlockNumber();
       await mine(2);
       expect(await membership.getPastTotalSupply(firstBlock)).to.equal(3);
