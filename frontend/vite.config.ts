@@ -1,30 +1,27 @@
-import {defineConfig, LibraryOptions, type PluginOption, splitVendorChunkPlugin} from 'vite'
+import {defineConfig} from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { visualizer } from "rollup-plugin-visualizer";
 import compress from 'vite-plugin-compression'
 import ssr from 'vite-plugin-ssr/plugin'
+const mode = process.env.MODE || 'dev';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    //svelte(),
     svelte({compilerOptions: {hydratable: true}}),
     ssr({prerender: true}),
-    visualizer({
-      emitFile: true,
-      filename: "stats.html"
-    }) as PluginOption,
+
     compress({
-      algorithm:'brotliCompress'
+      algorithm:'brotliCompress',
+      disable: mode === 'dev'
     }),
     compress({
-      algorithm:'gzip'
+      algorithm:'gzip',
+      disable: mode === 'dev'
     })],
-  //mode:'development',
-  server: {
-    host: '0.0.0.0',
-    port: 9085
-  },
+  mode: mode === 'dev' ? 'development': 'production',
   build: {
-    //minify: false,
+    minify: mode !== 'dev',
+    emptyOutDir: true,
   }
 })

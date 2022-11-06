@@ -1,11 +1,18 @@
 {
-  "name": "frontend2",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "watch": {
+    "build": {
+      "patterns": ["src"],
+      "extensions": "js,ts,svelte,css"
+    }
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "concurrently --kill-others \"node server\" \"npx npm-watch\"",
+    "build": "MODE=dev vite build",
+    "prod": "MODE=prod vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
@@ -20,16 +27,18 @@
     "tslib": "^2.4.1",
     "typescript": "^4.8.4",
     "vite": "^3.2.2",
-    "rollup-plugin-visualizer": "^5.8.3",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-ssr": "^0.4.44"
+    "vite-plugin-ssr": "^0.4.44",
+    "express": "^4.18.2",
+    "npm-watch": "^0.11.0",
+    "concurrently": "^7.5.0"
   },
   "dependencies": {
     "@metamask/detect-provider": "^2.0.0",
     "@stripe/stripe-js": "^1.42.1",
     "ethers": "^5.7.2",
     "ky": "^0.32.2",
-    "svelte-qrcode": "^1.0.0",
+    "svelte-qr": "^1.0.0",
     "svelte-routing": "^1.6.0",
     "svelte-chartjs": "^3.0.1",
     "chart.js": "^4.0.0-alpha.3"

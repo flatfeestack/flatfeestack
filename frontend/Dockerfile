@@ -7,7 +7,7 @@ RUN pnpm install
 COPY tsconfig.json tsconfig.node.json vite.config.ts svelte.config.js ./
 COPY ./public ./public
 COPY ./src ./src
-RUN pnpm build
+RUN pnpm prod
 
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile

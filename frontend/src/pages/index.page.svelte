@@ -32,7 +32,7 @@
     $route = history.location;
   });
 
-  export let url;
+  export let urlOriginal;
   let loading = true;
 
   function logout() {
@@ -53,10 +53,10 @@
 </script>
 
 <style>
-    .main {
+    .all {
         display: flex;
         flex-direction: column;
-        min-height: 100%;
+        min-height: 100vh;
     }
 
     header {
@@ -64,27 +64,27 @@
         background-color: #fff;
         border-bottom: 1px #000 solid;
         justify-content: space-between;
-        flex: 0 1 auto;
-    }
-
-    header, nav {
-        display: flex;
-        align-items: center;
-        font-size: 1.1rem;
+        flex: 0 0 auto;
     }
 
     main {
-        flex: 1 1 auto;
+        flex: 1 0 auto;
         display: flex;
+        height: 100%;
     }
 
     footer {
       background-color: #000;
       color: white;
-      height: 100%;
-      flex: 0 1 auto;
+      flex: 0 0 auto;
       font-size: 1rem;
       padding: 0.5rem;
+    }
+
+    header, nav {
+      display: flex;
+      align-items: center;
+      font-size: 1.1rem;
     }
 
     footer > :global(a) {
@@ -118,7 +118,7 @@
 
 </style>
 
-<div class="main">
+<div class="all">
   <header>
     <a href="/" use:link>
       <img class="hide-mda imgSmallLogo" src="/images/favicon.svg" alt="FlatFeeStack" />
@@ -126,7 +126,7 @@
     </a>
     <nav>
       {#if $user.id}
-        <a href="/user/search"><Fa icon="{faHome}" size="sm" class="icon" /></a>
+        <a href="/user/search" use:link><Fa icon="{faHome}" size="sm" class="icon" /></a>
         {#if $user.image}
           <img class="image-org-sx" src="{$user.image}" />
         {/if}
@@ -149,8 +149,7 @@
   {#if $error}<div class="bg-red p-2 parent err-container"><div class="w-100">{@html $error}</div><div class="close" on:click|preventDefault="{() => {$error=null}}">✕</div></div>{/if}
 
   <main>
-    <Router url="{url}">
-
+    <Router url="{urlOriginal}">
       <Route path="/confirm/reset/:email/:token" component="{ConfirmForgot}" />
       <Route path="/confirm/signup/:email/:token" component="{ConfirmSignup}" />
       <Route path="/confirm/git-email/:email/:token" component="{ForwardGitEmail}" />

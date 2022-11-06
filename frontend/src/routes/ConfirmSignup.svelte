@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { confirmEmail } from "../ts/services";
   import {navigate, link} from "svelte-routing";
+  import Spinner from "../components/Spinner.svelte";
 
   export let email;
   export let token;
@@ -33,18 +34,22 @@
 
 </style>
 
+{#if error}
 <div class="max">
   <div class="box-container rounded p-5">
     <h2 class="py-5 text-center text-primary-900">Confirm your email</h2>
 
-    {#if error}
+
       <div class="bg-red rounded p-2">{error}</div>
-    {/if}
+
 
     <div class="divider"></div>
     <div class="flex">
-      Already have an account?&nbsp;<a href="/signin" use:link>Log in</a>
+      Already have an account?&nbsp;<a href="/login" use:link>Log in</a>
     </div>
 
   </div>
 </div>
+{:else}
+  <Spinner />
+{/if}

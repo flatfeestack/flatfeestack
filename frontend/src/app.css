@@ -258,10 +258,11 @@ button {
   background: var(--secondary-500);
 }
 
-input[type=email], input[type=text], input[type=number], select {
+input[type=email], input[type=text], input[type=number], input[type=password], select {
   border: 1px solid var(--primary-700);
-  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+  padding: 0.5rem;
   font-size: 1.2rem;
+  border-radius: 4px;
 }
 
 /* Small only */
@@ -437,7 +438,6 @@ tbody tr:last-of-type {
 }
 
 .box-container {
-  margin-top: 2em;
   max-width: 20rem;
   background-color: var(--primary-100);
 }

@@ -2,7 +2,7 @@
     import {config, error} from "../../ts/store";
     import {API} from "../../ts/api";
     // noinspection TypeScriptCheckImport
-    import QrCode from "svelte-qrcode";
+    import QR from 'svelte-qr'
     import {formatBalance, minBalanceName, qrString} from "../../ts/services";
     import type {PaymentResponse} from "../../types/users";
 
@@ -60,6 +60,6 @@
         to this address: <b>{paymentResponse.payAddress}</b>
         ({paymentResponse.payAmount} {minBalanceName(paymentResponse.payCurrency)})
     </div>
-    <QrCode value="{qrString(paymentResponse.payAddress, paymentResponse.payCurrency, paymentResponse.payAmount)}" errorCorrection="H"/>
+    <QR text="{qrString(paymentResponse.payAddress, paymentResponse.payCurrency, paymentResponse.payAmount)}" level="H"/>
 {/if}
 
