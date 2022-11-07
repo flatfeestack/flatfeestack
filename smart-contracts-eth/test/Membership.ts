@@ -560,4 +560,25 @@ describe("Membership", () => {
       expect(await membership.getPastTotalSupply(secondBlock)).to.equal(4);
     });
   });
+
+  describe("getFirstWhitelister", () => {
+    it("returns address zero if first white lister is not known", async () => {
+      const { membership, newUser } = await deployFixture();
+
+      expect(await membership.getFirstWhitelister(newUser.address)).to.eq(
+        ethers.constants.AddressZero
+      );
+    });
+
+    it("returns address of the first white lister", async () => {
+      const { membership, whitelisterOne, newUser } = await deployFixture();
+
+      await membership.connect(newUser).requestMembership();
+      await membership.connect(whitelisterOne).whitelistMember(newUser.address);
+
+      expect(await membership.getFirstWhitelister(newUser.address)).to.eq(
+        whitelisterOne.address
+      );
+    });
+  });
 });
