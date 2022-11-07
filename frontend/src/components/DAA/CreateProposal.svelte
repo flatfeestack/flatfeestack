@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { Editor } from "bytemd";
+  import { onMount } from "svelte";
+  import { navigate } from "svelte-routing";
+  import { membershipContract, signer } from "../../ts/daaStore";
+  import { error } from "../../ts/mainStore";
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
-  import RequestFunds from "./proposals/RequestFunds.svelte";
-  import { Editor } from "bytemd";
   import ChangeRepresentative from "./proposals/ChangeRepresentative.svelte";
+  import RequestFunds from "./proposals/RequestFunds.svelte";
 
   const proposalTypes: ProposalType[] = [
     {
@@ -23,8 +27,26 @@
   let description = "";
   let transferCallData: string = "";
 
+  onMount(async () => {
+    if ($signer === null || $membershipContract === null) {
+      moveToVotesPage();
+      return;
+    }
+
+    const membershipStatus = await $membershipContract.getMembershipStatus(
+      await $signer.getAddress()
+    );
+
+    if (membershipStatus != 3) {
+      moveToVotesPage();
+    }
+  });
   function handleDescriptionChange(e) {
     description = e.detail.value;
+  }
+  function moveToVotesPage() {
+    $error = "You are not allowed to review this page.";
+    navigate("/daa/votes");
   }
 </script>
 
