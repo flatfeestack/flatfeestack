@@ -3,11 +3,16 @@
   import Navigation from "./Navigation.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
   import { Editor } from "bytemd";
+  import ChangeRepresentative from "./proposals/ChangeRepresentative.svelte";
 
   const proposalTypes: ProposalType[] = [
     {
       component: RequestFunds,
       text: "Request funds",
+    },
+    {
+      component: ChangeRepresentative,
+      text: "Change representative",
     },
   ];
 

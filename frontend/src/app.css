@@ -484,3 +484,9 @@ tbody tr:last-of-type {
 .bytemd h1 {
   color: var(--secondary-900);
 }
+
+.wrapper .invalid {
+  grid-column: 1 / 3;
+  margin: 0;
+  text-align: right;
+}

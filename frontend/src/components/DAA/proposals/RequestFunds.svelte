@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ethers } from "ethers";
   import { Interface } from "ethers/lib/utils";
-  import * as yup from "yup";
+  import yup from "../../../utils/yup";
   import { WalletABI } from "../../../contracts/Wallet";
   import type { ProposalFormProps } from "../../../types/daa";
 
@@ -23,12 +23,7 @@
 
   const schema = yup.object().shape({
     amount: yup.number().min(0).required(),
-    targetWalletAddress: yup
-      .string()
-      .test("isEthereumAddress", "Must be a valid Ethereum address!", (value) =>
-        ethers.utils.isAddress(value)
-      )
-      .required(),
+    targetWalletAddress: yup.string().isEthereumAddress().required(),
   });
 
   $: {
@@ -41,7 +36,6 @@
   }
 
   function updateCalldata() {
-    console.log("hello");
     values = [0];
     targets = [import.meta.env.VITE_WALLET_CONTRACT_ADDRESS];
     transferCallData = walletInterface.encodeFunctionData("increaseAllowance", [

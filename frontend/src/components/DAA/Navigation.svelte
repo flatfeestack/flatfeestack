@@ -148,7 +148,11 @@
       label="Membership requests"
     />
     <NavItem href="/daa/delegate" icon={faHippo} label="Delegate functions" />
-    <NavItem href="/daa/createProposal" icon={faHippo} label="Create Proposal" />
+    <NavItem
+      href="/daa/createProposal"
+      icon={faHippo}
+      label="Create Proposal"
+    />
   </nav>
   <div class="content">
     {#if $isSubmitting}
