@@ -43,12 +43,14 @@
     "@ethersproject/providers": "^5.7.2",
     "@metamask/detect-provider": "^2.0.0",
     "@stripe/stripe-js": "^1.42.1",
+    "bytemd": "^1.17.4",
     "chart.js": "^4.0.0-alpha.3",
     "ethers": "^5.7.2",
     "ky": "^0.32.2",
     "svelte-chartjs": "^3.0.1",
     "svelte-qr": "^1.0.0",
     "svelte-routing": "^1.6.0",
-    "svelte-simple-modal": "^1.4.1"
+    "svelte-simple-modal": "^1.4.1",
+    "yup": "^0.32.11"
   }
 }
