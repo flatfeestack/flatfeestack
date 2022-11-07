@@ -24,7 +24,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
 
     event ChangeInMembershipStatus(
         address indexed accountAddress,
-        uint256 currentStatus
+        uint256 indexed currentStatus
     );
 
     event ChangeInWhiteLister(
@@ -292,6 +292,10 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         bytes32 s
     ) external {
         // is fine to be empty
+    }
+
+    function getFirstWhitelister(address _adr) external view returns (address) {
+        return firstWhiteLister[_adr];
     }
 
     /* solhint-enable no-empty-blocks */
