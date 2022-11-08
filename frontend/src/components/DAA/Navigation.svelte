@@ -15,21 +15,15 @@
   import { ethers } from "ethers";
   import { MembershipABI } from "../../contracts/Membership";
   import Fa from "svelte-fa";
-  import { getContext } from "svelte";
+  import { getContext, onMount } from "svelte";
   import MembershipStatus from "./MembershipStatus.svelte";
   import { membershipContract, provider, signer } from "../../ts/daaStore";
+  import membershipStatusMapping from "../../utils/membershipStatusMapping";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
     pathname = window.location.pathname;
   }
-
-  const membershipStatusMapping = [
-    "Not a member",
-    "Membership requested",
-    "Whitelisted by one",
-    "Member",
-  ];
 
   export let ethereumAddress = null;
   export let membershipStatus;
@@ -37,6 +31,12 @@
   const { open } = getContext("simple-modal");
   const showMembershipStatus = () => open(MembershipStatus);
 
+  onMount(async () => {
+    if ($signer !== null && $membershipContract !== null) {
+      await setEthereumAddress();
+      setMembershipStatus();
+    }
+  });
   async function connectWallet() {
     let ethProv = await detectEthereumProvider();
 
@@ -44,7 +44,7 @@
       $provider = new Web3Provider(<any>ethProv);
       await $provider.send("eth_requestAccounts", []);
       $signer = $provider.getSigner();
-      ethereumAddress = await $signer.getAddress();
+      await setEthereumAddress();
 
       $membershipContract = new ethers.Contract(
         import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
@@ -52,13 +52,20 @@
         $signer
       );
 
-      membershipStatus =
-        membershipStatusMapping[
-          await $membershipContract.getMembershipStatus(ethereumAddress)
-        ];
+      setMembershipStatus();
     } else {
       $error = "MetaMask not detected in your browser.";
     }
+  }
+  async function setEthereumAddress() {
+    ethereumAddress = await $signer.getAddress();
+  }
+
+  async function setMembershipStatus() {
+    membershipStatus =
+      membershipStatusMapping[
+        await $membershipContract.getMembershipStatus(ethereumAddress)
+      ];
   }
 </script>
 

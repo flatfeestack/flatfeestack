@@ -1,5 +1,5 @@
 export const MembershipABI = [
-  "event ChangeInMembershipStatus(address indexed accountAddress, uint256 currentStatus)",
+  "event ChangeInMembershipStatus(address indexed accountAddress, uint256 indexed currentStatus)",
   "event ChangeInRepresentative(address indexed concernedRepresentative, bool removedOrAdded)",
   "event ChangeInWhiteLister(address indexed concernedWhitelister, bool removedOrAdded)",
   "event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate)",
@@ -9,6 +9,7 @@ export const MembershipABI = [
   "function delegate(address delegatee)",
   "function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)",
   "function delegates(address account) pure returns (address)",
+  "function getFirstWhitelister(address _adr) view returns (address)",
   "function getMembershipStatus(address _adr) view returns (uint256)",
   "function getPastTotalSupply(uint256 blockNumber) view returns (uint256)",
   "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",

@@ -27,6 +27,7 @@
   import Invitations from "../routes/Invitations.svelte";
 
   import DaaVotes from "../components/DAA/Votes.svelte";
+  import DaaMembershipRequests from "../components/DAA/MembershipRequests.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -196,6 +197,10 @@
         <Route path="/user/invitations" component={Invitations} />
 
         <Route path="/daa/votes" component={DaaVotes} />
+        <Route
+          path="/daa/membershipRequests"
+          component={DaaMembershipRequests}
+        />
 
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />
