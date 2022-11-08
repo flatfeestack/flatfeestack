@@ -5,7 +5,12 @@
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type { Invitation, UserStatus } from "../types/users.ts";
-  import { faTrash, faSync, faClock, faCheck } from "@fortawesome/free-solid-svg-icons";
+  import {
+    faTrash,
+    faSync,
+    faClock,
+    faCheck,
+  } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
 
@@ -62,9 +67,14 @@
       isAddInviteSubmitting = true;
       const res1 = API.invite.inviteAuth(inviteEmail);
       const res2 = API.invite.invite(inviteEmail);
-      const inv: Invitation = { email: $user.email, inviteEmail, createdAt: new Date().toISOString(), confirmedAt: null };
+      const inv: Invitation = {
+        email: $user.email,
+        inviteEmail,
+        createdAt: new Date().toISOString(),
+        confirmedAt: null,
+      };
       invites = [...invites, inv];
-      await res1
+      await res1;
       await res2;
     } catch (e) {
       $error = e;
@@ -80,58 +90,77 @@
     statusSponsoredUsers = res2 === null ? [] : res2;
     await pr1;
   });
-
 </script>
 
 <Navigation>
   <h2 class="p-2 m-2">Invite Users</h2>
-  <p class="p-2 m-2">Invite your friends or co-workers. They will be charged from your account on a daily basis.</p>
+  <p class="p-2 m-2">
+    Invite your friends or co-workers. They will be charged from your account on
+    a daily basis.
+  </p>
 
   <div class="container">
     <table>
       <thead>
-      <tr>
-        <th>Invited</th>
-        <th>Status</th>
-        <th>Date</th>
-        <th>Remove</th>
-        <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
-      </tr>
+        <tr>
+          <th>Invited</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Remove</th>
+          <th
+            ><span class="cursor-pointer" on:click={refreshInvite}
+              ><Fa icon={faSync} size="md" /></span
+            ></th
+          >
+        </tr>
       </thead>
       <tbody>
-      {#each invites as inv, key (inv.email+inv.inviteEmail)}
-        {#if (inv.email === $user.email)}
+        {#each invites as inv, key (inv.email + inv.inviteEmail)}
+          {#if inv.email === $user.email}
+            <tr>
+              <td>{inv.inviteEmail}</td>
+              <td class="text-center">
+                {#if inv.confirmedAt}
+                  <Fa icon={faCheck} size="md" />
+                {:else}
+                  <Fa icon={faClock} size="md" />
+                {/if}
+              </td>
+              <td title={formatDate(new Date(inv.createdAt))}>
+                {timeSince(new Date(inv.createdAt), new Date())} ago
+              </td>
+              <td class="text-center" colspan="2">
+                <span
+                  class="cursor-pointer"
+                  on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
+                  ><Fa icon={faTrash} size="md" /></span
+                >
+              </td>
+            </tr>
+          {/if}
+        {/each}
         <tr>
-          <td>{inv.inviteEmail}</td>
-          <td class="text-center">
-            {#if inv.confirmedAt}
-              <Fa icon="{faCheck}" size="md" />
-            {:else}
-              <Fa icon="{faClock}" size="md" />
-            {/if}
-          </td>
-          <td title="{formatDate(new Date(inv.createdAt))}">
-            {timeSince(new Date(inv.createdAt), new Date())} ago
-          </td>
-          <td class="text-center" colspan="2">
-            <span class="cursor-pointer" on:click="{() => removeMyInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
+          <td colspan="7">
+            <form on:submit|preventDefault={addInvite} class="container-small">
+              <label class="p-2">Invite by email:</label>
+              <input
+                size="24"
+                maxlength="50"
+                type="email"
+                bind:value={inviteEmail}
+              />&nbsp;
+              <button
+                class="ml-5 p-2 button1"
+                type="submit"
+                disabled={isAddInviteSubmitting}
+                >Invite
+                {#if isAddInviteSubmitting}
+                  <Dots />
+                {/if}
+              </button>
+            </form>
           </td>
         </tr>
-        {/if}
-      {/each}
-      <tr>
-        <td colspan="7">
-          <form on:submit|preventDefault="{addInvite}" class="container-small">
-            <label class="p-2">Invite by email:</label>
-            <input size="24" maxlength="50" type="email" bind:value="{inviteEmail}" />&nbsp;
-            <button class="ml-5 p-2 button1" type="submit" disabled="{isAddInviteSubmitting}">Invite
-              {#if isAddInviteSubmitting}
-                <Dots />
-              {/if}
-            </button>
-          </form>
-        </td>
-      </tr>
       </tbody>
     </table>
   </div>
@@ -142,38 +171,51 @@
   <div class="container">
     <table>
       <thead>
-      <tr>
-        <th>Invited By</th>
-        <th>Status</th>
-        <th>Date</th>
-        <th>Action</th>
-        <th><span class="cursor-pointer" on:click="{refreshInvite}"><Fa icon="{faSync}" size="md" /></span></th>
-      </tr>
+        <tr>
+          <th>Invited By</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+          <th
+            ><span class="cursor-pointer" on:click={refreshInvite}
+              ><Fa icon={faSync} size="md" /></span
+            ></th
+          >
+        </tr>
       </thead>
       <tbody>
-      {#each invites as inv, key (inv.email+inv.inviteEmail)}
-        {#if (inv.inviteEmail === $user.email)}
-        <tr>
-          <td>{inv.email}</td>
-          <td class="text-center">
-            {#if inv.confirmedAt}
-              <Fa icon="{faCheck}" size="md" />
-            {:else}
-              <Fa icon="{faClock}" size="md" />
-            {/if}
-          </td>
-          <td title="{formatDate(new Date(inv.createdAt))}">
-            {timeSince(new Date(inv.createdAt), new Date())} ago
-          </td>
-          <td class="text-center" colspan="2">
-            <span class="cursor-pointer" on:click="{() => removeByInvite(inv.email, inv.inviteEmail)}"><Fa icon="{faTrash}" size="md" /></span>
-            {#if !inv.confirmedAt} <span class="cursor-pointer" on:click="{() => acceptInvite(inv.email)}"><Fa icon="{faCheck}" size="md" /></span> {/if}
-          </td>
-        </tr>
-        {/if}
-      {/each}
+        {#each invites as inv, key (inv.email + inv.inviteEmail)}
+          {#if inv.inviteEmail === $user.email}
+            <tr>
+              <td>{inv.email}</td>
+              <td class="text-center">
+                {#if inv.confirmedAt}
+                  <Fa icon={faCheck} size="md" />
+                {:else}
+                  <Fa icon={faClock} size="md" />
+                {/if}
+              </td>
+              <td title={formatDate(new Date(inv.createdAt))}>
+                {timeSince(new Date(inv.createdAt), new Date())} ago
+              </td>
+              <td class="text-center" colspan="2">
+                <span
+                  class="cursor-pointer"
+                  on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
+                  ><Fa icon={faTrash} size="md" /></span
+                >
+                {#if !inv.confirmedAt}
+                  <span
+                    class="cursor-pointer"
+                    on:click={() => acceptInvite(inv.email)}
+                    ><Fa icon={faCheck} size="md" /></span
+                  >
+                {/if}
+              </td>
+            </tr>
+          {/if}
+        {/each}
       </tbody>
     </table>
   </div>
-
 </Navigation>

@@ -24,13 +24,14 @@
         $error = e;
       }
     } else {
-      $error = "Please install <a href=\"https://metamask.io/download.html\">MetaMask</a>";
+      $error =
+        'Please install <a href="https://metamask.io/download.html">MetaMask</a>';
     }
   });
 
   const requestFunds = async () => {
     try {
-      ethereum.request({ method: 'eth_requestAccounts' });
+      ethereum.request({ method: "eth_requestAccounts" });
       await storageContract.release();
     } catch (e) {
       $error = e;
@@ -39,23 +40,23 @@
 </script>
 
 <style>
+  main {
+    text-align: center;
+    padding: 1em;
+    max-width: 240px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: #ff3e00;
+    text-transform: uppercase;
+    font-size: 4em;
+    font-weight: 100;
+  }
+  @media (min-width: 640px) {
     main {
-        text-align: center;
-        padding: 1em;
-        max-width: 240px;
-        margin: 0 auto;
+      max-width: none;
     }
-    h1 {
-        color: #ff3e00;
-        text-transform: uppercase;
-        font-size: 4em;
-        font-weight: 100;
-    }
-    @media (min-width: 640px) {
-        main {
-            max-width: none;
-        }
-    }
+  }
 </style>
 
 <div class="container">
@@ -65,7 +66,7 @@
   {:then res}
     {res} ETH
   {:catch err}
-    {$error = err}
+    {($error = err)}
   {/await}
-  <button class="button2" on:click="{requestFunds}">Request funds</button>
+  <button class="button2" on:click={requestFunds}>Request funds</button>
 </div>

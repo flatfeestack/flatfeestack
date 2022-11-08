@@ -1,25 +1,25 @@
-import { escapeInject, dangerouslySkipEscape } from "vite-plugin-ssr"
+import { escapeInject, dangerouslySkipEscape } from "vite-plugin-ssr";
 
-export { render }
-export { passToClient }
+export { render };
+export { passToClient };
 
 //https://github.com/ryanweal/vite-plugin-ssr-svelte
 //https://github.com/jiangfengming/svelte-vite-ssr
 // See https://vite-plugin-ssr.com/data-fetching
-const passToClient = ['pageProps', 'routeParams']
+const passToClient = ["pageProps", "routeParams"];
 
 async function render(pageContext) {
-    const app = pageContext.Page.render(pageContext)
-    const appHtml = app.html
-    const appCss = app.css.code
-    const appHead = app.head
+  const app = pageContext.Page.render(pageContext);
+  const appHtml = app.html;
+  const appCss = app.css.code;
+  const appHead = app.head;
 
-    // We are using Svelte's app.head variable rather than the Vite Plugin SSR
-    // technique described here: https://vite-plugin-ssr.com/html-head This seems
-    // easier for using data fetched from APIs and also allows us to input the
-    // data using our custom MetaTags Svelte component.
+  // We are using Svelte's app.head variable rather than the Vite Plugin SSR
+  // technique described here: https://vite-plugin-ssr.com/html-head This seems
+  // easier for using data fetched from APIs and also allows us to input the
+  // data using our custom MetaTags Svelte component.
 
-    return escapeInject`<!DOCTYPE html>
+  return escapeInject`<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
@@ -33,5 +33,5 @@ async function render(pageContext) {
       <body>
         <div id="app">${dangerouslySkipEscape(appHtml)}</div>
       </body>
-    </html>`
+    </html>`;
 }

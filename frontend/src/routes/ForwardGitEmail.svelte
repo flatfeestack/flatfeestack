@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount } from "svelte";
   import { API } from "./../ts/api";
   import { error } from "../ts/mainStore";
-  import {navigate} from "svelte-routing";
+  import { navigate } from "svelte-routing";
 
   export let email;
   export let token;
@@ -12,7 +12,7 @@
       await API.user.confirmGitEmail(email, token);
       await navigate("/user/settings");
     } catch (e) {
-      $error = e
+      $error = e;
     }
   });
 </script>

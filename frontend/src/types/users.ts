@@ -1,4 +1,4 @@
-import type {ChartData} from "chart.js";
+import type { ChartData } from "chart.js";
 //Type vs. Interfaces: https://stackoverflow.com/questions/37233735/interfaces-vs-types-in-typescript
 export type Users = {
   id: string;
@@ -22,33 +22,33 @@ export type Config = {
   env: string;
   contractAddr: string;
   supportedCurrencies: Map<string, Currencies>;
-}
+};
 
 export type Plan = {
-  title:      string;
-  price:      number;
-  freq:       number;
-  desc:       string;
+  title: string;
+  price: number;
+  freq: number;
+  desc: string;
   disclaimer: string;
-  feePrm:     number;
-}
+  feePrm: number;
+};
 
 export type ClientSecret = {
   clientSecret: string;
-}
+};
 
 export type UserBalances = {
   paymentCycle: PaymentCycle;
   userBalances: UserBalance[];
   total: Map<string, bigint>;
   daysLeft: number;
-}
+};
 
 export type UserBalanceCore = {
   userId: string;
   balance: bigint;
   currency: string;
-}
+};
 
 export type UserBalance = {
   paymentCycleId: string;
@@ -57,26 +57,26 @@ export type UserBalance = {
   currency: string;
   balanceType: string;
   createdAt: string;
-}
+};
 
 export type UserStatus = {
   userId: string;
   name: string;
   email: string;
   daysLeft: number;
-}
+};
 
 export type PaymentCycle = {
   id: string;
   seats: number;
   freq: number;
-}
+};
 
 export type Repos = {
   uuid: string;
   repos: Repo[];
   balances: Map<string, bigint>;
-}
+};
 
 export type Repo = {
   uuid: string;
@@ -87,49 +87,49 @@ export type Repo = {
   description: string;
   score: number;
   source: string;
-  link: string|null;
+  link: string | null;
 };
 
 export type Token = {
-  access_token: string
-  refresh_token: string
-  expire: string
-}
+  access_token: string;
+  refresh_token: string;
+  expire: string;
+};
 
 export type GitUser = {
   email: string;
-  confirmedAt: string|null;
-  createdAt: string|null;
+  confirmedAt: string | null;
+  createdAt: string | null;
 };
 
 export type Invitation = {
   email: string;
   inviteEmail: string;
-  confirmedAt: string|null;
+  confirmedAt: string | null;
   createdAt: string;
 };
 
 export type Time = {
   time: string;
-}
+};
 
 export type UserAggBalance = {
   balance: number;
   email_list: string[];
   daily_user_payout_id_list: string[];
-}
+};
 
 export type RepoMapping = {
   startDate: string;
   endDate: string;
   name: string;
   weights: FlatFeeWeight;
-}
+};
 
 export type FlatFeeWeight = {
   email: string;
   weight: number;
-}
+};
 
 export type Contributions = {
   repoName: string;
@@ -142,7 +142,7 @@ export type Contributions = {
   currency: string;
   paymentCycleInId: string;
   day: string;
-}
+};
 
 export type FilteredContributions = {
   repoName: string;
@@ -156,18 +156,18 @@ export type FilteredContributions = {
   paymentCycleInId: string;
   dayFrom: string;
   dayTo: string;
-}
+};
 
 export type PayoutAddress = {
   id: string;
   currency: string;
   address: string;
-}
+};
 
 export type PayoutInfo = {
   currency: string;
   amount: bigint;
-}
+};
 
 export type Currencies = {
   name: string;
@@ -175,15 +175,15 @@ export type Currencies = {
   smallest: string;
   factorPow: number;
   isCrypto: boolean;
-}
+};
 
 export type PaymentResponse = {
   payAddress: string;
   payAmount: bigint;
   payCurrency: string;
-}
+};
 
 export type ChartDataTotal = ChartData & {
   total: number;
   days: number;
-}
+};
