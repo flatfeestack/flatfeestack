@@ -10,7 +10,6 @@
  * @see https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts
  */
 declare namespace svelte.JSX {
-
   /* svelte specific */
   interface ElementClass {
     $$prop_def: any;
@@ -21,7 +20,6 @@ declare namespace svelte.JSX {
   }
 
   /* html jsx */
-
 
   export type Child = Node | Node[] | string | number;
   export type Children = Child | Child[];
@@ -39,34 +37,60 @@ declare namespace svelte.JSX {
   //
   // Event Handler Types
   // ----------------------------------------------------------------------
-  type EventHandler<E extends Event = Event, T extends EventTarget = HTMLElement> =
-    (event: E & { currentTarget: EventTarget & T}) => any;
+  type EventHandler<
+    E extends Event = Event,
+    T extends EventTarget = HTMLElement
+  > = (event: E & { currentTarget: EventTarget & T }) => any;
 
-  type ClipboardEventHandler<T extends EventTarget> = EventHandler<ClipboardEvent, T>;
-  type CompositionEventHandler<T extends EventTarget> = EventHandler<CompositionEvent, T>;
+  type ClipboardEventHandler<T extends EventTarget> = EventHandler<
+    ClipboardEvent,
+    T
+  >;
+  type CompositionEventHandler<T extends EventTarget> = EventHandler<
+    CompositionEvent,
+    T
+  >;
   type DragEventHandler<T extends EventTarget> = EventHandler<DragEvent, T>;
   type FocusEventHandler<T extends EventTarget> = EventHandler<FocusEvent, T>;
   type FormEventHandler<T extends EventTarget> = EventHandler<Event, T>;
   type ChangeEventHandler<T extends EventTarget> = EventHandler<Event, T>;
-  type KeyboardEventHandler<T extends EventTarget> = EventHandler<KeyboardEvent, T>;
+  type KeyboardEventHandler<T extends EventTarget> = EventHandler<
+    KeyboardEvent,
+    T
+  >;
   type MouseEventHandler<T extends EventTarget> = EventHandler<MouseEvent, T>;
   type TouchEventHandler<T extends EventTarget> = EventHandler<TouchEvent, T>;
-  type PointerEventHandler<T extends EventTarget> = EventHandler<PointerEvent, T>;
+  type PointerEventHandler<T extends EventTarget> = EventHandler<
+    PointerEvent,
+    T
+  >;
   type UIEventHandler<T extends EventTarget> = EventHandler<UIEvent, T>;
   type WheelEventHandler<T extends EventTarget> = EventHandler<WheelEvent, T>;
-  type AnimationEventHandler<T extends EventTarget> = EventHandler<AnimationEvent, T>;
-  type TransitionEventHandler<T extends EventTarget> = EventHandler<TransitionEvent, T>;
-  type MessageEventHandler<T extends EventTarget> = EventHandler<MessageEvent, T>;
+  type AnimationEventHandler<T extends EventTarget> = EventHandler<
+    AnimationEvent,
+    T
+  >;
+  type TransitionEventHandler<T extends EventTarget> = EventHandler<
+    TransitionEvent,
+    T
+  >;
+  type MessageEventHandler<T extends EventTarget> = EventHandler<
+    MessageEvent,
+    T
+  >;
 
   type ClassNameBase = boolean | string | number | void | null;
-  type ClassName = string | Array<ClassNameBase | ClassNameBase[]> | {
-    [key: string]: boolean;
-  }
+  type ClassName =
+    | string
+    | Array<ClassNameBase | ClassNameBase[]>
+    | {
+        [key: string]: boolean;
+      };
 
   // See CSS 3 CSS-wide keywords https://www.w3.org/TR/css3-values/#common-keywords
   // See CSS 3 Explicit Defaulting https://www.w3.org/TR/css-cascade-3/#defaulting-keywords
   // "all CSS properties can accept these values"
-  type CSSWideKeyword = 'initial' | 'inherit' | 'unset';
+  type CSSWideKeyword = "initial" | "inherit" | "unset";
 
   // See CSS 3 <percentage> type https://drafts.csswg.org/css-values-3/#percentages
   type CSSPercentage = string;
@@ -237,7 +261,7 @@ declare namespace svelte.JSX {
     autocomplete?: string;
     autofocus?: boolean;
     autoplay?: boolean;
-    capture?: 'environment' | 'user' | boolean;
+    capture?: "environment" | "user" | boolean;
     cellpadding?: number | string;
     cellspacing?: number | string;
     charset?: string;
@@ -249,7 +273,7 @@ declare namespace svelte.JSX {
     cols?: number;
     colspan?: number;
     content?: string;
-    contenteditable?: 'true' | 'false' | boolean;
+    contenteditable?: "true" | "false" | boolean;
 
     // Doesn't work when used as HTML attribute
     /**
@@ -277,7 +301,7 @@ declare namespace svelte.JSX {
     dir?: string;
     disabled?: boolean;
     download?: any;
-    draggable?: boolean | 'true' | 'false';
+    draggable?: boolean | "true" | "false";
     enctype?: string;
     for?: string;
     form?: string;
@@ -428,41 +452,52 @@ declare namespace svelte.JSX {
     // Other HTML properties supported by SVG elements in browsers
     role?: string;
     tabindex?: number;
-    crossorigin?: 'anonymous' | 'use-credentials' | '';
+    crossorigin?: "anonymous" | "use-credentials" | "";
 
     // SVG Specific attributes
-    'accent-height'?: number | string;
-    accumulate?: 'none' | 'sum';
-    additive?: 'replace' | 'sum';
-    'alignment-baseline'?: 'auto' | 'baseline' | 'before-edge' | 'text-before-edge' | 'middle' |
-      'central' | 'after-edge' | 'text-after-edge' | 'ideographic' | 'alphabetic' | 'hanging' |
-      'mathematical' | 'inherit';
-    allowReorder?: 'no' | 'yes';
+    "accent-height"?: number | string;
+    accumulate?: "none" | "sum";
+    additive?: "replace" | "sum";
+    "alignment-baseline"?:
+      | "auto"
+      | "baseline"
+      | "before-edge"
+      | "text-before-edge"
+      | "middle"
+      | "central"
+      | "after-edge"
+      | "text-after-edge"
+      | "ideographic"
+      | "alphabetic"
+      | "hanging"
+      | "mathematical"
+      | "inherit";
+    allowReorder?: "no" | "yes";
     alphabetic?: number | string;
     amplitude?: number | string;
-    'arabic-form'?: 'initial' | 'medial' | 'terminal' | 'isolated';
+    "arabic-form"?: "initial" | "medial" | "terminal" | "isolated";
     ascent?: number | string;
     attributeName?: string;
     attributeType?: string;
     autoReverse?: number | string;
     azimuth?: number | string;
     baseFrequency?: number | string;
-    'baseline-shift'?: number | string;
+    "baseline-shift"?: number | string;
     baseProfile?: number | string;
     bbox?: number | string;
     begin?: number | string;
     bias?: number | string;
     by?: number | string;
     calcMode?: number | string;
-    'cap-height'?: number | string;
+    "cap-height"?: number | string;
     clip?: number | string;
-    'clip-path'?: string;
+    "clip-path"?: string;
     clipPathUnits?: number | string;
-    'clip-rule'?: number | string;
-    'color-interpolation'?: number | string;
-    'color-interpolation-filters'?: 'auto' | 'sRGB' | 'linearRGB' | 'inherit';
-    'color-profile'?: number | string;
-    'color-rendering'?: number | string;
+    "clip-rule"?: number | string;
+    "color-interpolation"?: number | string;
+    "color-interpolation-filters"?: "auto" | "sRGB" | "linearRGB" | "inherit";
+    "color-profile"?: number | string;
+    "color-rendering"?: number | string;
     contentScriptType?: number | string;
     contentStyleType?: number | string;
     cursor?: number | string;
@@ -475,49 +510,49 @@ declare namespace svelte.JSX {
     direction?: number | string;
     display?: number | string;
     divisor?: number | string;
-    'dominant-baseline'?: number | string;
+    "dominant-baseline"?: number | string;
     dur?: number | string;
     dx?: number | string;
     dy?: number | string;
     edgeMode?: number | string;
     elevation?: number | string;
-    'enable-background'?: number | string;
+    "enable-background"?: number | string;
     end?: number | string;
     exponent?: number | string;
     externalResourcesRequired?: number | string;
     fill?: string;
-    'fill-opacity'?: number | string;
-    fillRule?: 'nonzero' | 'evenodd' | 'inherit';
+    "fill-opacity"?: number | string;
+    fillRule?: "nonzero" | "evenodd" | "inherit";
     filter?: string;
     filterRes?: number | string;
     filterUnits?: number | string;
-    'flood-color'?: number | string;
-    'flood-opacity'?: number | string;
+    "flood-color"?: number | string;
+    "flood-opacity"?: number | string;
     focusable?: number | string;
-    'font-family'?: string;
-    'font-size'?: number | string;
-    'font-size-adjust'?: number | string;
-    'font-stretch'?: number | string;
-    'font-style'?: number | string;
-    'font-variant'?: number | string;
-    'font-weight'?: number | string;
+    "font-family"?: string;
+    "font-size"?: number | string;
+    "font-size-adjust"?: number | string;
+    "font-stretch"?: number | string;
+    "font-style"?: number | string;
+    "font-variant"?: number | string;
+    "font-weight"?: number | string;
     format?: number | string;
     from?: number | string;
     fx?: number | string;
     fy?: number | string;
     g1?: number | string;
     g2?: number | string;
-    'glyph-name'?: number | string;
-    'glyph-orientation-horizontal'?: number | string;
-    'glyph-orientation-vertical'?: number | string;
+    "glyph-name"?: number | string;
+    "glyph-orientation-horizontal"?: number | string;
+    "glyph-orientation-vertical"?: number | string;
     glyphRef?: number | string;
     gradientTransform?: string;
     gradientUnits?: string;
     hanging?: number | string;
-    'horiz-adv-x'?: number | string;
-    'horiz-origin-x'?: number | string;
+    "horiz-adv-x"?: number | string;
+    "horiz-origin-x"?: number | string;
     ideographic?: number | string;
-    'image-rendering'?: number | string;
+    "image-rendering"?: number | string;
     in2?: number | string;
     in?: string;
     intercept?: number | string;
@@ -533,14 +568,14 @@ declare namespace svelte.JSX {
     keySplines?: number | string;
     keyTimes?: number | string;
     lengthAdjust?: number | string;
-    'letter-spacing'?: number | string;
-    'lighting-color'?: number | string;
+    "letter-spacing"?: number | string;
+    "lighting-color"?: number | string;
     limitingConeAngle?: number | string;
     local?: number | string;
-    'marker-end'?: string;
+    "marker-end"?: string;
     markerHeight?: number | string;
-    'marker-mid'?: string;
-    'marker-start'?: string;
+    "marker-mid"?: string;
+    "marker-start"?: string;
     markerUnits?: number | string;
     markerWidth?: number | string;
     mask?: string;
@@ -557,16 +592,16 @@ declare namespace svelte.JSX {
     orientation?: number | string;
     origin?: number | string;
     overflow?: number | string;
-    'overline-position'?: number | string;
-    'overline-thickness'?: number | string;
-    'paint-order'?: number | string;
-    'panose-1'?: number | string;
+    "overline-position"?: number | string;
+    "overline-thickness"?: number | string;
+    "paint-order"?: number | string;
+    "panose-1"?: number | string;
     path?: string;
     pathLength?: number | string;
     patternContentUnits?: string;
     patternTransform?: number | string;
     patternUnits?: string;
-    'pointer-events'?: number | string;
+    "pointer-events"?: number | string;
     points?: string;
     pointsAtX?: number | string;
     pointsAtY?: number | string;
@@ -578,7 +613,7 @@ declare namespace svelte.JSX {
     radius?: number | string;
     refX?: number | string;
     refY?: number | string;
-    'rendering-intent'?: number | string;
+    "rendering-intent"?: number | string;
     repeatCount?: number | string;
     repeatDur?: number | string;
     requiredExtensions?: number | string;
@@ -590,7 +625,7 @@ declare namespace svelte.JSX {
     ry?: number | string;
     scale?: number | string;
     seed?: number | string;
-    'shape-rendering'?: number | string;
+    "shape-rendering"?: number | string;
     slope?: number | string;
     spacing?: number | string;
     specularConstant?: number | string;
@@ -602,59 +637,59 @@ declare namespace svelte.JSX {
     stemh?: number | string;
     stemv?: number | string;
     stitchTiles?: number | string;
-    'stop-color'?: string;
-    'stop-opacity'?: number | string;
-    'strikethrough-position'?: number | string;
-    'strikethrough-thickness'?: number | string;
+    "stop-color"?: string;
+    "stop-opacity"?: number | string;
+    "strikethrough-position"?: number | string;
+    "strikethrough-thickness"?: number | string;
     string?: number | string;
     stroke?: string;
-    'stroke-dasharray'?: string | number;
-    'stroke-dashoffset'?: string | number;
-    'stroke-linecap'?: 'butt' | 'round' | 'square' | 'inherit';
-    'stroke-linejoin'?: 'miter' | 'round' | 'bevel' | 'inherit';
-    'stroke-miterlimit'?: string;
-    'stroke-opacity'?: number | string;
-    'stroke-width'?: number | string;
+    "stroke-dasharray"?: string | number;
+    "stroke-dashoffset"?: string | number;
+    "stroke-linecap"?: "butt" | "round" | "square" | "inherit";
+    "stroke-linejoin"?: "miter" | "round" | "bevel" | "inherit";
+    "stroke-miterlimit"?: string;
+    "stroke-opacity"?: number | string;
+    "stroke-width"?: number | string;
     surfaceScale?: number | string;
     systemLanguage?: number | string;
     tableValues?: number | string;
     targetX?: number | string;
     targetY?: number | string;
-    'text-anchor'?: string;
-    'text-decoration'?: number | string;
+    "text-anchor"?: string;
+    "text-decoration"?: number | string;
     textLength?: number | string;
-    'text-rendering'?: number | string;
+    "text-rendering"?: number | string;
     to?: number | string;
     transform?: string;
     u1?: number | string;
     u2?: number | string;
-    'underline-position'?: number | string;
-    'underline-thickness'?: number | string;
+    "underline-position"?: number | string;
+    "underline-thickness"?: number | string;
     unicode?: number | string;
-    'unicode-bidi'?: number | string;
-    'unicode-range'?: number | string;
-    'units-per-em'?: number | string;
-    'v-alphabetic'?: number | string;
+    "unicode-bidi"?: number | string;
+    "unicode-range"?: number | string;
+    "units-per-em"?: number | string;
+    "v-alphabetic"?: number | string;
     values?: string;
-    'vector-effect'?: number | string;
+    "vector-effect"?: number | string;
     version?: string;
-    'vert-adv-y'?: number | string;
-    'vert-origin-x'?: number | string;
-    'vert-origin-y'?: number | string;
-    'v-hanging'?: number | string;
-    'v-ideographic'?: number | string;
+    "vert-adv-y"?: number | string;
+    "vert-origin-x"?: number | string;
+    "vert-origin-y"?: number | string;
+    "v-hanging"?: number | string;
+    "v-ideographic"?: number | string;
     viewBox?: string;
     viewTarget?: number | string;
     visibility?: number | string;
-    'v-mathematical'?: number | string;
+    "v-mathematical"?: number | string;
     widths?: number | string;
-    'word-spacing'?: number | string;
-    'writing-mode'?: number | string;
+    "word-spacing"?: number | string;
+    "writing-mode"?: number | string;
     x1?: number | string;
     x2?: number | string;
     x?: number | string;
     xChannelSelector?: string;
-    'x-height'?: number | string;
+    "x-height"?: number | string;
     xlinkActuate?: string;
     xlinkArcrole?: string;
     xlinkHref?: string;
@@ -694,15 +729,14 @@ declare namespace svelte.JSX {
     indeterminate?: boolean;
   }
 
-  interface SvelteWindowProps  {
-    readonly innerWidth?: Window['innerWidth'];
-    readonly innerHeight?: Window['innerHeight'];
-    readonly outerWidth?: Window['outerWidth'];
-    readonly outerHeight?: Window['outerHeight'];
-    scrollX?: Window['scrollX'];
-    scrollY?: Window['scrollY'];
-    readonly online?: Window['navigator']['onLine'];
-
+  interface SvelteWindowProps {
+    readonly innerWidth?: Window["innerWidth"];
+    readonly innerHeight?: Window["innerHeight"];
+    readonly outerWidth?: Window["outerWidth"];
+    readonly outerHeight?: Window["outerHeight"];
+    scrollX?: Window["scrollX"];
+    scrollY?: Window["scrollY"];
+    readonly online?: Window["navigator"]["onLine"];
 
     onbeforeprint?: EventHandler<Event, Window>;
     onafterprint?: EventHandler<Event, Window>;

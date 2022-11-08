@@ -3,8 +3,8 @@
   import { error, userBalances } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type {Repos} from "../types/users";
-  import {connectWs, formatDate, formatBalance} from "../ts/services";
+  import type { Repos } from "../types/users";
+  import { connectWs, formatDate, formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repos[] = [];
@@ -34,38 +34,37 @@
     </div>
   </div>
 
-  <PaymentSelection/>
+  <PaymentSelection />
 
   {#if $userBalances && $userBalances.userBalances}
     <h2 class="p-2 m-2">Payment History</h2>
     <div class="container">
       <table>
         <thead>
-        <tr>
-          <th>Balance</th>
-          <th>Currency</th>
-          <th>Date</th>
-          <th>Type</th>
-        </tr>
+          <tr>
+            <th>Balance</th>
+            <th>Currency</th>
+            <th>Date</th>
+            <th>Type</th>
+          </tr>
         </thead>
         <tbody>
-
-        {#each $userBalances.userBalances as row}
-          <tr>
-            <td>{formatBalance(row.balance, row.currency)}</td>
-            <td>{row.currency}</td>
-            <td>{formatDate(new Date(row.createdAt))}</td>
-            <td title="Payment cycle Id: {row.paymentCycleId}">{row.balanceType}</td>
-          </tr>
-        {:else}
-          <tr>
-            <td colspan="5">No Data</td>
-          </tr>
-        {/each}
-
+          {#each $userBalances.userBalances as row}
+            <tr>
+              <td>{formatBalance(row.balance, row.currency)}</td>
+              <td>{row.currency}</td>
+              <td>{formatDate(new Date(row.createdAt))}</td>
+              <td title="Payment cycle Id: {row.paymentCycleId}"
+                >{row.balanceType}</td
+              >
+            </tr>
+          {:else}
+            <tr>
+              <td colspan="5">No Data</td>
+            </tr>
+          {/each}
         </tbody>
       </table>
     </div>
   {/if}
-
 </Navigation>

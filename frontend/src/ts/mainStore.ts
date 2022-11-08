@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import type {Users, UserBalances, Config, Repos} from "../types/users";
+import type { Users, UserBalances, Config, Repos } from "../types/users";
 
 export const error = writable("");
 export const isSubmitting = writable(false);

@@ -1,10 +1,10 @@
 @charset "UTF-8";
 
 :root {
-  --primary-100: #ECF3EF;
+  --primary-100: #ecf3ef;
   --primary-300: #a9d4ba;
   --primary-400: #84d3a4;
-  --primary-500: #4CAF50;
+  --primary-500: #4caf50;
   --primary-700: #499768;
   --primary-900: #285338;
 
@@ -16,8 +16,9 @@
   --secondary-900: #000000;
 }
 
-body, html {
-  font-family: 'Roboto', sans-serif;
+body,
+html {
+  font-family: "Roboto", sans-serif;
   line-height: 1.4;
   margin: 0;
   font-size: 1.2rem;
@@ -87,67 +88,67 @@ h1 {
   padding: 3rem;
 }
 
-.mx-2	{
+.mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
 }
-.mb-0	{
+.mb-0 {
   margin-bottom: 0;
 }
-.mb-5	{
+.mb-5 {
   margin-bottom: 0.5rem;
 }
-.ml-5	{
+.ml-5 {
   margin-left: 0.5rem;
 }
 
-.my-2	{
+.my-2 {
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
 }
-.my-4	{
+.my-4 {
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
-.my-8	{
+.my-8 {
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
-.mt-20	{
+.mt-20 {
   margin-top: 2rem;
 }
-.mt-40	{
+.mt-40 {
   margin-top: 4rem;
 }
-.mt-60	{
+.mt-60 {
   margin-top: 6rem;
 }
-.mb-20	{
+.mb-20 {
   margin-bottom: 2rem;
 }
 
-.m-2	{
+.m-2 {
   margin: 0.5rem;
 }
-.m-4	{
+.m-4 {
   margin: 1rem;
 }
 
 .w-25 {
   width: 25%;
 }
-.w-33	{
+.w-33 {
   width: 33.333333%;
 }
-.w-50	{
+.w-50 {
   width: 50%;
 }
 .w-100 {
-  width: 100%
+  width: 100%;
 }
 
 .h-100 {
-  height: 100%
+  height: 100%;
 }
 
 .text-center {
@@ -228,7 +229,7 @@ button {
 .button1 {
   border: 1px solid var(--primary-500);
   background: var(--primary-500);
-  transition: background .5s;
+  transition: background 0.5s;
 }
 .button1:hover {
   background: var(--primary-400);
@@ -244,7 +245,7 @@ button {
 .button2 {
   border: 1px solid var(--primary-500);
   background: var(--primary-300);
-  transition: background .5s;
+  transition: background 0.5s;
 }
 .button2:hover {
   background: var(--primary-500);
@@ -256,7 +257,7 @@ button {
 .button3 {
   border: 1px solid var(--secondary-300);
   background: #fff;
-  transition: background .5s;
+  transition: background 0.5s;
   color: var(--secondary-700);
 }
 .button3:hover {
@@ -266,7 +267,11 @@ button {
   background: var(--secondary-500);
 }
 
-input[type=email], input[type=text], input[type=number], input[type=password], select {
+input[type="email"],
+input[type="text"],
+input[type="number"],
+input[type="password"],
+select {
   border: 1px solid var(--primary-700);
   padding: 0.5rem;
   font-size: 1.2rem;
@@ -344,7 +349,8 @@ thead tr {
   text-align: left;
 }
 
-th, td {
+th,
+td {
   padding: 0.5rem;
 }
 

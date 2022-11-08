@@ -1,5 +1,5 @@
-declare module 'svelte-routing' {
-  import { SvelteComponent, SvelteComponentTyped } from 'svelte';
+declare module "svelte-routing" {
+  import { SvelteComponent, SvelteComponentTyped } from "svelte";
 
   interface LinkProps {
     to: string;
@@ -18,8 +18,13 @@ declare module 'svelte-routing' {
   }
 
   class Link extends SvelteComponentTyped<
-    Omit<LinkProps & svelte.JSX.HTMLProps<HTMLAnchorElement> & svelte.JSX.SapperAnchorProps, 'href'>
-    > {}
+    Omit<
+      LinkProps &
+        svelte.JSX.HTMLProps<HTMLAnchorElement> &
+        svelte.JSX.SapperAnchorProps,
+      "href"
+    >
+  > {}
 
   export { Link };
 
@@ -50,7 +55,11 @@ declare module 'svelte-routing' {
     [param: string]: string;
   }
 
-  class Route extends SvelteComponentTyped<RouteProps, Record<string, any>, RouteSlots> {}
+  class Route extends SvelteComponentTyped<
+    RouteProps,
+    Record<string, any>,
+    RouteSlots
+  > {}
 
   export { Route, RouteLocation };
 
@@ -77,7 +86,7 @@ declare module 'svelte-routing' {
       state?: {
         [k in string | number]: unknown;
       };
-    },
+    }
   ) => void;
 
   export { navigate };
