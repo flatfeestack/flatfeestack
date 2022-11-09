@@ -518,5 +518,17 @@ abstract contract GovernorUpgradeable is
         revert("No voting slot found");
     }
 
+    function getSlotsLength() external view returns (uint256) {
+        return slots.length;
+    }
+
+    function getNumberOfProposalsInVotingSlot(uint256 slotNumber)
+        external
+        view
+        returns (uint256)
+    {
+        return votingSlots[slotNumber].length;
+    }
+
     uint256[46] private __gap;
 }

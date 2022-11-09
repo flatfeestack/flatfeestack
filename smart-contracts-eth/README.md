@@ -40,7 +40,7 @@ Then, start the chain:
 
 ```shell
 mkdir ganache
-npx ganache --database.dbPath "./ganache" --logging.verbose --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,100000000000000000000" --wallet.accounts "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,100000000000000000000" --wallet.accounts "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97,100000000000000000000" --wallet.accounts "0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1,100000000000000000000" --wallet.accounts "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e,100000000000000000000"
+ganache --database.dbPath "./ganache" --logging.verbose --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,100000000000000000000" --wallet.accounts "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,100000000000000000000" --wallet.accounts "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97,100000000000000000000" --wallet.accounts "0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1,100000000000000000000" --wallet.accounts "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e,100000000000000000000" -b 13 --miner.timestampIncrement "13"
 ```
 
 - This creates five accounts on the chain with 100 ETH each.
@@ -64,6 +64,18 @@ Additionally, if you run this setup the first time, you need to run a script tha
 
 ```shell
 npm run hardhat:script -- --network localhost scripts/addMember.ts
+```
+
+Then you can run this script to add voting slots and proposals to the chain
+
+```shell
+npm run hardhat:script -- --network localhost scripts/addSlots.ts
+```
+
+If you want to fast-forward your chain can run this script.
+
+```shell
+npm run hardhat:script -- --network localhost scripts/mineBlocks.ts
 ```
 
 Now, you can export the ABIs of the smart contracts and the addresses of the proxies to the frontend:
