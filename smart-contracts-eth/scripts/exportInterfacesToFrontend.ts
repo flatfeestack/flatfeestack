@@ -12,7 +12,7 @@ async function main() {
   const contractAddresses: String[] = [];
   const pathToFrontend = process.env.FRONTEND_PATH ?? "../../frontend";
 
-  ["DAA", "Membership"].forEach(async (contractName: String) => {
+  ["DAA", "Membership", "Wallet"].forEach(async (contractName: String) => {
     const contractAbi = resolve(
       __dirname,
       `../artifacts/contracts/${contractName}.sol/${contractName}.json`
