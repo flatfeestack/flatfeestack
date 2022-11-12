@@ -4,4 +4,5 @@ import type { Web3Provider } from "@ethersproject/providers";
 
 export const provider = writable<Web3Provider | null>(null);
 export const membershipContract = writable<any | null>(null);
+export const daaContract = writable<any | null>(null);
 export const signer = writable<JsonRpcSigner | null>(null);

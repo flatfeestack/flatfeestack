@@ -17,6 +17,8 @@ export const DAAABI = [
   "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
   "function castVoteWithReasonAndParamsBySig(uint256 proposalId, uint8 support, string reason, bytes params, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
+  "function getNumberOfProposalsInVotingSlot(uint256 slotNumber) view returns (uint256)",
+  "function getSlotsLength() view returns (uint256)",
   "function getVotes(address account, uint256 blockNumber) view returns (uint256)",
   "function getVotesWithParams(address account, uint256 blockNumber, bytes params) view returns (uint256)",
   "function hasVoted(uint256 proposalId, address account) view returns (bool)",

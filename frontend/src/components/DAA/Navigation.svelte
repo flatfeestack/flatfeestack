@@ -132,6 +132,10 @@
       float: left;
     }
   }
+
+  .content {
+    padding: 1rem;
+  }
 </style>
 
 <div class="page">
@@ -145,7 +149,7 @@
     />
     <NavItem href="/daa/delegate" icon={faHippo} label="Delegate functions" />
   </nav>
-  <div>
+  <div class="content">
     {#if $isSubmitting}
       <Spinner />
     {/if}
