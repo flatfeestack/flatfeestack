@@ -18,9 +18,19 @@ async function main() {
   const slot2 = latestBlock + 2 * blocksInAMonth + 1;
   const slot3 = latestBlock + 3 * blocksInAMonth + 1;
 
-  await daaDeployed.connect(representative).setVotingSlot(slot1);
-  await daaDeployed.connect(representative).setVotingSlot(slot2);
-  await daaDeployed.connect(representative).setVotingSlot(slot3);
+  console.log("Creating voting slots ...");
+  const [firstVotingSlot, secondVotingSlot, thirdVotingSlot] =
+    await Promise.all([
+      daaDeployed.connect(representative).setVotingSlot(slot1),
+      daaDeployed.connect(representative).setVotingSlot(slot2),
+      daaDeployed.connect(representative).setVotingSlot(slot3),
+    ]);
+
+  await Promise.all([
+    firstVotingSlot.wait(),
+    secondVotingSlot.wait(),
+    thirdVotingSlot.wait(),
+  ]);
 
   const transferCalldata = [
     walletDeployed.interface.encodeFunctionData("increaseAllowance", [
@@ -29,6 +39,7 @@ async function main() {
     ]),
   ];
 
+  console.log("Creating proposal ...");
   await daaDeployed
     .connect(representative)
     ["propose(address[],uint256[],bytes[],string)"](
@@ -40,6 +51,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error(error.message);
   process.exitCode = 1;
 });
