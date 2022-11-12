@@ -9,6 +9,7 @@
   import { Web3Provider } from "@ethersproject/providers";
   import detectEthereumProvider from "@metamask/detect-provider";
   import formatDateTime from "../../utils/formatDateTime";
+  import { navigate } from "svelte-routing";
 
   let futureVotingSlots: VotingSlot[] = [];
   let pastVotingSlots: VotingSlot[] = [];
@@ -163,7 +164,10 @@
           <button class="py-2 button3">Vote</button>
         {/if}
         {#if currentBlockNumber < slot.blockInfo.blockNumber - slotCloseTime}
-          <button class="py-2 button3">Create Propsal</button>
+          <button
+            on:click={() => navigate("/daa/createProposal")}
+            class="py-2 button3">Create Proposal</button
+          >
         {/if}
       </div>
       <div>
