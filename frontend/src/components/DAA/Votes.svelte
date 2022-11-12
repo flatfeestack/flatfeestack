@@ -1,15 +1,14 @@
 <script lang="ts">
-  import Navigation from "./Navigation.svelte";
-  import { onMount } from "svelte";
-  import { isSubmitting } from "../../ts/mainStore";
-  import { daaContract, provider } from "../../ts/daaStore";
-  import { ethers } from "ethers";
-  import { DAAABI } from "../../contracts/DAA";
-  import type Event from "@ethersproject/providers";
   import { Web3Provider } from "@ethersproject/providers";
   import detectEthereumProvider from "@metamask/detect-provider";
-  import formatDateTime from "../../utils/formatDateTime";
+  import { ethers } from "ethers";
+  import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
+  import { DAAABI } from "../../contracts/DAA";
+  import { daaContract, provider, signer } from "../../ts/daaStore";
+  import { isSubmitting } from "../../ts/mainStore";
+  import formatDateTime from "../../utils/formatDateTime";
+  import Navigation from "./Navigation.svelte";
 
   let futureVotingSlots: VotingSlot[] = [];
   let pastVotingSlots: VotingSlot[] = [];
@@ -41,7 +40,7 @@
     $daaContract = new ethers.Contract(
       import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
       DAAABI,
-      $provider
+      $signer ?? $provider
     );
 
     slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();

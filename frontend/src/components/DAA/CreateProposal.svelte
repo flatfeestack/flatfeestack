@@ -1,9 +1,11 @@
 <script lang="ts">
   import { Editor } from "bytemd";
+  import { ethers } from "ethers";
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { membershipContract, signer } from "../../ts/daaStore";
-  import { error } from "../../ts/mainStore";
+  import { DAAABI } from "../../contracts/DAA";
+  import { daaContract, membershipContract, signer } from "../../ts/daaStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
   import ChangeRepresentative from "./proposals/ChangeRepresentative.svelte";
@@ -25,7 +27,7 @@
   let targets: string[] = [];
   let values: number[] = [];
   let description = "";
-  let transferCallData: string = "";
+  let transferCallData: string[] = [];
 
   onMount(async () => {
     if ($signer === null || $membershipContract === null) {
@@ -40,12 +42,29 @@
     if (membershipStatus != 3) {
       moveToVotesPage();
     }
+
+    $daaContract = new ethers.Contract(
+      import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
+      DAAABI,
+      $signer
+    );
   });
+
   function handleDescriptionChange(e) {
     description = e.detail.value;
   }
+
   function moveToVotesPage() {
     $error = "You are not allowed to review this page.";
+    navigate("/daa/votes");
+  }
+
+  async function createProposal() {
+    $isSubmitting = true;
+
+    await $daaContract.propose(targets, values, transferCallData, description);
+
+    $isSubmitting = false;
     navigate("/daa/votes");
   }
 </script>
@@ -85,4 +104,8 @@
 
   <p>Description</p>
   <Editor value={description} on:change={handleDescriptionChange} />
+
+  <button class="button1" on:click={() => createProposal()}
+    >Create proposal</button
+  >
 </Navigation>

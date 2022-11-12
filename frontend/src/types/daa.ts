@@ -8,5 +8,5 @@ export interface ProposalType {
 export interface ProposalFormProps {
   targets: string[];
   values: number[];
-  transferCallData: string;
+  transferCallData: string[];
 }

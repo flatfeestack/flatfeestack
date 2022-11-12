@@ -38,13 +38,15 @@
   function updateCalldata() {
     values = [0];
     targets = [import.meta.env.VITE_WALLET_CONTRACT_ADDRESS];
-    transferCallData = walletInterface.encodeFunctionData("increaseAllowance", [
-      formValues.targetWalletAddress,
-      ethers.utils.parseUnits(
-        String(formValues.amount),
-        currencies[formValues.selectedCurrency] === "ETH" ? 18 : 1
-      ),
-    ]);
+    transferCallData = [
+      walletInterface.encodeFunctionData("increaseAllowance", [
+        formValues.targetWalletAddress,
+        ethers.utils.parseUnits(
+          String(formValues.amount),
+          currencies[formValues.selectedCurrency] === "ETH" ? 18 : 1
+        ),
+      ]),
+    ];
   }
 </script>
 

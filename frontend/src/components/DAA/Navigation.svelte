@@ -17,8 +17,14 @@
   import Fa from "svelte-fa";
   import { getContext, onMount } from "svelte";
   import MembershipStatus from "./MembershipStatus.svelte";
-  import { membershipContract, provider, signer } from "../../ts/daaStore";
+  import {
+    daaContract,
+    membershipContract,
+    provider,
+    signer,
+  } from "../../ts/daaStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
+  import { DAAABI } from "../../contracts/DAA";
 
   let pathname = "/";
   if (typeof window !== "undefined") {

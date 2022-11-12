@@ -32,10 +32,11 @@
   function updateCalldata() {
     values = [0];
     targets = [import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS];
-    transferCallData = membershipInterface.encodeFunctionData(
-      "setRepresentative",
-      [formValues.proposedRepresentative]
-    );
+    transferCallData = [
+      membershipInterface.encodeFunctionData("setRepresentative", [
+        formValues.proposedRepresentative,
+      ]),
+    ];
   }
 </script>
 
