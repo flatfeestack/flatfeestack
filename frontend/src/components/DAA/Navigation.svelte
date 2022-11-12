@@ -25,6 +25,7 @@
   } from "../../ts/daaStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import { DAAABI } from "../../contracts/DAA";
+  import MetaMaskRequired from "./MetaMaskRequired.svelte";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -33,35 +34,40 @@
 
   export let ethereumAddress = null;
   export let membershipStatus;
+  let metaMaskMissing = false;
 
   const { open } = getContext("simple-modal");
   const showMembershipStatus = () => open(MembershipStatus);
+  const showMetaMaskRequired = () =>
+    open(MetaMaskRequired, {}, { closeButton: false });
 
   onMount(async () => {
     if ($signer !== null && $membershipContract !== null) {
       await setEthereumAddress();
       setMembershipStatus();
+    } else {
+      try {
+        const ethProv = await detectEthereumProvider();
+        $provider = new Web3Provider(<any>ethProv);
+      } catch {
+        metaMaskMissing = true;
+        showMetaMaskRequired();
+      }
     }
   });
+
   async function connectWallet() {
-    let ethProv = await detectEthereumProvider();
+    await $provider.send("eth_requestAccounts", []);
+    $signer = $provider.getSigner();
+    await setEthereumAddress();
 
-    if (ethProv) {
-      $provider = new Web3Provider(<any>ethProv);
-      await $provider.send("eth_requestAccounts", []);
-      $signer = $provider.getSigner();
-      await setEthereumAddress();
+    $membershipContract = new ethers.Contract(
+      import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
+      MembershipABI,
+      $signer
+    );
 
-      $membershipContract = new ethers.Contract(
-        import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
-        MembershipABI,
-        $signer
-      );
-
-      setMembershipStatus();
-    } else {
-      $error = "MetaMask not detected in your browser.";
-    }
+    setMembershipStatus();
   }
   async function setEthereumAddress() {
     ethereumAddress = await $signer.getAddress();
@@ -158,8 +164,11 @@
   <div class="content">
     {#if $isSubmitting}
       <Spinner />
+    {:else if metaMaskMissing}
+      <div />
+    {:else}
+      <slot />
     {/if}
-    <slot />
   </div>
 
   <div class="memberArea">
