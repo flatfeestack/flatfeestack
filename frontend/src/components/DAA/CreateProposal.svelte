@@ -1,10 +1,13 @@
 <script lang="ts">
   import { Editor } from "bytemd";
-  import { ethers } from "ethers";
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { DAAABI } from "../../contracts/DAA";
-  import { daaContract, membershipContract, signer } from "../../ts/daaStore";
+  import {
+    daaContract,
+    membershipContract,
+    membershipStatusValue,
+    signer,
+  } from "../../ts/daaStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
@@ -35,19 +38,9 @@
       return;
     }
 
-    const membershipStatus = await $membershipContract.getMembershipStatus(
-      await $signer.getAddress()
-    );
-
-    if (membershipStatus != 3) {
+    if ($membershipStatusValue != 3) {
       moveToVotesPage();
     }
-
-    $daaContract = new ethers.Contract(
-      import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-      DAAABI,
-      $signer
-    );
   });
 
   function handleDescriptionChange(e) {

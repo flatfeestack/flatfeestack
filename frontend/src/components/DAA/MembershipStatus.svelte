@@ -5,10 +5,13 @@
   } from "@fortawesome/free-solid-svg-icons";
   import { getContext, onMount } from "svelte";
   import Fa from "svelte-fa";
-  import { membershipContract, signer } from "../../ts/daaStore";
+  import {
+    ethereumAddress,
+    membershipContract,
+    membershipStatusValue,
+  } from "../../ts/daaStore";
   import { error } from "../../ts/mainStore";
 
-  let membershipStatus = 0;
   let membershipFeePaid = false;
   let nextMembershipFeePayment = 0;
 
@@ -21,16 +24,14 @@
   ];
 
   onMount(async () => {
-    if ($signer !== null || $membershipContract !== null) {
-      const ethereumAddress = await $signer.getAddress();
-      membershipStatus = await $membershipContract.getMembershipStatus(
-        ethereumAddress
-      );
-
-      if (membershipStatus == 3) {
-        const ethereumAddress = await $signer.getAddress();
+    if (
+      $membershipStatusValue !== null &&
+      $membershipContract !== null &&
+      $ethereumAddress !== null
+    ) {
+      if ($membershipStatusValue == 3) {
         nextMembershipFeePayment =
-          await $membershipContract.nextMembershipFeePayment(ethereumAddress);
+          await $membershipContract.nextMembershipFeePayment($ethereumAddress);
 
         membershipFeePaid =
           nextMembershipFeePayment > Math.floor(Date.now() / 1000);
@@ -76,8 +77,12 @@
 
   <ul>
     {#each Array(3) as _, i}
-      <li class={membershipStatus >= i + 1 ? "text-primary-500" : "text-red"}>
-        {#if membershipStatus >= i + 1}
+      <li
+        class={$membershipStatusValue >= i + 1
+          ? "text-primary-500"
+          : "text-red"}
+      >
+        {#if $membershipStatusValue >= i + 1}
           <Fa icon={faSquareCheck} size="sm" class="icon" />
         {:else}
           <Fa icon={faSquareXmark} size="sm" class="icon" />
@@ -100,13 +105,13 @@
   </ul>
 
   <div class="py-2 right">
-    {#if membershipStatus == 0}
+    {#if $membershipStatusValue == 0}
       <button on:click={requestMembership} class="button1"
         >Request membership</button
       >
     {/if}
 
-    {#if membershipStatus == 3 && !membershipFeePaid}
+    {#if $membershipStatusValue == 3 && !membershipFeePaid}
       <button on:click={payMembershipFees} class="button1"
         >Pay membership fees</button
       >

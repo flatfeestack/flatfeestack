@@ -1,4 +1,5 @@
 <script type="ts">
+  import { Web3Provider } from "@ethersproject/providers";
   import {
     faHand,
     faHippo,
@@ -6,25 +7,22 @@
     faMoneyBill,
     faUserAstronaut,
   } from "@fortawesome/free-solid-svg-icons";
-  import { links } from "svelte-routing";
-  import { error, isSubmitting } from "../../ts/mainStore";
-  import Spinner from "../Spinner.svelte";
-  import NavItem from "../NavItem.svelte";
   import detectEthereumProvider from "@metamask/detect-provider";
-  import { Web3Provider } from "@ethersproject/providers";
-  import { ethers } from "ethers";
-  import { MembershipABI } from "../../contracts/Membership";
-  import Fa from "svelte-fa";
   import { getContext, onMount } from "svelte";
-  import MembershipStatus from "./MembershipStatus.svelte";
+  import Fa from "svelte-fa";
+  import { links } from "svelte-routing";
   import {
-    daaContract,
+    ethereumAddress,
     membershipContract,
+    membershipStatusValue,
     provider,
     signer,
   } from "../../ts/daaStore";
+  import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
-  import { DAAABI } from "../../contracts/DAA";
+  import NavItem from "../NavItem.svelte";
+  import Spinner from "../Spinner.svelte";
+  import MembershipStatus from "./MembershipStatus.svelte";
   import MetaMaskRequired from "./MetaMaskRequired.svelte";
 
   let pathname = "/";
@@ -32,8 +30,7 @@
     pathname = window.location.pathname;
   }
 
-  export let ethereumAddress = null;
-  export let membershipStatus;
+  let membershipStatus;
   let metaMaskMissing = false;
 
   const { open } = getContext("simple-modal");
@@ -42,42 +39,31 @@
     open(MetaMaskRequired, {}, { closeButton: false });
 
   onMount(async () => {
-    if ($signer !== null && $membershipContract !== null) {
-      await setEthereumAddress();
-      setMembershipStatus();
-    } else {
-      try {
-        const ethProv = await detectEthereumProvider();
-        $provider = new Web3Provider(<any>ethProv);
-      } catch {
-        metaMaskMissing = true;
-        showMetaMaskRequired();
-      }
+    try {
+      const ethProv = await detectEthereumProvider();
+      $provider = new Web3Provider(<any>ethProv);
+    } catch {
+      metaMaskMissing = true;
+      showMetaMaskRequired();
     }
   });
 
   async function connectWallet() {
-    await $provider.send("eth_requestAccounts", []);
-    $signer = $provider.getSigner();
-    await setEthereumAddress();
-
-    $membershipContract = new ethers.Contract(
-      import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
-      MembershipABI,
-      $signer
-    );
-
-    setMembershipStatus();
-  }
-  async function setEthereumAddress() {
-    ethereumAddress = await $signer.getAddress();
+    if ($provider === null) {
+      metaMaskMissing = true;
+      showMetaMaskRequired();
+    } else {
+      await $provider.send("eth_requestAccounts", []);
+      $signer = $provider.getSigner();
+    }
   }
 
-  async function setMembershipStatus() {
-    membershipStatus =
-      membershipStatusMapping[
-        await $membershipContract.getMembershipStatus(ethereumAddress)
-      ];
+  $: {
+    if ($membershipStatusValue === null) {
+      membershipStatus = membershipStatusMapping[0];
+    } else {
+      membershipStatus = membershipStatusMapping[$membershipStatusValue];
+    }
   }
 </script>
 
@@ -174,11 +160,11 @@
   <div class="memberArea">
     <Fa icon={faUserAstronaut} size="3x" />
 
-    {#if ethereumAddress === null}
+    {#if $ethereumAddress === null}
       <button class="button1" on:click={connectWallet}>Connect wallet</button>
     {:else}
       <p>
-        Hello {ethereumAddress}! <br />
+        Hello {$ethereumAddress}! <br />
         Your status: {membershipStatus}
       </p>
       <button class="py-2 button3" on:click={showMembershipStatus}
