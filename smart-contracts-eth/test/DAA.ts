@@ -191,10 +191,20 @@ describe("DAA", () => {
       expect(await daa.slots(0)).to.eq(firstVotingSlot);
       expect(await daa.slots(1)).to.eq(secondVotingSlot);
       expect(await daa.slots(2)).to.eq(thirdVotingSlot);
+      expect(await daa.getSlotsLength()).to.eq(3);
       expect(await daa.votingSlots(firstVotingSlot, 0)).to.eq(proposalId1);
+      expect(await daa.getNumberOfProposalsInVotingSlot(firstVotingSlot)).to.eq(
+        1
+      );
       expect(await daa.votingSlots(secondVotingSlot, 0)).to.eq(proposalId2);
       expect(await daa.votingSlots(secondVotingSlot, 1)).to.eq(proposalId3);
+      expect(
+        await daa.getNumberOfProposalsInVotingSlot(secondVotingSlot)
+      ).to.eq(2);
       expect(await daa.votingSlots(thirdVotingSlot, 0)).to.eq(proposalId4);
+      expect(await daa.getNumberOfProposalsInVotingSlot(thirdVotingSlot)).to.eq(
+        1
+      );
     });
 
     it("can not propose if there is no voting slot announced", async () => {

@@ -13,13 +13,22 @@ async function main() {
   const [representative, whitelisterOne, whitelisterTwo, member] =
     await ethers.getSigners();
 
-  await membershipDeployed.connect(member).requestMembership();
-  await membershipDeployed
-    .connect(whitelisterOne)
-    .whitelistMember(member.address);
-  await membershipDeployed
-    .connect(whitelisterTwo)
-    .whitelistMember(member.address);
+  console.log("Requesting membership ...");
+  await (await membershipDeployed.connect(member).requestMembership()).wait();
+
+  console.log("Approving membership with first account ...");
+  await (
+    await membershipDeployed
+      .connect(whitelisterOne)
+      .whitelistMember(member.address)
+  ).wait();
+
+  console.log("Approving membership with second account ...");
+  await (
+    await membershipDeployed
+      .connect(whitelisterTwo)
+      .whitelistMember(member.address)
+  ).wait();
 }
 
 main().catch((error) => {
