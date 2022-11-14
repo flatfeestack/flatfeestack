@@ -43,6 +43,15 @@
       navigate("/daa/votes");
     }
 
+    const votingPower = await $daaContract.getVotes(
+      $userEthereumAddress,
+      blockNumber
+    );
+    if (votingPower.toNumber() < 1) {
+      $error = "You are not allowed to vote in this cycle.";
+      navigate("/daa/votes");
+    }
+
     const amountOfProposals =
       await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber);
 
