@@ -23,7 +23,7 @@
     [key: string]: VoteValues;
   }
 
-  export let blockNumber: Number;
+  export let blockNumber: string;
   let proposals = [];
   let voteValues: VoteValuesContainer = {};
   let hasAnyVotes = false;
@@ -38,7 +38,7 @@
   }
 
   async function prepareView() {
-    if (!$votingSlots.includes(blockNumber)) {
+    if (!$votingSlots.includes(Number(blockNumber))) {
       $error = "Invalid voting slot.";
       navigate("/daa/votes");
     }

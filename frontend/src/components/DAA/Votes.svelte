@@ -6,16 +6,20 @@
   import formatDateTime from "../../utils/formatDateTime";
   import Navigation from "./Navigation.svelte";
 
-  let futureVotingSlots: VotingSlot[] = [];
-  let pastVotingSlots: VotingSlot[] = [];
+  let futureVotingSlots: VotingSlotsContainer = {};
+  let pastVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
   let currentBlockNumber: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
 
   interface VotingSlot {
-    blockInfo: BlockInfo;
+    blockDate: string;
     proposalInfos: ProposalInfo[];
+  }
+
+  interface VotingSlotsContainer {
+    [key: number]: VotingSlot;
   }
 
   interface BlockInfo {
@@ -35,7 +39,10 @@
       $votingSlots === null
     ) {
       $isSubmitting = true;
-    } else if (futureVotingSlots.length === 0) {
+    } else if (
+      Object.keys(pastVotingSlots).length === 0 &&
+      Object.keys(futureVotingSlots).length === 0
+    ) {
       prepareView();
     }
   }
@@ -58,12 +65,21 @@
       const blockInfo = await createBlockInfo(blockNumberForSlot);
       const proposalInfos = await createProposalInfo(blockInfo.blockNumber);
       if (blockInfo.blockNumber + votingPeriod < currentBlockNumber) {
-        pastVotingSlots = [...pastVotingSlots, { proposalInfos, blockInfo }];
+        pastVotingSlots = {
+          ...pastVotingSlots,
+          [blockInfo.blockNumber]: {
+            proposalInfos,
+            blockDate: blockInfo.blockDate,
+          },
+        };
       } else {
-        futureVotingSlots = [
+        futureVotingSlots = {
           ...futureVotingSlots,
-          { proposalInfos, blockInfo },
-        ];
+          [blockInfo.blockNumber]: {
+            proposalInfos,
+            blockDate: blockInfo.blockDate,
+          },
+        };
       }
     });
   }
@@ -126,23 +142,22 @@
 </style>
 
 <Navigation>
-  {#if futureVotingSlots.length > 0}
+  {#if Object.keys(futureVotingSlots).length > 0}
     <h2>Next Voting Windows</h2>
   {/if}
-  {#each futureVotingSlots as slot, i}
+  {#each Object.entries(futureVotingSlots) as [blockNumber, slotInfo]}
     <div class="card">
       <div>
         <div>Voting Start</div>
-        <div>#{slot.blockInfo.blockNumber}</div>
-        <div>≈{slot.blockInfo.blockDate}</div>
-        {#if currentBlockNumber >= slot.blockInfo.blockNumber && currentBlockNumber < slot.blockInfo.blockNumber + votingPeriod}
+        <div>#{blockNumber}</div>
+        <div>≈{slotInfo.blockDate}</div>
+        {#if currentBlockNumber >= Number(blockNumber) && currentBlockNumber < Number(blockNumber) + votingPeriod}
           <button
-            on:click={() =>
-              navigate(`/daa/castVotes/${slot.blockInfo.blockNumber}`)}
+            on:click={() => navigate(`/daa/castVotes/${blockNumber}`)}
             class="py-2 button3">Vote</button
           >
         {/if}
-        {#if currentBlockNumber < slot.blockInfo.blockNumber - slotCloseTime}
+        {#if currentBlockNumber < Number(blockNumber) - slotCloseTime}
           <button
             on:click={() => navigate("/daa/createProposal")}
             class="py-2 button3">Create Proposal</button
@@ -150,24 +165,24 @@
         {/if}
       </div>
       <div>
-        {#each slot.proposalInfos as proposalInfo, i}
+        {#each slotInfo.proposalInfos as proposalInfo, i}
           <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
         {/each}
       </div>
     </div>
   {/each}
-  {#if pastVotingSlots.length > 0}
+  {#if Object.keys(pastVotingSlots).length > 0}
     <h2>Past Voting Windows</h2>
   {/if}
-  {#each pastVotingSlots as slot, i}
+  {#each Object.entries(pastVotingSlots) as [blockNumber, slotInfo]}
     <div class="card">
       <div>
         <div>Voting Start</div>
-        <div>#{slot.blockInfo.blockNumber}</div>
-        <div>{slot.blockInfo.blockDate}</div>
+        <div>#{blockNumber}</div>
+        <div>{slotInfo.blockDate}</div>
       </div>
       <div>
-        {#each slot.proposalInfos as proposalInfo, i}
+        {#each slotInfo.proposalInfos as proposalInfo, i}
           <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
         {/each}
       </div>
