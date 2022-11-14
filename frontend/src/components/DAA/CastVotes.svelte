@@ -11,9 +11,18 @@
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import Navigation from "./Navigation.svelte";
 
+  interface VoteValues {
+    reason: string;
+    value: number;
+  }
+
+  interface VoteValuesContainer {
+    [key: string]: VoteValues;
+  }
+
   export let blockNumber: Number;
   let proposals = [];
-  let voteValues = {};
+  let voteValues: VoteValuesContainer = {};
 
   $: {
     if ($proposalCreatedEvents === null || $votingSlots === null) {
@@ -56,6 +65,16 @@
 
   function handleVoteValue(proposalId: string, voteValue: number) {
     voteValues[proposalId].value = voteValue;
+  }
+
+  async function castVotes() {
+    for (const [key, value] of Object.entries(voteValues)) {
+      if (value.reason.trim() === "") {
+        await $daaContract.castVote(key, value.value);
+      } else {
+        await $daaContract.castVoteWithReason(key, value.value, value.reason);
+      }
+    }
   }
 </script>
 
@@ -117,4 +136,6 @@
       />
     </div>
   {/each}
+
+  <button on:click={() => castVotes()} class="button1">Cast votes</button>
 </Navigation>
