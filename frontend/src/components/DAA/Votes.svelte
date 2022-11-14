@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import { daaContract, provider } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
+  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import formatDateTime from "../../utils/formatDateTime";
   import Navigation from "./Navigation.svelte";
 
   let futureVotingSlots: VotingSlot[] = [];
   let pastVotingSlots: VotingSlot[] = [];
-  let proposalCreatedEvents: Event[] = [];
   let slotCloseTime: number = 0;
   let currentBlockNumber: number = 0;
   let currentTime: string = "";
@@ -30,9 +29,13 @@
   }
 
   $: {
-    if ($daaContract === null) {
+    if (
+      $daaContract === null ||
+      $proposalCreatedEvents === null ||
+      $votingSlots === null
+    ) {
       $isSubmitting = true;
-    } else {
+    } else if (futureVotingSlots.length === 0) {
       prepareView();
     }
   }
@@ -51,30 +54,8 @@
   }
 
   async function createVotingSlots() {
-    const [slotsLength, events] = await Promise.all([
-      (await $daaContract.getSlotsLength()).toNumber(),
-      await $daaContract.queryFilter(
-        $daaContract.filters.ProposalCreated(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        )
-      ),
-    ]);
-    proposalCreatedEvents = events;
-    for (
-      let i = slotsLength;
-      slotsLength - i >= 0 && i > slotsLength - 3;
-      i--
-    ) {
-      const slot = (await $daaContract.slots(slotsLength - i)).toNumber();
-      const blockInfo = await createBlockInfo(slot);
+    $votingSlots.forEach(async (blockNumberForSlot: number) => {
+      const blockInfo = await createBlockInfo(blockNumberForSlot);
       const proposalInfos = await createProposalInfo(blockInfo.blockNumber);
       if (blockInfo.blockNumber + votingPeriod < currentBlockNumber) {
         pastVotingSlots = [...pastVotingSlots, { proposalInfos, blockInfo }];
@@ -84,7 +65,7 @@
           { proposalInfos, blockInfo },
         ];
       }
-    }
+    });
   }
 
   async function createBlockInfo(blockNumber: number): Promise<BlockInfo> {
@@ -128,7 +109,7 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = proposalCreatedEvents.find(
+    const event = $proposalCreatedEvents.find(
       (event) => event.args[0].toString() === proposalId
     );
     return event.args[8];
