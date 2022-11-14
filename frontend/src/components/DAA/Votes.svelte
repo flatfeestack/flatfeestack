@@ -136,7 +136,11 @@
         <div>#{slot.blockInfo.blockNumber}</div>
         <div>≈{slot.blockInfo.blockDate}</div>
         {#if currentBlockNumber >= slot.blockInfo.blockNumber && currentBlockNumber < slot.blockInfo.blockNumber + votingPeriod}
-          <button on:click={() => navigate(`/daa/castVotes/${slot.blockInfo.blockNumber}`)} class="py-2 button3">Vote</button>
+          <button
+            on:click={() =>
+              navigate(`/daa/castVotes/${slot.blockInfo.blockNumber}`)}
+            class="py-2 button3">Vote</button
+          >
         {/if}
         {#if currentBlockNumber < slot.blockInfo.blockNumber - slotCloseTime}
           <button

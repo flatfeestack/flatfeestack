@@ -5,13 +5,15 @@
     faXmark,
   } from "@fortawesome/free-solid-svg-icons";
   import { Viewer } from "bytemd";
+  import type { Event } from "ethers";
   import Fa from "svelte-fa";
-  import { daaContract } from "../../ts/daaStore";
+  import { daaContract, userEthereumAddress } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import Navigation from "./Navigation.svelte";
 
   interface VoteValues {
+    canVote: boolean;
     reason: string;
     value: number;
   }
@@ -23,11 +25,13 @@
   export let blockNumber: Number;
   let proposals = [];
   let voteValues: VoteValuesContainer = {};
+  let hasAnyVotes = false;
 
   $: {
     if ($proposalCreatedEvents === null || $votingSlots === null) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
+      $isSubmitting = true;
       prepareView();
     }
   }
@@ -56,8 +60,37 @@
       )
     );
 
+    const votesCasted = await $daaContract.queryFilter(
+      $daaContract.filters.VoteCast(
+        $userEthereumAddress,
+        null,
+        null,
+        null,
+        null
+      )
+    );
+
     proposals.forEach((proposal) => {
-      voteValues = { ...voteValues, [proposal.id]: { value: 0, reason: "" } };
+      const event: Event | undefined = votesCasted.find(
+        (event) => event.args[1].toString() === proposal.id
+      );
+
+      if (event === undefined) {
+        voteValues = {
+          ...voteValues,
+          [proposal.id]: { value: 0, reason: "", canVote: true },
+        };
+        hasAnyVotes = true;
+      } else {
+        voteValues = {
+          ...voteValues,
+          [proposal.id]: {
+            value: event.args[2],
+            reason: event.args[4],
+            canVote: false,
+          },
+        };
+      }
     });
 
     $isSubmitting = false;
@@ -103,6 +136,7 @@
       <p>Your vote:</p>
       <div>
         <button
+          disabled={!voteValues[proposal.id].canVote}
           class={voteValues[proposal.id].value === 0 ? "button1" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 0)}
         >
@@ -110,6 +144,7 @@
         </button>
 
         <button
+          disabled={!voteValues[proposal.id].canVote}
           class={voteValues[proposal.id].value === 1 ? "button1" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 1)}
         >
@@ -117,6 +152,7 @@
         </button>
 
         <button
+          disabled={!voteValues[proposal.id].canVote}
           class={voteValues[proposal.id].value === 2 ? "button1" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 2)}
         >
@@ -125,17 +161,25 @@
       </div>
     </div>
 
-    <p>Reason (optional):</p>
+    {#if voteValues[proposal.id].canVote}
+      <p>Reason (optional):</p>
 
-    <div>
-      <textarea
-        class="box-sizing-border"
-        bind:value={voteValues[proposal.id].reason}
-        rows="10"
-        cols="50"
-      />
-    </div>
+      <div>
+        <textarea
+          class="box-sizing-border"
+          bind:value={voteValues[proposal.id].reason}
+          rows="10"
+          cols="50"
+        />
+      </div>
+    {:else if voteValues[proposal.id].reason.trim() == ""}
+      <p>Reason: (no reason given)</p>
+    {:else}
+      <p>Reason: {voteValues[proposal.id].reason}</p>
+    {/if}
   {/each}
 
-  <button on:click={() => castVotes()} class="button1">Cast votes</button>
+  <button disabled={!hasAnyVotes} on:click={() => castVotes()} class="button1"
+    >Cast votes</button
+  >
 </Navigation>
