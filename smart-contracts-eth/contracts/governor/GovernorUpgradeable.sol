@@ -178,10 +178,10 @@ abstract contract GovernorUpgradeable is
 
     /**
      * The number of votes required in order for a voter to become a proposer
-     * Always zero because everyone can propose
+     * Must have voting power to create a proposal
      */
     function proposalThreshold() public view virtual returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function _quorumReached(uint256 proposalId)
