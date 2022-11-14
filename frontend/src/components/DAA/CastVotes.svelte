@@ -7,8 +7,9 @@
   import { Viewer } from "bytemd";
   import type { Event } from "ethers";
   import Fa from "svelte-fa";
+  import { navigate } from "svelte-routing";
   import { daaContract, userEthereumAddress } from "../../ts/daaStore";
-  import { isSubmitting } from "../../ts/mainStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import Navigation from "./Navigation.svelte";
 
@@ -37,6 +38,11 @@
   }
 
   async function prepareView() {
+    if (!$votingSlots.includes(blockNumber)) {
+      $error = "Invalid voting slot.";
+      navigate("/daa/votes");
+    }
+
     const amountOfProposals =
       await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber);
 
