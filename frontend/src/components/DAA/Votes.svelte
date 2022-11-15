@@ -1,22 +1,25 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import { daaContract, provider } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
+  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import formatDateTime from "../../utils/formatDateTime";
   import Navigation from "./Navigation.svelte";
 
-  let futureVotingSlots: VotingSlot[] = [];
-  let pastVotingSlots: VotingSlot[] = [];
-  let proposalCreatedEvents: Event[] = [];
+  let futureVotingSlots: VotingSlotsContainer = {};
+  let pastVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
   let currentBlockNumber: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
 
   interface VotingSlot {
-    blockInfo: BlockInfo;
+    blockDate: string;
     proposalInfos: ProposalInfo[];
+  }
+
+  interface VotingSlotsContainer {
+    [key: number]: VotingSlot;
   }
 
   interface BlockInfo {
@@ -30,9 +33,16 @@
   }
 
   $: {
-    if ($daaContract === null) {
+    if (
+      $daaContract === null ||
+      $proposalCreatedEvents === null ||
+      $votingSlots === null
+    ) {
       $isSubmitting = true;
-    } else {
+    } else if (
+      Object.keys(pastVotingSlots).length === 0 &&
+      Object.keys(futureVotingSlots).length === 0
+    ) {
       prepareView();
     }
   }
@@ -51,40 +61,27 @@
   }
 
   async function createVotingSlots() {
-    const [slotsLength, events] = await Promise.all([
-      (await $daaContract.getSlotsLength()).toNumber(),
-      await $daaContract.queryFilter(
-        $daaContract.filters.ProposalCreated(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        )
-      ),
-    ]);
-    proposalCreatedEvents = events;
-    for (
-      let i = slotsLength;
-      slotsLength - i >= 0 && i > slotsLength - 3;
-      i--
-    ) {
-      const slot = (await $daaContract.slots(slotsLength - i)).toNumber();
-      const blockInfo = await createBlockInfo(slot);
+    $votingSlots.forEach(async (blockNumberForSlot: number) => {
+      const blockInfo = await createBlockInfo(blockNumberForSlot);
       const proposalInfos = await createProposalInfo(blockInfo.blockNumber);
       if (blockInfo.blockNumber + votingPeriod < currentBlockNumber) {
-        pastVotingSlots = [...pastVotingSlots, { proposalInfos, blockInfo }];
+        pastVotingSlots = {
+          ...pastVotingSlots,
+          [blockInfo.blockNumber]: {
+            proposalInfos,
+            blockDate: blockInfo.blockDate,
+          },
+        };
       } else {
-        futureVotingSlots = [
+        futureVotingSlots = {
           ...futureVotingSlots,
-          { proposalInfos, blockInfo },
-        ];
+          [blockInfo.blockNumber]: {
+            proposalInfos,
+            blockDate: blockInfo.blockDate,
+          },
+        };
       }
-    }
+    });
   }
 
   async function createBlockInfo(blockNumber: number): Promise<BlockInfo> {
@@ -128,7 +125,7 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = proposalCreatedEvents.find(
+    const event = $proposalCreatedEvents.find(
       (event) => event.args[0].toString() === proposalId
     );
     return event.args[8];
@@ -145,19 +142,22 @@
 </style>
 
 <Navigation>
-  {#if futureVotingSlots.length > 0}
+  {#if Object.keys(futureVotingSlots).length > 0}
     <h2>Next Voting Windows</h2>
   {/if}
-  {#each futureVotingSlots as slot, i}
+  {#each Object.entries(futureVotingSlots) as [blockNumber, slotInfo]}
     <div class="card">
       <div>
         <div>Voting Start</div>
-        <div>#{slot.blockInfo.blockNumber}</div>
-        <div>≈{slot.blockInfo.blockDate}</div>
-        {#if currentBlockNumber >= slot.blockInfo.blockNumber && currentBlockNumber < slot.blockInfo.blockNumber + votingPeriod}
-          <button class="py-2 button3">Vote</button>
+        <div>#{blockNumber}</div>
+        <div>≈{slotInfo.blockDate}</div>
+        {#if currentBlockNumber >= Number(blockNumber) && currentBlockNumber < Number(blockNumber) + votingPeriod}
+          <button
+            on:click={() => navigate(`/daa/castVotes/${blockNumber}`)}
+            class="py-2 button3">Vote</button
+          >
         {/if}
-        {#if currentBlockNumber < slot.blockInfo.blockNumber - slotCloseTime}
+        {#if currentBlockNumber < Number(blockNumber) - slotCloseTime}
           <button
             on:click={() => navigate("/daa/createProposal")}
             class="py-2 button3">Create Proposal</button
@@ -165,24 +165,24 @@
         {/if}
       </div>
       <div>
-        {#each slot.proposalInfos as proposalInfo, i}
+        {#each slotInfo.proposalInfos as proposalInfo, i}
           <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
         {/each}
       </div>
     </div>
   {/each}
-  {#if pastVotingSlots.length > 0}
+  {#if Object.keys(pastVotingSlots).length > 0}
     <h2>Past Voting Windows</h2>
   {/if}
-  {#each pastVotingSlots as slot, i}
+  {#each Object.entries(pastVotingSlots) as [blockNumber, slotInfo]}
     <div class="card">
       <div>
         <div>Voting Start</div>
-        <div>#{slot.blockInfo.blockNumber}</div>
-        <div>{slot.blockInfo.blockDate}</div>
+        <div>#{blockNumber}</div>
+        <div>{slotInfo.blockDate}</div>
       </div>
       <div>
-        {#each slot.proposalInfos as proposalInfo, i}
+        {#each slotInfo.proposalInfos as proposalInfo, i}
           <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
         {/each}
       </div>
