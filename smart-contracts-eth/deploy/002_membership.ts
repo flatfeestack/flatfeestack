@@ -33,7 +33,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const isKnownSender = await walletDeployed.isKnownSender(membership.address);
   if (!isKnownSender) {
-    await walletDeployed.addKnownSender(membership.address);
+    console.log(
+      "Adding membership contract as known sender to wallet contract ..."
+    );
+    await (await walletDeployed.addKnownSender(membership.address)).wait();
   }
 };
 
