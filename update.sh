@@ -96,18 +96,6 @@ for name in ${PROJECTS}; do
 done
 wait
 
-#landing page
-cd frontend
-if [ ! -d "landing-page" ]; then
-  git_clone "landing-page" &
-else
-  git -C "landing-page" pull &
-fi
-wait
-cd -
-
 for name in ${PROJECTS}; do
   msg "${GREEN}[$(git -C "$name" symbolic-ref --short HEAD)]${NOFORMAT}-> $name"
 done
-#landing page
-msg "${GREEN}[$(git -C "frontend/landing-page" symbolic-ref --short HEAD)]${NOFORMAT}-> frontend/landing-page"
