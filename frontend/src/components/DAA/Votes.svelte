@@ -1,11 +1,7 @@
 <script lang="ts">
-  import { Web3Provider } from "@ethersproject/providers";
-  import detectEthereumProvider from "@metamask/detect-provider";
-  import { ethers } from "ethers";
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { DAAABI } from "../../contracts/DAA";
-  import { daaContract, provider, signer } from "../../ts/daaStore";
+  import { daaContract, provider } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import formatDateTime from "../../utils/formatDateTime";
   import Navigation from "./Navigation.svelte";
@@ -33,16 +29,15 @@
     proposalDescription: string;
   }
 
-  onMount(async () => {
-    $isSubmitting = true;
-    let ethProv = await detectEthereumProvider();
-    $provider = new Web3Provider(<any>ethProv);
-    $daaContract = new ethers.Contract(
-      import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-      DAAABI,
-      $signer ?? $provider
-    );
+  $: {
+    if ($daaContract === null) {
+      $isSubmitting = true;
+    } else {
+      prepareView();
+    }
+  }
 
+  async function prepareView() {
     slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();
     currentBlockNumber = await $provider.getBlockNumber();
     const currentBlockTimestamp = (await $provider.getBlock(currentBlockNumber))
@@ -53,7 +48,7 @@
     await createVotingSlots();
 
     $isSubmitting = false;
-  });
+  }
 
   async function createVotingSlots() {
     const [slotsLength, events] = await Promise.all([
