@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { ethereumAddress, membershipContract } from "../../ts/daaStore";
+  import { userEthereumAddress, membershipContract } from "../../ts/daaStore";
   import { error } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import Navigation from "./Navigation.svelte";
@@ -16,12 +16,14 @@
   }
 
   onMount(async () => {
-    if ($ethereumAddress === null || $membershipContract === null) {
+    if ($userEthereumAddress === null || $membershipContract === null) {
       moveToVotesPage();
       return;
     }
 
-    isWhiteLister = await $membershipContract.isWhitelister($ethereumAddress);
+    isWhiteLister = await $membershipContract.isWhitelister(
+      $userEthereumAddress
+    );
 
     if (!isWhiteLister) {
       moveToVotesPage();
@@ -62,7 +64,7 @@
               ? true
               : (await $membershipContract.getFirstWhitelister(
                   requestingMember.args[0]
-                )) !== $ethereumAddress;
+                )) !== $userEthereumAddress;
 
           return {
             address: requestingMember.args[0],

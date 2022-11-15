@@ -6,7 +6,7 @@
   import { getContext, onMount } from "svelte";
   import Fa from "svelte-fa";
   import {
-    ethereumAddress,
+    userEthereumAddress,
     membershipContract,
     membershipStatusValue,
   } from "../../ts/daaStore";
@@ -27,11 +27,13 @@
     if (
       $membershipStatusValue !== null &&
       $membershipContract !== null &&
-      $ethereumAddress !== null
+      $userEthereumAddress !== null
     ) {
       if ($membershipStatusValue == 3) {
         nextMembershipFeePayment =
-          await $membershipContract.nextMembershipFeePayment($ethereumAddress);
+          await $membershipContract.nextMembershipFeePayment(
+            $userEthereumAddress
+          );
 
         membershipFeePaid =
           nextMembershipFeePayment > Math.floor(Date.now() / 1000);

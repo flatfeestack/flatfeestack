@@ -12,7 +12,7 @@
   import Fa from "svelte-fa";
   import { links } from "svelte-routing";
   import {
-    ethereumAddress,
+    userEthereumAddress,
     membershipContract,
     membershipStatusValue,
     provider,
@@ -160,11 +160,11 @@
   <div class="memberArea">
     <Fa icon={faUserAstronaut} size="3x" />
 
-    {#if $ethereumAddress === null}
+    {#if $userEthereumAddress === null}
       <button class="button1" on:click={connectWallet}>Connect wallet</button>
     {:else}
       <p>
-        Hello {$ethereumAddress}! <br />
+        Hello {$userEthereumAddress}! <br />
         Your status: {membershipStatus}
       </p>
       <button class="py-2 button3" on:click={showMembershipStatus}

@@ -29,7 +29,7 @@ export const daaContract = derived(
   }
 );
 
-export const ethereumAddress = derived(
+export const userEthereumAddress = derived(
   signer,
   ($signer, set) => {
     if ($signer === null) {
@@ -59,13 +59,13 @@ export const membershipContract = derived(
 );
 
 export const membershipStatusValue = derived(
-  [ethereumAddress, membershipContract],
-  ([$ethereumAddress, $membershipContract], set) => {
-    if ($ethereumAddress === null || $membershipContract === null) {
+  [userEthereumAddress, membershipContract],
+  ([$userEthereumAddress, $membershipContract], set) => {
+    if ($userEthereumAddress === null || $membershipContract === null) {
       set(null);
     } else {
       Promise.resolve(
-        $membershipContract.getMembershipStatus($ethereumAddress)
+        $membershipContract.getMembershipStatus($userEthereumAddress)
       ).then((membershipStatus) => {
         set(membershipStatus);
       });
