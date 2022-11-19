@@ -1,9 +1,10 @@
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("Membership", () => {
+  const blocksInAYear = 9456720;
   async function deployFixture() {
     const [representative, whitelisterOne, whitelisterTwo, newUser] =
       await ethers.getSigners();
@@ -352,9 +353,11 @@ describe("Membership", () => {
       const { newUser, membership } = await deployFixture();
 
       await membership.connect(newUser).requestMembership();
+      expect(await membership.getMembersLength()).to.equal(4);
       await expect(membership.connect(newUser).removeMember(newUser.address))
         .to.emit(membership, "ChangeInMembershipStatus")
         .withArgs(newUser.address, 0);
+      expect(await membership.getMembersLength()).to.equal(3);
     });
 
     it("can leave association if they were whitelisted by one member", async () => {
@@ -363,15 +366,18 @@ describe("Membership", () => {
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
 
+      expect(await membership.getMembersLength()).to.equal(4);
       await expect(membership.connect(newUser).removeMember(newUser.address))
         .to.emit(membership, "ChangeInMembershipStatus")
         .withArgs(newUser.address, 0);
+      expect(await membership.getMembersLength()).to.equal(3);
     });
 
     it("can leave association if they are member", async () => {
       const { newUserWhitelisted, membership } =
         await deployFixtureWhitelisted();
 
+      expect(await membership.getMembersLength()).to.equal(4);
       await expect(
         membership
           .connect(newUserWhitelisted)
@@ -379,6 +385,7 @@ describe("Membership", () => {
       )
         .to.emit(membership, "ChangeInMembershipStatus")
         .withArgs(newUserWhitelisted.address, 0);
+      expect(await membership.getMembersLength()).to.equal(3);
     });
 
     it("can leave association if they are whitelister", async () => {
@@ -437,6 +444,39 @@ describe("Membership", () => {
       await expect(
         membership.connect(whitelisterOne).removeMember(whitelisterOne.address)
       ).to.be.revertedWith("Minimum whitelister not met!");
+    });
+  });
+
+  describe("removeMembersThatDidntPay", () => {
+    it("don't remove anyone if not necessary", async () => {
+      const { membership, newUserWhitelisted } =
+        await deployFixtureWhitelisted();
+
+      await membership.connect(newUserWhitelisted).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
+      await membership.removeMembersThatDidntPay();
+      expect(await membership.getMembersLength()).to.equal(4);
+    });
+
+    it("don't remove new members who haven't paid membership fees", async () => {
+      const { membership } = await deployFixtureWhitelisted();
+
+      await membership.removeMembersThatDidntPay();
+      expect(await membership.getMembersLength()).to.equal(4);
+    });
+
+    it("remove members that haven't paid", async () => {
+      const { membership, newUserWhitelisted } =
+        await deployFixtureWhitelisted();
+
+      await membership.connect(newUserWhitelisted).payMembershipFee({
+        value: ethers.utils.parseUnits("3", 4),
+      });
+      expect(await membership.getMembersLength()).to.equal(4);
+      await time.increase(365 * 24 * 60 * 60);
+      await membership.removeMembersThatDidntPay();
+      expect(await membership.getMembersLength()).to.equal(3);
     });
   });
 

@@ -56,6 +56,10 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         membershipList[_whitelisterOne] = MembershipStatus.isMember;
         membershipList[_whitelisterTwo] = MembershipStatus.isMember;
 
+        members.push(_representative);
+        members.push(_whitelisterOne);
+        members.push(_whitelisterTwo);
+
         nextMembershipFeePayment[_representative] = block.timestamp;
         nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
         nextMembershipFeePayment[_whitelisterTwo] = block.timestamp;
@@ -83,6 +87,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
 
     function requestMembership() public nonMemberOnly returns (bool) {
         membershipList[msg.sender] = MembershipStatus.requesting;
+        members.push(msg.sender);
         emit ChangeInMembershipStatus(
             msg.sender,
             uint256(MembershipStatus.requesting)
@@ -230,6 +235,10 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
             _removeWhitelister(_adr);
         }
 
+        _removeMember(_adr);
+    }
+
+    function _removeMember(address _adr) private {
         if (
             membershipList[_adr] == MembershipStatus.isMember &&
             nextMembershipFeePayment[_adr] > 0
@@ -241,10 +250,36 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         delete firstWhiteLister[_adr];
         membershipList[_adr] = MembershipStatus.nonMember;
 
+        for (uint256 i = 0; i < members.length; i++) {
+            if (members[i] == _adr) {
+                members[i] = members[members.length - 1];
+                members.pop();
+                break;
+            }
+        }
+
         emit ChangeInMembershipStatus(
             _adr,
             uint256(MembershipStatus.nonMember)
         );
+    }
+
+    function removeMembersThatDidntPay() public {
+        address[] memory toBeRemoved = new address[](members.length);
+        uint256 toBeRemovedIndex = 0;
+        for (uint256 i = 0; i < members.length; i++) {
+            address member = members[i];
+            uint256 nextPayment = nextMembershipFeePayment[member];
+            if (nextPayment > 0 && block.timestamp > nextPayment) {
+                if (!isWhitelister(member) && member != representative) {
+                    toBeRemoved[toBeRemovedIndex] = member;
+                    toBeRemovedIndex++;
+                }
+            }
+        }
+        for (uint256 i = 0; i < toBeRemoved.length; i++) {
+            _removeMember(toBeRemoved[i]);
+        }
     }
 
     function getVotes(address account)
