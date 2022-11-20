@@ -1046,12 +1046,8 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 
 	seconds := hours * 60 * 60
-	warp(seconds)
-	log.Printf("time warp: %v", timeNow())
-}
-
-func warp(seconds int) {
 	secondsAdd += seconds
+	log.Printf("time warp: %v", timeNow())
 }
 
 func crontester(w http.ResponseWriter, r *http.Request, _ string) {
