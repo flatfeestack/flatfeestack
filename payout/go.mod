@@ -5,11 +5,11 @@ go 1.19
 require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/ethereum/go-ethereum v1.10.26
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/nspcc-dev/neo-go v0.99.6
 	github.com/sirupsen/logrus v1.9.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
 require (
@@ -23,7 +23,6 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect

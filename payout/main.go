@@ -179,8 +179,8 @@ func main() {
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 	router.HandleFunc("/admin/sign/{userId}/{totalPayedOut}", jwtAuth(sign)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(timeWarp)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/timewarp", jwtAuth(timeWarpOffset)).Methods(http.MethodGet)
+	router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(timeWarp)).Methods(http.MethodPost)
 
 	log.Printf("listing on port %v", opts.Port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
