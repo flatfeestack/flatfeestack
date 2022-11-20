@@ -81,14 +81,17 @@ services:
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
-  openethereum:
+  ganache:
     #https://stackoverflow.com/questions/30233105/docker-compose-up-for-only-certain-containers
     #profiles: [ "local" ]
-    #https://github.com/ledgerwatch/erigon/blob/devel/DEV_CHAIN.md
-    image: openethereum/openethereum:v3.1.1
+    build: ./ganache
     ports:
       - "8545:8545"
-    user: root
     volumes:
       - ${BASE_PATH:-.}/.chain:/tmp/chain
-    command: --chain=dev --jsonrpc-interface=all --jsonrpc-hosts=all --jsonrpc-apis=all --jsonrpc-cors='*' --base-path=/tmp/chain
+    command: --database.dbPath=/tmp/chain --miner.blockTime=15 --wallet.seed="test" --server.host="0.0.0.0" --miner.timestampIncrement=15 --chain.networkId=1337
+
+    #I tried geth, but geth does not support eth_mine and eth_increaseTime. There is a pull request, that would solve
+    #it, but its not going to be included anytime soon: https://github.com/ethereum/go-ethereum/pull/16834
+    #libfaketime does not work with golang: https://github.com/wolfcw/libfaketime/issues/195
+    #command: --dev --dev.period=2 --http --http.api=eth,web3,personal,net --http.corsdomain="http://remix.ethereum.org" --datadir=/tmp/chain --http.addr=0.0.0.0 --mine --miner.threads=1 --miner.noverify
