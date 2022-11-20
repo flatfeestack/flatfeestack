@@ -7,7 +7,7 @@ import (
 	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	neo "github.com/nspcc-dev/neo-go/pkg/rpc/client"
+	neo "github.com/nspcc-dev/neo-go/pkg/rpcclient"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
