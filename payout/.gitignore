@@ -1,5 +1,4 @@
 .idea
 .env
 payout
-secrets/.key
-secrets/.contract
+

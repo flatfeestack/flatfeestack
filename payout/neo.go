@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,7 @@ import (
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neo-go/pkg/encoding/address"
 	"github.com/nspcc-dev/neo-go/pkg/io"
-	"github.com/nspcc-dev/neo-go/pkg/rpc/client"
+	neo "github.com/nspcc-dev/neo-go/pkg/rpc/client"
 	"github.com/nspcc-dev/neo-go/pkg/smartcontract"
 	"github.com/nspcc-dev/neo-go/pkg/smartcontract/callflag"
 	"github.com/nspcc-dev/neo-go/pkg/smartcontract/manifest"
@@ -23,14 +24,47 @@ import (
 	"math/big"
 )
 
+func getNeoClient(endpoint string) (*neo.Client, error) {
+	neoClient, err := neo.New(context.Background(), endpoint, neo.Options{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = neoClient.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(opts.NEO.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	// signatureBytes := signature_provider.NewSignatureNeo(dev, tea, contractOwnerPrivateKey)
+
+	// Following the steps on the developer's side after receiving the signature bytes:
+	// Create and initialize client
+	// Developer received the signature bytes and can now create the transaction to withdraw funds
+	owner := wallet.NewAccountFromPrivateKey(contractOwnerPrivateKey)
+
+	if opts.NEO.Deploy {
+		h, err := deploy(neoClient, owner)
+		if err != nil {
+			return nil, err
+		} else {
+			opts.NEO.Contract = h.StringLE()
+		}
+	}
+	return neoClient, nil
+}
+
 func payoutNEO(addressValues []string, teas []*big.Int) (string, error) {
-	var neo = opts.Blockchains["neo"]
-	var payoutNeoHash, err = util.Uint160DecodeStringLE(neo.Contract)
+	var payoutNeoHash, err = util.Uint160DecodeStringLE(opts.NEO.Contract)
 	if err != nil {
 		log.Fatalf(err.Error())
 		return "", err
 	}
-	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(neo.PrivateKey)
+	contractOwnerPrivateKey, err := keys.NewPrivateKeyFromWIF(opts.NEO.PrivateKey)
 	if err != nil {
 		log.Fatalf(err.Error())
 		return "", err
@@ -41,7 +75,7 @@ func payoutNEO(addressValues []string, teas []*big.Int) (string, error) {
 	return h, nil
 }
 
-func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {
+func CreateBatchPayoutTx(c *neo.Client, payoutNeoHash util.Uint160, acc *wallet.Account, addressValues []string, teas []*big.Int) string {
 	var devP []interface{}
 	for _, v := range addressValues {
 		add, _ := address.StringToUint160(v)
@@ -61,7 +95,7 @@ func CreateBatchPayoutTx(c *client.Client, payoutNeoHash util.Uint160, acc *wall
 		Account: sender,
 		Scopes:  transaction.CalledByEntry,
 	}
-	tx, err := c.CreateTxFromScript(script, acc, -1, 0, []client.SignerAccount{{
+	tx, err := c.CreateTxFromScript(script, acc, -1, 0, []neo.SignerAccount{{
 		Signer: signer,
 	}})
 	if err != nil {
@@ -120,7 +154,7 @@ func readManifest(filename string) (*manifest.Manifest, []byte, error) {
 	return m, manifestBytes, nil
 }
 
-func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
+func deploy(c *neo.Client, acc *wallet.Account) (util.Uint160, error) {
 	nativeManagementContractHash, err := c.GetNativeContractHash(nativenames.Management)
 	if err != nil {
 		log.Fatalf("Couldn't get native management contract hash")
@@ -154,7 +188,7 @@ func deploy(c *client.Client, acc *wallet.Account) (util.Uint160, error) {
 		//AllowedContracts: []util.Uint160{contractHash},
 	}
 	resp, _ := c.InvokeFunction(nativeManagementContractHash, "deploy", appCallParams, []transaction.Signer{signer})
-	tx, err := c.CreateTxFromScript(resp.Script, acc, -1, 0, []client.SignerAccount{{Signer: signer}})
+	tx, err := c.CreateTxFromScript(resp.Script, acc, -1, 0, []neo.SignerAccount{{Signer: signer}})
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
