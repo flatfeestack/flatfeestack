@@ -68,7 +68,7 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db caddy openethereum auth analysis-engine backend payout frontend'
+  internal='db caddy ganache auth analysis-engine backend payout frontend'
 
   while :; do
     case "${1-}" in
@@ -80,7 +80,7 @@ parse_params() {
     -np | --no-payout) external="${external} payout"; internal="${internal//payout/}";;
     -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
     -sb | --skip-build) include_build=false;;
-    -db | --db-only) internal='db'; external='caddy openethereum auth analysis-engine backend payout frontend'; break;; #if this is set everything else is ignored
+    -db | --db-only) internal='db'; external='caddy ganache auth analysis-engine backend payout frontend'; break;; #if this is set everything else is ignored
     -rm | --remove-data) rm -rf .db .chain;;
     -?*) die "Unknown option: $1";;
     *) break ;;
