@@ -1,5 +1,7 @@
 .git
 .gitignore
 .idea
-test-api
+api.http
 README.md
+.example.env
+test-repository.zip

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
@@ -13,11 +14,15 @@ import (
 )
 
 var (
-	opts *Opts
+	opts   *Opts
+	debug  bool
+	jwtKey []byte
 )
 
 type Opts struct {
 	Port         int
+	Env          string
+	HS256        string
 	BackendToken string
 	CallbackUrl  string
 	GitBasePath  string
@@ -30,18 +35,33 @@ func NewOpts() *Opts {
 	}
 
 	o := &Opts{}
+
+	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT", 9083), "listening HTTP port")
-	flag.StringVar(&o.BackendToken, "token", lookupEnv("BACKEND_TOKEN",
-		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbmFseXNpcy1lbmdpbmVAZmxhdGZlZXN0YWNrLmlvIn0.HJInRFNeQNTZhdQghG1Ylbng23wKxFQscJTLAkf8hu8"),
-		"Backend Token")
-	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("WEBHOOK_CALLBACK_URL", "http://backend:9082/hooks/analysis-engine"), "Callback URL")
-	flag.StringVar(&o.GitBasePath, "git-base-path", lookupEnv("GO_GIT_BASE_PATH", "/tmp"), "Git base storage path")
+	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&o.BackendToken, "token", lookupEnv("BACKEND_TOKEN"), "Backend Token")
+	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
+	flag.StringVar(&o.GitBasePath, "git-base", lookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if o.HS256 != "" {
+		h := sha256.New()
+		h.Write([]byte(o.HS256))
+		jwtKey = h.Sum(nil)
+	} else {
+		log.Fatalf("HS256 seed is required, non was provided")
+	}
+
+	//set defaults
+	if o.Env == "local" || o.Env == "dev" {
+		debug = true
+	}
+
 	return o
 }
 
@@ -93,7 +113,7 @@ func main() {
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/webhook", analyzeRepository).Methods("POST")
+	router.HandleFunc("/analyze", jwtAuth(analyze)).Methods("POST")
 	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }

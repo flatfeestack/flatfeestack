@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -33,7 +34,7 @@ type FlatFeeWeight struct {
 	Weight float64  `json:"weight"`
 }
 
-func analyzeRepository(w http.ResponseWriter, r *http.Request) {
+func analyze(w http.ResponseWriter, r *http.Request, _ *TokenClaims) {
 	var request WebhookRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -62,20 +63,20 @@ func analyzeForWebhookInBackground(request WebhookRequest) {
 
 	contributionMap, err := analyzeRepositoryFromString(request.DateFrom, request.DateTo, request.GitUrls...)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "analyzeRepositoryFromString: " + err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.CallbackUrl)
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "weightContributions: " + err.Error()})
+		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "weightContributions: " + err.Error()}, opts.CallbackUrl)
 		return
 	}
 
 	callbackToWebhook(WebhookCallback{
 		RequestId: request.RequestId,
 		Result:    weightsMap,
-	})
+	}, opts.CallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.RequestId)
 }
@@ -85,7 +86,7 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 	w.WriteHeader(httpStatusError)
 }
 
-func callbackToWebhook(body WebhookCallback) {
+func callbackToWebhook(body WebhookCallback, url string) {
 	if body.Error == "" {
 		log.Printf("About to returt the following data: %v", body.Result)
 	}
@@ -97,7 +98,7 @@ func callbackToWebhook(body WebhookCallback) {
 		Timeout: 15 * time.Second,
 	}
 
-	req, err := http.NewRequest("POST", opts.CallbackUrl, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Printf("Could not create a HTTP request to call the webhook %v", err)
 		return
@@ -117,4 +118,16 @@ func callbackToWebhook(body WebhookCallback) {
 	}
 
 	defer resp.Body.Close()
+}
+
+func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	log.Warnf(msg)
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
+	w.WriteHeader(code)
+	if debug {
+		w.Write([]byte(`{"error":"` + msg + `"}`))
+	}
 }
