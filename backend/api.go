@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/spaolacci/murmur3"
-	"github.com/stripe/stripe-go/v72/paymentmethod"
+	"github.com/stripe/stripe-go/v74/paymentmethod"
 	"golang.org/x/text/language"
 	"math/big"
 	"net/http"
@@ -28,6 +28,10 @@ var matcher = language.NewMatcher([]language.Tag{
 	language.English,
 	language.German,
 })
+
+type Timewarp struct {
+	Offset int `json:"offset"`
+}
 
 type EmailRequest struct {
 	MailTo      string `json:"mail_to,omitempty"`
@@ -1021,6 +1025,13 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 	return
 }
 
+func timeWarpOffset(w http.ResponseWriter, _ *http.Request, _ string) {
+	tw := Timewarp{
+		Offset: secondsAdd,
+	}
+	writeJson(w, tw)
+}
+
 func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	m := mux.Vars(r)
 	h := m["hours"]
@@ -1034,12 +1045,13 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 		return
 	}
 
-	warp(hours)
+	seconds := hours * 60 * 60
+	warp(seconds)
 	log.Printf("time warp: %v", timeNow())
 }
 
-func warp(hours int) {
-	hoursAdd += hours
+func warp(seconds int) {
+	secondsAdd += seconds
 }
 
 func crontester(w http.ResponseWriter, r *http.Request, _ string) {

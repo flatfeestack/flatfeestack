@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
 	"flag"
@@ -12,10 +13,8 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
-	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v74"
 	"golang.org/x/crypto/ed25519"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 	"net/http"
 	"os"
 	"regexp"
@@ -31,15 +30,15 @@ const (
 )
 
 var (
-	db        *sql.DB
-	opts      *Opts
-	jwtKey    []byte
-	privRSA   *rsa.PrivateKey
-	privEdDSA *ed25519.PrivateKey
-	debug     bool
-	admins    []string
-	hoursAdd  int
-	km        = KeyedMutex{}
+	db         *sql.DB
+	opts       *Opts
+	jwtKey     []byte
+	privRSA    *rsa.PrivateKey
+	privEdDSA  *ed25519.PrivateKey
+	debug      bool
+	admins     []string
+	secondsAdd int
+	km         = KeyedMutex{}
 )
 
 type Opts struct {
@@ -70,21 +69,12 @@ type Opts struct {
 	EmailParallel             int
 }
 
-type TokenClaims struct {
-	Scope            string                 `json:"scope,omitempty"`
-	InviteMetaSystem map[string]interface{} `json:"inviteMetaSystem,omitempty"`
-	InviteMetaUser   map[string]interface{} `json:"inviteMetaUser,omitempty"`
-	jwt.Claims
-}
-
 func NewOpts() *Opts {
 	o := &Opts{}
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV",
-		"local"), "ENV variable")
+	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
 		9082), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256",
-		"ORSXG5A="), "HS256 key")
+	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
 	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
 	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", lookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
 	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
@@ -125,15 +115,21 @@ func NewOpts() *Opts {
 	}
 	flag.Parse()
 
+	if o.HS256 != "" {
+		var err error
+		jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
+		if err != nil {
+			h := sha256.New()
+			h.Write([]byte(o.HS256))
+			jwtKey = h.Sum(nil)
+		}
+	} else {
+		log.Fatalf("HS256 seed is required, non was provided")
+	}
+
 	//set defaults
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
-	}
-
-	var err error
-	jwtKey, err = base32.StdEncoding.DecodeString(o.HS256)
-	if err != nil {
-		log.Fatalf("cannot decode %v", o.HS256)
 	}
 
 	admins = strings.Split(o.Admins, ";")
@@ -266,10 +262,11 @@ func main() {
 	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
 	//dev settings
-	if opts.Env == "local" || opts.Env == "dev" {
+	if debug {
 		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods(http.MethodPost)
 		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(fakePayment, admins)).Methods(http.MethodPost)
 		router.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(fakeContribution, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/timewarp", jwtAuthAdmin(timeWarpOffset, admins)).Methods(http.MethodGet)
 		router.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods(http.MethodPost)
 		router.HandleFunc("/nowpayments/crontester", jwtAuthAdmin(crontester, admins)).Methods(http.MethodPost)
 	}
@@ -324,123 +321,6 @@ func maxBytes(next func(w http.ResponseWriter, r *http.Request), size int64) fun
 	}
 }
 
-func jwtAuth(r *http.Request) (*TokenClaims, error) {
-	authHeader := r.Header.Get("Authorization")
-	var bearerToken = ""
-	if authHeader == "" {
-		authHeader = r.Header.Get("Sec-WebSocket-Protocol")
-		if authHeader == "" {
-			return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
-		}
-	}
-	split := strings.Split(authHeader, " ")
-	if len(split) != 2 {
-		return nil, fmt.Errorf("ERR-02, could not split token: %v", bearerToken)
-	}
-	bearerToken = split[1]
-
-	tok, err := jwt.ParseSigned(bearerToken)
-	if err != nil {
-		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
-	}
-
-	claims := &TokenClaims{}
-
-	if tok.Headers[0].Algorithm == string(jose.RS256) {
-		err = tok.Claims(privRSA.Public(), claims)
-	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
-		err = tok.Claims(jwtKey, claims)
-	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
-		err = tok.Claims(privEdDSA.Public(), claims)
-	} else {
-		return nil, fmt.Errorf("ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("ERR-05, could not parse claims: %v", bearerToken)
-	}
-
-	if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {
-		return claims, fmt.Errorf("ERR-06, unauthorized: %v", bearerToken)
-	}
-
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("ERR-07, no subject: %v", claims)
-	}
-	return claims, nil
-}
-
-func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		claims, err := jwtAuth(r)
-		if claims != nil && err != nil {
-			writeErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
-			return
-		} else if claims == nil && err != nil {
-			writeErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
-			return
-		}
-		for _, email := range emails {
-			if claims.Subject == email {
-				log.Printf("Authenticated admin %s\n", email)
-				next(w, r, email)
-				return
-			}
-		}
-		writeErrorf(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
-	}
-}
-
-func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *User)) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		claims, err := jwtAuth(r)
-
-		if claims != nil && err != nil {
-			if r.Header.Get("Sec-WebSocket-Protocol") == "" {
-				//no websocket
-				writeErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
-			} else {
-				//we use websocket
-				wsNoAuth(w, r)
-			}
-			return
-		} else if claims == nil && err != nil {
-			writeErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
-			return
-		}
-
-		unlock := km.Lock(claims.Subject)
-		defer unlock()
-
-		// Fetch user from DB
-		user, err := findUserByEmail(claims.Subject)
-		if err != nil {
-			writeErrorf(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
-			return
-		}
-
-		if user == nil {
-			user, err = createUser(claims.Subject)
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
-				return
-			}
-		}
-
-		//User exists now, check if we are admin
-		for _, email := range admins {
-			if claims.Subject == email {
-				log.Printf("Authenticated admin %s\n", email)
-				user.Role = stringPointer("admin")
-			}
-		}
-
-		user.Claims = claims
-		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
-		next(w, r, user)
-	}
-}
-
 func createUser(email string) (*User, error) {
 	payOutId := uuid.New()
 
@@ -464,8 +344,8 @@ func stringPointer(s string) *string {
 }
 
 func timeNow() time.Time {
-	if opts != nil && (opts.Env == "local" || opts.Env == "dev") {
-		return time.Now().Add(time.Duration(hoursAdd) * time.Hour).UTC()
+	if debug {
+		return time.Now().Add(time.Duration(secondsAdd) * time.Second).UTC()
 	} else {
 		return time.Now().UTC()
 	}

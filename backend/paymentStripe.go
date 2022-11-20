@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/paymentintent"
-	"github.com/stripe/stripe-go/v72/setupintent"
-	"github.com/stripe/stripe-go/v72/webhook"
+	"github.com/stripe/stripe-go/v74"
+	"github.com/stripe/stripe-go/v74/customer"
+	"github.com/stripe/stripe-go/v74/paymentintent"
+	"github.com/stripe/stripe-go/v74/setupintent"
+	"github.com/stripe/stripe-go/v74/webhook"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -20,7 +20,7 @@ type ClientSecretBody struct {
 	ClientSecret string `json:"clientSecret"`
 }
 
-//https://stripe.com/docs/payments/save-and-reuse
+// https://stripe.com/docs/payments/save-and-reuse
 func setupStripe(w http.ResponseWriter, r *http.Request, user *User) {
 	//create a user at stripe if the user does not exist yet
 	if user.StripeId == nil || opts.StripeAPISecretKey != "" {
@@ -116,12 +116,12 @@ func stripePaymentInitial(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-//https://stripe.com/docs/testing#cards
-//regular card for testing: 4242 4242 4242 4242
-//3d secure with auth required: 4000 0027 6000 3184
-//trigger 3d secure: 4000 0000 0000 3063
-//failed: 4000 0000 0000 0341 (checked)
-//insufficient funds: 4000 0000 0000 9995 (checked)
+// https://stripe.com/docs/testing#cards
+// regular card for testing: 4242 4242 4242 4242
+// 3d secure with auth required: 4000 0027 6000 3184
+// trigger 3d secure: 4000 0000 0000 3063
+// failed: 4000 0000 0000 0341 (checked)
+// insufficient funds: 4000 0000 0000 9995 (checked)
 func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
