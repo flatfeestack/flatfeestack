@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/dimiro1/banner v1.1.0
 	github.com/felixge/httpsnoop v1.0.2
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
@@ -19,7 +20,6 @@ require (
 	github.com/stripe/stripe-go/v74 v74.1.0
 	golang.org/x/crypto v0.3.0
 	golang.org/x/text v0.4.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
 require (

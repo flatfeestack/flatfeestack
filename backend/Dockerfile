@@ -8,8 +8,8 @@ COPY *.go *.sql banner.txt ./
 RUN go build
 
 FROM alpine:3.17
-WORKDIR /app
 RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
+WORKDIR /app
 COPY --from=builder /app/banner.txt /app/backend /app/init.sql ./
 USER nonroot
 ENTRYPOINT ["/app/backend"]

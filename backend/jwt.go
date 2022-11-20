@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 	"net/http"
 	"strings"
 )
