@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/base32"
+	"crypto/sha256"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
@@ -63,20 +63,15 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
 		9084), "listening HTTP port")
-	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY",
-		"4d5db4107d237df6a3d58ee5f70ae63d73d7658d4026f2eefd2f204c81682cb7"), "Ethereum private key")
-	flag.StringVar(&o.Ethereum.Contract, "eth-contract", lookupEnv("ETH_CONTRACT",
-		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Ethereum contract address")
-	flag.StringVar(&o.Ethereum.Url, "eth-url", lookupEnv("ETH_URL",
-		"http://openethereum:8545"), "Ethereum URL")
-	flag.BoolVar(&o.Ethereum.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "true", "Set to true to deploy ETH contract")
-	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY",
-		"L3WX5hiSstmFZBbr5Yyyvce1DoBZcQDgKn4xLeTdJHxsx7XcF3mp"), "NEO private key")
-	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT",
-		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "NEO contract address")
-	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL",
-		"http://172.17.0.1:8545"), "NEO URL")
-	flag.BoolVar(&o.NEO.Deploy, "neo-deploy", lookupEnv("NEO_DEPLOY") == "true", "Set to true to deploy NEO contract")
+	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
+	flag.StringVar(&o.Ethereum.Contract, "eth-contract", lookupEnv("ETH_CONTRACT"), "Ethereum contract address")
+	flag.StringVar(&o.Ethereum.Url, "eth-url", lookupEnv("ETH_URL"), "Ethereum URL")
+	flag.BoolVar(&o.Ethereum.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "false", "Set to true to deploy ETH contract")
+	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
+	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT"), "NEO contract address")
+	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL"), "NEO URL")
+	flag.BoolVar(&o.NEO.Deploy, "neo-deploy", lookupEnv("NEO_DEPLOY") == "false", "Set to true to deploy NEO contract")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -85,19 +80,20 @@ func NewOpts() *Opts {
 	flag.Parse()
 
 	if o.HS256 != "" {
-		jwtKey, err = base32.StdEncoding.DecodeString(opts.HS256)
-		if err != nil {
-			log.Fatalf("cannot decode %v", opts.HS256)
-		}
-	}
-
-	if strings.HasPrefix(o.Ethereum.PrivateKey, "0x") {
-		o.Ethereum.PrivateKey = o.Ethereum.PrivateKey[2:]
+		h := sha256.New()
+		h.Write([]byte(o.HS256))
+		jwtKey = h.Sum(nil)
+	} else {
+		log.Fatalf("HS256 seed is required, non was provided")
 	}
 
 	//set defaults
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
+	}
+
+	if strings.HasPrefix(o.Ethereum.PrivateKey, "0x") {
+		o.Ethereum.PrivateKey = o.Ethereum.PrivateKey[2:]
 	}
 
 	return o
@@ -153,7 +149,8 @@ func neoInit() *neo.Client {
 		neoClient, err = getNeoClient(opts.NEO.Url)
 	}
 	if err != nil {
-		log.Fatal("Could not initialize NEO network", err)
+		//log.Fatal("Could not initialize NEO network", err)
+		log.Debugf("Could not initialize NEO network", err)
 	}
 	return neoClient
 }

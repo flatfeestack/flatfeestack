@@ -157,7 +157,7 @@ func readManifest(filename string) (*manifest.Manifest, []byte, error) {
 func deploy(c *neo.Client, acc *wallet.Account) (util.Uint160, error) {
 	nativeManagementContractHash, err := c.GetNativeContractHash(nativenames.Management)
 	if err != nil {
-		log.Fatalf("Couldn't get native management contract hash")
+		return util.Uint160{}, err
 	}
 	ne, nefB, err := readNEFFile("./PayoutNeo.nef")
 	_, mfB, err := readManifest("./PayoutNeo.manifest.json")
@@ -190,15 +190,15 @@ func deploy(c *neo.Client, acc *wallet.Account) (util.Uint160, error) {
 	resp, _ := c.InvokeFunction(nativeManagementContractHash, "deploy", appCallParams, []transaction.Signer{signer})
 	tx, err := c.CreateTxFromScript(resp.Script, acc, -1, 0, []neo.SignerAccount{{Signer: signer}})
 	if err != nil {
-		log.Fatalf(err.Error())
+		return util.Uint160{}, err
 	}
 	txHash, err := c.SignAndPushTx(tx, acc, nil)
 	if err != nil {
-		log.Fatalf("failed to sign and push transaction: %v", err)
+		return util.Uint160{}, err
 	}
 	fmt.Println("---------------------------------")
 	fmt.Println("NEO Transaction: " + txHash.StringLE())
 	fmt.Println("NEO smart contract deployed: " + contractHash.StringLE())
 	fmt.Println("---------------------------------")
-	return contractHash, err
+	return contractHash, nil
 }
