@@ -490,3 +490,7 @@ tbody tr:last-of-type {
   margin: 0;
   text-align: right;
 }
+
+.italic {
+  font-style: italic;
+}
