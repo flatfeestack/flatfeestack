@@ -24,6 +24,8 @@
   import Spinner from "../Spinner.svelte";
   import MembershipStatus from "./MembershipStatus.svelte";
   import MetaMaskRequired from "./MetaMaskRequired.svelte";
+  import { error } from "../../ts/mainStore";
+  import Dialog from "../Dialog.svelte";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -57,6 +59,32 @@
       $signer = $provider.getSigner();
     }
   }
+
+  const onCancel = () => {};
+  const onConfirm = async () => {
+    try {
+      await $membershipContract.removeMember($userEthereumAddress);
+    } catch (e) {
+      $error = e.data.data.reason;
+    }
+  };
+
+  const leaveFlatFeeStack = () => {
+    open(
+      Dialog,
+      {
+        title: "Leave FlatFeeStack",
+        message: "Are you sure you want to leave FlatFeeStack immediately?",
+        onCancel,
+        onConfirm,
+      },
+      {
+        closeButton: false,
+        closeOnEsc: false,
+        closeOnOuterClick: false,
+      }
+    );
+  };
 
   $: {
     if ($membershipStatusValue === null) {
@@ -167,9 +195,14 @@
         Hello {$userEthereumAddress}! <br />
         Your status: {membershipStatus}
       </p>
-      <button class="py-2 button3" on:click={showMembershipStatus}
-        >Approval process</button
-      >
+      <button class="py-2 button3 my-2" on:click={showMembershipStatus}>
+        Approval process
+      </button>
+      {#if $membershipStatusValue > 0}
+        <button class="py-2 button3 my-2" on:click={leaveFlatFeeStack}>
+          Leave FlatFeeStack
+        </button>
+      {/if}
     {/if}
   </div>
 </div>
