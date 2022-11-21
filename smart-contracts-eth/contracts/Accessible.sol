@@ -15,6 +15,7 @@ contract Accessible {
     uint256 public membershipFee;
 
     mapping(uint256 => address) public whitelisterList;
+    address[] public members;
     mapping(address => MembershipStatus) internal membershipList;
     mapping(address => address) internal firstWhiteLister;
 
@@ -61,5 +62,9 @@ contract Accessible {
             }
         }
         return check;
+    }
+
+    function getMembersLength() external view returns (uint256) {
+        return members.length;
     }
 }
