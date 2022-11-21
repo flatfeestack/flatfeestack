@@ -341,3 +341,6 @@ typechain-types
 # local ganache chain artifacts
 ganache
 deployments/localhost
+
+# Solidity coverage
+coverage.json
