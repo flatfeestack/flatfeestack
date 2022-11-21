@@ -5,6 +5,7 @@ import "./governor/GovernorUpgradeable.sol";
 import "./governor/GovernorVotesUpgradeable.sol";
 import "./governor/GovernorCountingSimpleUpgradeable.sol";
 import "./governor/GovernorVotesQuorumFractionUpgradeable.sol";
+import "./governor/GovernorTimelockControlUpgradeable.sol";
 import "./Membership.sol";
 
 contract DAA is
@@ -12,16 +13,22 @@ contract DAA is
     GovernorUpgradeable,
     GovernorVotesUpgradeable,
     GovernorCountingSimpleUpgradeable,
-    GovernorVotesQuorumFractionUpgradeable
+    GovernorVotesQuorumFractionUpgradeable,
+    GovernorTimelockControlUpgradeable
 {
     Membership public membershipContract;
 
-    function initialize(Membership _membership) public initializer {
+    function initialize(
+        Membership _membership,
+        TimelockControllerUpgradeable _timelock
+    ) public initializer {
         membershipContract = Membership(_membership);
+
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
         governorVotesQuorumFractionInit(0);
+        governorTimelockControlInit(_timelock);
     }
 
     function votingDelay() public pure override returns (uint256) {
@@ -48,7 +55,7 @@ contract DAA is
     function getVotes(address account, uint256 blockNumber)
         public
         view
-        override(GovernorUpgradeable)
+        override(GovernorUpgradeable, IGovernorUpgradeable)
         returns (uint256)
     {
         return super.getVotes(account, blockNumber);
@@ -57,7 +64,7 @@ contract DAA is
     function state(uint256 proposalId)
         public
         view
-        override(GovernorUpgradeable)
+        override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
         returns (ProposalState)
     {
         return super.state(proposalId);
@@ -68,7 +75,11 @@ contract DAA is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public override(GovernorUpgradeable) returns (uint256) {
+    )
+        public
+        override(GovernorUpgradeable, IGovernorUpgradeable)
+        returns (uint256)
+    {
         return super.propose(targets, values, calldatas, description);
     }
 
@@ -78,7 +89,10 @@ contract DAA is
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) internal override(GovernorUpgradeable) {
+    )
+        internal
+        override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
+    {
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
@@ -87,14 +101,18 @@ contract DAA is
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) internal override(GovernorUpgradeable) returns (uint256) {
+    )
+        internal
+        override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
+        returns (uint256)
+    {
         return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
     function _executor()
         internal
         view
-        override(GovernorUpgradeable)
+        override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
         returns (address)
     {
         return super._executor();
@@ -120,5 +138,14 @@ contract DAA is
         slots.push(blockNumber);
         emit NewTimeslotSet(blockNumber);
         return blockNumber;
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

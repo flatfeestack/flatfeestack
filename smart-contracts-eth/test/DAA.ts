@@ -1,13 +1,16 @@
 import { keccak256 } from "@ethersproject/keccak256";
 import { toUtf8Bytes } from "@ethersproject/strings";
-import { mine, time, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
+import { mine, mineUpTo, time } from "@nomicfoundation/hardhat-network-helpers";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
+import type { Contract } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("DAA", () => {
   const blocksInAMonth = 181860;
   const blocksInAWeek = 45465;
+
   async function deployFixture() {
     const [nonMember, representative, whitelisterOne, whitelisterTwo] =
       await ethers.getSigners();
@@ -23,12 +26,32 @@ describe("DAA", () => {
       value: ethers.utils.parseEther("1.0"),
     });
 
+    // deploy timelock controller
+    const Timelock = await ethers.getContractFactory("Timelock");
+    const timelock = await upgrades.deployProxy(Timelock, [
+      representative.address,
+    ]);
+    await timelock.deployed();
+
+    // move wallet contract ownership to timelock
+    await wallet.connect(representative).transferOwnership(timelock.address);
+
+    // deploy DAA
     const DAA = await ethers.getContractFactory("DAA");
-    const daa = await upgrades.deployProxy(DAA, [membership.address]);
+    const daa = await upgrades.deployProxy(DAA, [
+      membership.address,
+      timelock.address,
+    ]);
     await daa.deployed();
 
-    // transfer wallet ownership
-    await wallet.connect(representative).transferOwnership(daa.address);
+    // set proper permissions on timelock controller
+    const proposerRole = await timelock.PROPOSER_ROLE();
+    await timelock.connect(representative).grantRole(proposerRole, daa.address);
+
+    const adminRole = await timelock.TIMELOCK_ADMIN_ROLE();
+    await timelock
+      .connect(representative)
+      .revokeRole(adminRole, representative.address);
 
     // create proposal slot
     const firstVotingSlot =
@@ -63,6 +86,7 @@ describe("DAA", () => {
       contracts: {
         daa,
         membership,
+        timelock,
         wallet,
       },
       entities: {
@@ -77,6 +101,12 @@ describe("DAA", () => {
         id: proposalId,
         targets: targets,
         values: values,
+        proposalArgs: [
+          targets,
+          values,
+          transferCalldata,
+          keccak256(toUtf8Bytes(description)),
+        ],
       },
       firstVotingSlot,
     };
@@ -453,8 +483,8 @@ describe("DAA", () => {
     });
   });
 
-  describe("execute", () => {
-    it("successful proposal can be executed", async () => {
+  describe("queue", () => {
+    it("successful proposal can be queued", async () => {
       const fixtures = await deployFixture();
       const { daa } = fixtures.contracts;
       const { representative } = fixtures.entities;
@@ -462,23 +492,32 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mineUpTo(firstVotingSlot);
-      await daa.connect(representative).castVote(proposalId, 1);
+      await castVote(firstVotingSlot, daa, representative, proposalId);
 
       // voting period
       await mine(await daa.votingPeriod());
+      await expect(daa.queue(...fixtures.proposal.proposalArgs)).to.emit(
+        daa,
+        "ProposalQueued"
+      );
+    });
+
+    it("cannot re-queue proposal", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      // votingDelay
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
+
+      expect(await daa.connect(representative).state(proposalId)).to.equal(5);
+
       await expect(
-        daa
-          .connect(representative)
-          .execute(
-            fixtures.proposal.targets,
-            fixtures.proposal.values,
-            fixtures.proposal.callData,
-            keccak256(toUtf8Bytes(fixtures.proposal.description))
-          )
-      )
-        .to.emit(daa, "ProposalExecuted")
-        .withArgs(proposalId);
+        queueProposal(daa, fixtures.proposal.proposalArgs)
+      ).to.revertedWith("Proposal not successful");
     });
   });
 
@@ -494,27 +533,21 @@ describe("DAA", () => {
       ).to.revertedWith("Governor: unknown proposal id");
     });
 
-    it("executed proposal has state exectuted", async () => {
+    it("executed proposal has state executed", async () => {
       const fixtures = await deployFixture();
-      const { daa } = fixtures.contracts;
+      const { daa, timelock } = fixtures.contracts;
       const { representative } = fixtures.entities;
       const proposalId = fixtures.proposal.id;
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mineUpTo(firstVotingSlot);
-      await daa.connect(representative).castVote(proposalId, 1);
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
 
-      // voting period
-      await mine(await daa.votingPeriod());
+      await mine(await timelock.getMinDelay());
       await daa
         .connect(representative)
-        .execute(
-          fixtures.proposal.targets,
-          fixtures.proposal.values,
-          fixtures.proposal.callData,
-          keccak256(toUtf8Bytes(fixtures.proposal.description))
-        );
+        .execute(...fixtures.proposal.proposalArgs);
 
       expect(await daa.connect(representative).state(proposalId)).to.equal(7);
     });
@@ -529,8 +562,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mineUpTo(firstVotingSlot);
-      await daa.connect(representative).castVote(proposalId, 1);
+      await castVote(firstVotingSlot, daa, representative, proposalId);
 
       expect(
         await daa
@@ -547,8 +579,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mineUpTo(firstVotingSlot);
-      await daa.connect(representative).castVote(proposalId, 1);
+      await castVote(firstVotingSlot, daa, representative, proposalId);
 
       expect(
         await daa
@@ -567,8 +598,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await mineUpTo(firstVotingSlot);
-      await daa.connect(representative).castVote(proposalId, 1);
+      await castVote(firstVotingSlot, daa, representative, proposalId);
 
       const result = await daa
         .connect(representative)
@@ -688,4 +718,148 @@ describe("DAA", () => {
         .withArgs(slot);
     });
   });
+
+  describe("execute", () => {
+    it("proposal can be executed by other than the proposer", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { representative, whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      // votingDelay
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
+
+      await mine(await timelock.getMinDelay());
+      await expect(
+        daa.connect(whitelisterOne).execute(...fixtures.proposal.proposalArgs)
+      )
+        .to.emit(daa, "ProposalExecuted")
+        .withArgs(proposalId);
+
+      expect(await daa.connect(representative).state(proposalId)).to.equal(7);
+    });
+
+    it("cannot execute without queueing", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      // votingDelay
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+
+      await mine(await daa.votingPeriod());
+      await expect(
+        daa.execute(...fixtures.proposal.proposalArgs)
+      ).to.revertedWith("TimelockController: operation is not ready");
+
+      expect(await daa.state(proposalId)).to.equal(4);
+    });
+
+    it("cannot execute proposal too early", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      // votingDelay
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
+
+      await expect(
+        daa.execute(...fixtures.proposal.proposalArgs)
+      ).to.revertedWith("TimelockController: operation is not ready");
+
+      expect(await daa.state(proposalId)).to.equal(5);
+    });
+
+    it("cannot re-execute proposal", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { representative, whitelisterOne } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      // votingDelay
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
+
+      await mine(await timelock.getMinDelay());
+      await expect(
+        daa.connect(whitelisterOne).execute(...fixtures.proposal.proposalArgs)
+      )
+        .to.emit(daa, "ProposalExecuted")
+        .withArgs(proposalId);
+
+      expect(await daa.connect(representative).state(proposalId)).to.equal(7);
+
+      await expect(
+        daa.execute(...fixtures.proposal.proposalArgs)
+      ).to.revertedWith("Proposal not successful");
+    });
+  });
+
+  describe("updateTimelock", () => {
+    it("is protected", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+
+      await expect(daa.updateTimelock(timelock.address)).to.revertedWith(
+        "Governor: onlyGovernance"
+      );
+    });
+  });
+
+  describe("timelock", () => {
+    it("returns address of timelock controller", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+
+      expect(await daa.timelock()).to.eq(timelock.address);
+    });
+  });
+
+  describe("proposalEta", () => {
+    it("returns timestamp when proposal can be executed", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { representative } = fixtures.entities;
+      const proposalId = fixtures.proposal.id;
+      const { firstVotingSlot } = fixtures;
+
+      await castVote(firstVotingSlot, daa, representative, proposalId);
+      await queueProposal(daa, fixtures.proposal.proposalArgs);
+
+      expect((await daa.proposalEta(proposalId)).toNumber()).to.eq(
+        (await time.latest()) + 86400
+      );
+    });
+
+    it("returns 0 if proposal is unknown", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const proposalId = fixtures.proposal.id;
+
+      expect((await daa.proposalEta(proposalId)).toNumber()).to.eq(0);
+    });
+  });
 });
+
+async function castVote(
+  firstVotingSlot: number,
+  daa: Contract,
+  representative: SignerWithAddress,
+  proposalId: string
+) {
+  await mineUpTo(firstVotingSlot);
+  await daa.connect(representative).castVote(proposalId, 1);
+}
+
+async function queueProposal(daa: Contract, proposalArgs: any[]) {
+  await mine(await daa.votingPeriod());
+  await daa.queue(...proposalArgs);
+}
