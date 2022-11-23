@@ -79,7 +79,7 @@ describe("DAA", () => {
       );
     const receipt = await transaction.wait();
     const [proposalId] = receipt.events.find(
-      (event: any) => event.event === "ProposalCreated"
+      (event: any) => event.event === "DAAProposalCreated"
     ).args;
 
     return {
@@ -154,7 +154,72 @@ describe("DAA", () => {
             [transferCalldata],
             "I would like to have some money to expand my island in Animal crossing."
           )
-      ).to.emit(daa, "ProposalCreated");
+      )
+        .to.emit(daa, "ProposalCreated")
+        .and.to.emit(daa, "DAAProposalCreated");
+    });
+
+    it("can propose a proposal with a category", async () => {
+      const fixtures = await deployFixture();
+      const { daa, wallet } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+
+      const transferCalldata = wallet.interface.encodeFunctionData(
+        "increaseAllowance",
+        [whitelisterOne.address, ethers.utils.parseEther("1.0")]
+      );
+
+      await expect(
+        daa
+          .connect(whitelisterOne)
+          ["propose(address[],uint256[],bytes[],string,uint8)"](
+            [wallet.address],
+            [0],
+            [transferCalldata],
+            "I would like to have an ExtraordinaryVote.",
+            1
+          )
+      )
+        .to.emit(daa, "ProposalCreated")
+        .and.to.emit(daa, "DAAProposalCreated");
+    });
+
+    it("proposal events emits correct data", async () => {
+      const fixtures = await deployFixture();
+      const { daa, wallet } = fixtures.contracts;
+      const { whitelisterOne } = fixtures.entities;
+
+      const transferCalldata = wallet.interface.encodeFunctionData(
+        "increaseAllowance",
+        [whitelisterOne.address, ethers.utils.parseEther("1.0")]
+      );
+
+      let description = "I would like to have an ExtraordinaryVote.";
+      let calldata = [transferCalldata];
+      let values = [0];
+      let targets = [wallet.address];
+      let category = 1;
+      const proposal = await daa
+        .connect(whitelisterOne)
+        ["propose(address[],uint256[],bytes[],string,uint8)"](
+          targets,
+          values,
+          calldata,
+          description,
+          category
+        );
+
+      const receiptProposal = await proposal.wait();
+      const event = receiptProposal.events.find(
+        (event: any) => event.event === "DAAProposalCreated"
+      ).args;
+
+      expect(event[1]).to.eq(whitelisterOne.address);
+      expect(event[2]).to.deep.eq(targets, "Targets don't match");
+      expect(event[3]).to.deep.eq(values, "Values don't match");
+      expect(event[5]).to.deep.eq(calldata, "Calldata don't match");
+      expect(event[8]).to.eq(description);
+      expect(event[9]).to.eq(category);
     });
 
     it("proposals get assigned to the correct voting slots", async () => {
@@ -187,7 +252,7 @@ describe("DAA", () => {
         );
       const receiptProposal2 = await proposal2.wait();
       const [proposalId2] = receiptProposal2.events.find(
-        (event: any) => event.event === "ProposalCreated"
+        (event: any) => event.event === "DAAProposalCreated"
       ).args;
 
       const proposal3 = await daa
@@ -200,7 +265,7 @@ describe("DAA", () => {
         );
       const receiptProposal3 = await proposal3.wait();
       const [proposalId3] = receiptProposal3.events.find(
-        (event: any) => event.event === "ProposalCreated"
+        (event: any) => event.event === "DAAProposalCreated"
       ).args;
 
       await mineUpTo(secondVotingSlot);
@@ -215,7 +280,7 @@ describe("DAA", () => {
         );
       const receiptProposal4 = await proposal4.wait();
       const [proposalId4] = receiptProposal4.events.find(
-        (event: any) => event.event === "ProposalCreated"
+        (event: any) => event.event === "DAAProposalCreated"
       ).args;
 
       expect(await daa.slots(0)).to.eq(firstVotingSlot);

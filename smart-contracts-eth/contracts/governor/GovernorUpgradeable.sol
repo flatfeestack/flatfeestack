@@ -29,9 +29,29 @@ abstract contract GovernorUpgradeable is
             "ExtendedBallot(uint256 proposalId,uint8 support,string reason,bytes params)"
         );
 
+    event DAAProposalCreated(
+        uint256 indexed proposalId,
+        address indexed proposer,
+        address[] targets,
+        uint256[] values,
+        string[] signatures,
+        bytes[] calldatas,
+        uint256 startBlock,
+        uint256 endBlock,
+        string description,
+        ProposalCategory indexed category
+    );
+
+    enum ProposalCategory {
+        Generic,
+        ExtraordinaryVote,
+        AssociationDissolution
+    }
+
     struct ProposalCore {
         TimersUpgradeable.BlockNumber voteStart;
         TimersUpgradeable.BlockNumber voteEnd;
+        ProposalCategory category;
         bool executed;
         bool canceled;
     }
@@ -216,6 +236,76 @@ abstract contract GovernorUpgradeable is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override returns (uint256) {
+        return
+            _propose(
+                targets,
+                values,
+                calldatas,
+                description,
+                ProposalCategory.Generic
+            );
+    }
+
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        ProposalCategory category
+    ) public returns (uint256) {
+        return _propose(targets, values, calldatas, description, category);
+    }
+
+    function _propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        ProposalCategory category
+    ) private returns (uint256) {
+        uint256 proposalId = _checkAndHashProposal(
+            targets,
+            values,
+            calldatas,
+            description
+        );
+
+        ProposalCore storage proposal = _buildProposal(proposalId, category);
+
+        emit ProposalCreated(
+            proposalId,
+            _msgSender(),
+            targets,
+            values,
+            new string[](targets.length),
+            calldatas,
+            proposal.voteStart._deadline,
+            proposal.voteEnd._deadline,
+            description
+        );
+
+        emit DAAProposalCreated(
+            proposalId,
+            _msgSender(),
+            targets,
+            values,
+            new string[](targets.length),
+            calldatas,
+            proposal.voteStart._deadline,
+            proposal.voteEnd._deadline,
+            description,
+            proposal.category
+        );
+
+        return proposalId;
+    }
+
+    function _checkAndHashProposal(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    ) private returns (uint256) {
         require(
             getVotes(_msgSender(), block.number - 1) >= proposalThreshold(),
             "Proposer votes below threshold"
@@ -232,6 +322,13 @@ abstract contract GovernorUpgradeable is
         require(targets.length == calldatas.length, "Invalid proposal length");
         require(targets.length > 0, "Empty proposal");
 
+        return proposalId;
+    }
+
+    function _buildProposal(uint256 proposalId, ProposalCategory category)
+        private
+        returns (ProposalCore storage)
+    {
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
@@ -242,22 +339,11 @@ abstract contract GovernorUpgradeable is
 
         proposal.voteStart.setDeadline(start);
         proposal.voteEnd.setDeadline(end);
-
-        emit ProposalCreated(
-            proposalId,
-            _msgSender(),
-            targets,
-            values,
-            new string[](targets.length),
-            calldatas,
-            start,
-            end,
-            description
-        );
+        proposal.category = category;
 
         votingSlots[nextSlot].push(proposalId);
 
-        return proposalId;
+        return proposal;
     }
 
     function execute(
