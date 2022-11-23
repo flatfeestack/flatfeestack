@@ -29,7 +29,7 @@
   let hasAnyVotes = false;
 
   $: {
-    if ($proposalCreatedEvents === null || $votingSlots === null) {
+    if ($votingSlots === null) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
       $isSubmitting = true;
@@ -62,14 +62,15 @@
             await $daaContract.votingSlots(blockNumber, index)
           ).toString();
 
-          const event = $proposalCreatedEvents.find(
-            (event) => event.args[0].toString() === proposalId
+          const event = await proposalCreatedEvents.get(
+            proposalId,
+            $daaContract
           );
 
           return {
-            description: event.args[8],
-            id: proposalId,
-            proposer: event.args[1],
+            description: event.event.args[8],
+            id: event.proposalId,
+            proposer: event.event.args[1],
           };
         }
       )

@@ -1,19 +1,28 @@
 import type { BigNumber, Contract, Event } from "ethers";
-import { derived, type Readable } from "svelte/store";
+import { derived, get, type Readable, writable } from "svelte/store";
 import { daaContract } from "./daaStore";
 
-export const proposalCreatedEvents = derived<
-  Readable<null | Contract>,
-  null | Event[]
->(
-  daaContract,
-  ($daaContract, set) => {
-    if ($daaContract === null) {
-      set(null);
+interface ProposalCreatedEvent {
+  proposalId: string;
+  event: Event;
+}
+
+const proposalEvents = writable<[] | ProposalCreatedEvent[]>([]);
+
+export const proposalCreatedEvents = {
+  // subscribe to the cart store
+  subscribe: proposalEvents.subscribe,
+  // custom logic
+  async get(id: string, $daaContract): Promise<ProposalCreatedEvent> {
+    let values = get(proposalEvents);
+    const result = values.find(({ proposalId }) => proposalId === id);
+    if (result) {
+      return result;
     } else {
-      Promise.resolve(
+      return await Promise.resolve(
         $daaContract.queryFilter(
-          $daaContract.filters.ProposalCreated(
+          $daaContract.filters.DAAProposalCreated(
+            id,
             null,
             null,
             null,
@@ -26,12 +35,18 @@ export const proposalCreatedEvents = derived<
           )
         )
       ).then((events: Event[]) => {
-        set(events);
+        let newItem: ProposalCreatedEvent = {
+          proposalId: events[0].args[0].toString(),
+          event: events[0],
+        };
+        proposalEvents.update((items) => {
+          return [...items, newItem];
+        });
+        return newItem;
       });
     }
   },
-  null
-);
+};
 
 export const votingSlots = derived<Readable<null | Contract>, null | Number[]>(
   daaContract,
@@ -39,8 +54,8 @@ export const votingSlots = derived<Readable<null | Contract>, null | Number[]>(
     if ($daaContract === null) {
       set(null);
     } else {
-      Promise.resolve($daaContract.getSlotsLength()).then(
-        (votingSlotsLength: BigNumber) => {
+      Promise.resolve($daaContract.getSlotsLength())
+        .then((votingSlotsLength: BigNumber) => {
           Promise.resolve(
             Promise.all(
               [...Array(votingSlotsLength.toNumber()).keys()].map((index) =>
@@ -50,8 +65,11 @@ export const votingSlots = derived<Readable<null | Contract>, null | Number[]>(
           ).then((slots: BigNumber[]) => {
             set(slots.map((slot) => slot.toNumber()));
           });
-        }
-      );
+        })
+        .catch((reason) => {
+          console.error(reason);
+          set(null);
+        });
     }
   },
   null
