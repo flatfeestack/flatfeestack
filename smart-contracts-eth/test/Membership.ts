@@ -4,7 +4,6 @@ import { ethers } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("Membership", () => {
-  const blocksInAYear = 9456720;
   async function deployFixture() {
     const [representative, whitelisterOne, whitelisterTwo, newUser] =
       await ethers.getSigners();

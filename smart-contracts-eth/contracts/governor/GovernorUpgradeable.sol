@@ -64,7 +64,7 @@ abstract contract GovernorUpgradeable is
     function governorInit(string memory name_) internal onlyInitializing {
         __EIP712_init_unchained(name_, version());
         governorInitUnchained(name_);
-        slotCloseTime = 45465; // 1 week before
+        slotCloseTime = 50400; // 1 week before
     }
 
     function governorInitUnchained(string memory name_)

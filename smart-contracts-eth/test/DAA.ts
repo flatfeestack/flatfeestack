@@ -8,8 +8,8 @@ import { ethers, upgrades } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("DAA", () => {
-  const blocksInAMonth = 181860;
-  const blocksInAWeek = 45465;
+  const blocksInAMonth = 201600;
+  const blocksInAWeek = 50400;
 
   async function deployFixture() {
     const [nonMember, representative, whitelisterOne, whitelisterTwo] =
