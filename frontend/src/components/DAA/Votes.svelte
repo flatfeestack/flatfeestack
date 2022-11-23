@@ -85,7 +85,7 @@
   }
 
   async function createBlockInfo(blockNumber: number): Promise<BlockInfo> {
-    const secondsPerBlock = 13.3;
+    const secondsPerBlock = 12;
     if (blockNumber <= currentBlockNumber) {
       const blockTimestamp = (await $provider.getBlock(blockNumber)).timestamp;
       return {
