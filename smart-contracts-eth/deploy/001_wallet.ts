@@ -5,10 +5,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { representative } = await getNamedAccounts();
+  const { chairman } = await getNamedAccounts();
 
   await deploy("Wallet", {
-    from: representative,
+    from: chairman,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",

@@ -11,14 +11,14 @@ export async function deployWalletContract(owner: SignerWithAddress) {
 }
 
 export async function deployMembershipContract(
-  representative: SignerWithAddress,
+  chairman: SignerWithAddress,
   whitelisterOne: SignerWithAddress,
   whitelisterTwo: SignerWithAddress
 ) {
-  const wallet = await deployWalletContract(representative);
+  const wallet = await deployWalletContract(chairman);
   const Membership = await ethers.getContractFactory("Membership");
   const membership = await upgrades.deployProxy(Membership, [
-    representative.address,
+    chairman.address,
     whitelisterOne.address,
     whitelisterTwo.address,
     wallet.address,
@@ -30,7 +30,7 @@ export async function deployMembershipContract(
   // pay membership fees
   const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
 
-  await membership.connect(representative).payMembershipFee({
+  await membership.connect(chairman).payMembershipFee({
     value: toBePaid,
   });
   await membership.connect(whitelisterOne).payMembershipFee({

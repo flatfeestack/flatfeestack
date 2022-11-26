@@ -32,45 +32,45 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         bool removedOrAdded
     );
 
-    event ChangeInRepresentative(
-        address indexed concernedRepresentative,
+    event ChangeInChairman(
+        address indexed concernedChairman,
         bool removedOrAdded
     );
 
     function initialize(
-        address _representative,
+        address _chairman,
         address _whitelisterOne,
         address _whitelisterTwo,
         Wallet _walletContract
     ) public initializer {
         minimumWhitelister = 2;
         whitelisterListLength = 2;
-        representative = _representative;
+        chairman = _chairman;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
 
         whitelisterList[0] = _whitelisterOne;
         whitelisterList[1] = _whitelisterTwo;
 
-        membershipList[_representative] = MembershipStatus.isMember;
+        membershipList[_chairman] = MembershipStatus.isMember;
         membershipList[_whitelisterOne] = MembershipStatus.isMember;
         membershipList[_whitelisterTwo] = MembershipStatus.isMember;
 
-        members.push(_representative);
+        members.push(_chairman);
         members.push(_whitelisterOne);
         members.push(_whitelisterTwo);
 
-        nextMembershipFeePayment[_representative] = block.timestamp;
+        nextMembershipFeePayment[_chairman] = block.timestamp;
         nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
         nextMembershipFeePayment[_whitelisterTwo] = block.timestamp;
 
         _totalCheckpoints.push(_add, 3);
-        _voteCheckpoints[_representative].push(_add, 1);
+        _voteCheckpoints[_chairman].push(_add, 1);
         _voteCheckpoints[_whitelisterOne].push(_add, 1);
         _voteCheckpoints[_whitelisterTwo].push(_add, 1);
 
         emit ChangeInMembershipStatus(
-            representative,
+            chairman,
             uint256(MembershipStatus.isMember)
         );
 
@@ -99,12 +99,8 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         return uint256(membershipList[_adr]);
     }
 
-    function addWhitelister(address _adr)
-        public
-        representativeOnly
-        returns (bool)
-    {
-        require(representative != _adr, "Can't become whitelister!");
+    function addWhitelister(address _adr) public chairmanOnly returns (bool) {
+        require(chairman != _adr, "Can't become whitelister!");
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "A whitelister must be a member"
@@ -118,7 +114,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
 
     function _removeWhitelister(address _adr)
         internal
-        representativeOrWhitelisterOnly
+        chairmanOrWhitelisterOnly
         returns (bool)
     {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
@@ -143,7 +139,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
 
     function removeWhitelister(address _adr)
         public
-        representativeOnly
+        chairmanOnly
         returns (bool)
     {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
@@ -195,24 +191,21 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         }
     }
 
-    function setMembershipFee(uint256 newMembershipFee)
-        public
-        representativeOnly
-    {
+    function setMembershipFee(uint256 newMembershipFee) public chairmanOnly {
         membershipFee = newMembershipFee;
     }
 
-    function setRepresentative(address _adr) public returns (bool) {
+    function setChairman(address _adr) public returns (bool) {
         // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "Address is not a member!"
         );
-        require(representative != _adr, "Address is the representative!");
-        address oldRepresentative = representative;
-        representative = _adr;
-        emit ChangeInRepresentative(oldRepresentative, false);
-        emit ChangeInRepresentative(representative, true);
+        require(chairman != _adr, "Address is the chairman!");
+        address oldChairman = chairman;
+        chairman = _adr;
+        emit ChangeInChairman(oldChairman, false);
+        emit ChangeInChairman(chairman, true);
         return true;
     }
 
@@ -222,13 +215,10 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
             "Address is not a member!"
         );
 
-        require(representative != _adr, "Representative cannot leave!");
+        require(chairman != _adr, "Chairman cannot leave!");
 
         if (msg.sender != _adr) {
-            require(
-                msg.sender == representative,
-                "Restricted to representative!"
-            );
+            require(msg.sender == chairman, "Restricted to chairman!");
         }
 
         if (isWhitelister(_adr)) {
@@ -271,7 +261,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
             address member = members[i];
             uint256 nextPayment = nextMembershipFeePayment[member];
             if (nextPayment > 0 && block.timestamp > nextPayment) {
-                if (!isWhitelister(member) && member != representative) {
+                if (!isWhitelister(member) && member != chairman) {
                     toBeRemoved[toBeRemovedIndex] = member;
                     toBeRemovedIndex++;
                 }

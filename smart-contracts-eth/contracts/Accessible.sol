@@ -9,7 +9,7 @@ contract Accessible {
         isMember
     }
 
-    address public representative;
+    address public chairman;
     uint256 public minimumWhitelister;
     uint256 public whitelisterListLength;
     uint256 public membershipFee;
@@ -35,8 +35,8 @@ contract Accessible {
         _;
     }
 
-    modifier representativeOnly() {
-        require(msg.sender == representative, "only representative");
+    modifier chairmanOnly() {
+        require(msg.sender == chairman, "only chairman");
         _;
     }
 
@@ -45,10 +45,10 @@ contract Accessible {
         _;
     }
 
-    modifier representativeOrWhitelisterOnly() {
+    modifier chairmanOrWhitelisterOnly() {
         require(
-            msg.sender == representative || isWhitelister(msg.sender),
-            "whitelister / represetative only"
+            msg.sender == chairman || isWhitelister(msg.sender),
+            "whitelister / chairman only"
         );
         _;
     }
