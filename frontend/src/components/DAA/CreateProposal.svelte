@@ -11,7 +11,7 @@
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
-  import ChangeRepresentative from "./proposals/ChangeRepresentative.svelte";
+  import ChangeChairman from "./proposals/ChangeChairman.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
 
   const proposalTypes: ProposalType[] = [
@@ -20,8 +20,8 @@
       text: "Request funds",
     },
     {
-      component: ChangeRepresentative,
-      text: "Change representative",
+      component: ChangeChairman,
+      text: "Change chairman",
     },
   ];
 

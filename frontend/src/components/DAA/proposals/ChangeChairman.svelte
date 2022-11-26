@@ -12,12 +12,12 @@
   export let transferCallData: $$Props["transferCallData"];
 
   let formValues = {
-    proposedRepresentative: "",
+    proposedChairman: "",
   };
   const membershipInterface = new Interface(MembershipABI);
 
   const schema = yup.object().shape({
-    proposedRepresentative: yup.string().isEthereumAddress().required(),
+    proposedChairman: yup.string().isEthereumAddress().required(),
   });
 
   $: {
@@ -33,20 +33,21 @@
     values = [0];
     targets = [import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS];
     transferCallData = [
-      membershipInterface.encodeFunctionData("setRepresentative", [
-        formValues.proposedRepresentative,
+      membershipInterface.encodeFunctionData("setChairman", [
+        formValues.proposedChairman,
       ]),
     ];
   }
 </script>
 
-<label for="proposedRepresentative">Proposed representative</label>
+<label for="proposedChairman">Proposed chairman</label>
 <input
   type="text"
-  name="proposedRepresentative"
-  bind:value={formValues.proposedRepresentative}
+  id="proposedChairman"
+  name="proposedChairman"
+  bind:value={formValues.proposedChairman}
   required
 />
-{#await schema.validateAt("proposedRepresentative", formValues)}{:catch error}
+{#await schema.validateAt("proposedChairman", formValues)}{:catch error}
   <p class="invalid" style="color:red">{error.errors[0]}</p>
 {/await}

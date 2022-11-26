@@ -173,7 +173,7 @@
       icon={faHand}
       label="Membership requests"
     />
-    <NavItem href="/daa/delegate" icon={faHippo} label="Delegate functions" />
+    <NavItem href="/daa/chairman" icon={faHippo} label="Chairman functions" />
   </nav>
   <div class="content">
     {#if $isSubmitting}
