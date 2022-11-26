@@ -58,7 +58,7 @@ abstract contract GovernorUpgradeable is
 
     string private _name;
 
-    mapping(uint256 => ProposalCore) private _proposals;
+    mapping(uint256 => ProposalCore) internal _proposals;
 
     uint256[] public slots;
     // BlockNumber => ProposalId[]

@@ -897,6 +897,63 @@ describe("DAA", () => {
       expect((await daa.proposalEta(proposalId)).toNumber()).to.eq(0);
     });
   });
+
+  describe("cancelVotingSlot", () => {
+    it("reverts if sender is not the chairman", async () => {
+      const fixtures = await deployFixture();
+
+      await expect(
+        fixtures.contracts.daa
+          .connect(fixtures.entities.whitelisterOne)
+          .cancelVotingSlot(1234)
+      ).to.revertedWith("only chairman");
+    });
+
+    it("cannot cancel too late", async () => {
+      const fixtures = await deployFixture();
+
+      await expect(
+        fixtures.contracts.daa
+          .connect(fixtures.entities.chairman)
+          .cancelVotingSlot(await time.latestBlock())
+      ).to.revertedWith("Must be a day before slot!");
+    });
+
+    it("cannot cancel non-existent voting slot", async () => {
+      const fixtures = await deployFixture();
+
+      await expect(
+        fixtures.contracts.daa
+          .connect(fixtures.entities.chairman)
+          .cancelVotingSlot((await time.latestBlock()) + 10000)
+      ).to.revertedWith("Voting slot does not exist!");
+    });
+
+    it("cancels voting slots and moves proposals", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { chairman } = fixtures.entities;
+
+      // create a new voting slot
+      const secondVotingSlot = (await time.latestBlock()) + 2 * blocksInAMonth;
+      await daa.connect(chairman).setVotingSlot(secondVotingSlot);
+      expect(await daa.getSlotsLength()).to.eq(2);
+
+      await expect(
+        daa.connect(chairman).cancelVotingSlot(fixtures.firstVotingSlot)
+      )
+        .to.emit(daa, "VotingSlotCancelled")
+        .withArgs(fixtures.firstVotingSlot)
+        .and.to.emit(daa, "ProposalVotingTimeChanged")
+        .withArgs(
+          fixtures.proposal.id,
+          fixtures.firstVotingSlot,
+          secondVotingSlot
+        );
+
+      expect(await daa.getSlotsLength()).to.eq(1);
+    });
+  });
 });
 
 async function castVote(

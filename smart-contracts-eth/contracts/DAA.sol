@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/TimersUpgradeable.sol";
+
 import "./governor/GovernorUpgradeable.sol";
 import "./governor/GovernorVotesUpgradeable.sol";
 import "./governor/GovernorCountingSimpleUpgradeable.sol";
@@ -17,6 +20,17 @@ contract DAA is
     GovernorTimelockControlUpgradeable
 {
     Membership public membershipContract;
+
+    using SafeCastUpgradeable for uint256;
+    using TimersUpgradeable for TimersUpgradeable.BlockNumber;
+
+    event ProposalVotingTimeChanged(
+        uint256 proposalId,
+        uint64 oldTime,
+        uint64 newTime
+    );
+
+    event VotingSlotCancelled(uint256 blockNumber);
 
     function initialize(
         Membership _membership,
@@ -135,6 +149,59 @@ contract DAA is
         slots.push(blockNumber);
         emit NewTimeslotSet(blockNumber);
         return blockNumber;
+    }
+
+    function cancelVotingSlot(uint256 blockNumber) public {
+        require(msg.sender == membershipContract.chairman(), "only chairman");
+        require(
+            blockNumber >= block.number + 7200,
+            "Must be a day before slot!"
+        );
+
+        uint256 i;
+        bool slotExists = false;
+
+        for (i = 0; i < slots.length; i++) {
+            if (slots[i] == blockNumber) {
+                slotExists = true;
+                break;
+            }
+        }
+
+        if (!slotExists) {
+            revert("Voting slot does not exist!");
+        }
+
+        if (i != slots.length - 1) {
+            slots[i] = slots[slots.length - 1];
+        }
+        slots.pop();
+
+        uint256[] memory proposalIds = votingSlots[blockNumber];
+
+        delete votingSlots[blockNumber];
+        uint256 nextSlot = _getNextPossibleVotingSlot();
+
+        for (i = 0; i < proposalIds.length; i++) {
+            ProposalCore storage proposal = _proposals[proposalIds[i]];
+
+            uint64 oldStart = proposal.voteStart.getDeadline();
+            uint64 start = nextSlot.toUint64();
+            uint64 end = start + votingPeriod().toUint64();
+
+            proposal.voteStart.setDeadline(start);
+            proposal.voteEnd.setDeadline(end);
+
+            votingSlots[nextSlot].push(proposalIds[i]);
+
+            emit ProposalVotingTimeChanged(
+                proposalIds[i],
+                oldStart,
+                proposal.voteStart.getDeadline()
+            );
+        }
+
+        emit VotingSlotCancelled(blockNumber);
     }
 
     function supportsInterface(bytes4 interfaceId)
