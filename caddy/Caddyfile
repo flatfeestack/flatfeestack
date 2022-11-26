@@ -32,6 +32,13 @@
     }
   }
 
+  handle_path /payout/* {
+      reverse_proxy payout:9084 {
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote}
+      }
+    }
+
   handle /hooks/* {
     reverse_proxy backend:9082 {
       header_up Host {upstream_hostport}
