@@ -6,17 +6,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { representative } = await getNamedAccounts();
+  const { chairman } = await getNamedAccounts();
 
   await deploy("Timelock", {
-    from: representative,
+    from: chairman,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         init: {
           methodName: "initialize",
-          args: [representative],
+          args: [chairman],
         },
       },
     },

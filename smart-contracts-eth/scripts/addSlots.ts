@@ -10,7 +10,7 @@ async function main() {
   const wallet = await deployments.get("Wallet");
   const walletDeployed = await ethers.getContractAt("Wallet", daa.address);
 
-  const [representative] = await ethers.getSigners();
+  const [chairman] = await ethers.getSigners();
 
   const blocksInAMonth = 201600;
   const latestBlock = (await hre.ethers.provider.getBlock("latest")).number;
@@ -21,9 +21,9 @@ async function main() {
   console.log("Creating voting slots ...");
   const [firstVotingSlot, secondVotingSlot, thirdVotingSlot] =
     await Promise.all([
-      daaDeployed.connect(representative).setVotingSlot(slot1),
-      daaDeployed.connect(representative).setVotingSlot(slot2),
-      daaDeployed.connect(representative).setVotingSlot(slot3),
+      daaDeployed.connect(chairman).setVotingSlot(slot1),
+      daaDeployed.connect(chairman).setVotingSlot(slot2),
+      daaDeployed.connect(chairman).setVotingSlot(slot3),
     ]);
 
   await Promise.all([
@@ -34,14 +34,14 @@ async function main() {
 
   const transferCalldata = [
     walletDeployed.interface.encodeFunctionData("increaseAllowance", [
-      representative.address,
+      chairman.address,
       ethers.utils.parseEther("1.0"),
     ]),
   ];
 
   console.log("Creating proposal ...");
   await daaDeployed
-    .connect(representative)
+    .connect(chairman)
     ["propose(address[],uint256[],bytes[],string)"](
       [wallet.address],
       [0],

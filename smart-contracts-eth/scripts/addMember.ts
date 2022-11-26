@@ -10,7 +10,7 @@ async function main() {
     membership.address
   );
 
-  const [representative, whitelisterOne, whitelisterTwo, member] =
+  const [chairman, whitelisterOne, whitelisterTwo, member] =
     await ethers.getSigners();
 
   console.log("Requesting membership ...");

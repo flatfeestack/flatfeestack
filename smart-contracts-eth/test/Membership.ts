@@ -5,17 +5,17 @@ import { deployMembershipContract } from "./helpers/deployContracts";
 
 describe("Membership", () => {
   async function deployFixture() {
-    const [representative, whitelisterOne, whitelisterTwo, newUser] =
+    const [chairman, whitelisterOne, whitelisterTwo, newUser] =
       await ethers.getSigners();
 
     const { membership, wallet } = await deployMembershipContract(
-      representative,
+      chairman,
       whitelisterOne,
       whitelisterTwo
     );
 
     return {
-      representative,
+      chairman,
       whitelisterOne,
       whitelisterTwo,
       newUser,
@@ -25,10 +25,10 @@ describe("Membership", () => {
   }
 
   async function deployFixtureWhitelisted() {
-    const [representative, whitelisterOne, whitelisterTwo, newUserWhitelisted] =
+    const [chairman, whitelisterOne, whitelisterTwo, newUserWhitelisted] =
       await ethers.getSigners();
     const { membership, wallet } = await deployMembershipContract(
-      representative,
+      chairman,
       whitelisterOne,
       whitelisterTwo
     );
@@ -42,7 +42,7 @@ describe("Membership", () => {
       .whitelistMember(newUserWhitelisted.address);
 
     return {
-      representative,
+      chairman,
       whitelisterOne,
       whitelisterTwo,
       newUserWhitelisted,
@@ -68,11 +68,9 @@ describe("Membership", () => {
   });
 
   describe("isWhitelister", () => {
-    it("representative is not whitelister", async () => {
-      const { representative, membership } = await deployFixture();
-      expect(await membership.isWhitelister(representative.address)).to.equal(
-        false
-      );
+    it("chairman is not whitelister", async () => {
+      const { chairman, membership } = await deployFixture();
+      expect(await membership.isWhitelister(chairman.address)).to.equal(false);
     });
 
     it("whitelister is whitelister", async () => {
@@ -89,38 +87,31 @@ describe("Membership", () => {
 
   describe("addWhitelister", () => {
     it("can not add whitelister who is already a whitelister", async () => {
-      const { representative, whitelisterOne, membership } =
-        await deployFixture();
+      const { chairman, whitelisterOne, membership } = await deployFixture();
       await expect(
-        membership
-          .connect(representative)
-          .addWhitelister(whitelisterOne.address)
+        membership.connect(chairman).addWhitelister(whitelisterOne.address)
       ).to.be.revertedWith("Is already whitelister!");
     });
 
     it("to become whitelister you must be a member", async () => {
-      const { representative, newUser, membership } = await deployFixture();
+      const { chairman, newUser, membership } = await deployFixture();
       await expect(
-        membership.connect(representative).addWhitelister(newUser.address)
+        membership.connect(chairman).addWhitelister(newUser.address)
       ).to.be.revertedWith("A whitelister must be a member");
     });
 
-    it("a representative can't become a whitelister", async () => {
-      const { representative, membership } = await deployFixture();
+    it("a chairman can't become a whitelister", async () => {
+      const { chairman, membership } = await deployFixture();
       await expect(
-        membership
-          .connect(representative)
-          .addWhitelister(representative.address)
+        membership.connect(chairman).addWhitelister(chairman.address)
       ).to.be.revertedWith("Can't become whitelister!");
     });
 
-    it("member can be added as whitelister by representative", async () => {
-      const { representative, newUserWhitelisted, membership } =
+    it("member can be added as whitelister by chairman", async () => {
+      const { chairman, newUserWhitelisted, membership } =
         await deployFixtureWhitelisted();
       await expect(
-        membership
-          .connect(representative)
-          .addWhitelister(newUserWhitelisted.address)
+        membership.connect(chairman).addWhitelister(newUserWhitelisted.address)
       )
         .to.emit(membership, "ChangeInWhiteLister")
         .withArgs(newUserWhitelisted.address, true);
@@ -173,32 +164,27 @@ describe("Membership", () => {
 
   describe("removeWhitelister", () => {
     it("the to be removed address must be a whitelister", async () => {
-      const { representative, newUser, membership } = await deployFixture();
+      const { chairman, newUser, membership } = await deployFixture();
       await expect(
-        membership.connect(representative).removeWhitelister(newUser.address)
+        membership.connect(chairman).removeWhitelister(newUser.address)
       ).to.be.revertedWith("Is no whitelister!");
     });
 
     it("can not remove whitelister if number of whitelisters becomes less than minimum number of whitelisters", async () => {
-      const { representative, whitelisterOne, membership } =
-        await deployFixture();
+      const { chairman, whitelisterOne, membership } = await deployFixture();
       await expect(
-        membership
-          .connect(representative)
-          .removeWhitelister(whitelisterOne.address)
+        membership.connect(chairman).removeWhitelister(whitelisterOne.address)
       ).to.be.revertedWith("Minimum whitelister not met!");
     });
 
-    it("whitelister can be removed by representative", async () => {
-      const { representative, whitelisterOne, newUserWhitelisted, membership } =
+    it("whitelister can be removed by chairman", async () => {
+      const { chairman, whitelisterOne, newUserWhitelisted, membership } =
         await deployFixtureWhitelisted();
       await membership
-        .connect(representative)
+        .connect(chairman)
         .addWhitelister(newUserWhitelisted.address);
       await expect(
-        membership
-          .connect(representative)
-          .removeWhitelister(whitelisterOne.address)
+        membership.connect(chairman).removeWhitelister(whitelisterOne.address)
       )
         .to.emit(membership, "ChangeInWhiteLister")
         .withArgs(whitelisterOne.address, false);
@@ -284,10 +270,10 @@ describe("Membership", () => {
 
   describe("setMembershipFee", () => {
     it("allows to set the membership fee", async () => {
-      const { representative, membership } = await deployFixture();
+      const { chairman, membership } = await deployFixture();
 
       await membership
-        .connect(representative)
+        .connect(chairman)
         .setMembershipFee(ethers.utils.parseUnits("1", 1));
 
       expect(await membership.membershipFee()).to.eq(
@@ -296,46 +282,46 @@ describe("Membership", () => {
     });
   });
 
-  describe("setRepresentative", () => {
-    it("non member can't become representative", async () => {
+  describe("setChairman", () => {
+    it("non member can't become chairman", async () => {
       const { newUser, membership } = await deployFixture();
-      await expect(
-        membership.setRepresentative(newUser.address)
-      ).to.be.revertedWith("Address is not a member!");
+      await expect(membership.setChairman(newUser.address)).to.be.revertedWith(
+        "Address is not a member!"
+      );
     });
 
-    it("requesting member can't become representative", async () => {
+    it("requesting member can't become chairman", async () => {
       const { newUser, membership } = await deployFixture();
       await membership.connect(newUser).requestMembership();
-      await expect(
-        membership.setRepresentative(newUser.address)
-      ).to.be.revertedWith("Address is not a member!");
+      await expect(membership.setChairman(newUser.address)).to.be.revertedWith(
+        "Address is not a member!"
+      );
     });
 
-    it("requesting member whitelisted by one can't become representative", async () => {
+    it("requesting member whitelisted by one can't become chairman", async () => {
       const { newUser, whitelisterOne, membership } = await deployFixture();
       await membership.connect(newUser).requestMembership();
       await membership.connect(whitelisterOne).whitelistMember(newUser.address);
-      await expect(
-        membership.setRepresentative(newUser.address)
-      ).to.be.revertedWith("Address is not a member!");
+      await expect(membership.setChairman(newUser.address)).to.be.revertedWith(
+        "Address is not a member!"
+      );
     });
 
-    it("representative can't become representative", async () => {
-      const { representative, membership } = await deployFixture();
-      await expect(
-        membership.setRepresentative(representative.address)
-      ).to.be.revertedWith("Address is the representative!");
+    it("chairman can't become chairman", async () => {
+      const { chairman, membership } = await deployFixture();
+      await expect(membership.setChairman(chairman.address)).to.be.revertedWith(
+        "Address is the chairman!"
+      );
     });
 
-    it("set new representative emits event", async () => {
-      const { representative, newUserWhitelisted, membership } =
+    it("set new chairman emits event", async () => {
+      const { chairman, newUserWhitelisted, membership } =
         await deployFixtureWhitelisted();
-      await expect(membership.setRepresentative(newUserWhitelisted.address))
-        .to.emit(membership, "ChangeInRepresentative")
+      await expect(membership.setChairman(newUserWhitelisted.address))
+        .to.emit(membership, "ChangeInChairman")
         .withArgs(newUserWhitelisted.address, true)
-        .and.to.emit(membership, "ChangeInRepresentative")
-        .withArgs(representative.address, false);
+        .and.to.emit(membership, "ChangeInChairman")
+        .withArgs(chairman.address, false);
     });
   });
 
@@ -388,12 +374,12 @@ describe("Membership", () => {
     });
 
     it("can leave association if they are whitelister", async () => {
-      const { whitelisterOne, membership, representative, newUserWhitelisted } =
+      const { whitelisterOne, membership, chairman, newUserWhitelisted } =
         await deployFixtureWhitelisted();
 
-      // representative a replacement for our whitelisterOne
+      // chairman a replacement for our whitelisterOne
       await membership
-        .connect(representative)
+        .connect(chairman)
         .addWhitelister(newUserWhitelisted.address);
 
       await expect(
@@ -413,28 +399,26 @@ describe("Membership", () => {
         membership
           .connect(newUserWhitelisted)
           .removeMember(whitelisterOne.address)
-      ).to.be.revertedWith("Restricted to representative!");
+      ).to.be.revertedWith("Restricted to chairman!");
     });
 
-    it("can remove other members if they're a representative", async () => {
-      const { newUserWhitelisted, membership, representative } =
+    it("can remove other members if they're a chairman", async () => {
+      const { newUserWhitelisted, membership, chairman } =
         await deployFixtureWhitelisted();
 
       await expect(
-        membership
-          .connect(representative)
-          .removeMember(newUserWhitelisted.address)
+        membership.connect(chairman).removeMember(newUserWhitelisted.address)
       )
         .to.emit(membership, "ChangeInMembershipStatus")
         .withArgs(newUserWhitelisted.address, 0);
     });
 
-    it("representative cannot leave association", async () => {
-      const { membership, representative } = await deployFixtureWhitelisted();
+    it("chairman cannot leave association", async () => {
+      const { membership, chairman } = await deployFixtureWhitelisted();
 
       await expect(
-        membership.connect(representative).removeMember(representative.address)
-      ).to.be.revertedWith("Representative cannot leave!");
+        membership.connect(chairman).removeMember(chairman.address)
+      ).to.be.revertedWith("Chairman cannot leave!");
     });
 
     it("whitelister cannot leave if minimum is not met", async () => {
@@ -481,9 +465,9 @@ describe("Membership", () => {
 
   describe("getVotes", () => {
     it("everyone has same voting right after initialize", async () => {
-      const { representative, whitelisterOne, whitelisterTwo, membership } =
+      const { chairman, whitelisterOne, whitelisterTwo, membership } =
         await deployFixture();
-      expect(await membership.getVotes(representative.address)).to.equal(1);
+      expect(await membership.getVotes(chairman.address)).to.equal(1);
       expect(await membership.getVotes(whitelisterOne.address)).to.equal(1);
       expect(await membership.getVotes(whitelisterTwo.address)).to.equal(1);
     });

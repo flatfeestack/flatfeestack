@@ -16,7 +16,7 @@ const config: HardhatUserConfig = {
     },
   },
   namedAccounts: {
-    representative: {
+    chairman: {
       1337: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     },
     whitelisterOne: {
