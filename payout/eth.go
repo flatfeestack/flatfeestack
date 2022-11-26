@@ -91,7 +91,9 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 
 	if deploy {
 		log.Printf("Start deploying ETH Contract...")
-		c.contract = deployEthContract(c, *parsed)
+		var addr common.Address
+		c.contract, addr = deployEthContract(c, *parsed)
+		opts.Ethereum.Contract = addr.Hex()
 	} else {
 		c.contract = bind.NewBoundContract(common.HexToAddress(ethContract), *parsed, c.c, c.c, c.c)
 	}
@@ -124,7 +126,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	return c, nil
 }
 
-func deployEthContract(ethClient *ClientETH, abi abi.ABI) *bind.BoundContract {
+func deployEthContract(ethClient *ClientETH, abi abi.ABI) (*bind.BoundContract, common.Address) {
 	opts, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
 
 	//param []
@@ -150,7 +152,7 @@ func deployEthContract(ethClient *ClientETH, abi abi.ABI) *bind.BoundContract {
 	fmt.Println("---------------------------------")
 	log.Printf("ETH Contract deployed at %v", address)
 	fmt.Println("---------------------------------")
-	return contract
+	return contract, address
 }
 
 func warpChain(seconds int, rpc *rpc.Client) error {

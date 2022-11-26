@@ -10,7 +10,13 @@ import (
 	"strconv"
 )
 
-func sign(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
+type Config struct {
+	PayoutContractAddress string `json:"payoutContractAddress"`
+	ChainId               int64  `json:"chainId"`
+	Env                   string `json:"env"`
+}
+
+func sign(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userId := params["userId"]
 	totalPayedOut := params["totalPayedOut"]
@@ -50,14 +56,14 @@ func sign(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	writeJson(w, sig)
 }
 
-func timeWarpOffset(w http.ResponseWriter, _ *http.Request, _ *TokenClaims) {
+func timeWarpOffset(w http.ResponseWriter, _ *http.Request, _ string) {
 	tw := Timewarp{
 		Offset: secondsAdd,
 	}
 	writeJson(w, tw)
 }
 
-func timeWarp(w http.ResponseWriter, r *http.Request, _ *TokenClaims) {
+func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {
@@ -81,6 +87,15 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ *TokenClaims) {
 
 	secondsAdd += seconds
 	log.Printf("time warp: %v", timeNow())
+}
+
+func config(w http.ResponseWriter, _ *http.Request) {
+	cfg := Config{
+		PayoutContractAddress: opts.Ethereum.Contract,
+		ChainId:               ethClient.chainId.Int64(),
+		Env:                   opts.Env,
+	}
+	writeJson(w, cfg)
 }
 
 //Generic helpers

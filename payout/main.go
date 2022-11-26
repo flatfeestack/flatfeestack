@@ -41,6 +41,7 @@ type Opts struct {
 	HS256    string
 	Ethereum Blockchain
 	NEO      Blockchain
+	Admins   string
 }
 
 var (
@@ -50,6 +51,7 @@ var (
 	neoClient  *neo.Client
 	debug      bool
 	secondsAdd int
+	admins     []string
 )
 
 func NewOpts() *Opts {
@@ -67,11 +69,12 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
 	flag.StringVar(&o.Ethereum.Contract, "eth-contract", lookupEnv("ETH_CONTRACT"), "Ethereum contract address")
 	flag.StringVar(&o.Ethereum.Url, "eth-url", lookupEnv("ETH_URL"), "Ethereum URL")
-	flag.BoolVar(&o.Ethereum.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "false", "Set to true to deploy ETH contract")
+	flag.BoolVar(&o.Ethereum.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "true", "Set to true to deploy ETH contract")
 	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
 	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT"), "NEO contract address")
 	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL"), "NEO URL")
-	flag.BoolVar(&o.NEO.Deploy, "neo-deploy", lookupEnv("NEO_DEPLOY") == "false", "Set to true to deploy NEO contract")
+	flag.BoolVar(&o.NEO.Deploy, "neo-deploy", lookupEnv("NEO_DEPLOY") == "true", "Set to true to deploy NEO contract")
+	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -91,6 +94,7 @@ func NewOpts() *Opts {
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
 	}
+	admins = strings.Split(o.Admins, ";")
 
 	if strings.HasPrefix(o.Ethereum.PrivateKey, "0x") {
 		o.Ethereum.PrivateKey = o.Ethereum.PrivateKey[2:]
@@ -178,9 +182,15 @@ func main() {
 
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
-	router.HandleFunc("/admin/sign/{userId}/{totalPayedOut}", jwtAuth(sign)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/timewarp", jwtAuth(timeWarpOffset)).Methods(http.MethodGet)
-	router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(timeWarp)).Methods(http.MethodPost)
+	//this can only be called by an internal server
+	router.HandleFunc("/admin/sign/{userId}/{totalPayedOut}", jwtAuth(jwtAuthServer(sign))).Methods(http.MethodPost)
+	//this can be called from frontend, but only the admin
+	if debug {
+		router.HandleFunc("/admin/timewarp", jwtAuth(jwtAuthAdmin(timeWarpOffset, admins))).Methods(http.MethodGet)
+		router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(jwtAuthAdmin(timeWarp, admins))).Methods(http.MethodPost)
+	}
+	//available for the public
+	router.HandleFunc("/config", config).Methods(http.MethodGet)
 
 	log.Printf("listing on port %v", opts.Port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))

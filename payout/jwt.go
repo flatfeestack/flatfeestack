@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/go-jose/go-jose/v3/jwt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -51,5 +52,44 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 		}
 
 		next(w, r, claims)
+	}
+}
+
+func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request, *TokenClaims) {
+	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
+		if claims != nil {
+			writeErr(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
+			return
+		} else if claims == nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin claims are empty")
+			return
+		}
+		for _, email := range emails {
+			if claims.Subject == email {
+				log.Printf("Authenticated admin %s\n", email)
+				next(w, r, email)
+				return
+			}
+		}
+		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+	}
+}
+
+func jwtAuthServer(next func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request, *TokenClaims) {
+	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
+		if claims != nil {
+			writeErr(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
+			return
+		} else if claims == nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin claims are empty")
+			return
+		}
+		if claims.Subject == "ffs-server" {
+			log.Printf("Authenticated server %s\n")
+			next(w, r)
+			return
+		}
+
+		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v", claims.Subject)
 	}
 }
