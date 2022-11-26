@@ -44,11 +44,7 @@
   }
 
   $: {
-    if (
-      $daaContract === null ||
-      $proposalCreatedEvents === null ||
-      $votingSlots === null
-    ) {
+    if ($daaContract === null || $votingSlots === null) {
       $isSubmitting = true;
     } else if (Object.keys(viewVotingSlots).length === 0) {
       $isSubmitting = true;
@@ -135,10 +131,8 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = $proposalCreatedEvents.find(
-      (event) => event.args[0].toString() === proposalId
-    );
-    return event.args[8];
+    const event = await proposalCreatedEvents.get(proposalId, $daaContract);
+    return event.event.args[8];
   }
 
   async function getVotingSlotState(

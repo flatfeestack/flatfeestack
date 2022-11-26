@@ -1,5 +1,6 @@
 export const DAAABI = [
   "error Empty()",
+  "event DAAProposalCreated(uint256 indexed proposalId, address indexed proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description, uint8 indexed category)",
   "event Initialized(uint8 version)",
   "event NewTimeslotSet(uint256 timeslot)",
   "event ProposalCanceled(uint256 proposalId)",
@@ -34,6 +35,7 @@ export const DAAABI = [
   "function proposalThreshold() pure returns (uint256)",
   "function proposalVotes(uint256 proposalId) view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)",
   "function propose(address[] targets, uint256[] values, bytes[] calldatas, string description) returns (uint256)",
+  "function propose(address[] targets, uint256[] values, bytes[] calldatas, string description, uint8 category) returns (uint256)",
   "function queue(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) returns (uint256)",
   "function quorum(uint256 blockNumber) view returns (uint256)",
   "function quorumDenominator() view returns (uint256)",
