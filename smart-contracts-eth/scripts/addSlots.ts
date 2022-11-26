@@ -12,7 +12,7 @@ async function main() {
 
   const [representative] = await ethers.getSigners();
 
-  const blocksInAMonth = 181860;
+  const blocksInAMonth = 201600;
   const latestBlock = (await hre.ethers.provider.getBlock("latest")).number;
   const slot1 = latestBlock + blocksInAMonth + 1;
   const slot2 = latestBlock + 2 * blocksInAMonth + 1;
