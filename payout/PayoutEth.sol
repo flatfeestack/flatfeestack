@@ -70,19 +70,18 @@ contract PayoutEth {
     *
     * @param dev The address to withdraw to.
     * @param userId The user id that never changes
-    * @param totalPayedOut The total amount that the user earned.
+    * @param totalPayOut The total amount that the user earned.
     * @param v The recovery byte of the signature.
     * @param r The r value of the signature.
     * @param s The s value of the signature.
     */
-    function withdraw(address payable dev, bytes32 userId, uint256 totalPayedOut, uint8 v, bytes32 r, bytes32 s) external {
-        require(totalPayedOut > payedOut[userId], "No new funds to be withdrawn");
-        require(ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n66",
-            keccak256(abi.encodePacked(userId, totalPayedOut)))), v, r, s) == owner, "Signature no match");
+    function withdraw(address payable dev, bytes32 userId, uint256 totalPayOut, uint8 v, bytes32 r, bytes32 s) external {
+        require(totalPayOut > payedOut[userId], "No new funds to be withdrawn");
+        require(ecrecover(keccak256(abi.encodePacked(userId, "#", totalPayOut)), v, r, s) == owner, "Signature no match");
         uint256 old = payedOut[userId];
-        payedOut[userId] = totalPayedOut;
+        payedOut[userId] = totalPayOut;
         // transfer reverts transaction if not successful.
-        dev.transfer(totalPayedOut - old);
+        dev.transfer(totalPayOut - old);
     }
 
 }

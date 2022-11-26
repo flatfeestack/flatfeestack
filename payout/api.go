@@ -19,14 +19,14 @@ type Config struct {
 func sign(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userId := params["userId"]
-	totalPayedOut := params["totalPayedOut"]
+	totalPayOut := params["totalPayOut"]
 
 	if userId == "" {
 		writeErr(w, http.StatusBadRequest, "user id is empty")
 		return
 	}
 
-	if totalPayedOut == "" {
+	if totalPayOut == "" {
 		writeErr(w, http.StatusBadRequest, "totalPayedOut is empty")
 		return
 	}
@@ -37,7 +37,7 @@ func sign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashRaw := crypto.Keccak256([]byte(userId + "#" + totalPayedOut))
+	hashRaw := crypto.Keccak256([]byte(userId + "#" + totalPayOut))
 	signature, err := crypto.Sign(hashRaw, privateKey)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "private key error %v", err)
