@@ -46,6 +46,7 @@
     "bytemd": "^1.17.4",
     "chart.js": "^4.0.0-alpha.3",
     "ethers": "^5.7.2",
+    "humanize-duration": "^3.27.3",
     "ky": "^0.32.2",
     "svelte-chartjs": "^3.0.1",
     "svelte-qr": "^1.0.0",

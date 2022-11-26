@@ -1,0 +1,151 @@
+<script lang="ts">
+  import { Viewer } from "bytemd";
+  import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
+  import { navigate } from "svelte-routing";
+  import { daaContract, provider } from "../../ts/daaStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
+  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import Navigation from "./Navigation.svelte";
+  import humanizeDuration from "humanize-duration";
+
+  export let blockNumber: string;
+  let proposals = [];
+  let currentBlockTimestamp: number = 0;
+
+  $: {
+    if ($proposalCreatedEvents === null || $votingSlots === null) {
+      $isSubmitting = true;
+    } else if (proposals.length === 0) {
+      $isSubmitting = true;
+      prepareView();
+    }
+  }
+
+  async function prepareView() {
+    if (!$votingSlots.includes(Number(blockNumber))) {
+      $error = "Invalid voting slot.";
+      navigate("/daa/votes");
+    }
+
+    const currentBlockNumber = await $provider.getBlockNumber();
+    const [currentBlock, amountOfProposals] = await Promise.all([
+      $provider.getBlock(currentBlockNumber),
+      $daaContract.getNumberOfProposalsInVotingSlot(blockNumber),
+    ]);
+
+    currentBlockTimestamp = currentBlock.timestamp;
+
+    proposals = await Promise.all(
+      [...Array(amountOfProposals.toNumber()).keys()].map(
+        async (index: Number) => {
+          const proposalId = await $daaContract.votingSlots(blockNumber, index);
+
+          const [proposalState, proposalEta] = await Promise.all([
+            $daaContract.state(proposalId),
+            $daaContract.proposalEta(proposalId),
+          ]);
+
+          const event = $proposalCreatedEvents.find(
+            (event) => event.args[0].toString() === proposalId.toString()
+          );
+
+          return {
+            calldatas: event.args[5],
+            description: event.args[8],
+            eta: proposalEta < currentBlockTimestamp ? 0 : proposalEta,
+            id: proposalId.toString(),
+            proposer: event.args[1],
+            state: proposalState,
+            targets: event.args[2],
+            values: event.args[3],
+          };
+        }
+      )
+    );
+
+    $isSubmitting = false;
+  }
+
+  async function queueProposal(
+    targets: string[],
+    values: number[],
+    description: string,
+    calldatas: string[]
+  ) {
+    await $daaContract.queue(
+      targets,
+      values,
+      calldatas,
+      keccak256(toUtf8Bytes(description))
+    );
+  }
+
+  async function executeProposal(
+    targets: string[],
+    values: number[],
+    description: string,
+    calldatas: string[]
+  ) {
+    await $daaContract.execute(
+      targets,
+      values,
+      calldatas,
+      keccak256(toUtf8Bytes(description))
+    );
+  }
+</script>
+
+<Navigation>
+  <h1 class="text-secondary-900">Execute proposals</h1>
+
+  {#each proposals as proposal, i}
+    <h2>Proposal {i + 1}</h2>
+    Proposer: {proposal.proposer}
+
+    <Viewer value={proposal.description} />
+
+    {#if proposal.state == 4}
+      <button
+        on:click={() =>
+          queueProposal(
+            proposal.targets,
+            proposal.values,
+            proposal.description,
+            proposal.calldatas
+          )}
+        class="button1">Queue proposal for execution</button
+      >
+    {:else if proposal.state == 5}
+      {#if proposal.eta === 0}
+        <p class="italic">The proposal is ready for execution!</p>
+        <button
+          on:click={() =>
+            executeProposal(
+              proposal.targets,
+              proposal.values,
+              proposal.description,
+              proposal.calldatas
+            )}
+          class="button1">Execute proposal</button
+        >
+      {:else}
+        <p class="italic">
+          The proposal can be executed in {humanizeDuration(
+            (proposal.eta - currentBlockTimestamp) * 1000
+          )}.
+        </p>
+        <button class="button1" disabled>Execute proposal</button>
+      {/if}
+    {:else if proposal.state == 7}
+      <p class="italic">Proposal has been executed.</p>
+    {:else if proposal.state == 3}
+      <p class="italic">
+        The proposal cannot be executed as the vote didn't pass.
+      </p>
+    {:else}
+      <p class="italic">
+        The proposal cannot be executed as voting is still pending or running.
+      </p>
+    {/if}
+  {/each}
+</Navigation>

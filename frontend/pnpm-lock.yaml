@@ -12,6 +12,7 @@ specifiers:
   concurrently: ^7.5.0
   ethers: ^5.7.2
   express: ^4.18.2
+  humanize-duration: ^3.27.3
   ky: ^0.32.2
   npm-watch: ^0.11.0
   prettier: ^2.7.1
@@ -38,6 +39,7 @@ dependencies:
   bytemd: 1.17.4
   chart.js: 4.0.0-alpha.3
   ethers: 5.7.2
+  humanize-duration: 3.27.3
   ky: 0.32.2
   svelte-chartjs: 3.0.1_35lyr3fljcb5qq3m6uq3smzvke
   svelte-qr: 1.0.0
@@ -1543,6 +1545,10 @@ packages:
       statuses: 2.0.1
       toidentifier: 1.0.1
     dev: true
+
+  /humanize-duration/3.27.3:
+    resolution: {integrity: sha512-iimHkHPfIAQ8zCDQLgn08pRqSVioyWvnGfaQ8gond2wf7Jq2jJ+24ykmnRyiz3fIldcn4oUuQXpjqKLhSVR7lw==}
+    dev: false
 
   /iconv-lite/0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
