@@ -17,6 +17,8 @@
     membershipStatusValue,
     provider,
     signer,
+    whitelisters,
+    chairmanAddress,
   } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
@@ -32,7 +34,7 @@
     pathname = window.location.pathname;
   }
 
-  let membershipStatus;
+  let membershipStatus = "Loading ...";
   let metaMaskMissing = false;
 
   const { open } = getContext("simple-modal");
@@ -87,11 +89,27 @@
   };
 
   $: {
-    if ($membershipStatusValue === null) {
-      membershipStatus = membershipStatusMapping[0];
+    if (
+      $membershipStatusValue === null ||
+      $whitelisters === null ||
+      $chairmanAddress === null
+    ) {
+      membershipStatus = "Loading ...";
     } else {
-      membershipStatus = membershipStatusMapping[$membershipStatusValue];
+      membershipStatus = resolveMembershipStatus();
     }
+  }
+
+  function resolveMembershipStatus(): string {
+    if ($membershipStatusValue == 3) {
+      if ($chairmanAddress == $userEthereumAddress) {
+        return "Chairman";
+      } else if ($whitelisters?.includes($userEthereumAddress)) {
+        return "Whitelister";
+      }
+    }
+
+    return membershipStatusMapping[$membershipStatusValue];
   }
 </script>
 
