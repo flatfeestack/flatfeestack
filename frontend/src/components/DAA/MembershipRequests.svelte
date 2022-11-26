@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { userEthereumAddress, membershipContract } from "../../ts/daaStore";
+  import {
+    userEthereumAddress,
+    membershipContract,
+    whitelisters,
+  } from "../../ts/daaStore";
   import { error } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import Navigation from "./Navigation.svelte";
 
-  let isWhiteLister;
   let membersToBeConfirmed: MemberToConfirm[] = [];
 
   interface MemberToConfirm {
@@ -21,11 +24,9 @@
       return;
     }
 
-    isWhiteLister = await $membershipContract.isWhitelister(
-      $userEthereumAddress
-    );
-
-    if (!isWhiteLister) {
+    if (
+      !$whitelisters.some((whitelister) => whitelister == $userEthereumAddress)
+    ) {
       moveToVotesPage();
     }
 

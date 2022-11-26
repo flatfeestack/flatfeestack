@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { Signer } from "ethers";
-  import { daaContract, membershipContract } from "../../ts/daaStore";
-  import { isSubmitting } from "../../ts/mainStore";
+  import { navigate } from "svelte-routing";
+  import {
+    chairmanAddress,
+    daaContract,
+    membershipContract,
+    userEthereumAddress,
+    whitelisters,
+  } from "../../ts/daaStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
   import Navigation from "./Navigation.svelte";
 
   let minimumWhitelister = 0;
@@ -9,28 +16,34 @@
   let toBeRemoved = "";
 
   let nonWhitelisters: Signer[] = [];
-  let whitelisters: Signer[] = [];
 
   $: {
-    if ($daaContract === null || $membershipContract === null) {
+    if (
+      $daaContract === null ||
+      $membershipContract === null ||
+      $whitelisters === null
+    ) {
       $isSubmitting = true;
-    } else if (whitelisters.length === 0) {
+    } else if ($chairmanAddress !== $userEthereumAddress) {
+      $error = "You are not allowed to review this page.";
+      navigate("/daa/votes");
+    } else if (nonWhitelisters.length === 0) {
       prepareView();
     }
   }
 
   async function prepareView() {
-    await setWhitelisters();
+    minimumWhitelister = minimumWhitelister = (
+      await $membershipContract.minimumWhitelister()
+    ).toNumber();
+
     await setMembers();
 
     $isSubmitting = false;
   }
 
   async function setMembers() {
-    const [membersLength, chairman] = await Promise.all([
-      $membershipContract.getMembersLength(),
-      $membershipContract.chairman(),
-    ]);
+    const membersLength = await $membershipContract.getMembersLength();
 
     const allMembers = await Promise.all(
       [...Array(membersLength.toNumber()).keys()].map(async (index: Number) => {
@@ -40,23 +53,8 @@
 
     nonWhitelisters = allMembers.filter(
       (address) =>
-        !whitelisters.some((whitelister) => whitelister == address) &&
-        chairman != address
-    );
-  }
-
-  async function setWhitelisters() {
-    const whitelisterLength = await $membershipContract.whitelisterListLength();
-    minimumWhitelister = (
-      await $membershipContract.minimumWhitelister()
-    ).toNumber();
-
-    whitelisters = await Promise.all(
-      [...Array(whitelisterLength.toNumber()).keys()].map(
-        async (index: Number) => {
-          return await $membershipContract.whitelisterList(index);
-        }
-      )
+        !$whitelisters.some((whitelister) => whitelister == address) &&
+        $chairmanAddress != address
     );
   }
 
@@ -69,13 +67,6 @@
   }
 </script>
 
-<style>
-  .container {
-    display: flex;
-    justify-content: space-between;
-  }
-</style>
-
 <Navigation>
   <h1 class="text-secondary-900">Chairman functions</h1>
 
@@ -84,23 +75,21 @@
   {#if nonWhitelisters.length === 0}
     <p>Anybody that could be a whitelister, is a whitelister.</p>
   {:else}
-    <div class="flex justify-between">
-      <div>
-        <div class="block">
-          <label for="toBeAdded">Affected member</label>
-        </div>
+    <div class="container-col2 my-2">
+      <label for="toBeAdded">Affected member</label>
+    </div>
 
-        <div class="block">
-          <select name="toBeAdded" bind:value={toBeAdded}>
-            {#each nonWhitelisters as nonWhitelister}
-              <option value={nonWhitelister}>
-                {nonWhitelister}
-              </option>
-            {/each}
-          </select>
-        </div>
-      </div>
+    <div class="container-col2 my-2">
+      <select name="toBeAdded" bind:value={toBeAdded}>
+        {#each nonWhitelisters as nonWhitelister}
+          <option value={nonWhitelister}>
+            {nonWhitelister}
+          </option>
+        {/each}
+      </select>
+    </div>
 
+    <div class="container-col2 my-2">
       <button
         class="button1"
         on:click={() => addWhitelister()}
@@ -111,29 +100,27 @@
 
   <h2 class="text-secondary-900">Remove whitelister</h2>
 
-  {#if whitelisters.length - 1 < minimumWhitelister}
+  {#if $whitelisters.length - 1 < minimumWhitelister}
     <p>
       You cannot remove any whitelister as the minimum is {minimumWhitelister} (currently
-      {whitelisters.length}).
+      {$whitelisters.length}).
     </p>
   {:else}
-    <div class="flex justify-between">
-      <div>
-        <div class="block">
-          <label for="toBeRemoved">Affected whitelister</label>
-        </div>
+    <div class="container-col2 my-2">
+      <label for="toBeRemoved">Affected whitelister</label>
+    </div>
 
-        <div class="block">
-          <select name="toBeRemoved" bind:value={toBeRemoved}>
-            {#each whitelisters as whitelister}
-              <option value={whitelister}>
-                {whitelister}
-              </option>
-            {/each}
-          </select>
-        </div>
-      </div>
+    <div class="container-col2 my-2">
+      <select name="toBeRemoved" bind:value={toBeRemoved}>
+        {#each $whitelisters as whitelister}
+          <option value={whitelister}>
+            {whitelister}
+          </option>
+        {/each}
+      </select>
+    </div>
 
+    <div class="container-col2 my-2">
       <button
         class="button1"
         on:click={() => removeWhitelister()}

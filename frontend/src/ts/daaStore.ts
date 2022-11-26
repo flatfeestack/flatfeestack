@@ -1,7 +1,7 @@
-import { derived, readable, writable } from "svelte/store";
+import { derived, readable, writable, type Readable } from "svelte/store";
 import type { JsonRpcSigner } from "@ethersproject/providers";
 import type { Web3Provider } from "@ethersproject/providers";
-import { ethers } from "ethers";
+import { BigNumber, Contract, ethers, Signer } from "ethers";
 import { MembershipABI } from "../contracts/Membership";
 import { DAAABI } from "../contracts/DAA";
 
@@ -72,4 +72,40 @@ export const membershipStatusValue = derived(
     }
   },
   null
+);
+
+export const chairmanAddress = derived<
+  Readable<Contract | null>,
+  Signer | null
+>(membershipContract, ($membershipContract, set) => {
+  if ($membershipContract === null) {
+    set(null);
+  } else {
+    Promise.resolve($membershipContract.chairman()).then((chairmanAddress) => {
+      set(chairmanAddress);
+    });
+  }
+});
+
+export const whitelisters = derived<Readable<Contract | null>, Signer[] | null>(
+  membershipContract,
+  ($membershipContract, set) => {
+    if ($membershipContract === null) {
+      set(null);
+    } else {
+      Promise.resolve($membershipContract.whitelisterListLength()).then(
+        (whitelisterLength: BigNumber) => {
+          Promise.all(
+            [...Array(whitelisterLength.toNumber()).keys()].map(
+              async (index: Number) => {
+                return await $membershipContract.whitelisterList(index);
+              }
+            )
+          ).then((whitelisters) => {
+            set(whitelisters);
+          });
+        }
+      );
+    }
+  }
 );
