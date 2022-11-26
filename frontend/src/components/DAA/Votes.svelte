@@ -173,8 +173,6 @@
     Last updated (time): Current-Time: {currentTime}
 
     {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
-      {console.log(viewVotingSlots)}
-
       <div class="card">
         <h2 class="text-secondary-900">
           Voting slot #{Object.entries(viewVotingSlots).length - index}

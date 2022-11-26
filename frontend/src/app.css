@@ -494,3 +494,7 @@ tbody tr:last-of-type {
 .italic {
   font-style: italic;
 }
+
+.block {
+  display: block;
+}
