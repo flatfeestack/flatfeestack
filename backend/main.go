@@ -61,7 +61,6 @@ type Opts struct {
 	EmailToken                string
 	EmailMarketing            string
 	WebSocketBaseUrl          string
-	ContractAddr              string
 	NowpaymentsToken          string
 	NowpaymentsIpnKey         string
 	NowpaymentsApiUrl         string
@@ -99,8 +98,6 @@ func NewOpts() *Opts {
 		"tom.marketing@bocek.ch"), "Email marketing email. Set the value to 'live' to send out real emails")
 	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
 		"ws://localhost"), "Websocket base URL")
-	flag.StringVar(&o.ContractAddr, "contract-addr", lookupEnv("CONTRACT_ADDR",
-		"0x731a10897d267e19b34503ad902d0a29173ba4b1"), "Default Ethereum Address")
 	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
 	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",

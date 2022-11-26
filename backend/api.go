@@ -891,7 +891,6 @@ func config(w http.ResponseWriter, _ *http.Request) {
 			"wsBaseUrl":"`+opts.WebSocketBaseUrl+`",
             "plans": `+string(b)+`,
 			"env":"`+opts.Env+`",
-			"contractAddr":"`+opts.ContractAddr+`",
 			"supportedCurrencies":`+string(supportedCurrencies)+`
 			}`)
 }
