@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type TokenClaims struct {
@@ -46,7 +45,12 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 			return
 		}
 
-		if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
+		if claims == nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuth, claims are empty")
+			return
+		}
+
+		if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {
 			writeErr(w, http.StatusBadRequest, "jwtAuth, expired: %v", claims.Expiry.Time())
 			return
 		}
@@ -57,13 +61,6 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 
 func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request, *TokenClaims) {
 	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-		if claims != nil {
-			writeErr(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
-			return
-		} else if claims == nil {
-			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin claims are empty")
-			return
-		}
 		for _, email := range emails {
 			if claims.Subject == email {
 				log.Printf("Authenticated admin %s\n", email)
@@ -77,13 +74,6 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 
 func jwtAuthServer(next func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request, *TokenClaims) {
 	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-		if claims != nil {
-			writeErr(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
-			return
-		} else if claims == nil {
-			writeErr(w, http.StatusBadRequest, "jwtAuthAdmin claims are empty")
-			return
-		}
 		if claims.Subject == "ffs-server" {
 			log.Printf("Authenticated server %s\n")
 			next(w, r)

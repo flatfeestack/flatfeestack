@@ -82,18 +82,23 @@ func NewOpts() *Opts {
 	}
 	flag.Parse()
 
+	//set defaults, be explicit
+	if o.Env == "local" || o.Env == "dev" {
+		debug = true
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
 	if o.HS256 != "" {
 		h := sha256.New()
 		h.Write([]byte(o.HS256))
 		jwtKey = h.Sum(nil)
+		log.Debugf("jwtKey: %v", jwtKey)
 	} else {
 		log.Fatalf("HS256 seed is required, non was provided")
 	}
 
-	//set defaults
-	if o.Env == "local" || o.Env == "dev" {
-		debug = true
-	}
 	admins = strings.Split(o.Admins, ";")
 
 	if strings.HasPrefix(o.Ethereum.PrivateKey, "0x") {
