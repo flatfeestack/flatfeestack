@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -8,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -58,6 +60,16 @@ func sign(w http.ResponseWriter, r *http.Request) {
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()
+	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(secondsAdd)+`}`)
+}
+
+func serverTimeEth(w http.ResponseWriter, r *http.Request, email string) {
+	header, err := ethClient.c.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	currentTime := time.Unix(int64(header.Time), 0)
 	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(secondsAdd)+`}`)
 }
 
