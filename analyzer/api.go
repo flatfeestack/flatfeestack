@@ -34,7 +34,7 @@ type FlatFeeWeight struct {
 	Weight float64  `json:"weight"`
 }
 
-func analyze(w http.ResponseWriter, r *http.Request, _ *TokenClaims) {
+func analyze(w http.ResponseWriter, r *http.Request) {
 	var request WebhookRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {

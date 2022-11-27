@@ -49,17 +49,21 @@ func NewOpts() *Opts {
 	}
 	flag.Parse()
 
+	//set defaults, be explicit
+	if o.Env == "local" || o.Env == "dev" {
+		debug = true
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
 	if o.HS256 != "" {
 		h := sha256.New()
 		h.Write([]byte(o.HS256))
 		jwtKey = h.Sum(nil)
+		log.Debugf("jwtKey: %v", jwtKey)
 	} else {
 		log.Fatalf("HS256 seed is required, non was provided")
-	}
-
-	//set defaults
-	if o.Env == "local" || o.Env == "dev" {
-		debug = true
 	}
 
 	return o
@@ -113,7 +117,7 @@ func main() {
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/analyze", jwtAuth(analyze)).Methods("POST")
+	router.HandleFunc("/analyze", jwtAuth(jwtAuthServer(analyze))).Methods("POST")
 	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }

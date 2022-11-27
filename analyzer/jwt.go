@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/go-jose/go-jose/v3/jwt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -45,11 +46,28 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 			return
 		}
 
+		if claims == nil {
+			writeErr(w, http.StatusBadRequest, "jwtAuth, claims are empty")
+			return
+		}
+
 		if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now()) {
 			writeErr(w, http.StatusBadRequest, "jwtAuth, expired: %v", claims.Expiry.Time())
 			return
 		}
 
 		next(w, r, claims)
+	}
+}
+
+func jwtAuthServer(next func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request, *TokenClaims) {
+	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
+		if claims.Subject == "ffs-server" {
+			log.Printf("Authenticated server %s\n")
+			next(w, r)
+			return
+		}
+
+		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v", claims.Subject)
 	}
 }
