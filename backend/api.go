@@ -866,7 +866,7 @@ func analysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()
-	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`"}`)
+	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(secondsAdd)+`}`)
 }
 
 func users(w http.ResponseWriter, r *http.Request, _ string) {
@@ -1022,13 +1022,6 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 	return
-}
-
-func timeWarpOffset(w http.ResponseWriter, _ *http.Request, _ string) {
-	tw := Timewarp{
-		Offset: secondsAdd,
-	}
-	writeJson(w, tw)
 }
 
 func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {

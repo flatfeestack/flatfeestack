@@ -66,9 +66,8 @@ func TestSponsor(t *testing.T) {
 	}
 	err := insertUser(&u)
 	assert.Nil(t, err)
-	id, err := insertOrUpdateRepo(&r)
+	err = insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
-	assert.NotNil(t, id)
 
 	t1 := time.Time{}.Add(time.Duration(1) * time.Second)
 	t2 := time.Time{}.Add(time.Duration(2) * time.Second)
@@ -140,9 +139,8 @@ func TestRepo(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	id, err := insertOrUpdateRepo(&r)
+	err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
-	assert.NotNil(t, id)
 
 	r2, err := findRepoById(uuid.New())
 	assert.NotNil(t, err)
@@ -204,7 +202,7 @@ func TestAnalysisRequest(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	_, err := insertOrUpdateRepo(&r)
+	err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
 
 	ar, err := findLatestAnalysisRequest(r.Id)
@@ -241,7 +239,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	_, err := insertOrUpdateRepo(&r1)
+	err := insertOrUpdateRepo(&r1)
 	assert.Nil(t, err)
 
 	r2 := Repo{
@@ -252,7 +250,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		Name:        stringPointer("name2"),
 		Description: stringPointer("desc2"),
 	}
-	_, err = insertOrUpdateRepo(&r2)
+	err = insertOrUpdateRepo(&r2)
 	assert.Nil(t, err)
 
 	a1 := AnalysisRequest{
@@ -337,7 +335,7 @@ func TestAnalysisResponse(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	_, err := insertOrUpdateRepo(&r)
+	err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
 
 	a := AnalysisRequest{
