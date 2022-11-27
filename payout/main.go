@@ -186,7 +186,7 @@ func main() {
 	router.HandleFunc("/admin/sign/{userId}/{totalPayedOut}", jwtAuth(jwtAuthServer(sign))).Methods(http.MethodPost)
 	//this can be called from frontend, but only the admin
 	if debug {
-		router.HandleFunc("/admin/timewarp", jwtAuth(jwtAuthAdmin(timeWarpOffset, admins))).Methods(http.MethodGet)
+		router.HandleFunc("/admin/time", jwtAuth(jwtAuthAdmin(serverTime, admins))).Methods(http.MethodGet)
 		router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(jwtAuthAdmin(timeWarp, admins))).Methods(http.MethodPost)
 	}
 	//available for the public
