@@ -17,7 +17,7 @@ type PayoutInfoDTO struct {
 	Amount   *big.Int `json:"amount"`
 }
 
-//returns current payment cycle that is active (there was exactly one payment for this)
+// returns current payment cycle that is active (there was exactly one payment for this)
 func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 	pc, err := findPaymentCycle(user.PaymentCycleInId)
 	if err != nil {
@@ -38,7 +38,7 @@ func paymentCycle(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 }
 
-//calculates the maximum of days that is left with any currency, returns the max with currency
+// calculates the maximum of days that is left with any currency, returns the max with currency
 func maxDaysLeft(paymentCycleId *uuid.UUID) (string, int64, error) {
 	//daily, err := findDailyPaymentByPaymentCycleId(paymentCycleId)
 	//if err != nil {
@@ -384,7 +384,7 @@ func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 
 // Helper
 func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) error {
-	res, err := payoutRequest(pts, currency)
+	/*res, err := payoutRequest(pts, currency)
 	if err != nil {
 		err1 := err.Error()
 		err2 := insertPayoutResponse(&PayoutsResponse{
@@ -402,10 +402,11 @@ func cryptoPayout(pts []PayoutToService, batchId uuid.UUID, currency string) err
 		Error:     nil,
 		CreatedAt: timeNow(),
 		Payouts:   *res,
-	})
+	})*/
+	return nil
 }
 
-//Closes the current cycle and carries over all open currencies
+// Closes the current cycle and carries over all open currencies
 func closeCycle(uid uuid.UUID, currentPaymentCycleInId *uuid.UUID, newPaymentCycleInId *uuid.UUID) error {
 	if isUUIDZero(currentPaymentCycleInId) {
 		return nil

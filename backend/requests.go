@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -27,45 +28,52 @@ type AnalysisRequest struct {
 	Error      *string
 }
 
-type AnalysisWebhookResponse struct {
+type AnalysisResponse2 struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type Payout struct {
-	Address          string       `json:"address"`
-	NanoTea          int64        `json:"nano_tea"`
-	SmartContractTea big.Int      `json:"smart_contract_tea"`
-	Meta             []PayoutMeta `json:"meta"`
+type PayoutRequest2 struct {
+	UserId uuid.UUID `json:"userId"`
+	Amount *big.Int  `json:"amount"`
 }
 
 type PayoutResponse struct {
-	TxHash   string   `json:"tx_hash"`
-	Currency string   `json:"currency"`
-	Payout   []Payout `json:"payout_cryptos"`
+	TxHash   string           `json:"tx_hash"`
+	Currency string           `json:"currency"`
+	Payout   []PayoutRequest2 `json:"payout_cryptos"`
 }
 
-func payoutRequest(pts []PayoutToService, currency string) (*PayoutResponse, error) {
+func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
-	body, err := json.Marshal(pts)
+
+	preq := PayoutRequest2{
+		userId,
+		amount,
+	}
+
+	body, err := json.Marshal(preq)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := client.Post(opts.PayoutUrl+"/pay-crypto/"+string(bytes.ToLower([]byte(currency))), "application/json", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign", bytes.NewBuffer(body))
+	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
+	defer resp.Body.Close()
 
-	var resp PayoutResponse
-	err = json.NewDecoder(r.Body).Decode(&resp)
+	var presp PayoutResponse
+	err = json.NewDecoder(resp.Body).Decode(&presp)
 	if err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return &presp, nil
 }
 
 func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
@@ -74,7 +82,7 @@ func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
 		Timeout: 10 * time.Second,
 	}
 	now := timeNow()
-	req := AnalysisRequest{
+	ar := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    repoId,
 		DateFrom:  now.AddDate(0, -3, 0),
@@ -82,40 +90,48 @@ func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
 		GitUrls:   repoUrls,
 	}
 
-	err := insertAnalysisRequest(req, now)
+	err := insertAnalysisRequest(ar, now)
 	if err != nil {
 		return err
 	}
 
-	body, err := json.Marshal(req)
+	body, err := json.Marshal(ar)
 	if err != nil {
 		return err
 	}
 
-	r, err := client.Post(opts.AnalysisUrl+"/analyze", "application/json", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, opts.AnalysisUrl+"/analyze", bytes.NewBuffer(body))
+	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+
 	if err != nil {
 		e := err.Error()
-		errA := updateAnalysisRequest(req.RequestId, now, &e)
+		errA := updateAnalysisRequest(ar.RequestId, now, &e)
 		if errA != nil {
 			log.Warnf("cannot send to analyze engine %v", errA)
 		}
 		return err
 	}
-	defer r.Body.Close()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("the request %v received the status code %v", ar.RequestId, resp.StatusCode)
+	}
 
 	//just make sure we got the response
-	var awr AnalysisWebhookResponse
-	err = json.NewDecoder(r.Body).Decode(&awr)
+	var awr AnalysisResponse2
+	err = json.NewDecoder(resp.Body).Decode(&awr)
 	if err != nil {
 		e := err.Error()
-		errA := updateAnalysisRequest(req.RequestId, timeNow(), &e)
+		errA := updateAnalysisRequest(ar.RequestId, timeNow(), &e)
 		if errA != nil {
 			log.Warnf("cannot send to analyze engine %v", errA)
 		}
-		log.Warnf("cannot send to analyze engine %v", err)
+		return err
 	}
-	if awr.RequestId != req.RequestId {
-		log.Errorf("We have a serious problem, request id does not match %v != %v", awr.RequestId, req.RequestId)
+	if awr.RequestId != ar.RequestId {
+		return fmt.Errorf("we have a serious problem, request id does not match %v != %v", awr.RequestId, ar.RequestId)
 	}
 
 	return nil
