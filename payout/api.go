@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,18 +21,16 @@ type Config struct {
 	Env                   string `json:"env"`
 }
 
+type PayoutRequest2 struct {
+	UserId uuid.UUID `json:"userId"`
+	Amount *big.Int  `json:"amount"`
+}
+
 func sign(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	userId := params["userId"]
-	totalPayOut := params["totalPayOut"]
-
-	if userId == "" {
-		writeErr(w, http.StatusBadRequest, "user id is empty")
-		return
-	}
-
-	if totalPayOut == "" {
-		writeErr(w, http.StatusBadRequest, "totalPayedOut is empty")
+	var data PayoutRequest2
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -39,7 +40,12 @@ func sign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashRaw := crypto.Keccak256([]byte(userId + "#" + totalPayOut))
+	b1, _ := data.UserId.MarshalBinary()
+	b2 := make([]byte, 32-len(b1))
+	b3 := append(b1, b2...)
+	b4 := math.U256Bytes(data.Amount)
+
+	hashRaw := crypto.Keccak256(b3, []byte{'#'}, b4)
 	signature, err := crypto.Sign(hashRaw, privateKey)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "private key error %v", err)
