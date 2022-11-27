@@ -8,7 +8,7 @@ cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
   # script cleanup here
   if [ -n "${PID-}" ]; then
-    kill $PID
+    kill "$PID" 2>/dev/null
   fi
 }
 
