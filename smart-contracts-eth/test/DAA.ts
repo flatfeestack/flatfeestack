@@ -905,7 +905,7 @@ describe("DAA", () => {
       await expect(
         fixtures.contracts.daa
           .connect(fixtures.entities.whitelisterOne)
-          .cancelVotingSlot(1234)
+          .cancelVotingSlot(1234, "")
       ).to.revertedWith("only chairman");
     });
 
@@ -915,7 +915,7 @@ describe("DAA", () => {
       await expect(
         fixtures.contracts.daa
           .connect(fixtures.entities.chairman)
-          .cancelVotingSlot(await time.latestBlock())
+          .cancelVotingSlot(await time.latestBlock(), "")
       ).to.revertedWith("Must be a day before slot!");
     });
 
@@ -925,7 +925,7 @@ describe("DAA", () => {
       await expect(
         fixtures.contracts.daa
           .connect(fixtures.entities.chairman)
-          .cancelVotingSlot((await time.latestBlock()) + 10000)
+          .cancelVotingSlot((await time.latestBlock()) + 10000, "")
       ).to.revertedWith("Voting slot does not exist!");
     });
 
@@ -939,9 +939,13 @@ describe("DAA", () => {
       await daa.connect(chairman).setVotingSlot(secondVotingSlot);
       expect(await daa.getSlotsLength()).to.eq(2);
 
-      await expect(daa.connect(chairman).cancelVotingSlot(secondVotingSlot))
+      const reason = "no proposals there for this voting slot!";
+
+      await expect(
+        daa.connect(chairman).cancelVotingSlot(secondVotingSlot, reason)
+      )
         .to.emit(daa, "VotingSlotCancelled")
-        .withArgs(secondVotingSlot);
+        .withArgs(secondVotingSlot, reason);
 
       expect(await daa.getSlotsLength()).to.eq(1);
     });
@@ -956,11 +960,13 @@ describe("DAA", () => {
       await daa.connect(chairman).setVotingSlot(secondVotingSlot);
       expect(await daa.getSlotsLength()).to.eq(2);
 
+      const reason = "I feel it's too early to vote on these matters.";
+
       await expect(
-        daa.connect(chairman).cancelVotingSlot(fixtures.firstVotingSlot)
+        daa.connect(chairman).cancelVotingSlot(fixtures.firstVotingSlot, reason)
       )
         .to.emit(daa, "VotingSlotCancelled")
-        .withArgs(fixtures.firstVotingSlot)
+        .withArgs(fixtures.firstVotingSlot, reason)
         .and.to.emit(daa, "ProposalVotingTimeChanged")
         .withArgs(
           fixtures.proposal.id,

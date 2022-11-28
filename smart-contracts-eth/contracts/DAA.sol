@@ -30,7 +30,7 @@ contract DAA is
         uint64 newTime
     );
 
-    event VotingSlotCancelled(uint256 blockNumber);
+    event VotingSlotCancelled(uint256 blockNumber, string reason);
 
     function initialize(
         Membership _membership,
@@ -151,7 +151,9 @@ contract DAA is
         return blockNumber;
     }
 
-    function cancelVotingSlot(uint256 blockNumber) public {
+    function cancelVotingSlot(uint256 blockNumber, string calldata reason)
+        public
+    {
         require(msg.sender == membershipContract.chairman(), "only chairman");
         require(
             blockNumber >= block.number + 7200,
@@ -201,7 +203,7 @@ contract DAA is
             );
         }
 
-        emit VotingSlotCancelled(blockNumber);
+        emit VotingSlotCancelled(blockNumber, reason);
     }
 
     function supportsInterface(bytes4 interfaceId)
