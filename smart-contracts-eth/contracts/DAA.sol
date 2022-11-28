@@ -160,11 +160,11 @@ contract DAA is
             "Must be a day before slot!"
         );
 
-        uint256 i;
+        uint256 index;
         bool slotExists = false;
 
-        for (i = 0; i < slots.length; i++) {
-            if (slots[i] == blockNumber) {
+        for (index = 0; index < slots.length; index++) {
+            if (slots[index] == blockNumber) {
                 slotExists = true;
                 break;
             }
@@ -174,8 +174,8 @@ contract DAA is
             revert("Voting slot does not exist!");
         }
 
-        if (i != slots.length - 1) {
-            slots[i] = slots[slots.length - 1];
+        for (uint256 i = index; i < slots.length - 1; i++) {
+            slots[i] = slots[i + 1];
         }
         slots.pop();
 
@@ -184,8 +184,8 @@ contract DAA is
         delete votingSlots[blockNumber];
         uint256 nextSlot = _getNextPossibleVotingSlot();
 
-        for (i = 0; i < proposalIds.length; i++) {
-            ProposalCore storage proposal = _proposals[proposalIds[i]];
+        for (uint256 j = 0; j < proposalIds.length; j++) {
+            ProposalCore storage proposal = _proposals[proposalIds[j]];
 
             uint64 oldStart = proposal.voteStart.getDeadline();
             uint64 start = nextSlot.toUint64();
@@ -194,10 +194,10 @@ contract DAA is
             proposal.voteStart.setDeadline(start);
             proposal.voteEnd.setDeadline(end);
 
-            votingSlots[nextSlot].push(proposalIds[i]);
+            votingSlots[nextSlot].push(proposalIds[j]);
 
             emit ProposalVotingTimeChanged(
-                proposalIds[i],
+                proposalIds[j],
                 oldStart,
                 proposal.voteStart.getDeadline()
             );
