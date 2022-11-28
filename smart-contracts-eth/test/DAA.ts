@@ -929,6 +929,23 @@ describe("DAA", () => {
       ).to.revertedWith("Voting slot does not exist!");
     });
 
+    it("cancels voting slots without proposals", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { chairman } = fixtures.entities;
+
+      // create a new voting slot
+      const secondVotingSlot = (await time.latestBlock()) + 2 * blocksInAMonth;
+      await daa.connect(chairman).setVotingSlot(secondVotingSlot);
+      expect(await daa.getSlotsLength()).to.eq(2);
+
+      await expect(daa.connect(chairman).cancelVotingSlot(secondVotingSlot))
+        .to.emit(daa, "VotingSlotCancelled")
+        .withArgs(secondVotingSlot);
+
+      expect(await daa.getSlotsLength()).to.eq(1);
+    });
+
     it("cancels voting slots and moves proposals", async () => {
       const fixtures = await deployFixture();
       const { daa } = fixtures.contracts;
