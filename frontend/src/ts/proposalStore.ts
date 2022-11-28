@@ -48,7 +48,7 @@ export const proposalCreatedEvents = {
   },
 };
 
-export const votingSlots = derived<Readable<null | Contract>, null | Number[]>(
+export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
   daaContract,
   ($daaContract, set) => {
     if ($daaContract === null) {

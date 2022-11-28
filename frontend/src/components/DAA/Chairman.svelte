@@ -5,25 +5,28 @@
     chairmanAddress,
     daaContract,
     membershipContract,
+    provider,
     userEthereumAddress,
     whitelisters,
   } from "../../ts/daaStore";
+  import { votingSlots } from "../../ts/proposalStore";
   import { error, isSubmitting } from "../../ts/mainStore";
+  import AddVotingSlot from "./chairman/AddVotingSlot.svelte";
   import AddWhitelister from "./chairman/AddWhitelister.svelte";
+  import CancelVotingSlot from "./chairman/CancelVotingSlot.svelte";
   import RemoveWhitelister from "./chairman/RemoveWhitelister.svelte";
   import Navigation from "./Navigation.svelte";
 
+  let currentBlockNumber = 0;
   let minimumWhitelister = 0;
-  let toBeAdded = "";
-  let toBeRemoved = "";
-
   let nonWhitelisters: Signer[] = [];
 
   $: {
     if (
       $daaContract === null ||
       $membershipContract === null ||
-      $whitelisters === null
+      $whitelisters === null ||
+      $provider === null
     ) {
       $isSubmitting = true;
     } else if ($chairmanAddress !== $userEthereumAddress) {
@@ -38,6 +41,7 @@
     minimumWhitelister = minimumWhitelister = (
       await $membershipContract.minimumWhitelister()
     ).toNumber();
+    currentBlockNumber = await $provider.getBlockNumber();
 
     await setMembers();
 
@@ -70,4 +74,6 @@
     membershipContract={$membershipContract}
     whitelisters={$whitelisters}
   />
+  <AddVotingSlot {currentBlockNumber} daaContract={$daaContract} />
+  <CancelVotingSlot daaContract={$daaContract} votingSlots={$votingSlots} />
 </Navigation>

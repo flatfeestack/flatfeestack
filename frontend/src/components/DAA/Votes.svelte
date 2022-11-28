@@ -8,6 +8,7 @@
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import formatDateTime from "../../utils/formatDateTime";
+  import { futureBlockDate } from "../../utils/futureBlockDate";
   import Navigation from "./Navigation.svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
@@ -90,23 +91,21 @@
       }, {});
   }
 
-  async function createBlockInfo(blockNumber: number): Promise<BlockInfo> {
-    const secondsPerBlock = 12;
-    if (blockNumber <= currentBlockNumber) {
-      const blockTimestamp = (await $provider.getBlock(blockNumber)).timestamp;
+  async function createBlockInfo(
+    futureBlockNumber: number
+  ): Promise<BlockInfo> {
+    if (futureBlockNumber <= currentBlockNumber) {
+      const blockTimestamp = (await $provider.getBlock(futureBlockNumber))
+        .timestamp;
       return {
-        blockNumber,
+        blockNumber: futureBlockNumber,
         blockDate: formatDateTime(new Date(blockTimestamp * 1000)),
       };
     } else {
-      const blockDifference = blockNumber - currentBlockNumber;
-      const timeDifference = Math.abs(blockDifference * secondsPerBlock);
-      const currentBlockTimestamp = (
-        await $provider.getBlock(currentBlockNumber)
-      ).timestamp;
-      let date = new Date(currentBlockTimestamp * 1000);
-      date.setSeconds(date.getSeconds() + timeDifference);
-      return { blockNumber, blockDate: formatDateTime(date) };
+      return {
+        blockNumber: futureBlockNumber,
+        blockDate: await futureBlockDate(futureBlockNumber, currentBlockNumber),
+      };
     }
   }
 
