@@ -45,7 +45,8 @@ abstract contract GovernorUpgradeable is
     enum ProposalCategory {
         Generic,
         ExtraordinaryVote,
-        AssociationDissolution
+        AssociationDissolution,
+        ChangeBylaws
     }
 
     struct ProposalCore {
