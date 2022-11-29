@@ -3,15 +3,22 @@ pragma solidity ^0.8.17;
 
 import "./Wallet.sol";
 import "./Accessible.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 // we rely on time to track membership payments
 // however, we don't care about second-level precision, as we deal with a much longer time period
 // there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
 /* solhint-disable not-rely-on-time */
-contract Membership is Initializable, IVotesUpgradeable, Accessible {
+contract Membership is
+    Initializable,
+    IVotesUpgradeable,
+    Accessible,
+    OwnableUpgradeable
+{
     using CheckpointsUpgradeable for CheckpointsUpgradeable.History;
 
     Wallet private _wallet;
@@ -43,6 +50,8 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         address _whitelisterTwo,
         Wallet _walletContract
     ) public initializer {
+        __Ownable_init();
+
         minimumWhitelister = 2;
         whitelisterListLength = 2;
         chairman = _chairman;
@@ -218,7 +227,7 @@ contract Membership is Initializable, IVotesUpgradeable, Accessible {
         require(chairman != _adr, "Chairman cannot leave!");
 
         if (msg.sender != _adr) {
-            require(msg.sender == chairman, "Restricted to chairman!");
+            _checkOwner();
         }
 
         if (isWhitelister(_adr)) {
