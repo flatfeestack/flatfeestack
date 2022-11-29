@@ -39,6 +39,7 @@ describe("DAA", () => {
     const daa = await upgrades.deployProxy(DAA, [
       membership.address,
       timelock.address,
+      "3d3cb723c544b48169a908737027aadfdc56540a7b9121e6bf90695e214e209c",
     ]);
     await daa.deployed();
 
@@ -553,7 +554,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
 
       // voting period
       await mine(await daa.votingPeriod());
@@ -571,7 +572,8 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       expect(await daa.connect(chairman).state(proposalId)).to.equal(5);
@@ -602,7 +604,8 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       await mine(await timelock.getMinDelay());
@@ -621,7 +624,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
 
       expect(
         await daa.connect(chairman).hasVoted(proposalId, chairman.address)
@@ -636,7 +639,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
 
       expect(
         await daa.connect(chairman).hasVoted(proposalId, whitelisterOne.address)
@@ -653,7 +656,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
 
       const result = await daa.connect(chairman).proposalVotes(proposalId);
 
@@ -778,7 +781,8 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       await mine(await timelock.getMinDelay());
@@ -799,7 +803,7 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
 
       await mine(await daa.votingPeriod());
       await expect(
@@ -817,7 +821,8 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       await expect(
@@ -835,7 +840,8 @@ describe("DAA", () => {
       const { firstVotingSlot } = fixtures;
 
       // votingDelay
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       await mine(await timelock.getMinDelay());
@@ -881,7 +887,8 @@ describe("DAA", () => {
       const proposalId = fixtures.proposal.id;
       const { firstVotingSlot } = fixtures;
 
-      await castVote(firstVotingSlot, daa, chairman, proposalId);
+      await castVote(firstVotingSlot, daa, chairman, proposalId, 1);
+      await mine(await daa.votingPeriod());
       await queueProposal(daa, fixtures.proposal.proposalArgs);
 
       expect((await daa.proposalEta(proposalId)).toNumber()).to.eq(
@@ -977,19 +984,131 @@ describe("DAA", () => {
       expect(await daa.getSlotsLength()).to.eq(1);
     });
   });
+
+  describe("setNewBylawsHash", () => {
+    it("can set new bylaws hash via proposal", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { chairman, whitelisterOne, whitelisterTwo } = fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const oldHash = await daa.bylawsHash();
+      const newHash =
+        "0466442ae9a903c3028fbea8cb271e7e1ca0ac0ea51ab8823955d3c7e93809b4";
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData("setNewBylawsHash", [newHash]),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I would like to change the bylaws.";
+
+      await createQueueAndVoteProposal(
+        daa,
+        timelock,
+        chairman,
+        firstVotingSlot,
+        [chairman, whitelisterOne, whitelisterTwo],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      const proposalArgs = [
+        targets,
+        values,
+        transferCalldatas,
+        keccak256(toUtf8Bytes(description)),
+      ];
+
+      await mine(await timelock.getMinDelay());
+      await expect(daa.connect(chairman).execute(...proposalArgs))
+        .to.emit(daa, "BylawsChanged")
+        .withArgs(oldHash, newHash);
+    });
+
+    it("bylaws hash can not be set directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { chairman } = fixtures.entities;
+
+      const newHash =
+        "0466442ae9a903c3028fbea8cb271e7e1ca0ac0ea51ab8823955d3c7e93809b4";
+      await expect(
+        daa.connect(chairman).setNewBylawsHash(newHash)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
 });
+
+async function createQueueAndVoteProposal(
+  daa: Contract,
+  timelock: Contract,
+  proposingMember: SignerWithAddress,
+  firstVotingSlot: number,
+  forVoters: SignerWithAddress[],
+  againstVoters: SignerWithAddress[],
+  abstainVoters: SignerWithAddress[],
+  transferCalldatas: string[],
+  targets: string[],
+  values: number[],
+  description: string
+) {
+  const transaction = await daa
+    .connect(proposingMember)
+    ["propose(address[],uint256[],bytes[],string,uint8)"](
+      targets,
+      values,
+      transferCalldatas,
+      description,
+      3
+    );
+
+  const proposalArgs = [
+    targets,
+    values,
+    transferCalldatas,
+    keccak256(toUtf8Bytes(description)),
+  ];
+
+  const receipt = await transaction.wait();
+  const [proposalId] = receipt.events.find(
+    (event: any) => event.event === "DAAProposalCreated"
+  ).args;
+
+  for (const againstVoter of againstVoters) {
+    await castVote(firstVotingSlot, daa, againstVoter, proposalId, 1);
+  }
+
+  for (const forVoter of forVoters) {
+    await castVote(firstVotingSlot, daa, forVoter, proposalId, 1);
+  }
+
+  for (const abstainVoter of abstainVoters) {
+    await castVote(firstVotingSlot, daa, abstainVoter, proposalId, 1);
+  }
+
+  await mine(await daa.votingPeriod());
+
+  await queueProposal(daa, proposalArgs);
+}
 
 async function castVote(
   firstVotingSlot: number,
   daa: Contract,
-  chairman: SignerWithAddress,
-  proposalId: string
+  member: SignerWithAddress,
+  proposalId: string,
+  voteType: number // 0 = Against, 1 = For, 2 = Abstain
 ) {
-  await mineUpTo(firstVotingSlot);
-  await daa.connect(chairman).castVote(proposalId, 1);
+  if ((await time.latestBlock()) < firstVotingSlot) {
+    await mineUpTo(firstVotingSlot);
+  }
+  await daa.connect(member).castVote(proposalId, voteType);
 }
 
 async function queueProposal(daa: Contract, proposalArgs: any[]) {
-  await mine(await daa.votingPeriod());
   await daa.queue(...proposalArgs);
 }

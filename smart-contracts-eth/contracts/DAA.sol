@@ -32,12 +32,17 @@ contract DAA is
 
     event VotingSlotCancelled(uint256 blockNumber, string reason);
 
+    string public bylawsHash;
+
+    event BylawsChanged(string indexed oldHash, string indexed newHash);
+
     function initialize(
         Membership _membership,
-        TimelockControllerUpgradeable _timelock
+        TimelockControllerUpgradeable _timelock,
+        string memory bylaws
     ) public initializer {
         membershipContract = Membership(_membership);
-
+        bylawsHash = bylaws;
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
@@ -213,5 +218,11 @@ contract DAA is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function setNewBylawsHash(string memory newHash) external onlyGovernance {
+        string memory oldHash = bylawsHash;
+        bylawsHash = newHash;
+        emit BylawsChanged(oldHash, bylawsHash);
     }
 }
