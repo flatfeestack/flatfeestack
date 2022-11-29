@@ -34,64 +34,51 @@ contract Membership is
         uint256 indexed currentStatus
     );
 
-    event ChangeInWhiteLister(
-        address indexed concernedWhitelister,
-        bool removedOrAdded
-    );
-
     event ChangeInChairman(
         address indexed concernedChairman,
         bool removedOrAdded
     );
 
     function initialize(
-        address _chairman,
-        address _whitelisterOne,
-        address _whitelisterTwo,
+        address _firstChairman,
+        address _secondChairman,
         Wallet _walletContract
     ) public initializer {
         __Ownable_init();
 
-        minimumWhitelister = 2;
-        whitelisterListLength = 2;
-        chairman = _chairman;
+        minimumChairmen = 2;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
 
-        whitelisterList[0] = _whitelisterOne;
-        whitelisterList[1] = _whitelisterTwo;
+        chairmen.push(_firstChairman);
+        chairmen.push(_secondChairman);
 
-        membershipList[_chairman] = MembershipStatus.isMember;
-        membershipList[_whitelisterOne] = MembershipStatus.isMember;
-        membershipList[_whitelisterTwo] = MembershipStatus.isMember;
+        membershipList[_firstChairman] = MembershipStatus.isMember;
+        membershipList[_secondChairman] = MembershipStatus.isMember;
 
-        members.push(_chairman);
-        members.push(_whitelisterOne);
-        members.push(_whitelisterTwo);
+        members.push(_firstChairman);
+        members.push(_secondChairman);
 
-        nextMembershipFeePayment[_chairman] = block.timestamp;
-        nextMembershipFeePayment[_whitelisterOne] = block.timestamp;
-        nextMembershipFeePayment[_whitelisterTwo] = block.timestamp;
+        nextMembershipFeePayment[_firstChairman] = block.timestamp;
+        nextMembershipFeePayment[_secondChairman] = block.timestamp;
 
-        _totalCheckpoints.push(_add, 3);
-        _voteCheckpoints[_chairman].push(_add, 1);
-        _voteCheckpoints[_whitelisterOne].push(_add, 1);
-        _voteCheckpoints[_whitelisterTwo].push(_add, 1);
+        _totalCheckpoints.push(_add, 2);
+        _voteCheckpoints[_firstChairman].push(_add, 1);
+        _voteCheckpoints[_secondChairman].push(_add, 1);
 
         emit ChangeInMembershipStatus(
-            chairman,
+            _firstChairman,
             uint256(MembershipStatus.isMember)
         );
 
+        emit ChangeInChairman(_firstChairman, true);
+
         emit ChangeInMembershipStatus(
-            _whitelisterOne,
+            _secondChairman,
             uint256(MembershipStatus.isMember)
         );
 
-        emit ChangeInMembershipStatus(
-            _whitelisterTwo,
-            uint256(MembershipStatus.isMember)
-        );
+        emit ChangeInChairman(_secondChairman, true);
     }
 
     function requestMembership() public nonMemberOnly returns (bool) {
@@ -108,65 +95,63 @@ contract Membership is
         return uint256(membershipList[_adr]);
     }
 
-    function addWhitelister(address _adr) public chairmanOnly returns (bool) {
-        require(chairman != _adr, "Can't become whitelister!");
+    function addChairman(address _adr) public onlyOwner returns (bool) {
         require(
             membershipList[_adr] == MembershipStatus.isMember,
-            "A whitelister must be a member"
+            "A chairman must be a member"
         );
-        require(isWhitelister(_adr) == false, "Is already whitelister!");
-        whitelisterList[whitelisterListLength] = _adr;
-        whitelisterListLength++;
-        emit ChangeInWhiteLister(_adr, true);
+        require(isChairman(_adr) == false, "Is already chairman!");
+
+        chairmen.push(_adr);
+        emit ChangeInChairman(_adr, true);
+
         return true;
     }
 
-    function _removeWhitelister(
-        address _adr
-    ) internal chairmanOrWhitelisterOnly returns (bool) {
-        require(isWhitelister(_adr) == true, "Is no whitelister!");
+    function removeChairman(address _adr) public returns (bool) {
+        require(isChairman(_adr) == true, "Is no chairman!");
         require(
-            whitelisterListLength > minimumWhitelister,
-            "Minimum whitelister not met!"
+            this.getChairmenLength() > minimumChairmen,
+            "Minimum chairmen not met!"
         );
 
+        if (msg.sender != _adr) {
+            _checkOwner();
+        }
+
         uint256 i;
-        for (i = 0; i < whitelisterListLength - 1; i++) {
-            if (whitelisterList[i] == _adr) {
+
+        for (i = 0; i < this.getChairmenLength() - 1; i++) {
+            if (chairmen[i] == _adr) {
                 break;
             }
         }
-        if (i != whitelisterListLength - 1) {
-            whitelisterList[i] = whitelisterList[whitelisterListLength - 1];
+
+        if (i != this.getChairmenLength() - 1) {
+            chairmen[i] = chairmen[this.getChairmenLength() - 1];
         }
-        whitelisterListLength--;
-        emit ChangeInWhiteLister(_adr, false);
+        chairmen.pop();
+
+        emit ChangeInChairman(_adr, false);
+
         return true;
     }
 
-    function removeWhitelister(
+    function approveMembership(
         address _adr
-    ) public chairmanOnly returns (bool) {
-        require(isWhitelister(_adr) == true, "Is no whitelister!");
-
-        return _removeWhitelister(_adr);
-    }
-
-    function whitelistMember(
-        address _adr
-    ) public whitelisterOnly returns (bool) {
+    ) public chairmenOnly returns (bool) {
         require(
             membershipList[_adr] == MembershipStatus.requesting ||
-                (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
-                    firstWhiteLister[_adr] != msg.sender),
+                (membershipList[_adr] == MembershipStatus.approvedByOne &&
+                    firstApproval[_adr] != msg.sender),
             "Invalid member status!"
         );
         if (membershipList[_adr] == MembershipStatus.requesting) {
-            membershipList[_adr] = MembershipStatus.whitelistedByOne;
-            firstWhiteLister[_adr] = msg.sender;
+            membershipList[_adr] = MembershipStatus.approvedByOne;
+            firstApproval[_adr] = msg.sender;
             emit ChangeInMembershipStatus(
                 _adr,
-                uint256(MembershipStatus.whitelistedByOne)
+                uint256(MembershipStatus.approvedByOne)
             );
         } else {
             membershipList[_adr] = MembershipStatus.isMember;
@@ -194,22 +179,8 @@ contract Membership is
         }
     }
 
-    function setMembershipFee(uint256 newMembershipFee) public chairmanOnly {
+    function setMembershipFee(uint256 newMembershipFee) public chairmenOnly {
         membershipFee = newMembershipFee;
-    }
-
-    function setChairman(address _adr) public returns (bool) {
-        // TODO: require oder modifier einbauen, dass der sender vom verwalter der proposals kommt
-        require(
-            membershipList[_adr] == MembershipStatus.isMember,
-            "Address is not a member!"
-        );
-        require(chairman != _adr, "Address is the chairman!");
-        address oldChairman = chairman;
-        chairman = _adr;
-        emit ChangeInChairman(oldChairman, false);
-        emit ChangeInChairman(chairman, true);
-        return true;
     }
 
     function removeMember(address _adr) public {
@@ -218,14 +189,12 @@ contract Membership is
             "Address is not a member!"
         );
 
-        require(chairman != _adr, "Chairman cannot leave!");
-
         if (msg.sender != _adr) {
             _checkOwner();
         }
 
-        if (isWhitelister(_adr)) {
-            _removeWhitelister(_adr);
+        if (isChairman(_adr)) {
+            removeChairman(_adr);
         }
 
         _removeMember(_adr);
@@ -240,7 +209,7 @@ contract Membership is
             _voteCheckpoints[_adr].push(_subtract, 1);
         }
 
-        delete firstWhiteLister[_adr];
+        delete firstApproval[_adr];
         membershipList[_adr] = MembershipStatus.nonMember;
 
         for (uint256 i = 0; i < members.length; i++) {
@@ -264,7 +233,7 @@ contract Membership is
             address member = members[i];
             uint256 nextPayment = nextMembershipFeePayment[member];
             if (nextPayment > 0 && block.timestamp > nextPayment) {
-                if (!isWhitelister(member) && member != chairman) {
+                if (!isChairman(member)) {
                     toBeRemoved[toBeRemovedIndex] = member;
                     toBeRemovedIndex++;
                 }
@@ -311,8 +280,8 @@ contract Membership is
         // is fine to be empty
     }
 
-    function getFirstWhitelister(address _adr) external view returns (address) {
-        return firstWhiteLister[_adr];
+    function getFirstApproval(address _adr) external view returns (address) {
+        return firstApproval[_adr];
     }
 
     /* solhint-enable no-empty-blocks */
