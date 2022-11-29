@@ -12,6 +12,7 @@
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
   import ChangeChairman from "./proposals/ChangeChairman.svelte";
+  import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
 
   const proposalTypes: ProposalType[] = [
@@ -22,6 +23,10 @@
     {
       component: ChangeChairman,
       text: "Change chairman",
+    },
+    {
+      component: RemoveMember,
+      text: "Remove member",
     },
   ];
 
@@ -55,7 +60,12 @@
   async function createProposal() {
     $isSubmitting = true;
 
-    await $daaContract.propose(targets, values, transferCallData, description);
+    await $daaContract["propose(address[],uint256[],bytes[],string)"](
+      targets,
+      values,
+      transferCallData,
+      description
+    );
 
     $isSubmitting = false;
     navigate("/daa/votes");
