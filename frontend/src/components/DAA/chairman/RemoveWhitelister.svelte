@@ -44,11 +44,15 @@
   </p>
 {:else}
   <div class="container-col2 my-2">
-    <label for="toBeRemoved">Affected whitelister</label>
+    <label for="whiteListerToBeRemoved">Affected whitelister</label>
   </div>
 
   <div class="container-col2 my-2">
-    <select name="toBeRemoved" bind:value={toBeRemoved}>
+    <select
+      name="whiteListerToBeRemoved"
+      id="whiteListerToBeRemoved"
+      bind:value={toBeRemoved}
+    >
       {#each $whitelisters as whitelister}
         <option value={whitelister}>
           {whitelister}

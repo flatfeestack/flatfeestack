@@ -29,11 +29,15 @@
   <p>Assigned proposals will be moved to the next available voting slot.</p>
 
   <div class="container-col2 my-2">
-    <label for="toBeRemoved">Affected voting slot</label>
+    <label for="votingSlotToBeRemoved">Affected voting slot</label>
   </div>
 
   <div class="container-col2 my-2">
-    <select name="toBeRemoved" bind:value={toBeRemoved}>
+    <select
+      name="votingSlotToBeRemoved"
+      id="votingSlotToBeRemoved"
+      bind:value={toBeRemoved}
+    >
       {#each $votingSlots as votingSlot}
         <option value={votingSlot}>
           {votingSlot}
@@ -43,12 +47,14 @@
   </div>
 
   <div class="container-col2 my-2">
-    <label for="reason">Reason</label>
+    <label for="cancellationReason">Reason</label>
   </div>
 
   <div class="container-col2 my-2">
     <textarea
       class="box-sizing-border"
+      name="cancellationReason"
+      id="cancellationReason"
       bind:value={reason}
       rows="10"
       cols="50"

@@ -37,21 +37,24 @@
   <Spinner />
 {:else}
   <p>
-    The current block number is {currentBlockNumber}, voting slots
-    need to be announced one month in advance, so the minimum value is {minValue}
+    The current block number is {currentBlockNumber}, voting slots need to be
+    announced one month in advance, so the minimum value is {minValue}
     {#await futureBlockDate(minValue, currentBlockNumber) then futureDate}
       (approx. {futureDate})
     {/await}.
   </p>
 
   <div class="container-col2 my-2">
-    <label for="blockNumber">Voting should start at block number</label>
+    <label for="votingSlotBlockNumber"
+      >Voting should start at block number</label
+    >
   </div>
 
   <div class="container-col2 my-2">
     <input
       type="number"
-      name="blockNumber"
+      name="votingSlotBlockNumber"
+      id="votingSlotBlockNumber"
       min={minValue}
       bind:value={plannedBlockNumber}
     />
