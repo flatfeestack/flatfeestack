@@ -37,7 +37,7 @@
   <Spinner />
 {:else}
   <p>
-    For context: The current block number is {currentBlockNumber}, voting slots
+    The current block number is {currentBlockNumber}, voting slots
     need to be announced one month in advance, so the minimum value is {minValue}
     {#await futureBlockDate(minValue, currentBlockNumber) then futureDate}
       (approx. {futureDate})
