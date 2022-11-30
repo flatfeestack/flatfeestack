@@ -16,7 +16,9 @@ export async function deployMembershipContract(
   whitelisterTwo: SignerWithAddress
 ) {
   const wallet = await deployWalletContract(chairman);
-  const Membership = await ethers.getContractFactory("Membership");
+  const Membership = await ethers.getContractFactory("Membership", {
+    signer: chairman,
+  });
   const membership = await upgrades.deployProxy(Membership, [
     chairman.address,
     whitelisterOne.address,

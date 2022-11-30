@@ -399,10 +399,10 @@ describe("Membership", () => {
         membership
           .connect(newUserWhitelisted)
           .removeMember(whitelisterOne.address)
-      ).to.be.revertedWith("Restricted to chairman!");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("can remove other members if they're a chairman", async () => {
+    it("can remove other members if they are the contract owner", async () => {
       const { newUserWhitelisted, membership, chairman } =
         await deployFixtureWhitelisted();
 
