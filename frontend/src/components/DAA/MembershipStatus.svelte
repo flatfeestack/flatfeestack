@@ -19,8 +19,8 @@
 
   const approvalProcessSteps = [
     "Membership to the DAA has been requested",
-    "Membership has been approved by one whitelister",
-    "Membership has been approved by a second whitelister",
+    "Membership has been approved by one chairman",
+    "Membership has been approved by a second chairman",
   ];
 
   onMount(async () => {

@@ -9,6 +9,7 @@
   let isLoading = true;
   let currentBlockNumber = 0;
   let plannedBlockNumber = 0;
+  let minValue = 0;
 
   $: {
     if ($provider === null || $daaContract === null) {
@@ -21,10 +22,8 @@
   async function prepareView() {
     currentBlockNumber = await $provider.getBlockNumber();
     isLoading = false;
+    minValue = currentBlockNumber + (60 * 60 * 24 * 7 * 4) / secondsPerBlock;
   }
-
-  const minValue =
-    currentBlockNumber + (60 * 60 * 24 * 7 * 4) / secondsPerBlock;
 
   async function createVotingSlot() {
     await $daaContract.setVotingSlot(plannedBlockNumber);
