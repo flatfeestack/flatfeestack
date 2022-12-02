@@ -271,21 +271,6 @@ func statusSponsoredUsers(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
-func getPayoutInfos(w http.ResponseWriter, r *http.Request, email string) {
-	infos, err := findPayoutInfos()
-	var result []PayoutInfoDTO
-	if err != nil {
-		writeErrorf(w, http.StatusInternalServerError, err.Error())
-		log.Printf("Could not find payout infos: %v", err)
-		return
-	}
-	for _, v := range infos {
-		r := PayoutInfoDTO{Currency: v.Currency, Amount: v.Amount}
-		result = append(result, r)
-	}
-	writeJson(w, result)
-}
-
 func monthlyPayout(w http.ResponseWriter, r *http.Request, email string) {
 	//TODO: enable again
 	/*chunkSize := 100

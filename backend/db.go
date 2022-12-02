@@ -25,10 +25,9 @@ type SponsorEvent struct {
 	UnSponsorAt *time.Time `json:"un_sponsor_at"`
 }
 
-type Repos struct {
-	Id       uuid.UUID           `json:"uuid"`
-	Repo     []Repo              `json:"repos"`
-	Balances map[string]*big.Int `json:"balances"`
+type RepoBalance struct {
+	Repo            Repo                `json:"repo"`
+	CurrencyBalance map[string]*big.Int `json:"currencyBalance"`
 }
 
 type Repo struct {
@@ -39,7 +38,6 @@ type Repo struct {
 	Description *string   `json:"description"`
 	Score       uint32    `json:"score"`
 	Source      *string   `json:"source"`
-	Link        uuid.UUID `json:"link"`
 	CreatedAt   time.Time
 }
 
@@ -136,9 +134,9 @@ type AnalysisResponse struct {
 	Weight    float64
 }
 
-//*********************************************************************************
-//********************************* Wallet ****************************************
-//*********************************************************************************
+// *********************************************************************************
+// ********************************* Wallet ****************************************
+// *********************************************************************************
 func findActiveWalletsByUserId(uid uuid.UUID) ([]Wallet, error) {
 	userWallets := []Wallet{}
 	s := "SELECT id, currency, address FROM wallet_address WHERE user_id=$1 AND is_deleted = false"
@@ -209,9 +207,9 @@ func updateWallet(uid uuid.UUID, isDeleted bool) error {
 	return handleErrMustInsertOne(res)
 }
 
-//*********************************************************************************
-//******************************* Sponsoring **************************************
-//*********************************************************************************
+// *********************************************************************************
+// ******************************* Sponsoring **************************************
+// *********************************************************************************
 func insertOrUpdateSponsor(event *SponsorEvent) error {
 	//first get last sponsored event to check if we need to insertOrUpdateSponsor or unsponsor
 	//TODO: use mutex
@@ -293,11 +291,11 @@ func findLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 
 // Repositories and Sponsors
 
-func findSponsoredReposById(userId uuid.UUID) (map[uuid.UUID]Repos, error) {
+func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	//we want to send back an empty array, don't change
-	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, r.link
+	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
             FROM sponsor_event s
-            INNER JOIN repo r ON s.repo_id=r.link
+            INNER JOIN repo r ON s.repo_id=r.id
 			WHERE s.user_id=$1 AND s.un_sponsor_at IS NULL`
 	rows, err := db.Query(s, userId)
 	if err != nil {
@@ -356,12 +354,12 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 	return cs, nil
 }
 
-//*********************************************************************************
-//******************************* Repository **************************************
-//*********************************************************************************
+// *********************************************************************************
+// ******************************* Repository **************************************
+// *********************************************************************************
 func insertOrUpdateRepo(repo *Repo) error {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at, link) 
-									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 									ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
@@ -369,47 +367,11 @@ func insertOrUpdateRepo(repo *Repo) error {
 	defer closeAndLog(stmt)
 
 	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt, repo.Link).Scan(&lastInsertId)
+	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
 	if err != nil {
 		return err
 	}
 	repo.Id = lastInsertId
-	return nil
-}
-
-func insertOrUpdateRepoWithLink(repo *Repo) error {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at, link) 
-									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-									ON CONFLICT(git_url) DO UPDATE SET link=$9, name=$4, description=$5`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
-	}
-	defer closeAndLog(stmt)
-
-	res, err := stmt.Exec(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt, repo.Link)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func updateRepoWhereLink(newLinkId uuid.UUID, oldLinkId *uuid.UUID) error {
-	stmt, err := db.Prepare(`UPDATE repo SET link=$1 WHERE link=$2 OR id=$2`)
-	if err != nil {
-		return fmt.Errorf("prepare Update INTO repo for %v statement event: %v", newLinkId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(newLinkId, oldLinkId)
-	if err != nil {
-		return err
-	}
-	nr, err := handleErr(res)
-	if err != nil {
-		return err
-	}
-	log.Infof("affected %v rows", nr)
 	return nil
 }
 
@@ -429,39 +391,21 @@ func findRepoById(repoId uuid.UUID) (*Repo, error) {
 	}
 }
 
-func findAllReposById(repoId uuid.UUID) (map[uuid.UUID]Repos, error) {
-	rows, err := db.
-		Query("SELECT id, url, git_url, name, description, source, link FROM repo WHERE id=$1 OR link=$1", repoId)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-	return scanRepo(rows)
-}
-
-func scanRepo(rows *sql.Rows) (map[uuid.UUID]Repos, error) {
-	repoMap := map[uuid.UUID]Repos{}
+func scanRepo(rows *sql.Rows) ([]Repo, error) {
+	repos := []Repo{}
 	for rows.Next() {
 		var r Repo
-		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.Link)
+		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
 		if err != nil {
 			return nil, err
 		}
-
-		repos, ok := repoMap[r.Link]
-		if !ok {
-			repos.Id = r.Link
-			repos.Repo = []Repo{r}
-		} else {
-			repos.Repo = append(repos.Repo, r)
-		}
-		repoMap[r.Link] = repos
+		repos = append(repos, r)
 	}
-	return repoMap, nil
+	return repos, nil
 }
 
-func findReposByName(name string) (map[uuid.UUID]Repos, error) {
-	rows, err := db.Query("SELECT id, url, git_url, name, description, source, link FROM repo WHERE name=$1 ORDER BY link", name)
+func findReposByName(name string) ([]Repo, error) {
+	rows, err := db.Query("SELECT id, url, git_url, name, description, source FROM repo WHERE name=$1", name)
 	if err != nil {
 		return nil, err
 	}
@@ -469,9 +413,9 @@ func findReposByName(name string) (map[uuid.UUID]Repos, error) {
 	return scanRepo(rows)
 }
 
-//*********************************************************************************
-//*******************************  Connected emails *******************************
-//*********************************************************************************
+// *********************************************************************************
+// *******************************  Connected emails *******************************
+// *********************************************************************************
 func findGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	var gitEmails []GitEmail
 	s := "SELECT email, confirmed_at, created_at FROM git_email WHERE user_id=$1"
@@ -538,18 +482,18 @@ func deleteGitEmail(uid uuid.UUID, email string) error {
 	return handleErrMustInsertOne(res)
 }
 
-//*********************************************************************************
-//******************************* Analysis Requests *******************************
-//*********************************************************************************
+// *********************************************************************************
+// ******************************* Analysis Requests *******************************
+// *********************************************************************************
 func insertAnalysisRequest(a AnalysisRequest, now time.Time) error {
-	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_urls, created_at) VALUES($1, $2, $3, $4, $5, $6)")
+	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, created_at) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", a.RequestId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(a.RequestId, a.RepoId, a.DateFrom, a.DateTo, pq.Array(a.GitUrls), now)
+	res, err = stmt.Exec(a.RequestId, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, now)
 	if err != nil {
 		return err
 	}
@@ -573,19 +517,19 @@ func insertAnalysisResponse(reqId uuid.UUID, gitEmail string, names []string, we
 	return handleErrMustInsertOne(res)
 }
 
-//https://stackoverflow.com/questions/3491329/group-by-with-maxdate
-//https://pganalyze.com/docs/log-insights/app-errors/U115
+// https://stackoverflow.com/questions/3491329/group-by-with-maxdate
+// https://pganalyze.com/docs/log-insights/app-errors/U115
 func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 	var a AnalysisRequest
 
 	//https://stackoverflow.com/questions/47479973/golang-postgresql-array#47480256
 	err := db.
-		QueryRow(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
+		QueryRow(`SELECT id, repo_id, date_from, date_to, git_url, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request WHERE repo_id=$1) AS x
                         WHERE dest_rank = 1`, repoId).
-		Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
+		Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.ReceivedAt, &a.Error)
 
 	switch err {
 	case sql.ErrNoRows:
@@ -600,8 +544,8 @@ func findLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	var as []AnalysisRequest
 
-	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_urls, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_urls, received_at, error,
+	rows, err := db.Query(`SELECT id, repo_id, date_from, date_to, git_url, received_at, error FROM (
+                          SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request) AS x
                         WHERE dest_rank = 1 AND date_to <= $1`, dateTo)
@@ -613,7 +557,7 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 
 	for rows.Next() {
 		var a AnalysisRequest
-		err = rows.Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, (*pq.StringArray)(&a.GitUrls), &a.ReceivedAt, &a.Error)
+		err = rows.Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.ReceivedAt, &a.Error)
 		if err != nil {
 			return nil, err
 		}
@@ -724,9 +668,9 @@ func findAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
 	return ars, nil
 }
 
-//*********************************************************************************
-//******************************* Payments ****************************************
-//*********************************************************************************
+// *********************************************************************************
+// ******************************* Payments ****************************************
+// *********************************************************************************
 func insertUserBalance(ub UserBalance) error {
 	stmt, err := db.Prepare(`INSERT INTO user_balances(
                                             payment_cycle_in_id, 
@@ -1203,239 +1147,8 @@ func findPaymentCycleLast(uid uuid.UUID) (PaymentCycle, error) {
 }
 
 //*********************************************************************************
-//******************************* Payouts *****************************************
+//******************************* Email handling *****************************************
 //*********************************************************************************
-/*func insertPayoutsRequest(p *PayoutsRequest) error {
-	stmt, err := db.Prepare(`
-				INSERT INTO payouts_request(daily_user_payout_id, batch_id, exchange_rate, created_at)
-				VALUES($1, $2, $3, $4)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.DailyUserPayoutId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(p.DailyUserPayoutId, p.BatchId, p.ExchangeRate.String(), p.CreatedAt)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func insertPayoutsResponse(p *PayoutsResponse) error {
-	pid := uuid.New()
-	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response(id, batch_id, tx_hash, error, created_at)
-				VALUES($1, $2, $3, $4, $5)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
-	if err != nil {
-		return err
-	}
-	err = handleErrMustInsertOne(res)
-	if err != nil {
-		return err
-	}
-	for _, v := range p.PayoutWeis {
-		err = insertPayoutsResponseDetails(pid, &v)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func insertPayoutsResponseDetails(pid uuid.UUID, pwei *PayoutWei) error {
-	stmt, err := db.Prepare(`
-				INSERT INTO payouts_response_details(payouts_response_id, address, balance_wei, created_at)
-				VALUES($1, $2, $3, $4)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_response_details for %v statement event: %v", pid, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(pid, pwei.Address, pwei.Balance.String(), timeNow())
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}*/
-
-func insertPayoutRequest(p *PayoutRequest) error {
-	stmt, err := db.Prepare(`
-				INSERT INTO payout_request(user_id, batch_id, currency, exchange_rate, tea, address, created_at) 
-				VALUES($1, $2, $3, $4, $5, $6, $7)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_request for %v statement event: %v", p.UserId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(p.UserId, p.BatchId, p.Currency, p.ExchangeRate.String(), p.Tea, p.Address, p.CreatedAt)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func insertPayoutResponse(p *PayoutsResponse) error {
-	pid := uuid.New()
-	stmt, err := db.Prepare(`
-				INSERT INTO payout_response(id, batch_id, tx_hash, error, created_at) 
-				VALUES($1, $2, $3, $4, $5)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payouts_response for %v statement event: %v", p.BatchId, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(pid, p.BatchId, p.TxHash, p.Error, p.CreatedAt)
-	if err != nil {
-		return err
-	}
-	err = handleErrMustInsertOne(res)
-	if err != nil {
-		return err
-	}
-	for _, v := range p.Payouts.Payout {
-		if len(v.Meta) > 0 {
-			for _, i := range v.Meta {
-				v.NanoTea = i.Tea
-				err = insertPayoutResponseDetails(pid, &v, i.Currency)
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			err = insertPayoutResponseDetails(pid, &v, p.Payouts.Currency)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func insertPayoutResponseDetails(pid uuid.UUID, payout *Payout, currency string) error {
-	stmt, err := db.Prepare(`
-				INSERT INTO payout_response_details(payout_response_id, currency, address, nano_tea, smart_contract_tea, created_at) 
-				VALUES($1, $2, $3, $4, $5, $6)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO payout_response_details for %v statement event: %v", pid, err)
-	}
-	defer closeAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(pid, currency, payout.Address, payout.NanoTea, payout.SmartContractTea.String(), timeNow())
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func getPendingDailyUserPayouts(uid uuid.UUID) ([]UserBalanceCore, error) {
-	var ubs []UserBalanceCore
-	s := `SELECT 
-		 		payout.currency, 
-		 		MAX(payout.balance) - COALESCE(SUM(payout_response.balance), 0) as balance
-		 	FROM (	SELECT dup.user_id, SUM(dup.balance) as balance, dup.currency 
-		 			FROM daily_user_payout dup 
-		 			GROUP BY dup.user_id, dup.currency
-		 		 ) as payout
-		 	LEFT JOIN (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
-		 				JOIN payout_response res on res_details.payout_response_id = res.id
-		 				JOIN payout_request req on req.batch_id = res.batch_id and req.address = res_details.address
-		 				GROUP BY req.user_id, res_details.address, res_details.currency 
-		 			  ) as payout_response 
-		 				on payout_response.user_id = payout.user_id 
-		 				AND payout_response.currency = payout.currency 
-			WHERE payout.user_id = $1
-		 	GROUP BY payout.user_id, payout.currency`
-
-	rows, err := db.Query(s, uid)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var ub UserBalanceCore
-		err = rows.Scan(&ub.Currency, &ub.Balance)
-		if err != nil {
-			return nil, err
-		}
-		ubs = append(ubs, ub)
-	}
-	return ubs, nil
-}
-
-func getTotalRealizedIncome(uid uuid.UUID) ([]UserBalanceCore, error) {
-	var ubs []UserBalanceCore
-	s := `	SELECT tmp.currency, SUM(tmp.balance) 
-			FROM (	SELECT req.user_id, res_details.address, res_details.currency, MAX(res_details.nano_tea) as balance FROM payout_response_details res_details
-					JOIN payout_response res on res_details.payout_response_id = res.id
-					JOIN payout_request req on req.batch_id = res.batch_id and req.address = res_details.address
-					where req.user_id = $1
-					GROUP BY req.user_id, res_details.address, res_details.currency ) as tmp
-			GROUP BY tmp.currency`
-
-	rows, err := db.Query(s, uid)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var ub UserBalanceCore
-		err = rows.Scan(&ub.Currency, &ub.Balance)
-		if err != nil {
-			return nil, err
-		}
-		ubs = append(ubs, ub)
-	}
-	return ubs, nil
-}
-
-func findPayoutInfos() ([]PayoutInfo, error) {
-	var payoutInfos []PayoutInfo
-	s := `	SELECT 
-				dup.currency,
-				CASE WHEN MAX(tmp2.balance) IS NULL THEN 
-					SUM(dup.balance)
-				ELSE
-					SUM(dup.balance) - MAX(tmp2.balance)
-				END AS balance
-			FROM daily_user_payout dup 
-			JOIN wallet_address wa ON wa.user_id = dup.user_id AND ((wa.currency = dup.currency) OR (dup.currency = 'USD' AND wa.currency = 'ETH'))
-			LEFT JOIN ( SELECT tmp.currency , SUM(tmp.balance) AS balance
-						FROM (	SELECT currency, MAX(nano_tea) AS balance 
-								FROM payout_response_details GROUP BY address, currency
-							 ) AS tmp GROUP BY tmp.currency
-					  ) AS tmp2 ON tmp2.currency = dup.currency
-			WHERE wa.is_deleted = false
-			GROUP BY dup.currency`
-	rows, err := db.Query(s)
-	if err != nil {
-		return nil, err
-	}
-	defer closeAndLog(rows)
-
-	for rows.Next() {
-		var payoutInfo PayoutInfo
-		err = rows.Scan(&payoutInfo.Currency, &payoutInfo.Amount)
-		if err != nil {
-			return nil, err
-		}
-		payoutInfos = append(payoutInfos, payoutInfo)
-	}
-	return payoutInfos, nil
-}
 
 func insertEmailSent(userId *uuid.UUID, email string, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`

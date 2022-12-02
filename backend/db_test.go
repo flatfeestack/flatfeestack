@@ -214,7 +214,7 @@ func TestAnalysisRequest(t *testing.T) {
 		RepoId:    r.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrls:   []string{*r.GitUrl},
+		GitUrl:    *r.GitUrl,
 	}
 	err = insertAnalysisRequest(a, timeNow())
 	assert.Nil(t, err)
@@ -258,7 +258,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r1.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrls:   []string{*r1.GitUrl},
+		GitUrl:    *r1.GitUrl,
 	}
 	err = insertAnalysisRequest(a1, timeNow())
 	assert.Nil(t, err)
@@ -268,7 +268,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r1.Id,
 		DateFrom:  day1,
 		DateTo:    day2,
-		GitUrls:   []string{*r1.GitUrl},
+		GitUrl:    *r1.GitUrl,
 	}
 	err = insertAnalysisRequest(a2, timeNow())
 	assert.Nil(t, err)
@@ -285,7 +285,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r2.Id,
 		DateFrom:  day2,
 		DateTo:    day3,
-		GitUrls:   []string{*r2.GitUrl},
+		GitUrl:    *r2.GitUrl,
 	}
 	err = insertAnalysisRequest(a3, timeNow())
 	assert.Nil(t, err)
@@ -302,7 +302,7 @@ func TestAnalysisRequest2(t *testing.T) {
 		RepoId:    r2.Id,
 		DateFrom:  day3,
 		DateTo:    day4,
-		GitUrls:   []string{*r2.GitUrl},
+		GitUrl:    *r2.GitUrl,
 	}
 	err = insertAnalysisRequest(a4, timeNow())
 	assert.Nil(t, err)
@@ -343,7 +343,7 @@ func TestAnalysisResponse(t *testing.T) {
 		RepoId:    r.Id,
 		DateFrom:  day0,
 		DateTo:    day1,
-		GitUrls:   []string{*r.GitUrl},
+		GitUrl:    *r.GitUrl,
 	}
 	err = insertAnalysisRequest(a, timeNow())
 	assert.Nil(t, err)

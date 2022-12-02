@@ -96,7 +96,7 @@ func hourlyRunner(now time.Time) error {
 	nr := 0
 	for _, v := range a {
 		//check if we need analysis request
-		err := analysisRequest(v.RepoId, v.GitUrls)
+		err := analysisRequest(v.RepoId, v.GitUrl)
 		if err != nil {
 			log.Warnf("analysis request failed %v", err)
 		} else {
@@ -152,15 +152,11 @@ func dailyRunner(now time.Time) error {
 		}
 		repoNames := []string{}
 		for _, v := range v.RepoIds {
-			m1, err := findAllReposById(v)
+			repo, err := findRepoById(v)
 			if err != nil {
 				return err
 			}
-			for _, v2 := range m1 {
-				for _, v3 := range v2.Repo {
-					repoNames = append(repoNames, *v3.Name)
-				}
-			}
+			repoNames = append(repoNames, *repo.Name)
 		}
 		sendMarketingEmail(v.Email, balanceMap, repoNames)
 	}

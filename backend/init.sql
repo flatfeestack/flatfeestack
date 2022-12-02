@@ -41,7 +41,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_balances_index ON user_balances (payment_
 
 CREATE TABLE IF NOT EXISTS repo (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    link        UUID CONSTRAINT fk_repo REFERENCES repo (id), /* needs a request to the admins */
     git_url     VARCHAR(255) UNIQUE NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description TEXT,
@@ -77,7 +76,7 @@ CREATE TABLE IF NOT EXISTS analysis_request (
     repo_id     UUID CONSTRAINT fk_repo_id_req REFERENCES repo (id),
     date_from   DATE NOT NULL,
     date_to     DATE NOT NULL,
-    git_urls    VARCHAR(255)[] NOT NULL,
+    git_url     VARCHAR(255) NOT NULL,
     received_at TIMESTAMP,
     error       TEXT,
     created_at  TIMESTAMP NOT NULL
@@ -131,35 +130,6 @@ CREATE TABLE IF NOT EXISTS future_contribution (
     created_at          TIMESTAMP NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS future_contribution_index ON future_contribution(user_id, repo_id, currency, day);
-
-
-CREATE TABLE IF NOT EXISTS payout_request (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id             UUID CONSTRAINT fk_user_id_pc REFERENCES users (id),
-    batch_id            UUID NOT NULL,
-    currency            VARCHAR(8) NOT NULL,
-    exchange_rate       NUMERIC,
-    tea                 BIGINT NOT NULL,
-    address             TEXT NOT NULL,
-    created_at          TIMESTAMP NOT NULL
-);
-CREATE TABLE IF NOT EXISTS payout_response (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    batch_id   UUID UNIQUE NOT NULL,
-    tx_hash    VARCHAR(66) NOT NULL,
-    error      TEXT,
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS payout_response_details (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    payout_response_id  UUID CONSTRAINT fk_payout_response_id_pres REFERENCES payout_response (id),
-    currency            VARCHAR(8) NOT NULL,
-    nano_tea            BIGINT NOT NULL,
-    smart_contract_tea  NUMERIC NOT NULL,
-    address             VARCHAR(42),
-    created_at          TIMESTAMP NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS wallet_address (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

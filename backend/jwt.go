@@ -117,7 +117,7 @@ func jwtAuth(r *http.Request) (*TokenClaims, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("ERR-05, could not parse claims: %v", bearerToken)
+		return nil, fmt.Errorf("ERR-05, could not parse claims: err=%v for token=%v", err, bearerToken)
 	}
 
 	if claims.Expiry != nil && !claims.Expiry.Time().After(timeNow()) {

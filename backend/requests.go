@@ -23,7 +23,7 @@ type AnalysisRequest struct {
 	RepoId     uuid.UUID
 	DateFrom   time.Time `json:"dateFrom"`
 	DateTo     time.Time `json:"dateTo"`
-	GitUrls    []string  `json:"gitUrls"`
+	GitUrl     string    `json:"gitUrl"`
 	ReceivedAt *time.Time
 	Error      *string
 }
@@ -76,7 +76,7 @@ func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
 	return &presp, nil
 }
 
-func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
+func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
 	client := http.Client{
 		Timeout: 10 * time.Second,
@@ -87,7 +87,7 @@ func analysisRequest(repoId uuid.UUID, repoUrls []string) error {
 		RepoId:    repoId,
 		DateFrom:  now.AddDate(0, -3, 0),
 		DateTo:    now,
-		GitUrls:   repoUrls,
+		GitUrl:    repoUrl,
 	}
 
 	err := insertAnalysisRequest(ar, now)

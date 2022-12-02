@@ -83,8 +83,8 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
 	flag.StringVar(&o.DBScripts, "db-scripts", lookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&o.AnalysisUrl, "analysis-url", lookupEnv("ANALYSIS_URL",
-		"http://analysis-engine:9083"), "Analysis Url")
+	flag.StringVar(&o.AnalysisUrl, "analyzer-url", lookupEnv("ANALYZER_URL",
+		"http://analyzer:9083"), "Analysis Url")
 	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT_URL",
 		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
@@ -243,8 +243,6 @@ func main() {
 	//repo github
 	router.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/name", jwtAuthUser(searchRepoNames)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/link/{repoId}", jwtAuthAdmin(linkGitUrl, admins)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/root/{repoId}/{rootUuid}", jwtAuthAdmin(makeRoot, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
 	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
 	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
@@ -254,10 +252,9 @@ func main() {
 	//hooks
 	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/nowpayments", nowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analysis-engine", jwtAuthAdmin(analysisEngineHook, []string{"analysis-engine@flatfeestack.io"})).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analyzer", jwtAuthAdmin(analysisEngineHook, []string{"ffs-server"})).Methods(http.MethodPost)
 
 	//admin
-	router.HandleFunc("/admin/payout", jwtAuthAdmin(getPayoutInfos, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(monthlyPayout, admins)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/users", jwtAuthAdmin(users, admins)).Methods(http.MethodPost)
