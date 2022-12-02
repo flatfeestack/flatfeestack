@@ -28,12 +28,12 @@ services:
       db:
         condition: service_healthy
 
-  analysis-engine:
-    image: ghcr.io/flatfeestack/flatfeestack/analysis-engine:${TAG_IMAGE:-latest}
-    build: ./analysis-engine
+  analyzer:
+    image: ghcr.io/flatfeestack/flatfeestack/analyzer:${TAG_IMAGE:-latest}
+    build: ./analyzer
     restart: always
     env_file:
-      - ${BASE_PATH:-.}/analysis-engine/.env
+      - ${BASE_PATH:-.}/analyzer/.env
     volumes:
       - ${BASE_PATH:-.}/.repos:/tmp/repos
     ports:

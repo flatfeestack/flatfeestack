@@ -7,7 +7,7 @@ Now:
   - [x] DNS
   - [x] Tag-based auto deployment (GitHub Actions, only master branch, tag)
   - [x] Infura node (Alchemy)
-  - [x] Volume for analysis-engine
+  - [x] Volume for aanalyzer
 - [ ] Test containers: the goal is to execute tests BEFORE build
 - [ ] Check if we can use podman?
 - [ ] Create GitHub users

@@ -34,7 +34,7 @@ Available options:
 
 -h, --help          Print this help and exit
 -na, --no-auth      Don't start auth
--ne, --no-engine    Don't start analysis-engine
+-ne, --no-engine    Don't start analyzer engine
 -nb, --no-backend   Don't start backend
 -np, --no-payout    Don't start payout
 -nf, --no-frontend  Dont' start frontend
@@ -68,19 +68,19 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db caddy ganache auth analysis-engine backend payout frontend'
+  internal='db caddy ganache auth analyzer backend payout frontend'
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     --no-color) NO_COLOR=1 ;;
     -na | --no-auth) external="${external} auth"; internal="${internal//auth/}";;
-    -ne | --no-engine) external="${external} analysis-engine"; internal="${internal//analysis-engine/}";;
+    -ne | --no-engine) external="${external} analyzer"; internal="${internal//analyzer/}";;
     -nb | --no-backend) external="${external} backend"; internal="${internal//backend/}";;
     -np | --no-payout) external="${external} payout"; internal="${internal//payout/}";;
     -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
     -sb | --skip-build) include_build=false;;
-    -db | --db-only) internal='db'; external='caddy ganache auth analysis-engine backend payout frontend'; break;; #if this is set everything else is ignored
+    -db | --db-only) internal='db'; external='caddy ganache auth analyzer backend payout frontend'; break;; #if this is set everything else is ignored
     -rm | --remove-data) rm -rf .db .chain;;
     -?*) die "Unknown option: $1";;
     *) break ;;

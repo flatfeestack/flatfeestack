@@ -85,7 +85,7 @@ check_update "$0" "$@"
 parse_params "$@"
 
 REPO='flatfeestack'
-PROJECTS='analysis-engine backend fastauth frontend payout'
+PROJECTS='analyzer backend fastauth frontend payout'
 
 for name in ${PROJECTS}; do
   if [ ! -d "$name" ]; then

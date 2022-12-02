@@ -2,7 +2,7 @@
 
 now=$(date +"%Y-%m-%d_%H-%M-%S")
 tar cfz "flatfeestack-env-${now}.tar.gz" \
- analysis-engine/.env \
+ analyzer/.env \
  backend/.env \
  db/.env \
  fastauth/.env \

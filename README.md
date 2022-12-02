@@ -7,7 +7,7 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 ./update.sh
 
 # Create example .env files
-cp analysis-engine/example.env analysis-engine/.env
+cp analyzer/example.env analyzer/.env
 cp backend/example.env backend/.env
 cp fastauth/example.env fastauth/.env
 cp payout/.example.env payout/.env
@@ -47,7 +47,7 @@ This repo includes a caddy server to create reverse proxies to the different pac
 
 **/auth/*** --> Authentication Service
 
-**/analysis/*** --> Analysis Engine
+**/analyzer/*** --> Analysis Engine
 
 ## Env
 

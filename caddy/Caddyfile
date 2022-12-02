@@ -25,8 +25,8 @@
     }
   }
 
-  handle_path /analysis/* {
-    reverse_proxy analysis-engine:9083 {
+  handle_path /analyzer/* {
+    reverse_proxy analyzer:9083 {
       header_up Host {upstream_hostport}
       header_up X-Real-IP {remote}
     }

@@ -6,7 +6,7 @@ flatfeestack-env-*.tar.gz
 .chain
 .repos
 env*.tar.gz
-/analysis-engine
+/analyzer
 /backend
 /fastauth
 /frontend
