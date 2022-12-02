@@ -15,7 +15,7 @@ type WebhookRequest struct {
 	RequestId uuid.UUID `json:"reqId"`
 	DateFrom  time.Time `json:"dateFrom"`
 	DateTo    time.Time `json:"dateTo"`
-	GitUrls   []string  `json:"gitUrls"`
+	GitUrl    string    `json:"gitUrl"`
 }
 
 type WebhookResponse struct {
@@ -23,7 +23,7 @@ type WebhookResponse struct {
 }
 
 type WebhookCallback struct {
-	RequestId uuid.UUID       `json:"request_id"`
+	RequestId uuid.UUID       `json:"requestId"`
 	Error     string          `json:"error,omitempty"`
 	Result    []FlatFeeWeight `json:"result"`
 }
@@ -43,25 +43,21 @@ func analyze(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("analyze repo: %v", request)
 
-	if len(request.GitUrls) == 0 {
-		makeHttpStatusErr(w, "no required repository_url provided", http.StatusBadRequest)
-	}
-
 	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: request.RequestId})
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	go analyzeForWebhookInBackground(request)
+	go analyzeBackground(request)
 	log.Debugf("is analyzing")
 
 }
 
-func analyzeForWebhookInBackground(request WebhookRequest) {
-	log.Debugf("\n\n---> webhook request for repository %s\n", request.GitUrls)
+func analyzeBackground(request WebhookRequest) {
+	log.Debugf("---> webhook request for repository %s\n", request.GitUrl)
 	log.Debugf("Request id: %s\n", request.RequestId)
 
-	contributionMap, err := analyzeRepositoryFromString(request.DateFrom, request.DateTo, request.GitUrls...)
+	contributionMap, err := analyzeRepository(request.DateFrom, request.DateTo, request.GitUrl)
 	if err != nil {
 		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.CallbackUrl)
 		return
@@ -118,6 +114,7 @@ func callbackToWebhook(body WebhookCallback, url string) {
 	}
 
 	defer resp.Body.Close()
+	log.Debugf("return value: %v", resp.StatusCode)
 }
 
 func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {

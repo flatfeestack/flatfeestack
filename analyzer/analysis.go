@@ -2,18 +2,14 @@ package main
 
 import (
 	"fmt"
-	git "github.com/libgit2/git2go/v33"
+	git "github.com/libgit2/git2go/v34"
 	log "github.com/sirupsen/logrus"
-	cases "golang.org/x/text/cases"
+	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"io/ioutil"
 	"math"
 	"net/url"
-	"os"
-	"os/exec"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -59,10 +55,11 @@ var (
 	findCommonRegexp    = regexp.MustCompile("(?i)([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,24})")
 	rfc5322             = "(?i)(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"
 	validRfc5322Regexp  = regexp.MustCompile(fmt.Sprintf("^%s*$", rfc5322))
+	caser               = cases.Title(language.Und)
 )
 
-//small contributors get more, to be encouraged, also the committer that
-//have most lines know the repository the best
+// small contributors get more, to be encouraged, also the committer that
+// have most lines know the repository the best
 func smallCommitter(input int) float64 {
 	//https://www.desmos.com/calculator/k0f7hv7hg5
 	if input == 0 {
@@ -71,24 +68,18 @@ func smallCommitter(input int) float64 {
 	return float64(input) * ((2 / math.Pow(1.02, float64(input))) + 1)
 }
 
-// analyzeRepositoryFromString manages the whole analysis process (opens the repository and initialized the analysis)
-func analyzeRepositoryFromString(since time.Time, until time.Time, location ...string) (map[string]Contribution, error) {
+// analyzeRepository manages the whole analysis process (opens the repository and initialized the analysis)
+func analyzeRepository(startTime time.Time, stopTime time.Time, location string) (map[string]Contribution, error) {
 	cloneUpdateStart := time.Now()
-	repo, err := cloneOrUpdateRepository(location...)
+	repo, err := cloneOrUpdate(location)
 	if err != nil {
 		return nil, err
 	}
+	defer repo.Free()
 
 	log.Infof("---> cloned/updated repository in %dms\n", time.Since(cloneUpdateStart).Milliseconds())
-	return analyzeRepositoryFromRepository(repo, since, until)
-}
 
-// analyzeRepositoryFromRepository uses go-git to extract the metrics from the opened repository
-func analyzeRepositoryFromRepository(repo *git.Repository, startTime time.Time, stopTime time.Time) (map[string]Contribution, error) {
 	authorMap := map[string]Contribution{}
-	if repo == nil {
-		return authorMap, nil
-	}
 	gitAnalysisStart := time.Now()
 	authorLock := &sync.Mutex{}
 	seen := map[string]bool{}
@@ -96,34 +87,15 @@ func analyzeRepositoryFromRepository(repo *git.Repository, startTime time.Time, 
 	commitCounter := int64(0)
 	wg := &sync.WaitGroup{}
 
-	rc := repo.Remotes
-	list, err := rc.List()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, v := range list {
-		err = walkRepo(repo, startTime, stopTime, rc, v, wg, commitCounter, authorMap, authorLock, seen, seenLock)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	log.Infof("---> #%v git analysis in %dms\n", commitCounter, time.Since(gitAnalysisStart).Milliseconds())
-
-	return authorMap, nil
-}
-
-func walkRepo(repo *git.Repository, startTime time.Time, stopTime time.Time, rc git.RemoteCollection, v string, wg *sync.WaitGroup, commitCounter int64, authorMap map[string]Contribution, authorLock *sync.Mutex, seen map[string]bool, seenLock *sync.Mutex) error {
 	revWalk, err := repo.Walk()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer revWalk.Free()
 
 	err = revWalk.PushHead()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = revWalk.Iterate(func(commit *git.Commit) bool {
@@ -135,33 +107,15 @@ func walkRepo(repo *git.Repository, startTime time.Time, stopTime time.Time, rc 
 	//since we have not the full history, revision walker throws an error if we don't find an old parent. This is ok, ignore it
 	if gErr, ok := err.(*git.GitError); ok {
 		if gErr.Code != git.ErrorCodeNotFound && gErr.Class != git.ErrorClassOdb {
-			return err
+			return nil, err
 		}
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 	wg.Wait()
 
-	return nil
-}
-
-func expired(commit *git.Commit, startTime time.Time, stopTime time.Time) bool {
-	if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) ||
-		(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
-		log.Debugf("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
-		return true
-	}
-	return false
-}
-
-func alreadyProcessed(commit string, seen map[string]bool, seenLock *sync.Mutex) bool {
-	seenLock.Lock()
-	defer seenLock.Unlock()
-	if _, found := seen[commit]; found {
-		return true
-	}
-	seen[commit] = true
-	return false
+	log.Infof("---> #%v git analysis in %dms\n", commitCounter, time.Since(gitAnalysisStart).Milliseconds())
+	return authorMap, nil
 }
 
 func loop(repo *git.Repository, commitCounter *int64, authorMap map[string]Contribution, authorLock *sync.Mutex, commit *git.Commit, seen map[string]bool, seenLock *sync.Mutex, wg *sync.WaitGroup, startTime time.Time, stopTime time.Time) {
@@ -277,28 +231,6 @@ func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Tra
 	}
 }
 
-func emailToName(email string) (string, error) {
-	i := strings.IndexByte(email, '@')
-	if i < 0 {
-		return "", fmt.Errorf("not an email %v", email)
-	}
-	name := email[:i]
-	name = strings.ReplaceAll(name, ".", " ")
-	caser := cases.Title(language.Und)
-	name = caser.String(name)
-	return name, nil
-}
-
-func findEmail(haystack string) string {
-	result := findCommonRegexp.FindString(haystack)
-	if result != "" {
-		if validRfc5322Regexp.MatchString(result) {
-			return result
-		}
-	}
-	return ""
-}
-
 func addToMap(authorEmail string, authorName string, authorMap map[string]Contribution, stats *git.DiffStats, authorFactor float64, merge int) {
 	c1, _ := authorMap[authorEmail]
 
@@ -363,6 +295,67 @@ func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight
 	return result, nil
 }
 
+// clones the repository if it is not already on the disk, else update it
+func cloneOrUpdate(gitUrl string) (*git.Repository, error) {
+
+	p, err := pathName(gitUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	o := git.CheckoutOptions{Strategy: git.CheckoutForce}
+	repo, err := git.Clone(gitUrl, p, &git.CloneOptions{CheckoutOptions: o})
+	if err == nil {
+		defer repo.Free()
+	}
+
+	//directory already existing,
+	if err != nil {
+		repo, err = git.OpenRepository(p)
+		if err != nil {
+			return nil, err
+		}
+
+		remote, err := repo.Remotes.Lookup("origin")
+		if err != nil {
+			return nil, err
+		}
+		defer remote.Free()
+
+		err = remote.Fetch([]string{}, nil, "")
+		if err != nil {
+			return nil, err
+		}
+		rh, err := remote.Ls()
+		if err != nil {
+			return nil, err
+		}
+
+		remoteCommit, err := repo.LookupCommit(rh[0].Id)
+		if err != nil {
+			return nil, err
+		}
+		defer remoteCommit.Free()
+
+		err = repo.ResetToCommit(remoteCommit, git.ResetHard, &o)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return repo, nil
+}
+
+func pathName(gitUrl string) (string, error) {
+	u, err := url.Parse(gitUrl)
+	if err != nil {
+		return "", err
+	}
+	folderName := u.Host + strings.ReplaceAll(u.Path, "/", "")
+	folderName = strings.ReplaceAll(folderName, ".", "")
+	return opts.GitBasePath + "/" + folderName, nil
+}
+
 func contains(s []string, e string) bool {
 	if s == nil {
 		return false
@@ -375,116 +368,42 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-// CloneOrUpdateRepository clones the repository if it is not already on the disk, else update it
-func cloneOrUpdateRepository(location ...string) (*git.Repository, error) {
-	// check if the repository can successfully be updated
-	repo, err := updateRepository(location)
-	// if not try to clone it
-	if err != nil {
-		log.Debugf("probably new repo, %v", err)
-		return cloneRepository(location)
+func expired(commit *git.Commit, startTime time.Time, stopTime time.Time) bool {
+	if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) ||
+		(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
+		log.Debugf("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
+		return true
 	}
-	return repo, nil
+	return false
 }
 
-// CloneRepository clones the repository as a single branch repository with the desired branch
-func cloneRepository(location []string) (*git.Repository, error) {
-	u, err := url.Parse(location[0])
-	if err != nil {
-		return nil, err
+func alreadyProcessed(commit string, seen map[string]bool, seenLock *sync.Mutex) bool {
+	seenLock.Lock()
+	defer seenLock.Unlock()
+	if _, found := seen[commit]; found {
+		return true
 	}
-	folderName := u.Host + strings.ReplaceAll(u.Path, "/", "")
-	folderName = strings.ReplaceAll(folderName, ".", "")
-	// clone just one branch
-	// git clone https://github.com/torvalds/linux.git --shallow-since="3 months ago" -n
-	// git clone git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git --shallow-since="6 months ago" -n
-	cmd := exec.Command("git", "clone", location[0], `--shallow-since="6 months ago"`, "-n", ".")
-	cmd.Dir = opts.GitBasePath + "/" + folderName
-	err = os.MkdirAll(opts.GitBasePath+"/"+folderName, os.ModePerm)
-	if err != nil {
-		return nil, err
-	}
-	err = cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("command [%v] error %v", cmd.String(), err)
-	}
-
-	for i := 1; i < len(location); i++ {
-		cmd := exec.Command("git", "remote", "add", "r"+strconv.Itoa(i), location[i])
-		cmd.Dir = opts.GitBasePath + "/" + folderName
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
-		cmd = exec.Command("git", "fetch", "r"+strconv.Itoa(i), `--shallow-since="3 months ago"`, "-a")
-		cmd.Dir = opts.GitBasePath + "/" + folderName
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	r, err := git.OpenRepository(opts.GitBasePath + "/" + folderName)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := os.WriteFile(opts.GitBasePath+"/"+folderName+".date", []byte(time.Now().Format(time.RFC3339)), 0666); err != nil {
-		return nil, err
-	}
-	return r, nil
-
+	seen[commit] = true
+	return false
 }
 
-// CloneRepository updates the repository and checks out the desired branch
-func updateRepository(location []string) (*git.Repository, error) {
-	u, err := url.Parse(location[0])
-	if err != nil {
-		return nil, err
+func emailToName(email string) (string, error) {
+	i := strings.IndexByte(email, '@')
+	if i < 0 {
+		return "", fmt.Errorf("not an email %v", email)
 	}
-	folderName := u.Host + strings.ReplaceAll(u.Path, "/", "")
-	folderName = strings.ReplaceAll(folderName, ".", "")
+	name := email[:i]
+	name = strings.ReplaceAll(name, ".", " ")
+	name = caser.String(name)
+	return name, nil
+}
 
-	r, err := git.OpenRepository(opts.GitBasePath + "/" + folderName)
-	if err != nil {
-		return nil, err
+func findEmail(haystack string) string {
+	result := findCommonRegexp.FindString(haystack)
+	if result != "" {
+		if validRfc5322Regexp.MatchString(result) {
+			return result
+		}
 	}
-
-	content, err := ioutil.ReadFile(opts.GitBasePath + "/" + folderName + ".date")
-	if err != nil {
-		return nil, err
-	}
-	lastUpdate, err := time.Parse(time.RFC3339, string(content))
-	if err != nil {
-		return nil, err
-	}
-	if lastUpdate.After(time.Now().AddDate(0, 0, -1)) {
-		return r, nil
-	}
-	if err := os.WriteFile(opts.GitBasePath+"/"+folderName+".date", []byte(time.Now().Format(time.RFC3339)), 0666); err != nil {
-		return nil, err
-	}
-
-	cmd := exec.Command("git", "fetch", `--shallow-since="3 months ago"`, "-a")
-	cmd.Dir = opts.GitBasePath + "/" + folderName
-	err = cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-	cmd = exec.Command("git", "update-ref", "HEAD", "refs/remotes/origin/HEAD")
-	cmd.Dir = opts.GitBasePath + "/" + folderName
-	err = cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-	//if default branch is changed after the repo has been cloned, this is not updated automatically, but can easily be fixed locally
-	//https://stackoverflow.com/questions/51274430/change-from-master-to-a-new-default-branch-git
-	cmd = exec.Command("git", "remote", "set-head", "origin", "-a")
-	cmd.Dir = opts.GitBasePath + "/" + folderName
-	err = cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	return git.OpenRepository(opts.GitBasePath + "/" + folderName)
+	return ""
 }

@@ -1,4 +1,4 @@
-# analysis-engine for flatfeestack
+# analyzer for flatfeestack
 This repository contains the engine, that evaluates the contribution 
 for each contributer of an open source git repository. 
 A simple ``GET`` request to the server with the parameters to configure 

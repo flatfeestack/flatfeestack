@@ -3,7 +3,6 @@ package main
 import (
 	"archive/zip"
 	"fmt"
-	git "github.com/libgit2/git2go/v33"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"math"
@@ -19,15 +18,13 @@ func TestRemoteRepo(t *testing.T) {
 	start := time.Now()
 	opts = &Opts{}
 	opts.GitBasePath = "/tmp"
-	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git")
-	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
-	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
-	r, err := cloneOrUpdateRepository("https://github.com/neow3j/neow3j.git")
-	assert.Nil(t, err)
-	var defaultTime time.Time
+	//r, err := cloneOrUpdate("https://github.com/flatfeestack/flatfeestack-test-itself.git")
+	//r, err := cloneOrUpdate("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdate("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdate("https://github.com/neow3j/neow3j.git")
+	//assert.Nil(t, err)
 	month3 := time.Now().AddDate(0, -3, 0)
-	start = time.Now()
-	c, err := analyzeRepositoryFromRepository(r, month3, defaultTime)
+	c, err := analyzeRepository(start, month3, "https://github.com/flatfeestack/flatfeestack-test-itself.git")
 	fmt.Printf(" elpased2 %vs\n", time.Since(start).Seconds())
 	assert.Nil(t, err)
 	start = time.Now()
@@ -45,14 +42,14 @@ func TestRemoteRepo(t *testing.T) {
 func TestRemoteRepo2(t *testing.T) {
 	opts = &Opts{}
 	opts.GitBasePath = "/tmp"
-	//r, err := cloneOrUpdateRepository("git@github.com:flatfeestack/flatfeestack-test-itself.git")
-	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
-	//r, err := cloneOrUpdateRepository("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
-	r, err := cloneOrUpdateRepository("https://github.com/flatfeestack/flatfeestack-test-itself3.git")
-	assert.Nil(t, err)
-	var defaultTime time.Time
+	//r, err := cloneOrUpdate("git@github.com:flatfeestack/flatfeestack-test-itself.git")
+	//r, err := cloneOrUpdate("git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git", "git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdate("git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git")
+	//r, err := cloneOrUpdate("https://github.com/flatfeestack/flatfeestack-test-itself3.git")
+	//assert.Nil(t, err)
 	month6 := time.Now().AddDate(0, -3, 0)
-	c, err := analyzeRepositoryFromRepository(r, month6, defaultTime)
+	start := time.Now()
+	c, err := analyzeRepository(start, month6, "https://github.com/flatfeestack/flatfeestack-test-itself3.git")
 	assert.Nil(t, err)
 	f, err := weightContributions(c)
 	assert.Nil(t, err)
@@ -62,140 +59,6 @@ func TestRemoteRepo2(t *testing.T) {
 	for _, v := range f {
 		fmt.Printf("out: %v\n", v)
 	}
-}
-
-func TestAnalyzeRepositoryFromRepository(t *testing.T) {
-	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
-	repo, _ := git.OpenRepository("/tmp/test-repository")
-
-	var defaultTime time.Time
-
-	contributions, err := analyzeRepositoryFromRepository(repo, defaultTime, defaultTime)
-
-	expectedContributions := make(map[string]Contribution)
-
-	expectedContributions["claude@axlabs.com"] = Contribution{
-		Names:    []string{"Claude Muller", "claudemiller"},
-		Addition: 20691,
-		Deletion: 12443,
-		Merges:   11,
-		Commits:  155,
-	}
-	expectedContributions["37138571+claudemiller@users.noreply.github.com"] = Contribution{
-		Names:    []string{"Claude Muller"},
-		Addition: 891,
-		Deletion: 690,
-		Merges:   5,
-		Commits:  9,
-	}
-	expectedContributions["guil@axlabs.com"] = Contribution{
-		Names:    []string{"Guil. Sperb Machado", "Guilherme Sperb Machado"},
-		Addition: 33775,
-		Deletion: 14866,
-		Merges:   36,
-		Commits:  223,
-	}
-	expectedContributions["gsm@machados.org"] = Contribution{
-		Names:    []string{"Guil. Sperb Machado"},
-		Addition: 0,
-		Deletion: 0,
-		Merges:   1,
-		Commits:  1,
-	}
-	expectedContributions["sebastian-stephan@users.noreply.github.com"] = Contribution{
-		Names:    []string{"Sebastian Stephan"},
-		Addition: 1,
-		Deletion: 1,
-		Merges:   0,
-		Commits:  1,
-	}
-	expectedContributions["nimmortalz@gmail.com"] = Contribution{
-		Names:    []string{"Nikita Andrejevs"},
-		Addition: 3873,
-		Deletion: 1397,
-		Merges:   4,
-		Commits:  11,
-	}
-	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
-		Names:    []string{"Freddy Tuxworth"},
-		Addition: 47,
-		Deletion: 0,
-		Merges:   0,
-		Commits:  1,
-	}
-	expectedContributions["chenquanyu@ngd.neo.org"] = Contribution{
-		Names:    []string{"Krain Chen"},
-		Addition: 8,
-		Deletion: 5,
-		Merges:   0,
-		Commits:  1,
-	}
-	expectedContributions["nikita.andrejevs@knowledgeprice.com"] = Contribution{
-		Names:    []string{"Nikita Andrejevs"},
-		Addition: 300,
-		Deletion: 65,
-		Merges:   2,
-		Commits:  2,
-	}
-	expectedContributions["shipeng@aladingbank.com"] = Contribution{
-		Names:    []string{"施鹏"},
-		Addition: 4,
-		Deletion: 2,
-		Merges:   0,
-		Commits:  1,
-	}
-
-	expectedContributions["ssssu8@qq.com"] = Contribution{
-		Names:    []string{"Krain Chen"},
-		Addition: 63,
-		Deletion: 5,
-		Merges:   1,
-		Commits:  1,
-	}
-
-	assert.Equal(t, expectedContributions, contributions)
-	assert.Equal(t, nil, err)
-
-	_ = os.RemoveAll("./test-repository")
-}
-
-func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
-	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
-	repo, _ := git.OpenRepository("/tmp/test-repository")
-
-	startDate, err := time.Parse(time.RFC3339, "2019-02-01T12:00:00Z")
-	endDate, err := time.Parse(time.RFC3339, "2019-04-30T12:00:00Z")
-
-	contributions, err := analyzeRepositoryFromRepository(repo, startDate, endDate)
-
-	expectedContributions := make(map[string]Contribution)
-
-	expectedContributions["nimmortalz@gmail.com"] = Contribution{
-		Names:    []string{"Nikita Andrejevs"},
-		Addition: 474,
-		Deletion: 131,
-		Merges:   0,
-		Commits:  3,
-	}
-	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
-		Names:    []string{"Freddy Tuxworth"},
-		Addition: 47,
-		Deletion: 0,
-		Merges:   0,
-		Commits:  1,
-	}
-	expectedContributions["guil@axlabs.com"] = Contribution{
-		Names:    []string{"Guilherme Sperb Machado"},
-		Addition: 3640,
-		Deletion: 463,
-		Merges:   0,
-		Commits:  34,
-	}
-
-	assert.Equal(t, expectedContributions, contributions)
-	assert.Equal(t, nil, err)
-
-	_ = os.RemoveAll("./test-repository")
 }
 
 func TestWeightContributions(t *testing.T) {
@@ -328,8 +191,144 @@ func TestWeightContributions_NoInput(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-// Helpers
+func TestAnalyzeRepositoryFromRepository(t *testing.T) {
+	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
+	//repo, _ := git.OpenRepository("/tmp/test-repository")
+	opts = &Opts{GitBasePath: "/tmp"}
 
+	startDate, err := time.Parse(time.RFC3339, "2017-02-01T12:00:00Z")
+	endDate, err := time.Parse(time.RFC3339, "2029-04-30T12:00:00Z")
+
+	contributions, err := analyzeRepository(startDate, endDate, "/tmp/test-repository")
+
+	expectedContributions := make(map[string]Contribution)
+
+	expectedContributions["claude@axlabs.com"] = Contribution{
+		Names:    []string{"Claude Muller", "claudemiller"},
+		Addition: 20691,
+		Deletion: 12443,
+		Merges:   11,
+		Commits:  155,
+	}
+	expectedContributions["37138571+claudemiller@users.noreply.github.com"] = Contribution{
+		Names:    []string{"Claude Muller"},
+		Addition: 891,
+		Deletion: 690,
+		Merges:   5,
+		Commits:  9,
+	}
+	expectedContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guil. Sperb Machado", "Guilherme Sperb Machado"},
+		Addition: 33775,
+		Deletion: 14866,
+		Merges:   36,
+		Commits:  223,
+	}
+	expectedContributions["gsm@machados.org"] = Contribution{
+		Names:    []string{"Guil. Sperb Machado"},
+		Addition: 0,
+		Deletion: 0,
+		Merges:   1,
+		Commits:  1,
+	}
+	expectedContributions["sebastian-stephan@users.noreply.github.com"] = Contribution{
+		Names:    []string{"Sebastian Stephan"},
+		Addition: 1,
+		Deletion: 1,
+		Merges:   0,
+		Commits:  1,
+	}
+	expectedContributions["nimmortalz@gmail.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 3873,
+		Deletion: 1397,
+		Merges:   4,
+		Commits:  11,
+	}
+	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
+		Names:    []string{"Freddy Tuxworth"},
+		Addition: 47,
+		Deletion: 0,
+		Merges:   0,
+		Commits:  1,
+	}
+	expectedContributions["chenquanyu@ngd.neo.org"] = Contribution{
+		Names:    []string{"Krain Chen"},
+		Addition: 8,
+		Deletion: 5,
+		Merges:   0,
+		Commits:  1,
+	}
+	expectedContributions["nikita.andrejevs@knowledgeprice.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 300,
+		Deletion: 65,
+		Merges:   2,
+		Commits:  2,
+	}
+	expectedContributions["shipeng@aladingbank.com"] = Contribution{
+		Names:    []string{"施鹏"},
+		Addition: 4,
+		Deletion: 2,
+		Merges:   0,
+		Commits:  1,
+	}
+
+	expectedContributions["ssssu8@qq.com"] = Contribution{
+		Names:    []string{"Krain Chen"},
+		Addition: 63,
+		Deletion: 5,
+		Merges:   1,
+		Commits:  1,
+	}
+
+	assert.Equal(t, expectedContributions, contributions)
+	assert.Equal(t, nil, err)
+
+	_ = os.RemoveAll("./test-repository")
+}
+
+func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
+	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
+	//repo, _ := git.OpenRepository("/tmp/test-repository")
+
+	opts = &Opts{GitBasePath: "/tmp"}
+	startDate, err := time.Parse(time.RFC3339, "2019-02-01T12:00:00Z")
+	endDate, err := time.Parse(time.RFC3339, "2019-04-30T12:00:00Z")
+
+	contributions, err := analyzeRepository(startDate, endDate, "/tmp/test-repository")
+
+	expectedContributions := make(map[string]Contribution)
+
+	expectedContributions["nimmortalz@gmail.com"] = Contribution{
+		Names:    []string{"Nikita Andrejevs"},
+		Addition: 474,
+		Deletion: 131,
+		Merges:   0,
+		Commits:  3,
+	}
+	expectedContributions["freddytuxworth@gmail.com"] = Contribution{
+		Names:    []string{"Freddy Tuxworth"},
+		Addition: 47,
+		Deletion: 0,
+		Merges:   0,
+		Commits:  1,
+	}
+	expectedContributions["guil@axlabs.com"] = Contribution{
+		Names:    []string{"Guilherme Sperb Machado"},
+		Addition: 3640,
+		Deletion: 463,
+		Merges:   0,
+		Commits:  34,
+	}
+
+	assert.Equal(t, expectedContributions, contributions)
+	assert.Equal(t, nil, err)
+
+	_ = os.RemoveAll("./test-repository")
+}
+
+// Helpers
 func roundToDecimals(f float64, decimals int) float64 {
 	return math.Round(f*float64(10)*float64(decimals)) / (float64(10) * float64(decimals))
 }

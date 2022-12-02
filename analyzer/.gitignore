@@ -12,6 +12,6 @@
 *.out
 
 # This is the resulting binary
-analysis-engine
+analyzer
 .idea
 .env
