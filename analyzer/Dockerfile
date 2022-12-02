@@ -1,5 +1,5 @@
 FROM golang:1.19-alpine AS builder
-RUN apk add --update --no-cache cmake make gcc musl-dev openssl-dev
+RUN apk add --update --no-cache git cmake make gcc musl-dev openssl-dev
 WORKDIR /app
 RUN git clone https://github.com/libgit2/libgit2.git
 RUN cd /app/libgit2 && git checkout v1.5.0 && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTS=false && cmake --build . --target install -j 8
