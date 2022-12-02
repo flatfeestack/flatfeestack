@@ -38,8 +38,7 @@ contract PayoutEth {
     * @dev Send back from contract in case something is wrong. This should never happen
     */
     function sndRecoverToken(address receiver, address contractAddress, uint256 amount) external onlyOwner() {
-        IERC20 erc20 = IERC20(contractAddress);
-        erc20.transfer(receiver, amount);
+        IERC20(contractAddress).transfer(receiver, amount);
     }
 
     /**
@@ -59,9 +58,8 @@ contract PayoutEth {
     /**
     * @dev Gets the tea for the provided address.
     */
-    function getClaimableAmount(bytes32 userId, uint256 totalPayedOut) external view returns (uint256) {
-        require(totalPayedOut >= payedOut[userId], "Negative funds");
-        return totalPayedOut - payedOut[userId];
+    function getClaimableAmount(bytes32 userId, uint256 totalPayOut) external view returns (uint256) {
+        return totalPayOut - payedOut[userId];
     }
 
     /**
