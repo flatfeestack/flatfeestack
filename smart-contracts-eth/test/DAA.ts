@@ -38,10 +38,12 @@ describe("DAA", () => {
 
     // deploy DAA
     const DAA = await ethers.getContractFactory("DAA");
+    const bylawsHash =
+      "3d3cb723c544b48169a908737027aadfdc56540a7b9121e6bf90695e214e209c";
     const daa = await upgrades.deployProxy(DAA, [
       membership.address,
       timelock.address,
-      "3d3cb723c544b48169a908737027aadfdc56540a7b9121e6bf90695e214e209c",
+      bylawsHash,
     ]);
     await daa.deployed();
 
@@ -53,6 +55,58 @@ describe("DAA", () => {
     await timelock
       .connect(firstChairman)
       .revokeRole(adminRole, firstChairman.address);
+
+    // Approve founding proposal
+    const initialVotingSlot = await daa.slots(0);
+    const events = await daa.queryFilter(
+      daa.filters.DAAProposalCreated(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      )
+    );
+
+    // @ts-ignore
+    const [
+      initialProposalId,
+      sender,
+      initialTargets,
+      initialValues,
+      targetsLength,
+      initialCalldatas,
+      start,
+      end,
+      initialDescription,
+    ] = events.find((event: any) => event.event === "DAAProposalCreated")?.args;
+    await castVote(initialVotingSlot, daa, firstChairman, initialProposalId, 1);
+    await castVote(
+      initialVotingSlot,
+      daa,
+      secondChairman,
+      initialProposalId,
+      1
+    );
+    await castVote(initialVotingSlot, daa, regularMember, initialProposalId, 1);
+    await mine(await daa.votingPeriod());
+    const initialProposalArgs = [
+      initialTargets,
+      initialValues,
+      initialCalldatas,
+      keccak256(toUtf8Bytes(initialDescription)),
+    ];
+    await queueProposal(daa, initialProposalArgs);
+
+    await mine(await timelock.getMinDelay());
+    await daa.connect(firstChairman).execute(...initialProposalArgs);
+
+    expect(await daa.bylawsHash()).to.eq(bylawsHash);
 
     // create proposal slot
     const firstVotingSlot =
@@ -284,10 +338,10 @@ describe("DAA", () => {
         (event: any) => event.event === "DAAProposalCreated"
       ).args;
 
-      expect(await daa.slots(0)).to.eq(firstVotingSlot);
-      expect(await daa.slots(1)).to.eq(secondVotingSlot);
-      expect(await daa.slots(2)).to.eq(thirdVotingSlot);
-      expect(await daa.getSlotsLength()).to.eq(3);
+      expect(await daa.slots(1)).to.eq(firstVotingSlot);
+      expect(await daa.slots(2)).to.eq(secondVotingSlot);
+      expect(await daa.slots(3)).to.eq(thirdVotingSlot);
+      expect(await daa.getSlotsLength()).to.eq(4);
       expect(await daa.votingSlots(firstVotingSlot, 0)).to.eq(proposalId1);
       expect(await daa.getNumberOfProposalsInVotingSlot(firstVotingSlot)).to.eq(
         1
@@ -952,7 +1006,7 @@ describe("DAA", () => {
       // create a new voting slot
       const secondVotingSlot = (await time.latestBlock()) + 2 * blocksInAMonth;
       await daa.connect(firstChairman).setVotingSlot(secondVotingSlot);
-      expect(await daa.getSlotsLength()).to.eq(2);
+      expect(await daa.getSlotsLength()).to.eq(3);
 
       const reason = "no proposals there for this voting slot!";
 
@@ -962,7 +1016,7 @@ describe("DAA", () => {
         .to.emit(daa, "VotingSlotCancelled")
         .withArgs(secondVotingSlot, reason);
 
-      expect(await daa.getSlotsLength()).to.eq(1);
+      expect(await daa.getSlotsLength()).to.eq(2);
     });
 
     it("cancels voting slots and moves proposals", async () => {
@@ -973,7 +1027,7 @@ describe("DAA", () => {
       // create a new voting slot
       const secondVotingSlot = (await time.latestBlock()) + 2 * blocksInAMonth;
       await daa.connect(firstChairman).setVotingSlot(secondVotingSlot);
-      expect(await daa.getSlotsLength()).to.eq(2);
+      expect(await daa.getSlotsLength()).to.eq(3);
 
       const reason = "I feel it's too early to vote on these matters.";
 
@@ -991,7 +1045,7 @@ describe("DAA", () => {
           secondVotingSlot
         );
 
-      expect(await daa.getSlotsLength()).to.eq(1);
+      expect(await daa.getSlotsLength()).to.eq(2);
     });
   });
 

@@ -33,6 +33,7 @@ contract DAA is
     event VotingSlotCancelled(uint256 blockNumber, string reason);
 
     string public bylawsHash;
+    bool private _foundingSetupDone;
 
     event BylawsChanged(string indexed oldHash, string indexed newHash);
 
@@ -42,12 +43,13 @@ contract DAA is
         string memory bylaws
     ) public initializer {
         membershipContract = Membership(_membership);
-        bylawsHash = bylaws;
+        _foundingSetupDone = false;
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
         governorVotesQuorumFractionInit(0);
         governorTimelockControlInit(_timelock);
+        setupDAAFoundingSlotAndProposal(bylaws);
     }
 
     function votingDelay() public pure override returns (uint256) {
@@ -234,5 +236,65 @@ contract DAA is
         string memory oldHash = bylawsHash;
         bylawsHash = newHash;
         emit BylawsChanged(oldHash, bylawsHash);
+    }
+
+    function setupDAAFoundingSlotAndProposal(string memory bylaws) internal {
+        require(_foundingSetupDone == false, "already done");
+
+        // Create slot
+        uint256 slotBlockNumber = block.number + slotCloseTime + 1; // First slot is in a week
+        slots.push(slotBlockNumber);
+        emit NewTimeslotSet(slotBlockNumber);
+
+        // CreateProposal
+        bytes memory calldatas = abi.encodeCall(DAA.setNewBylawsHash, bylaws);
+        string memory description = "Founding Proposal. Set initial bylaws.";
+        address[] memory targets = new address[](1);
+        targets[0] = address(this);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatasArray = new bytes[](1);
+        calldatasArray[0] = calldatas;
+
+        uint256 proposalId = hashProposal(
+            targets,
+            values,
+            calldatasArray,
+            keccak256(bytes(description))
+        );
+
+        ProposalCore storage proposal = _buildProposal(
+            proposalId,
+            ProposalCategory.Generic
+        );
+
+        emit ProposalCreated(
+            proposalId,
+            _msgSender(),
+            targets,
+            values,
+            new string[](targets.length),
+            calldatasArray,
+            proposal.voteStart._deadline,
+            proposal.voteEnd._deadline,
+            description
+        );
+
+        emit DAAProposalCreated(
+            proposalId,
+            _msgSender(),
+            targets,
+            values,
+            new string[](targets.length),
+            calldatasArray,
+            proposal.voteStart._deadline,
+            proposal.voteEnd._deadline,
+            description,
+            proposal.category
+        );
+
+        _foundingSetupDone = true;
     }
 }
