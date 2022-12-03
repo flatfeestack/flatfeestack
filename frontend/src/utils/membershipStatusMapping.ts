@@ -1,7 +1,7 @@
 const membershipStatusMapping = [
   "Not a member",
   "Membership requested",
-  "Whitelisted by one",
+  "Approved by one",
   "Member",
 ];
 

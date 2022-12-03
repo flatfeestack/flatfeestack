@@ -17,8 +17,7 @@
     membershipStatusValue,
     provider,
     signer,
-    whitelisters,
-    chairmanAddress,
+    chairmen,
   } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
@@ -89,11 +88,7 @@
   };
 
   $: {
-    if (
-      $membershipStatusValue === null ||
-      $whitelisters === null ||
-      $chairmanAddress === null
-    ) {
+    if ($membershipStatusValue === null || $chairmen === null) {
       membershipStatus = "Loading ...";
     } else {
       membershipStatus = resolveMembershipStatus();
@@ -101,12 +96,11 @@
   }
 
   function resolveMembershipStatus(): string {
-    if ($membershipStatusValue == 3) {
-      if ($chairmanAddress == $userEthereumAddress) {
-        return "Chairman";
-      } else if ($whitelisters?.includes($userEthereumAddress)) {
-        return "Whitelister";
-      }
+    if (
+      $membershipStatusValue == 3 &&
+      $chairmen?.includes($userEthereumAddress)
+    ) {
+      return "Chairman";
     }
 
     return membershipStatusMapping[$membershipStatusValue];

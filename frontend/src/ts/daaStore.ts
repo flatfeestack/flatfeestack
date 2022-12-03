@@ -74,35 +74,22 @@ export const membershipStatusValue = derived(
   null
 );
 
-export const chairmanAddress = derived<
-  Readable<Contract | null>,
-  Signer | null
->(membershipContract, ($membershipContract, set) => {
-  if ($membershipContract === null) {
-    set(null);
-  } else {
-    Promise.resolve($membershipContract.chairman()).then((chairmanAddress) => {
-      set(chairmanAddress);
-    });
-  }
-});
-
-export const whitelisters = derived<Readable<Contract | null>, Signer[] | null>(
+export const chairmen = derived<Readable<Contract | null>, Signer[] | null>(
   membershipContract,
   ($membershipContract, set) => {
     if ($membershipContract === null) {
       set(null);
     } else {
-      Promise.resolve($membershipContract.whitelisterListLength()).then(
-        (whitelisterLength: BigNumber) => {
+      Promise.resolve($membershipContract.getChairmenLength()).then(
+        (chairmenLength: BigNumber) => {
           Promise.all(
-            [...Array(whitelisterLength.toNumber()).keys()].map(
+            [...Array(chairmenLength.toNumber()).keys()].map(
               async (index: Number) => {
-                return await $membershipContract.whitelisterList(index);
+                return await $membershipContract.chairmen(index);
               }
             )
-          ).then((whitelisters) => {
-            set(whitelisters);
+          ).then((chairmen) => {
+            set(chairmen);
           });
         }
       );

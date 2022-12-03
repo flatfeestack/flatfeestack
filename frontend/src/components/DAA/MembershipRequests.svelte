@@ -4,7 +4,7 @@
   import {
     userEthereumAddress,
     membershipContract,
-    whitelisters,
+    chairmen,
   } from "../../ts/daaStore";
   import { error } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
@@ -24,9 +24,7 @@
       return;
     }
 
-    if (
-      !$whitelisters.some((whitelister) => whitelister == $userEthereumAddress)
-    ) {
+    if (!$chairmen.some((chairman) => chairman == $userEthereumAddress)) {
       moveToVotesPage();
     }
 
@@ -63,7 +61,7 @@
           const canConfirm =
             requestingMember.args[1] === 1
               ? true
-              : (await $membershipContract.getFirstWhitelister(
+              : (await $membershipContract.getFirstApproval(
                   requestingMember.args[0]
                 )) !== $userEthereumAddress;
 
@@ -81,9 +79,9 @@
     navigate("/daa/votes");
   }
 
-  async function whitelistMember(address: String) {
+  async function approveMember(address: String) {
     try {
-      await $membershipContract.whitelistMember(address);
+      await $membershipContract.approveMembership(address);
     } catch (e) {
       $error = e.message;
     }
@@ -111,7 +109,7 @@
               ><button
                 class="button1"
                 disabled={!memberToBeConfirmed.canConfirm}
-                on:click={() => whitelistMember(memberToBeConfirmed.address)}
+                on:click={() => approveMember(memberToBeConfirmed.address)}
                 >Confirm member</button
               ></td
             >
