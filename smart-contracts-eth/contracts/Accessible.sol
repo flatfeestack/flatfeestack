@@ -5,19 +5,18 @@ contract Accessible {
     enum MembershipStatus {
         nonMember,
         requesting,
-        whitelistedByOne,
+        approvedByOne,
         isMember
     }
 
-    address public chairman;
-    uint256 public minimumWhitelister;
-    uint256 public whitelisterListLength;
+    uint256 public minimumChairmen;
     uint256 public membershipFee;
 
-    mapping(uint256 => address) public whitelisterList;
+    address[] public chairmen;
     address[] public members;
+
     mapping(address => MembershipStatus) internal membershipList;
-    mapping(address => address) internal firstWhiteLister;
+    mapping(address => address) internal firstApproval;
 
     modifier nonMemberOnly() {
         require(
@@ -35,33 +34,26 @@ contract Accessible {
         _;
     }
 
-    modifier chairmanOnly() {
-        require(msg.sender == chairman, "only chairman");
+    modifier chairmenOnly() {
+        require(isChairman(msg.sender) == true, "only chairmen");
         _;
     }
 
-    modifier whitelisterOnly() {
-        require(isWhitelister(msg.sender) == true, "only whitelisters");
-        _;
-    }
-
-    modifier chairmanOrWhitelisterOnly() {
-        require(
-            msg.sender == chairman || isWhitelister(msg.sender),
-            "whitelister / chairman only"
-        );
-        _;
-    }
-
-    function isWhitelister(address _adr) public view returns (bool) {
+    function isChairman(address _adr) public view returns (bool) {
         bool check = false;
-        for (uint256 i = 0; i < whitelisterListLength; i++) {
-            if (whitelisterList[i] == _adr) {
+
+        for (uint256 i = 0; i < this.getChairmenLength(); i++) {
+            if (chairmen[i] == _adr) {
                 check = true;
                 break;
             }
         }
+
         return check;
+    }
+
+    function getChairmenLength() external view returns (uint256) {
+        return chairmen.length;
     }
 
     function getMembersLength() external view returns (uint256) {

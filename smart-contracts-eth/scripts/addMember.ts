@@ -10,8 +10,7 @@ async function main() {
     membership.address
   );
 
-  const [chairman, whitelisterOne, whitelisterTwo, member] =
-    await ethers.getSigners();
+  const [firstChairman, secondChairman, member] = await ethers.getSigners();
 
   console.log("Requesting membership ...");
   await (await membershipDeployed.connect(member).requestMembership()).wait();
@@ -19,15 +18,15 @@ async function main() {
   console.log("Approving membership with first account ...");
   await (
     await membershipDeployed
-      .connect(whitelisterOne)
-      .whitelistMember(member.address)
+      .connect(firstChairman)
+      .approveMembership(member.address)
   ).wait();
 
   console.log("Approving membership with second account ...");
   await (
     await membershipDeployed
-      .connect(whitelisterTwo)
-      .whitelistMember(member.address)
+      .connect(secondChairman)
+      .approveMembership(member.address)
   ).wait();
 }
 

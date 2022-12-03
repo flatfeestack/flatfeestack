@@ -7,13 +7,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { chairman } = await getNamedAccounts();
+  const { firstChairman } = await getNamedAccounts();
 
   const membership = await deployments.get("Membership");
   const timelock = await deployments.get("Timelock");
 
   await deploy("DAA", {
-    from: chairman,
+    from: firstChairman,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
@@ -39,7 +39,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await Promise.all([
     addDaaAsProposer(timelockDeployed, daa),
-    revokeChairmanAsAdmin(timelockDeployed, chairman),
+    revokeChairmanAsAdmin(timelockDeployed, firstChairman),
   ]);
 };
 

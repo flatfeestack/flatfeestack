@@ -11,34 +11,42 @@ export async function deployWalletContract(owner: SignerWithAddress) {
 }
 
 export async function deployMembershipContract(
-  chairman: SignerWithAddress,
-  whitelisterOne: SignerWithAddress,
-  whitelisterTwo: SignerWithAddress
+  firstChairman: SignerWithAddress,
+  secondChairman: SignerWithAddress,
+  regularMember: SignerWithAddress
 ) {
-  const wallet = await deployWalletContract(chairman);
+  const wallet = await deployWalletContract(firstChairman);
   const Membership = await ethers.getContractFactory("Membership", {
-    signer: chairman,
+    signer: firstChairman,
   });
   const membership = await upgrades.deployProxy(Membership, [
-    chairman.address,
-    whitelisterOne.address,
-    whitelisterTwo.address,
+    firstChairman.address,
+    secondChairman.address,
     wallet.address,
   ]);
 
   await membership.deployed();
   await wallet.addKnownSender(membership.address);
 
+  // approve new member
+  await membership.connect(regularMember).requestMembership();
+  await membership
+    .connect(firstChairman)
+    .approveMembership(regularMember.address);
+  await membership
+    .connect(secondChairman)
+    .approveMembership(regularMember.address);
+
   // pay membership fees
   const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
 
-  await membership.connect(chairman).payMembershipFee({
+  await membership.connect(firstChairman).payMembershipFee({
     value: toBePaid,
   });
-  await membership.connect(whitelisterOne).payMembershipFee({
+  await membership.connect(secondChairman).payMembershipFee({
     value: toBePaid,
   });
-  await membership.connect(whitelisterTwo).payMembershipFee({
+  await membership.connect(regularMember).payMembershipFee({
     value: toBePaid,
   });
 
