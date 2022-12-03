@@ -22,10 +22,9 @@ abstract contract GovernorVotesQuorumFractionUpgradeable is
         uint256 newQuorumNumerator
     );
 
-    function governorVotesQuorumFractionInit(uint256 quorumNumeratorValue)
-        internal
-        onlyInitializing
-    {
+    function governorVotesQuorumFractionInit(
+        uint256 quorumNumeratorValue
+    ) internal onlyInitializing {
         governorVotesQuorumFractionInitUnchained(quorumNumeratorValue);
     }
 
@@ -42,12 +41,9 @@ abstract contract GovernorVotesQuorumFractionUpgradeable is
                 : _quorumNumeratorHistory.latest();
     }
 
-    function quorumNumerator(uint256 blockNumber)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
+    function quorumNumerator(
+        uint256 blockNumber
+    ) public view virtual returns (uint256) {
         // If history is empty, fallback to old storage
         uint256 length = _quorumNumeratorHistory._checkpoints.length;
         if (length == 0) {
@@ -69,30 +65,23 @@ abstract contract GovernorVotesQuorumFractionUpgradeable is
         return 100;
     }
 
-    function quorum(uint256 blockNumber)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function quorum(
+        uint256 blockNumber
+    ) public view virtual override returns (uint256) {
         return
             (token.getPastTotalSupply(blockNumber) *
                 quorumNumerator(blockNumber)) / quorumDenominator();
     }
 
-    function updateQuorumNumerator(uint256 newQuorumNumerator)
-        external
-        virtual
-        onlyGovernance
-    {
+    function updateQuorumNumerator(
+        uint256 newQuorumNumerator
+    ) external virtual onlyGovernance {
         _updateQuorumNumerator(newQuorumNumerator);
     }
 
-    function _updateQuorumNumerator(uint256 newQuorumNumerator)
-        internal
-        virtual
-    {
+    function _updateQuorumNumerator(
+        uint256 newQuorumNumerator
+    ) internal virtual {
         require(
             newQuorumNumerator <= quorumDenominator(),
             "Numerator over denominator"

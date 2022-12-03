@@ -13,17 +13,15 @@ abstract contract GovernorVotesUpgradeable is
 {
     IVotesUpgradeable public token;
 
-    function governorVotesInit(IVotesUpgradeable tokenAddress)
-        internal
-        onlyInitializing
-    {
+    function governorVotesInit(
+        IVotesUpgradeable tokenAddress
+    ) internal onlyInitializing {
         governorVotesInitUnchained(tokenAddress);
     }
 
-    function governorVotesInitUnchained(IVotesUpgradeable tokenAddress)
-        internal
-        onlyInitializing
-    {
+    function governorVotesInitUnchained(
+        IVotesUpgradeable tokenAddress
+    ) internal onlyInitializing {
         token = tokenAddress;
     }
 

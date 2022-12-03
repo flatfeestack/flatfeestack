@@ -121,11 +121,9 @@ contract Membership is
         return true;
     }
 
-    function _removeWhitelister(address _adr)
-        internal
-        chairmanOrWhitelisterOnly
-        returns (bool)
-    {
+    function _removeWhitelister(
+        address _adr
+    ) internal chairmanOrWhitelisterOnly returns (bool) {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
         require(
             whitelisterListLength > minimumWhitelister,
@@ -146,21 +144,17 @@ contract Membership is
         return true;
     }
 
-    function removeWhitelister(address _adr)
-        public
-        chairmanOnly
-        returns (bool)
-    {
+    function removeWhitelister(
+        address _adr
+    ) public chairmanOnly returns (bool) {
         require(isWhitelister(_adr) == true, "Is no whitelister!");
 
         return _removeWhitelister(_adr);
     }
 
-    function whitelistMember(address _adr)
-        public
-        whitelisterOnly
-        returns (bool)
-    {
+    function whitelistMember(
+        address _adr
+    ) public whitelisterOnly returns (bool) {
         require(
             membershipList[_adr] == MembershipStatus.requesting ||
                 (membershipList[_adr] == MembershipStatus.whitelistedByOne &&
@@ -281,33 +275,22 @@ contract Membership is
         }
     }
 
-    function getVotes(address account)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function getVotes(
+        address account
+    ) public view virtual override returns (uint256) {
         return _voteCheckpoints[account].latest();
     }
 
-    function getPastVotes(address account, uint256 blockNumber)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function getPastVotes(
+        address account,
+        uint256 blockNumber
+    ) public view virtual override returns (uint256) {
         return _voteCheckpoints[account].getAtProbablyRecentBlock(blockNumber);
     }
 
-    function getPastTotalSupply(uint256 blockNumber)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function getPastTotalSupply(
+        uint256 blockNumber
+    ) public view virtual override returns (uint256) {
         require(blockNumber < block.number, "Votes: block not yet mined");
         return _totalCheckpoints.getAtProbablyRecentBlock(blockNumber);
     }

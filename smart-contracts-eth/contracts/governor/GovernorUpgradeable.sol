@@ -88,10 +88,9 @@ abstract contract GovernorUpgradeable is
         slotCloseTime = 50400; // 1 week before
     }
 
-    function governorInitUnchained(string memory name_)
-        internal
-        onlyInitializing
-    {
+    function governorInitUnchained(
+        string memory name_
+    ) internal onlyInitializing {
         _name = name_;
     }
 
@@ -99,13 +98,9 @@ abstract contract GovernorUpgradeable is
         require(_executor() == address(this), "can only called by governor");
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(IERC165Upgradeable)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(IERC165Upgradeable) returns (bool) {
         return
             interfaceId ==
             (type(IGovernorUpgradeable).interfaceId ^
@@ -137,13 +132,9 @@ abstract contract GovernorUpgradeable is
             );
     }
 
-    function state(uint256 proposalId)
-        public
-        view
-        virtual
-        override
-        returns (ProposalState)
-    {
+    function state(
+        uint256 proposalId
+    ) public view virtual override returns (ProposalState) {
         ProposalCore storage proposal = _proposals[proposalId];
 
         if (proposal.executed) {
@@ -177,23 +168,15 @@ abstract contract GovernorUpgradeable is
         }
     }
 
-    function proposalSnapshot(uint256 proposalId)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function proposalSnapshot(
+        uint256 proposalId
+    ) public view virtual override returns (uint256) {
         return _proposals[proposalId].voteStart.getDeadline();
     }
 
-    function proposalDeadline(uint256 proposalId)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function proposalDeadline(
+        uint256 proposalId
+    ) public view virtual override returns (uint256) {
         return _proposals[proposalId].voteEnd.getDeadline();
     }
 
@@ -205,17 +188,13 @@ abstract contract GovernorUpgradeable is
         return 1;
     }
 
-    function _quorumReached(uint256 proposalId)
-        internal
-        view
-        virtual
-        returns (bool);
+    function _quorumReached(
+        uint256 proposalId
+    ) internal view virtual returns (bool);
 
-    function _voteSucceeded(uint256 proposalId)
-        internal
-        view
-        virtual
-        returns (bool);
+    function _voteSucceeded(
+        uint256 proposalId
+    ) internal view virtual returns (bool);
 
     function _getVotes(
         address account,
@@ -326,10 +305,10 @@ abstract contract GovernorUpgradeable is
         return proposalId;
     }
 
-    function _buildProposal(uint256 proposalId, ProposalCategory category)
-        private
-        returns (ProposalCore storage)
-    {
+    function _buildProposal(
+        uint256 proposalId,
+        ProposalCategory category
+    ) private returns (ProposalCore storage) {
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
@@ -377,7 +356,7 @@ abstract contract GovernorUpgradeable is
     }
 
     function _execute(
-        uint256, /* proposalId */
+        uint256 /* proposalId */,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
@@ -398,9 +377,9 @@ abstract contract GovernorUpgradeable is
     }
 
     function _beforeExecute(
-        uint256, /* proposalId */
+        uint256 /* proposalId */,
         address[] memory targets,
-        uint256[] memory, /* values */
+        uint256[] memory /* values */,
         bytes[] memory calldatas,
         bytes32 /*descriptionHash*/
     ) internal virtual {
@@ -414,10 +393,10 @@ abstract contract GovernorUpgradeable is
     }
 
     function _afterExecute(
-        uint256, /* proposalId */
-        address[] memory, /* targets */
-        uint256[] memory, /* values */
-        bytes[] memory, /* calldatas */
+        uint256 /* proposalId */,
+        address[] memory /* targets */,
+        uint256[] memory /* values */,
+        bytes[] memory /* calldatas */,
         bytes32 /*descriptionHash*/
     ) internal virtual {
         if (_executor() != address(this)) {
@@ -454,13 +433,10 @@ abstract contract GovernorUpgradeable is
         return proposalId;
     }
 
-    function getVotes(address account, uint256 blockNumber)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function getVotes(
+        address account,
+        uint256 blockNumber
+    ) public view virtual override returns (uint256) {
         return _getVotes(account, blockNumber, "");
     }
 
@@ -472,12 +448,10 @@ abstract contract GovernorUpgradeable is
         return _getVotes(account, blockNumber, params);
     }
 
-    function castVote(uint256 proposalId, uint8 support)
-        public
-        virtual
-        override
-        returns (uint256)
-    {
+    function castVote(
+        uint256 proposalId,
+        uint8 support
+    ) public virtual override returns (uint256) {
         address voter = _msgSender();
         return _castVote(proposalId, voter, support, "");
     }
@@ -609,11 +583,9 @@ abstract contract GovernorUpgradeable is
         return slots.length;
     }
 
-    function getNumberOfProposalsInVotingSlot(uint256 slotNumber)
-        external
-        view
-        returns (uint256)
-    {
+    function getNumberOfProposalsInVotingSlot(
+        uint256 slotNumber
+    ) external view returns (uint256) {
         return votingSlots[slotNumber].length;
     }
 

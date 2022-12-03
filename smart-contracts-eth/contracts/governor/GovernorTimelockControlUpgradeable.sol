@@ -30,7 +30,9 @@ abstract contract GovernorTimelockControlUpgradeable is
         _updateTimelock(timelockAddress);
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         virtual
@@ -42,7 +44,9 @@ abstract contract GovernorTimelockControlUpgradeable is
             super.supportsInterface(interfaceId);
     }
 
-    function state(uint256 proposalId)
+    function state(
+        uint256 proposalId
+    )
         public
         view
         virtual
@@ -72,13 +76,9 @@ abstract contract GovernorTimelockControlUpgradeable is
         return address(_timelock);
     }
 
-    function proposalEta(uint256 proposalId)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function proposalEta(
+        uint256 proposalId
+    ) public view virtual override returns (uint256) {
         uint256 eta = _timelock.getTimestamp(_timelockIds[proposalId]);
         return eta == 1 ? 0 : eta; // _DONE_TIMESTAMP (1) should be replaced with a 0 value
     }
@@ -125,7 +125,7 @@ abstract contract GovernorTimelockControlUpgradeable is
     }
 
     function _execute(
-        uint256, /* proposalId */
+        uint256 /* proposalId */,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
@@ -165,17 +165,15 @@ abstract contract GovernorTimelockControlUpgradeable is
         return address(_timelock);
     }
 
-    function updateTimelock(TimelockControllerUpgradeable newTimelock)
-        external
-        virtual
-        onlyGovernance
-    {
+    function updateTimelock(
+        TimelockControllerUpgradeable newTimelock
+    ) external virtual onlyGovernance {
         _updateTimelock(newTimelock);
     }
 
-    function _updateTimelock(TimelockControllerUpgradeable newTimelock)
-        private
-    {
+    function _updateTimelock(
+        TimelockControllerUpgradeable newTimelock
+    ) private {
         emit TimelockChange(address(_timelock), address(newTimelock));
         _timelock = newTimelock;
     }

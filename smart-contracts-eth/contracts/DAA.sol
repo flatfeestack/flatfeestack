@@ -62,7 +62,9 @@ contract DAA is
         return 1;
     }
 
-    function quorum(uint256 blockNumber)
+    function quorum(
+        uint256 blockNumber
+    )
         public
         view
         override(IGovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
@@ -71,7 +73,10 @@ contract DAA is
         return super.quorum(blockNumber);
     }
 
-    function getVotes(address account, uint256 blockNumber)
+    function getVotes(
+        address account,
+        uint256 blockNumber
+    )
         public
         view
         override(GovernorUpgradeable, IGovernorUpgradeable)
@@ -80,7 +85,9 @@ contract DAA is
         return super.getVotes(account, blockNumber);
     }
 
-    function state(uint256 proposalId)
+    function state(
+        uint256 proposalId
+    )
         public
         view
         override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
@@ -156,9 +163,10 @@ contract DAA is
         return blockNumber;
     }
 
-    function cancelVotingSlot(uint256 blockNumber, string calldata reason)
-        public
-    {
+    function cancelVotingSlot(
+        uint256 blockNumber,
+        string calldata reason
+    ) public {
         require(msg.sender == membershipContract.chairman(), "only chairman");
         require(
             blockNumber >= block.number + 7200,
@@ -211,7 +219,9 @@ contract DAA is
         emit VotingSlotCancelled(blockNumber, reason);
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
