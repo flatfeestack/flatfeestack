@@ -1,6 +1,7 @@
+import type { JsonRpcProvider } from "@ethersproject/providers";
 import type { BigNumber, Contract, Event } from "ethers";
 import { derived, get, type Readable, writable } from "svelte/store";
-import { daaContract } from "./daaStore";
+import { daaContract, userEthereumAddress } from "./daaStore";
 
 interface ProposalCreatedEvent {
   proposalId: string;
@@ -70,6 +71,63 @@ export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
           console.error(reason);
           set(null);
         });
+    }
+  },
+  null
+);
+
+export const extraOrdinaryAssemblyRequestProposalIds = derived<
+  Readable<null | Contract>,
+  null | BigNumber[]
+>(
+  daaContract,
+  ($daaContract, set) => {
+    if ($daaContract === null) {
+      set(null);
+    } else {
+      Promise.resolve($daaContract.getExtraOrdinaryProposalsLength())
+        .then((extraOrdinaryProposalsLength: BigNumber) => {
+          Promise.resolve(
+            Promise.all(
+              [...Array(extraOrdinaryProposalsLength.toNumber()).keys()].map(
+                (index) => $daaContract.extraOrdinaryAssemblyProposals(index)
+              )
+            )
+          ).then((extraOrdinaryAssemblyRequestProposalIds: BigNumber[]) => {
+            set(extraOrdinaryAssemblyRequestProposalIds);
+          });
+        })
+        .catch((reason) => {
+          console.error(reason);
+          set(null);
+        });
+    }
+  },
+  null
+);
+
+export const votesCasted = derived<
+  [Readable<Contract | null>, Readable<JsonRpcProvider | null>],
+  Event[] | null
+>(
+  [daaContract, userEthereumAddress],
+  ([$daaContract, $userEthereumAddress], set) => {
+    if ($daaContract === null || $userEthereumAddress === null) {
+      set(null);
+    } else {
+      Promise.resolve(
+        $daaContract.queryFilter(
+          $daaContract.filters.VoteCast(
+            $userEthereumAddress,
+            null,
+            null,
+            null,
+            null
+          )
+        )
+      ).then((events: Event[]) => {
+        set(events);
+      });
     }
   },
   null

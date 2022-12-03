@@ -10,6 +10,7 @@
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import Navigation from "./Navigation.svelte";
+  import ExtraOrdinaryAssemblies from "./votes/ExtraOrdinaryAssemblies.svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
@@ -170,6 +171,8 @@
   <p>Last updated (block): #{currentBlockNumber}</p>
   <p>
     Last updated (time): Current-Time: {currentTime}
+
+    <ExtraOrdinaryAssemblies {currentBlockNumber} />
 
     {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
       <div class="card">
