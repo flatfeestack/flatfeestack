@@ -71,11 +71,10 @@ contract Wallet is Initializable, OwnableUpgradeable {
         _knownSenderLength--;
     }
 
-    function increaseAllowance(address _adr, uint256 _amount)
-        public
-        onlyOwner
-        returns (bool)
-    {
+    function increaseAllowance(
+        address _adr,
+        uint256 _amount
+    ) public onlyOwner returns (bool) {
         require(
             (totalAllowance + _amount) <= totalBalance,
             "Keep allowance below balance!"
@@ -86,12 +85,9 @@ contract Wallet is Initializable, OwnableUpgradeable {
         return true;
     }
 
-    function payContribution(address _adr)
-        public
-        payable
-        knownSender
-        returns (bool)
-    {
+    function payContribution(
+        address _adr
+    ) public payable knownSender returns (bool) {
         uint256 _amount = msg.value;
         totalBalance += _amount;
         individualContribution[_adr] += _amount;
@@ -101,11 +97,9 @@ contract Wallet is Initializable, OwnableUpgradeable {
         return true;
     }
 
-    function withdrawMoney(address payable _adr)
-        public
-        onlyOwner
-        returns (bool)
-    {
+    function withdrawMoney(
+        address payable _adr
+    ) public onlyOwner returns (bool) {
         require(allowance[_adr] > 0, "No allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];

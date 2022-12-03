@@ -39,25 +39,20 @@ abstract contract GovernorCountingSimpleUpgradeable is
         return "support=bravo&quorum=for,abstain";
     }
 
-    function hasVoted(uint256 proposalId, address account)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function hasVoted(
+        uint256 proposalId,
+        address account
+    ) public view virtual override returns (bool) {
         return _proposalVotes[proposalId].hasVoted[account];
     }
 
-    function proposalVotes(uint256 proposalId)
+    function proposalVotes(
+        uint256 proposalId
+    )
         public
         view
         virtual
-        returns (
-            uint256 againstVotes,
-            uint256 forVotes,
-            uint256 abstainVotes
-        )
+        returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)
     {
         ProposalVote storage proposalVote = _proposalVotes[proposalId];
         return (
@@ -67,13 +62,9 @@ abstract contract GovernorCountingSimpleUpgradeable is
         );
     }
 
-    function _quorumReached(uint256 proposalId)
-        internal
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function _quorumReached(
+        uint256 proposalId
+    ) internal view virtual override returns (bool) {
         ProposalVote storage proposalVote = _proposalVotes[proposalId];
 
         return
@@ -81,13 +72,9 @@ abstract contract GovernorCountingSimpleUpgradeable is
             proposalVote.forVotes + proposalVote.abstainVotes;
     }
 
-    function _voteSucceeded(uint256 proposalId)
-        internal
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function _voteSucceeded(
+        uint256 proposalId
+    ) internal view virtual override returns (bool) {
         ProposalVote storage proposalVote = _proposalVotes[proposalId];
 
         return proposalVote.forVotes > proposalVote.againstVotes;
