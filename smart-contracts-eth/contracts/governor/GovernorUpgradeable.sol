@@ -285,7 +285,7 @@ abstract contract GovernorUpgradeable is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         require(
             getVotes(_msgSender(), block.number - 1) >= proposalThreshold(),
             "Proposer votes below threshold"
@@ -308,7 +308,7 @@ abstract contract GovernorUpgradeable is
     function _buildProposal(
         uint256 proposalId,
         ProposalCategory category
-    ) private returns (ProposalCore storage) {
+    ) internal returns (ProposalCore storage) {
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
