@@ -181,7 +181,7 @@ describe("DAA", () => {
       await expect(
         daa
           .connect(nonMember)
-          ["propose(address[],uint256[],bytes[],string)"](
+          .propose(
             [wallet.address],
             [0],
             [transferCalldata],
@@ -203,7 +203,7 @@ describe("DAA", () => {
       await expect(
         daa
           .connect(secondChairman)
-          ["propose(address[],uint256[],bytes[],string)"](
+          .propose(
             [wallet.address],
             [0],
             [transferCalldata],
@@ -214,29 +214,28 @@ describe("DAA", () => {
         .and.to.emit(daa, "DAAProposalCreated");
     });
 
-    it("can propose a proposal with a category", async () => {
+    it("can propose an extraordinary assembly", async () => {
       const fixtures = await deployFixture();
-      const { daa, wallet } = fixtures.contracts;
+      const { daa } = fixtures.contracts;
       const { secondChairman } = fixtures.entities;
 
-      const transferCalldata = wallet.interface.encodeFunctionData(
-        "increaseAllowance",
-        [secondChairman.address, ethers.utils.parseEther("1.0")]
+      const transferCalldata = daa.interface.encodeFunctionData(
+        "setVotingSlot",
+        [987654321]
       );
 
       await expect(
         daa
           .connect(secondChairman)
-          ["propose(address[],uint256[],bytes[],string,uint8)"](
-            [wallet.address],
+          .propose(
+            [daa.address],
             [0],
             [transferCalldata],
-            "I would like to have an ExtraordinaryVote.",
-            1
+            "I would like to propose an extraordinary assembly to vote stuff."
           )
       )
         .to.emit(daa, "ProposalCreated")
-        .and.to.emit(daa, "DAAProposalCreated");
+        .and.to.emit(daa, "ExtraOrdinaryAssemblyRequested");
     });
 
     it("proposal events emits correct data", async () => {
@@ -253,16 +252,10 @@ describe("DAA", () => {
       let calldata = [transferCalldata];
       let values = [0];
       let targets = [wallet.address];
-      let category = 1;
+
       const proposal = await daa
         .connect(secondChairman)
-        ["propose(address[],uint256[],bytes[],string,uint8)"](
-          targets,
-          values,
-          calldata,
-          description,
-          category
-        );
+        .propose(targets, values, calldata, description);
 
       const receiptProposal = await proposal.wait();
       const event = receiptProposal.events.find(
@@ -274,7 +267,7 @@ describe("DAA", () => {
       expect(event[3]).to.deep.eq(values, "Values don't match");
       expect(event[5]).to.deep.eq(calldata, "Calldata don't match");
       expect(event[8]).to.eq(description);
-      expect(event[9]).to.eq(category);
+      expect(event[9]).to.eq(0);
     });
 
     it("proposals get assigned to the correct voting slots", async () => {
@@ -1183,13 +1176,7 @@ async function createQueueAndVoteProposal(
 ) {
   const transaction = await daa
     .connect(proposingMember)
-    ["propose(address[],uint256[],bytes[],string,uint8)"](
-      targets,
-      values,
-      transferCalldatas,
-      description,
-      3
-    );
+    .propose(targets, values, transferCalldatas, description);
 
   const proposalArgs = [
     targets,

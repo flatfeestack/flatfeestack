@@ -270,7 +270,7 @@ contract DAA is
 
         ProposalCore storage proposal = _buildProposal(
             proposalId,
-            ProposalCategory.Generic
+            calldatasArray
         );
 
         emit ProposalCreated(

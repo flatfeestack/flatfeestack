@@ -28,6 +28,8 @@ abstract contract GovernorUpgradeable is
         keccak256(
             "ExtendedBallot(uint256 proposalId,uint8 support,string reason,bytes params)"
         );
+    bytes4 private constant setVotingSlotSignature =
+        bytes4(keccak256("setVotingSlot(uint256)"));
 
     event DAAProposalCreated(
         uint256 indexed proposalId,
@@ -40,6 +42,18 @@ abstract contract GovernorUpgradeable is
         uint256 endBlock,
         string description,
         ProposalCategory indexed category
+    );
+
+    event ExtraOrdinaryAssemblyRequested(
+        uint256 indexed proposalId,
+        address indexed proposer,
+        address[] targets,
+        uint256[] values,
+        string[] signatures,
+        bytes[] calldatas,
+        uint256 startBlock,
+        uint256 endBlock,
+        string description
     );
 
     enum ProposalCategory {
@@ -216,34 +230,7 @@ abstract contract GovernorUpgradeable is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public virtual override returns (uint256) {
-        return
-            _propose(
-                targets,
-                values,
-                calldatas,
-                description,
-                ProposalCategory.Generic
-            );
-    }
-
-    function propose(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        string memory description,
-        ProposalCategory category
-    ) public returns (uint256) {
-        return _propose(targets, values, calldatas, description, category);
-    }
-
-    function _propose(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        string memory description,
-        ProposalCategory category
-    ) private returns (uint256) {
+    ) public virtual override(IGovernorUpgradeable) returns (uint256) {
         uint256 proposalId = _checkAndHashProposal(
             targets,
             values,
@@ -251,7 +238,7 @@ abstract contract GovernorUpgradeable is
             description
         );
 
-        ProposalCore storage proposal = _buildProposal(proposalId, category);
+        ProposalCore storage proposal = _buildProposal(proposalId, calldatas);
 
         emit ProposalCreated(
             proposalId,
@@ -278,6 +265,20 @@ abstract contract GovernorUpgradeable is
             proposal.category
         );
 
+        if (proposal.category == ProposalCategory.ExtraordinaryVote) {
+            emit ExtraOrdinaryAssemblyRequested(
+                proposalId,
+                _msgSender(),
+                targets,
+                values,
+                new string[](targets.length),
+                calldatas,
+                proposal.voteStart._deadline,
+                proposal.voteEnd._deadline,
+                description
+            );
+        }
+
         return proposalId;
     }
 
@@ -286,7 +287,7 @@ abstract contract GovernorUpgradeable is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         require(
             getVotes(_msgSender(), block.number - 1) >= proposalThreshold(),
             "Proposer votes below threshold"
@@ -308,21 +309,39 @@ abstract contract GovernorUpgradeable is
 
     function _buildProposal(
         uint256 proposalId,
-        ProposalCategory category
+        bytes[] memory calldatas
     ) internal returns (ProposalCore storage) {
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
-        uint256 nextSlot = _getNextPossibleVotingSlot();
+        bool isRequestingExtraOrdinaryVotingSlot = false;
+        for (uint256 i = 0; i < calldatas.length; i++) {
+            bytes4 functionSignature = bytes4(calldatas[i]);
+            if (functionSignature == setVotingSlotSignature) {
+                isRequestingExtraOrdinaryVotingSlot = true;
+                break;
+            }
+        }
 
-        uint64 start = nextSlot.toUint64();
-        uint64 end = start + votingPeriod().toUint64();
+        if (isRequestingExtraOrdinaryVotingSlot) {
+            uint64 start = block.number.toUint64() + votingDelay().toUint64();
+            uint64 end = start + votingPeriod().toUint64();
 
-        proposal.voteStart.setDeadline(start);
-        proposal.voteEnd.setDeadline(end);
-        proposal.category = category;
+            proposal.voteStart.setDeadline(start);
+            proposal.voteEnd.setDeadline(end);
+            proposal.category = ProposalCategory.ExtraordinaryVote;
+        } else {
+            uint256 nextSlot = _getNextPossibleVotingSlot();
 
-        votingSlots[nextSlot].push(proposalId);
+            uint64 start = nextSlot.toUint64();
+            uint64 end = start + votingPeriod().toUint64();
+
+            proposal.voteStart.setDeadline(start);
+            proposal.voteEnd.setDeadline(end);
+            proposal.category = ProposalCategory.Generic;
+
+            votingSlots[nextSlot].push(proposalId);
+        }
 
         return proposal;
     }
