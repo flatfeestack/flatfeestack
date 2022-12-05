@@ -152,7 +152,12 @@ contract DAA is
     // the voting slot has to be four weeks from now
     // it is calculated in blocks and we assume that 7200 blocks will be mined in a day
     function setVotingSlot(uint256 blockNumber) public returns (uint256) {
-        require(membershipContract.isChairman(msg.sender), "only chairman");
+        require(
+            membershipContract.isChairman(msg.sender) ||
+                _msgSender() == _executor(),
+            "only chairman or governor"
+        );
+
         require(
             blockNumber >= block.number + 201600,
             "Must be a least a month from now"
@@ -305,5 +310,29 @@ contract DAA is
         uint256 newSlotCloseTime
     ) external onlyGovernance {
         slotCloseTime = newSlotCloseTime;
+    }
+
+    // this overs the case that an extraordinary vote needs 20% of all members on
+    function _quorumReached(
+        uint256 proposalId
+    )
+        internal
+        view
+        virtual
+        override(GovernorCountingSimpleUpgradeable, GovernorUpgradeable)
+        returns (bool)
+    {
+        ProposalCategory proposalCategory = _proposals[proposalId].category;
+        if (proposalCategory != ProposalCategory.ExtraordinaryVote) {
+            return super._quorumReached(proposalId);
+        }
+
+        ProposalVote storage proposalVote = _proposalVotes[proposalId];
+
+        uint256 voteStart = proposalSnapshot(proposalId);
+        uint256 neededQuorum = (token.getPastTotalSupply(voteStart) * 20) /
+            quorumDenominator();
+        return
+            neededQuorum <= proposalVote.forVotes + proposalVote.abstainVotes;
     }
 }
