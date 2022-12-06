@@ -2,7 +2,10 @@ import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { deployMembershipContract } from "./helpers/deployContracts";
+import {
+  deployMembershipContract,
+  deployWalletContract,
+} from "./helpers/deployContracts";
 import type { Contract } from "ethers";
 
 describe("Membership", () => {
@@ -265,6 +268,7 @@ describe("Membership", () => {
     });
   });
 
+  // this function is only callable by the owner, which is the first chairman in the tests, but the timelock controller in reality
   describe("setMembershipFee", () => {
     it("allows to set the membership fee", async () => {
       const { firstChairman, membership } = await deployFixture();
@@ -276,6 +280,63 @@ describe("Membership", () => {
       expect(await membership.membershipFee()).to.eq(
         ethers.utils.parseUnits("1", 1)
       );
+    });
+
+    it("can only be set by owner", async () => {
+      const { secondChairman, membership } = await deployFixture();
+      const newFee = ethers.utils.parseEther("2.0");
+      await expect(
+        membership.connect(secondChairman).setMembershipFee(newFee)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  // this function is only callable by the owner, which is the first chairman in the tests, but the timelock controller in reality
+  describe("setMinimumChairmen", () => {
+    it("allows to set the minimum chairmen", async () => {
+      const { firstChairman, membership } = await deployFixture();
+
+      await membership.connect(firstChairman).setMinimumChairmen(2);
+
+      expect(await membership.minimumChairmen()).to.eq(2);
+    });
+
+    it("can not increase if there are to few chairmen", async () => {
+      const { firstChairman, membership } = await deployFixture();
+      await expect(
+        membership.connect(firstChairman).setMinimumChairmen(3)
+      ).to.be.revertedWith("To few chairmen!");
+    });
+
+    it("can only be set by owner", async () => {
+      const { secondChairman, membership } = await deployFixture();
+      await expect(
+        membership.connect(secondChairman).setMinimumChairmen(27)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  // this function is only callable by the owner, which is the first chairman in the tests, but the timelock controller in reality
+  describe("setNewWalletAddress", () => {
+    it("allows to set a new wallet address", async () => {
+      const { firstChairman, membership } = await deployFixture();
+
+      const newWallet = await deployWalletContract(firstChairman);
+
+      await expect(
+        membership.connect(firstChairman).setNewWalletAddress(newWallet.address)
+      ).to.emit(membership, "ChangeInWalletAddress");
+    });
+
+    it("can only be set by owner", async () => {
+      const { firstChairman, secondChairman, membership } =
+        await deployFixture();
+      const newWallet = await deployWalletContract(firstChairman);
+      await expect(
+        membership
+          .connect(secondChairman)
+          .setNewWalletAddress(newWallet.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 

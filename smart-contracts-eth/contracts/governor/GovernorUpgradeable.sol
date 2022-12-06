@@ -65,6 +65,7 @@ abstract contract GovernorUpgradeable is
     // BlockNumber => ProposalId[]
     mapping(uint256 => uint256[]) public votingSlots;
 
+    // number of blocks before voting slot closes for submission
     uint256 public slotCloseTime;
 
     DoubleEndedQueueUpgradeable.Bytes32Deque private _governanceCall;

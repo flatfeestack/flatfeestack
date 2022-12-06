@@ -53,11 +53,13 @@ contract DAA is
     }
 
     function votingDelay() public pure override returns (uint256) {
-        return 0; // Votes get assigned to slots, so delay is differt ervery time
+        return 0;
+        // Votes get assigned to slots, so delay is differs every time
     }
 
     function votingPeriod() public pure override returns (uint256) {
-        return 7200; // 1 day in blocks
+        return 7200;
+        // 1 day in blocks
     }
 
     function proposalThreshold() public pure override returns (uint256) {
@@ -242,7 +244,8 @@ contract DAA is
         require(_foundingSetupDone == false, "already done");
 
         // Create slot
-        uint256 slotBlockNumber = block.number + slotCloseTime + 1; // First slot is in a week
+        uint256 slotBlockNumber = block.number + slotCloseTime + 1;
+        // First slot is in a week
         slots.push(slotBlockNumber);
         emit NewTimeslotSet(slotBlockNumber);
 
@@ -296,5 +299,11 @@ contract DAA is
         );
 
         _foundingSetupDone = true;
+    }
+
+    function setSlotCloseTime(
+        uint256 newSlotCloseTime
+    ) external onlyGovernance {
+        slotCloseTime = newSlotCloseTime;
     }
 }
