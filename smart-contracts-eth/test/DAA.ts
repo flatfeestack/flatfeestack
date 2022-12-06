@@ -1107,6 +1107,65 @@ describe("DAA", () => {
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });
+
+  describe("setSlotCloseTime", () => {
+    it("can set new slot close time", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstChairman, secondChairman, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newSlotCloseTime = 100800;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData("setSlotCloseTime", [
+          newSlotCloseTime,
+        ]),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I would like to expand the slot close time.";
+
+      await createQueueAndVoteProposal(
+        daa,
+        timelock,
+        firstChairman,
+        firstVotingSlot,
+        [firstChairman, secondChairman, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      const proposalArgs = [
+        targets,
+        values,
+        transferCalldatas,
+        keccak256(toUtf8Bytes(description)),
+      ];
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstChairman).execute(...proposalArgs);
+      expect(await daa.connect(firstChairman).slotCloseTime()).to.eq(
+        newSlotCloseTime
+      );
+    });
+
+    it("slot close time can not be set directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstChairman } = fixtures.entities;
+
+      const newSlotCloseTime = 100800;
+      await expect(
+        daa.connect(firstChairman).setSlotCloseTime(newSlotCloseTime)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
 });
 
 async function createQueueAndVoteProposal(

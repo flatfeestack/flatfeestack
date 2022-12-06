@@ -39,6 +39,11 @@ contract Membership is
         bool removedOrAdded
     );
 
+    event ChangeInWalletAddress(
+        address indexed oldWallet,
+        address indexed newWallet
+    );
+
     function initialize(
         address _firstChairman,
         address _secondChairman,
@@ -49,6 +54,7 @@ contract Membership is
         minimumChairmen = 2;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
+        emit ChangeInWalletAddress(address(0x0), address(_wallet));
 
         chairmen.push(_firstChairman);
         chairmen.push(_secondChairman);
@@ -179,8 +185,19 @@ contract Membership is
         }
     }
 
-    function setMembershipFee(uint256 newMembershipFee) public chairmenOnly {
+    function setMembershipFee(uint256 newMembershipFee) external onlyOwner {
         membershipFee = newMembershipFee;
+    }
+
+    function setMinimumChairmen(uint256 newMinimumChairmen) external onlyOwner {
+        require(newMinimumChairmen <= chairmen.length, "To few chairmen!");
+        minimumChairmen = newMinimumChairmen;
+    }
+
+    function setNewWalletAddress(Wallet newWallet) external onlyOwner {
+        address oldWallet = address(_wallet);
+        _wallet = newWallet;
+        emit ChangeInWalletAddress(oldWallet, address(newWallet));
     }
 
     function removeMember(address _adr) public {
