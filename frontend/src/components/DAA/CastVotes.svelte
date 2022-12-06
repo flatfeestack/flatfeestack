@@ -94,7 +94,7 @@
       if (event === undefined) {
         voteValues = {
           ...voteValues,
-          [proposal.id]: { value: 0, reason: "", canVote: true },
+          [proposal.id]: { value: -1, reason: "", canVote: true },
         };
         hasAnyVotes = true;
       } else {
@@ -118,6 +118,10 @@
 
   async function castVotes() {
     for (const [key, value] of Object.entries(voteValues)) {
+      if (!value.canVote || value.value === -1) {
+        continue;
+      }
+
       if (value.reason.trim() === "") {
         await $daaContract.castVote(key, value.value);
       } else {
