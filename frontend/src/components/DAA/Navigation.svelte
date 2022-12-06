@@ -27,6 +27,7 @@
   import MetaMaskRequired from "./MetaMaskRequired.svelte";
   import { error } from "../../ts/mainStore";
   import Dialog from "../Dialog.svelte";
+  import truncateEthAddress from "../../utils/truncateEthereumAddress";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -113,7 +114,7 @@
     display: flex;
   }
 
-  nav {
+  .navigation {
     padding-top: 2rem;
     display: flex;
     flex-flow: column;
@@ -121,19 +122,24 @@
     background-color: var(--secondary-100);
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
+    padding: 2rem 1em;
   }
 
-  nav :global(a),
-  nav {
+  .navigation :global(a),
+  .navigation {
     display: block;
     color: var(--secondary-700);
-    padding: 1em;
     text-decoration: none;
     transition: color 0.3s linear, background-color 0.3s linear;
+    word-wrap: break-word;
   }
 
-  nav :global(a:hover),
-  nav {
+  .navigation :global(a) {
+    padding: 1em 0;
+  }
+
+  .navigation :global(a:hover),
+  .navigation {
     background-color: var(--primary-300);
     color: var(--primary-900);
   }
@@ -141,10 +147,6 @@
   .memberArea {
     display: flex;
     flex-flow: column;
-    max-width: 12rem;
-    margin-left: auto;
-    padding: 1rem;
-    border-left: solid 1px var(--secondary-300);
     overflow-wrap: anywhere;
     font-size: 0.8rem;
   }
@@ -173,20 +175,43 @@
 
   .content {
     padding: 1rem;
+    width: 100%;
   }
 </style>
 
 <div class="page">
-  <nav use:links>
-    <NavItem href="/daa/votes" icon={faList} label="Votes" />
-    <NavItem href="/daa/treasury" icon={faMoneyBill} label="Treasury" />
-    <NavItem
-      href="/daa/membershipRequests"
-      icon={faHand}
-      label="Membership requests"
-    />
-    <NavItem href="/daa/chairman" icon={faHippo} label="Chairman functions" />
-  </nav>
+  <div class="navigation">
+    <div class="memberArea">
+      <Fa icon={faUserAstronaut} size="3x" />
+
+      {#if $userEthereumAddress === null}
+        <button class="button1" on:click={connectWallet}>Connect wallet</button>
+      {:else}
+        <p>
+          Hello {truncateEthAddress($userEthereumAddress)}! <br />
+          Your status: {membershipStatus}
+        </p>
+        <button class="py-2 button3 my-2" on:click={showMembershipStatus}>
+          Approval process
+        </button>
+        {#if $membershipStatusValue > 0}
+          <button class="py-2 button3 my-2" on:click={leaveFlatFeeStack}>
+            Leave FlatFeeStack
+          </button>
+        {/if}
+      {/if}
+    </div>
+    <nav use:links>
+      <NavItem href="/daa/votes" icon={faList} label="Votes" />
+      <NavItem href="/daa/treasury" icon={faMoneyBill} label="Treasury" />
+      <NavItem
+        href="/daa/membershipRequests"
+        icon={faHand}
+        label="Membership requests"
+      />
+      <NavItem href="/daa/chairman" icon={faHippo} label="Chairman functions" />
+    </nav>
+  </div>
   <div class="content">
     {#if $isSubmitting}
       <Spinner />
@@ -194,27 +219,6 @@
       <div />
     {:else}
       <slot />
-    {/if}
-  </div>
-
-  <div class="memberArea">
-    <Fa icon={faUserAstronaut} size="3x" />
-
-    {#if $userEthereumAddress === null}
-      <button class="button1" on:click={connectWallet}>Connect wallet</button>
-    {:else}
-      <p>
-        Hello {$userEthereumAddress}! <br />
-        Your status: {membershipStatus}
-      </p>
-      <button class="py-2 button3 my-2" on:click={showMembershipStatus}>
-        Approval process
-      </button>
-      {#if $membershipStatusValue > 0}
-        <button class="py-2 button3 my-2" on:click={leaveFlatFeeStack}>
-          Leave FlatFeeStack
-        </button>
-      {/if}
     {/if}
   </div>
 </div>
