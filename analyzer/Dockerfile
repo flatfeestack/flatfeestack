@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS builder
+FROM golang:1.20rc1-alpine3.17 AS builder
 RUN apk add --update --no-cache git cmake make gcc musl-dev openssl-dev
 WORKDIR /app
 RUN git clone https://github.com/libgit2/libgit2.git
@@ -8,8 +8,7 @@ RUN go mod download
 COPY *.go ./
 RUN go build
 
-FROM alpine:3.16
-RUN apk add --update --no-cache git
+FROM alpine:3.17
 RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
 WORKDIR /app
 COPY banner.txt .
