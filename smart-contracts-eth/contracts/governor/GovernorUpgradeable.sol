@@ -286,7 +286,7 @@ abstract contract GovernorUpgradeable is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         require(
             getVotes(_msgSender(), block.number - 1) >= proposalThreshold(),
             "Proposer votes below threshold"
@@ -571,7 +571,7 @@ abstract contract GovernorUpgradeable is
         return address(this);
     }
 
-    function _getNextPossibleVotingSlot() internal returns (uint256) {
+    function _getNextPossibleVotingSlot() internal view returns (uint256) {
         for (uint256 i = 0; i < slots.length; i++) {
             if (block.number < (slots[i] - slotCloseTime)) {
                 return slots[i];
@@ -590,5 +590,5 @@ abstract contract GovernorUpgradeable is
         return votingSlots[slotNumber].length;
     }
 
-    uint256[46] private __gap;
+    uint256[50] private __gap;
 }
