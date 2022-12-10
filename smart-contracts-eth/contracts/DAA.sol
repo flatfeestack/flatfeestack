@@ -348,7 +348,7 @@ contract DAA is
         slotCloseTime = newSlotCloseTime;
     }
 
-    // this overs the case that an extraordinary vote needs 20% of all members on
+    // this overs the case that an extraordinary vote needs 20% of all members to participate
     function _quorumReached(
         uint256 proposalId
     )

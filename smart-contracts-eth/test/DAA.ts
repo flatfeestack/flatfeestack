@@ -660,20 +660,30 @@ describe("DAA", () => {
       await mine(1);
       expect(await membership.getPastTotalSupply(previousBlock)).to.eq(3);
 
-      await Promise.all(
-        [...Array(3).keys()].map(async (_element) => {
-          const wallet = ethers.Wallet.createRandom().connect(ethers.provider);
+      const [
+        _nonMember,
+        _firstChairman,
+        _secondChairman,
+        _regularMember,
+        newMember1,
+        newMember2,
+        newMember3,
+      ] = await ethers.getSigners();
 
-          await firstChairman.sendTransaction({
-            to: wallet.address,
-            value: ethers.utils.parseEther("0.1"),
-          });
-          await addNewMember(wallet, firstChairman, secondChairman, membership);
-          await membership.connect(wallet).payMembershipFee({
-            value: membershipFee,
-          });
-        })
-      );
+      await addNewMember(newMember1, firstChairman, secondChairman, membership);
+      await membership.connect(newMember1).payMembershipFee({
+        value: membershipFee,
+      });
+
+      await addNewMember(newMember2, firstChairman, secondChairman, membership);
+      await membership.connect(newMember2).payMembershipFee({
+        value: membershipFee,
+      });
+
+      await addNewMember(newMember3, firstChairman, secondChairman, membership);
+      await membership.connect(newMember3).payMembershipFee({
+        value: membershipFee,
+      });
 
       previousBlock = await ethers.provider.getBlockNumber();
       await mine(1);
@@ -706,7 +716,7 @@ describe("DAA", () => {
 
       await mine(await daa.votingPeriod());
 
-      expect(await daa.state(proposalId)).to.eq(3);
+      expect(await daa.connect(firstChairman).state(proposalId)).to.eq(3);
     });
 
     it("executed proposal has state executed", async () => {
