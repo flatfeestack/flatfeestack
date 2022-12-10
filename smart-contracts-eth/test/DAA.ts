@@ -920,6 +920,28 @@ describe("DAA", () => {
         .to.emit(daa, "NewTimeslotSet")
         .withArgs(proposedVotingSlotTime);
     });
+
+    it("keeps the slots in sorted order", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstChairman } = fixtures.entities;
+
+      const slotInThreeMonths =
+        (await time.latestBlock()) + 3 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInThreeMonths);
+
+      const slotInAMonth = (await time.latestBlock()) + 1 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInAMonth);
+
+      const slotInTwoMonths =
+        (await time.latestBlock()) + 2 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInTwoMonths);
+
+      expect(await daa.slots(1)).to.eq(slotInAMonth);
+      expect(await daa.slots(2)).to.eq(fixtures.firstVotingSlot);
+      expect(await daa.slots(3)).to.eq(slotInTwoMonths);
+      expect(await daa.slots(4)).to.eq(slotInThreeMonths);
+    });
   });
 
   describe("execute", () => {

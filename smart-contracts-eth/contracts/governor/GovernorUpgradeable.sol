@@ -590,7 +590,7 @@ abstract contract GovernorUpgradeable is
         return address(this);
     }
 
-    function _getNextPossibleVotingSlot() internal returns (uint256) {
+    function _getNextPossibleVotingSlot() internal view returns (uint256) {
         for (uint256 i = 0; i < slots.length; i++) {
             if (block.number < (slots[i] - slotCloseTime)) {
                 return slots[i];

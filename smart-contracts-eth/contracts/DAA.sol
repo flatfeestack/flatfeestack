@@ -9,6 +9,7 @@ import "./governor/GovernorVotesUpgradeable.sol";
 import "./governor/GovernorCountingSimpleUpgradeable.sol";
 import "./governor/GovernorVotesQuorumFractionUpgradeable.sol";
 import "./governor/GovernorTimelockControlUpgradeable.sol";
+
 import "./Membership.sol";
 
 contract DAA is
@@ -162,12 +163,47 @@ contract DAA is
             blockNumber >= block.number + 201600,
             "Must be a least a month from now"
         );
-        for (uint256 i = 0; i < slots.length; i++) {
+
+        uint256 previousMaxIndex = slots.length - 1;
+
+        for (uint256 i = previousMaxIndex; i >= 0; i--) {
             if (slots[i] == blockNumber) {
                 revert("Vote slot already exists");
             }
+
+            if (i == 0) {
+                // prevent underflow
+                break;
+            }
         }
+
+        uint256 targetIndex = 0;
+        for (uint256 i = previousMaxIndex; i >= 0; i--) {
+            if (slots[i] < blockNumber) {
+                targetIndex = i + 1;
+                break;
+            }
+
+            if (i == 0) {
+                // prevent underflow
+                break;
+            }
+        }
+
         slots.push(blockNumber);
+        if (targetIndex < slots.length - 1) {
+            for (uint256 i = previousMaxIndex; i >= targetIndex; i--) {
+                slots[i + 1] = slots[i];
+
+                if (i == 0) {
+                    // prevent underflow
+                    break;
+                }
+            }
+        }
+
+        slots[targetIndex] = blockNumber;
+
         emit NewTimeslotSet(blockNumber);
         return blockNumber;
     }
