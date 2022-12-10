@@ -9,41 +9,51 @@ import (
 )
 
 var (
-	day0  = time.Time{}
-	day01 = time.Time{}.Add(time.Duration(1) * time.Second)
-	day1  = time.Time{}.Add(time.Duration(1*24) * time.Hour)
-	day2  = time.Time{}.Add(time.Duration(2*24) * time.Hour)
-	day3  = time.Time{}.Add(time.Duration(3*24) * time.Hour)
-	day4  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
+	day1  = time.Time{}
+	day11 = time.Time{}.Add(time.Duration(1) * time.Second)
+	day2  = time.Time{}.Add(time.Duration(1*24) * time.Hour)
+	day3  = time.Time{}.Add(time.Duration(2*24) * time.Hour)
+	day4  = time.Time{}.Add(time.Duration(3*24) * time.Hour)
+	day5  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
 )
 
 func TestDailyRunnerOneContributor(t *testing.T) {
 	setup()
 	defer teardown()
 
+	//we have 5 sponsors, but only the first sponsor added funds
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
+	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
 
+	//we have 4 contributors, 1 has added a git email
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+
+	//we have 4 repos, ste is contribution with 0.5 to tomp2p
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
-	setupContributor(t, *repos[0], day0, day2, []string{"ste@ste.ste"}, []float64{0.5})
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	//tom is sponsoring the repo tomp2p at time 0
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupUnSponsor(t, sponsors[0], repos[0], day0)
+	//tom is unsponsoring the repo tomp2p at time 0, no error should occur
+	err = setupUnSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day0)
+	//tom is sponsoring again the repo at time 0, no error should occur
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Error(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day01)
+	//tom is sponsoring for the first second
+	err = setupSponsor(t, sponsors[0], repos[0], day11)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
 	m1, err := findSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
+	//120 / 365 * 1'000'000
 	assert.Equal(t, m1["USD"].Balance.String(), "328767")
 
 	m2, err := findSumDailySponsors(*sponsors[0], *payId)
@@ -56,16 +66,52 @@ func TestDailyRunnerOneContributor(t *testing.T) {
 
 }
 
+func TestDailyRunnerOneContributorLowFunds(t *testing.T) {
+	setup()
+	defer teardown()
+
+	//we have 5 sponsors, but only the first sponsor added funds
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	setupFunds(t, *sponsors[0], "USD", 2, 2, nil, day1)
+
+	//we have 4 contributors, 1 has added a git email
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+
+	//we have 4 repos, ste is contribution with 0.5 to tomp2p
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
+
+	//tom is sponsoring the repo tomp2p at time 0
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
+	assert.Nil(t, err)
+	//tom is unsponsoring the repo tomp2p at time 0, no error should occur
+	err = setupUnSponsor(t, sponsors[0], repos[0], day1)
+	assert.Nil(t, err)
+	//tom is sponsoring again the repo at time 0, no error should occur
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
+	assert.Error(t, err)
+	//tom is sponsoring for the first second
+	err = setupSponsor(t, sponsors[0], repos[0], day11)
+	assert.Nil(t, err)
+
+	//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
+	err = dailyRunner(day3)
+	assert.Nil(t, err)
+	//check send
+	assert.Equal(t, 1, emailNotifications)
+}
+
 func TestDailyRunnerOneFuture(t *testing.T) {
 	setup()
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
+	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
 
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
 
 	err = dailyRunner(day2)
@@ -84,9 +130,9 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
-	payId2 := setupFunds(t, *sponsors[1], "USD", 365, 120, nil)
-	payId3 := setupFunds(t, *sponsors[2], "USD", 365, 120, nil)
+	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
+	payId2 := setupFunds(t, *sponsors[1], "USD", 365, 120, nil, day1)
+	payId3 := setupFunds(t, *sponsors[2], "USD", 365, 120, nil, day1)
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
@@ -94,29 +140,29 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	setupGitEmail(t, *contributors[2], "luc@luc.luc")
 
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
-	setupContributor(t, *repos[0], day0, day2, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.3, 0.3})
-	setupContributor(t, *repos[1], day0, day2, []string{"luc@luc.luc", "pea@pea.pea"}, []float64{0.4, 0.2})
+	setupContributor(t, *repos[0], day1, day2, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.3, 0.3})
+	setupContributor(t, *repos[1], day1, day2, []string{"luc@luc.luc", "pea@pea.pea"}, []float64{0.4, 0.2})
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupUnSponsor(t, sponsors[0], repos[0], day0)
+	err = setupUnSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day0)
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Error(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day01)
+	err = setupSponsor(t, sponsors[0], repos[0], day11)
 	assert.Nil(t, err)
 
-	err = setupSponsor(t, sponsors[1], repos[0], day0)
+	err = setupSponsor(t, sponsors[1], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[1], repos[1], day0)
-	assert.Nil(t, err)
-
-	err = setupSponsor(t, sponsors[2], repos[0], day0)
-	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[2], repos[1], day0)
+	err = setupSponsor(t, sponsors[1], repos[1], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = setupSponsor(t, sponsors[2], repos[0], day1)
+	assert.Nil(t, err)
+	err = setupSponsor(t, sponsors[2], repos[1], day1)
+	assert.Nil(t, err)
+
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	//the distribution needs to be as follows:
@@ -169,9 +215,9 @@ func TestDailyRunnerThreeContributorsTwice(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
-	payId2 := setupFunds(t, *sponsors[1], "USD", 365, 120, nil)
-	payId3 := setupFunds(t, *sponsors[2], "USD", 365, 120, nil)
+	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
+	payId2 := setupFunds(t, *sponsors[1], "USD", 365, 120, nil, day1)
+	payId3 := setupFunds(t, *sponsors[2], "USD", 365, 120, nil, day1)
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
@@ -179,38 +225,38 @@ func TestDailyRunnerThreeContributorsTwice(t *testing.T) {
 	setupGitEmail(t, *contributors[2], "luc@luc.luc")
 
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
-	setupContributor(t, *repos[0], day0, day3, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.3, 0.3})
-	setupContributor(t, *repos[1], day0, day3, []string{"luc@luc.luc", "pea@pea.pea"}, []float64{0.4, 0.2})
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.3, 0.3})
+	setupContributor(t, *repos[1], day1, day3, []string{"luc@luc.luc", "pea@pea.pea"}, []float64{0.4, 0.2})
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupUnSponsor(t, sponsors[0], repos[0], day0)
+	err = setupUnSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day0)
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Error(t, err)
-	err = setupSponsor(t, sponsors[0], repos[0], day01)
+	err = setupSponsor(t, sponsors[0], repos[0], day11)
 	assert.Nil(t, err)
 
-	err = setupSponsor(t, sponsors[1], repos[0], day0)
+	err = setupSponsor(t, sponsors[1], repos[0], day1)
 	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[1], repos[1], day0)
-	assert.Nil(t, err)
-
-	err = setupSponsor(t, sponsors[2], repos[0], day0)
-	assert.Nil(t, err)
-	err = setupSponsor(t, sponsors[2], repos[1], day0)
+	err = setupSponsor(t, sponsors[1], repos[1], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = setupSponsor(t, sponsors[2], repos[0], day1)
+	assert.Nil(t, err)
+	err = setupSponsor(t, sponsors[2], repos[1], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	err = dailyRunner(day4)
+	assert.Nil(t, err)
+
+	err = dailyRunner(day5)
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
@@ -249,13 +295,13 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
+	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	m2, err := findSumDailySponsors(*sponsors[0], *payId)
@@ -264,13 +310,13 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
-	setupContributor(t, *repos[0], day0, day3, []string{"ste@ste.ste"}, []float64{0.4})
+	setupContributor(t, *repos[0], day1, day4, []string{"ste@ste.ste"}, []float64{0.4})
 
 	//this needs to fail, as we already processed this
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.NotNil(t, err)
 
-	err = dailyRunner(day3)
+	err = dailyRunner(day4)
 	assert.Nil(t, err)
 
 	m3, err := findSumDailySponsors(*sponsors[0], *payId)
@@ -287,18 +333,18 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
-	payId2 := setupFunds(t, *sponsors[0], "GAS", 360, 200, payId1)
-	payId3 := setupFunds(t, *sponsors[1], "GAS", 365, 300, nil)
+	payId1 := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
+	payId2 := setupFunds(t, *sponsors[0], "GAS", 360, 200, payId1, day1)
+	payId3 := setupFunds(t, *sponsors[1], "GAS", 365, 300, nil, day1)
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
 
-	err = setupSponsor(t, sponsors[1], repos[0], day0)
+	err = setupSponsor(t, sponsors[1], repos[0], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	m2, err := findSumDailySponsors(*sponsors[1], *payId1)
@@ -310,9 +356,9 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 
 	contributors := setupUsers(t, "ste@ste.ste c1")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
-	setupContributor(t, *repos[0], day0, day3, []string{"ste@ste.ste"}, []float64{0.4})
+	setupContributor(t, *repos[0], day1, day4, []string{"ste@ste.ste"}, []float64{0.4})
 
-	err = dailyRunner(day3)
+	err = dailyRunner(day4)
 	assert.Nil(t, err)
 
 	m4, err := findSumDailySponsors(*sponsors[0], *payId2)
@@ -334,22 +380,22 @@ func TestDailyRunnerSponsor(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil)
+	payId := setupFunds(t, *sponsors[0], "USD", 365, 120, nil, day1)
 	setupSponsorUser(t, *sponsors[0], *sponsors[1])
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
-	setupContributor(t, *repos[0], day0, day2, []string{"ste@ste.ste"}, []float64{0.5})
-	setupContributor(t, *repos[1], day0, day2, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.5, 0.5})
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
+	setupContributor(t, *repos[1], day1, day3, []string{"ste@ste.ste", "pea@pea.pea"}, []float64{0.5, 0.5})
 
-	err := setupSponsor(t, sponsors[0], repos[0], day0)
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
 
-	err = setupSponsor(t, sponsors[1], repos[1], day0)
+	err = setupSponsor(t, sponsors[1], repos[1], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
@@ -386,7 +432,7 @@ func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Ti
 		RepoId:    repoId,
 		DateFrom:  from,
 		DateTo:    to,
-		GitUrls:   []string{"test"},
+		GitUrl:    "test",
 	}
 	err := insertAnalysisRequest(a, now)
 	assert.Nil(t, err)
@@ -396,10 +442,10 @@ func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Ti
 	}
 }
 
-func setupFunds(t *testing.T, uid uuid.UUID, currency string, freq int64, balance int64, oldPaymentCycleId *uuid.UUID) *uuid.UUID {
+func setupFunds(t *testing.T, uid uuid.UUID, currency string, freq int64, balance int64, oldPaymentCycleId *uuid.UUID, now time.Time) *uuid.UUID {
 	pow, err := getFactorInt(currency)
 	assert.Nil(t, err)
-	paymentCycleId, err := insertNewPaymentCycleIn(1, freq, timeNow())
+	paymentCycleId, err := insertNewPaymentCycleIn(1, freq, now)
 	assert.Nil(t, err)
 	err = paymentSuccess(uid, oldPaymentCycleId, paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
 	assert.Nil(t, err)
@@ -453,7 +499,7 @@ func setupUser(email string) (*uuid.UUID, error) {
 	u := User{
 		Id:                uuid.New(),
 		StripeId:          stringPointer("strip-id"),
-		PaymentCycleOutId: &payOutId,
+		PaymentCycleOutId: payOutId,
 		Email:             email,
 	}
 

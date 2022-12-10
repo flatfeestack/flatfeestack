@@ -747,7 +747,7 @@ func insertFutureBalance(uid uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid
 	currency string, day time.Time, createdAt time.Time) error {
 
 	stmt, err := db.Prepare(`
-				INSERT INTO future_contribution(user_id, repo_id, payment_cycle_in_id, balance, 
+				INSERT INTO future_contribution(user_sponsor_id, repo_id, payment_cycle_in_id, balance, 
 				                               currency, day, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
@@ -783,7 +783,7 @@ func insertUnclaimed(email string, rid uuid.UUID, balance *big.Int, currency str
 	return handleErrMustInsertOne(res)
 }
 
-func insertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit *uuid.UUID,
+func insertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit uuid.UUID,
 	balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
 
 	stmt, err := db.Prepare(`
@@ -1146,10 +1146,10 @@ func findPaymentCycleLast(uid uuid.UUID) (PaymentCycle, error) {
 	}
 }
 
-//*********************************************************************************
-//******************************* Email handling *****************************************
-//*********************************************************************************
-
+// *********************************************************************************
+// ******************************* Email handling *****************************************
+// *********************************************************************************
+// uuid can be null for users not in our system, but having an email address
 func insertEmailSent(userId *uuid.UUID, email string, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`
 			INSERT INTO user_emails_sent(user_id, email, email_type, created_at) 

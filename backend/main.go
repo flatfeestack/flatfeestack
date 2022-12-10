@@ -65,7 +65,6 @@ type Opts struct {
 	NowpaymentsIpnKey         string
 	NowpaymentsApiUrl         string
 	NowpaymentsIpnCallbackUrl string
-	EmailParallel             int
 	ServerKey                 string
 }
 
@@ -104,8 +103,6 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
 		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
 	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
-	flag.IntVar(&o.EmailParallel, "email-parallel", lookupEnvInt("EMAIL_PARALLEL",
-		4), "How many email queues should be active")
 	flag.StringVar(&o.ServerKey, "server-key", lookupEnv("SERVER_KEY"), "make secure calls to the subsystems")
 
 	flag.Usage = func() {
@@ -325,7 +322,7 @@ func createUser(email string) (*User, error) {
 
 	user := User{
 		Id:                uuid.New(),
-		PaymentCycleOutId: &payOutId,
+		PaymentCycleOutId: payOutId,
 		Email:             email,
 		CreatedAt:         timeNow(),
 	}

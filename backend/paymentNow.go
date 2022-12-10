@@ -228,40 +228,12 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		email := user.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["url"] = opts.EmailLinkPrefix + "/user/payments"
-		other["lang"] = "en"
-
-		defaultMessage := "Crypto payment successful. See your payment here: " + other["url"]
-		e := prepareEmail(email, other,
-			"template-subject-success_", "Payment successful",
-			"template-plain-success_", defaultMessage,
-			"template-html-success_", other["lang"])
-
 		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
-			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
+			log.Infof("browser seems offline, need to send email %v", err)
 		}
 
-		emailCountId := "success-" + data.OrderId.String()
-		var c int
-		c, err = countEmailSentByEmail(email, emailCountId)
-		if err != nil {
-			writeErrorf(w, http.StatusInternalServerError, "Could not get countEmailSentByEmail: %v", err)
-			return
-		}
-		if c > 0 {
-			log.Printf("Marketing, but we already sent a notification %v", email)
-			return
-		}
-		err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
-		if err != nil {
-			writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-			return
-		}
-		sendEmail(&e)
+		sendPaymentNowFinished(user, data)
 	case "partially_paid":
 		var ub []UserBalance
 		ub, err = findUserBalancesAndType(data.OrderId, "PART_PAID", strings.ToUpper(data.PayCurrency))
@@ -292,37 +264,9 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
-
-			email := user.Email
-			var other = map[string]string{}
-			other["email"] = email
-			other["url"] = opts.EmailLinkPrefix + "/user/payments"
-			other["lang"] = "en"
-
-			defaultMessage := fmt.Sprintf("Only partial payment received (%v) of (%v), please send the rest (%v) to: ", data.ActuallyPaid, data.PayAmount, data.PayAmount-data.ActuallyPaid)
-			e := prepareEmail(email, other,
-				"template-subject-part_paid_", "Partially paid",
-				"template-plain-part_paid_", defaultMessage,
-				"template-html-part_paid_", other["lang"])
-
-			emailCountId := "failed-" + data.OrderId.String()
-			var c int
-			c, err = countEmailSentByEmail(email, emailCountId)
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", user.Id, err)
-				return
-			}
-			if c > 0 {
-				log.Printf("Marketing, but we already sent a notification %v", email)
-				return
-			}
-			err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-				return
-			}
-			sendEmail(&e)
 		}
+
+		sendPaymentNowPartially(*user, data)
 	case "expired":
 	case "failed":
 	case "refunded":
@@ -365,37 +309,9 @@ func nowWebhook(w http.ResponseWriter, r *http.Request) {
 		err = sendToBrowser(user.Id, data.OrderId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
-
-			email := user.Email
-			var other = map[string]string{}
-			other["email"] = email
-			other["url"] = opts.EmailLinkPrefix + "/user/payments"
-			other["lang"] = "en"
-
-			defaultMessage := fmt.Sprintf("Payment %v, please check payment: %s", data.PaymentStatus, other["url"])
-			e := prepareEmail(email, other,
-				"template-subject-failed_", "Payment "+data.PaymentStatus,
-				"template-plain-failed_", defaultMessage,
-				"template-html-failed_", other["lang"])
-
-			emailCountId := "failed-" + suf + "-" + data.OrderId.String()
-			var c int
-			c, err = countEmailSentByEmail(email, emailCountId)
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", user.Id, err)
-				return
-			}
-			if c > 0 {
-				log.Printf("Marketing, but we already sent a notification %v", email)
-				return
-			}
-			err = insertEmailSent(&user.Id, email, emailCountId, timeNow())
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-				return
-			}
-			sendEmail(&e)
 		}
+
+		sendPaymentNowRefunded(*user, data, suf)
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)

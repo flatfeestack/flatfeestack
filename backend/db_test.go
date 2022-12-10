@@ -15,7 +15,7 @@ func TestUser(t *testing.T) {
 	u := User{
 		Id:                uuid.New(),
 		StripeId:          stringPointer("strip-id"),
-		PaymentCycleOutId: &payOutId,
+		PaymentCycleOutId: payOutId,
 		Email:             "email",
 	}
 
@@ -52,7 +52,7 @@ func TestSponsor(t *testing.T) {
 	u := User{
 		Id:                uuid.New(),
 		StripeId:          stringPointer("strip-id"),
-		PaymentCycleOutId: &payOutId,
+		PaymentCycleOutId: payOutId,
 		Email:             "email",
 	}
 
@@ -156,7 +156,7 @@ func saveTestUser(t *testing.T, email string) uuid.UUID {
 	u := User{
 		Id:                uuid.New(),
 		StripeId:          stringPointer("strip-id"),
-		PaymentCycleOutId: &payOutId,
+		PaymentCycleOutId: payOutId,
 		Email:             email,
 	}
 
@@ -212,8 +212,8 @@ func TestAnalysisRequest(t *testing.T) {
 	a := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r.Id,
-		DateFrom:  day0,
-		DateTo:    day1,
+		DateFrom:  day1,
+		DateTo:    day2,
 		GitUrl:    *r.GitUrl,
 	}
 	err = insertAnalysisRequest(a, timeNow())
@@ -256,8 +256,8 @@ func TestAnalysisRequest2(t *testing.T) {
 	a1 := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r1.Id,
-		DateFrom:  day0,
-		DateTo:    day1,
+		DateFrom:  day1,
+		DateTo:    day2,
 		GitUrl:    *r1.GitUrl,
 	}
 	err = insertAnalysisRequest(a1, timeNow())
@@ -266,8 +266,8 @@ func TestAnalysisRequest2(t *testing.T) {
 	a2 := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r1.Id,
-		DateFrom:  day1,
-		DateTo:    day2,
+		DateFrom:  day2,
+		DateTo:    day3,
 		GitUrl:    *r1.GitUrl,
 	}
 	err = insertAnalysisRequest(a2, timeNow())
@@ -283,8 +283,8 @@ func TestAnalysisRequest2(t *testing.T) {
 	a3 := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r2.Id,
-		DateFrom:  day2,
-		DateTo:    day3,
+		DateFrom:  day3,
+		DateTo:    day4,
 		GitUrl:    *r2.GitUrl,
 	}
 	err = insertAnalysisRequest(a3, timeNow())
@@ -300,8 +300,8 @@ func TestAnalysisRequest2(t *testing.T) {
 	a4 := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r2.Id,
-		DateFrom:  day3,
-		DateTo:    day4,
+		DateFrom:  day4,
+		DateTo:    day5,
 		GitUrl:    *r2.GitUrl,
 	}
 	err = insertAnalysisRequest(a4, timeNow())
@@ -341,8 +341,8 @@ func TestAnalysisResponse(t *testing.T) {
 	a := AnalysisRequest{
 		RequestId: uuid.New(),
 		RepoId:    r.Id,
-		DateFrom:  day0,
-		DateTo:    day1,
+		DateFrom:  day1,
+		DateTo:    day2,
 		GitUrl:    *r.GitUrl,
 	}
 	err = insertAnalysisRequest(a, timeNow())
@@ -365,5 +365,5 @@ func TestAnalysisResponse(t *testing.T) {
 
 	alr, err := findLatestAnalysisRequest(r.Id)
 	assert.Nil(t, err)
-	assert.Equal(t, day2.Nanosecond(), alr.ReceivedAt.Nanosecond())
+	assert.Equal(t, day3.Nanosecond(), alr.ReceivedAt.Nanosecond())
 }

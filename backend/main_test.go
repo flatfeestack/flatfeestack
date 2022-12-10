@@ -50,6 +50,9 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
+	opts = &Opts{}
+	opts.Env = "test"
+
 	code := m.Run()
 
 	err = db.Close()

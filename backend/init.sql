@@ -121,7 +121,7 @@ CREATE INDEX IF NOT EXISTS unclaimed_email_index ON unclaimed(email); /*we do a 
 
 CREATE TABLE IF NOT EXISTS future_contribution (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id             UUID CONSTRAINT fk_user_id_fc REFERENCES users (id),
+    user_sponsor_id     UUID CONSTRAINT fk_user_id_fc REFERENCES users (id),
     repo_id             UUID CONSTRAINT fk_repo_id_fc REFERENCES repo (id),
     payment_cycle_in_id UUID CONSTRAINT fk_payment_cycle_in_id_fc REFERENCES payment_cycle_in (id),
     balance             NUMERIC(78), /*256 bits*/
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS future_contribution (
     day                 DATE NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS future_contribution_index ON future_contribution(user_id, repo_id, currency, day);
+CREATE UNIQUE INDEX IF NOT EXISTS future_contribution_index ON future_contribution(user_sponsor_id, repo_id, currency, day);
 
 CREATE TABLE IF NOT EXISTS wallet_address (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

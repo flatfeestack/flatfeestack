@@ -245,25 +245,7 @@ func addGitEmail(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	email := url.QueryEscape(body.Email)
-	var other = map[string]string{}
-	other["token"] = addGitEmailToken
-	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
-	other["lang"] = lang(r)
-
-	defaultMessage := "Is this your email address? Please confirm: " + other["url"]
-	e := prepareEmail(body.Email, other,
-		"template-subject-addgitemail_", "Validate your git email",
-		"template-plain-addgitemail_", defaultMessage,
-		"template-html-addgitemail_", other["lang"])
-
-	emailCountId := "gitemail-" + email
-	err = insertEmailSent(&user.Id, user.Email, emailCountId, timeNow())
-	if err != nil {
-		writeErrorf(w, http.StatusInternalServerError, "insert email sent failed: %v", err)
-		return
-	}
-	sendEmail(&e)
+	sendAddGit(email, addGitEmailToken, lang(r))
 }
 
 // @Summary Delete git email
@@ -790,7 +772,7 @@ func fakeUser(w http.ResponseWriter, r *http.Request, email string) {
 	u := User{
 		Email:             n,
 		Id:                uid,
-		PaymentCycleOutId: &payOutI,
+		PaymentCycleOutId: payOutI,
 		CreatedAt:         timeNow(),
 	}
 

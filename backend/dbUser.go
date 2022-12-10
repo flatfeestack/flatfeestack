@@ -12,7 +12,7 @@ type User struct {
 	InvitedId         *uuid.UUID
 	StripeId          *string    `json:"-"`
 	PaymentCycleInId  *uuid.UUID `json:"paymentCycleInId,omitempty"`
-	PaymentCycleOutId *uuid.UUID `json:"paymentCycleOutId"`
+	PaymentCycleOutId uuid.UUID  `json:"paymentCycleOutId"`
 	Email             string     `json:"email"`
 	Name              *string    `json:"name"`
 	Image             *string    `json:"image"`
@@ -175,7 +175,7 @@ func updateUserImage(uid uuid.UUID, data string) error {
 	return handleErrMustInsertOne(res)
 }
 
-//for testing
+// for testing
 func updateUserInviteId(uid uuid.UUID, inviteId uuid.UUID) error {
 	stmt, err := db.Prepare("UPDATE users SET invited_id=$1 WHERE id=$2")
 	if err != nil {

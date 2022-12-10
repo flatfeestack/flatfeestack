@@ -163,40 +163,12 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		email := u.Email
-		var other = map[string]string{}
-		other["email"] = email
-		other["url"] = opts.EmailLinkPrefix + "/user/payments"
-		other["lang"] = "en"
-
-		defaultMessage := "Payment successful. See your payment here: " + other["url"]
-		e := prepareEmail(email, other,
-			"template-subject-success_", "Payment successful",
-			"template-plain-success_", defaultMessage,
-			"template-html-success_", other["lang"])
-
-		err = sendToBrowser(uid, newPaymentCycleInId)
+		err = sendToBrowser(u.Id, newPaymentCycleInId)
 		if err != nil {
-			log.Debugf("browser offline, best effort, we write a email to %s anyway", email)
+			log.Debugf("browser offline, best effort, we write a email to %s anyway", err)
 		}
 
-		emailCountId := "success-" + newPaymentCycleInId.String()
-		var c int
-		c, err = countEmailSentByEmail(email, emailCountId)
-		if err != nil {
-			writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
-			return
-		}
-		if c > 0 {
-			log.Printf("Marketing, but we already sent a notification %v", email)
-			return
-		}
-		err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
-		if err != nil {
-			writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-			return
-		}
-		sendEmail(&e)
+		sendStripeSuccess(*u, newPaymentCycleInId)
 	// ... handle other event types
 	case "payment_intent.requires_action":
 		//again
@@ -244,37 +216,9 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		err = sendToBrowser(uid, newPaymentCycleInId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
-
-			email := u.Email
-			var other = map[string]string{}
-			other["email"] = email
-			other["url"] = opts.EmailLinkPrefix + "/user/payments"
-			other["lang"] = "en"
-
-			defaultMessage := "Action is required, please go to the following site to continue: " + other["url"]
-			e := prepareEmail(email, other,
-				"template-subject-authreq_", "Authentication requested",
-				"template-plain-authreq_", defaultMessage,
-				"template-html-authreq_", other["lang"])
-
-			emailCountId := "authreq-" + newPaymentCycleInId.String()
-			var c int
-			c, err = countEmailSentByEmail(email, emailCountId)
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
-				return
-			}
-			if c > 0 {
-				log.Printf("Marketing, but we already sent a notification %v", email)
-				return
-			}
-			err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-				return
-			}
-			sendEmail(&e)
 		}
+
+		sendStripeAction(*u, newPaymentCycleInId)
 	//case "payment_intent.requires_action":
 	//3d secure - this is handled by strip, we just get notified
 	case "payment_intent.payment_failed":
@@ -328,37 +272,9 @@ func stripeWebhook(w http.ResponseWriter, req *http.Request) {
 		err = sendToBrowser(uid, newPaymentCycleInId)
 		if err != nil {
 			log.Infof("browser seems offline, need to send email %v", err)
-
-			email := u.Email
-			var other = map[string]string{}
-			other["email"] = email
-			other["url"] = opts.EmailLinkPrefix + "/user/payments"
-			other["lang"] = "en"
-
-			defaultMessage := "Your credit card transfer failed. If you have enough funds, please go to: " + other["url"]
-			e := prepareEmail(email, other,
-				"template-subject-failed_", "Insufficient funds",
-				"template-plain-failed_", defaultMessage,
-				"template-html-failed_", other["lang"])
-
-			emailCountId := "failed-" + newPaymentCycleInId.String()
-			var c int
-			c, err = countEmailSentByEmail(email, emailCountId)
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Cannot get countEmailSentByEmail %v / %v", email, err)
-				return
-			}
-			if c > 0 {
-				log.Printf("Marketing, but we already sent a notification %v", email)
-				return
-			}
-			err = insertEmailSent(&u.Id, email, emailCountId, timeNow())
-			if err != nil {
-				writeErrorf(w, http.StatusBadRequest, "Insert Send email failed: %v, %v\n", opts.EmailUrl, err)
-				return
-			}
-			sendEmail(&e)
 		}
+
+		sendStripeFailed(*u, newPaymentCycleInId)
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)
