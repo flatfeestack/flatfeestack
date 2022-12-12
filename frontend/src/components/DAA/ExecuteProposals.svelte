@@ -1,12 +1,15 @@
 <script lang="ts">
   import { Viewer } from "bytemd";
-  import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
+  import humanizeDuration from "humanize-duration";
   import { navigate } from "svelte-routing";
   import { daaContract, provider } from "../../ts/daaStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import {
+    executeProposal,
+    queueProposal,
+  } from "../../utils/proposalFunctions";
   import Navigation from "./Navigation.svelte";
-  import humanizeDuration from "humanize-duration";
 
   export let blockNumber: string;
   let proposals = [];
@@ -64,34 +67,6 @@
     );
 
     $isSubmitting = false;
-  }
-
-  async function queueProposal(
-    targets: string[],
-    values: number[],
-    description: string,
-    calldatas: string[]
-  ) {
-    await $daaContract.queue(
-      targets,
-      values,
-      calldatas,
-      keccak256(toUtf8Bytes(description))
-    );
-  }
-
-  async function executeProposal(
-    targets: string[],
-    values: number[],
-    description: string,
-    calldatas: string[]
-  ) {
-    await $daaContract.execute(
-      targets,
-      values,
-      calldatas,
-      keccak256(toUtf8Bytes(description))
-    );
   }
 </script>
 

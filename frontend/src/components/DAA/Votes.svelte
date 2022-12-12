@@ -10,10 +10,12 @@
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import Navigation from "./Navigation.svelte";
+  import ExtraOrdinaryAssemblies from "./votes/ExtraOrdinaryAssemblies.svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
   let currentBlockNumber: number = 0;
+  let currentBlockTimestamp: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
 
@@ -56,7 +58,7 @@
   async function prepareView() {
     slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();
     currentBlockNumber = await $provider.getBlockNumber();
-    const currentBlockTimestamp = (await $provider.getBlock(currentBlockNumber))
+    currentBlockTimestamp = (await $provider.getBlock(currentBlockNumber))
       .timestamp;
     currentTime = formatDateTime(new Date(currentBlockTimestamp * 1000));
     votingPeriod = (await $daaContract.votingPeriod()).toNumber();
@@ -170,6 +172,8 @@
   <p>Last updated (block): #{currentBlockNumber}</p>
   <p>
     Last updated (time): Current-Time: {currentTime}
+
+    <ExtraOrdinaryAssemblies {currentBlockNumber} {currentBlockTimestamp} />
 
     {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
       <div class="card">

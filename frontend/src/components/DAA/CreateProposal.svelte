@@ -11,6 +11,7 @@
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
+  import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
   import ChangeChairman from "./proposals/ChangeChairman.svelte";
   import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
@@ -27,6 +28,10 @@
     {
       component: RemoveMember,
       text: "Remove member",
+    },
+    {
+      component: CallExtraOrdinaryAssembly,
+      text: "Call extra ordinary assembly",
     },
   ];
 
