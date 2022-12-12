@@ -28,8 +28,10 @@ abstract contract GovernorUpgradeable is
         keccak256(
             "ExtendedBallot(uint256 proposalId,uint8 support,string reason,bytes params)"
         );
-    bytes4 private constant setVotingSlotSignature =
+    bytes4 private constant SET_VOTING_SLOT_SIGNATURE =
         bytes4(keccak256("setVotingSlot(uint256)"));
+
+    uint64 public extraOrdinaryAssemblyVotingPeriod;
 
     event DAAProposalCreated(
         uint256 indexed proposalId,
@@ -317,7 +319,7 @@ abstract contract GovernorUpgradeable is
         bool isRequestingExtraOrdinaryVotingSlot = false;
         for (uint256 i = 0; i < calldatas.length; i++) {
             bytes4 functionSignature = bytes4(calldatas[i]);
-            if (functionSignature == setVotingSlotSignature) {
+            if (functionSignature == SET_VOTING_SLOT_SIGNATURE) {
                 isRequestingExtraOrdinaryVotingSlot = true;
                 break;
             }
@@ -325,7 +327,7 @@ abstract contract GovernorUpgradeable is
 
         if (isRequestingExtraOrdinaryVotingSlot) {
             uint64 start = block.number.toUint64() + votingDelay().toUint64();
-            uint64 end = start + votingPeriod().toUint64();
+            uint64 end = start + extraOrdinaryAssemblyVotingPeriod;
 
             proposal.voteStart.setDeadline(start);
             proposal.voteEnd.setDeadline(end);

@@ -714,7 +714,7 @@ describe("DAA", () => {
       castVote(currentTime, daa, firstChairman, proposalId, 0);
       castVote(currentTime, daa, secondChairman, proposalId, 1);
 
-      await mine(await daa.votingPeriod());
+      await mine(await daa.extraOrdinaryAssemblyVotingPeriod());
 
       expect(await daa.connect(firstChairman).state(proposalId)).to.eq(3);
     });
@@ -921,7 +921,8 @@ describe("DAA", () => {
         transferCalldatas,
         [daa.address],
         [0],
-        "I would like to have an extraordinary voting slot"
+        "I would like to have an extraordinary voting slot",
+        daa.extraOrdinaryAssemblyVotingPeriod
       );
 
       await mine(await timelock.getMinDelay());
@@ -1270,6 +1271,58 @@ describe("DAA", () => {
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });
+
+  describe("setExtraOrdinaryAssemblyVotingPeriod", () => {
+    it("can set new voting period for extra ordinary assemblies", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstChairman, secondChairman, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newExtraOrdinaryAssemblyVotingPeriod = 9001;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setExtraOrdinaryAssemblyVotingPeriod",
+          [newExtraOrdinaryAssemblyVotingPeriod]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description =
+        "I think the time to vote on an extra ordinary assembly should be shorter.";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstChairman,
+        firstVotingSlot,
+        [firstChairman, secondChairman, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstChairman).execute(...proposalArgs);
+      expect(
+        await daa.connect(firstChairman).extraOrdinaryAssemblyVotingPeriod()
+      ).to.eq(newExtraOrdinaryAssemblyVotingPeriod);
+    });
+
+    it("cannot be changed directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstChairman } = fixtures.entities;
+
+      await expect(
+        daa.connect(firstChairman).setExtraOrdinaryAssemblyVotingPeriod(9876543)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
 });
 
 async function createQueueAndVoteProposal(
@@ -1282,7 +1335,8 @@ async function createQueueAndVoteProposal(
   transferCalldatas: string[],
   targets: string[],
   values: number[],
-  description: string
+  description: string,
+  votingPeriod: () => Promise<number> = daa.votingPeriod
 ) {
   const transaction = await daa
     .connect(proposingMember)
@@ -1312,7 +1366,7 @@ async function createQueueAndVoteProposal(
     await castVote(voteStart, daa, abstainVoter, proposalId, 1);
   }
 
-  await mine(await daa.votingPeriod());
+  await mine(await votingPeriod());
 
   await queueProposal(daa, proposalArgs);
 

@@ -45,6 +45,8 @@ contract DAA is
     ) public initializer {
         membershipContract = Membership(_membership);
         _foundingSetupDone = false;
+        extraOrdinaryAssemblyVotingPeriod = 50400;
+
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
@@ -346,6 +348,12 @@ contract DAA is
         uint256 newSlotCloseTime
     ) external onlyGovernance {
         slotCloseTime = newSlotCloseTime;
+    }
+
+    function setExtraOrdinaryAssemblyVotingPeriod(
+        uint64 newExtraOrdinaryAssemblyVotingPeriod
+    ) external onlyGovernance {
+        extraOrdinaryAssemblyVotingPeriod = newExtraOrdinaryAssemblyVotingPeriod;
     }
 
     // this overs the case that an extraordinary vote needs 20% of all members to participate
