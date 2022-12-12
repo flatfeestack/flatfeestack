@@ -1,12 +1,11 @@
 import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import {
   deployMembershipContract,
   deployWalletContract,
 } from "./helpers/deployContracts";
-import type { Contract } from "ethers";
+import { addNewMember } from "./helpers/membershipHelpers";
 
 describe("Membership", () => {
   async function deployFixture() {
@@ -27,21 +26,6 @@ describe("Membership", () => {
       membership,
       wallet,
     };
-  }
-
-  async function addNewMember(
-    futureMember: SignerWithAddress,
-    firstChairman: SignerWithAddress,
-    secondChairman: SignerWithAddress,
-    membershipContract: Contract
-  ) {
-    await membershipContract.connect(futureMember).requestMembership();
-    await membershipContract
-      .connect(firstChairman)
-      .approveMembership(futureMember.address);
-    await membershipContract
-      .connect(secondChairman)
-      .approveMembership(futureMember.address);
   }
 
   describe("requestMembership", () => {

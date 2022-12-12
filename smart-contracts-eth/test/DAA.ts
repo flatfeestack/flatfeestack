@@ -6,6 +6,7 @@ import { expect } from "chai";
 import type { Contract } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { deployMembershipContract } from "./helpers/deployContracts";
+import { addNewMember } from "./helpers/membershipHelpers";
 
 describe("DAA", () => {
   const blocksInAMonth = 201600;
@@ -181,7 +182,7 @@ describe("DAA", () => {
       await expect(
         daa
           .connect(nonMember)
-          ["propose(address[],uint256[],bytes[],string)"](
+          .propose(
             [wallet.address],
             [0],
             [transferCalldata],
@@ -203,7 +204,7 @@ describe("DAA", () => {
       await expect(
         daa
           .connect(secondChairman)
-          ["propose(address[],uint256[],bytes[],string)"](
+          .propose(
             [wallet.address],
             [0],
             [transferCalldata],
@@ -214,29 +215,28 @@ describe("DAA", () => {
         .and.to.emit(daa, "DAAProposalCreated");
     });
 
-    it("can propose a proposal with a category", async () => {
+    it("can propose an extraordinary assembly", async () => {
       const fixtures = await deployFixture();
-      const { daa, wallet } = fixtures.contracts;
+      const { daa } = fixtures.contracts;
       const { secondChairman } = fixtures.entities;
 
-      const transferCalldata = wallet.interface.encodeFunctionData(
-        "increaseAllowance",
-        [secondChairman.address, ethers.utils.parseEther("1.0")]
+      const transferCalldata = daa.interface.encodeFunctionData(
+        "setVotingSlot",
+        [987654321]
       );
 
       await expect(
         daa
           .connect(secondChairman)
-          ["propose(address[],uint256[],bytes[],string,uint8)"](
-            [wallet.address],
+          .propose(
+            [daa.address],
             [0],
             [transferCalldata],
-            "I would like to have an ExtraordinaryVote.",
-            1
+            "I would like to propose an extraordinary assembly to vote stuff."
           )
       )
         .to.emit(daa, "ProposalCreated")
-        .and.to.emit(daa, "DAAProposalCreated");
+        .and.to.emit(daa, "ExtraOrdinaryAssemblyRequested");
     });
 
     it("proposal events emits correct data", async () => {
@@ -253,16 +253,10 @@ describe("DAA", () => {
       let calldata = [transferCalldata];
       let values = [0];
       let targets = [wallet.address];
-      let category = 1;
+
       const proposal = await daa
         .connect(secondChairman)
-        ["propose(address[],uint256[],bytes[],string,uint8)"](
-          targets,
-          values,
-          calldata,
-          description,
-          category
-        );
+        .propose(targets, values, calldata, description);
 
       const receiptProposal = await proposal.wait();
       const event = receiptProposal.events.find(
@@ -274,7 +268,7 @@ describe("DAA", () => {
       expect(event[3]).to.deep.eq(values, "Values don't match");
       expect(event[5]).to.deep.eq(calldata, "Calldata don't match");
       expect(event[8]).to.eq(description);
-      expect(event[9]).to.eq(category);
+      expect(event[9]).to.eq(0);
     });
 
     it("proposals get assigned to the correct voting slots", async () => {
@@ -654,6 +648,77 @@ describe("DAA", () => {
       ).to.revertedWith("Governor: unknown proposal id");
     });
 
+    it("extra ordinary assembly: proposal is defeated if quorum is not reached", async () => {
+      const fixtures = await deployFixture();
+      const { daa, membership } = fixtures.contracts;
+      const { firstChairman, secondChairman } = fixtures.entities;
+      const membershipFee = ethers.utils.parseUnits("3", 4);
+
+      // our fixtures ships with three confirmed members, therefore one vote is already 33%
+      // add 3 additional members, so one vote is equal to a quorum of 17%
+      let previousBlock = await ethers.provider.getBlockNumber();
+      await mine(1);
+      expect(await membership.getPastTotalSupply(previousBlock)).to.eq(3);
+
+      const [
+        _nonMember,
+        _firstChairman,
+        _secondChairman,
+        _regularMember,
+        newMember1,
+        newMember2,
+        newMember3,
+      ] = await ethers.getSigners();
+
+      await addNewMember(newMember1, firstChairman, secondChairman, membership);
+      await membership.connect(newMember1).payMembershipFee({
+        value: membershipFee,
+      });
+
+      await addNewMember(newMember2, firstChairman, secondChairman, membership);
+      await membership.connect(newMember2).payMembershipFee({
+        value: membershipFee,
+      });
+
+      await addNewMember(newMember3, firstChairman, secondChairman, membership);
+      await membership.connect(newMember3).payMembershipFee({
+        value: membershipFee,
+      });
+
+      previousBlock = await ethers.provider.getBlockNumber();
+      await mine(1);
+      expect(await membership.getPastTotalSupply(previousBlock)).to.eq(6);
+
+      const transferCalldata = daa.interface.encodeFunctionData(
+        "setVotingSlot",
+        [987654321]
+      );
+
+      const transaction = await daa
+        .connect(secondChairman)
+        .propose(
+          [daa.address],
+          [0],
+          [transferCalldata],
+          "I would like to propose an extraordinary assembly to vote stuff."
+        );
+      const receipt = await transaction.wait();
+      const [proposalId] = receipt.events.find(
+        (event: any) => event.event === "ExtraOrdinaryAssemblyRequested"
+      ).args;
+
+      expect(await daa.state(proposalId)).to.eq(0);
+
+      const currentTime = await time.latestBlock();
+
+      castVote(currentTime, daa, firstChairman, proposalId, 0);
+      castVote(currentTime, daa, secondChairman, proposalId, 1);
+
+      await mine(await daa.extraOrdinaryAssemblyVotingPeriod());
+
+      expect(await daa.connect(firstChairman).state(proposalId)).to.eq(3);
+    });
+
     it("executed proposal has state executed", async () => {
       const fixtures = await deployFixture();
       const { daa, timelock } = fixtures.contracts;
@@ -792,7 +857,7 @@ describe("DAA", () => {
 
       await expect(
         daa.connect(regularMember).setVotingSlot(slot)
-      ).to.revertedWith("only chairman");
+      ).to.revertedWith("only chairman or governor");
     });
 
     it("can not set same slot twice", async () => {
@@ -831,6 +896,62 @@ describe("DAA", () => {
       await expect(daa.connect(firstChairman).setVotingSlot(slot))
         .to.emit(daa, "NewTimeslotSet")
         .withArgs(slot);
+    });
+
+    it("can be requested using a proposal", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { regularMember, firstChairman, secondChairman } =
+        fixtures.entities;
+
+      const proposedVotingSlotTime = 987654321;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData("setVotingSlot", [
+          proposedVotingSlotTime,
+        ]),
+      ];
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        regularMember,
+        await time.latestBlock(),
+        [firstChairman, secondChairman],
+        [],
+        [],
+        transferCalldatas,
+        [daa.address],
+        [0],
+        "I would like to have an extraordinary voting slot",
+        daa.extraOrdinaryAssemblyVotingPeriod
+      );
+
+      await mine(await timelock.getMinDelay());
+
+      await expect(daa.execute(...proposalArgs))
+        .to.emit(daa, "NewTimeslotSet")
+        .withArgs(proposedVotingSlotTime);
+    });
+
+    it("keeps the slots in sorted order", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstChairman } = fixtures.entities;
+
+      const slotInThreeMonths =
+        (await time.latestBlock()) + 3 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInThreeMonths);
+
+      const slotInAMonth = (await time.latestBlock()) + 1 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInAMonth);
+
+      const slotInTwoMonths =
+        (await time.latestBlock()) + 2 * blocksInAMonth + 1;
+      await daa.connect(firstChairman).setVotingSlot(slotInTwoMonths);
+
+      expect(await daa.slots(1)).to.eq(slotInAMonth);
+      expect(await daa.slots(2)).to.eq(fixtures.firstVotingSlot);
+      expect(await daa.slots(3)).to.eq(slotInTwoMonths);
+      expect(await daa.slots(4)).to.eq(slotInThreeMonths);
     });
   });
 
@@ -1068,9 +1189,8 @@ describe("DAA", () => {
       const values = [0];
       const description = "I would like to change the bylaws.";
 
-      await createQueueAndVoteProposal(
+      const proposalArgs = await createQueueAndVoteProposal(
         daa,
-        timelock,
         firstChairman,
         firstVotingSlot,
         [firstChairman, secondChairman, regularMember],
@@ -1081,13 +1201,6 @@ describe("DAA", () => {
         values,
         description
       );
-
-      const proposalArgs = [
-        targets,
-        values,
-        transferCalldatas,
-        keccak256(toUtf8Bytes(description)),
-      ];
 
       await mine(await timelock.getMinDelay());
       await expect(daa.connect(firstChairman).execute(...proposalArgs))
@@ -1127,9 +1240,8 @@ describe("DAA", () => {
       const values = [0];
       const description = "I would like to expand the slot close time.";
 
-      await createQueueAndVoteProposal(
+      const proposalArgs = await createQueueAndVoteProposal(
         daa,
-        timelock,
         firstChairman,
         firstVotingSlot,
         [firstChairman, secondChairman, regularMember],
@@ -1140,13 +1252,6 @@ describe("DAA", () => {
         values,
         description
       );
-
-      const proposalArgs = [
-        targets,
-        values,
-        transferCalldatas,
-        keccak256(toUtf8Bytes(description)),
-      ];
 
       await mine(await timelock.getMinDelay());
       await daa.connect(firstChairman).execute(...proposalArgs);
@@ -1166,30 +1271,76 @@ describe("DAA", () => {
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });
+
+  describe("setExtraOrdinaryAssemblyVotingPeriod", () => {
+    it("can set new voting period for extra ordinary assemblies", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstChairman, secondChairman, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newExtraOrdinaryAssemblyVotingPeriod = 9001;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setExtraOrdinaryAssemblyVotingPeriod",
+          [newExtraOrdinaryAssemblyVotingPeriod]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description =
+        "I think the time to vote on an extra ordinary assembly should be shorter.";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstChairman,
+        firstVotingSlot,
+        [firstChairman, secondChairman, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstChairman).execute(...proposalArgs);
+      expect(
+        await daa.connect(firstChairman).extraOrdinaryAssemblyVotingPeriod()
+      ).to.eq(newExtraOrdinaryAssemblyVotingPeriod);
+    });
+
+    it("cannot be changed directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstChairman } = fixtures.entities;
+
+      await expect(
+        daa.connect(firstChairman).setExtraOrdinaryAssemblyVotingPeriod(9876543)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
 });
 
 async function createQueueAndVoteProposal(
   daa: Contract,
-  timelock: Contract,
   proposingMember: SignerWithAddress,
-  firstVotingSlot: number,
+  voteStart: number,
   forVoters: SignerWithAddress[],
   againstVoters: SignerWithAddress[],
   abstainVoters: SignerWithAddress[],
   transferCalldatas: string[],
   targets: string[],
   values: number[],
-  description: string
+  description: string,
+  votingPeriod: () => Promise<number> = daa.votingPeriod
 ) {
   const transaction = await daa
     .connect(proposingMember)
-    ["propose(address[],uint256[],bytes[],string,uint8)"](
-      targets,
-      values,
-      transferCalldatas,
-      description,
-      3
-    );
+    .propose(targets, values, transferCalldatas, description);
 
   const proposalArgs = [
     targets,
@@ -1200,24 +1351,26 @@ async function createQueueAndVoteProposal(
 
   const receipt = await transaction.wait();
   const [proposalId] = receipt.events.find(
-    (event: any) => event.event === "DAAProposalCreated"
+    (event: any) => event.event === "ProposalCreated"
   ).args;
 
   for (const againstVoter of againstVoters) {
-    await castVote(firstVotingSlot, daa, againstVoter, proposalId, 1);
+    await castVote(voteStart, daa, againstVoter, proposalId, 1);
   }
 
   for (const forVoter of forVoters) {
-    await castVote(firstVotingSlot, daa, forVoter, proposalId, 1);
+    await castVote(voteStart, daa, forVoter, proposalId, 1);
   }
 
   for (const abstainVoter of abstainVoters) {
-    await castVote(firstVotingSlot, daa, abstainVoter, proposalId, 1);
+    await castVote(voteStart, daa, abstainVoter, proposalId, 1);
   }
 
-  await mine(await daa.votingPeriod());
+  await mine(await votingPeriod());
 
   await queueProposal(daa, proposalArgs);
+
+  return proposalArgs;
 }
 
 async function castVote(

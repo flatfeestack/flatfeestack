@@ -26,7 +26,7 @@ abstract contract GovernorCountingSimpleUpgradeable is
         mapping(address => bool) hasVoted;
     }
 
-    mapping(uint256 => ProposalVote) private _proposalVotes;
+    mapping(uint256 => ProposalVote) internal _proposalVotes;
 
     // solhint-disable-next-line func-name-mixedcase
     function COUNTING_MODE()

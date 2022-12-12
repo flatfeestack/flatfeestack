@@ -9,6 +9,7 @@ import "./governor/GovernorVotesUpgradeable.sol";
 import "./governor/GovernorCountingSimpleUpgradeable.sol";
 import "./governor/GovernorVotesQuorumFractionUpgradeable.sol";
 import "./governor/GovernorTimelockControlUpgradeable.sol";
+
 import "./Membership.sol";
 
 contract DAA is
@@ -44,6 +45,8 @@ contract DAA is
     ) public initializer {
         membershipContract = Membership(_membership);
         _foundingSetupDone = false;
+        extraOrdinaryAssemblyVotingPeriod = 50400;
+
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
@@ -152,17 +155,57 @@ contract DAA is
     // the voting slot has to be four weeks from now
     // it is calculated in blocks and we assume that 7200 blocks will be mined in a day
     function setVotingSlot(uint256 blockNumber) public returns (uint256) {
-        require(membershipContract.isChairman(msg.sender), "only chairman");
+        require(
+            membershipContract.isChairman(msg.sender) ||
+                _msgSender() == _executor(),
+            "only chairman or governor"
+        );
+
         require(
             blockNumber >= block.number + 201600,
             "Must be a least a month from now"
         );
-        for (uint256 i = 0; i < slots.length; i++) {
+
+        uint256 previousMaxIndex = slots.length - 1;
+
+        for (uint256 i = previousMaxIndex; i >= 0; i--) {
             if (slots[i] == blockNumber) {
                 revert("Vote slot already exists");
             }
+
+            if (i == 0) {
+                // prevent underflow
+                break;
+            }
         }
+
+        uint256 targetIndex = 0;
+        for (uint256 i = previousMaxIndex; i >= 0; i--) {
+            if (slots[i] < blockNumber) {
+                targetIndex = i + 1;
+                break;
+            }
+
+            if (i == 0) {
+                // prevent underflow
+                break;
+            }
+        }
+
         slots.push(blockNumber);
+        if (targetIndex < slots.length - 1) {
+            for (uint256 i = previousMaxIndex; i >= targetIndex; i--) {
+                slots[i + 1] = slots[i];
+
+                if (i == 0) {
+                    // prevent underflow
+                    break;
+                }
+            }
+        }
+
+        slots[targetIndex] = blockNumber;
+
         emit NewTimeslotSet(blockNumber);
         return blockNumber;
     }
@@ -270,7 +313,7 @@ contract DAA is
 
         ProposalCore storage proposal = _buildProposal(
             proposalId,
-            ProposalCategory.Generic
+            calldatasArray
         );
 
         emit ProposalCreated(
@@ -305,5 +348,35 @@ contract DAA is
         uint256 newSlotCloseTime
     ) external onlyGovernance {
         slotCloseTime = newSlotCloseTime;
+    }
+
+    function setExtraOrdinaryAssemblyVotingPeriod(
+        uint64 newExtraOrdinaryAssemblyVotingPeriod
+    ) external onlyGovernance {
+        extraOrdinaryAssemblyVotingPeriod = newExtraOrdinaryAssemblyVotingPeriod;
+    }
+
+    // this overs the case that an extraordinary vote needs 20% of all members to participate
+    function _quorumReached(
+        uint256 proposalId
+    )
+        internal
+        view
+        virtual
+        override(GovernorCountingSimpleUpgradeable, GovernorUpgradeable)
+        returns (bool)
+    {
+        ProposalCategory proposalCategory = _proposals[proposalId].category;
+        if (proposalCategory != ProposalCategory.ExtraordinaryVote) {
+            return super._quorumReached(proposalId);
+        }
+
+        ProposalVote storage proposalVote = _proposalVotes[proposalId];
+
+        uint256 voteStart = proposalSnapshot(proposalId);
+        uint256 neededQuorum = (token.getPastTotalSupply(voteStart) * 20) /
+            quorumDenominator();
+        return
+            neededQuorum <= proposalVote.forVotes + proposalVote.abstainVotes;
     }
 }
