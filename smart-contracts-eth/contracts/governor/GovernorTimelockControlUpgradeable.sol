@@ -178,5 +178,5 @@ abstract contract GovernorTimelockControlUpgradeable is
         _timelock = newTimelock;
     }
 
-    uint256[48] private __gap;
+    uint256[50] private __gap;
 }

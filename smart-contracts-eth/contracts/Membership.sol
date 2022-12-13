@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 
 import "./Wallet.sol";
-import "./Accessible.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
@@ -13,13 +12,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 // however, we don't care about second-level precision, as we deal with a much longer time period
 // there is a good exaplanation about this on StackExchange https://ethereum.stackexchange.com/a/117874
 /* solhint-disable not-rely-on-time */
-contract Membership is
-    Initializable,
-    IVotesUpgradeable,
-    Accessible,
-    OwnableUpgradeable
-{
+contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     using CheckpointsUpgradeable for CheckpointsUpgradeable.History;
+
+    enum MembershipStatus {
+        nonMember,
+        requesting,
+        approvedByOne,
+        isMember
+    }
 
     Wallet private _wallet;
 
@@ -28,6 +29,15 @@ contract Membership is
     // used for IVotes
     mapping(address => CheckpointsUpgradeable.History) private _voteCheckpoints;
     CheckpointsUpgradeable.History private _totalCheckpoints;
+
+    uint256 public minimumChairmen;
+    uint256 public membershipFee;
+
+    address[] public chairmen;
+    address[] public members;
+
+    mapping(address => MembershipStatus) internal membershipList;
+    mapping(address => address) internal firstApproval;
 
     event ChangeInMembershipStatus(
         address indexed accountAddress,
@@ -43,6 +53,27 @@ contract Membership is
         address indexed oldWallet,
         address indexed newWallet
     );
+
+    modifier nonMemberOnly() {
+        require(
+            membershipList[msg.sender] == MembershipStatus.nonMember,
+            "only non-members"
+        );
+        _;
+    }
+
+    modifier memberOnly() {
+        require(
+            membershipList[msg.sender] == MembershipStatus.isMember,
+            "only members"
+        );
+        _;
+    }
+
+    modifier chairmenOnly() {
+        require(isChairman(msg.sender) == true, "only chairmen");
+        _;
+    }
 
     function initialize(
         address _firstChairman,
@@ -313,6 +344,27 @@ contract Membership is
 
     function _subtract(uint256 a, uint256 b) private pure returns (uint256) {
         return a - b;
+    }
+
+    function isChairman(address _adr) public view returns (bool) {
+        bool check = false;
+
+        for (uint256 i = 0; i < this.getChairmenLength(); i++) {
+            if (chairmen[i] == _adr) {
+                check = true;
+                break;
+            }
+        }
+
+        return check;
+    }
+
+    function getChairmenLength() external view returns (uint256) {
+        return chairmen.length;
+    }
+
+    function getMembersLength() external view returns (uint256) {
+        return members.length;
     }
 }
 /* solhint-enable not-rely-on-time */

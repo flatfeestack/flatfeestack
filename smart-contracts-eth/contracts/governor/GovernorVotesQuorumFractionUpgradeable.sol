@@ -108,5 +108,5 @@ abstract contract GovernorVotesQuorumFractionUpgradeable is
         emit QuorumNumeratorUpdated(oldQuorumNumerator, newQuorumNumerator);
     }
 
-    uint256[48] private __gap;
+    uint256[50] private __gap;
 }

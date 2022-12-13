@@ -611,5 +611,5 @@ abstract contract GovernorUpgradeable is
         return votingSlots[slotNumber].length;
     }
 
-    uint256[46] private __gap;
+    uint256[50] private __gap;
 }

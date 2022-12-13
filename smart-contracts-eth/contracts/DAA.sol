@@ -50,7 +50,7 @@ contract DAA is
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
         governorCountingSimpleInit();
-        governorVotesQuorumFractionInit(0);
+        governorVotesQuorumFractionInit(5);
         governorTimelockControlInit(_timelock);
         setupDAAFoundingSlotAndProposal(bylaws);
     }
