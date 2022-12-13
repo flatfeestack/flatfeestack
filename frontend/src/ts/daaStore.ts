@@ -74,25 +74,25 @@ export const membershipStatusValue = derived(
   null
 );
 
-export const chairmen = derived<Readable<Contract | null>, Signer[] | null>(
-  membershipContract,
-  ($membershipContract, set) => {
-    if ($membershipContract === null) {
-      set(null);
-    } else {
-      Promise.resolve($membershipContract.getChairmenLength()).then(
-        (chairmenLength: BigNumber) => {
-          Promise.all(
-            [...Array(chairmenLength.toNumber()).keys()].map(
-              async (index: Number) => {
-                return await $membershipContract.chairmen(index);
-              }
-            )
-          ).then((chairmen) => {
-            set(chairmen);
-          });
-        }
-      );
-    }
+export const councilMembers = derived<
+  Readable<Contract | null>,
+  Signer[] | null
+>(membershipContract, ($membershipContract, set) => {
+  if ($membershipContract === null) {
+    set(null);
+  } else {
+    Promise.resolve($membershipContract.getCouncilMembersLength()).then(
+      (councilLength: BigNumber) => {
+        Promise.all(
+          [...Array(councilLength.toNumber()).keys()].map(
+            async (index: Number) => {
+              return await $membershipContract.councilMembers(index);
+            }
+          )
+        ).then((councilMember) => {
+          set(councilMember);
+        });
+      }
+    );
   }
-);
+});

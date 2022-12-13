@@ -19,8 +19,8 @@
 
   const approvalProcessSteps = [
     "Membership to the DAA has been requested",
-    "Membership has been approved by one chairman",
-    "Membership has been approved by a second chairman",
+    "Membership has been approved by one council member",
+    "Membership has been approved by a second council member",
   ];
 
   onMount(async () => {
