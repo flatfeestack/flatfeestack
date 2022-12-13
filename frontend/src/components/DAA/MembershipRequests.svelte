@@ -4,7 +4,7 @@
   import {
     userEthereumAddress,
     membershipContract,
-    chairmen,
+    councilMembers,
   } from "../../ts/daaStore";
   import { error } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
@@ -24,7 +24,7 @@
       return;
     }
 
-    if (!$chairmen.some((chairman) => chairman == $userEthereumAddress)) {
+    if (!$councilMembers.some((member) => member == $userEthereumAddress)) {
       moveToVotesPage();
     }
 

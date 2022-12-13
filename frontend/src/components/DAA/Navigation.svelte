@@ -17,7 +17,7 @@
     membershipStatusValue,
     provider,
     signer,
-    chairmen,
+    councilMembers,
   } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
@@ -89,7 +89,7 @@
   };
 
   $: {
-    if ($membershipStatusValue === null || $chairmen === null) {
+    if ($membershipStatusValue === null || $councilMembers === null) {
       membershipStatus = "Loading ...";
     } else {
       membershipStatus = resolveMembershipStatus();
@@ -99,9 +99,9 @@
   function resolveMembershipStatus(): string {
     if (
       $membershipStatusValue == 3 &&
-      $chairmen?.includes($userEthereumAddress)
+      $councilMembers?.includes($userEthereumAddress)
     ) {
-      return "Chairman";
+      return "Council Member";
     }
 
     return membershipStatusMapping[$membershipStatusValue];
@@ -209,7 +209,7 @@
         icon={faHand}
         label="Membership requests"
       />
-      <NavItem href="/daa/chairman" icon={faHippo} label="Chairman functions" />
+      <NavItem href="/daa/council" icon={faHippo} label="Council functions" />
     </nav>
   </div>
   <div class="content">
