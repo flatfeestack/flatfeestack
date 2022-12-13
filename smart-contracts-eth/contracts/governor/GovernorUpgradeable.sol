@@ -86,6 +86,9 @@ abstract contract GovernorUpgradeable is
 
     DoubleEndedQueueUpgradeable.Bytes32Deque private _governanceCall;
 
+    // index of requested extra ordinary proposal ids
+    uint256[] public extraOrdinaryAssemblyProposals;
+
     event NewTimeslotSet(uint256 timeslot);
 
     modifier onlyGovernance() {
@@ -332,6 +335,8 @@ abstract contract GovernorUpgradeable is
             proposal.voteStart.setDeadline(start);
             proposal.voteEnd.setDeadline(end);
             proposal.category = ProposalCategory.ExtraordinaryVote;
+
+            extraOrdinaryAssemblyProposals.push(proposalId);
         } else {
             uint256 nextSlot = _getNextPossibleVotingSlot();
 
@@ -611,5 +616,9 @@ abstract contract GovernorUpgradeable is
         return votingSlots[slotNumber].length;
     }
 
-    uint256[50] private __gap;
+    function getExtraOrdinaryProposalsLength() external view returns (uint256) {
+        return extraOrdinaryAssemblyProposals.length;
+    }
+
+    uint256[49] private __gap;
 }

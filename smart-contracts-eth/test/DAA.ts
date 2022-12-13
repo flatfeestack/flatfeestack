@@ -237,6 +237,8 @@ describe("DAA", () => {
       )
         .to.emit(daa, "ProposalCreated")
         .and.to.emit(daa, "ExtraOrdinaryAssemblyRequested");
+
+      expect(await daa.getExtraOrdinaryProposalsLength()).to.eq(1);
     });
 
     it("proposal events emits correct data", async () => {
@@ -707,6 +709,7 @@ describe("DAA", () => {
         (event: any) => event.event === "ExtraOrdinaryAssemblyRequested"
       ).args;
 
+      expect(await daa.getExtraOrdinaryProposalsLength()).to.eq(1);
       expect(await daa.state(proposalId)).to.eq(0);
 
       const currentTime = await time.latestBlock();
