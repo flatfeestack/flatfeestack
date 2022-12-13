@@ -7,7 +7,7 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 ./update.sh
 
 # Create example .env files
-cp analyzer/example.env analyzer/.env
+cp analyzer/.example.env analyzer/.env
 cp backend/example.env backend/.env
 cp fastauth/example.env fastauth/.env
 cp payout/.example.env payout/.env
