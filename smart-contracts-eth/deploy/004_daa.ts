@@ -7,13 +7,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstChairman } = await getNamedAccounts();
+  const { firstCouncilMember } = await getNamedAccounts();
 
   const membership = await deployments.get("Membership");
   const timelock = await deployments.get("Timelock");
 
   await deploy("DAA", {
-    from: firstChairman,
+    from: firstCouncilMember,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
@@ -39,7 +39,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await Promise.all([
     addDaaAsProposer(timelockDeployed, daa),
-    revokeChairmanAsAdmin(timelockDeployed, firstChairman),
+    revokeCouncilMemberAsAdmin(timelockDeployed, firstCouncilMember),
   ]);
 };
 
@@ -56,16 +56,21 @@ async function addDaaAsProposer(timelockDeployed: Contract, daa: Deployment) {
   }
 }
 
-async function revokeChairmanAsAdmin(
+async function revokeCouncilMemberAsAdmin(
   timelockDeployed: Contract,
-  chairman: String
+  councilMember: String
 ) {
   const adminRole = await timelockDeployed.TIMELOCK_ADMIN_ROLE();
-  const chairmanIsAdmin = await timelockDeployed.hasRole(adminRole, chairman);
+  const councilMemberIsAdmin = await timelockDeployed.hasRole(
+    adminRole,
+    councilMember
+  );
 
-  if (chairmanIsAdmin) {
-    console.log("Revoking admin role for chairman on timelock controller ...");
-    await (await timelockDeployed.revokeRole(adminRole, chairman)).wait();
+  if (councilMemberIsAdmin) {
+    console.log(
+      "Revoking admin role for council member on timelock controller ..."
+    );
+    await (await timelockDeployed.revokeRole(adminRole, councilMember)).wait();
   }
 }
 

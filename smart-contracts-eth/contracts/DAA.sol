@@ -156,9 +156,9 @@ contract DAA is
     // it is calculated in blocks and we assume that 7200 blocks will be mined in a day
     function setVotingSlot(uint256 blockNumber) public returns (uint256) {
         require(
-            membershipContract.isChairman(msg.sender) ||
+            membershipContract.isCouncilMember(msg.sender) ||
                 _msgSender() == _executor(),
-            "only chairman or governor"
+            "only council member or governor"
         );
 
         require(
@@ -214,7 +214,10 @@ contract DAA is
         uint256 blockNumber,
         string calldata reason
     ) public {
-        require(membershipContract.isChairman(msg.sender), "only chairman");
+        require(
+            membershipContract.isCouncilMember(msg.sender),
+            "only council member"
+        );
         require(
             blockNumber >= block.number + 7200,
             "Must be a day before slot!"

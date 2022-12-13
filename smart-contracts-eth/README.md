@@ -43,8 +43,8 @@ The chain ships with five accounts:
 
 - The five accounts on the chain have 100 ETH each.
 - The accounts are ordered as follows:
-  - `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` is the first chairman of the DAA.
-  - `0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d` is the second chairman.
+  - `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` is the first council member of the DAA.
+  - `0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d` is the second council member.
   - `0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1` is a regular member.
   - `0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e` has no privileges in the DAA.
 - Those accounts can be imported into MetaMask so you can interact with the smart contract.

@@ -4,15 +4,15 @@ import type { Wallet } from "@ethersproject/wallet";
 
 export async function addNewMember(
   futureMember: SignerWithAddress | Wallet,
-  firstChairman: SignerWithAddress,
-  secondChairman: SignerWithAddress,
+  firstCouncilMember: SignerWithAddress,
+  secondCouncilMember: SignerWithAddress,
   membershipContract: Contract
 ) {
   await membershipContract.connect(futureMember).requestMembership();
   await membershipContract
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     .approveMembership(futureMember.address);
   await membershipContract
-    .connect(secondChairman)
+    .connect(secondCouncilMember)
     .approveMembership(futureMember.address);
 }

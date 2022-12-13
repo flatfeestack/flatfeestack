@@ -6,18 +6,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstChairman, secondChairman } = await getNamedAccounts();
+  const { firstCouncilMember, secondCouncilMember } = await getNamedAccounts();
   const wallet = await deployments.get("Wallet");
 
   const membership = await deploy("Membership", {
-    from: firstChairman,
+    from: firstCouncilMember,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         init: {
           methodName: "initialize",
-          args: [firstChairman, secondChairman, wallet.address],
+          args: [firstCouncilMember, secondCouncilMember, wallet.address],
         },
       },
     },
