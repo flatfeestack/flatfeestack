@@ -30,10 +30,10 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     mapping(address => CheckpointsUpgradeable.History) private _voteCheckpoints;
     CheckpointsUpgradeable.History private _totalCheckpoints;
 
-    uint256 public minimumChairmen;
+    uint256 public minimumCouncilMembers;
     uint256 public membershipFee;
 
-    address[] public chairmen;
+    address[] public councilMembers;
     address[] public members;
 
     mapping(address => MembershipStatus) internal membershipList;
@@ -44,8 +44,8 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         uint256 indexed currentStatus
     );
 
-    event ChangeInChairman(
-        address indexed concernedChairman,
+    event ChangeInCouncilMember(
+        address indexed concernedCouncilMember,
         bool removedOrAdded
     );
 
@@ -70,52 +70,52 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         _;
     }
 
-    modifier chairmenOnly() {
-        require(isChairman(msg.sender) == true, "only chairmen");
+    modifier councilMemberOnly() {
+        require(isCouncilMember(msg.sender) == true, "only council member");
         _;
     }
 
     function initialize(
-        address _firstChairman,
-        address _secondChairman,
+        address _firstCouncilMember,
+        address _secondCouncilMember,
         Wallet _walletContract
     ) public initializer {
         __Ownable_init();
 
-        minimumChairmen = 2;
+        minimumCouncilMembers = 2;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
         emit ChangeInWalletAddress(address(0x0), address(_wallet));
 
-        chairmen.push(_firstChairman);
-        chairmen.push(_secondChairman);
+        councilMembers.push(_firstCouncilMember);
+        councilMembers.push(_secondCouncilMember);
 
-        membershipList[_firstChairman] = MembershipStatus.isMember;
-        membershipList[_secondChairman] = MembershipStatus.isMember;
+        membershipList[_firstCouncilMember] = MembershipStatus.isMember;
+        membershipList[_secondCouncilMember] = MembershipStatus.isMember;
 
-        members.push(_firstChairman);
-        members.push(_secondChairman);
+        members.push(_firstCouncilMember);
+        members.push(_secondCouncilMember);
 
-        nextMembershipFeePayment[_firstChairman] = block.timestamp;
-        nextMembershipFeePayment[_secondChairman] = block.timestamp;
+        nextMembershipFeePayment[_firstCouncilMember] = block.timestamp;
+        nextMembershipFeePayment[_secondCouncilMember] = block.timestamp;
 
         _totalCheckpoints.push(_add, 2);
-        _voteCheckpoints[_firstChairman].push(_add, 1);
-        _voteCheckpoints[_secondChairman].push(_add, 1);
+        _voteCheckpoints[_firstCouncilMember].push(_add, 1);
+        _voteCheckpoints[_secondCouncilMember].push(_add, 1);
 
         emit ChangeInMembershipStatus(
-            _firstChairman,
+            _firstCouncilMember,
             uint256(MembershipStatus.isMember)
         );
 
-        emit ChangeInChairman(_firstChairman, true);
+        emit ChangeInCouncilMember(_firstCouncilMember, true);
 
         emit ChangeInMembershipStatus(
-            _secondChairman,
+            _secondCouncilMember,
             uint256(MembershipStatus.isMember)
         );
 
-        emit ChangeInChairman(_secondChairman, true);
+        emit ChangeInCouncilMember(_secondCouncilMember, true);
     }
 
     function requestMembership() public nonMemberOnly returns (bool) {
@@ -132,24 +132,24 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         return uint256(membershipList[_adr]);
     }
 
-    function addChairman(address _adr) public onlyOwner returns (bool) {
+    function addCouncilMember(address _adr) public onlyOwner returns (bool) {
         require(
             membershipList[_adr] == MembershipStatus.isMember,
-            "A chairman must be a member"
+            "Must be a member"
         );
-        require(isChairman(_adr) == false, "Is already chairman!");
+        require(isCouncilMember(_adr) == false, "Is already council member!");
 
-        chairmen.push(_adr);
-        emit ChangeInChairman(_adr, true);
+        councilMembers.push(_adr);
+        emit ChangeInCouncilMember(_adr, true);
 
         return true;
     }
 
-    function removeChairman(address _adr) public returns (bool) {
-        require(isChairman(_adr) == true, "Is no chairman!");
+    function removeCouncilMember(address _adr) public returns (bool) {
+        require(isCouncilMember(_adr) == true, "Is no council member!");
         require(
-            this.getChairmenLength() > minimumChairmen,
-            "Minimum chairmen not met!"
+            this.getCouncilMembersLength() > minimumCouncilMembers,
+            "Min council members not met!"
         );
 
         if (msg.sender != _adr) {
@@ -158,25 +158,27 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
 
         uint256 i;
 
-        for (i = 0; i < this.getChairmenLength() - 1; i++) {
-            if (chairmen[i] == _adr) {
+        for (i = 0; i < this.getCouncilMembersLength() - 1; i++) {
+            if (councilMembers[i] == _adr) {
                 break;
             }
         }
 
-        if (i != this.getChairmenLength() - 1) {
-            chairmen[i] = chairmen[this.getChairmenLength() - 1];
+        if (i != this.getCouncilMembersLength() - 1) {
+            councilMembers[i] = councilMembers[
+                this.getCouncilMembersLength() - 1
+            ];
         }
-        chairmen.pop();
+        councilMembers.pop();
 
-        emit ChangeInChairman(_adr, false);
+        emit ChangeInCouncilMember(_adr, false);
 
         return true;
     }
 
     function approveMembership(
         address _adr
-    ) public chairmenOnly returns (bool) {
+    ) public councilMemberOnly returns (bool) {
         require(
             membershipList[_adr] == MembershipStatus.requesting ||
                 (membershipList[_adr] == MembershipStatus.approvedByOne &&
@@ -220,9 +222,14 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         membershipFee = newMembershipFee;
     }
 
-    function setMinimumChairmen(uint256 newMinimumChairmen) external onlyOwner {
-        require(newMinimumChairmen <= chairmen.length, "To few chairmen!");
-        minimumChairmen = newMinimumChairmen;
+    function setMinimumCouncilMembers(
+        uint256 newMinimumCouncilMembers
+    ) external onlyOwner {
+        require(
+            newMinimumCouncilMembers <= councilMembers.length,
+            "To few council members!"
+        );
+        minimumCouncilMembers = newMinimumCouncilMembers;
     }
 
     function setNewWalletAddress(Wallet newWallet) external onlyOwner {
@@ -241,8 +248,8 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
             _checkOwner();
         }
 
-        if (isChairman(_adr)) {
-            removeChairman(_adr);
+        if (isCouncilMember(_adr)) {
+            removeCouncilMember(_adr);
         }
 
         _removeMember(_adr);
@@ -281,7 +288,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
             address member = members[i];
             uint256 nextPayment = nextMembershipFeePayment[member];
             if (nextPayment > 0 && block.timestamp > nextPayment) {
-                if (!isChairman(member)) {
+                if (!isCouncilMember(member)) {
                     toBeRemoved[toBeRemovedIndex] = member;
                     toBeRemovedIndex++;
                 }
@@ -346,11 +353,11 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         return a - b;
     }
 
-    function isChairman(address _adr) public view returns (bool) {
+    function isCouncilMember(address _adr) public view returns (bool) {
         bool check = false;
 
-        for (uint256 i = 0; i < this.getChairmenLength(); i++) {
-            if (chairmen[i] == _adr) {
+        for (uint256 i = 0; i < this.getCouncilMembersLength(); i++) {
+            if (councilMembers[i] == _adr) {
                 check = true;
                 break;
             }
@@ -359,8 +366,8 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         return check;
     }
 
-    function getChairmenLength() external view returns (uint256) {
-        return chairmen.length;
+    function getCouncilMembersLength() external view returns (uint256) {
+        return councilMembers.length;
     }
 
     function getMembersLength() external view returns (uint256) {

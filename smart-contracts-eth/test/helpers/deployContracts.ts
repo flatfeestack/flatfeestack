@@ -11,17 +11,17 @@ export async function deployWalletContract(owner: SignerWithAddress) {
 }
 
 export async function deployMembershipContract(
-  firstChairman: SignerWithAddress,
-  secondChairman: SignerWithAddress,
+  firstCouncilMember: SignerWithAddress,
+  secondCouncilMember: SignerWithAddress,
   regularMember: SignerWithAddress
 ) {
-  const wallet = await deployWalletContract(firstChairman);
+  const wallet = await deployWalletContract(firstCouncilMember);
   const Membership = await ethers.getContractFactory("Membership", {
-    signer: firstChairman,
+    signer: firstCouncilMember,
   });
   const membership = await upgrades.deployProxy(Membership, [
-    firstChairman.address,
-    secondChairman.address,
+    firstCouncilMember.address,
+    secondCouncilMember.address,
     wallet.address,
   ]);
 
@@ -31,19 +31,19 @@ export async function deployMembershipContract(
   // approve new member
   await membership.connect(regularMember).requestMembership();
   await membership
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     .approveMembership(regularMember.address);
   await membership
-    .connect(secondChairman)
+    .connect(secondCouncilMember)
     .approveMembership(regularMember.address);
 
   // pay membership fees
   const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
 
-  await membership.connect(firstChairman).payMembershipFee({
+  await membership.connect(firstCouncilMember).payMembershipFee({
     value: toBePaid,
   });
-  await membership.connect(secondChairman).payMembershipFee({
+  await membership.connect(secondCouncilMember).payMembershipFee({
     value: toBePaid,
   });
   await membership.connect(regularMember).payMembershipFee({

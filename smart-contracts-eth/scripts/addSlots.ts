@@ -10,7 +10,7 @@ async function main() {
   const wallet = await deployments.get("Wallet");
   const walletDeployed = await ethers.getContractAt("Wallet", daa.address);
 
-  const [firstChairman] = await ethers.getSigners();
+  const [firstCouncilMember] = await ethers.getSigners();
 
   const blocksInAMonth = 201600;
   const latestBlock = (await hre.ethers.provider.getBlock("latest")).number;
@@ -20,32 +20,32 @@ async function main() {
 
   console.log("Create first voting slot ...");
   const firstVotingSlot = await daaDeployed
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     .setVotingSlot(slot1);
   await firstVotingSlot.wait();
 
   console.log("Create second voting slot ...");
   const secondVotingSlot = await daaDeployed
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     .setVotingSlot(slot2);
   await secondVotingSlot.wait();
 
   console.log("Create third voting slot ...");
   const thirdVotingSlot = await daaDeployed
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     .setVotingSlot(slot3);
   await thirdVotingSlot.wait();
 
   const transferCalldata = [
     walletDeployed.interface.encodeFunctionData("increaseAllowance", [
-      firstChairman.address,
+      firstCouncilMember.address,
       ethers.utils.parseEther("1.0"),
     ]),
   ];
 
   console.log("Creating proposal ...");
   await daaDeployed
-    .connect(firstChairman)
+    .connect(firstCouncilMember)
     ["propose(address[],uint256[],bytes[],string)"](
       [wallet.address],
       [0],
