@@ -13,7 +13,7 @@ abstract contract GovernorTimelockControlUpgradeable is
     IGovernorTimelockUpgradeable,
     GovernorUpgradeable
 {
-    TimelockControllerUpgradeable private _timelock;
+    TimelockControllerUpgradeable internal _timelock;
     mapping(uint256 => bytes32) private _timelockIds;
 
     event TimelockChange(address oldTimelock, address newTimelock);

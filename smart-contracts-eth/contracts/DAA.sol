@@ -35,6 +35,7 @@ contract DAA is
 
     string public bylawsHash;
     bool private _foundingSetupDone;
+    uint256 public votingSlotAnnouncementPeriod;
 
     event BylawsChanged(string indexed oldHash, string indexed newHash);
 
@@ -46,6 +47,7 @@ contract DAA is
         membershipContract = Membership(_membership);
         _foundingSetupDone = false;
         extraOrdinaryAssemblyVotingPeriod = 50400;
+        votingSlotAnnouncementPeriod = 201600;
 
         governorInit("FlatFeeStack");
         governorVotesInit(_membership);
@@ -162,8 +164,8 @@ contract DAA is
         );
 
         require(
-            blockNumber >= block.number + 201600,
-            "Must be a least a month from now"
+            blockNumber >= block.number + votingSlotAnnouncementPeriod,
+            "Announcement too late!"
         );
 
         uint256 previousMaxIndex = slots.length - 1;
@@ -381,5 +383,15 @@ contract DAA is
             quorumDenominator();
         return
             neededQuorum <= proposalVote.forVotes + proposalVote.abstainVotes;
+    }
+
+    function getMinDelay() public view virtual returns (uint256 duration) {
+        return _timelock.getMinDelay();
+    }
+
+    function setVotingSlotAnnouncementPeriod(
+        uint64 newVotingSlotAnnouncementPeriod
+    ) external onlyGovernance {
+        votingSlotAnnouncementPeriod = newVotingSlotAnnouncementPeriod;
     }
 }
