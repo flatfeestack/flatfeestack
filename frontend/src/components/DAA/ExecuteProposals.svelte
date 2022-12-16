@@ -48,9 +48,9 @@
             $daaContract.proposalEta(proposalId),
           ]);
 
-          const event = $proposalCreatedEvents.find(
-            (event) => event.args[0].toString() === proposalId.toString()
-          );
+          const event = (
+            await proposalCreatedEvents.get(proposalId, $daaContract)
+          ).event;
 
           return {
             calldatas: event.args[5],
