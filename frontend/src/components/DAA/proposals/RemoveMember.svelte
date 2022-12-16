@@ -8,10 +8,7 @@
   import Spinner from "../../Spinner.svelte";
 
   interface $$Props extends ProposalFormProps {}
-
-  export let targets: $$Props["targets"];
-  export let values: $$Props["values"];
-  export let transferCallData: $$Props["transferCallData"];
+  export let calls: $$Props["calls"];
 
   let formValues = {
     memberToBeRemoved: "",
@@ -57,12 +54,15 @@
   }
 
   function updateCalldata() {
-    values = [0];
-    targets = [import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS];
-    transferCallData = [
-      membershipInterface.encodeFunctionData("removeMember", [
-        formValues.memberToBeRemoved,
-      ]),
+    calls = [
+      {
+        target: import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
+        transferCallData: membershipInterface.encodeFunctionData(
+          "removeMember",
+          [formValues.memberToBeRemoved]
+        ),
+        value: 0,
+      },
     ];
   }
 </script>

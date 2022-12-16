@@ -5,10 +5,7 @@
   import yup from "../../../utils/yup";
 
   interface $$Props extends ProposalFormProps {}
-
-  export let targets: $$Props["targets"];
-  export let values: $$Props["values"];
-  export let transferCallData: $$Props["transferCallData"];
+  export let calls: $$Props["calls"];
 
   let formValues = {
     proposedBlockNumber: 12345,
@@ -30,12 +27,14 @@
   }
 
   function updateCalldata() {
-    values = [0];
-    targets = [import.meta.env.VITE_DAA_CONTRACT_ADDRESS];
-    transferCallData = [
-      daaInterface.encodeFunctionData("setVotingSlot", [
-        formValues.proposedBlockNumber,
-      ]),
+    calls = [
+      {
+        target: import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
+        transferCallData: daaInterface.encodeFunctionData("setVotingSlot", [
+          formValues.proposedBlockNumber,
+        ]),
+        value: 0,
+      },
     ];
   }
 </script>

@@ -1,24 +1,23 @@
 <script lang="ts">
-  import type { ProposalFormProps } from "../../../types/daa";
+  import type { Call, ProposalFormProps } from "../../../types/daa";
   import yup from "../../../utils/yup";
 
   interface $$Props extends ProposalFormProps {}
 
-  export let targets: $$Props["targets"];
-  export let values: $$Props["values"];
-  export let transferCallData: $$Props["transferCallData"];
+  export let calls: $$Props["calls"];
 
-  let formValues = {
-    targets: ["example address"],
-    values: [0],
-    transferCallData: ["example call data"],
-  };
+  let formValues: Call[] = [];
 
-  const schema = yup.object().shape({
-    targets: yup.array().min(1).of(yup.string().isEthereumAddress()).required(),
-    values: yup.array().min(1).of(yup.number()).required(),
-    transferCallData: yup.array().min(1).of(yup.string()).required(),
-  });
+  const schema = yup
+    .array()
+    .min(1)
+    .of(
+      yup.object().shape({
+        target: yup.string().isEthereumAddress().required(),
+        value: yup.number().min(0).required(),
+        transferCallData: yup.string().required(),
+      })
+    );
 
   $: {
     try {
@@ -30,17 +29,17 @@
   }
 
   function updateCalldata() {
-    values = formValues.values;
-    targets = formValues.targets;
-    transferCallData = formValues.transferCallData;
+    calls = formValues;
   }
 
   function addAdditionalCall() {
-    formValues.targets = [...formValues.targets, "another call"];
-    formValues.values = [...formValues.values, 0];
-    formValues.transferCallData = [
-      ...formValues.transferCallData,
-      "another set of calldata",
+    formValues = [
+      ...formValues,
+      {
+        target: "another target",
+        value: 0,
+        transferCallData: "another set of calldata",
+      },
     ];
   }
 </script>
@@ -51,7 +50,7 @@
   }
 </style>
 
-{#each formValues.targets as _targets, i}
+{#each formValues as call, i}
   <h2 class="combine-column">Call {i + 1}</h2>
 
   <label for="target_{i}">Target</label>
@@ -59,10 +58,10 @@
     type="text"
     id="target_{i}"
     name="target[{i}]"
-    bind:value={formValues.targets[i]}
+    bind:value={call.target}
     required
   />
-  {#await schema.validateAt(`targets[${i}]`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].target`, formValues)}{:catch error}
     <p class="invalid combine-column" style="color:red">{error.errors[0]}</p>
   {/await}
 
@@ -71,10 +70,10 @@
     type="number"
     id="value_{i}"
     name="value[{i}]"
-    bind:value={formValues.values[i]}
+    bind:value={call.value}
     required
   />
-  {#await schema.validateAt(`values[${i}]`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].value`, formValues)}{:catch error}
     <p class="invalid combine-column" style="color:red">{error.errors[0]}</p>
   {/await}
 
@@ -83,12 +82,12 @@
     class="combine-column"
     id="calldata_{i}"
     name="calldata[{i}]"
-    bind:value={formValues.transferCallData[i]}
+    bind:value={call.transferCallData}
     rows="4"
     cols="50"
   />
 
-  {#await schema.validateAt(`transferCallData[${i}]`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].transferCallData`, formValues)}{:catch error}
     <p class="combine-column invalid" style="color:red">{error.errors[0]}</p>
   {/await}
 {/each}

@@ -1,16 +1,13 @@
 <script lang="ts">
   import { ethers } from "ethers";
   import { Interface } from "ethers/lib/utils";
-  import yup from "../../../utils/yup";
   import { WalletABI } from "../../../contracts/Wallet";
   import type { ProposalFormProps } from "../../../types/daa";
+  import yup from "../../../utils/yup";
 
   // as described in https://github.com/sveltejs/svelte/issues/7605#issuecomment-1156000553
   interface $$Props extends ProposalFormProps {}
-
-  export let targets: $$Props["targets"];
-  export let values: $$Props["values"];
-  export let transferCallData: $$Props["transferCallData"];
+  export let calls: $$Props["calls"];
 
   const currencies = ["ETH", "Wei"];
   const walletInterface = new Interface(WalletABI);
@@ -36,16 +33,21 @@
   }
 
   function updateCalldata() {
-    values = [0];
-    targets = [import.meta.env.VITE_WALLET_CONTRACT_ADDRESS];
-    transferCallData = [
-      walletInterface.encodeFunctionData("increaseAllowance", [
-        formValues.targetWalletAddress,
-        ethers.utils.parseUnits(
-          String(formValues.amount),
-          currencies[formValues.selectedCurrency] === "ETH" ? 18 : 1
+    calls = [
+      {
+        target: import.meta.env.VITE_WALLET_CONTRACT_ADDRESS,
+        transferCallData: walletInterface.encodeFunctionData(
+          "increaseAllowance",
+          [
+            formValues.targetWalletAddress,
+            ethers.utils.parseUnits(
+              String(formValues.amount),
+              currencies[formValues.selectedCurrency] === "ETH" ? 18 : 1
+            ),
+          ]
         ),
-      ]),
+        value: 0,
+      },
     ];
   }
 </script>
