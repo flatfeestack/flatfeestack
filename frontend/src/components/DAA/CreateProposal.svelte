@@ -14,6 +14,7 @@
   import AddCouncilMember from "./proposals/AddCouncilMember.svelte";
   import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
   import FreeText from "./proposals/FreeText.svelte";
+  import RemoveCouncilMember from "./proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
 
@@ -25,6 +26,10 @@
     {
       component: AddCouncilMember,
       text: "Add council member",
+    },
+    {
+      component: RemoveCouncilMember,
+      text: "Remove council member",
     },
     {
       component: RemoveMember,
