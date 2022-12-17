@@ -912,7 +912,7 @@ describe("DAA", () => {
       ).to.revertedWith("Vote slot already exists");
     });
 
-    it("can not set slot who is less than one month from now", async () => {
+    it("can not set slot too late", async () => {
       const fixtures = await deployFixture();
       const { daa } = fixtures.contracts;
       const { firstCouncilMember } = fixtures.entities;
@@ -921,7 +921,7 @@ describe("DAA", () => {
 
       await expect(
         daa.connect(firstCouncilMember).setVotingSlot(slot)
-      ).to.revertedWith("Must be a least a month from now");
+      ).to.revertedWith("Announcement too late!");
     });
 
     it("emits event after setting new slot", async () => {
@@ -1368,6 +1368,65 @@ describe("DAA", () => {
         daa
           .connect(firstCouncilMember)
           .setExtraOrdinaryAssemblyVotingPeriod(9876543)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
+
+  describe("getMinDelay", () => {
+    it("should return minimum delay of timelock controller", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+
+      expect(await daa.getMinDelay()).to.eq(await timelock.getMinDelay());
+    });
+  });
+
+  describe("setVotingSlotAnnouncementPeriod", () => {
+    it("can set new announcement period for voting slots", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newVotingSlotAnnouncementPeriod = 123456;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData("setVotingSlotAnnouncementPeriod", [
+          newVotingSlotAnnouncementPeriod,
+        ]),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "Reducing this time would be nicer";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstCouncilMember).execute(...proposalArgs);
+      expect(
+        await daa.connect(firstCouncilMember).votingSlotAnnouncementPeriod()
+      ).to.eq(newVotingSlotAnnouncementPeriod);
+    });
+
+    it("cannot be changed directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstCouncilMember } = fixtures.entities;
+
+      await expect(
+        daa.connect(firstCouncilMember).setVotingSlotAnnouncementPeriod(9876543)
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });
