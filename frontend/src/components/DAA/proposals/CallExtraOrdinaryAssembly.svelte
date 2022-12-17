@@ -4,10 +4,12 @@
   import { DAAABI } from "../../../contracts/DAA";
   import { currentBlockNumber, daaContract } from "../../../ts/daaStore";
   import type { ProposalFormProps } from "../../../types/daa";
-  import { secondsPerBlock } from "../../../utils/futureBlockDate";
+  import {
+    futureBlockDate,
+    secondsPerBlock,
+  } from "../../../utils/futureBlockDate";
   import yup from "../../../utils/yup";
   import Spinner from "../../Spinner.svelte";
-  import { futureBlockDate } from "../../../utils/futureBlockDate";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];
@@ -143,8 +145,7 @@
 
     Given we're at block #{$currentBlockNumber}, the earliest you can request an
     extraordinary assembly would be at block #{minimumBlockNumber} (approx. {futureBlockDate(
-      minimumBlockNumber,
-      $currentBlockNumber
+      minimumBlockNumber
     )}). However, this would require that you create the proposal right now and
     queued and execute it immediately when ready. Therefore, calculate an
     additional day or two in (we calculate with 7200 blocks per day).

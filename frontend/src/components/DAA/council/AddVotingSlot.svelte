@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { daaContract, provider } from "../../../ts/daaStore";
+  import {
+    currentBlockNumber,
+    daaContract,
+    provider,
+  } from "../../../ts/daaStore";
   import {
     futureBlockDate,
     secondsPerBlock,
@@ -7,22 +11,20 @@
   import Spinner from "../../Spinner.svelte";
 
   let isLoading = true;
-  let currentBlockNumber = 0;
   let plannedBlockNumber = 0;
   let minValue = 0;
 
   $: {
     if ($provider === null || $daaContract === null) {
       isLoading = true;
-    } else if (currentBlockNumber === 0) {
+    } else if (minValue === 0) {
       prepareView();
     }
   }
 
   async function prepareView() {
-    currentBlockNumber = await $provider.getBlockNumber();
     isLoading = false;
-    minValue = currentBlockNumber + (60 * 60 * 24 * 7 * 4) / secondsPerBlock;
+    minValue = $currentBlockNumber + (60 * 60 * 24 * 7 * 4) / secondsPerBlock;
   }
 
   async function createVotingSlot() {
@@ -38,8 +40,7 @@
   <p>
     The current block number is {currentBlockNumber}, voting slots need to be
     announced one month in advance, so the minimum value is {minValue} (approx. {futureBlockDate(
-      minValue,
-      currentBlockNumber
+      minValue
     )}).
   </p>
 

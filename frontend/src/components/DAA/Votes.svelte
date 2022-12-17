@@ -110,7 +110,7 @@
       const blockTimestamp = (await $provider.getBlock(blockNumber)).timestamp;
       return formatDateTime(new Date(blockTimestamp * 1000));
     } else {
-      return futureBlockDate(blockNumber, $currentBlockNumber);
+      return futureBlockDate(blockNumber);
     }
   }
 
@@ -195,10 +195,7 @@
   <p>
     Last updated (time): Current-Time: {currentTime}
 
-    <ExtraOrdinaryAssemblies
-      currentBlockNumber={$currentBlockNumber}
-      currentBlockTimestamp={$currentBlockTimestamp}
-    />
+    <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
 
     {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
       <div class="card">

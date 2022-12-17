@@ -17,7 +17,6 @@
   import VoteButtonGroup from "./VoteButtonGroup.svelte";
 
   let extraOrdinaryAssemblyRequests = [];
-  export let currentBlockNumber: number | null = null;
   export let currentBlockTimestamp: number | null = null;
 
   // subscribe to the store for notification when the user decides to connect their wallet
@@ -138,8 +137,7 @@
 
     {#if extraOrdinaryAssemblyRequest.state === 1}
       Vote running until #{extraOrdinaryAssemblyRequest.deadline} (approx. {futureBlockDate(
-        extraOrdinaryAssemblyRequest.deadline,
-        currentBlockNumber
+        extraOrdinaryAssemblyRequest.deadline
       )}).
 
       {#if $userEthereumAddress !== null}
