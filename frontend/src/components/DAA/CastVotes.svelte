@@ -18,13 +18,24 @@
     value: number;
   }
 
+  interface Votes {
+    abstainVotes: number;
+    againstVotes: number;
+    forVotes: number;
+  }
+
   interface VoteValuesContainer {
     [key: string]: VoteValues;
+  }
+
+  interface VotesContainer {
+    [key: string]: Votes;
   }
 
   export let blockNumber: string;
   let proposals = [];
   let voteValues: VoteValuesContainer = {};
+  let votes: VotesContainer = {};
   let hasAnyVotes = false;
 
   $: {
@@ -84,6 +95,19 @@
         null
       )
     );
+
+    for (const proposal of proposals) {
+      const { againstVotes, forVotes, abstainVotes } =
+        await $daaContract.proposalVotes(proposal.id);
+      votes = {
+        ...votes,
+        [proposal.id]: {
+          abstainVotes,
+          againstVotes,
+          forVotes,
+        },
+      };
+    }
 
     proposals.forEach((proposal) => {
       const event: Event | undefined = votesCasted.find(
@@ -151,6 +175,15 @@
     <p>Proposer: {proposal.proposer}</p>
 
     <p>{proposal.description}</p>
+
+    <div>
+      <p>State of the vote:</p>
+      <ul>
+        <li>For votes: {votes[proposal.id].forVotes}</li>
+        <li>Against votes: {votes[proposal.id].againstVotes}</li>
+        <li>Abstain votes: {votes[proposal.id].abstainVotes}</li>
+      </ul>
+    </div>
 
     <div class="vote-container">
       <p>Your vote:</p>
