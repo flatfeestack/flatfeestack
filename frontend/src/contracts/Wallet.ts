@@ -10,6 +10,7 @@ export const WalletABI = [
   "function individualContribution(address) view returns (uint256)",
   "function initialize()",
   "function isKnownSender(address _adr) view returns (bool)",
+  "function liquidate(address liquidator)",
   "function owner() view returns (address)",
   "function payContribution(address _adr) payable returns (bool)",
   "function removeKnownSender(address _adr)",

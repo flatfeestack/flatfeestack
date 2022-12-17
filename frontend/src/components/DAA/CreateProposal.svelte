@@ -17,6 +17,7 @@
   import RemoveCouncilMember from "./proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
+  import DissolveAssociation from "./proposals/DissolveAssociation.svelte";
 
   const proposalTypes: ProposalType[] = [
     {
@@ -38,6 +39,10 @@
     {
       component: CallExtraOrdinaryAssembly,
       text: "Call extra ordinary assembly",
+    },
+    {
+      component: DissolveAssociation,
+      text: "Dissolve association",
     },
     {
       component: FreeText,
