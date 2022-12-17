@@ -20,7 +20,7 @@ contract DAA is
     GovernorVotesQuorumFractionUpgradeable,
     GovernorTimelockControlUpgradeable
 {
-    Membership public membershipContract;
+    Membership private _membershipContract;
 
     using SafeCastUpgradeable for uint256;
     using TimersUpgradeable for TimersUpgradeable.BlockNumber;
@@ -35,6 +35,8 @@ contract DAA is
 
     string public bylawsHash;
     bool private _foundingSetupDone;
+    uint256 public extraordinaryVoteQuorumNominator;
+    uint256 public associationDissolutionQuorumNominator;
     uint256 public votingSlotAnnouncementPeriod;
 
     event BylawsChanged(string indexed oldHash, string indexed newHash);
@@ -44,9 +46,11 @@ contract DAA is
         TimelockControllerUpgradeable _timelock,
         string memory bylaws
     ) public initializer {
-        membershipContract = Membership(_membership);
+        _membershipContract = Membership(_membership);
         _foundingSetupDone = false;
         extraOrdinaryAssemblyVotingPeriod = 50400;
+        extraordinaryVoteQuorumNominator = 20;
+        associationDissolutionQuorumNominator = 20;
         votingSlotAnnouncementPeriod = 201600;
 
         governorInit("FlatFeeStack");
@@ -115,6 +119,7 @@ contract DAA is
         override(GovernorUpgradeable, IGovernorUpgradeable)
         returns (uint256)
     {
+        require(daaActive, "The DAA is not active");
         return super.propose(targets, values, calldatas, description);
     }
 
@@ -128,6 +133,7 @@ contract DAA is
         internal
         override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
     {
+        require(daaActive, "The DAA is not active");
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
@@ -157,8 +163,9 @@ contract DAA is
     // the voting slot has to be four weeks from now
     // it is calculated in blocks and we assume that 7200 blocks will be mined in a day
     function setVotingSlot(uint256 blockNumber) public returns (uint256) {
+        require(daaActive, "The DAA is not active");
         require(
-            membershipContract.isCouncilMember(msg.sender) ||
+            _membershipContract.isCouncilMember(msg.sender) ||
                 _msgSender() == _executor(),
             "only council member or governor"
         );
@@ -216,8 +223,9 @@ contract DAA is
         uint256 blockNumber,
         string calldata reason
     ) public {
+        require(daaActive, "The DAA is not active");
         require(
-            membershipContract.isCouncilMember(msg.sender),
+            _membershipContract.isCouncilMember(msg.sender),
             "only council member"
         );
         require(
@@ -372,15 +380,25 @@ contract DAA is
         returns (bool)
     {
         ProposalCategory proposalCategory = _proposals[proposalId].category;
-        if (proposalCategory != ProposalCategory.ExtraordinaryVote) {
+        if (proposalCategory == ProposalCategory.Generic) {
             return super._quorumReached(proposalId);
         }
 
         ProposalVote storage proposalVote = _proposalVotes[proposalId];
 
         uint256 voteStart = proposalSnapshot(proposalId);
-        uint256 neededQuorum = (token.getPastTotalSupply(voteStart) * 20) /
-            quorumDenominator();
+        uint256 quorumNominator = 0;
+        if (proposalCategory == ProposalCategory.ExtraordinaryVote) {
+            quorumNominator = extraordinaryVoteQuorumNominator;
+        } else if (
+            proposalCategory == ProposalCategory.AssociationDissolution
+        ) {
+            quorumNominator = associationDissolutionQuorumNominator;
+        } else {
+            revert("Not implemented proposal quorum");
+        }
+        uint256 neededQuorum = (token.getPastTotalSupply(voteStart) *
+            quorumNominator) / quorumDenominator();
         return
             neededQuorum <= proposalVote.forVotes + proposalVote.abstainVotes;
     }
@@ -393,5 +411,23 @@ contract DAA is
         uint64 newVotingSlotAnnouncementPeriod
     ) external onlyGovernance {
         votingSlotAnnouncementPeriod = newVotingSlotAnnouncementPeriod;
+    }
+
+    function dissolveDAA() public onlyGovernance {
+        daaActive = false;
+    }
+
+    function setExtraordinaryVoteQuorumNominator(
+        uint256 newValue
+    ) public onlyGovernance {
+        require(newValue <= 20, "mustt be less than 20");
+        extraordinaryVoteQuorumNominator = newValue;
+    }
+
+    function setAssociationDissolutionQuorumNominator(
+        uint256 newValue
+    ) public onlyGovernance {
+        require(newValue <= 100, "must be less than 100");
+        associationDissolutionQuorumNominator = newValue;
     }
 }

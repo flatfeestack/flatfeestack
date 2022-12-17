@@ -39,6 +39,11 @@ describe("DAA", () => {
       .connect(firstCouncilMember)
       .transferOwnership(timelock.address);
 
+    // move membership contract ownership to timelock
+    await membership
+      .connect(firstCouncilMember)
+      .transferOwnership(timelock.address);
+
     // deploy DAA
     const DAA = await ethers.getContractFactory("DAA");
     const bylawsHash =
@@ -1427,6 +1432,258 @@ describe("DAA", () => {
 
       await expect(
         daa.connect(firstCouncilMember).setVotingSlotAnnouncementPeriod(9876543)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
+
+  describe("dissolveDAA", () => {
+    it("can dissolve the daa", async () => {
+      const fixtures = await deployFixture();
+      const { daa, membership, wallet, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      expect(await daa.connect(firstCouncilMember).daaActive()).to.eq(true);
+
+      const transferCalldatas = [
+        wallet.interface.encodeFunctionData("liquidate", [
+          firstCouncilMember.address,
+        ]),
+        membership.interface.encodeFunctionData("lockMembership"),
+        daa.interface.encodeFunctionData("dissolveDAA"),
+      ];
+
+      const targets = [wallet.address, membership.address, daa.address];
+      const values = [0, 0, 0];
+      const description =
+        "I want to dissolve the DAA and the firstCouncilMember is the liquidator.";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstCouncilMember).execute(...proposalArgs);
+      expect(await daa.connect(firstCouncilMember).daaActive()).to.eq(false);
+    });
+
+    it("can not only liquidate", async () => {
+      const fixtures = await deployFixture();
+      const { daa, wallet } = fixtures.contracts;
+      const { firstCouncilMember } = fixtures.entities;
+
+      expect(await daa.connect(firstCouncilMember).daaActive()).to.eq(true);
+
+      const transferCalldatas = [
+        wallet.interface.encodeFunctionData("liquidate", [
+          firstCouncilMember.address,
+        ]),
+      ];
+
+      const targets = [wallet.address];
+      const values = [0];
+      const description = "I want to only liquidate to steal the money";
+
+      await expect(
+        daa
+          .connect(firstCouncilMember)
+          .propose(targets, values, transferCalldatas, description)
+      ).to.be.revertedWith("Wrong functions");
+    });
+  });
+
+  describe("setExtraordinaryVoteQuorumNominator", () => {
+    it("can set new value", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newValue = 15;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setExtraordinaryVoteQuorumNominator",
+          [newValue]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I want to increase the value";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstCouncilMember).execute(...proposalArgs);
+      expect(
+        await daa.connect(firstCouncilMember).extraordinaryVoteQuorumNominator()
+      ).to.eq(newValue);
+    });
+
+    it("can not be more than 20", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newValue = 21;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setExtraordinaryVoteQuorumNominator",
+          [newValue]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I want to increase the value";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await expect(
+        daa.connect(firstCouncilMember).execute(...proposalArgs)
+      ).to.be.revertedWith(
+        "TimelockController: underlying transaction reverted"
+      );
+    });
+
+    it("cannot be changed directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstCouncilMember } = fixtures.entities;
+
+      await expect(
+        daa.connect(firstCouncilMember).setExtraordinaryVoteQuorumNominator(15)
+      ).to.revertedWith("Governor: onlyGovernance");
+    });
+  });
+
+  describe("setAssociationDissolutionQuorumNominator", () => {
+    it("can set new value", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newValue = 50;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setAssociationDissolutionQuorumNominator",
+          [newValue]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I want to increase the value";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await daa.connect(firstCouncilMember).execute(...proposalArgs);
+      expect(
+        await daa
+          .connect(firstCouncilMember)
+          .associationDissolutionQuorumNominator()
+      ).to.eq(newValue);
+    });
+
+    it("can not be more than 100", async () => {
+      const fixtures = await deployFixture();
+      const { daa, timelock } = fixtures.contracts;
+      const { firstCouncilMember, secondCouncilMember, regularMember } =
+        fixtures.entities;
+      const { firstVotingSlot } = fixtures;
+
+      const newValue = 101;
+      const transferCalldatas = [
+        daa.interface.encodeFunctionData(
+          "setAssociationDissolutionQuorumNominator",
+          [newValue]
+        ),
+      ];
+
+      const targets = [daa.address];
+      const values = [0];
+      const description = "I want to increase the value";
+
+      const proposalArgs = await createQueueAndVoteProposal(
+        daa,
+        firstCouncilMember,
+        firstVotingSlot,
+        [firstCouncilMember, secondCouncilMember, regularMember],
+        [],
+        [],
+        transferCalldatas,
+        targets,
+        values,
+        description
+      );
+
+      await mine(await timelock.getMinDelay());
+      await expect(
+        daa.connect(firstCouncilMember).execute(...proposalArgs)
+      ).to.be.revertedWith(
+        "TimelockController: underlying transaction reverted"
+      );
+    });
+
+    it("cannot be changed directly", async () => {
+      const fixtures = await deployFixture();
+      const { daa } = fixtures.contracts;
+      const { firstCouncilMember } = fixtures.entities;
+
+      await expect(
+        daa
+          .connect(firstCouncilMember)
+          .setAssociationDissolutionQuorumNominator(15)
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });

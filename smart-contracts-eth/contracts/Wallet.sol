@@ -97,9 +97,7 @@ contract Wallet is Initializable, OwnableUpgradeable {
         return true;
     }
 
-    function withdrawMoney(
-        address payable _adr
-    ) public onlyOwner returns (bool) {
+    function withdrawMoney(address payable _adr) public returns (bool) {
         require(allowance[_adr] > 0, "No allowance for this account!");
 
         uint256 operatingAmount = allowance[_adr];
@@ -113,5 +111,13 @@ contract Wallet is Initializable, OwnableUpgradeable {
 
         emit WithdrawFunds(_adr, totalAllowance);
         return true;
+    }
+
+    function liquidate(address payable liquidator) public onlyOwner {
+        uint256 amountToLiquidate = totalBalance - totalAllowance;
+        if (amountToLiquidate > 0) {
+            liquidator.transfer(amountToLiquidate);
+            emit WithdrawFunds(liquidator, amountToLiquidate);
+        }
     }
 }

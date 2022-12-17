@@ -18,26 +18,43 @@ describe("Wallet", () => {
 
   describe("increaseAllowance", () => {
     it("cannot increase more than total balance of wallet", async () => {
-      const { otherAccount, wallet } = await deployFixture();
+      const { owner, otherAccount, wallet } = await deployFixture();
 
       await expect(
-        wallet.increaseAllowance(
-          otherAccount.address,
-          ethers.utils.parseEther("200.0")
-        )
+        wallet
+          .connect(owner)
+          .increaseAllowance(
+            otherAccount.address,
+            ethers.utils.parseEther("200.0")
+          )
       ).to.be.revertedWith("Keep allowance below balance!");
     });
 
     it("increases allowance for given address", async () => {
-      const { otherAccount, wallet } = await deployFixture();
+      const { owner, otherAccount, wallet } = await deployFixture();
 
-      await wallet.increaseAllowance(
-        otherAccount.address,
-        ethers.utils.parseEther("0.5")
-      );
+      await wallet
+        .connect(owner)
+        .increaseAllowance(
+          otherAccount.address,
+          ethers.utils.parseEther("0.5")
+        );
       expect(await wallet.allowance(otherAccount.address)).to.eq(
         ethers.utils.parseEther("0.5")
       );
+    });
+
+    it("other than owner can not increase allowance", async () => {
+      const { otherAccount, wallet } = await deployFixture();
+
+      await expect(
+        wallet
+          .connect(otherAccount)
+          .increaseAllowance(
+            otherAccount.address,
+            ethers.utils.parseEther("0.5")
+          )
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
@@ -85,10 +102,12 @@ describe("Wallet", () => {
     });
 
     it("can withdraw allowance", async () => {
-      const { otherAccount, wallet } = await deployFixture();
+      const { owner, otherAccount, wallet } = await deployFixture();
       const withdrawAmount = ethers.utils.parseEther("0.5");
 
-      await wallet.increaseAllowance(otherAccount.address, withdrawAmount);
+      await wallet
+        .connect(owner)
+        .increaseAllowance(otherAccount.address, withdrawAmount);
 
       await expect(
         wallet.withdrawMoney(otherAccount.address)
@@ -117,6 +136,25 @@ describe("Wallet", () => {
       await expect(wallet.removeKnownSender(owner.address)).to.be.revertedWith(
         "Owner cannot be removed!"
       );
+    });
+  });
+
+  describe("liquidate", () => {
+    it("can liquidate wallet", async () => {
+      const { owner, otherAccount, wallet } = await deployFixture();
+      const totalBalance = await wallet.totalBalance();
+
+      await expect(wallet.connect(owner).liquidate(otherAccount.address))
+        .to.emit(wallet, "WithdrawFunds")
+        .withArgs(otherAccount.address, totalBalance);
+    });
+
+    it("other than owner can not liquidate", async () => {
+      const { otherAccount, wallet } = await deployFixture();
+
+      await expect(
+        wallet.connect(otherAccount).liquidate(otherAccount.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });

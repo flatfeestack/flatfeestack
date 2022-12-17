@@ -368,6 +368,27 @@ describe("Membership", () => {
     });
   });
 
+  // this function is only callable by the owner, which is the first council member in the tests, but the timelock controller in reality
+  describe("lockMembership", () => {
+    it("allows to lock the membership", async () => {
+      const { firstCouncilMember, membership } = await deployFixture();
+
+      await membership.connect(firstCouncilMember).lockMembership();
+
+      expect(
+        await membership.connect(firstCouncilMember).membershipActive()
+      ).to.eq(false);
+    });
+
+    it("other than owner can not lock the membership", async () => {
+      const { secondCouncilMember, membership } = await deployFixture();
+
+      await expect(
+        membership.connect(secondCouncilMember).lockMembership()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
   describe("removeMember", () => {
     it("cannot leave association if they're no member", async () => {
       const { newUser, membership } = await deployFixture();
