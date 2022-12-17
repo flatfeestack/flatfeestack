@@ -1,8 +1,9 @@
-import { derived, readable, writable, type Readable } from "svelte/store";
-import type { Web3Provider, JsonRpcSigner } from "@ethersproject/providers";
+import type { JsonRpcSigner, Web3Provider } from "@ethersproject/providers";
 import { BigNumber, Contract, ethers, Signer } from "ethers";
-import { MembershipABI } from "../contracts/Membership";
+import { derived, writable, type Readable } from "svelte/store";
 import { DAAABI } from "../contracts/DAA";
+import { MembershipABI } from "../contracts/Membership";
+import { WalletABI } from "../contracts/Wallet";
 
 export const provider = writable<Web3Provider | null>(null);
 export const signer = writable<JsonRpcSigner | null>(null);
@@ -129,3 +130,18 @@ export const councilMembers = derived<
     );
   }
 });
+
+export const walletContract = derived(
+  [provider, signer],
+  ([$provider, $signer]) => {
+    if ($provider === null || $signer === null) {
+      return null;
+    } else {
+      return new ethers.Contract(
+        import.meta.env.VITE_WALLET_CONTRACT_ADDRESS,
+        WalletABI,
+        $signer
+      );
+    }
+  }
+);
