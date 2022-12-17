@@ -1,6 +1,7 @@
 <script lang="ts">
   import { navigate } from "svelte-routing";
   import {
+    currentBlockNumber,
     currentBlockTimestamp,
     daaContract,
     membershipStatusValue,
@@ -15,7 +16,6 @@
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
-  let currentBlockNumber: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
 
@@ -26,19 +26,24 @@
     ExecutionPhase,
   }
 
+  interface VotingSlotDates {
+    proposalCreationOpenBlockNumber: number;
+    proposalCreationOpenDate: string;
+    votingStartBlockNumber: number;
+    votingStartDate: string;
+    votingEndBlockNumber: number;
+    votingEndDate: string;
+  }
+
   interface VotingSlot {
-    blockDate: string;
+    dates: VotingSlotDates;
+    id: number;
     proposalInfos: ProposalInfo[];
     votingSlotState: VotingSlotState;
   }
 
   interface VotingSlotsContainer {
     [key: number]: VotingSlot;
-  }
-
-  interface BlockInfo {
-    blockNumber: number;
-    blockDate: string;
   }
 
   interface ProposalInfo {
@@ -48,9 +53,10 @@
 
   $: {
     if (
+      $currentBlockNumber === null ||
+      $currentBlockTimestamp === null ||
       $daaContract === null ||
-      $votingSlots === null ||
-      $currentBlockTimestamp === null
+      $votingSlots === null
     ) {
       $isSubmitting = true;
     } else if (Object.keys(viewVotingSlots).length === 0) {
@@ -61,7 +67,6 @@
 
   async function prepareView() {
     slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();
-    currentBlockNumber = await $provider.getBlockNumber();
     currentTime = formatDateTime(new Date($currentBlockTimestamp * 1000));
     votingPeriod = (await $daaContract.votingPeriod()).toNumber();
 
@@ -71,16 +76,21 @@
   }
 
   async function createVotingSlots() {
-    $votingSlots.forEach(async (votingSlotBlock: number) => {
+    $votingSlots.forEach(async (votingSlotBlock: number, index) => {
       const blockInfo = await createBlockInfo(votingSlotBlock);
-      const proposalInfos = await createProposalInfo(blockInfo.blockNumber);
-      const votingSlotState = await getVotingSlotState(blockInfo.blockNumber);
+      const proposalInfos = await createProposalInfo(
+        blockInfo.votingStartBlockNumber
+      );
+      const votingSlotState = await getVotingSlotState(
+        blockInfo.votingStartBlockNumber
+      );
 
       viewVotingSlots = {
         ...viewVotingSlots,
-        [blockInfo.blockNumber]: {
+        [blockInfo.votingStartBlockNumber]: {
           proposalInfos,
-          blockDate: blockInfo.blockDate,
+          dates: blockInfo,
+          id: index + 1,
           votingSlotState,
         },
       };
@@ -95,22 +105,32 @@
       }, {});
   }
 
-  async function createBlockInfo(
-    futureBlockNumber: number
-  ): Promise<BlockInfo> {
-    if (futureBlockNumber <= currentBlockNumber) {
-      const blockTimestamp = (await $provider.getBlock(futureBlockNumber))
-        .timestamp;
-      return {
-        blockNumber: futureBlockNumber,
-        blockDate: formatDateTime(new Date(blockTimestamp * 1000)),
-      };
+  async function getDateForBlock(blockNumber): Promise<string> {
+    if (blockNumber <= $currentBlockNumber) {
+      const blockTimestamp = (await $provider.getBlock(blockNumber)).timestamp;
+      return formatDateTime(new Date(blockTimestamp * 1000));
     } else {
-      return {
-        blockNumber: futureBlockNumber,
-        blockDate: futureBlockDate(futureBlockNumber, currentBlockNumber),
-      };
+      return futureBlockDate(blockNumber);
     }
+  }
+
+  async function createBlockInfo(
+    votingStartBlockNumber: number
+  ): Promise<VotingSlotDates> {
+    const dates = {
+      proposalCreationOpenBlockNumber: votingStartBlockNumber - slotCloseTime,
+      votingStartBlockNumber,
+      votingEndBlockNumber: votingStartBlockNumber + votingPeriod,
+    };
+
+    return {
+      ...dates,
+      proposalCreationOpenDate: await getDateForBlock(
+        dates.proposalCreationOpenBlockNumber
+      ),
+      votingStartDate: await getDateForBlock(dates.votingStartBlockNumber),
+      votingEndDate: await getDateForBlock(dates.votingEndBlockNumber),
+    };
   }
 
   async function createProposalInfo(
@@ -141,14 +161,14 @@
   async function getVotingSlotState(
     votingSlotBlockNumber: number
   ): Promise<VotingSlotState> {
-    if (currentBlockNumber < votingSlotBlockNumber) {
-      if (currentBlockNumber < votingSlotBlockNumber - slotCloseTime) {
+    if ($currentBlockNumber < votingSlotBlockNumber) {
+      if ($currentBlockNumber < votingSlotBlockNumber - slotCloseTime) {
         return VotingSlotState.ProposalsOpen;
       } else {
         return VotingSlotState.ProposalFreeze;
       }
     } else {
-      if (currentBlockNumber > votingSlotBlockNumber + votingPeriod) {
+      if ($currentBlockNumber > votingSlotBlockNumber + votingPeriod) {
         return VotingSlotState.ExecutionPhase;
       } else {
         return VotingSlotState.VotingOpen;
@@ -171,36 +191,53 @@
 </style>
 
 <Navigation>
-  <p>Last updated (block): #{currentBlockNumber}</p>
+  <p>Last updated (block): #{$currentBlockNumber}</p>
   <p>
     Last updated (time): Current-Time: {currentTime}
 
-    <ExtraOrdinaryAssemblies
-      {currentBlockNumber}
-      currentBlockTimestamp={$currentBlockTimestamp}
-    />
+    <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
 
-    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
+    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
       <div class="card">
         <h2 class="text-secondary-900">
-          Voting slot #{Object.entries(viewVotingSlots).length - index}
+          Voting slot #{slotInfo.id}
         </h2>
 
         {#if slotInfo.votingSlotState === VotingSlotState.ProposalsOpen}
           <p>
-            Proposal creation open until #{Number(blockNumber) - slotCloseTime}
+            Proposal creation open until #{slotInfo.dates
+              .proposalCreationOpenBlockNumber} (approx. {slotInfo.dates
+              .proposalCreationOpenDate})
           </p>
-          <p>Voting scheduled for #{blockNumber}</p>
+          <p>
+            Voting scheduled for #{blockNumber} (approx. {slotInfo.dates
+              .votingStartDate})
+          </p>
         {:else if slotInfo.votingSlotState === VotingSlotState.ProposalFreeze}
           <p>
-            Proposal creation closed since #{Number(blockNumber) -
-              slotCloseTime}
+            Proposal creation closed since #{slotInfo.dates
+              .proposalCreationOpenBlockNumber} ({slotInfo.dates
+              .proposalCreationOpenDate})
           </p>
-          <p>Voting scheduled for #{blockNumber}</p>
+          <p>
+            Voting start scheduled for #{blockNumber} (approx. {slotInfo.dates
+              .votingStartDate})
+          </p>
+
+          <p>
+            Voting end scheduled for #{slotInfo.dates.votingEndBlockNumber} (approx.
+            {slotInfo.dates.votingEndDate})
+          </p>
         {:else if slotInfo.votingSlotState === VotingSlotState.VotingOpen}
-          <p>Voting open until #{Number(blockNumber) + votingPeriod}</p>
+          <p>
+            Voting open until #{slotInfo.dates.votingEndBlockNumber} (approx. {slotInfo
+              .dates.votingEndDate})
+          </p>
         {:else}
-          <p>Voting closed since #{Number(blockNumber) + votingPeriod}</p>
+          <p>
+            Voting closed since #{slotInfo.dates.votingEndBlockNumber} ({slotInfo
+              .dates.votingEndDate})
+          </p>
         {/if}
 
         {#if slotInfo.proposalInfos.length > 0}
@@ -219,12 +256,12 @@
               on:click={() => navigate("/daa/createProposal")}
               class="py-2 button3">Create Proposal</button
             >
-          {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen}
+          {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
             <button
               on:click={() => navigate(`/daa/castVotes/${blockNumber}`)}
               class="py-2 button3">Vote</button
             >
-          {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase}
+          {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
             <button
               on:click={() => navigate(`/daa/executeProposals/${blockNumber}`)}
               class="py-2 button3">Execute proposals</button
@@ -233,5 +270,5 @@
         {/if}
       </div>
     {/each}
-  </p></Navigation
->
+  </p>
+</Navigation>

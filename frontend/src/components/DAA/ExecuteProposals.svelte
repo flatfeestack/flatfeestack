@@ -37,11 +37,8 @@
       navigate("/daa/votes");
     }
 
-    const currentBlockNumber = await $provider.getBlockNumber();
-    const [currentBlock, amountOfProposals] = await Promise.all([
-      $provider.getBlock(currentBlockNumber),
-      $daaContract.getNumberOfProposalsInVotingSlot(blockNumber),
-    ]);
+    const amountOfProposals =
+      await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber);
 
     proposals = await Promise.all(
       [...Array(amountOfProposals.toNumber()).keys()].map(

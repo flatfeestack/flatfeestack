@@ -1,14 +1,11 @@
 import { get } from "svelte/store";
-import { currentBlockTimestamp } from "../ts/daaStore";
+import { currentBlockNumber, currentBlockTimestamp } from "../ts/daaStore";
 import formateDateTime from "./formatDateTime";
 
 const secondsPerBlock = 12;
 
-function futureBlockDate(
-  futureBlockNumber: number,
-  currentBlockNumber: number
-): string {
-  const blockDifference = futureBlockNumber - currentBlockNumber;
+function futureBlockDate(futureBlockNumber: number): string {
+  const blockDifference = futureBlockNumber - get(currentBlockNumber);
   const timeDifference = Math.abs(blockDifference * secondsPerBlock);
 
   const date = new Date(get(currentBlockTimestamp) * 1000);
