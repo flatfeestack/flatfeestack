@@ -256,12 +256,12 @@
               on:click={() => navigate("/daa/createProposal")}
               class="py-2 button3">Create Proposal</button
             >
-          {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen}
+          {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
             <button
               on:click={() => navigate(`/daa/castVotes/${blockNumber}`)}
               class="py-2 button3">Vote</button
             >
-          {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase}
+          {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
             <button
               on:click={() => navigate(`/daa/executeProposals/${blockNumber}`)}
               class="py-2 button3">Execute proposals</button
