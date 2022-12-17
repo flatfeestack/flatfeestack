@@ -33,15 +33,16 @@ describe("Wallet", () => {
     it("increases allowance for given address", async () => {
       const { owner, otherAccount, wallet } = await deployFixture();
 
-      await wallet
-        .connect(owner)
-        .increaseAllowance(
-          otherAccount.address,
-          ethers.utils.parseEther("0.5")
-        );
-      expect(await wallet.allowance(otherAccount.address)).to.eq(
-        ethers.utils.parseEther("0.5")
-      );
+      const halfAnEther = ethers.utils.parseEther("0.5");
+
+      await expect(
+        wallet
+          .connect(owner)
+          .increaseAllowance(otherAccount.address, halfAnEther)
+      )
+        .to.emit(wallet, "IncreaseAllowance")
+        .withArgs(otherAccount.address, halfAnEther);
+      expect(await wallet.allowance(otherAccount.address)).to.eq(halfAnEther);
     });
 
     it("other than owner can not increase allowance", async () => {
@@ -62,16 +63,21 @@ describe("Wallet", () => {
     it("increases total balance and contribution - no previous contributions", async () => {
       const { otherAccount, wallet } = await deployFixture();
       const currentBalance = await wallet.totalBalance();
+      const halfAnEther = ethers.utils.parseEther("0.5");
 
-      await wallet.payContribution(otherAccount.address, {
-        value: ethers.utils.parseEther("0.5"),
-      });
+      await expect(
+        wallet.payContribution(otherAccount.address, {
+          value: halfAnEther,
+        })
+      )
+        .to.emit(wallet, "AcceptPayment")
+        .withArgs(otherAccount.address, halfAnEther);
 
-      expect(await wallet.totalBalance()).to.eq(
-        ethers.utils.parseEther("0.5").add(currentBalance)
-      );
       expect(await wallet.individualContribution(otherAccount.address)).to.eq(
-        ethers.utils.parseEther("0.5")
+        halfAnEther
+      );
+      expect(await wallet.totalBalance()).to.eq(
+        halfAnEther.add(currentBalance)
       );
     });
 
@@ -80,9 +86,13 @@ describe("Wallet", () => {
       const currentBalance = await wallet.totalBalance();
       const contribution = ethers.utils.parseEther("0.5");
 
-      await wallet.payContribution(owner.address, {
-        value: contribution,
-      });
+      await expect(
+        wallet.payContribution(owner.address, {
+          value: contribution,
+        })
+      )
+        .to.emit(wallet, "AcceptPayment")
+        .withArgs(owner.address, contribution);
 
       const expectedContribution = contribution.add(currentBalance);
       expect(await wallet.totalBalance()).to.eq(expectedContribution);
@@ -109,12 +119,13 @@ describe("Wallet", () => {
         .connect(owner)
         .increaseAllowance(otherAccount.address, withdrawAmount);
 
-      await expect(
-        wallet.withdrawMoney(otherAccount.address)
-      ).to.changeEtherBalances(
-        [otherAccount, wallet],
-        [withdrawAmount, withdrawAmount.mul(BigInt(-1))]
-      );
+      await expect(wallet.withdrawMoney(otherAccount.address))
+        .to.emit(wallet, "WithdrawFunds")
+        .withArgs(owner.address, withdrawAmount)
+        .and.to.changeEtherBalances(
+          [otherAccount, wallet],
+          [withdrawAmount, withdrawAmount.mul(BigInt(-1))]
+        );
     });
   });
 
@@ -165,14 +176,18 @@ describe("Wallet", () => {
       const currentTotalBalance = await wallet.totalBalance();
       const oneEther = ethers.utils.parseEther("1.0");
 
-      await expect(owner.sendTransaction({
-        to: wallet.address,
-        value: oneEther,
-      }))
-      .to.emit(wallet, "AcceptPayment")
-      .withArgs(owner.address, oneEther);
+      await expect(
+        owner.sendTransaction({
+          to: wallet.address,
+          value: oneEther,
+        })
+      )
+        .to.emit(wallet, "AcceptPayment")
+        .withArgs(owner.address, oneEther);
 
-      expect(await wallet.totalBalance()).to.eq(currentTotalBalance.add(oneEther))
-    })
-  })
+      expect(await wallet.totalBalance()).to.eq(
+        currentTotalBalance.add(oneEther)
+      );
+    });
+  });
 });
