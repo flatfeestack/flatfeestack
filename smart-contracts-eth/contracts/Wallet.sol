@@ -33,6 +33,8 @@ contract Wallet is Initializable, OwnableUpgradeable {
     receive() external payable {
         totalBalance += msg.value;
         individualContribution[msg.sender] += msg.value;
+
+        emit AcceptPayment(msg.sender, msg.value);
     }
 
     function addKnownSender(address _adr) public onlyOwner {

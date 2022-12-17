@@ -157,4 +157,22 @@ describe("Wallet", () => {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
+
+  describe("receive", () => {
+    it("emits event when receiving funds", async () => {
+      const { owner, wallet } = await deployFixture();
+
+      const currentTotalBalance = await wallet.totalBalance();
+      const oneEther = ethers.utils.parseEther("1.0");
+
+      await expect(owner.sendTransaction({
+        to: wallet.address,
+        value: oneEther,
+      }))
+      .to.emit(wallet, "AcceptPayment")
+      .withArgs(owner.address, oneEther);
+
+      expect(await wallet.totalBalance()).to.eq(currentTotalBalance.add(oneEther))
+    })
+  })
 });
