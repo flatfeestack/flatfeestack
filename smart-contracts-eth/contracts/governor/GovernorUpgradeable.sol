@@ -31,6 +31,15 @@ abstract contract GovernorUpgradeable is
     bytes4 private constant SET_VOTING_SLOT_SIGNATURE =
         bytes4(keccak256("setVotingSlot(uint256)"));
 
+    bytes4 private constant DISSOLVE_DAA_SIGNATURE =
+        bytes4(keccak256("dissolveDAA()"));
+
+    bytes4 private constant LOCK_MEMBERSHIP_SIGNATURE =
+        bytes4(keccak256("lockMembership()"));
+
+    bytes4 private constant LIQUIDATE_WALLET_SIGNATURE =
+        bytes4(keccak256("liquidate(address)"));
+
     uint64 public extraOrdinaryAssemblyVotingPeriod;
 
     event DAAProposalCreated(
@@ -61,8 +70,7 @@ abstract contract GovernorUpgradeable is
     enum ProposalCategory {
         Generic,
         ExtraordinaryVote,
-        AssociationDissolution,
-        ChangeBylaws
+        AssociationDissolution
     }
 
     struct ProposalCore {
@@ -89,6 +97,8 @@ abstract contract GovernorUpgradeable is
     // index of requested extra ordinary proposal ids
     uint256[] public extraOrdinaryAssemblyProposals;
 
+    bool public daaActive;
+
     event NewTimeslotSet(uint256 timeslot);
 
     modifier onlyGovernance() {
@@ -105,7 +115,9 @@ abstract contract GovernorUpgradeable is
     function governorInit(string memory name_) internal onlyInitializing {
         __EIP712_init_unchained(name_, version());
         governorInitUnchained(name_);
-        slotCloseTime = 50400; // 1 week before
+        slotCloseTime = 50400;
+        // 1 week before
+        daaActive = true;
     }
 
     function governorInitUnchained(
@@ -236,6 +248,7 @@ abstract contract GovernorUpgradeable is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(IGovernorUpgradeable) returns (uint256) {
+        require(daaActive, "The DAA is not active");
         uint256 proposalId = _checkAndHashProposal(
             targets,
             values,
@@ -320,11 +333,33 @@ abstract contract GovernorUpgradeable is
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
         bool isRequestingExtraOrdinaryVotingSlot = false;
-        for (uint256 i = 0; i < calldatas.length; i++) {
-            bytes4 functionSignature = bytes4(calldatas[i]);
-            if (functionSignature == SET_VOTING_SLOT_SIGNATURE) {
-                isRequestingExtraOrdinaryVotingSlot = true;
-                break;
+        bool isRequestingDissolveOfDAA = false;
+        if (calldatas.length == 3) {
+            bytes4 functionSignature0 = bytes4(calldatas[0]);
+            bytes4 functionSignature1 = bytes4(calldatas[1]);
+            bytes4 functionSignature2 = bytes4(calldatas[2]);
+            if (
+                functionSignature0 == LIQUIDATE_WALLET_SIGNATURE &&
+                functionSignature1 == LOCK_MEMBERSHIP_SIGNATURE &&
+                functionSignature2 == DISSOLVE_DAA_SIGNATURE
+            ) {
+                isRequestingDissolveOfDAA = true;
+            }
+        }
+        if (isRequestingDissolveOfDAA != true) {
+            for (uint256 i = 0; i < calldatas.length; i++) {
+                bytes4 functionSignature = bytes4(calldatas[i]);
+                if (functionSignature == SET_VOTING_SLOT_SIGNATURE) {
+                    isRequestingExtraOrdinaryVotingSlot = true;
+                    break;
+                }
+                if (
+                    functionSignature == LIQUIDATE_WALLET_SIGNATURE ||
+                    functionSignature == LOCK_MEMBERSHIP_SIGNATURE ||
+                    functionSignature == DISSOLVE_DAA_SIGNATURE
+                ) {
+                    revert("Wrong functions");
+                }
             }
         }
 
@@ -345,7 +380,11 @@ abstract contract GovernorUpgradeable is
 
             proposal.voteStart.setDeadline(start);
             proposal.voteEnd.setDeadline(end);
-            proposal.category = ProposalCategory.Generic;
+            if (isRequestingDissolveOfDAA) {
+                proposal.category = ProposalCategory.AssociationDissolution;
+            } else {
+                proposal.category = ProposalCategory.Generic;
+            }
 
             votingSlots[nextSlot].push(proposalId);
         }

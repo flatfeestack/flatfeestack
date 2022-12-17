@@ -39,6 +39,8 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     mapping(address => MembershipStatus) internal membershipList;
     mapping(address => address) internal firstApproval;
 
+    bool public membershipActive;
+
     event ChangeInMembershipStatus(
         address indexed accountAddress,
         uint256 indexed currentStatus
@@ -85,6 +87,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
         minimumCouncilMembers = 2;
         membershipFee = 30000 wei;
         _wallet = _walletContract;
+        membershipActive = true;
         emit ChangeInWalletAddress(address(0x0), address(_wallet));
 
         councilMembers.push(_firstCouncilMember);
@@ -119,6 +122,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function requestMembership() public nonMemberOnly returns (bool) {
+        require(membershipActive, "Membership is not active");
         membershipList[msg.sender] = MembershipStatus.requesting;
         members.push(msg.sender);
         emit ChangeInMembershipStatus(
@@ -133,6 +137,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function addCouncilMember(address _adr) public onlyOwner returns (bool) {
+        require(membershipActive, "Membership is not active");
         require(
             membershipList[_adr] == MembershipStatus.isMember,
             "Must be a member"
@@ -146,6 +151,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function removeCouncilMember(address _adr) public returns (bool) {
+        require(membershipActive, "Membership is not active");
         require(isCouncilMember(_adr) == true, "Is no council member!");
         require(
             this.getCouncilMembersLength() > minimumCouncilMembers,
@@ -179,6 +185,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     function approveMembership(
         address _adr
     ) public councilMemberOnly returns (bool) {
+        require(membershipActive, "Membership is not active");
         require(
             membershipList[_adr] == MembershipStatus.requesting ||
                 (membershipList[_adr] == MembershipStatus.approvedByOne &&
@@ -204,6 +211,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function payMembershipFee() public payable memberOnly {
+        require(membershipActive, "Membership is not active");
         uint256 nextDueDate = nextMembershipFeePayment[msg.sender];
         require(nextDueDate <= block.timestamp, "Membership fee not due yet.");
         // we don't say "no" if somebody pays more than they should :)
@@ -239,6 +247,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function removeMember(address _adr) public {
+        require(membershipActive, "Membership is not active");
         require(
             membershipList[_adr] != MembershipStatus.nonMember,
             "Address is not a member!"
@@ -282,6 +291,7 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
     }
 
     function removeMembersThatDidntPay() public {
+        require(membershipActive, "Membership is not active");
         address[] memory toBeRemoved = new address[](members.length);
         uint256 toBeRemovedIndex = 0;
         for (uint256 i = 0; i < members.length; i++) {
@@ -372,6 +382,10 @@ contract Membership is Initializable, IVotesUpgradeable, OwnableUpgradeable {
 
     function getMembersLength() external view returns (uint256) {
         return members.length;
+    }
+
+    function lockMembership() public onlyOwner {
+        membershipActive = false;
     }
 }
 /* solhint-enable not-rely-on-time */
