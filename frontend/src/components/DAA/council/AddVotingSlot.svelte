@@ -37,10 +37,10 @@
 {:else}
   <p>
     The current block number is {currentBlockNumber}, voting slots need to be
-    announced one month in advance, so the minimum value is {minValue}
-    {#await futureBlockDate(minValue, currentBlockNumber) then futureDate}
-      (approx. {futureDate})
-    {/await}.
+    announced one month in advance, so the minimum value is {minValue} (approx. {futureBlockDate(
+      minValue,
+      currentBlockNumber
+    )}).
   </p>
 
   <div class="container-col2 my-2">
@@ -60,9 +60,12 @@
   </div>
 
   {#if plannedBlockNumber !== 0}
-    {#await futureBlockDate(plannedBlockNumber, currentBlockNumber) then futureDate}
-      <p>The voting for this block would start approx. at {futureDate}</p>
-    {/await}
+    <p>
+      The voting for this block would start approx. at {futureBlockDate(
+        plannedBlockNumber,
+        currentBlockNumber
+      )}
+    </p>
   {/if}
 
   <div class="container-col2 my-2">

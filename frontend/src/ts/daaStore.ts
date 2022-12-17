@@ -1,12 +1,45 @@
 import { derived, readable, writable, type Readable } from "svelte/store";
-import type { JsonRpcSigner } from "@ethersproject/providers";
-import type { Web3Provider } from "@ethersproject/providers";
+import type { Web3Provider, JsonRpcSigner } from "@ethersproject/providers";
 import { BigNumber, Contract, ethers, Signer } from "ethers";
 import { MembershipABI } from "../contracts/Membership";
 import { DAAABI } from "../contracts/DAA";
 
 export const provider = writable<Web3Provider | null>(null);
 export const signer = writable<JsonRpcSigner | null>(null);
+
+export const currentBlockNumber = derived<
+  Readable<null | Web3Provider>,
+  number | null
+>(
+  provider,
+  ($provider, set) => {
+    if ($provider === null) {
+      set(null);
+    } else {
+      $provider.getBlockNumber().then((blockNumber) => {
+        set(blockNumber);
+      });
+    }
+  },
+  null
+);
+
+export const currentBlockTimestamp = derived<
+  [Readable<null | Web3Provider>, Readable<number | null>],
+  number | null
+>(
+  [provider, currentBlockNumber],
+  ([$provider, $currentBlockNumber], set) => {
+    if ($provider === null || $currentBlockNumber === null) {
+      set(null);
+    } else {
+      $provider.getBlock($currentBlockNumber).then((currentBlock) => {
+        set(currentBlock.timestamp);
+      });
+    }
+  },
+  null
+);
 
 export const daaContract = derived(
   [provider, signer],

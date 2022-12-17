@@ -2,7 +2,11 @@
   import { Viewer } from "bytemd";
   import humanizeDuration from "humanize-duration";
   import { navigate } from "svelte-routing";
-  import { daaContract, provider } from "../../ts/daaStore";
+  import {
+    currentBlockTimestamp,
+    daaContract,
+    provider,
+  } from "../../ts/daaStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import {
@@ -13,10 +17,13 @@
 
   export let blockNumber: string;
   let proposals = [];
-  let currentBlockTimestamp: number = 0;
 
   $: {
-    if ($proposalCreatedEvents === null || $votingSlots === null) {
+    if (
+      $proposalCreatedEvents === null ||
+      $votingSlots === null ||
+      $currentBlockTimestamp === null
+    ) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
       $isSubmitting = true;
@@ -36,8 +43,6 @@
       $daaContract.getNumberOfProposalsInVotingSlot(blockNumber),
     ]);
 
-    currentBlockTimestamp = currentBlock.timestamp;
-
     proposals = await Promise.all(
       [...Array(amountOfProposals.toNumber()).keys()].map(
         async (index: Number) => {
@@ -55,7 +60,7 @@
           return {
             calldatas: event.args[5],
             description: event.args[8],
-            eta: proposalEta < currentBlockTimestamp ? 0 : proposalEta,
+            eta: proposalEta < $currentBlockTimestamp ? 0 : proposalEta,
             id: proposalId.toString(),
             proposer: event.args[1],
             state: proposalState,
@@ -106,7 +111,7 @@
       {:else}
         <p class="italic">
           The proposal can be executed in {humanizeDuration(
-            (proposal.eta - currentBlockTimestamp) * 1000
+            (proposal.eta - $currentBlockTimestamp) * 1000
           )}.
         </p>
         <button class="button1" disabled>Execute proposal</button>
