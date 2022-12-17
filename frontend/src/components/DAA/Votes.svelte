@@ -28,6 +28,7 @@
 
   interface VotingSlot {
     blockDate: string;
+    id: number;
     proposalInfos: ProposalInfo[];
     votingSlotState: VotingSlotState;
   }
@@ -71,7 +72,7 @@
   }
 
   async function createVotingSlots() {
-    $votingSlots.forEach(async (votingSlotBlock: number) => {
+    $votingSlots.forEach(async (votingSlotBlock: number, index) => {
       const blockInfo = await createBlockInfo(votingSlotBlock);
       const proposalInfos = await createProposalInfo(blockInfo.blockNumber);
       const votingSlotState = await getVotingSlotState(blockInfo.blockNumber);
@@ -81,6 +82,7 @@
         [blockInfo.blockNumber]: {
           proposalInfos,
           blockDate: blockInfo.blockDate,
+          id: index + 1,
           votingSlotState,
         },
       };
@@ -180,10 +182,10 @@
       currentBlockTimestamp={$currentBlockTimestamp}
     />
 
-    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
+    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
       <div class="card">
         <h2 class="text-secondary-900">
-          Voting slot #{Object.entries(viewVotingSlots).length - index}
+          Voting slot #{slotInfo.id}
         </h2>
 
         {#if slotInfo.votingSlotState === VotingSlotState.ProposalsOpen}
