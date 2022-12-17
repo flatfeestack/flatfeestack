@@ -137,10 +137,10 @@
     <Viewer value={extraOrdinaryAssemblyRequest.description} />
 
     {#if extraOrdinaryAssemblyRequest.state === 1}
-      Vote running until #{extraOrdinaryAssemblyRequest.deadline}
-      {#await futureBlockDate(extraOrdinaryAssemblyRequest.deadline, currentBlockNumber) then futureDate}
-        (approx. {futureDate})
-      {/await}.
+      Vote running until #{extraOrdinaryAssemblyRequest.deadline} (approx. {futureBlockDate(
+        extraOrdinaryAssemblyRequest.deadline,
+        currentBlockNumber
+      )}).
 
       {#if $userEthereumAddress !== null}
         <div class="vote-container">

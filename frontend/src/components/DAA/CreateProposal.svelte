@@ -9,10 +9,12 @@
     signer,
   } from "../../ts/daaStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import type { ProposalType } from "../../types/daa";
+  import type { Call, ProposalType } from "../../types/daa";
   import Navigation from "./Navigation.svelte";
-  import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
   import AddCouncilMember from "./proposals/AddCouncilMember.svelte";
+  import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
+  import FreeText from "./proposals/FreeText.svelte";
+  import RemoveCouncilMember from "./proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
 
@@ -26,6 +28,10 @@
       text: "Add council member",
     },
     {
+      component: RemoveCouncilMember,
+      text: "Remove council member",
+    },
+    {
       component: RemoveMember,
       text: "Remove member",
     },
@@ -33,14 +39,16 @@
       component: CallExtraOrdinaryAssembly,
       text: "Call extra ordinary assembly",
     },
+    {
+      component: FreeText,
+      text: "Free text",
+    },
   ];
 
   let selected = 0;
 
-  let targets: string[] = [];
-  let values: number[] = [];
+  let calls: Call[] = [];
   let description = "";
-  let transferCallData: string[] = [];
 
   onMount(async () => {
     if ($signer === null || $membershipContract === null) {
@@ -64,6 +72,16 @@
 
   async function createProposal() {
     $isSubmitting = true;
+
+    let targets = [];
+    let values = [];
+    let transferCallData = [];
+
+    calls.forEach((call) => {
+      targets.push(call.target);
+      values.push(call.value);
+      transferCallData.push(call.transferCallData);
+    });
 
     await $daaContract["propose(address[],uint256[],bytes[],string)"](
       targets,
@@ -102,12 +120,7 @@
       {/each}
     </select>
 
-    <svelte:component
-      this={proposalTypes[selected].component}
-      bind:targets
-      bind:values
-      bind:transferCallData
-    />
+    <svelte:component this={proposalTypes[selected].component} bind:calls />
   </div>
 
   <p>Description</p>

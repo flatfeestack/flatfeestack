@@ -1,6 +1,7 @@
 <script lang="ts">
   import { navigate } from "svelte-routing";
   import {
+    currentBlockTimestamp,
     daaContract,
     membershipStatusValue,
     provider,
@@ -15,7 +16,6 @@
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
   let currentBlockNumber: number = 0;
-  let currentBlockTimestamp: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
 
@@ -47,7 +47,11 @@
   }
 
   $: {
-    if ($daaContract === null || $votingSlots === null) {
+    if (
+      $daaContract === null ||
+      $votingSlots === null ||
+      $currentBlockTimestamp === null
+    ) {
       $isSubmitting = true;
     } else if (Object.keys(viewVotingSlots).length === 0) {
       $isSubmitting = true;
@@ -58,9 +62,7 @@
   async function prepareView() {
     slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();
     currentBlockNumber = await $provider.getBlockNumber();
-    currentBlockTimestamp = (await $provider.getBlock(currentBlockNumber))
-      .timestamp;
-    currentTime = formatDateTime(new Date(currentBlockTimestamp * 1000));
+    currentTime = formatDateTime(new Date($currentBlockTimestamp * 1000));
     votingPeriod = (await $daaContract.votingPeriod()).toNumber();
 
     await createVotingSlots();
@@ -106,7 +108,7 @@
     } else {
       return {
         blockNumber: futureBlockNumber,
-        blockDate: await futureBlockDate(futureBlockNumber, currentBlockNumber),
+        blockDate: futureBlockDate(futureBlockNumber, currentBlockNumber),
       };
     }
   }
@@ -173,7 +175,10 @@
   <p>
     Last updated (time): Current-Time: {currentTime}
 
-    <ExtraOrdinaryAssemblies {currentBlockNumber} {currentBlockTimestamp} />
+    <ExtraOrdinaryAssemblies
+      {currentBlockNumber}
+      currentBlockTimestamp={$currentBlockTimestamp}
+    />
 
     {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo], index}
       <div class="card">

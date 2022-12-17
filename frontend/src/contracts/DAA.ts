@@ -29,6 +29,7 @@ export const DAAABI = [
   "function extraOrdinaryAssemblyProposals(uint256) view returns (uint256)",
   "function extraOrdinaryAssemblyVotingPeriod() view returns (uint64)",
   "function getExtraOrdinaryProposalsLength() view returns (uint256)",
+  "function getMinDelay() view returns (uint256 duration)",
   "function getNumberOfProposalsInVotingSlot(uint256 slotNumber) view returns (uint256)",
   "function getSlotsLength() view returns (uint256)",
   "function getVotes(address account, uint256 blockNumber) view returns (uint256)",
@@ -54,6 +55,7 @@ export const DAAABI = [
   "function setNewBylawsHash(string newHash)",
   "function setSlotCloseTime(uint256 newSlotCloseTime)",
   "function setVotingSlot(uint256 blockNumber) returns (uint256)",
+  "function setVotingSlotAnnouncementPeriod(uint64 newVotingSlotAnnouncementPeriod)",
   "function slotCloseTime() view returns (uint256)",
   "function slots(uint256) view returns (uint256)",
   "function state(uint256 proposalId) view returns (uint8)",
@@ -65,5 +67,6 @@ export const DAAABI = [
   "function version() view returns (string)",
   "function votingDelay() pure returns (uint256)",
   "function votingPeriod() pure returns (uint256)",
+  "function votingSlotAnnouncementPeriod() view returns (uint256)",
   "function votingSlots(uint256, uint256) view returns (uint256)",
 ];

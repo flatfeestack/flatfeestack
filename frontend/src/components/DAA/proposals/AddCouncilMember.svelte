@@ -1,15 +1,11 @@
 <script lang="ts">
-  import { ethers } from "ethers";
   import { Interface } from "ethers/lib/utils";
-  import yup from "../../../utils/yup";
   import { MembershipABI } from "../../../contracts/Membership";
   import type { ProposalFormProps } from "../../../types/daa";
+  import yup from "../../../utils/yup";
 
   interface $$Props extends ProposalFormProps {}
-
-  export let targets: $$Props["targets"];
-  export let values: $$Props["values"];
-  export let transferCallData: $$Props["transferCallData"];
+  export let calls: $$Props["calls"];
 
   let formValues = {
     proposedCouncilMember: "",
@@ -30,12 +26,15 @@
   }
 
   function updateCalldata() {
-    values = [0];
-    targets = [import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS];
-    transferCallData = [
-      membershipInterface.encodeFunctionData("addCouncilMember", [
-        formValues.proposedCouncilMember,
-      ]),
+    calls = [
+      {
+        target: import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
+        transferCallData: membershipInterface.encodeFunctionData(
+          "addCouncilMember",
+          [formValues.proposedCouncilMember]
+        ),
+        value: 0,
+      },
     ];
   }
 </script>
