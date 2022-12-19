@@ -32,6 +32,7 @@
   import DaaCastVotes from "../components/DAA/CastVotes.svelte";
   import DaaExecuteProposals from "../components/DAA/ExecuteProposals.svelte";
   import DaaCouncil from "../components/DAA/Council.svelte";
+  import DaaTreasury from "../components/DAA/Treasury.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -212,6 +213,7 @@
           component={DaaExecuteProposals}
         />
         <Route path="/daa/council" component={DaaCouncil} />
+        <Route path="/daa/treasury" component={DaaTreasury} />
 
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />
