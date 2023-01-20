@@ -3,6 +3,7 @@ package io.flatfeestack;
 import io.neow3j.devpack.ByteString;
 import io.neow3j.devpack.ECPoint;
 import io.neow3j.devpack.Hash160;
+import io.neow3j.devpack.Helper;
 import io.neow3j.devpack.Storage;
 import io.neow3j.devpack.StorageContext;
 import io.neow3j.devpack.StorageMap;
@@ -12,6 +13,7 @@ import io.neow3j.devpack.annotations.OnDeployment;
 import io.neow3j.devpack.annotations.OnNEP17Payment;
 import io.neow3j.devpack.annotations.Permission;
 import io.neow3j.devpack.annotations.Safe;
+import io.neow3j.devpack.constants.NamedCurve;
 import io.neow3j.devpack.constants.NativeContract;
 import io.neow3j.devpack.contracts.CryptoLib;
 import io.neow3j.devpack.contracts.GasToken;
@@ -38,7 +40,7 @@ public class PayoutNeo {
     /**
      * The StorageMap to store contract relevant information.
      */
-    static final StorageMap contractMap = ctx.createMap(new byte[]{0x01});
+    static final StorageMap contractMap = new StorageMap(ctx, new byte[]{0x01});
 
     /**
      * The key where the contract owner's public key is stored in the contractMap.
@@ -53,7 +55,7 @@ public class PayoutNeo {
     /**
      * The StorageMap to store k-v pairs mapping addresses as key to their total earned amount (tea) as value.
      */
-    static final StorageMap teaMap = ctx.createMap(new byte[]{0x10});
+    static final StorageMap teaMap = new StorageMap(ctx, new byte[]{0x10});
 
     /**
      * Upon deployment, the initial owner is set.
@@ -62,13 +64,12 @@ public class PayoutNeo {
      * @param update True, if the contract is being deployed, false if it is updated.
      */
     @OnDeployment
-    public static void deploy(Object data, boolean update) {
+    public static void deploy(Object data, boolean update) throws Exception {
         if (!update) {
-            ByteString pubKey = (ByteString) data;
-            // ECPoint instantiation checks valid public key length. Thus, makes sure that the data cannot be a Hash160.
-            assert checkWitness(new ECPoint(pubKey)) : "Passed public key must match a witness.";
-            contractMap.put(ownerKey, pubKey);
+            if (!ECPoint.isValid(data) || !checkWitness((ECPoint) data))
+                throw new Exception("No authorization");
         }
+        contractMap.put(ownerKey, (ByteString) data);
     }
 
     /**
@@ -90,7 +91,7 @@ public class PayoutNeo {
      * The arguments relate to the account, the tea that was stored before and the new tea.
      */
     @DisplayName("onTeaUpdateWithoutPayment")
-    private static Event3Args<Hash160, Integer, Integer> onTeaUpdateWithoutPayment;
+    private static Event3Args<Integer, Integer, Integer> onTeaUpdateWithoutPayment;
 
     // region owner
 
@@ -107,11 +108,15 @@ public class PayoutNeo {
     /**
      * Changes the contract owner.
      *
-     * @param newOwner The new contract owner.
+     * @param newOwner the new contract owner.
      */
-    public static void changeOwner(ECPoint newOwner) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        assert checkWitness(newOwner) : "The new owner must witness this change.";
+    public static void changeOwner(ECPoint newOwner) throws Exception {
+        if (!checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
+            throw new Exception("No authorization");
+        }
+        if (!checkWitness(newOwner)) {
+            throw new Exception("No authorization");
+        }
         contractMap.put(ownerKey, newOwner.toByteString());
     }
 
@@ -121,12 +126,12 @@ public class PayoutNeo {
     /**
      * Gets the total earned amount (tea) of an account.
      *
-     * @param account The account.
+     * @param ownerId ghe owner id.
      * @return the total earned amount.
      */
     @Safe
-    public static int getTea(Hash160 account) {
-        return teaMap.get(account.toByteString()).toIntOrZero();
+    public static int getTea(int ownerId) {
+        return teaMap.get(ownerId).toIntOrZero();
     }
 
     /**
@@ -140,17 +145,21 @@ public class PayoutNeo {
      * In the case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of
      * that account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param account The account to set the tea for.
-     * @param oldTea  The previous tea for that account.
-     * @param newTea  The new tea for that account.
+     * @param ownerId the owner id to set the tea for.
+     * @param oldTea  the previous tea for that account.
+     * @param newTea  the new tea for that account.
      */
-    public static void setTea(Hash160 account, int oldTea, int newTea) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
-        int storedTea = teaMap.get(account.toByteString()).toIntOrZero();
-        assert oldTea == storedTea : "Stored tea is not equal to the provided oldTea.";
-        assert newTea > storedTea : "The provided amount is lower than or equal to the stored tea.";
-        teaMap.put(account.toByteString(), newTea);
-        onTeaUpdateWithoutPayment.fire(account, oldTea, newTea);
+    public static void setTea(int ownerId, int oldTea, int newTea) throws Exception {
+        if (!checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
+            throw new Exception("No authorization");
+        }
+        int storedTea = teaMap.get(ownerId).toIntOrZero();
+        if (oldTea != storedTea || newTea <= storedTea) {
+            throw new Exception("Provided current amount must be equal and new amount must be greater than the stored" +
+                    " value");
+        }
+        teaMap.put(ownerId, newTea);
+        onTeaUpdateWithoutPayment.fire(ownerId, oldTea, newTea);
     }
 
     /**
@@ -164,18 +173,21 @@ public class PayoutNeo {
      * In case of an address change, the contract owner can set the {@code tea} to the highest {@code tea} of that
      * account for which a signature was provided, in order to invalidate that signature.
      *
-     * @param accounts The accounts to set the tea for.
-     * @param oldTeas  The previously stored tea for the accounts.
-     * @param newTeas  The new tea for the accounts.
+     * @param ownerIds the owner ids to set the tea for.
+     * @param oldTeas  the previously stored tea for the accounts.
+     * @param newTeas  the new tea for the accounts.
      */
-    public static void setTeas(Hash160[] accounts, int[] oldTeas, int[] newTeas) throws Exception {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization.";
-        int len = accounts.length;
-        assert len == oldTeas.length : "Parameters must have same length.";
-        assert len == newTeas.length : "Parameters must have same length.";
+    public static void setTeas(int[] ownerIds, int[] oldTeas, int[] newTeas) throws Exception {
+        if (!checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
+            throw new Exception("No authorization");
+        }
+        int len = oldTeas.length;
+        if (len != newTeas.length) {
+            throw new Exception("Parameters must have same length");
+        }
         for (int i = 0; i < len; i++) {
-            Hash160 acc = accounts[i];
-            int storedTea = teaMap.get(acc.toByteString()).toIntOrZero();
+            int ownerId = ownerIds[i];
+            int storedTea = teaMap.get(ownerId).toIntOrZero();
             int oldTea = oldTeas[i];
             if (oldTea != storedTea) {
                 continue;
@@ -184,8 +196,8 @@ public class PayoutNeo {
             if (newTea <= storedTea) {
                 continue;
             }
-            teaMap.put(acc.toByteString(), newTea);
-            onTeaUpdateWithoutPayment.fire(acc, oldTea, newTea);
+            teaMap.put(ownerId, newTea);
+            onTeaUpdateWithoutPayment.fire(ownerId, oldTea, newTea);
         }
     }
 
@@ -213,22 +225,27 @@ public class PayoutNeo {
      * {@code teaMap}. After calculating the payment amount, the value of the account in the {@code teaMap} is
      * updated with the new tea.
      *
-     * @param account   The beneficiary account.
-     * @param tea       The tea of this account.
-     * @param signature The signature
+     * @param account   the beneficiary account.
+     * @param tea       the tea of this account.
+     * @param signature the signature
      */
-    public static void withdraw(Hash160 account, int tea, ByteString signature) {
-        assert CryptoLib.verifyWithECDsa(
-                new ByteString(concat(account.toByteArray(), toByteArray(tea))), // the message
+    public static void withdraw(Hash160 account, int ownerId, int tea, ByteString signature) throws Exception {
+        if (new CryptoLib().verifyWithECDsa(
+                new ByteString(concat(Helper.toByteArray(ownerId), toByteArray(tea))), // the message
                 new ECPoint(contractMap.get(ownerKey)), // the contract owner
                 signature, // the signature
-                (byte) 23 // the curve
-        ) : "Signature invalid.";
-        int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
-        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
-        teaMap.put(account.toByteString(), tea);
-        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
-                "Transfer was not successful.";
+                NamedCurve.Secp256r1 // the curve
+        )) {
+            throw new Exception("Provided signature was not valid for the given parameters");
+        }
+        int amountToWithdraw = tea - teaMap.get(ownerId).toIntOrZero();
+        if (amountToWithdraw <= 0) {
+            throw new Exception("These funds have already been withdrawn");
+        }
+        teaMap.put(ownerId, tea);
+        if (!new GasToken().transfer(getExecutingScriptHash(), account, amountToWithdraw, null)) {
+            throw new Exception("Transfer was not successful");
+        }
     }
 
     /**
@@ -240,16 +257,21 @@ public class PayoutNeo {
      * {@code teaMap}. After calculating the payment amount, the value of the account in the {@code teaMap} is
      * updated with the new tea.
      *
-     * @param account The beneficiary account.
-     * @param tea     The tea of this account.
+     * @param account the beneficiary account.
+     * @param tea     the tea of this account.
      */
-    public static void withdraw(Hash160 account, int tea) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int amountToWithdraw = tea - teaMap.get(account.toByteString()).toIntOrZero();
-        assert amountToWithdraw > 0 : "These funds have already been withdrawn.";
-        teaMap.put(account.toByteString(), tea);
-        assert GasToken.transfer(getExecutingScriptHash(), account, amountToWithdraw, null) :
-                "Transfer was not successful.";
+    public static void withdraw(Hash160 account, int ownerId, int tea) throws Exception {
+        if (!checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
+            throw new Exception("No authorization.");
+        }
+        int amountToWithdraw = tea - teaMap.get(ownerId).toIntOrZero();
+        if (amountToWithdraw <= 0) {
+            throw new Exception("Amount to withdraw must be positive");
+        }
+        teaMap.put(ownerId, tea);
+        if (!new GasToken().transfer(getExecutingScriptHash(), account, amountToWithdraw, null)) {
+            throw new Exception("Transfer was not successful");
+        }
     }
 
     // endregion withdraw
@@ -267,25 +289,32 @@ public class PayoutNeo {
      * A potential service fee for each included account can be deducted off-chain by the contract owner when
      * providing the first signature after each batch payout.
      *
-     * @param accounts The accounts to pay out to.
-     * @param teas     The corresponding teas.
+     * @param ownerIds the owner ids.
+     * @param accounts the accounts to pay out to.
+     * @param teas     the corresponding teas.
      */
-    public static void batchPayout(Hash160[] accounts, int[] teas) {
-        assert checkWitness(new ECPoint(contractMap.get(ownerKey))) : "No authorization";
-        int len = accounts.length;
-        // Note: If teas had fewer items than accounts, the code would run into out of bounds anyways, but the other
+    public static void batchPayout(int[] ownerIds, Hash160[] accounts, int[] teas) throws Exception {
+        if (!checkWitness(new ECPoint(contractMap.get(ownerKey)))) {
+            throw new Exception("No authorization.");
+        }
+        int len = ownerIds.length;
+        // Note: If teas had fewer items than accounts, the code would run into out of bounds anyway, but the other
         // way around that is not the case, thus this check is required.
-        assert len == teas.length : "The parameters must have the same length.";
+        if (len != accounts.length && len != teas.length) {
+            throw new Exception("Parameters must have same length");
+        }
         for (int i = 0; i < len; i++) {
             Hash160 acc = accounts[i];
+            int ownerId = ownerIds[i];
             int tea = teas[i];
-            int payoutAmount = tea - teaMap.get(acc.toByteString()).toIntOrZero();
+            int payoutAmount = tea - teaMap.get(ownerId).toIntOrZero();
             if (payoutAmount <= 0) {
                 continue;
             }
-            teaMap.put(acc.toByteString(), tea);
-            assert GasToken.transfer(getExecutingScriptHash(), acc, payoutAmount, null) : "Transfer was not " +
-                    "successful.";
+            teaMap.put(ownerId, tea);
+            if (!new GasToken().transfer(getExecutingScriptHash(), acc, payoutAmount, null)) {
+                throw new Exception("Transfer was not successful");
+            }
         }
     }
 

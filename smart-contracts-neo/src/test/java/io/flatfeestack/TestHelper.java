@@ -50,7 +50,7 @@ import static io.neow3j.wallet.Account.createMultiSigAccount;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
-public class EvaluationHelper {
+public class TestHelper {
 
     static final BigInteger TENTH_GAS = toFractions(new BigDecimal("0.1"), GasToken.DECIMALS);
     static final BigInteger ONE_GAS = toFractions(BigDecimal.ONE, GasToken.DECIMALS);
@@ -262,10 +262,10 @@ public class EvaluationHelper {
 
     // region helper methods
 
-    public static Sign.SignatureData createSignature(Hash160 account, BigInteger tea, Account signer) {
-        byte[] accountArray = account.toLittleEndianArray();
+    public static Sign.SignatureData createSignature(BigInteger ownerId, BigInteger tea, Account signer) {
+        byte[] ownerIdBytes = ownerId.toByteArray();
         byte[] teaArray = reverseArray(tea.toByteArray());
-        byte[] message = concatenate(accountArray, teaArray);
+        byte[] message = concatenate(ownerIdBytes, teaArray);
         return signMessage(message, signer.getECKeyPair());
     }
 
