@@ -4,7 +4,6 @@
     faQuestion,
     faXmark,
   } from "@fortawesome/free-solid-svg-icons";
-  import { Viewer } from "bytemd";
   import type { Event } from "ethers";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
@@ -148,9 +147,10 @@
 
   {#each proposals as proposal, i}
     <h2>Proposal {i + 1}</h2>
-    Proposer: {proposal.proposer}
 
-    <Viewer value={proposal.description} />
+    <p>Proposer: {proposal.proposer}</p>
+
+    <p>{proposal.description}</p>
 
     <div class="vote-container">
       <p>Your vote:</p>

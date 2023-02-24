@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Editor } from "bytemd";
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import {
@@ -13,11 +12,11 @@
   import Navigation from "./Navigation.svelte";
   import AddCouncilMember from "./proposals/AddCouncilMember.svelte";
   import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
+  import DissolveAssociation from "./proposals/DissolveAssociation.svelte";
   import FreeText from "./proposals/FreeText.svelte";
   import RemoveCouncilMember from "./proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "./proposals/RemoveMember.svelte";
   import RequestFunds from "./proposals/RequestFunds.svelte";
-  import DissolveAssociation from "./proposals/DissolveAssociation.svelte";
 
   const proposalTypes: ProposalType[] = [
     {
@@ -66,10 +65,6 @@
     }
   });
 
-  function handleDescriptionChange(e) {
-    description = e.detail.value;
-  }
-
   function moveToVotesPage() {
     $error = "You are not allowed to review this page.";
     navigate("/daa/votes");
@@ -110,6 +105,10 @@
     grid-template-columns: 1fr 1fr;
     row-gap: 0.5em;
   }
+
+  textarea {
+    width: 100%;
+  }
 </style>
 
 <Navigation>
@@ -129,7 +128,8 @@
   </div>
 
   <p>Description</p>
-  <Editor value={description} on:change={handleDescriptionChange} />
+
+  <textarea class="box-sizing-border" bind:value={description} rows="10" />
 
   <button class="button1" on:click={() => createProposal()}
     >Create proposal</button

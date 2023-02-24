@@ -1,5 +1,4 @@
 @charset "UTF-8";
-@import "bytemd/dist/index.css";
 
 :root {
   --primary-100: #ecf3ef;
@@ -475,14 +474,6 @@ tbody tr:last-of-type {
 
 #app {
   height: 100%;
-}
-
-.bytemd {
-  margin: 1rem 0;
-}
-
-.bytemd h1 {
-  color: var(--secondary-900);
 }
 
 .wrapper .invalid {
