@@ -7,13 +7,12 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 ./update.sh
 
 # Create example .env files
-cp analyzer/example.env analyzer/.env
-cp backend/example.env backend/.env
-cp fastauth/example.env fastauth/.env
+cp analyzer/.example.env analyzer/.env
+cp backend/.example.env backend/.env
+cp fastauth/.example.env fastauth/.env
 cp payout/.example.env payout/.env
 echo "HOST=http://localhost:8080" >> caddy/.env
 
-mkdir db
 echo "POSTGRES_PASSWORD=password" > db/.env
 echo "POSTGRES_USER=postgres" >> db/.env
 echo "POSTGRES_DB=flatfeestack" >> db/.env
