@@ -29,6 +29,19 @@ async function main() {
       .connect(secondCouncilMember)
       .approveMembership(member.address)
   ).wait();
+
+  console.log("Pay membership fees ...");
+  const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
+
+  await membershipDeployed.connect(firstCouncilMember).payMembershipFee({
+    value: toBePaid,
+  });
+  await membershipDeployed.connect(secondCouncilMember).payMembershipFee({
+    value: toBePaid,
+  });
+  await membershipDeployed.connect(member).payMembershipFee({
+    value: toBePaid,
+  });
 }
 
 main().catch((error) => {
