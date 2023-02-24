@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Viewer } from "bytemd";
   import type { Event } from "ethers";
   import humanizeDuration from "humanize-duration";
   import { daaContract, userEthereumAddress } from "../../../ts/daaStore";
@@ -131,9 +130,9 @@
   <div class="card-important">
     <h2>Active proposal for extra ordinary assembly</h2>
 
-    Proposer: {extraOrdinaryAssemblyRequest.proposer}
+    <p>Proposer: {extraOrdinaryAssemblyRequest.proposer}</p>
 
-    <Viewer value={extraOrdinaryAssemblyRequest.description} />
+    <p>{extraOrdinaryAssemblyRequest.description}</p>
 
     {#if extraOrdinaryAssemblyRequest.state === 1}
       Vote running until #{extraOrdinaryAssemblyRequest.deadline} (approx. {futureBlockDate(

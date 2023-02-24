@@ -1,12 +1,7 @@
 <script lang="ts">
-  import { Viewer } from "bytemd";
   import humanizeDuration from "humanize-duration";
   import { navigate } from "svelte-routing";
-  import {
-    currentBlockTimestamp,
-    daaContract,
-    provider,
-  } from "../../ts/daaStore";
+  import { currentBlockTimestamp, daaContract } from "../../ts/daaStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import {
@@ -77,9 +72,10 @@
 
   {#each proposals as proposal, i}
     <h2>Proposal {i + 1}</h2>
-    Proposer: {proposal.proposer}
 
-    <Viewer value={proposal.description} />
+    <p>Proposer: {proposal.proposer}</p>
+
+    <p>{proposal.description}</p>
 
     {#if proposal.state == 4}
       <button
