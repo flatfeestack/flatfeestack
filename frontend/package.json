@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "hmr": "vite --host",
     "dev": "concurrently --kill-others \"node server\" \"npx npm-watch\"",
     "build": "MODE=dev vite build",
     "prod": "MODE=prod vite build",
