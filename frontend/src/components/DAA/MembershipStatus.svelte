@@ -14,6 +14,7 @@
 
   let membershipFeePaid = false;
   let nextMembershipFeePayment = 0;
+  let isAgreed = false;
 
   const { close } = getContext("simple-modal");
 
@@ -106,13 +107,24 @@
     </li>
   </ul>
 
-  <div class="py-2 right">
+  <div class="py-2">
     {#if $membershipStatusValue == 0}
-      <button on:click={requestMembership} class="button1"
+      <div class="py-2">
+        <label>
+          <input type="checkbox" bind:checked={isAgreed} />
+          I agree with the current
+          <a href="https://flatfeestack.github.io/bylaws/" target="_blank"
+            >bylaws</a
+          >
+        </label>
+      </div>
+      <button on:click={requestMembership} class="button1" disabled={!isAgreed}
         >Request membership</button
       >
     {/if}
+  </div>
 
+  <div class="py-2 right">
     {#if $membershipStatusValue == 3 && !membershipFeePaid}
       <button on:click={payMembershipFees} class="button1"
         >Pay membership fees</button
