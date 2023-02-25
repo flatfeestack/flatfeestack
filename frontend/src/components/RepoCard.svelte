@@ -1,25 +1,18 @@
 <script lang="ts">
-  import type { Repos, Repo } from "../types/users";
   import { API } from "../ts/api";
   import { error, sponsoredRepos } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
+  import type { Repo } from "../types/users";
 
-  export let repos: Repos;
+  export let repo: Repo;
   let star = true;
-  let rootRepo;
-
-  $: {
-    rootRepo = repos.repos.find((r: Repo) => {
-      return repos.uuid === r.uuid;
-    });
-  }
 
   async function unTag() {
     star = false;
     try {
-      await API.repos.untag(repos.uuid);
-      $sponsoredRepos = $sponsoredRepos.filter((r: Repos) => {
-        return r.uuid !== repos.uuid;
+      await API.repos.untag(repo.uuid);
+      $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
+        return r.uuid !== repo.uuid;
       });
     } catch (e) {
       $error = e;
@@ -74,8 +67,8 @@
   <div
     class="color"
     style="background-image:radial-gradient(circle at top right,{getColor2(
-      repos.uuid
-    )},{getColor1(repos.uuid)});"
+      repo.uuid
+    )},{getColor1(repo.uuid)});"
   >
     <div>
       {#if star}
@@ -111,18 +104,13 @@
       {/if}
     </div>
   </div>
-  {#if repos}
-    <div class="center center2 py-2">{rootRepo.name}</div>
-    <div class="body">{rootRepo.description}</div>
+  {#if repo}
+    <div class="center center2 py-2">{repo.name}</div>
+    <div class="body">{repo.description}</div>
     <div>
-      <a href={rootRepo.url} class="py-2 url" target="_blank">
-        {rootRepo.url}
+      <a href={repo.url} class="py-2 url" target="_blank">
+        {repo.url}
       </a>
-    </div>
-    <div class="small center">
-      Git URLs: ({#each repos.repos as repos2, i}
-        {i == 0 ? repos2.gitUrl : ", " + repos2.gitUrl}
-      {/each})
     </div>
   {/if}
 </div>
