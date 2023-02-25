@@ -1,28 +1,27 @@
 import ky from "ky";
-import { config, token } from "./mainStore";
 import { get } from "svelte/store";
-import { refresh } from "./services";
 import type {
+  ChartDataTotal,
   ClientSecret,
   Config,
-  Invitation,
-  Repos,
-  Token,
-  Users,
-  Time,
-  UserAggBalance,
-  GitUser,
-  RepoMapping,
   Contributions,
-  PayoutAddress,
-} from "../types/users";
-import type {
+  GitUser,
+  Invitation,
   PaymentCycle,
   PaymentResponse,
+  PayoutAddress,
   PayoutInfo,
+  Repo,
+  RepoMapping,
+  Repos,
+  Time,
+  Token,
+  UserAggBalance,
+  Users,
   UserStatus,
 } from "../types/users";
-import type { ChartDataTotal } from "../types/users";
+import { token } from "./mainStore";
+import { refresh } from "./services";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -143,7 +142,7 @@ export const API = {
     updatePaymentMethod: (method: string) =>
       backendToken.put(`users/me/method/${method}`).json<Users>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
-    getSponsored: () => backendToken.get("users/me/sponsored").json<Repos[]>(),
+    getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
@@ -177,7 +176,7 @@ export const API = {
     search: (s: string) =>
       backendToken
         .get(`repos/search?q=${encodeURIComponent(s)}`)
-        .json<Repos[]>(),
+        .json<Repo[] | null>(),
     searchName: (s: string) =>
       backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repos[]>(),
     linkGitUrl: (repoId: string, gitUrl: string) =>
@@ -188,7 +187,7 @@ export const API = {
       backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repos[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),
     tag: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/tag`).json<Repos>(),
+      backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
     graph: (repoId: string, offset: number) =>
       backendToken

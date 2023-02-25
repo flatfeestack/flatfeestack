@@ -1,28 +1,27 @@
 <script lang="ts">
-  import type { Repos } from "../types/users";
-  import { API } from "../ts/api";
   import { onMount } from "svelte";
+  import { API } from "../ts/api";
   import {
     error,
     isSubmitting,
     loadedSponsoredRepos,
     sponsoredRepos,
   } from "../ts/mainStore";
+  import type { Repo } from "../types/users";
 
+  import Dots from "../components/Dots.svelte";
   import Navigation from "../components/Navigation.svelte";
   import RepoCard from "../components/RepoCard.svelte";
   import SearchResult from "../components/SearchResult.svelte";
-  import Dots from "../components/Dots.svelte";
 
   let search = "";
-  let searchRepos: Repos[] = [];
+  let searchRepos: Repo[] = [];
   let isSearchSubmitting = false;
 
   const handleSearch = async () => {
     try {
       isSearchSubmitting = true;
       searchRepos = await API.repos.search(search);
-      console.log("searchRepos", searchRepos);
     } catch (e) {
       $error = e;
     } finally {
@@ -35,7 +34,6 @@
       try {
         $isSubmitting = true;
         $sponsoredRepos = await API.user.getSponsored();
-        console.log("$sponsoredRepos", $sponsoredRepos);
         $loadedSponsoredRepos = true;
       } catch (e) {
         $error = e;
@@ -57,8 +55,8 @@
   <div class="p-2">
     {#if $sponsoredRepos.length > 0}
       <div class="wrap">
-        {#each $sponsoredRepos as repos, key (repos.uuid)}
-          <RepoCard {repos} class="child" />
+        {#each $sponsoredRepos as repo, key (repo.uuid)}
+          <RepoCard {repo} class="child" />
         {/each}
       </div>
     {/if}
@@ -78,11 +76,11 @@
       </form>
     </div>
 
-    {#if searchRepos.length > 0}
+    {#if searchRepos?.length > 0}
       <h2>Results</h2>
       <div>
-        {#each searchRepos as repos, key (repos.uuid)}
-          <SearchResult {repos} />
+        {#each searchRepos as repo, key (repo.uuid)}
+          <SearchResult {repo} />
         {/each}
       </div>
     {/if}
