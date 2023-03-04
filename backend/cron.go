@@ -117,7 +117,7 @@ func dailyRunner(now time.Time) error {
 			SELECT user_id, ARRAY_AGG(repo_id)
 			FROM sponsor_event
 			WHERE sponsor_at < $1 AND (un_sponsor_at IS NULL OR un_sponsor_at >= $2)
-			GROUP BY user_id`, yesterdayStart, yesterdayStop)
+			GROUP BY user_id`, yesterdayStart.Format("2023-01-01"), yesterdayStop.Format("2023-01-01"))
 	if err != nil {
 		return err
 	}
