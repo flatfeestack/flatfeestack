@@ -253,7 +253,13 @@ func sendTopUpOther(u User) error {
 	other["email"] = email
 	other["url"] = opts.EmailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = u.PaymentCycleInId.String() + KeyTopUpUser2
+
+	key := KeyTopUpUser2
+	if u.PaymentCycleInId != nil {
+		key += u.PaymentCycleInId.String()
+	}
+	other["key"] = key
+
 	return prepareEmail(
 		&u.Id,
 		other,
