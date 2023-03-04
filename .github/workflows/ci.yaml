@@ -5,6 +5,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-analyzer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build container
+        uses: docker/build-push-action@v4
+        with:
+          context: analyzer
+          load: true
+          target: builder
+          tags: ghcr.io/flatfeestack/flatfeestack/analyzer:test
+
+      - name: Run tests
+        run: |
+          docker run -v $(pwd)/analyzer:/app --rm ghcr.io/flatfeestack/flatfeestack/analyzer:test go test -v ./...
+
   test-backend:
     runs-on: ubuntu-latest
     defaults:
