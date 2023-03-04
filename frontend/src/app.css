@@ -489,3 +489,9 @@ tbody tr:last-of-type {
 .block {
   display: block;
 }
+
+.centerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

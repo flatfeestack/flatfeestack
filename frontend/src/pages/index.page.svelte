@@ -28,6 +28,8 @@
 
   import DaaVotes from "../components/DAA/Votes.svelte";
   import DaaMembershipRequests from "../components/DAA/MembershipRequests.svelte";
+  import DaaMembership from "../components/DAA/Membership.svelte";
+  import DaaMetamaskRequired from "../components/DAA/MetaMaskRequired.svelte";
   import DaaCreateProposal from "../components/DAA/CreateProposal.svelte";
   import DaaCastVotes from "../components/DAA/CastVotes.svelte";
   import DaaExecuteProposals from "../components/DAA/ExecuteProposals.svelte";
@@ -206,6 +208,8 @@
           path="/daa/membershipRequests"
           component={DaaMembershipRequests}
         />
+        <Route path="/daa/membership" component={DaaMembership} />
+        <Route path="/daa/metamask" component={DaaMetamaskRequired} />
         <Route path="/daa/createProposal" component={DaaCreateProposal} />
         <Route path="/daa/castVotes/:blockNumber" component={DaaCastVotes} />
         <Route

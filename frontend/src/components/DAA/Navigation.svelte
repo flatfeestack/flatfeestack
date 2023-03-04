@@ -5,28 +5,24 @@
     faHippo,
     faList,
     faMoneyBill,
+    faPerson,
     faUserAstronaut,
   } from "@fortawesome/free-solid-svg-icons";
   import detectEthereumProvider from "@metamask/detect-provider";
   import { getContext, onMount } from "svelte";
   import Fa from "svelte-fa";
-  import { links } from "svelte-routing";
+  import { links, navigate } from "svelte-routing";
   import {
-    userEthereumAddress,
-    membershipContract,
+    councilMembers,
     membershipStatusValue,
     provider,
     signer,
-    councilMembers,
+    userEthereumAddress,
   } from "../../ts/daaStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
-  import MembershipStatus from "./MembershipStatus.svelte";
-  import MetaMaskRequired from "./MetaMaskRequired.svelte";
-  import { error } from "../../ts/mainStore";
-  import Dialog from "../Dialog.svelte";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
 
   let pathname = "/";
@@ -34,59 +30,27 @@
     pathname = window.location.pathname;
   }
 
-  let membershipStatus = "Loading ...";
-  let metaMaskMissing = false;
+  let membershipStatus: string;
 
-  const { open } = getContext("simple-modal");
-  const showMembershipStatus = () => open(MembershipStatus);
-  const showMetaMaskRequired = () =>
-    open(MetaMaskRequired, {}, { closeButton: false });
+  const showMetaMaskRequired = () => navigate("/daa/metamask");
 
   onMount(async () => {
     try {
       const ethProv = await detectEthereumProvider();
       $provider = new Web3Provider(<any>ethProv);
     } catch {
-      metaMaskMissing = true;
       showMetaMaskRequired();
     }
   });
 
   async function connectWallet() {
     if ($provider === null) {
-      metaMaskMissing = true;
       showMetaMaskRequired();
     } else {
       await $provider.send("eth_requestAccounts", []);
       $signer = $provider.getSigner();
     }
   }
-
-  const onCancel = () => {};
-  const onConfirm = async () => {
-    try {
-      await $membershipContract.removeMember($userEthereumAddress);
-    } catch (e) {
-      $error = e.data.data.reason;
-    }
-  };
-
-  const leaveFlatFeeStack = () => {
-    open(
-      Dialog,
-      {
-        title: "Leave FlatFeeStack",
-        message: "Are you sure you want to leave FlatFeeStack immediately?",
-        onCancel,
-        onConfirm,
-      },
-      {
-        closeButton: false,
-        closeOnEsc: false,
-        closeOnOuterClick: false,
-      }
-    );
-  };
 
   $: {
     if ($membershipStatusValue === null || $councilMembers === null) {
@@ -115,7 +79,6 @@
   }
 
   .navigation {
-    padding-top: 2rem;
     display: flex;
     flex-flow: column;
     min-width: 12rem;
@@ -191,14 +154,6 @@
           Hello {truncateEthAddress($userEthereumAddress)}! <br />
           Your status: {membershipStatus}
         </p>
-        <button class="py-2 button3 my-2" on:click={showMembershipStatus}>
-          Approval process
-        </button>
-        {#if $membershipStatusValue > 0}
-          <button class="py-2 button3 my-2" on:click={leaveFlatFeeStack}>
-            Leave FlatFeeStack
-          </button>
-        {/if}
       {/if}
     </div>
     <nav use:links>
@@ -210,13 +165,12 @@
         label="Membership requests"
       />
       <NavItem href="/daa/council" icon={faHippo} label="Council functions" />
+      <NavItem href="/daa/membership" icon={faPerson} label="Membership" />
     </nav>
   </div>
   <div class="content">
     {#if $isSubmitting}
       <Spinner />
-    {:else if metaMaskMissing}
-      <div />
     {:else}
       <slot />
     {/if}
