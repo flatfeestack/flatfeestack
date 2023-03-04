@@ -1,0 +1,7 @@
+.git
+.gitignore
+.idea
+api.http
+README.md
+.example.env
+test-repository.zip
