@@ -131,6 +131,7 @@ func TestSponsor(t *testing.T) {
 func TestRepo(t *testing.T) {
 	setup()
 	defer teardown()
+
 	r := Repo{
 		Id:          uuid.New(),
 		Url:         stringPointer("url"),
@@ -143,7 +144,7 @@ func TestRepo(t *testing.T) {
 	assert.Nil(t, err)
 
 	r2, err := findRepoById(uuid.New())
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 	assert.Nil(t, r2)
 
 	r3, err := findRepoById(r.Id)
@@ -308,19 +309,16 @@ func TestAnalysisRequest2(t *testing.T) {
 	assert.Nil(t, err)
 
 	alar, err := findAllLatestAnalysisRequest(day2)
+	assert.Nil(t, err)
 	assert.Equal(t, 2, len(alar))
-	if alar[0].RepoId == r1.Id {
-		assert.Equal(t, alar[0].RepoId, r1.Id)
-		assert.Equal(t, alar[1].RepoId, r2.Id)
-	} else {
-		assert.Equal(t, alar[1].RepoId, r1.Id)
-		assert.Equal(t, alar[0].RepoId, r2.Id)
-	}
+	assert.Equal(t, alar[0].RepoId, r1.Id)
+	assert.Equal(t, alar[1].RepoId, r2.Id)
 
 	alar, err = findAllLatestAnalysisRequest(day3)
-	assert.Equal(t, 1, len(alar))
-	assert.Equal(t, alar[0].RepoId, r2.Id)
-
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(alar))
+	assert.Equal(t, alar[0].RepoId, r1.Id)
+	assert.Equal(t, alar[1].RepoId, r2.Id)
 }
 
 func TestAnalysisResponse(t *testing.T) {

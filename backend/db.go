@@ -548,7 +548,8 @@ func findAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
                           SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request) AS x
-                        WHERE dest_rank = 1 AND date_to <= $1`, dateTo.Format("2023-01-01"))
+                        WHERE dest_rank = 1 AND date_to <= $1
+                        ORDER BY git_url ASC`, dateTo.Format("2023-01-01"))
 
 	if err != nil {
 		return nil, err
