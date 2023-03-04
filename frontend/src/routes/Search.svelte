@@ -56,7 +56,7 @@
     {#if $sponsoredRepos.length > 0}
       <div class="wrap">
         {#each $sponsoredRepos as repo, key (repo.uuid)}
-          <RepoCard {repo} class="child" />
+          <RepoCard {repo} />
         {/each}
       </div>
     {/if}

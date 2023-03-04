@@ -4,13 +4,13 @@
   import { error } from "../ts/mainStore";
   import { navigate } from "svelte-routing";
 
-  export let email;
-  export let token;
+  export let email: string;
+  export let token: string;
 
   onMount(async () => {
     try {
       await API.user.confirmGitEmail(email, token);
-      await navigate("/user/settings");
+      navigate("/user/settings");
     } catch (e) {
       $error = e;
     }

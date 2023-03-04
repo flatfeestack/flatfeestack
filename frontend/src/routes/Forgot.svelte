@@ -27,12 +27,6 @@
 </script>
 
 <style>
-  .container {
-    margin-top: 2em;
-    max-width: 20rem;
-    background-color: var(--primary-100);
-  }
-
   button,
   input:focus {
     outline: none;

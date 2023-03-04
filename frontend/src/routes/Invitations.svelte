@@ -1,10 +1,10 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, isSubmitting, user, config } from "../ts/mainStore";
+  import { error, isSubmitting, user } from "../ts/mainStore";
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type { Invitation, UserStatus } from "../types/users.ts";
+  import type { Invitation, UserStatus } from "../types/users";
   import {
     faTrash,
     faSync,
@@ -15,7 +15,7 @@
   import Dots from "../components/Dots.svelte";
 
   let invites: Invitation[] = [];
-  let inviteEmail;
+  let inviteEmail: string;
   let isAddInviteSubmitting = false;
   let statusSponsoredUsers: UserStatus[] = [];
 
@@ -142,8 +142,9 @@
         <tr>
           <td colspan="7">
             <form on:submit|preventDefault={addInvite} class="container-small">
-              <label class="p-2">Invite by email:</label>
+              <label for="invite-mail-input" class="p-2">Invite by email:</label>
               <input
+                id="invite-mail-input"
                 size="24"
                 maxlength="50"
                 type="email"

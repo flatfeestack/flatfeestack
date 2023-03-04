@@ -33,7 +33,7 @@
       Supported Repositories for {user.name ? user.name : user.id}
     </h2>
     {#if user.image}
-      <img class="image-org" src={user.image} />
+      <img class="image-org" src={user.image} alt="supported user repository" />
     {/if}
     <div class="container">
       <table>

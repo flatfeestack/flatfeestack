@@ -4,8 +4,8 @@
   import { navigate, link } from "svelte-routing";
   import Spinner from "../components/Spinner.svelte";
 
-  export let email;
-  export let token;
+  export let email: string;
+  export let token: string;
   let error = "";
 
   onMount(async () => {
