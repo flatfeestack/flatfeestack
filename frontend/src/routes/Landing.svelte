@@ -162,7 +162,11 @@
         src="/images/ffs-logo-white.svg"
         alt="FlatFeeStack Logo"
       />
-      <img class="hide-sx logoFFSWhiteLarge" src="/images/ffs-logo-white.svg" alt="FlatFeeStack Logo" />
+      <img
+        class="hide-sx logoFFSWhiteLarge"
+        src="/images/ffs-logo-white.svg"
+        alt="FlatFeeStack Logo"
+      />
       <h1>
         A flat-fee sponsoring platform for <br />
         open source projects based on git metrics
@@ -173,8 +177,16 @@
   <div class="flex-row py-300">
     <div class="card">
       <div>
-        <img class="icon bottom" src="/images/holding-world-bw.svg" alt="Hands holding world icon bw"/>
-        <img class="icon top" src="/images/holding-world.svg" alt="Hands holding world icon color" />
+        <img
+          class="icon bottom"
+          src="/images/holding-world-bw.svg"
+          alt="Hands holding world icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/holding-world.svg"
+          alt="Hands holding world icon color"
+        />
       </div>
       <h2>On the Shoulders of Giants</h2>
       <div class="max-w20">
@@ -183,7 +195,11 @@
     </div>
     <div class="card">
       <div>
-        <img class="icon bottom" src="/images/house-bw.svg" alt="House icon bw" />
+        <img
+          class="icon bottom"
+          src="/images/house-bw.svg"
+          alt="House icon bw"
+        />
         <img class="icon top" src="/images/house.svg" alt="House icon bw" />
       </div>
       <h2>Our Mission</h2>
@@ -220,8 +236,16 @@
   <div class="flex-row">
     <div class="flex-row card max-w50 cardLeft">
       <div>
-        <img class="icon bottom" src="/images/running-bw.svg" alt="person running icon bw" />
-        <img class="icon top" src="/images/running.svg" alt="person running icon color" />
+        <img
+          class="icon bottom"
+          src="/images/running-bw.svg"
+          alt="person running icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/running.svg"
+          alt="person running icon color"
+        />
       </div>
       <div>
         <h2>Why Sponsoring?</h2>
@@ -247,7 +271,11 @@
         </div>
       </div>
       <div>
-        <img class="icon bottom" src="/images/metrics-bw.svg" alt="metric icon bw" />
+        <img
+          class="icon bottom"
+          src="/images/metrics-bw.svg"
+          alt="metric icon bw"
+        />
         <img class="icon top" src="/images/metrics.svg" alt="metric icon bw" />
       </div>
     </div>
@@ -288,8 +316,16 @@
         </div>
       </div>
       <div>
-        <img class="icon bottom" src="/images/cc-bw.svg" alt="crypto currencies icon bw" />
-        <img class="icon top" src="/images/cc.svg" alt="crypto currencies icon bw" />
+        <img
+          class="icon bottom"
+          src="/images/cc-bw.svg"
+          alt="crypto currencies icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/cc.svg"
+          alt="crypto currencies icon bw"
+        />
       </div>
     </div>
   </div>

@@ -129,14 +129,16 @@
                   )}{/each}</td
               >
               <td>
-                <div
-                  class="cursor-pointer"
-                  on:click={() =>
-                    showGraph === repo.uuid
-                      ? (showGraph = undefined)
-                      : (showGraph = repo.uuid)}
-                >
-                  <Fa icon={faPlus} size="md" />
+                <div>
+                  <button
+                    class="accessible-btn"
+                    on:click={() =>
+                      showGraph === repo.uuid
+                        ? (showGraph = undefined)
+                        : (showGraph = repo.uuid)}
+                  >
+                    <Fa icon={faPlus} size="md" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -161,20 +163,20 @@
                       />
                     {/if}
                     {#if offset > 0}
-                      <span
-                        class="cursor-pointer"
+                      <button
+                        class="accessible-btn"
                         on:click={() => (offset -= 20)}
                       >
                         Previous 20 <Fa icon={faArrowLeft} size="md" />
-                      </span>
+                      </button>
                     {/if}
                     {#if data.total > offset + 20}
-                      <span
-                        class="cursor-pointer"
+                      <button
+                        class="accessible-btn"
                         on:click={() => (offset += 20)}
                       >
                         <Fa icon={faArrowRight} size="md" /> Next 20
-                      </span>
+                      </button>
                     {/if}
                   {:catch err}
                     {($error = err.message)}

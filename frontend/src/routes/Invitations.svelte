@@ -107,11 +107,11 @@
           <th>Status</th>
           <th>Date</th>
           <th>Remove</th>
-          <th
-            ><span class="cursor-pointer" on:click={refreshInvite}
-              ><Fa icon={faSync} size="md" /></span
-            ></th
-          >
+          <th>
+            <button class="accessible-btn" on:click={refreshInvite}>
+              <Fa icon={faSync} size="md" />
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -130,10 +130,10 @@
                 {timeSince(new Date(inv.createdAt), new Date())} ago
               </td>
               <td class="text-center" colspan="2">
-                <span
-                  class="cursor-pointer"
+                <button
+                  class="accessible-btn"
                   on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
-                  ><Fa icon={faTrash} size="md" /></span
+                  ><Fa icon={faTrash} size="md" /></button
                 >
               </td>
             </tr>
@@ -142,7 +142,8 @@
         <tr>
           <td colspan="7">
             <form on:submit|preventDefault={addInvite} class="container-small">
-              <label for="invite-mail-input" class="p-2">Invite by email:</label>
+              <label for="invite-mail-input" class="p-2">Invite by email:</label
+              >
               <input
                 id="invite-mail-input"
                 size="24"
@@ -178,8 +179,8 @@
           <th>Date</th>
           <th>Action</th>
           <th
-            ><span class="cursor-pointer" on:click={refreshInvite}
-              ><Fa icon={faSync} size="md" /></span
+            ><button class="accessible-btn" on:click={refreshInvite}
+              ><Fa icon={faSync} size="md" /></button
             ></th
           >
         </tr>
@@ -200,16 +201,16 @@
                 {timeSince(new Date(inv.createdAt), new Date())} ago
               </td>
               <td class="text-center" colspan="2">
-                <span
-                  class="cursor-pointer"
+                <button
+                  class="accessible-btn"
                   on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
-                  ><Fa icon={faTrash} size="md" /></span
+                  ><Fa icon={faTrash} size="md" /></button
                 >
                 {#if !inv.confirmedAt}
-                  <span
-                    class="cursor-pointer"
+                  <button
+                    class="accessible-btn"
                     on:click={() => acceptInvite(inv.email)}
-                    ><Fa icon={faCheck} size="md" /></span
+                    ><Fa icon={faCheck} size="md" /></button
                   >
                 {/if}
               </td>

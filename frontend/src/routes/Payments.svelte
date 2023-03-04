@@ -28,7 +28,11 @@
   <h2 class="p-2 m-2">Sponsor Summary</h2>
 
   <div class="grid-2">
-    <p class="nobreak">Selected Projects: <span class="bold m-4">{sponsoredRepos.length} projects</span></p>
+    <p class="nobreak">
+      Selected Projects: <span class="bold m-4"
+        >{sponsoredRepos.length} projects</span
+      >
+    </p>
   </div>
 
   <PaymentSelection />

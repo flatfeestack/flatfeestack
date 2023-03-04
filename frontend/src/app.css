@@ -495,3 +495,10 @@ tbody tr:last-of-type {
   align-items: center;
   justify-content: center;
 }
+
+.accessible-btn {
+  padding: unset;
+  color: unset;
+  background-color: unset;
+  border: unset;
+}

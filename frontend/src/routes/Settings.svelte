@@ -155,33 +155,39 @@
 <Navigation>
   <h2 class="p-2 m-2">Account Settings</h2>
   <div class="grid-2">
-    <label class="p-2 m-2 nobreak">Email:&nbsp;</label>
-    <label class="p-2 m-2">{$user.email}</label>
-    <label class="p-2 m-2 nobreak">Your name: </label>
+    <p class="p-2 m-2 nobreak">Email:&nbsp;</p>
+    <span class="p-2 m-2">{$user.email}</span>
+    <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
     <input
+      id="username-input"
       type="text"
       class="max-w20"
       bind:value={$user.name}
       placeholder="Name on the badge"
     />
-    <label class="p-2 m-2 nobreak">Profile picture:</label>
-    <div
-      class="upload"
-      on:click={() => {
-        fileInput.click();
-      }}
+    <label for="profile-picture-upload" class="p-2 m-2 nobreak"
+      >Profile picture:</label
     >
-      <Fa icon={faUpload} size="lg" class="icon, px-2" />
-      <input
-        style="display:none"
-        type="file"
-        accept=".jpg, .jpeg, .png"
-        on:change={(e) => onFileSelected(e)}
-        bind:this={fileInput}
-      />
-      {#if $user.image}
-        <img class="image-org" src={$user.image} />
-      {/if}
+    <div>
+      <button
+        id="profile-picture-upload"
+        class="upload accessible-btn"
+        on:click={() => {
+          fileInput.click();
+        }}
+      >
+        <Fa icon={faUpload} size="lg" class="icon, px-2" />
+        <input
+          style="display:none"
+          type="file"
+          accept=".jpg, .jpeg, .png"
+          on:change={(e) => onFileSelected(e)}
+          bind:this={fileInput}
+        />
+        {#if $user.image}
+          <img class="image-org" src={$user.image} alt="profile img" />
+        {/if}
+      </button>
     </div>
   </div>
 
@@ -213,12 +219,13 @@
             {:else}
               <td><Fa icon={faClock} size="md" /></td>
             {/if}
-
-            <td
-              class="cursor-pointer"
-              on:click={() => removeEmail(email.email)}
-            >
-              <Fa icon={faTrash} size="md" />
+            <td>
+              <button
+                class="accessible-btn"
+                on:click={() => removeEmail(email.email)}
+              >
+                <Fa icon={faTrash} size="md" />
+              </button>
             </td>
           </tr>
         {/each}
@@ -226,7 +233,6 @@
           <td colspan="3">
             <div class="container-small">
               <input
-                input-size="24"
                 id="email-input"
                 name="email"
                 type="text"
@@ -268,11 +274,13 @@
           <tr>
             <td><strong>{address.currency}</strong></td>
             <td>{address.address}</td>
-            <td
-              class="cursor-pointer"
-              on:click={() => removePaymentAddress(address.id)}
-            >
-              <Fa icon={faTrash} size="md" />
+            <td>
+              <button
+                class="accessible-btn"
+                on:click={() => removePaymentAddress(address.id)}
+              >
+                <Fa icon={faTrash} size="md" />
+              </button>
             </td>
           </tr>
         {/each}
@@ -288,7 +296,6 @@
                   {/each}
                 </select>
                 <input
-                  input-size="32"
                   id="address-input"
                   name="address"
                   type="text"
