@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/language"
 	"math"
 	"net/url"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -305,9 +306,6 @@ func cloneOrUpdate(gitUrl string) (*git.Repository, error) {
 
 	o := git.CheckoutOptions{Strategy: git.CheckoutForce}
 	repo, err := git.Clone(gitUrl, p, &git.CloneOptions{CheckoutOptions: o})
-	if err == nil {
-		defer repo.Free()
-	}
 
 	//directory already existing,
 	if err != nil {
@@ -347,6 +345,15 @@ func cloneOrUpdate(gitUrl string) (*git.Repository, error) {
 }
 
 func pathName(gitUrl string) (string, error) {
+	alreadyExists, err := exists(gitUrl)
+	if err != nil {
+		return "", err
+	}
+
+	if alreadyExists {
+		return gitUrl, nil
+	}
+
 	u, err := url.Parse(gitUrl)
 	if err != nil {
 		return "", err
@@ -406,4 +413,16 @@ func findEmail(haystack string) string {
 		}
 	}
 	return ""
+}
+
+// https://stackoverflow.com/a/10510783
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
