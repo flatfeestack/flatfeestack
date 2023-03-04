@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"math"
 	"os"
@@ -192,7 +193,9 @@ func TestWeightContributions_NoInput(t *testing.T) {
 }
 
 func TestAnalyzeRepositoryFromRepository(t *testing.T) {
-	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
+	_, err := unzip("test-repository.zip", "/tmp/test-repository")
+	require.Nil(t, err)
+
 	//repo, _ := git.OpenRepository("/tmp/test-repository")
 	opts = &Opts{GitBasePath: "/tmp"}
 
@@ -289,8 +292,8 @@ func TestAnalyzeRepositoryFromRepository(t *testing.T) {
 }
 
 func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
-	_, _ = unzip("test-repository.zip", "/tmp/test-repository")
-	//repo, _ := git.OpenRepository("/tmp/test-repository")
+	_, err := unzip("test-repository.zip", "/tmp/test-repository")
+	require.Nil(t, err)
 
 	opts = &Opts{GitBasePath: "/tmp"}
 	startDate, err := time.Parse(time.RFC3339, "2019-02-01T12:00:00Z")
