@@ -1,0 +1,24 @@
+POST https://api.sandbox.nowpayments.io/v1/payment
+Content-Type: application/json
+x-api-key: C59C7JD-6YAM33Y-NMNSRVK-JAMKPW2
+
+{"price_amount": 3999.15,
+"price_currency": "USD",
+"pay_currency": "GAS",
+"ipn_callback_url": "https://nowpayments.io",
+"order_id": "RGDBP-21314",
+"order_description": "Apple Macbook Pro 2019 x 1",
+"case": "success"}
+###
+
+POST https://api.sandbox.nowpayments.io/v1/payment
+Content-Type: application/json
+x-api-key: C59C7JD-6YAM33Y-NMNSRVK-JAMKPW2
+
+{"price_amount":36528.03999999999,
+  "price_currency":"USD",
+  "pay_currency":"GAS",
+  "ipn_callback_url":"https://axelra.net/tom/hooks/nowpayments",
+  "order_id":"9ac20803-ac1b-4559-9207-c549041aed75",
+  "order_description":"8d602b85-e8d4-47f1-82c7-52d0c67586a0"}
+###
