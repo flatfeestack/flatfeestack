@@ -53,7 +53,7 @@
 >
   <div>
     {#if !star}
-      <a href="#" on:click|preventDefault={onSponsor}>
+      <a href={"#"} on:click|preventDefault={onSponsor}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 573.655 550.909"

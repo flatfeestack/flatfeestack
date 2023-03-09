@@ -23,14 +23,6 @@
   }
 </script>
 
-<style>
-  input {
-    display: block;
-    width: 500px;
-    max-width: 100%;
-  }
-</style>
-
 <form on:submit|preventDefault={handleSubmit}>
   <div class="container">
     <div class="p-2">

@@ -85,15 +85,16 @@
 <div class="container-stretch">
   {#each $config.plans as { title, desc, disclaimer, freq }}
     <div
-      class="flex-grow child p-2 m-2 w1-2 card cursor-pointer border-primary-500 rounded {currentFreq ===
+      class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
       freq
         ? 'bg-green'
         : ''}"
-      on:click={() => (currentFreq = freq)}
     >
-      <h3 class="text-center font-bold text-lg">{title}</h3>
-      <div class="text-center">{@html desc}</div>
-      <div class="small text-center">{@html disclaimer}</div>
+      <button class="accessible-btn" on:click={() => (currentFreq = freq)}>
+        <h3 class="text-center font-bold text-lg">{title}</h3>
+        <div class="text-center">{@html desc}</div>
+        <div class="small text-center">{@html disclaimer}</div>
+      </button>
     </div>
   {/each}
 </div>

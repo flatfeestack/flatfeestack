@@ -88,14 +88,6 @@
   });
 </script>
 
-<style>
-  canvas {
-    position: absolute;
-    width: 80%;
-    height: 70%;
-  }
-</style>
-
 <Navigation>
   {#if repos && repos.length > 0}
     <h2 class="p-2 m-2">Supported Repositories</h2>
