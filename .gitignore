@@ -6,9 +6,6 @@ flatfeestack-env-*.tar.gz
 .chain
 .repos
 env*.tar.gz
-/analyzer
-/backend
-/fastauth
 /frontend
 /payout
 /payout-nodejs
