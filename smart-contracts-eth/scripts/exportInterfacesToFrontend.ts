@@ -25,6 +25,7 @@ async function main() {
     const iface = new ethers.utils.Interface(abi);
     const resultFile = resolve(
       __dirname,
+      "..",
       `${pathToFrontend}/src/contracts/${contractName}.ts`
     );
 
