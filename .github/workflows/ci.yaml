@@ -165,3 +165,79 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  build-test-fastauth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build test container
+        uses: docker/build-push-action@v4
+        with:
+          context: fastauth
+          load: true
+          target: builder
+          tags: ghcr.io/flatfeestack/flatfeestack/fastauth:test
+
+      - name: Run tests
+        run: |
+          docker run -v $(pwd)/fastauth:/app --rm ghcr.io/flatfeestack/flatfeestack/fastauth:test go test -v ./...
+
+      - name: Build container
+        uses: docker/build-push-action@v4
+        with:
+          context: fastauth
+          load: true
+          tags: ghcr.io/flatfeestack/flatfeestack/fastauth:test
+
+      - name: Run Postgres server for testing
+        run: docker run --env-file db/.example.env -p 5432:5432 -d postgres:15-alpine
+
+      - name: Run fastauth
+        run: docker run --env-file fastauth/.example.env -d --network="host" -e DB_PATH=postgresql://postgres:password@127.0.0.1:5432/flatfeestack?sslmode=disable ghcr.io/flatfeestack/flatfeestack/fastauth:test
+
+      - name: Check if fastauth is reachable
+        uses: nick-fields/retry@v2
+        with:
+          timeout_seconds: 15
+          max_attempts: 5
+          command: curl -v localhost:9081
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.CR_PAT_USERNAME }}
+          password: ${{ secrets.CR_PAT_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ghcr.io/flatfeestack/flatfeestack/fastauth
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Push
+        uses: docker/build-push-action@v4
+        with:
+          context: fastauth
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
