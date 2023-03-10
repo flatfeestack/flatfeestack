@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
+    <style>
+        .form {
+            max-width: 20rem;
+            margin: auto;
+            font-family: sans-serif;
+            background: #FFFFFF;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.3), 0 5px 5px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .form input {
+            outline: 0;
+            background: #f2f2f2;
+            width: 100%;
+            border: 0;
+            margin-bottom: 1em;
+            padding: 1em;
+            box-sizing: border-box;
+            font-size: medium;
+        }
+
+        .form button {
+            background: #4CAF50;
+            width: 100%;
+            border: 0;
+            padding: 1em;
+            color: #FFFFFF;
+            font-size: medium;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .form .message {
+            color: #b3b3b3;
+            font-size: small;
+        }
+
+        .form .message a {
+            color: #4CAF50;
+        }
+
+        .form #register-form {
+            display: none;
+        }
+
+        #registrationLink {
+            display: none;
+        }
+
+        body {
+            background: #b0b0b0; /* fallback for old browsers */
+            background: linear-gradient(to left, #d0d0d0, #a0a0a0);
+        }
+    </style>
+    <script>
+        window.addEventListener('load', (event) => {
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            const aag = urlParams.get('aag');
+            if(aag === "regglight") {
+                changeForm('register');
+            }
+        });
+        function changeForm(action) {
+            const reg = document.getElementById("register-form");
+            const login = document.getElementById("login-form");
+            if (action === "login") {
+                login.style.display = "block";
+                reg.style.display = "none";
+            } else {
+                login.style.display = "none";
+                reg.style.display = "block";
+            }
+        }
+
+        function login() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const login = document.getElementById("login-form");
+            const data = new FormData(login);
+            const params1 = Object.fromEntries(data);
+            const params2 = Object.fromEntries(urlParams);
+            const merged = {...params1, ...params2};
+            merged["redirectAs201"]=true
+
+            //for (const [key, value] of Object.entries(merged)) {
+            //    console.log(`${key}: ${value}`);
+            //}
+
+            fetch("login", {
+                method: "POST",
+                redirect: 'manual', //this does not return the redirect location, so we must convert the 303 to a 201, see https://github.com/whatwg/fetch/issues/763
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(merged)})
+                .then(function(res) {
+                    if (res.status == 201) {
+                        window.location.href = res.headers.get("Location");
+                    }
+                })
+                .catch(function(err) {
+                    console.error(err);
+                });
+            return false;
+        }
+
+        function register() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const reg = document.getElementById("register-form");
+            const data = new FormData(reg);
+            const params1 = Object.fromEntries(data);
+            const params2 = Object.fromEntries(urlParams);
+            const merged = {...params1, ...params2};
+            merged["redirect_uri"] = merged["Location"];
+            console.log(JSON.stringify(merged));
+            console.log("TEST");
+
+            fetch("/signup", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(merged)})
+                .then(response => response.json())
+                .then(data => {
+                    const registrationLink = document.getElementById("registrationLink");
+                    registrationLink.children[0].setAttribute("href", data.url);
+                    registrationLink.style.display = "block";
+                    changeForm('login');
+                    })
+                .catch(function(err) {
+                    console.error(err);
+                });
+            return false;
+        }
+    </script>
+</head>
+<body>
+
+<div class="form">
+    <form id="register-form">
+        <input name="email" type="text" autocorrect="off" autocapitalize="none" placeholder="email address"/>
+        <input name="password" type="password" placeholder="password"/>
+        <button onclick="return register()">CREATE ACCOUNT</button>
+        <p class="message">Already registered? <a href="#" onclick="changeForm('login')">Sign In</a></p>
+    </form>
+
+    <form id="login-form">
+        <input name="email" type="text" autocorrect="off" autocapitalize="none" placeholder="email address"/>
+        <input name="password" type="password" placeholder="password"/>
+        <button onclick="return login()">LOGIN</button>
+        <p class="message">Not registered? <a href="#" onclick="changeForm('register')">Create an account</a></p>
+    </form>
+    <p id="registrationLink"><a href="#">Registration Link</a></p>
+</div>
+
+</body>
+</html>
