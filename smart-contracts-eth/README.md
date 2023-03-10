@@ -1,0 +1,90 @@
+# FlatFeeStack DAA
+
+This project contains the source code for the FlatFeeStack DAA on the Ethereum blockchain.
+The project is based on [HardHat](https://hardhat.org/).
+
+## Development
+
+Make sure you have Node v16 up and running, best with NVM.
+
+```shell
+brew install nvm
+nvm install 16
+nvm use
+```
+
+Then, install the dependencies and check if the tests run.
+
+```shell
+npm i
+npm run hardhat:test
+```
+
+## Deployment
+
+We use the community-maintained `hardhat-deploy` plugin.
+
+### To local environment
+
+When working on the frontend of the DAA, which is part of the [main FlatFeeStack frontend](https://github.com/flatfeestack/frontend), we provide a setup with a local Ethereum chain and a block explorer.
+
+This might seem silly, as `hardhat` is installed in this project and would also provide to run an Ethereum node. However, `hardhat` does not support running a persistent blockchain.
+
+Run the Docker compose file:
+
+```shell
+docker compose up
+```
+
+- The blockchain explorer is available at port 4000
+- The chain is available at port 8545
+
+The chain ships with five accounts:
+
+- The five accounts on the chain have 100 ETH each.
+- The accounts are ordered as follows:
+  - `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` is the first council member of the DAA.
+  - `0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d` is the second council member.
+  - `0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1` is a regular member.
+  - `0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e` has no privileges in the DAA.
+- Those accounts can be imported into MetaMask so you can interact with the smart contract.
+
+Deploy the smart contracts:
+
+```shell
+npm run hardhat:deploy -- --network localhost
+```
+
+Deployment is necessary each time the contracts change.
+
+Additionally, if you run this setup the first time, you need to run a script that confirms the reserved member address:
+
+```shell
+npm run hardhat:script -- --network localhost scripts/addMember.ts
+```
+
+Then you can run this script to add voting slots and proposals to the chain
+
+```shell
+npm run hardhat:script -- --network localhost scripts/addSlots.ts
+```
+
+If you want to fast-forward your chain can run this script.
+
+```shell
+npm run hardhat:script -- --network localhost scripts/mineBlocks.ts
+```
+
+Now, you can export the ABIs of the smart contracts and the addresses of the proxies to the frontend:
+
+```shell
+FRONTEND_PATH="../frontend" npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
+```
+
+- The contracts' ABI will be written to `src/contracts`.
+- The contracts' addresses will be written to a `.env` file. You can retrieve them via `VITE_${Contract name}_CONTRACT_ADDRESS` in the frontend.
+- Always restart vite after a new interface export
+
+# MetaMask
+
+Make sure you are connect you wallet to localhost
