@@ -34,8 +34,10 @@
       <label>
         <input type="checkbox" bind:checked={isAgreed} />
         I agree with the current
-        <a href="https://flatfeestack.github.io/bylaws/" target="_blank"
-          >bylaws</a
+        <a
+          href="https://flatfeestack.github.io/bylaws/"
+          target="_blank"
+          rel="noreferrer">bylaws</a
         >
       </label>
     </div>

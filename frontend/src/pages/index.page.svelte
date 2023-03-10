@@ -105,8 +105,8 @@
   }
 
   header :global(a),
-  .header :global(a:visited),
-  .header :global(a:active) {
+  header :global(a:visited),
+  header :global(a:active) {
     text-decoration: none;
     color: #000;
   }
@@ -151,7 +151,7 @@
           ><Fa icon={faHome} size="sm" class="icon" /></a
         >
         {#if $user.image}
-          <img class="image-org-sx" src={$user.image} />
+          <img class="image-org-sx" src={$user.image} alt="user profile img" />
         {/if}
         &nbsp;
         {$user.email}
@@ -171,13 +171,15 @@
 
   {#if $error}<div class="bg-red p-2 parent err-container">
       <div class="w-100">{@html $error}</div>
-      <div
-        class="close"
-        on:click|preventDefault={() => {
-          $error = null;
-        }}
-      >
-        ✕
+      <div>
+        <button
+          class="close accessible-btn"
+          on:click|preventDefault={() => {
+            $error = null;
+          }}
+        >
+          ✕
+        </button>
       </div>
     </div>{/if}
 

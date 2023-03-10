@@ -72,7 +72,7 @@
   >
     <div>
       {#if star}
-        <a href="#" on:click|preventDefault={unTag}>
+        <a href={"#"} on:click|preventDefault={unTag}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 573.655 550.909"
@@ -108,7 +108,7 @@
     <div class="center center2 py-2">{repo.name}</div>
     <div class="body">{repo.description}</div>
     <div>
-      <a href={repo.url} class="py-2 url" target="_blank">
+      <a href={repo.url} class="py-2 url" target="_blank" rel="noreferrer">
         {repo.url}
       </a>
     </div>

@@ -1,12 +1,11 @@
 <script lang="ts">
   import Dots from "../components/Dots.svelte";
   import { confirmInvite } from "../ts/services";
-  import { API } from "../ts/api";
   import { navigate, link } from "svelte-routing";
 
-  export let email;
-  export let emailToken;
-  export let inviteByEmail;
+  export let email: string;
+  export let emailToken: string;
+  export let inviteByEmail: string;
 
   let password = "";
   let error = "";

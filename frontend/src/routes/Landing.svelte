@@ -89,29 +89,25 @@
     text-align: left;
   }
 
-  .card img.bottom,
-  .greybox2 img.bottom {
+  .card img.bottom {
     position: absolute;
     animation: fadeIn 0.5s;
     opacity: 1;
   }
 
-  .card img.top,
-  .greybox2 img.top {
+  .card img.top {
     position: relative;
     animation: fadeOut 0.5s;
     opacity: 0;
   }
 
-  .card:hover img.bottom,
-  .greybox2:hover img.bottom {
+  .card:hover img.bottom {
     position: absolute;
     animation: fadeOut 0.5s;
     opacity: 0;
   }
 
-  .card:hover img.top,
-  .greybox2:hover img.top {
+  .card:hover img.top {
     position: relative;
     animation: fadeIn 0.5s;
     opacity: 1;
@@ -164,8 +160,13 @@
       <img
         class="hide-mda logoFFSWhiteSmall"
         src="/images/ffs-logo-white.svg"
+        alt="FlatFeeStack Logo"
       />
-      <img class="hide-sx logoFFSWhiteLarge" src="/images/ffs-logo-white.svg" />
+      <img
+        class="hide-sx logoFFSWhiteLarge"
+        src="/images/ffs-logo-white.svg"
+        alt="FlatFeeStack Logo"
+      />
       <h1>
         A flat-fee sponsoring platform for <br />
         open source projects based on git metrics
@@ -176,8 +177,16 @@
   <div class="flex-row py-300">
     <div class="card">
       <div>
-        <img class="icon bottom" src="/images/holding-world-bw.svg" />
-        <img class="icon top" src="/images/holding-world.svg" />
+        <img
+          class="icon bottom"
+          src="/images/holding-world-bw.svg"
+          alt="Hands holding world icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/holding-world.svg"
+          alt="Hands holding world icon color"
+        />
       </div>
       <h2>On the Shoulders of Giants</h2>
       <div class="max-w20">
@@ -186,8 +195,12 @@
     </div>
     <div class="card">
       <div>
-        <img class="icon bottom" src="/images/house-bw.svg" />
-        <img class="icon top" src="/images/house.svg" />
+        <img
+          class="icon bottom"
+          src="/images/house-bw.svg"
+          alt="House icon bw"
+        />
+        <img class="icon top" src="/images/house.svg" alt="House icon bw" />
       </div>
       <h2>Our Mission</h2>
       <div class="max-w20">
@@ -223,8 +236,16 @@
   <div class="flex-row">
     <div class="flex-row card max-w50 cardLeft">
       <div>
-        <img class="icon bottom" src="/images/running-bw.svg" />
-        <img class="icon top" src="/images/running.svg" />
+        <img
+          class="icon bottom"
+          src="/images/running-bw.svg"
+          alt="person running icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/running.svg"
+          alt="person running icon color"
+        />
       </div>
       <div>
         <h2>Why Sponsoring?</h2>
@@ -250,8 +271,12 @@
         </div>
       </div>
       <div>
-        <img class="icon bottom" src="/images/metrics-bw.svg" />
-        <img class="icon top" src="/images/metrics.svg" />
+        <img
+          class="icon bottom"
+          src="/images/metrics-bw.svg"
+          alt="metric icon bw"
+        />
+        <img class="icon top" src="/images/metrics.svg" alt="metric icon bw" />
       </div>
     </div>
   </div>
@@ -259,8 +284,8 @@
   <div class="flex-row">
     <div class="flex-row card max-w50 cardLeft">
       <div>
-        <img class="icon bottom" src="/images/seat-bw.svg" />
-        <img class="icon top" src="/images/seat.svg" />
+        <img class="icon bottom" src="/images/seat-bw.svg" alt="seat icon bw" />
+        <img class="icon top" src="/images/seat.svg" alt="metric icon color" />
       </div>
       <div>
         <h2>Which Projects Should your Company Sponsor?</h2>
@@ -291,8 +316,16 @@
         </div>
       </div>
       <div>
-        <img class="icon bottom" src="/images/cc-bw.svg" />
-        <img class="icon top" src="/images/cc.svg" />
+        <img
+          class="icon bottom"
+          src="/images/cc-bw.svg"
+          alt="crypto currencies icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/cc.svg"
+          alt="crypto currencies icon bw"
+        />
       </div>
     </div>
   </div>

@@ -3,8 +3,8 @@
   import { confirmReset } from "../ts/services";
   import { navigate, link } from "svelte-routing";
 
-  export let email;
-  export let token;
+  export let email: string;
+  export let token: string;
 
   let password = "";
   let error = "";

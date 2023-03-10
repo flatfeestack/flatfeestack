@@ -100,7 +100,7 @@
 
 {#if $user.paymentMethod}
   <div class="container">
-    <label class="nobreak">Credit card: </label>
+    <p class="nobreak">Credit card:</p>
     <div class="container">
       <span>*** *** *** {$user.last4}</span>
       <form class="p-2" on:submit|preventDefault={deletePaymentMethod}>
@@ -117,7 +117,7 @@
 
 {#if $userBalances && $userBalances.total}
   <div class="container">
-    <label class="nobreak">Current balance: </label>
+    <p class="nobreak">Current balance:</p>
     <div class="container">
       {formatBalance($userBalances.total["USD"], "USD")}
     </div>

@@ -198,11 +198,11 @@
                 <tr>
                   <td>{row.email}</td>
                   <td
-                    ><span
-                      class="cursor-pointer"
+                    ><button
+                      class="accessible-btn"
                       on:click={() => loginAs(row.email)}
                     >
-                      <Fa icon={faSignInAlt} size="md" /></span
+                      <Fa icon={faSignInAlt} size="md" /></button
                     >
                   </td>
                 </tr>
@@ -248,12 +248,12 @@
               <td>{repo.source}</td>
               <td>
                 {#if repo.uuid !== repos2.uuid}
-                  <div
-                    class="cursor-pointer"
+                  <button
+                    class="accessible-btn"
                     on:click={() => makeRoot(repo.uuid)}
                   >
                     <Fa icon={faArrowsLeftRight} size="md" />
-                  </div>
+                  </button>
                 {:else}
                   <Fa icon={faCheck} size="md" />
                 {/if}
