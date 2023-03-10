@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xlzd/gotp"
 	"io/ioutil"
 	"log"
@@ -210,9 +211,14 @@ func TestTOTP(t *testing.T) {
 	p := ProvisioningUri{}
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(bodyBytes, &p)
-	secret := strings.SplitN(p.Uri, "=", 2)
-	secret = strings.SplitN(secret[1], "&", 2)
-	totp := newTOTP(secret[0])
+
+	u, err := url.Parse(p.Uri)
+	require.Nil(t, err)
+
+	secret := u.Query().Get("secret")
+	require.NotNil(t, secret)
+
+	totp := newTOTP(secret)
 	conf := totp.Now()
 
 	resp = doTOTPConfirm(conf, oauth.AccessToken)
@@ -263,9 +269,14 @@ func doAllTOTP(token string) *gotp.TOTP {
 	p := ProvisioningUri{}
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(bodyBytes, &p)
-	secret := strings.SplitN(p.Uri, "=", 2)
-	secret = strings.SplitN(secret[1], "&", 2)
-	totp := newTOTP(secret[0])
+
+	u, err := url.Parse(p.Uri)
+	if err != nil {
+		panic(err)
+	}
+
+	secret := u.Query().Get("secret")
+	totp := newTOTP(secret)
 	conf := totp.Now()
 	resp = doTOTPConfirm(conf, token)
 	return totp
