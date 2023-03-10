@@ -94,4 +94,4 @@
 
 <p />
 
-<button class="button1" on:click={() => addAdditionalCall()}>Add call</button>
+<button class="button4" on:click={() => addAdditionalCall()}>Add call</button>

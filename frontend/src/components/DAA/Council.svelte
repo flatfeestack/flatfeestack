@@ -5,6 +5,7 @@
   import AddVotingSlot from "./council/AddVotingSlot.svelte";
   import CancelVotingSlot from "./council/CancelVotingSlot.svelte";
   import Navigation from "./Navigation.svelte";
+  import MembershipRequests from "./council/MembershipRequests.svelte";
 
   $: {
     if ($councilMembers === null || $userEthereumAddress === null) {
@@ -12,8 +13,8 @@
     } else if (
       !$councilMembers.some((member) => member == $userEthereumAddress)
     ) {
-      $error = "You are not allowed to review this page.";
-      navigate("/daa/votes");
+      $error = "You are not allowed to view this page.";
+      navigate("/daa/home");
     } else {
       $isSubmitting = false;
     }
@@ -25,4 +26,5 @@
 
   <AddVotingSlot />
   <CancelVotingSlot />
+  <MembershipRequests />
 </Navigation>

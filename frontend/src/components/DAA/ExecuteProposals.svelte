@@ -86,7 +86,7 @@
             proposal.description,
             proposal.calldatas
           )}
-        class="button1">Queue proposal for execution</button
+        class="button4">Queue proposal for execution</button
       >
     {:else if proposal.state == 5}
       {#if proposal.eta === 0}
@@ -99,7 +99,7 @@
               proposal.description,
               proposal.calldatas
             )}
-          class="button1">Execute proposal</button
+          class="button4">Execute proposal</button
         >
       {:else}
         <p class="italic">
@@ -107,7 +107,7 @@
             (proposal.eta - $currentBlockTimestamp) * 1000
           )}.
         </p>
-        <button class="button1" disabled>Execute proposal</button>
+        <button class="button4" disabled>Execute proposal</button>
       {/if}
     {:else if proposal.state == 7}
       <p class="italic">Proposal has been executed.</p>

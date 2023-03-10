@@ -190,7 +190,7 @@
       <div>
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 0 ? "button1" : "button3"}
+          class={voteValues[proposal.id].value === 0 ? "button4" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 0)}
         >
           <Fa icon={faXmark} size="sm" class="icon px-2" />
@@ -198,7 +198,7 @@
 
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 1 ? "button1" : "button3"}
+          class={voteValues[proposal.id].value === 1 ? "button4" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 1)}
         >
           <Fa icon={faCheck} size="sm" class="icon px-2" />
@@ -206,7 +206,7 @@
 
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 2 ? "button1" : "button3"}
+          class={voteValues[proposal.id].value === 2 ? "button4" : "button3"}
           on:click={() => handleVoteValue(proposal.id, 2)}
         >
           <Fa icon={faQuestion} size="sm" class="icon px-2" />
@@ -232,7 +232,7 @@
     {/if}
   {/each}
 
-  <button disabled={!hasAnyVotes} on:click={() => castVotes()} class="button1"
+  <button disabled={!hasAnyVotes} on:click={() => castVotes()} class="button4"
     >Cast votes</button
   >
 </Navigation>

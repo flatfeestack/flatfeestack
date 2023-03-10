@@ -44,8 +44,8 @@
   </div>
 
   <div class="buttons">
-    <button class="button1" on:click={_onCancel}> Cancel </button>
-    <button class="button1" on:click={_onConfirm} disabled={!isAgreed}>
+    <button class="button4" on:click={_onCancel}> Cancel </button>
+    <button class="button4" on:click={_onConfirm} disabled={!isAgreed}>
       Request membership
     </button>
   </div>

@@ -71,7 +71,7 @@
 
   <div class="container-col2 my-2">
     <button
-      class="button1"
+      class="button4"
       on:click={() => createVotingSlot()}
       disabled={plannedBlockNumber === 0}>Create voting slot</button
     >

@@ -52,8 +52,8 @@
 
   onMount(() => {
     if ($membershipStatusValue != 3) {
-      $error = "You are not allowed to review this page.";
-      navigate("/daa/votes");
+      $error = "You are not allowed to view this page.";
+      navigate("/daa/home");
       return;
     }
 
@@ -156,7 +156,7 @@
       You have {ethers.utils.formatEther(availableFunds)} ETH available to be withdrawn.
     </p>
 
-    <button on:click={() => withdrawFunds()} class="button1">Withdraw</button>
+    <button on:click={() => withdrawFunds()} class="button4">Withdraw</button>
   {:else}
     You have no funds available.
   {/if}

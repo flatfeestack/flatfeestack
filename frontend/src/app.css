@@ -14,6 +14,13 @@
   --secondary-500: #808080;
   --secondary-700: #494949;
   --secondary-900: #000000;
+
+  --tertiary-100: #cae2c8;
+  --tertiary-300: #89bd84;
+  --tertiary-400: #72b06c;
+  --tertiary-500: #5ca353;
+  --tertiary-700: #488340;
+  --tertiary-900: #2e5328;
 }
 
 body,
@@ -162,6 +169,10 @@ h1 {
   color: var(--primary-500);
 }
 
+.text-tertiary-500 {
+  color: var(--tertiary-500);
+}
+
 .text-red {
   color: rgba(252, 165, 165, 1);
 }
@@ -265,6 +276,22 @@ button {
 }
 .button3:active {
   background: var(--secondary-500);
+}
+
+.button4 {
+  border: 1px solid var(--tertiary-500);
+  background: var(--tertiary-500);
+  transition: background 0.5s;
+}
+.button4:hover {
+  background: var(--tertiary-400);
+}
+.button4:active {
+  background: var(--secondary-900);
+}
+.button4:disabled {
+  background: var(--secondary-300);
+  border: 1px solid var(--secondary-100);
 }
 
 input[type="email"],

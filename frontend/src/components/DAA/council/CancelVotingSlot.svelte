@@ -63,7 +63,7 @@
 
   <div class="container-col2 my-2">
     <button
-      class="button1"
+      class="button4"
       on:click={() => cancelVotingSlot()}
       disabled={toBeRemoved === 0 || reason === ""}>Cancel voting slot</button
     >
