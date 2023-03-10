@@ -24,7 +24,7 @@ jobs:
           node-version: 16
           cache: "npm"
           cache-dependency-path: smart-contracts-eth/package-lock.json
-      - run: npm ci
+      - run: npm i
       - run: npm run prettify:check
       - run: npm run lint
       - run: npm run hardhat:coverage
