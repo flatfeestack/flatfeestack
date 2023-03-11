@@ -20,6 +20,9 @@ export default defineConfig({
       disable: mode === "dev",
     }),
   ],
+  server: {
+    port: 9085,
+  },
   mode: mode === "dev" ? "development" : "production",
   build: {
     minify: mode !== "dev",
