@@ -7,7 +7,7 @@
     try {
       const provider = await detectEthereumProvider();
       if (provider !== null) {
-        navigate("/daa/votes");
+        navigate("/daa/home");
       }
     } catch {}
   });

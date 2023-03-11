@@ -66,8 +66,8 @@
   });
 
   function moveToVotesPage() {
-    $error = "You are not allowed to review this page.";
-    navigate("/daa/votes");
+    $error = "You are not allowed to view this page.";
+    navigate("/daa/home");
   }
 
   async function createProposal() {
@@ -131,7 +131,7 @@
 
   <textarea class="box-sizing-border" bind:value={description} rows="10" />
 
-  <button class="button1" on:click={() => createProposal()}
+  <button class="button4" on:click={() => createProposal()}
     >Create proposal</button
   >
 </Navigation>

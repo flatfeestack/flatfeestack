@@ -1,15 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { navigate } from "svelte-routing";
   import {
-    userEthereumAddress,
     membershipContract,
-    councilMembers,
-  } from "../../ts/daaStore";
-  import { error } from "../../ts/mainStore";
-  import membershipStatusMapping from "../../utils/membershipStatusMapping";
-  import Navigation from "./Navigation.svelte";
+    provider,
+    userEthereumAddress,
+  } from "../../../ts/daaStore";
+  import { error } from "../../../ts/mainStore";
+  import membershipStatusMapping from "../../../utils/membershipStatusMapping";
+  import Spinner from "../../Spinner.svelte";
 
+  let isLoading = true;
   let membersToBeConfirmed: MemberToConfirm[] = [];
 
   interface MemberToConfirm {
@@ -18,16 +17,15 @@
     canConfirm: boolean;
   }
 
-  onMount(async () => {
-    if ($userEthereumAddress === null || $membershipContract === null) {
-      moveToVotesPage();
-      return;
+  $: {
+    if ($provider === null || $membershipContract === null) {
+      isLoading = true;
+    } else {
+      prepareView();
     }
+  }
 
-    if (!$councilMembers.some((member) => member == $userEthereumAddress)) {
-      moveToVotesPage();
-    }
-
+  async function prepareView() {
     const [requestingMembers, confirmedMembers] = await Promise.all([
       $membershipContract.queryFilter(
         $membershipContract.filters.ChangeInMembershipStatus(null, [1, 2])
@@ -72,11 +70,8 @@
           };
         })
     );
-  });
 
-  function moveToVotesPage() {
-    $error = "You are not allowed to review this page.";
-    navigate("/daa/votes");
+    isLoading = false;
   }
 
   async function approveMember(address: String) {
@@ -88,36 +83,36 @@
   }
 </script>
 
-<Navigation>
-  <h1 class="text-secondary-900">Current membership requests</h1>
+<h1 class="text-secondary-900">Current membership requests</h1>
 
-  {#if membersToBeConfirmed.length > 0}
-    <table>
-      <thead>
+{#if isLoading}
+  <Spinner />
+{:else if membersToBeConfirmed.length > 0}
+  <table>
+    <thead>
+      <tr>
+        <th>Address</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each membersToBeConfirmed as memberToBeConfirmed}
         <tr>
-          <th>Address</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <td>{memberToBeConfirmed.address}</td>
+          <td>{memberToBeConfirmed.status}</td>
+          <td>
+            <button
+              class="button4"
+              disabled={!memberToBeConfirmed.canConfirm}
+              on:click={() => approveMember(memberToBeConfirmed.address)}
+              >Confirm member
+            </button>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        {#each membersToBeConfirmed as memberToBeConfirmed}
-          <tr>
-            <td>{memberToBeConfirmed.address}</td>
-            <td>{memberToBeConfirmed.status}</td>
-            <td
-              ><button
-                class="button1"
-                disabled={!memberToBeConfirmed.canConfirm}
-                on:click={() => approveMember(memberToBeConfirmed.address)}
-                >Confirm member</button
-              ></td
-            >
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {:else}
-    There are no members to confirm.
-  {/if}
-</Navigation>
+      {/each}
+    </tbody>
+  </table>
+{:else}
+  There are no members to confirm.
+{/if}

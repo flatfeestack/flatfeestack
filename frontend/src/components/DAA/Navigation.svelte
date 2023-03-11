@@ -1,9 +1,9 @@
 <script type="ts">
   import { Web3Provider } from "@ethersproject/providers";
   import {
-    faHand,
     faHippo,
     faList,
+    faHome,
     faMoneyBill,
     faPerson,
     faUserAstronaut,
@@ -19,7 +19,7 @@
     signer,
     userEthereumAddress,
   } from "../../ts/daaStore";
-  import { isSubmitting } from "../../ts/mainStore";
+  import { isSubmitting, route } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
@@ -79,32 +79,31 @@
   }
 
   .navigation {
+    padding-top: 2rem;
     display: flex;
     flex-flow: column;
-    min-width: 12rem;
-    background-color: var(--secondary-100);
+    min-width: 14rem;
+    background-color: var(--tertiary-300);
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
-    padding: 2rem 1em;
   }
-
   .navigation :global(a),
-  .navigation {
+  .navigation .inactive {
     display: block;
     color: var(--secondary-700);
+    padding: 1em;
     text-decoration: none;
     transition: color 0.3s linear, background-color 0.3s linear;
-    word-wrap: break-word;
   }
 
-  .navigation :global(a) {
-    padding: 1em 0;
+  .navigation .inactive {
+    color: var(--secondary-300);
   }
 
   .navigation :global(a:hover),
-  .navigation {
-    background-color: var(--primary-300);
-    color: var(--primary-900);
+  .navigation .selected {
+    background-color: var(--tertiary-900);
+    color: var(--tertiary-700);
   }
 
   .memberArea {
@@ -112,6 +111,8 @@
     flex-flow: column;
     overflow-wrap: anywhere;
     font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    padding: 1em;
   }
 
   @media (max-width: 36rem) {
@@ -119,8 +120,7 @@
       flex-direction: column;
       display: flex;
     }
-
-    nav {
+    .navigation {
       display: flex;
       flex-direction: row;
       justify-content: space-between;
@@ -128,8 +128,7 @@
       border-bottom: solid 1px var(--primary-500);
       padding: 0;
     }
-
-    nav :global(a) {
+    .navigation :global(a) {
       text-align: center;
       width: 100%;
       float: left;
@@ -145,10 +144,10 @@
 <div class="page">
   <div class="navigation">
     <div class="memberArea">
-      <Fa icon={faUserAstronaut} size="3x" />
+      <Fa class="mb-5" icon={faUserAstronaut} size="3x" />
 
       {#if $userEthereumAddress === null}
-        <button class="button1" on:click={connectWallet}>Connect wallet</button>
+        <button class="button4" on:click={connectWallet}>Connect wallet</button>
       {:else}
         <p>
           Hello {truncateEthAddress($userEthereumAddress)}! <br />
@@ -157,14 +156,14 @@
       {/if}
     </div>
     <nav use:links>
+      <NavItem href="/daa/home" icon={faHome} label="DAO Home" />
       <NavItem href="/daa/votes" icon={faList} label="Votes" />
-      <NavItem href="/daa/treasury" icon={faMoneyBill} label="Treasury" />
-      <NavItem
-        href="/daa/membershipRequests"
-        icon={faHand}
-        label="Membership requests"
-      />
-      <NavItem href="/daa/council" icon={faHippo} label="Council functions" />
+      {#if $membershipStatusValue == 3}
+        <NavItem href="/daa/treasury" icon={faMoneyBill} label="Treasury" />
+      {/if}
+      {#if $membershipStatusValue == 3 && $councilMembers?.includes($userEthereumAddress)}
+        <NavItem href="/daa/council" icon={faHippo} label="Council functions" />
+      {/if}
       <NavItem href="/daa/membership" icon={faPerson} label="Membership" />
     </nav>
   </div>

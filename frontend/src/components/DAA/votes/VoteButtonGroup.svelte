@@ -15,7 +15,7 @@
 <div>
   <button
     {disabled}
-    class={voteValue == 0 ? "button1" : "button3"}
+    class={voteValue == 0 ? "button4" : "button3"}
     on:click={() => onClick(proposalId, 0)}
   >
     <Fa icon={faXmark} size="sm" class="icon px-2" />
@@ -23,7 +23,7 @@
 
   <button
     {disabled}
-    class={voteValue == 1 ? "button1" : "button3"}
+    class={voteValue == 1 ? "button4" : "button3"}
     on:click={() => onClick(proposalId, 1)}
   >
     <Fa icon={faCheck} size="sm" class="icon px-2" />
@@ -31,7 +31,7 @@
 
   <button
     {disabled}
-    class={voteValue == 3 ? "button1" : "button3"}
+    class={voteValue == 3 ? "button4" : "button3"}
     on:click={() => onClick(proposalId, 2)}
   >
     <Fa icon={faQuestion} size="sm" class="icon px-2" />

@@ -26,8 +26,8 @@
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
 
+  import DAAHome from "../components/DAA/DAAHome.svelte";
   import DaaVotes from "../components/DAA/Votes.svelte";
-  import DaaMembershipRequests from "../components/DAA/MembershipRequests.svelte";
   import DaaMembership from "../components/DAA/Membership.svelte";
   import DaaMetamaskRequired from "../components/DAA/MetaMaskRequired.svelte";
   import DaaCreateProposal from "../components/DAA/CreateProposal.svelte";
@@ -38,6 +38,7 @@
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
+
   $route = globalHistory.location;
   globalHistory.listen((history) => {
     $route = history.location;
@@ -163,9 +164,12 @@
           <button class="button3 center mx-2" type="submit">Login</button>
         </form>
         <form on:submit|preventDefault={() => navigate("/signup")}>
-          <button class="button1 center" type="submit">Sign Up</button>
+          <button class="button1 center mx-2" type="submit">Sign Up</button>
         </form>
       {/if}
+      <button class="button4 center mx-2" on:click={() => navigate("/daa/home")}
+        >DAO</button
+      >
     </nav>
   </header>
 
@@ -205,11 +209,8 @@
         <Route path="/user/admin" component={Admin} />
         <Route path="/user/invitations" component={Invitations} />
 
+        <Route path="/daa/home" component={DAAHome} />
         <Route path="/daa/votes" component={DaaVotes} />
-        <Route
-          path="/daa/membershipRequests"
-          component={DaaMembershipRequests}
-        />
         <Route path="/daa/membership" component={DaaMembership} />
         <Route path="/daa/metamask" component={DaaMetamaskRequired} />
         <Route path="/daa/createProposal" component={DaaCreateProposal} />

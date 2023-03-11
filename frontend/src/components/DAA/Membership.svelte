@@ -20,7 +20,7 @@
   let nextMembershipFeePayment = 0;
 
   const approvalProcessSteps = [
-    "Membership to the DAA has been requested",
+    "Membership to the DAO has been requested",
     "Membership has been approved by one council member",
     "Membership has been approved by a second council member",
   ];
@@ -140,7 +140,7 @@
         {#each Array(3) as _, i}
           <li
             class={$membershipStatusValue >= i + 1
-              ? "text-primary-500"
+              ? "text-tertiary-500"
               : "text-red"}
           >
             {#if $membershipStatusValue >= i + 1}
@@ -152,7 +152,7 @@
           </li>
         {/each}
 
-        <li class={membershipFeePaid ? "text-primary-500" : "text-red"}>
+        <li class={membershipFeePaid ? "text-tertiary-500" : "text-red"}>
           {#if membershipFeePaid}
             <Fa icon={faSquareCheck} size="sm" class="icon" />
           {:else}
@@ -169,7 +169,7 @@
         {#if $membershipStatusValue == 0}
           <p>You seem not to be a member of the FlatFeeStack Association.</p>
           <p>If you want to shape the future of this product, join us!</p>
-          <button on:click={requestMembership} class="button1"
+          <button on:click={requestMembership} class="button4"
             >Request membership</button
           >
         {/if}
@@ -177,7 +177,7 @@
 
       <div class="py-2">
         {#if $membershipStatusValue == 3 && !membershipFeePaid}
-          <button on:click={payMembershipFees} class="button1"
+          <button on:click={payMembershipFees} class="button4"
             >Pay membership fees</button
           >
         {/if}
