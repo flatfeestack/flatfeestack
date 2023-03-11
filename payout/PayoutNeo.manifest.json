@@ -1,0 +1,168 @@
+{
+  "name" : "PayoutNeo",
+  "groups" : [ ],
+  "features" : { },
+  "supportedstandards" : [ ],
+  "abi" : {
+    "methods" : [ {
+      "name" : "_deploy",
+      "parameters" : [ {
+        "name" : "data",
+        "type" : "Any"
+      }, {
+        "name" : "update",
+        "type" : "Boolean"
+      } ],
+      "offset" : 0,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "onNEP17Payment",
+      "parameters" : [ {
+        "name" : "from",
+        "type" : "Hash160"
+      }, {
+        "name" : "amount",
+        "type" : "Integer"
+      }, {
+        "name" : "data",
+        "type" : "Any"
+      } ],
+      "offset" : 80,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getOwner",
+      "parameters" : [ ],
+      "offset" : 84,
+      "returntype" : "PublicKey",
+      "safe" : true
+    }, {
+      "name" : "changeOwner",
+      "parameters" : [ {
+        "name" : "newOwner",
+        "type" : "PublicKey"
+      } ],
+      "offset" : 99,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "getTea",
+      "parameters" : [ {
+        "name" : "account",
+        "type" : "Hash160"
+      } ],
+      "offset" : 208,
+      "returntype" : "Integer",
+      "safe" : true
+    }, {
+      "name" : "setTea",
+      "parameters" : [ {
+        "name" : "account",
+        "type" : "Hash160"
+      }, {
+        "name" : "oldTea",
+        "type" : "Integer"
+      }, {
+        "name" : "newTea",
+        "type" : "Integer"
+      } ],
+      "offset" : 230,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "setTeas",
+      "parameters" : [ {
+        "name" : "accounts",
+        "type" : "Array"
+      }, {
+        "name" : "oldTeas",
+        "type" : "Array"
+      }, {
+        "name" : "newTeas",
+        "type" : "Array"
+      } ],
+      "offset" : 472,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "withdraw",
+      "parameters" : [ {
+        "name" : "account",
+        "type" : "Hash160"
+      }, {
+        "name" : "tea",
+        "type" : "Integer"
+      }, {
+        "name" : "signature",
+        "type" : "ByteArray"
+      } ],
+      "offset" : 730,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "withdraw",
+      "parameters" : [ {
+        "name" : "account",
+        "type" : "Hash160"
+      }, {
+        "name" : "tea",
+        "type" : "Integer"
+      } ],
+      "offset" : 918,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "batchPayout",
+      "parameters" : [ {
+        "name" : "accounts",
+        "type" : "Array"
+      }, {
+        "name" : "teas",
+        "type" : "Array"
+      } ],
+      "offset" : 1093,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "batchPayout",
+      "parameters" : [ {
+        "name" : "payoutMap",
+        "type" : "Map"
+      } ],
+      "offset" : 1275,
+      "returntype" : "Void",
+      "safe" : false
+    }, {
+      "name" : "_initialize",
+      "parameters" : [ ],
+      "offset" : 1439,
+      "returntype" : "Void",
+      "safe" : false
+    } ],
+    "events" : [ {
+      "name" : "onTeaUpdateWithoutPayment",
+      "parameters" : [ {
+        "name" : "arg1",
+        "type" : "Hash160"
+      }, {
+        "name" : "arg2",
+        "type" : "Integer"
+      }, {
+        "name" : "arg3",
+        "type" : "Integer"
+      } ]
+    } ]
+  },
+  "permissions" : [ {
+    "contract" : "0x726cb6e0cd8628a1350a611384688911ab75f51b",
+    "methods" : "*"
+  }, {
+    "contract" : "0xd2a4cff31913016155e38e474a2c06d08be276cf",
+    "methods" : "*"
+  } ],
+  "trusts" : [ ],
+  "extra" : {
+    "Author" : "Michael Bucher"
+  }
+}
