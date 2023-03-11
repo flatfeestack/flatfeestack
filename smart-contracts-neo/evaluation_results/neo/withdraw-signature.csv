@@ -1,0 +1,9 @@
+feeperbyte=100
+storageprice=10000
+executionfeefactor=3
+teatype,presettype,totalfee
+int32,-,0.02234199
+int64,-,0.02244599
+int32,int32,0.02018760
+int64,int32,0.02029160
+int64,int64,0.02029160
