@@ -6,7 +6,6 @@ flatfeestack-env-*.tar.gz
 .chain
 .repos
 env*.tar.gz
-/frontend
 /payout-nodejs
 /search-proj
 /landing-page
