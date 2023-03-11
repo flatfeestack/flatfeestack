@@ -1,0 +1,10 @@
+{
+    admin off
+    auto_https off
+}
+
+:9085
+
+root * /var/www/html
+try_files {path} /
+file_server
