@@ -10,7 +10,7 @@ import { ethers } from "hardhat";
 
 async function main() {
   const contractAddresses: String[] = [];
-  const pathToFrontend = process.env.FRONTEND_PATH ?? "../../frontend";
+  const pathToFrontend = "../../frontend";
 
   ["DAA", "Membership", "Wallet"].forEach(async (contractName: String) => {
     const contractAbi = resolve(

@@ -4,8 +4,6 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 ## Build / Start / Stop (local development)
 
 ```shell script
-./update.sh
-
 # Create example .env files
 cp analyzer/.example.env analyzer/.env
 cp backend/.example.env backend/.env
@@ -105,7 +103,7 @@ npm run hardhat:script -- --network localhost scripts/mineBlocks.ts
 Now, you can export the ABIs of the smart contracts and the addresses of the proxies to the frontend:
 
 ```shell
-FRONTEND_PATH="../../frontend" npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
+npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
 ```
 
 - This does not yet work with the dockerized version of the frontend.
