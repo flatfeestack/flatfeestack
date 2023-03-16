@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS base
+FROM golang:1.20-alpine AS base
 WORKDIR /app
 COPY go.* ./
 RUN go mod download
