@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS base
+FROM golang:1.20-alpine AS base
 RUN apk update && apk add --update make gcc musl-dev
 WORKDIR /app
 COPY *.go go.* Makefile ./
