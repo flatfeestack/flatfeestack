@@ -1,4 +1,4 @@
-FROM golang:1.20rc1-alpine3.17 AS builder
+FROM golang:1.20-alpine3.17 AS builder
 RUN apk add --update --no-cache git cmake make gcc musl-dev openssl-dev
 WORKDIR /app
 RUN git clone https://github.com/libgit2/libgit2.git
