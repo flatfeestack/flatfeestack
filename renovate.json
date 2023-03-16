@@ -2,5 +2,80 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base"
+  ],
+  "packageRules": [
+    {
+      "groupName": "Github Actions - all non-major dependencies",
+      "matchPaths": [
+        ".github/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "analyzer - all non-major dependencies",
+      "matchPaths": [
+        "analyzer/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "backend - all non-major dependencies",
+      "matchPaths": [
+        "backend/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "caddy - all non-major dependencies",
+      "matchPaths": [
+        "caddy/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "fastauth - all non-major dependencies",
+      "matchPaths": [
+        "fastauth/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "payout - all non-major dependencies",
+      "matchPaths": [
+        "payout/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "smart-contracts-eth - all non-major dependencies",
+      "matchPaths": [
+        "smart-contracts-eth/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    }
+  ],
+  "schedule": [
+    "before 12pm every thursday"
   ]
 }
