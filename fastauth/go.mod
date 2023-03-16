@@ -13,7 +13,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.7
 	github.com/lor00x/goldap v0.0.0-20180618054307-a546dffdd1a3
-	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
 	github.com/vjeantet/ldapserver v1.0.2-0.20201119091145-9f1711e226a4
