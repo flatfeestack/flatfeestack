@@ -52,6 +52,6 @@
     "svelte-qr": "^1.0.0",
     "svelte-routing": "^1.6.0",
     "svelte-simple-modal": "^1.4.1",
-    "yup": "^0.32.11"
+    "yup": "^1.0.0"
   }
 }
