@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -43,12 +42,12 @@ type ClientETH struct {
 	contract    *bind.BoundContract
 }
 
-func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract string) (*ClientETH, error) {
-	rpc, err := rpc.DialContext(context.Background(), ethUrl)
+func getEthClient(ethUrl string, hexPrivateKey string, ethContract string) (*ClientETH, error) {
+	dialContext, err := rpc.DialContext(context.Background(), ethUrl)
 	if err != nil {
 		return nil, err
 	}
-	client := ethclient.NewClient(rpc)
+	client := ethclient.NewClient(dialContext)
 
 	if err != nil {
 		return nil, err
@@ -68,7 +67,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 
 	c := &ClientETH{
 		c:          client,
-		rpc:        rpc,
+		rpc:        dialContext,
 		privateKey: privateKey,
 		publicKey:  publicKeyECDSA,
 	}
@@ -89,14 +88,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 		log.Fatal(err)
 	}
 
-	if deploy {
-		log.Printf("Start deploying ETH Contract...")
-		var addr common.Address
-		c.contract, addr = deployEthContract(c, *parsed)
-		opts.Ethereum.Contract = addr.Hex()
-	} else {
-		c.contract = bind.NewBoundContract(common.HexToAddress(ethContract), *parsed, c.c, c.c, c.c)
-	}
+	c.contract = bind.NewBoundContract(common.HexToAddress(ethContract), *parsed, c.c, c.c, c.c)
 
 	// get time
 	header, err := client.HeaderByNumber(context.Background(), nil)
@@ -109,7 +101,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	diff := timeNow().Sub(t)
 	diffSec := diff.Milliseconds() / 1000
 	if diffSec > 0 {
-		warpChain(int(diffSec), rpc)
+		warpChain(int(diffSec), dialContext)
 	}
 
 	// show time
@@ -124,35 +116,6 @@ func getEthClient(ethUrl string, hexPrivateKey string, deploy bool, ethContract 
 	fmt.Println("---------------------------------")
 
 	return c, nil
-}
-
-func deployEthContract(ethClient *ClientETH, abi abi.ABI) (*bind.BoundContract, common.Address) {
-	opts, err := bind.NewKeyedTransactorWithChainID(ethClient.privateKey, ethClient.chainId)
-
-	//param []
-
-	address, tx, contract, err := bind.DeployContract(opts, abi, common.FromHex(PayoutEthMetaData.Bin), ethClient.c)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//mine immediately
-	var result hexutil.Big
-	err = ethClient.rpc.CallContext(context.Background(), &result, "evm_mine")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = bind.WaitDeployed(context.Background(), ethClient.c, tx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("---------------------------------")
-	log.Printf("ETH Contract deployed at %v", address)
-	fmt.Println("---------------------------------")
-	return contract, address
 }
 
 func warpChain(seconds int, rpc *rpc.Client) error {

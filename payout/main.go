@@ -69,11 +69,9 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
 	flag.StringVar(&o.Ethereum.Contract, "eth-contract", lookupEnv("ETH_CONTRACT"), "Ethereum contract address")
 	flag.StringVar(&o.Ethereum.Url, "eth-url", lookupEnv("ETH_URL"), "Ethereum URL")
-	flag.BoolVar(&o.Ethereum.Deploy, "eth-deploy", lookupEnv("ETH_DEPLOY") == "true", "Set to true to deploy ETH contract")
 	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
 	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT"), "NEO contract address")
 	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL"), "NEO URL")
-	flag.BoolVar(&o.NEO.Deploy, "neo-deploy", lookupEnv("NEO_DEPLOY") == "true", "Set to true to deploy NEO contract")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
@@ -139,10 +137,10 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 
 func ethInit() *ClientETH {
 	now := time.Now()
-	ethClient, err := getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Deploy, opts.Ethereum.Contract)
+	ethClient, err := getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Contract)
 	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
 		time.Sleep(time.Second)
-		ethClient, err = getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Deploy, opts.Ethereum.Contract)
+		ethClient, err = getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Contract)
 	}
 	if err != nil {
 		log.Fatal("Could not initialize ETH network", err)
