@@ -37,6 +37,24 @@
       }
     }
   ],
-  "wallets": [],
+  "wallets": [
+    {
+      "name": "alice",
+      "accounts": [
+        {
+          "private-key": "196ac84ae5764fcc77187cccef0fc45407a5afde57bab27d5a3113a46d33c3b3",
+          "script-hash": "NR3Hu7j8hgTLRjHkC9NCVnyCriGdzgQcpx",
+          "label": null,
+          "is-default": true,
+          "contract": {
+            "script": "0c21033c833ee8bf808b644c7f6217c00701bdc0b99c95229fb443207b1c540322eda54156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    }
+  ],
   "settings": {}
 }
