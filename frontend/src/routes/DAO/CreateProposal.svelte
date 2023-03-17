@@ -2,21 +2,21 @@
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import {
-    daaContract,
+    daoContract,
     membershipContract,
     membershipStatusValue,
     signer,
-  } from "../../ts/daaStore";
+  } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import type { Call, ProposalType } from "../../types/daa";
-  import Navigation from "./Navigation.svelte";
-  import AddCouncilMember from "./proposals/AddCouncilMember.svelte";
-  import CallExtraOrdinaryAssembly from "./proposals/CallExtraOrdinaryAssembly.svelte";
-  import DissolveAssociation from "./proposals/DissolveAssociation.svelte";
-  import FreeText from "./proposals/FreeText.svelte";
-  import RemoveCouncilMember from "./proposals/RemoveCouncilMember.svelte";
-  import RemoveMember from "./proposals/RemoveMember.svelte";
-  import RequestFunds from "./proposals/RequestFunds.svelte";
+  import type { Call, ProposalType } from "../../types/dao";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import AddCouncilMember from "../../components/DAO/proposals/AddCouncilMember.svelte";
+  import CallExtraOrdinaryAssembly from "../../components/DAO/proposals/CallExtraOrdinaryAssembly.svelte";
+  import DissolveAssociation from "../../components/DAO/proposals/DissolveAssociation.svelte";
+  import FreeText from "../../components/DAO/proposals/FreeText.svelte";
+  import RemoveCouncilMember from "../../components/DAO/proposals/RemoveCouncilMember.svelte";
+  import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
+  import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
 
   const proposalTypes: ProposalType[] = [
     {
@@ -67,7 +67,7 @@
 
   function moveToVotesPage() {
     $error = "You are not allowed to view this page.";
-    navigate("/daa/home");
+    navigate("/dao/home");
   }
 
   async function createProposal() {
@@ -83,7 +83,7 @@
       transferCallData.push(call.transferCallData);
     });
 
-    await $daaContract["propose(address[],uint256[],bytes[],string)"](
+    await $daoContract["propose(address[],uint256[],bytes[],string)"](
       targets,
       values,
       transferCallData,
@@ -91,7 +91,7 @@
     );
 
     $isSubmitting = false;
-    navigate("/daa/votes");
+    navigate("/dao/votes");
   }
 </script>
 

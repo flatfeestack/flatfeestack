@@ -7,10 +7,10 @@
   import type { Event } from "ethers";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
-  import { daaContract, userEthereumAddress } from "../../ts/daaStore";
+  import { daoContract, userEthereumAddress } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import Navigation from "./Navigation.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
 
   interface VoteValues {
     canVote: boolean;
@@ -50,31 +50,31 @@
   async function prepareView() {
     if (!$votingSlots.includes(Number(blockNumber))) {
       $error = "Invalid voting slot.";
-      navigate("/daa/votes");
+      navigate("/dao/votes");
     }
 
-    const votingPower = await $daaContract.getVotes(
+    const votingPower = await $daoContract.getVotes(
       $userEthereumAddress,
       blockNumber
     );
     if (votingPower.toNumber() < 1) {
       $error = "You are not allowed to vote in this cycle.";
-      navigate("/daa/votes");
+      navigate("/dao/votes");
     }
 
     const amountOfProposals =
-      await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber);
+      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber);
 
     proposals = await Promise.all(
       [...Array(amountOfProposals.toNumber()).keys()].map(
         async (index: Number) => {
           const proposalId = (
-            await $daaContract.votingSlots(blockNumber, index)
+            await $daoContract.votingSlots(blockNumber, index)
           ).toString();
 
           const event = await proposalCreatedEvents.get(
             proposalId,
-            $daaContract
+            $daoContract
           );
 
           return {
@@ -86,8 +86,8 @@
       )
     );
 
-    const votesCasted = await $daaContract.queryFilter(
-      $daaContract.filters.VoteCast(
+    const votesCasted = await $daoContract.queryFilter(
+      $daoContract.filters.VoteCast(
         $userEthereumAddress,
         null,
         null,
@@ -98,7 +98,7 @@
 
     for (const proposal of proposals) {
       const { againstVotes, forVotes, abstainVotes } =
-        await $daaContract.proposalVotes(proposal.id);
+        await $daoContract.proposalVotes(proposal.id);
       votes = {
         ...votes,
         [proposal.id]: {
@@ -146,9 +146,9 @@
       }
 
       if (value.reason.trim() === "") {
-        await $daaContract.castVote(key, value.value);
+        await $daoContract.castVote(key, value.value);
       } else {
-        await $daaContract.castVoteWithReason(key, value.value, value.reason);
+        await $daoContract.castVoteWithReason(key, value.value, value.reason);
       }
     }
   }

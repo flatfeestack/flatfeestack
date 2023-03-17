@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
   import { MembershipABI } from "../../../contracts/Membership";
-  import { membershipContract } from "../../../ts/daaStore";
-  import type { ProposalFormProps } from "../../../types/daa";
+  import { membershipContract } from "../../../ts/daoStore";
+  import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
   import Spinner from "../../Spinner.svelte";

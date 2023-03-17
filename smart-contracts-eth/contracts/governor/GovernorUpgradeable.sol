@@ -31,8 +31,8 @@ abstract contract GovernorUpgradeable is
     bytes4 private constant SET_VOTING_SLOT_SIGNATURE =
         bytes4(keccak256("setVotingSlot(uint256)"));
 
-    bytes4 private constant DISSOLVE_DAA_SIGNATURE =
-        bytes4(keccak256("dissolveDAA()"));
+    bytes4 private constant DISSOLVE_DAO_SIGNATURE =
+        bytes4(keccak256("dissolveDAO()"));
 
     bytes4 private constant LOCK_MEMBERSHIP_SIGNATURE =
         bytes4(keccak256("lockMembership()"));
@@ -42,7 +42,7 @@ abstract contract GovernorUpgradeable is
 
     uint64 public extraOrdinaryAssemblyVotingPeriod;
 
-    event DAAProposalCreated(
+    event DAOProposalCreated(
         uint256 indexed proposalId,
         address indexed proposer,
         address[] targets,
@@ -97,7 +97,7 @@ abstract contract GovernorUpgradeable is
     // index of requested extra ordinary proposal ids
     uint256[] public extraOrdinaryAssemblyProposals;
 
-    bool public daaActive;
+    bool public daoActive;
 
     event NewTimeslotSet(uint256 timeslot);
 
@@ -117,7 +117,7 @@ abstract contract GovernorUpgradeable is
         governorInitUnchained(name_);
         slotCloseTime = 50400;
         // 1 week before
-        daaActive = true;
+        daoActive = true;
     }
 
     function governorInitUnchained(
@@ -248,7 +248,7 @@ abstract contract GovernorUpgradeable is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(IGovernorUpgradeable) returns (uint256) {
-        require(daaActive, "The DAA is not active");
+        require(daoActive, "The DAO is not active");
         uint256 proposalId = _checkAndHashProposal(
             targets,
             values,
@@ -270,7 +270,7 @@ abstract contract GovernorUpgradeable is
             description
         );
 
-        emit DAAProposalCreated(
+        emit DAOProposalCreated(
             proposalId,
             _msgSender(),
             targets,
@@ -333,7 +333,7 @@ abstract contract GovernorUpgradeable is
         require(proposal.voteStart.isUnset(), "Proposal already exists");
 
         bool isRequestingExtraOrdinaryVotingSlot = false;
-        bool isRequestingDissolveOfDAA = false;
+        bool isRequestingDissolveOfDAO = false;
         if (calldatas.length == 3) {
             bytes4 functionSignature0 = bytes4(calldatas[0]);
             bytes4 functionSignature1 = bytes4(calldatas[1]);
@@ -341,12 +341,12 @@ abstract contract GovernorUpgradeable is
             if (
                 functionSignature0 == LIQUIDATE_WALLET_SIGNATURE &&
                 functionSignature1 == LOCK_MEMBERSHIP_SIGNATURE &&
-                functionSignature2 == DISSOLVE_DAA_SIGNATURE
+                functionSignature2 == DISSOLVE_DAO_SIGNATURE
             ) {
-                isRequestingDissolveOfDAA = true;
+                isRequestingDissolveOfDAO = true;
             }
         }
-        if (isRequestingDissolveOfDAA != true) {
+        if (isRequestingDissolveOfDAO != true) {
             for (uint256 i = 0; i < calldatas.length; i++) {
                 bytes4 functionSignature = bytes4(calldatas[i]);
                 if (functionSignature == SET_VOTING_SLOT_SIGNATURE) {
@@ -356,7 +356,7 @@ abstract contract GovernorUpgradeable is
                 if (
                     functionSignature == LIQUIDATE_WALLET_SIGNATURE ||
                     functionSignature == LOCK_MEMBERSHIP_SIGNATURE ||
-                    functionSignature == DISSOLVE_DAA_SIGNATURE
+                    functionSignature == DISSOLVE_DAO_SIGNATURE
                 ) {
                     revert("Wrong functions");
                 }
@@ -380,7 +380,7 @@ abstract contract GovernorUpgradeable is
 
             proposal.voteStart.setDeadline(start);
             proposal.voteEnd.setDeadline(end);
-            if (isRequestingDissolveOfDAA) {
+            if (isRequestingDissolveOfDAO) {
                 proposal.category = ProposalCategory.AssociationDissolution;
             } else {
                 proposal.category = ProposalCategory.Generic;

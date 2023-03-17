@@ -1,7 +1,7 @@
-export const DAAABI = [
+export const DAOABI = [
   "error Empty()",
   "event BylawsChanged(string indexed oldHash, string indexed newHash)",
-  "event DAAProposalCreated(uint256 indexed proposalId, address indexed proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description, uint8 indexed category)",
+  "event DAOProposalCreated(uint256 indexed proposalId, address indexed proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description, uint8 indexed category)",
   "event ExtraOrdinaryAssemblyRequested(uint256 indexed proposalId, address indexed proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)",
   "event Initialized(uint8 version)",
   "event NewTimeslotSet(uint256 timeslot)",
@@ -26,8 +26,8 @@ export const DAAABI = [
   "function castVoteWithReason(uint256 proposalId, uint8 support, string reason) returns (uint256)",
   "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
   "function castVoteWithReasonAndParamsBySig(uint256 proposalId, uint8 support, string reason, bytes params, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
-  "function daaActive() view returns (bool)",
-  "function dissolveDAA()",
+  "function daoActive() view returns (bool)",
+  "function dissolveDAO()",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
   "function extraOrdinaryAssemblyProposals(uint256) view returns (uint256)",
   "function extraOrdinaryAssemblyVotingPeriod() view returns (uint64)",

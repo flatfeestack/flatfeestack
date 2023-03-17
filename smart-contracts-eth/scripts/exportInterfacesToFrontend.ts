@@ -10,9 +10,9 @@ import { ethers } from "hardhat";
 
 async function main() {
   const contractAddresses: String[] = [];
-  const pathToFrontend = "../../frontend";
+  const pathToFrontend = "../frontend";
 
-  ["DAA", "Membership", "Wallet"].forEach(async (contractName: String) => {
+  ["DAO", "Membership", "Wallet"].forEach(async (contractName: String) => {
     const contractAbi = resolve(
       __dirname,
       `../artifacts/contracts/${contractName}.sol/${contractName}.json`
@@ -52,7 +52,7 @@ async function main() {
     );
   });
 
-  const dotEnvFilePath = resolve(__dirname, `${pathToFrontend}/.env`);
+  const dotEnvFilePath = resolve(__dirname, "..", `${pathToFrontend}/.env`);
 
   // empty .env file
   closeSync(openSync(dotEnvFilePath, "w"));

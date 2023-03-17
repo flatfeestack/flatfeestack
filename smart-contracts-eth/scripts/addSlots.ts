@@ -4,11 +4,11 @@ async function main() {
   const hre = require("hardhat");
   const { deployments } = hre;
 
-  const daa = await deployments.get("DAA");
-  const daaDeployed = await ethers.getContractAt("DAA", daa.address);
+  const dao = await deployments.get("DAO");
+  const daoDeployed = await ethers.getContractAt("DAO", dao.address);
 
   const wallet = await deployments.get("Wallet");
-  const walletDeployed = await ethers.getContractAt("Wallet", daa.address);
+  const walletDeployed = await ethers.getContractAt("Wallet", dao.address);
 
   const [firstCouncilMember] = await ethers.getSigners();
 
@@ -19,19 +19,19 @@ async function main() {
   const slot3 = latestBlock + 3 * blocksInAMonth + 1;
 
   console.log("Create first voting slot ...");
-  const firstVotingSlot = await daaDeployed
+  const firstVotingSlot = await daoDeployed
     .connect(firstCouncilMember)
     .setVotingSlot(slot1);
   await firstVotingSlot.wait();
 
   console.log("Create second voting slot ...");
-  const secondVotingSlot = await daaDeployed
+  const secondVotingSlot = await daoDeployed
     .connect(firstCouncilMember)
     .setVotingSlot(slot2);
   await secondVotingSlot.wait();
 
   console.log("Create third voting slot ...");
-  const thirdVotingSlot = await daaDeployed
+  const thirdVotingSlot = await daoDeployed
     .connect(firstCouncilMember)
     .setVotingSlot(slot3);
   await thirdVotingSlot.wait();
@@ -44,7 +44,7 @@ async function main() {
   ];
 
   console.log("Creating proposal ...");
-  await daaDeployed
+  await daoDeployed
     .connect(firstCouncilMember)
     ["propose(address[],uint256[],bytes[],string)"](
       [wallet.address],

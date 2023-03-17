@@ -1,7 +1,7 @@
 import type { JsonRpcSigner, Web3Provider } from "@ethersproject/providers";
 import { BigNumber, Contract, ethers, Signer } from "ethers";
 import { derived, writable, type Readable } from "svelte/store";
-import { DAAABI } from "../contracts/DAA";
+import { DAOABI } from "../contracts/DAO";
 import { MembershipABI } from "../contracts/Membership";
 import { WalletABI } from "../contracts/Wallet";
 
@@ -42,21 +42,21 @@ export const currentBlockTimestamp = derived<
   null
 );
 
-export const daaContract = derived(
+export const daoContract = derived(
   [provider, signer],
   ([$provider, $signer]) => {
     if ($provider === null) {
       return null;
     } else if ($signer === null) {
       return new ethers.Contract(
-        import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-        DAAABI,
+        import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
+        DAOABI,
         $provider
       );
     } else {
       return new ethers.Contract(
-        import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-        DAAABI,
+        import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
+        DAOABI,
         $signer
       );
     }

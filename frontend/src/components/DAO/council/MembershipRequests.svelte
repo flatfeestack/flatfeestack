@@ -3,7 +3,7 @@
     membershipContract,
     provider,
     userEthereumAddress,
-  } from "../../../ts/daaStore";
+  } from "../../../ts/daoStore";
   import { error } from "../../../ts/mainStore";
   import membershipStatusMapping from "../../../utils/membershipStatusMapping";
   import Spinner from "../../Spinner.svelte";

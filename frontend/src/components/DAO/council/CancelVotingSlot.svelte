@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { daaContract } from "../../../ts/daaStore";
+  import { daoContract } from "../../../ts/daoStore";
   import { votingSlots } from "../../../ts/proposalStore";
   import Spinner from "../../Spinner.svelte";
 
@@ -16,7 +16,7 @@
   }
 
   async function cancelVotingSlot() {
-    await $daaContract.cancelVotingSlot(toBeRemoved, reason);
+    await $daoContract.cancelVotingSlot(toBeRemoved, reason);
   }
 </script>
 

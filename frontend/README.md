@@ -21,8 +21,8 @@ Code formatting is automated with Prettier:
 pnpm run prettify
 ```
 
-## Integration with FlatFeeStack DAA
+## Integration with FlatFeeStack DAO
 
-The frontend offers an interface to interact with the FlatFeeStack DAA. Right now this only works by starting a local Ethereum blockchain. Deployment to this local chain and exports of the contract's ABIs is automated.
+The frontend offers an interface to interact with the FlatFeeStack DAO. Right now this only works by starting a local Ethereum blockchain. Deployment to this local chain and exports of the contract's ABIs is automated from the [repository](https://github.com/flatfeestack/daa).
 
 If you do a fresh deployment, restart the frontend development server as the contracts deployment addresses are injected via environment variables.

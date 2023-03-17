@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Call, ProposalFormProps } from "../../../types/daa";
+  import type { Call, ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
   interface $$Props extends ProposalFormProps {}

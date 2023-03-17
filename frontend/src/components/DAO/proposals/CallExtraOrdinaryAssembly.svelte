@@ -1,9 +1,9 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
   import humanizeDuration from "humanize-duration";
-  import { DAAABI } from "../../../contracts/DAA";
-  import { currentBlockNumber, daaContract } from "../../../ts/daaStore";
-  import type { ProposalFormProps } from "../../../types/daa";
+  import { DAOABI } from "../../../contracts/DAO";
+  import { currentBlockNumber, daoContract } from "../../../ts/daoStore";
+  import type { ProposalFormProps } from "../../../types/dao";
   import {
     futureBlockDate,
     secondsPerBlock,
@@ -30,14 +30,14 @@
   let extraOrdinaryAssemblyParameters: ExtraOrdinaryAssemblyParameters | null =
     null;
 
-  const daaInterface = new Interface(DAAABI);
+  const daoInterface = new Interface(DAOABI);
 
   const schema = yup.object().shape({
     proposedBlockNumber: yup.number().min(minimumBlockNumber).required(),
   });
 
   $: {
-    if ($daaContract === null) {
+    if ($daoContract === null) {
       isLoading = true;
     } else {
       if (extraOrdinaryAssemblyParameters === null) {
@@ -69,9 +69,9 @@
       extraAssemblyVotingPeriod,
       votingSlotAnnouncementPeriod,
     ] = await Promise.all([
-      $daaContract.getMinDelay(),
-      $daaContract.extraOrdinaryAssemblyVotingPeriod(),
-      $daaContract.votingSlotAnnouncementPeriod(),
+      $daoContract.getMinDelay(),
+      $daoContract.extraOrdinaryAssemblyVotingPeriod(),
+      $daoContract.votingSlotAnnouncementPeriod(),
     ]);
 
     extraOrdinaryAssemblyParameters = {
@@ -92,8 +92,8 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-        transferCallData: daaInterface.encodeFunctionData("setVotingSlot", [
+        target: import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
+        transferCallData: daoInterface.encodeFunctionData("setVotingSlot", [
           formValues.proposedBlockNumber,
         ]),
         value: 0,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
   import { MembershipABI } from "../../../contracts/Membership";
-  import type { ProposalFormProps } from "../../../types/daa";
+  import type { ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
   interface $$Props extends ProposalFormProps {}
