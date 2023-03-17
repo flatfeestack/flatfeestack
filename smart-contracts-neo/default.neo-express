@@ -1,5 +1,5 @@
 {
-  "magic": 1317850730,
+  "magic": 75933535,
   "address-version": 53,
   "consensus-nodes": [
     {
@@ -10,24 +10,24 @@
         "name": "node1",
         "accounts": [
           {
-            "private-key": "d31c99ce17444877a8729490e91d42a441cb3bd4606e30a2dc620c8169ac5694",
-            "script-hash": "NLTg1sSu79pCWV2XhrWR9fBtf1m1qUobR2",
+            "private-key": "7995bc6ca6a2d7604c8943cf2b41578bb6f93661d71683855fc9154345056cf1",
+            "script-hash": "NbZfmhysCNZEVy4VTMrzAAhMrqq9isggFZ",
             "label": null,
             "is-default": true,
             "contract": {
-              "script": "0c2102812d7537efc9b818cf2960533326cc6a33cdecd6b99b18d33b6c5fee0736a0f54156e7b327",
+              "script": "0c21036f3ff40d21122a9d9030f6883bdf27e82bd01c2ba4c9c87888408955b82c462c4156e7b327",
               "parameters": [
                 "Signature"
               ]
             }
           },
           {
-            "private-key": "d31c99ce17444877a8729490e91d42a441cb3bd4606e30a2dc620c8169ac5694",
-            "script-hash": "NhSTk7e2UY2iKzuk7gyceD1Nf3nUy2HE4r",
+            "private-key": "7995bc6ca6a2d7604c8943cf2b41578bb6f93661d71683855fc9154345056cf1",
+            "script-hash": "NfjhUeupSQvxWWDM4LiKt4im8L63Uim6sj",
             "label": "Consensus MultiSigContract",
             "is-default": false,
             "contract": {
-              "script": "110c2102812d7537efc9b818cf2960533326cc6a33cdecd6b99b18d33b6c5fee0736a0f511419ed0dc3a",
+              "script": "110c21036f3ff40d21122a9d9030f6883bdf27e82bd01c2ba4c9c87888408955b82c462c11419ed0dc3a",
               "parameters": [
                 "Signature"
               ]
@@ -39,15 +39,15 @@
   ],
   "wallets": [
     {
-      "name": "alice",
+      "name": "Alice",
       "accounts": [
         {
-          "private-key": "196ac84ae5764fcc77187cccef0fc45407a5afde57bab27d5a3113a46d33c3b3",
-          "script-hash": "NR3Hu7j8hgTLRjHkC9NCVnyCriGdzgQcpx",
+          "private-key": "6c54536dbd876b92bfc96dd7b9fd6a4286d9a51ac5e26b5cf9becfa27e330918",
+          "script-hash": "NNSyinBZAr8HMhjj95MfkKD1PY7YWoDweR",
           "label": null,
           "is-default": true,
           "contract": {
-            "script": "0c21033c833ee8bf808b644c7f6217c00701bdc0b99c95229fb443207b1c540322eda54156e7b327",
+            "script": "0c2102d46506b9f20bbeb20c5a6112e9e2370f7b0ae4f1a02c236b2fc313ffaf16ad884156e7b327",
             "parameters": [
               "Signature"
             ]
@@ -56,5 +56,7 @@
       ]
     }
   ],
-  "settings": {}
+  "settings": {
+    "rpc.BindAddress": "0.0.0.0"
+  }
 }

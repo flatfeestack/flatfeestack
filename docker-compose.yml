@@ -56,7 +56,7 @@ services:
     ports:
       - "9084:9084"
     extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+      - "host.docker.internal:host-gateway"
     profiles:
       - platform
 

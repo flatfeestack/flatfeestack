@@ -112,6 +112,38 @@ npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
 - Always restart vite after a new interface export!
 - When you access the frontend, make sure you connect MetaMask to the `localhost` network.
 
+## NEO smart contract
+
+There is a version of the payout contract for NEO. To start development, you need Java 8 and Docker to run the tests.
+
+Running tests works with Gradle:
+
+```shell
+./gradlew test
+```
+
+To get a file that can be deployed to a NEO blockchain, execute the compile command:
+
+```shell
+./gradlew neow3jCompile
+```
+
+The resulting NEF file and manifest can be found in `smart-contracts-neo/build/neow3j`.
+
+This NEF file can be deployed to a local NEO blockchain. Easiest way is to install VS Code and the [NEO blockchain toolkit](https://marketplace.visualstudio.com/items?itemName=ngd-seattle.neo-blockchain-toolkit). The NEO blockchain toolkit requires to have the [.NET SDK v6 installed](https://dotnet.microsoft.com/en-us/).
+
+The NEO blockchain toolkit adds a new tab to your VS Code, where you have a button to start a NEO express chain. There is a [video tutorial available](https://ngdenterprise.com/neo-tutorials/quickstart1.html) that explains the functions of the toolkit.
+
+Transfer some assets from the genesis block to Alice's wallet, either from the UI or with the CLI:
+
+```shell
+neoxp transfer 100 GAS genesis alice
+```
+
+Then, execute the file `NeoExpressDeployment.java`, ideally using IntelliJ (no clue how to do this from the terminal ...).
+
+The script will yield you a `Deployment Transaction Hash`. Copy this hash and convert into a wallet import format (WIF). There is a website available to do this. Just copy the hash and press `Priv → WIF`. Place the result in your `.env` for the payout service at `NEO_CONTRACT`.
+
 ## Networking
 
 This repo includes a caddy server to create reverse proxies to the different packages:
