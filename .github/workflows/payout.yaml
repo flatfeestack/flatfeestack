@@ -1,0 +1,42 @@
+name: Test and build payout
+
+on:
+  push:
+    paths:
+      - ".github/workflows/payout.yaml"
+      - "payout/**"
+  pull_request:
+    paths:
+      - ".github/workflows/payout.yaml"
+      - "payout/**"
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build container
+        uses: docker/build-push-action@v4
+        with:
+          context: payout
+          load: true
+          tags: ghcr.io/flatfeestack/flatfeestack/payout:test
+
+      - name: Run payout
+        run: docker run --env-file payout/.example.env --rm -d -p 9084:9084 -e ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 -e NEO_URL=http://seed1t4.neo.org:20332 ghcr.io/flatfeestack/flatfeestack/payout:test
+
+      - name: Check if payout is reachable
+        uses: nick-fields/retry@v2
+        with:
+          timeout_seconds: 15
+          max_attempts: 5
+          command: curl -v localhost:9084
