@@ -116,7 +116,7 @@
   bind:value={formValues.proposedBlockNumber}
   required
 />
-{#await schema.validateAt("proposedBlockNumber", formValues)}{:catch error}
+{#await schema.validateAt("proposedBlockNumber", formValues) catch error}
   <p class="invalid" style="color:red">{error.errors[0]}</p>
 {/await}
 

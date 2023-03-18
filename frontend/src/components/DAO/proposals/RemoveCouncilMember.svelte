@@ -85,7 +85,7 @@
     {/each}
   </select>
 
-  {#await schema.validateAt("councilMemberToBeRemoved", formValues)}{:catch error}
+  {#await schema.validateAt("councilMemberToBeRemoved", formValues) catch error}
     <p class="invalid" style="color:red">{error.errors[0]}</p>
   {/await}
 

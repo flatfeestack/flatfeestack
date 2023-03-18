@@ -67,7 +67,7 @@
   bind:value={formValues.targetWalletAddress}
   required
 />
-{#await schema.validateAt("targetWalletAddress", formValues)}{:catch error}
+{#await schema.validateAt("targetWalletAddress", formValues) catch error}
   <p class="invalid" style="color:red">{error.errors[0]}</p>
 {/await}
 
@@ -89,6 +89,6 @@
     {/each}
   </select>
 </div>
-{#await schema.validateAt("amount", formValues)}{:catch error}
+{#await schema.validateAt("amount", formValues) catch error}
   <p class="invalid" style="color:red">{error.errors[0]}</p>
 {/await}

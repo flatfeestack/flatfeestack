@@ -78,6 +78,11 @@ export type Repos = {
   balances: Map<string, bigint>;
 };
 
+export type ContributionSummary = {
+  repo: Repo;
+  currencyBalance: Map<string, bigint>;
+};
+
 export type Repo = {
   uuid: string;
   id: number; //this comes from the github search
