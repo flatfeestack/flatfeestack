@@ -28,13 +28,13 @@
         "name" : "data",
         "type" : "Any"
       } ],
-      "offset" : 80,
+      "offset" : 77,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "getOwner",
       "parameters" : [ ],
-      "offset" : 84,
+      "offset" : 81,
       "returntype" : "PublicKey",
       "safe" : true
     }, {
@@ -43,23 +43,23 @@
         "name" : "newOwner",
         "type" : "PublicKey"
       } ],
-      "offset" : 99,
+      "offset" : 97,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "getTea",
       "parameters" : [ {
-        "name" : "account",
-        "type" : "Hash160"
+        "name" : "ownerId",
+        "type" : "Integer"
       } ],
-      "offset" : 208,
+      "offset" : 192,
       "returntype" : "Integer",
       "safe" : true
     }, {
       "name" : "setTea",
       "parameters" : [ {
-        "name" : "account",
-        "type" : "Hash160"
+        "name" : "ownerId",
+        "type" : "Integer"
       }, {
         "name" : "oldTea",
         "type" : "Integer"
@@ -67,13 +67,13 @@
         "name" : "newTea",
         "type" : "Integer"
       } ],
-      "offset" : 230,
+      "offset" : 221,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "setTeas",
       "parameters" : [ {
-        "name" : "accounts",
+        "name" : "ownerIds",
         "type" : "Array"
       }, {
         "name" : "oldTeas",
@@ -82,7 +82,7 @@
         "name" : "newTeas",
         "type" : "Array"
       } ],
-      "offset" : 472,
+      "offset" : 457,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -90,6 +90,9 @@
       "parameters" : [ {
         "name" : "account",
         "type" : "Hash160"
+      }, {
+        "name" : "ownerId",
+        "type" : "Integer"
       }, {
         "name" : "tea",
         "type" : "Integer"
@@ -97,7 +100,7 @@
         "name" : "signature",
         "type" : "ByteArray"
       } ],
-      "offset" : 730,
+      "offset" : 685,
       "returntype" : "Void",
       "safe" : false
     }, {
@@ -106,37 +109,34 @@
         "name" : "account",
         "type" : "Hash160"
       }, {
+        "name" : "ownerId",
+        "type" : "Integer"
+      }, {
         "name" : "tea",
         "type" : "Integer"
       } ],
-      "offset" : 918,
+      "offset" : 1051,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "batchPayout",
       "parameters" : [ {
+        "name" : "ownerIds",
+        "type" : "Array"
+      }, {
         "name" : "accounts",
         "type" : "Array"
       }, {
         "name" : "teas",
         "type" : "Array"
       } ],
-      "offset" : 1093,
-      "returntype" : "Void",
-      "safe" : false
-    }, {
-      "name" : "batchPayout",
-      "parameters" : [ {
-        "name" : "payoutMap",
-        "type" : "Map"
-      } ],
-      "offset" : 1275,
+      "offset" : 1296,
       "returntype" : "Void",
       "safe" : false
     }, {
       "name" : "_initialize",
       "parameters" : [ ],
-      "offset" : 1439,
+      "offset" : 1591,
       "returntype" : "Void",
       "safe" : false
     } ],
@@ -144,7 +144,7 @@
       "name" : "onTeaUpdateWithoutPayment",
       "parameters" : [ {
         "name" : "arg1",
-        "type" : "Hash160"
+        "type" : "Integer"
       }, {
         "name" : "arg2",
         "type" : "Integer"

@@ -1,0 +1,7 @@
+preset_tea=25.00000000
+feeperbyte=100
+storageprice=10000
+executionfeefactor=3
+tea,systemfee,networkfee
+100.00000000,0.01627846,0.00234604
+1000.00000000,0.01627846,0.00234604
