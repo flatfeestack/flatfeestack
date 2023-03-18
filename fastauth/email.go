@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"net/http"
 	"strings"
 	"time"
@@ -17,10 +18,10 @@ func sendEmail(url string, e EmailRequest) error {
 	var jsonData []byte
 	var err error
 	if strings.Contains(url, "sendgrid") {
-		sendGridReq := NewSingleEmailPlainText(
-			NewEmail(opts.EmailFromName, opts.EmailFrom),
+		sendGridReq := mail.NewSingleEmailPlainText(
+			mail.NewEmail(opts.EmailFromName, opts.EmailFrom),
 			e.Subject,
-			NewEmail("", e.MailTo),
+			mail.NewEmail("", e.MailTo),
 			e.TextMessage)
 		jsonData, err = json.Marshal(sendGridReq)
 	} else {
