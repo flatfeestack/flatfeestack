@@ -81,7 +81,7 @@ export type Repos = {
 export type ContributionSummary = {
   repo: Repo;
   currencyBalance: Map<string, bigint>;
-}
+};
 
 export type Repo = {
   uuid: string;

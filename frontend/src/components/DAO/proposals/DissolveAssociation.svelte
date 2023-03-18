@@ -92,7 +92,7 @@
       </option>
     {/each}
   </select>
-  {#await schema.validateAt("liquidator", formValues)}{:catch error}
+  {#await schema.validateAt("liquidator", formValues) catch error}
     <p class="invalid" style="color:red">{error.errors[0]}</p>
   {/await}
 {/if}

@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/mainStore";
@@ -51,7 +51,7 @@
               <td>{cs.repo.name}</td>
               <td><a href={cs.repo.url}>{cs.repo.url}</a></td>
               <td>
-                  <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
+                <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
               </td>
               <td>{cs.repo.description}</td>
             </tr>

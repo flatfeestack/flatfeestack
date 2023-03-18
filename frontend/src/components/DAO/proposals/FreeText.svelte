@@ -61,7 +61,7 @@
     bind:value={call.target}
     required
   />
-  {#await schema.validateAt(`[${i}].target`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].target`, formValues) catch error}
     <p class="invalid combine-column" style="color:red">{error.errors[0]}</p>
   {/await}
 
@@ -73,7 +73,7 @@
     bind:value={call.value}
     required
   />
-  {#await schema.validateAt(`[${i}].value`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].value`, formValues) catch error}
     <p class="invalid combine-column" style="color:red">{error.errors[0]}</p>
   {/await}
 
@@ -87,7 +87,7 @@
     cols="50"
   />
 
-  {#await schema.validateAt(`[${i}].transferCallData`, formValues)}{:catch error}
+  {#await schema.validateAt(`[${i}].transferCallData`, formValues) catch error}
     <p class="combine-column invalid" style="color:red">{error.errors[0]}</p>
   {/await}
 {/each}

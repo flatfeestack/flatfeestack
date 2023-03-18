@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import { Web3Provider } from "@ethersproject/providers";
   import {
     faHippo,

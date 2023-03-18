@@ -167,9 +167,13 @@ export const API = {
     contributionsRcv: () =>
       backendToken.post(`users/contrib-rcv`).json<Contributions[]>(),
     contributionsSummary: () =>
-      backendToken.post(`users/me/contributions-summary`).json<ContributionSummary[]>(),
+      backendToken
+        .post(`users/me/contributions-summary`)
+        .json<ContributionSummary[]>(),
     contributionsSummary2: (uuid: string) =>
-      backendToken.post(`users/contributions-summary/${uuid}`).json<ContributionSummary[]>(),
+      backendToken
+        .post(`users/contributions-summary/${uuid}`)
+        .json<ContributionSummary[]>(),
     summary: (uuid: string) =>
       backendToken.post(`users/summary/${uuid}`).json<Users>(),
   },

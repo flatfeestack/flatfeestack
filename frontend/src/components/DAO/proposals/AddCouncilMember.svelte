@@ -47,6 +47,6 @@
   bind:value={formValues.proposedCouncilMember}
   required
 />
-{#await schema.validateAt("proposedCouncilMember", formValues)}{:catch error}
+{#await schema.validateAt("proposedCouncilMember", formValues) catch error}
   <p class="invalid" style="color:red">{error.errors[0]}</p>
 {/await}
