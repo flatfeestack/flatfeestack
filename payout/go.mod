@@ -1,6 +1,6 @@
 module github.com/flatfeestack/payout
 
-go 1.19
+go 1.20
 
 require (
 	github.com/dimiro1/banner v1.1.0
