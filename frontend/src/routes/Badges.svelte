@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error, user } from "../ts/mainStore";
-  import type { Contributions, Repos } from "../types/users";
+  import type { Contributions, ContributionSummary } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
   import { Line, Bar } from "svelte-chartjs";
   import Fa from "svelte-fa";
@@ -14,7 +14,7 @@
   } from "@fortawesome/free-solid-svg-icons";
   import { htmlLegendPlugin } from "../ts/utils";
 
-  let repos: Repos[] = [];
+  let contributionSummaries: ContributionSummary[] = [];
   let contributions: Contributions[] = [];
   let canvas;
   let showGraph;
@@ -69,7 +69,6 @@
 
   onMount(async () => {
     try {
-      let pr1;
       const pr2 = API.user.contributionsSend();
       const pr3 = API.user.contributionsSummary();
 
@@ -77,11 +76,7 @@
       contributions = res2 ? res2 : contributions;
 
       const res3 = await pr3;
-      repos = res3 ? res3 : repos;
-
-      if (pr1) {
-        await pr1;
-      }
+      contributionSummaries = res3 ? res3 : contributionSummaries;
     } catch (e) {
       $error = e;
     }
@@ -89,7 +84,7 @@
 </script>
 
 <Navigation>
-  {#if repos && repos.length > 0}
+  {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="p-2 m-2">Supported Repositories</h2>
     <div class="container">
       <table>
@@ -104,18 +99,16 @@
           </tr>
         </thead>
         <tbody>
-          {#each repos as repo}
+          {#each contributionSummaries as cs}
             <tr>
-              <td>{repo.repos[0].name}</td>
-              <td><a href={repo.repos[0].url}>{repo.repos[0].url}</a></td>
+              <td>{cs.repo.name}</td>
+              <td><a href={cs.repo.url}>{cs.repo.url}</a></td>
               <td>
-                {#each repo.repos as r2}
-                  <a href={r2.gitUrl}>{r2.gitUrl}</a>
-                {/each}
+                  <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
               </td>
-              <td>{repo.repos[0].description}</td>
+              <td>{cs.repo.description}</td>
               <td
-                >{#each Object.entries(repo.balances) as [key, value]}{formatBalance(
+                >{#each Object.entries(cs.currencyBalance) as [key, value]}{formatBalance(
                     value,
                     key
                   )}{/each}</td
@@ -125,20 +118,20 @@
                   <button
                     class="accessible-btn"
                     on:click={() =>
-                      showGraph === repo.uuid
+                      showGraph === cs.repo.uuid
                         ? (showGraph = undefined)
-                        : (showGraph = repo.uuid)}
+                        : (showGraph = cs.repo.uuid)}
                   >
                     <Fa icon={faPlus} size="md" />
                   </button>
                 </div>
               </td>
             </tr>
-            {#if showGraph === repo.uuid}
+            {#if showGraph === cs.repo.uuid}
               <tr id="bg-green1">
                 <td colspan="6">
                   <div id="legend-container" />
-                  {#await API.repos.graph(repo.uuid, offset)}
+                  {#await API.repos.graph(cs.repo.uuid, offset)}
                     ...waiting
                   {:then data}
                     {#if data.days > 1}

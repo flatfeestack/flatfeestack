@@ -2,10 +2,10 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/mainStore";
-  import type { Repos, Users } from "../types/users";
+  import type { ContributionSummary, Users } from "../types/users";
 
   export let uuid: string;
-  let repos: Repos[] = [];
+  let contributionSummaries: ContributionSummary[] = [];
   let user: Users;
 
   onMount(async () => {
@@ -16,7 +16,7 @@
       const res1 = await pr1;
       const res2 = await pr2;
 
-      repos = res1 ? res1 : repos;
+      contributionSummaries = res1 ? res1 : contributionSummaries;
       user = res2;
     } catch (e) {
       $error = e;
@@ -28,7 +28,7 @@
 </style>
 
 <div class="container-col">
-  {#if repos && repos.length > 0}
+  {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="px-2">
       Supported Repositories for {user.name ? user.name : user.id}
     </h2>
@@ -46,16 +46,14 @@
           </tr>
         </thead>
         <tbody>
-          {#each repos as repo}
+          {#each contributionSummaries as cs}
             <tr>
-              <td>{repo.repos[0].name}</td>
-              <td><a href={repo.repos[0].url}>{repo.repos[0].url}</a></td>
+              <td>{cs.repo.name}</td>
+              <td><a href={cs.repo.url}>{cs.repo.url}</a></td>
               <td>
-                {#each repo.repos as r2}
-                  <a href={r2.gitUrl}>{r2.gitUrl}</a>
-                {/each}
+                  <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
               </td>
-              <td>{repo.repos[0].description}</td>
+              <td>{cs.repo.description}</td>
             </tr>
           {:else}
             <tr>
