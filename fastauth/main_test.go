@@ -415,17 +415,6 @@ func TestSecret(t *testing.T) {
 	assert.Equal(t, "n4bQgYhMfWWaL-qgxVrQFaO_TxsrC4Is0V1sFbDwCgg", s)
 }
 
-func TestGetAttrDN(t *testing.T) {
-
-	assert.Equal(t,
-		getAttrDN("CN=tom,OU=P_Internal,OU=P_Users,DC=test,DC=ch", "cn"),
-		"tom")
-
-	assert.Equal(t,
-		getAttrDN("CN=tom,OU=P_Internal,OU=P_Users,DC=test,DC=ch", "cn"),
-		getAttrDN("cn=tom,ou=P_Internal,ou=P_Users,dc=test,dc=ch", "CN"))
-}
-
 func mainTest(args ...string) func() {
 	oldArgs := os.Args
 	os.Args = []string{oldArgs[0]}
@@ -442,7 +431,6 @@ func mainTest(args ...string) func() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	serverLdap, doneChannelLdap := serverLdap()
 
 	return func() {
 		defer timeTrack(time.Now(), "shutdown")
@@ -450,10 +438,6 @@ func mainTest(args ...string) func() {
 		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
 		serverRest.Shutdown(context.Background())
-		serverLdap.Stop()
-		if serverLdap.Listener != nil {
-			serverLdap.Listener.Close()
-		}
 
 		err := db.Close()
 		if err != nil {
@@ -469,7 +453,6 @@ func mainTest(args ...string) func() {
 		}
 
 		<-doneChannelRest
-		<-doneChannelLdap
 	}
 }
 
