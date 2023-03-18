@@ -73,6 +73,16 @@
         "minor",
         "patch"
       ]
+    },
+    {
+      "groupName": "smart-contracts-neo - all non-major dependencies",
+      "matchPaths": [
+        "smart-contracts-neo/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
     }
   ],
   "schedule": [
