@@ -1,6 +1,6 @@
 {
-  "name": "daa",
-  "description": "Code for the FlatFeeStack DAA",
+  "name": "dao",
+  "description": "Code for the FlatFeeStack DAO",
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomicfoundation/hardhat-toolbox": "^2.0.1",

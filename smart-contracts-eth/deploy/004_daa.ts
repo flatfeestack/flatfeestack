@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const membership = await deployments.get("Membership");
   const timelock = await deployments.get("Timelock");
 
-  await deploy("DAA", {
+  await deploy("DAO", {
     from: firstCouncilMember,
     log: true,
     proxy: {
@@ -35,24 +35,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "Timelock",
     timelock.address
   );
-  const daa = await deployments.get("DAA");
+  const dao = await deployments.get("DAO");
 
   await Promise.all([
-    addDaaAsProposer(timelockDeployed, daa),
+    addDaoAsProposer(timelockDeployed, dao),
     revokeCouncilMemberAsAdmin(timelockDeployed, firstCouncilMember),
   ]);
 };
 
-async function addDaaAsProposer(timelockDeployed: Contract, daa: Deployment) {
+async function addDaoAsProposer(timelockDeployed: Contract, dao: Deployment) {
   const proposerRole = await timelockDeployed.PROPOSER_ROLE();
-  const daaIsProposer = await timelockDeployed.hasRole(
+  const daoIsProposer = await timelockDeployed.hasRole(
     proposerRole,
-    daa.address
+    dao.address
   );
 
-  if (!daaIsProposer) {
-    console.log("Granting proposer role to DAA on timelock controller ...");
-    await (await timelockDeployed.grantRole(proposerRole, daa.address)).wait();
+  if (!daoIsProposer) {
+    console.log("Granting proposer role to DAO on timelock controller ...");
+    await (await timelockDeployed.grantRole(proposerRole, dao.address)).wait();
   }
 }
 
@@ -75,4 +75,4 @@ async function revokeCouncilMemberAsAdmin(
 }
 
 export default func;
-func.tags = ["DAA"];
+func.tags = ["DAO"];

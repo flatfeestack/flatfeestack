@@ -1,11 +1,11 @@
 <script lang="ts">
   import { navigate } from "svelte-routing";
-  import { councilMembers, userEthereumAddress } from "../../ts/daaStore";
+  import { councilMembers, userEthereumAddress } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import AddVotingSlot from "./council/AddVotingSlot.svelte";
-  import CancelVotingSlot from "./council/CancelVotingSlot.svelte";
-  import Navigation from "./Navigation.svelte";
-  import MembershipRequests from "./council/MembershipRequests.svelte";
+  import AddVotingSlot from "../../components/DAO/council/AddVotingSlot.svelte";
+  import CancelVotingSlot from "../../components/DAO/council/CancelVotingSlot.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import MembershipRequests from "../../components/DAO/council/MembershipRequests.svelte";
 
   $: {
     if ($councilMembers === null || $userEthereumAddress === null) {
@@ -14,7 +14,7 @@
       !$councilMembers.some((member) => member == $userEthereumAddress)
     ) {
       $error = "You are not allowed to view this page.";
-      navigate("/daa/home");
+      navigate("/dao/home");
     } else {
       $isSubmitting = false;
     }

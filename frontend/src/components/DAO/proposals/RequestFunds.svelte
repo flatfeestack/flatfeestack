@@ -2,7 +2,7 @@
   import { ethers } from "ethers";
   import { Interface } from "ethers/lib/utils";
   import { WalletABI } from "../../../contracts/Wallet";
-  import type { ProposalFormProps } from "../../../types/daa";
+  import type { ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
   // as described in https://github.com/sveltejs/svelte/issues/7605#issuecomment-1156000553

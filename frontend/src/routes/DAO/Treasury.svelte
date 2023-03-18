@@ -8,12 +8,12 @@
     provider,
     userEthereumAddress,
     walletContract,
-  } from "../../ts/daaStore";
+  } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import formateDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
-  import Navigation from "./Navigation.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
 
   enum TransactionEventType {
     AcceptPayment,
@@ -53,7 +53,7 @@
   onMount(() => {
     if ($membershipStatusValue != 3) {
       $error = "You are not allowed to view this page.";
-      navigate("/daa/home");
+      navigate("/dao/home");
       return;
     }
 

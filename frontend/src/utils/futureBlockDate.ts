@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { currentBlockNumber, currentBlockTimestamp } from "../ts/daaStore";
+import { currentBlockNumber, currentBlockTimestamp } from "../ts/daoStore";
 import formateDateTime from "./formatDateTime";
 
 const secondsPerBlock = 12;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Event } from "ethers";
   import humanizeDuration from "humanize-duration";
-  import { daaContract, userEthereumAddress } from "../../../ts/daaStore";
+  import { daoContract, userEthereumAddress } from "../../../ts/daoStore";
   import { isSubmitting } from "../../../ts/mainStore";
   import {
     extraOrdinaryAssemblyRequestProposalIds,
@@ -41,7 +41,7 @@
     const events = await Promise.all(
       $extraOrdinaryAssemblyRequestProposalIds.map(
         async (proposalId) =>
-          await proposalCreatedEvents.get(proposalId.toString(), $daaContract)
+          await proposalCreatedEvents.get(proposalId.toString(), $daoContract)
       )
     );
 
@@ -49,7 +49,7 @@
     const extraOrdinaryAssemblyRequestStates = await Promise.all(
       events.map(async (proposalCreatedEvent) => {
         const proposalId = proposalCreatedEvent.event.args[0];
-        const proposalState = await $daaContract.state(proposalId);
+        const proposalState = await $daoContract.state(proposalId);
 
         return {
           event: proposalCreatedEvent.event,
@@ -66,7 +66,7 @@
           [1, 4, 5].includes(intermediateObject.proposalState)
         )
         .map(async (intermediateObject) => {
-          const proposalEta = await $daaContract.proposalEta(
+          const proposalEta = await $daoContract.proposalEta(
             intermediateObject.proposalId
           );
           const event: Event | undefined =
@@ -98,7 +98,7 @@
   }
 
   async function castVote(proposalId: string, voteValue: number) {
-    await $daaContract.castVote(proposalId, voteValue);
+    await $daoContract.castVote(proposalId, voteValue);
   }
 </script>
 

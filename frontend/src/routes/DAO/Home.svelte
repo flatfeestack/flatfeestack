@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Navigation from "./Navigation.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
 </script>
 
 <Navigation>

@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
   import { MembershipABI } from "../../../contracts/Membership";
-  import { membershipContract } from "../../../ts/daaStore";
-  import type { ProposalFormProps } from "../../../types/daa";
+  import { membershipContract } from "../../../ts/daoStore";
+  import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
   import Spinner from "../../Spinner.svelte";
   import { WalletABI } from "../../../contracts/Wallet";
-  import { DAAABI } from "../../../contracts/DAA";
+  import { DAOABI } from "../../../contracts/DAO";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];
@@ -42,7 +42,7 @@
 
   const membershipInterface = new Interface(MembershipABI);
   const walletInterface = new Interface(WalletABI);
-  const daaInterface = new Interface(DAAABI);
+  const daoInterface = new Interface(DAOABI);
 
   const schema = yup.object().shape({
     liquidator: yup.string().isEthereumAddress().required(),
@@ -73,8 +73,8 @@
         value: 0,
       },
       {
-        target: import.meta.env.VITE_DAA_CONTRACT_ADDRESS,
-        transferCallData: daaInterface.encodeFunctionData("dissolveDAA"),
+        target: import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
+        transferCallData: daoInterface.encodeFunctionData("dissolveDAO"),
         value: 0,
       },
     ];

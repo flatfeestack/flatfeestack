@@ -1,6 +1,6 @@
 import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import { get } from "svelte/store";
-import { daaContract } from "../ts/daaStore";
+import { daoContract } from "../ts/daoStore";
 
 export async function queueProposal(
   targets: string[],
@@ -8,7 +8,7 @@ export async function queueProposal(
   description: string,
   calldatas: string[]
 ) {
-  await get(daaContract).queue(
+  await get(daoContract).queue(
     targets,
     values,
     calldatas,
@@ -22,7 +22,7 @@ export async function executeProposal(
   description: string,
   calldatas: string[]
 ) {
-  await get(daaContract).execute(
+  await get(daoContract).execute(
     targets,
     values,
     calldatas,

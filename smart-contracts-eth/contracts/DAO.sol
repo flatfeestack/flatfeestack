@@ -12,7 +12,7 @@ import "./governor/GovernorTimelockControlUpgradeable.sol";
 
 import "./Membership.sol";
 
-contract DAA is
+contract DAO is
     Initializable,
     GovernorUpgradeable,
     GovernorVotesUpgradeable,
@@ -58,7 +58,7 @@ contract DAA is
         governorCountingSimpleInit();
         governorVotesQuorumFractionInit(5);
         governorTimelockControlInit(_timelock);
-        setupDAAFoundingSlotAndProposal(bylaws);
+        setupDAOFoundingSlotAndProposal(bylaws);
     }
 
     function votingDelay() public pure override returns (uint256) {
@@ -119,7 +119,7 @@ contract DAA is
         override(GovernorUpgradeable, IGovernorUpgradeable)
         returns (uint256)
     {
-        require(daaActive, "The DAA is not active");
+        require(daoActive, "The DAO is not active");
         return super.propose(targets, values, calldatas, description);
     }
 
@@ -133,7 +133,7 @@ contract DAA is
         internal
         override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
     {
-        require(daaActive, "The DAA is not active");
+        require(daoActive, "The DAO is not active");
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
@@ -163,7 +163,7 @@ contract DAA is
     // the voting slot has to be four weeks from now
     // it is calculated in blocks and we assume that 7200 blocks will be mined in a day
     function setVotingSlot(uint256 blockNumber) public returns (uint256) {
-        require(daaActive, "The DAA is not active");
+        require(daoActive, "The DAO is not active");
         require(
             _membershipContract.isCouncilMember(msg.sender) ||
                 _msgSender() == _executor(),
@@ -223,7 +223,7 @@ contract DAA is
         uint256 blockNumber,
         string calldata reason
     ) public {
-        require(daaActive, "The DAA is not active");
+        require(daoActive, "The DAO is not active");
         require(
             _membershipContract.isCouncilMember(msg.sender),
             "only council member"
@@ -296,7 +296,7 @@ contract DAA is
         emit BylawsChanged(oldHash, bylawsHash);
     }
 
-    function setupDAAFoundingSlotAndProposal(string memory bylaws) internal {
+    function setupDAOFoundingSlotAndProposal(string memory bylaws) internal {
         require(_foundingSetupDone == false, "already done");
 
         // Create slot
@@ -306,7 +306,7 @@ contract DAA is
         emit NewTimeslotSet(slotBlockNumber);
 
         // CreateProposal
-        bytes memory calldatas = abi.encodeCall(DAA.setNewBylawsHash, bylaws);
+        bytes memory calldatas = abi.encodeCall(DAO.setNewBylawsHash, bylaws);
         string memory description = "Founding Proposal. Set initial bylaws.";
         address[] memory targets = new address[](1);
         targets[0] = address(this);
@@ -341,7 +341,7 @@ contract DAA is
             description
         );
 
-        emit DAAProposalCreated(
+        emit DAOProposalCreated(
             proposalId,
             _msgSender(),
             targets,
@@ -413,8 +413,8 @@ contract DAA is
         votingSlotAnnouncementPeriod = newVotingSlotAnnouncementPeriod;
     }
 
-    function dissolveDAA() public onlyGovernance {
-        daaActive = false;
+    function dissolveDAO() public onlyGovernance {
+        daoActive = false;
     }
 
     function setExtraordinaryVoteQuorumNominator(

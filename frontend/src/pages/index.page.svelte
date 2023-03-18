@@ -26,15 +26,15 @@
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
 
-  import DAAHome from "../components/DAA/DAAHome.svelte";
-  import DaaVotes from "../components/DAA/Votes.svelte";
-  import DaaMembership from "../components/DAA/Membership.svelte";
-  import DaaMetamaskRequired from "../components/DAA/MetaMaskRequired.svelte";
-  import DaaCreateProposal from "../components/DAA/CreateProposal.svelte";
-  import DaaCastVotes from "../components/DAA/CastVotes.svelte";
-  import DaaExecuteProposals from "../components/DAA/ExecuteProposals.svelte";
-  import DaaCouncil from "../components/DAA/Council.svelte";
-  import DaaTreasury from "../components/DAA/Treasury.svelte";
+  import DAOHome from "../routes/DAO/Home.svelte";
+  import DAOVotes from "../routes/DAO/Votes.svelte";
+  import DAOMembership from "../routes/DAO/Membership.svelte";
+  import DAOMetamaskRequired from "../routes/DAO/MetaMaskRequired.svelte";
+  import DAOCreateProposal from "../routes/DAO/CreateProposal.svelte";
+  import DAOCastVotes from "../routes/DAO/CastVotes.svelte";
+  import DAOExecuteProposals from "../routes/DAO/ExecuteProposals.svelte";
+  import DAOCouncil from "../routes/DAO/Council.svelte";
+  import DAOTreasury from "../routes/DAO/Treasury.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -167,7 +167,7 @@
           <button class="button1 center mx-2" type="submit">Sign Up</button>
         </form>
       {/if}
-      <button class="button4 center mx-2" on:click={() => navigate("/daa/home")}
+      <button class="button4 center mx-2" on:click={() => navigate("/dao/home")}
         >DAO</button
       >
     </nav>
@@ -209,18 +209,18 @@
         <Route path="/user/admin" component={Admin} />
         <Route path="/user/invitations" component={Invitations} />
 
-        <Route path="/daa/home" component={DAAHome} />
-        <Route path="/daa/votes" component={DaaVotes} />
-        <Route path="/daa/membership" component={DaaMembership} />
-        <Route path="/daa/metamask" component={DaaMetamaskRequired} />
-        <Route path="/daa/createProposal" component={DaaCreateProposal} />
-        <Route path="/daa/castVotes/:blockNumber" component={DaaCastVotes} />
+        <Route path="/dao/home" component={DAOHome} />
+        <Route path="/dao/votes" component={DAOVotes} />
+        <Route path="/dao/membership" component={DAOMembership} />
+        <Route path="/dao/metamask" component={DAOMetamaskRequired} />
+        <Route path="/dao/createProposal" component={DAOCreateProposal} />
+        <Route path="/dao/castVotes/:blockNumber" component={DAOCastVotes} />
         <Route
-          path="/daa/executeProposals/:blockNumber"
-          component={DaaExecuteProposals}
+          path="/dao/executeProposals/:blockNumber"
+          component={DAOExecuteProposals}
         />
-        <Route path="/daa/council" component={DaaCouncil} />
-        <Route path="/daa/treasury" component={DaaTreasury} />
+        <Route path="/dao/council" component={DAOCouncil} />
+        <Route path="/dao/treasury" component={DAOTreasury} />
 
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />

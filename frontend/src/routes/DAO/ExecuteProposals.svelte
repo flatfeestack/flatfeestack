@@ -1,14 +1,14 @@
 <script lang="ts">
   import humanizeDuration from "humanize-duration";
   import { navigate } from "svelte-routing";
-  import { currentBlockTimestamp, daaContract } from "../../ts/daaStore";
+  import { currentBlockTimestamp, daoContract } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import {
     executeProposal,
     queueProposal,
   } from "../../utils/proposalFunctions";
-  import Navigation from "./Navigation.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
 
   export let blockNumber: string;
   let proposals = [];
@@ -29,24 +29,24 @@
   async function prepareView() {
     if (!$votingSlots.includes(Number(blockNumber))) {
       $error = "Invalid voting slot.";
-      navigate("/daa/votes");
+      navigate("/dao/votes");
     }
 
     const amountOfProposals =
-      await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber);
+      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber);
 
     proposals = await Promise.all(
       [...Array(amountOfProposals.toNumber()).keys()].map(
         async (index: Number) => {
-          const proposalId = await $daaContract.votingSlots(blockNumber, index);
+          const proposalId = await $daoContract.votingSlots(blockNumber, index);
 
           const [proposalState, proposalEta] = await Promise.all([
-            $daaContract.state(proposalId),
-            $daaContract.proposalEta(proposalId),
+            $daoContract.state(proposalId),
+            $daoContract.proposalEta(proposalId),
           ]);
 
           const event = (
-            await proposalCreatedEvents.get(proposalId, $daaContract)
+            await proposalCreatedEvents.get(proposalId, $daoContract)
           ).event;
 
           return {

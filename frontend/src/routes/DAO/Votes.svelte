@@ -3,16 +3,16 @@
   import {
     currentBlockNumber,
     currentBlockTimestamp,
-    daaContract,
+    daoContract,
     membershipStatusValue,
     provider,
-  } from "../../ts/daaStore";
+  } from "../../ts/daoStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
-  import Navigation from "./Navigation.svelte";
-  import ExtraOrdinaryAssemblies from "./votes/ExtraOrdinaryAssemblies.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
@@ -55,7 +55,7 @@
     if (
       $currentBlockNumber === null ||
       $currentBlockTimestamp === null ||
-      $daaContract === null ||
+      $daoContract === null ||
       $votingSlots === null
     ) {
       $isSubmitting = true;
@@ -66,9 +66,9 @@
   }
 
   async function prepareView() {
-    slotCloseTime = (await $daaContract.slotCloseTime()).toNumber();
+    slotCloseTime = (await $daoContract.slotCloseTime()).toNumber();
     currentTime = formatDateTime(new Date($currentBlockTimestamp * 1000));
-    votingPeriod = (await $daaContract.votingPeriod()).toNumber();
+    votingPeriod = (await $daoContract.votingPeriod()).toNumber();
 
     await createVotingSlots();
 
@@ -137,12 +137,12 @@
     blockNumber: number
   ): Promise<ProposalInfo[]> {
     const number = (
-      await $daaContract.getNumberOfProposalsInVotingSlot(blockNumber)
+      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber)
     ).toNumber();
     let proposalInfos: ProposalInfo[] = [];
     for (let i = 0; i < number; i++) {
       const proposalId = (
-        await $daaContract.votingSlots(blockNumber, i)
+        await $daoContract.votingSlots(blockNumber, i)
       ).toString();
       const proposalDescription = await loadProposalDescription(proposalId);
       proposalInfos.push({
@@ -154,7 +154,7 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = await proposalCreatedEvents.get(proposalId, $daaContract);
+    const event = await proposalCreatedEvents.get(proposalId, $daoContract);
     return event.event.args[8];
   }
 
@@ -253,17 +253,17 @@
         {#if $membershipStatusValue == 3}
           {#if slotInfo.votingSlotState == VotingSlotState.ProposalsOpen}
             <button
-              on:click={() => navigate("/daa/createProposal")}
+              on:click={() => navigate("/dao/createProposal")}
               class="py-2 button3">Create Proposal</button
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/daa/castVotes/${blockNumber}`)}
+              on:click={() => navigate(`/dao/castVotes/${blockNumber}`)}
               class="py-2 button3">Vote</button
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/daa/executeProposals/${blockNumber}`)}
+              on:click={() => navigate(`/dao/executeProposals/${blockNumber}`)}
               class="py-2 button3">Execute proposals</button
             >
           {/if}

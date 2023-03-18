@@ -1,7 +1,7 @@
 import type { JsonRpcProvider } from "@ethersproject/providers";
 import type { BigNumber, Contract, Event } from "ethers";
 import { derived, get, type Readable, writable } from "svelte/store";
-import { daaContract, userEthereumAddress } from "./daaStore";
+import { daoContract, userEthereumAddress } from "./daoStore";
 
 interface ProposalCreatedEvent {
   proposalId: string;
@@ -14,15 +14,15 @@ export const proposalCreatedEvents = {
   // subscribe to the cart store
   subscribe: proposalEvents.subscribe,
   // custom logic
-  async get(id: string, $daaContract): Promise<ProposalCreatedEvent> {
+  async get(id: string, $daoContract): Promise<ProposalCreatedEvent> {
     let values = get(proposalEvents);
     const result = values.find(({ proposalId }) => proposalId === id);
     if (result) {
       return result;
     } else {
       return await Promise.resolve(
-        $daaContract.queryFilter(
-          $daaContract.filters.DAAProposalCreated(
+        $daoContract.queryFilter(
+          $daoContract.filters.DAOProposalCreated(
             id,
             null,
             null,
@@ -50,17 +50,17 @@ export const proposalCreatedEvents = {
 };
 
 export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
-  daaContract,
-  ($daaContract, set) => {
-    if ($daaContract === null) {
+  daoContract,
+  ($daoContract, set) => {
+    if ($daoContract === null) {
       set(null);
     } else {
-      Promise.resolve($daaContract.getSlotsLength())
+      Promise.resolve($daoContract.getSlotsLength())
         .then((votingSlotsLength: BigNumber) => {
           Promise.resolve(
             Promise.all(
               [...Array(votingSlotsLength.toNumber()).keys()].map((index) =>
-                $daaContract.slots(index)
+                $daoContract.slots(index)
               )
             )
           ).then((slots: BigNumber[]) => {
@@ -80,17 +80,17 @@ export const extraOrdinaryAssemblyRequestProposalIds = derived<
   Readable<null | Contract>,
   null | BigNumber[]
 >(
-  daaContract,
-  ($daaContract, set) => {
-    if ($daaContract === null) {
+  daoContract,
+  ($daoContract, set) => {
+    if ($daoContract === null) {
       set(null);
     } else {
-      Promise.resolve($daaContract.getExtraOrdinaryProposalsLength())
+      Promise.resolve($daoContract.getExtraOrdinaryProposalsLength())
         .then((extraOrdinaryProposalsLength: BigNumber) => {
           Promise.resolve(
             Promise.all(
               [...Array(extraOrdinaryProposalsLength.toNumber()).keys()].map(
-                (index) => $daaContract.extraOrdinaryAssemblyProposals(index)
+                (index) => $daoContract.extraOrdinaryAssemblyProposals(index)
               )
             )
           ).then((extraOrdinaryAssemblyRequestProposalIds: BigNumber[]) => {
@@ -110,14 +110,14 @@ export const votesCasted = derived<
   [Readable<Contract | null>, Readable<JsonRpcProvider | null>],
   Event[] | null
 >(
-  [daaContract, userEthereumAddress],
-  ([$daaContract, $userEthereumAddress], set) => {
-    if ($daaContract === null || $userEthereumAddress === null) {
+  [daoContract, userEthereumAddress],
+  ([$daoContract, $userEthereumAddress], set) => {
+    if ($daoContract === null || $userEthereumAddress === null) {
       set(null);
     } else {
       Promise.resolve(
-        $daaContract.queryFilter(
-          $daaContract.filters.VoteCast(
+        $daoContract.queryFilter(
+          $daoContract.filters.VoteCast(
             $userEthereumAddress,
             null,
             null,

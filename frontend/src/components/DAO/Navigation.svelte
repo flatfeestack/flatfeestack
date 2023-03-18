@@ -18,7 +18,7 @@
     provider,
     signer,
     userEthereumAddress,
-  } from "../../ts/daaStore";
+  } from "../../ts/daoStore";
   import { isSubmitting, route } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import NavItem from "../NavItem.svelte";
@@ -32,7 +32,7 @@
 
   let membershipStatus: string;
 
-  const showMetaMaskRequired = () => navigate("/daa/metamask");
+  const showMetaMaskRequired = () => navigate("/dao/metamask");
 
   onMount(async () => {
     try {
@@ -156,15 +156,15 @@
       {/if}
     </div>
     <nav use:links>
-      <NavItem href="/daa/home" icon={faHome} label="DAO Home" />
-      <NavItem href="/daa/votes" icon={faList} label="Votes" />
+      <NavItem href="/dao/home" icon={faHome} label="DAO Home" />
+      <NavItem href="/dao/votes" icon={faList} label="Votes" />
       {#if $membershipStatusValue == 3}
-        <NavItem href="/daa/treasury" icon={faMoneyBill} label="Treasury" />
+        <NavItem href="/dao/treasury" icon={faMoneyBill} label="Treasury" />
       {/if}
       {#if $membershipStatusValue == 3 && $councilMembers?.includes($userEthereumAddress)}
-        <NavItem href="/daa/council" icon={faHippo} label="Council functions" />
+        <NavItem href="/dao/council" icon={faHippo} label="Council functions" />
       {/if}
-      <NavItem href="/daa/membership" icon={faPerson} label="Membership" />
+      <NavItem href="/dao/membership" icon={faPerson} label="Membership" />
     </nav>
   </div>
   <div class="content">

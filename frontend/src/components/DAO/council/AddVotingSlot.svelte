@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
     currentBlockNumber,
-    daaContract,
+    daoContract,
     provider,
-  } from "../../../ts/daaStore";
+  } from "../../../ts/daoStore";
   import {
     futureBlockDate,
     secondsPerBlock,
@@ -15,7 +15,7 @@
   let minValue = 0;
 
   $: {
-    if ($provider === null || $daaContract === null) {
+    if ($provider === null || $daoContract === null) {
       isLoading = true;
     } else if (minValue === 0) {
       prepareView();
@@ -28,7 +28,7 @@
   }
 
   async function createVotingSlot() {
-    await $daaContract.setVotingSlot(plannedBlockNumber);
+    await $daoContract.setVotingSlot(plannedBlockNumber);
   }
 </script>
 
