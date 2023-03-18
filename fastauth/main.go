@@ -22,7 +22,6 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
-	ldap "github.com/vjeantet/ldapserver"
 	"github.com/xlzd/gotp"
 	"golang.org/x/crypto/ed25519"
 	"hash/fnv"
@@ -115,7 +114,6 @@ type Opts struct {
 	Dev             string
 	Issuer          string
 	Port            int
-	Ldap            int
 	DBPath          string
 	DBDriver        string
 	DBScripts       string
@@ -140,7 +138,6 @@ type Opts struct {
 	AdminEndpoints  bool
 	UserEndpoints   bool
 	OauthEndpoints  bool
-	LdapServer      bool
 	DetailedError   bool
 	Redirects       string
 	PasswordFlow    bool
@@ -162,8 +159,6 @@ func NewOpts() *Opts {
 	flag.StringVar(&opts.Issuer, "issuer", lookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
 	flag.IntVar(&opts.Port, "port", lookupEnvInt("PORT",
 		8080), "listening HTTP port")
-	flag.IntVar(&opts.Ldap, "ldap", lookupEnvInt("LDAP",
-		8389), "listening LDAP port")
 	flag.StringVar(&opts.DBPath, "db-path", lookupEnv("DB_PATH",
 		"./fastauth.db"), "DB path")
 	flag.StringVar(&opts.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
@@ -194,7 +189,6 @@ func NewOpts() *Opts {
 	flag.BoolVar(&opts.AdminEndpoints, "admin-endpoints", lookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
 	flag.BoolVar(&opts.UserEndpoints, "user-endpoints", lookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
 	flag.BoolVar(&opts.OauthEndpoints, "oauth-enpoints", lookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.LdapServer, "ldap-server", lookupEnv("LDAP_SERVER") != "", "Enable ldap server. In dev mode these are enabled by default")
 	flag.BoolVar(&opts.DetailedError, "details", lookupEnv("DETAILS") != "", "Enable detailed errors")
 	flag.StringVar(&opts.Redirects, "redir", lookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
 	flag.BoolVar(&opts.PasswordFlow, "pwflow", lookupEnv("PWFLOW") != "", "enable password flow, default disabled")
@@ -279,7 +273,6 @@ func NewOpts() *Opts {
 		opts.AdminEndpoints = true
 		opts.OauthEndpoints = true
 		opts.UserEndpoints = true
-		opts.LdapServer = true
 		opts.DetailedError = true
 		opts.PasswordFlow = true
 
@@ -412,30 +405,6 @@ func checkEmailPassword(email string, password string) (*dbRes, string, error) {
 		return nil, "blocked", fmt.Errorf("ERR-checkEmail-05, key %v error: %v", email, err)
 	}
 	return result, "", nil
-}
-
-func serverLdap() (*ldap.Server, <-chan bool) {
-	routes := ldap.NewRouteMux()
-	routes.Bind(handleBind)
-	routes.Search(handleSearch)
-
-	server := ldap.NewServer()
-	server.Handle(routes)
-
-	done := make(chan bool)
-	if opts.LdapServer {
-		go func(s *ldap.Server) {
-			addr := ":" + strconv.Itoa(opts.Ldap)
-			log.Printf("Starting auth server on port %v...", addr)
-			err := s.ListenAndServe(addr)
-			log.Printf("server closed %v", err)
-			done <- true
-		}(server)
-	} else {
-		done <- true
-	}
-
-	return server, done
 }
 
 func serverRest(keepAlive bool) (*http.Server, <-chan bool, error) {
@@ -706,19 +675,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	serverLdap, doneChannelLdap := serverLdap()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		serverRest.Shutdown(context.Background())
-		serverLdap.Stop()
-		if serverLdap.Listener != nil {
-			serverLdap.Listener.Close()
-		}
 	}()
 
 	<-doneChannelRest
-	<-doneChannelLdap
 }
