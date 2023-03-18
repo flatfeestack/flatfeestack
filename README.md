@@ -20,12 +20,12 @@ There are different Docker compose profiles to boot up what you need to develop 
 
 * `platform`: Starts all services needed for the Flatfeestack Platform.
 * `smart-contracts-eth`: Only starts the Ganache chain and the frontend, needed to develop the Flatfeestack DAO.
-* `blockscout`: A Ethereum block explorer. Nice to have when you need to inspect what happens in the local chain.
+* `blockexplorer`: A Ethereum block explorer. Nice to have when you need to inspect what happens in the local chain.
 
 Profiles can be used as follows:
 
 ```shell
-docker compose --profile blockscout --profile smart-contracts-eth up --build
+docker compose --profile blockexplorer --profile smart-contracts-eth up --build
 ```
 
 ## Register a user for the platform

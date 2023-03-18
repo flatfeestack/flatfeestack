@@ -3,7 +3,7 @@ env
 flatfeestack-env-*.tar.gz
 .idea
 .db
-.chain
+.ganache
 .repos
 env*.tar.gz
 /payout-nodejs
