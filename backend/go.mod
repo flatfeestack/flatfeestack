@@ -17,7 +17,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.2
-	github.com/stripe/stripe-go/v74 v74.11.0
+	github.com/stripe/stripe-go/v74 v74.12.0
 	golang.org/x/crypto v0.7.0
 	golang.org/x/text v0.8.0
 )
