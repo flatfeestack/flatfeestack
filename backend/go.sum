@@ -165,6 +165,8 @@ github.com/stripe/stripe-go/v74 v74.1.0 h1:qXSpztyjX2e7ZrGJ6FmAZx8OWi88iGanD14KO
 github.com/stripe/stripe-go/v74 v74.1.0/go.mod h1:5PoXNp30AJ3tGq57ZcFuaMylzNi8KpwlrYAFmO1fHZw=
 github.com/stripe/stripe-go/v74 v74.11.0 h1:fhajX7EC1m/LGwWFoaasZjPmTyxu1rAEBW7WfiANx/Q=
 github.com/stripe/stripe-go/v74 v74.11.0/go.mod h1:f9L6LvaXa35ja7eyvP6GQswoaIPaBRvGAimAO+udbBw=
+github.com/stripe/stripe-go/v74 v74.12.0 h1:uakz8Ubngok3G6Pcwc1ssqI3msONE4tdeyi84UooLQk=
+github.com/stripe/stripe-go/v74 v74.12.0/go.mod h1:f9L6LvaXa35ja7eyvP6GQswoaIPaBRvGAimAO+udbBw=
 github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
