@@ -47,7 +47,7 @@
     "chart.js": "^4.2.1",
     "ethers": "^5.7.2",
     "humanize-duration": "^3.28.0",
-    "ky": "^0.32.2",
+    "ky": "^0.33.0",
     "svelte-chartjs": "^3.1.2",
     "svelte-qr": "^1.0.0",
     "svelte-routing": "^1.6.0",
