@@ -11,6 +11,7 @@ import "./SBT.sol";
 contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction {
 
     string public bylawsHash;
+    event BylawsChanged(string indexed oldHash, string indexed newHash);
 
     constructor(IVotes _token)
         Governor("FFSDAO")
