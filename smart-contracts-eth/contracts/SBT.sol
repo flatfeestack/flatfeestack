@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
     using Counters for Counters.Counter;
 
-    bytes32 public constant DAO_DECISION = keccak256("DAO_DECISION");
     Counters.Counter private _tokenIdCounter;
 
     mapping(address => uint256) internal waitList;
@@ -25,6 +24,7 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
     constructor()
     ERC721("FlatFeeStack DAO NFT", "FFSDAO NFT")
     EIP712("FlatFeeStack DAO NFT", "1") {
+        //this needs to change to the address of the DAO contract
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _tokenIdCounter.current(100);
     }
@@ -62,7 +62,7 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
         _safeMint(to, tokenId);
     }
 
-    function safeMintCouncil(address to, uint256 tokenId) public onlyRole(DAO_DECISION) {
+    function safeMintCouncil(address to, uint256 tokenId) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(tokenId > 0 && tokenId < 100, "Cannot have more than 99 council members");
         require(_ownedTokens[to][0] == 0, "1 address cannot have 2 NFTs");
         address owner = _ownerOf(tokenId);
@@ -74,12 +74,24 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
         }
     }
 
-    function setMembershipSettings(uint256 _membershipFee, uint256 _membershipPeriod) public onlyRole(DAO_DECISION) {
+    function setMembershipSettings(uint256 _membershipFee, uint256 _membershipPeriod) public onlyRole(DEFAULT_ADMIN_ROLE) {
         if(_membershipFee > 0) {
             membershipFee = _membershipFee;
         }
         if(_membershipPeriod > 0) {
             membershipPeriod = _membershipPeriod;
+        }
+    }
+
+    function execute(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas
+    ) public payable override onlyRole(DEFAULT_ADMIN_ROLE) {
+        string memory errorMessage = "SBT: call reverted without message";
+        for (uint256 i = 0; i < targets.length; ++i) {
+            (bool success, bytes memory returndata) = targets[i].call{value: values[i]}(calldatas[i]);
+            Address.verifyCallResult(success, returndata, errorMessage);
         }
     }
 
@@ -89,18 +101,6 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
 
     function isMember(address owner) public view returns (boolean) {
         return _ownedTokens[owner][0] >= 100;
-    }
-
-    function execute(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas
-    ) public payable override onlyRole(DAO_DECISION) {
-        string memory errorMessage = "SBT: call reverted without message";
-        for (uint256 i = 0; i < targets.length; ++i) {
-            (bool success, bytes memory returndata) = targets[i].call{value: values[i]}(calldatas[i]);
-            Address.verifyCallResult(success, returndata, errorMessage);
-        }
     }
 
     // The following functions are overrides required by Solidity.
