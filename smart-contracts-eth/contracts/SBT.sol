@@ -9,14 +9,13 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/draft-ERC721Votes.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
 
-    mapping(address => uint256) internal waitList;
-    mapping(address => uint256) internal membershipPayed;
     uint256 public membershipFee = 1 ether;
     uint256 public membershipPeriod = 365 * 24 * 60 * 60; // 1 year
     uint256 public membershipPayment;
@@ -29,33 +28,13 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
         _tokenIdCounter.current(100);
     }
 
-    function requestMembership(address to) {
-        require(msg.value >= membershipFee);
-        waitList[to] += msg.value;
-    }
-
-    function withdrawRequestMembership() {
-        uint256 value = waitList[msg.sender];
-        require(value > 0);
-        delete(waitList[msg.sender]);
-
-        (bool transferSuccess, ) = payable(msg.sender).call{value: value}("");
-        require(transferSuccess, "Transfer failed");
-    }
-
     function safeMint(address to, uint256 timestamp, uint8 v1, bytes32 r1, bytes32 s1, uint8 v2, bytes32 r2, bytes32 s2) public {
         require(_ownedTokens[to][0] == 0, "1 address cannot have 2 NFTs");
+        address council1 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1);
+        address council2 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2);
+        require(isCouncil(council1) && isCouncil(council2) && council1 != council2, "Signature not from council member");
 
-        require(
-            isCouncil(ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1))
-                && isCouncil(ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2)),
-                    "Signature not from council member"
-        );
-
-        require(waitList[to] >= membershipFee);
-        membershipPayment += waitList[to];
-        delete(waitList[to]);
-        membershipPayed[to] = block.timestamp;
+        require(msg.value >= membershipFee);
 
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
@@ -137,5 +116,13 @@ contract FlatFeeStackDAOVote is ERC721, Ownable, EIP712, ERC721Votes {
         // https://eips.ethereum.org/EIPS/eip-6372
         require(clock() == block.timestamp);
         return "mode=timestamp";
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 }

@@ -64,7 +64,25 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         uint256 proposalId0 = hashProposal(targets, values, calldatas, descriptionHash);
         //timelock is votingDelay, so we have before voting the same delay as the timelock
         require(proposalDeadline(proposalId0) + super.votingDelay() < block.timestamp, "Governor: timelock not expired yet");
+        require(!_paused);
         return super.execute(targets, values, calldatas, descriptionHash);
+    }
+
+    function councilExecute(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas, uint8 v1, bytes32 r1, bytes32 s1, uint8 v2, bytes32 r2, bytes32 s2) {
+            address council1 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1);
+            address council2 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2);
+
+        //TODO: mark signature as exectude to stop replay
+        require(SBT(token).isCouncil(council1) && SBT(token).isCouncil(council2) && council1 != council2, "Signature not from council member");
+
+        string memory errorMessage = "DAO: call reverted without message";
+        for (uint256 i = 0; i < targets.length; ++i) {
+            (bool success, bytes memory returndata) = targets[i].call{value: values[i]}(calldatas[i]);
+            Address.verifyCallResult(success, returndata, errorMessage);
+        }
     }
 
     function cancel(
@@ -75,9 +93,11 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
     ) public virtual override returns (uint256) {
         uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
         require(state(proposalId) == ProposalState.Pending, "Governor: too late to cancel");
+        address council1 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1);
+        address council2 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2);
 
-        boolean isCouncil = SBT(token).isCouncil(ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1))
-            && SBT(token).isCouncil(ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2));
+        //TODO: mark signature as exectude to stop replay
+        boolean isCouncil = SBT(token).isCouncil(council1) && SBT(token).isCouncil(council2) && council1 != council2;
 
         require(_msgSender() == _proposals[proposalId].proposer || isCouncil, "Governor: only proposer can cancel");
         return _cancel(targets, values, calldatas, descriptionHash);
@@ -103,4 +123,5 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bylawsHash = newHash;
         emit BylawsChanged(oldHash, bylawsHash);
     }
+
 }
