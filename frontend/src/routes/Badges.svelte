@@ -235,6 +235,6 @@
     <p class="p-2 m-2">No contributions yet.</p>
   {/if}
   <p class="p-2 m-2">
-    Public URL: <a href="/badges/{$user.id}">/badges/{$user.id}"</a>
+    Public URL: <a href="/badges/{$user.id}">/badges/{$user.id}</a>
   </p>
 </Navigation>

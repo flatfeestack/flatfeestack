@@ -117,7 +117,7 @@
       gitEmails = [...gitEmails, ge];
       newEmail = "";
     } catch (e) {
-      $error = e;
+      $error = "Duplicate email address. Email can only be used once.";
     }
   }
 
@@ -232,14 +232,15 @@
         <tr>
           <td colspan="3">
             <div class="container-small">
-              <input
-                id="email-input"
-                name="email"
-                type="text"
-                bind:value={newEmail}
-                placeholder="Email"
-              />
               <form class="p-2" on:submit|preventDefault={handleAddEmail}>
+                <input
+                  id="email-input"
+                  name="email"
+                  type="email"
+                  required
+                  bind:value={newEmail}
+                  placeholder="Email"
+                />
                 <button class="ml-5 p-2 button1" type="submit"
                   >Add Git Email</button
                 >
