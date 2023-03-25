@@ -28,6 +28,34 @@ Profiles can be used as follows:
 docker compose --profile blockexplorer --profile smart-contracts-eth up --build
 ```
 
+### Local development - Frontend with Hot Module Reload (HMR)
+Especially while working on the frontend, HMR in local development enables you to instantly see your changes without having to rebuild the project or wait ages.
+
+First a change in the caddy file (`caddy/Caddyfile`) is required.
+
+```yaml
+# change
+reverse_proxy frontend:9085
+# to
+reverse_proxy host.docker.internal:9085
+```
+
+Afterwards docker can be started up again
+```shell
+docker compose --profile platform up --build
+
+# Switch to a different tab / terminal and shut down the frontend
+docker compose stop frontend
+```
+
+Move to your frontend folder (assuming you are in the root flatfeestack dir) and execute the new pnpm script
+```shell
+cd frontend
+pnpm run hmr
+```
+
+Afterwards you can visit the same URL and use the frontend but this time with HMR.
+
 ## Register a user for the platform
 
 To register a user:
