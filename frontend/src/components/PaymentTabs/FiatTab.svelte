@@ -37,7 +37,7 @@
     if (!cardElement) {
       console.log("called create");
       let elements = stripe.elements();
-      cardElement = elements.create("card");
+      cardElement = elements.create("card", { hidePostalCode: true });
       cardElement.mount(card);
       cardElement.on("change", (e) => {
         if (e.error) {
