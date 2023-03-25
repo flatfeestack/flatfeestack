@@ -98,7 +98,7 @@ export const API = {
   authToken: {
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
     timeWarp: (hours: number) =>
-      authToken.post(`timewarp/${hours}`).json<Token>(),
+      authToken.post(`admin/timewarp/${hours}`).json<Token>(),
     loginAs: (email: string) =>
       authToken.post(`admin/login-as/${email}`).json<Token>(),
   },
