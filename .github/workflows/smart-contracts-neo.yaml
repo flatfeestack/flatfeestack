@@ -29,3 +29,9 @@ jobs:
         with:
           arguments: test
           build-root-directory: smart-contracts-neo
+
+      - name: Compile smart contract
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: neow3jCompile
+          build-root-directory: smart-contracts-neo
