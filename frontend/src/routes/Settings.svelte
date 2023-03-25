@@ -78,7 +78,7 @@
     }
   }
 
-  async function removePaymentAddress(addressNumber: number) {
+  async function removePaymentAddress(addressNumber: string) {
     try {
       await API.user.removePayoutAddress(addressNumber);
       payoutAddresses = payoutAddresses.filter((e) => e.id !== addressNumber);
@@ -195,7 +195,7 @@
   <p class="p-2 m-2">
     If you have multiple git email addresses, you can connect these addresses to
     your FlatFeeStack account. You must verify your git email address. Once it
-    has been validated, the confirm date will show the data of validation.
+    has been validated, the confirm date will show the date of validation.
   </p>
 
   <div class="min-w20 container">

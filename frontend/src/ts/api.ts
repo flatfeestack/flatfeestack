@@ -138,7 +138,7 @@ export const API = {
       backendToken
         .post(`users/me/wallets`, { json: { currency, address } })
         .json<PayoutAddress>(),
-    removePayoutAddress: (id: number) =>
+    removePayoutAddress: (id: string) =>
       backendToken.delete(`users/me/wallets/${id}`),
     updatePaymentMethod: (method: string) =>
       backendToken.put(`users/me/method/${method}`).json<Users>(),
