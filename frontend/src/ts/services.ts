@@ -123,11 +123,10 @@ const connect = (): Promise<WebSocket> => {
     console.log("connect");
     const t = get(token);
     const c = get(config);
-    console.log("ws to", `${c.wsBaseUrl}/ws/users/me/payment`);
-    const server = new WebSocket(`${c.wsBaseUrl}/ws/users/me/payment`, [
-      "access_token",
-      t,
-    ]);
+
+    const paymentEndpoint = `${c.wsBaseUrl}/users/me/payment`;
+    console.log(`ws to ${paymentEndpoint}`);
+    const server = new WebSocket(paymentEndpoint, ["access_token", t]);
     server.onopen = function () {
       console.log("open");
       resolve(server);
