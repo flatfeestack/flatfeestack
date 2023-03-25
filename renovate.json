@@ -5,6 +5,15 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": [
+        "ch.qos.logback:logback-classic"
+      ],
+      "matchPaths": [
+        ".smart-contracts-neo/"
+      ],
+      "allowedVersions": "<=1.3"
+    },
+    {
       "groupName": "Github Actions - all non-major dependencies",
       "matchPaths": [
         ".github/"
