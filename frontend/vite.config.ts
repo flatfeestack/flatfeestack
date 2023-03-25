@@ -7,9 +7,9 @@ const mode = process.env.MODE || "dev";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    //svelte(),
     svelte({ compilerOptions: { hydratable: true } }),
-    ssr({ prerender: true }),
+
+    mode !== "hmr" ? ssr({ prerender: true }) : {},
 
     compress({
       algorithm: "brotliCompress",
