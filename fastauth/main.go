@@ -146,6 +146,11 @@ type Opts struct {
 	Admins          string
 }
 
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
+}
+
 func hash(s string) int64 {
 	h := fnv.New64()
 	h.Write([]byte(s))

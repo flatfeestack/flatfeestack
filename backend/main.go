@@ -68,6 +68,11 @@ type Opts struct {
 	ServerKey                 string
 }
 
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
+}
+
 func NewOpts() *Opts {
 	o := &Opts{}
 	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")

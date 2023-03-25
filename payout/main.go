@@ -54,6 +54,11 @@ var (
 	admins     []string
 )
 
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
+}
+
 func NewOpts() *Opts {
 	err := godotenv.Load()
 	if err != nil {

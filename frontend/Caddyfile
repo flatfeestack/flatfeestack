@@ -1,6 +1,13 @@
 {
     admin off
     auto_https off
+    log {
+        output stdout
+        format json {
+            time_key time
+            time_format iso8601
+        }
+    }
 }
 
 :9085
