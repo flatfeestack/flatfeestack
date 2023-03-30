@@ -9,7 +9,7 @@
         "ch.qos.logback:logback-classic"
       ],
       "matchPaths": [
-        ".smart-contracts-neo/"
+        "smart-contracts-neo/"
       ],
       "allowedVersions": "<=1.3"
     },
