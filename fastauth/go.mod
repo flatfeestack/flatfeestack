@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/dimiro1/banner v1.1.0
-	github.com/domodwyer/mailyak/v3 v3.4.0
+	github.com/domodwyer/mailyak/v3 v3.5.0
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/gorilla/mux v1.8.0
