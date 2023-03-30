@@ -230,6 +230,6 @@ export const API = {
     config: () => backend.get(`config`).json<Config>(),
   },
   admin: {
-    users: () => backendToken.post(`admin/users`).json<Users[]>(),
+    users: () => backendToken.post(`admin/users`).json<String[]>(),
   },
 };

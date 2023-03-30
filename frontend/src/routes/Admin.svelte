@@ -194,13 +194,13 @@
         <tbody>
           {#if users && users.length > 1}
             {#each users as row}
-              {#if $user.email !== row.email}
+              {#if $user.email !== row}
                 <tr>
-                  <td>{row.email}</td>
+                  <td>{row}</td>
                   <td
                     ><button
                       class="accessible-btn"
-                      on:click={() => loginAs(row.email)}
+                      on:click={() => loginAs(row)}
                     >
                       <Fa icon={faSignInAlt} size="md" /></button
                     >
