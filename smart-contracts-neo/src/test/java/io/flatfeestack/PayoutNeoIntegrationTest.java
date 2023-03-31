@@ -1,5 +1,6 @@
 package io.flatfeestack;
 
+import io.neow3j.contract.ContractManagement;
 import io.neow3j.contract.GasToken;
 import io.neow3j.contract.SmartContract;
 import io.neow3j.crypto.Sign;
@@ -13,9 +14,13 @@ import io.neow3j.test.ContractTest;
 import io.neow3j.test.ContractTestExtension;
 import io.neow3j.test.DeployConfig;
 import io.neow3j.test.DeployConfiguration;
+import io.neow3j.transaction.AccountSigner;
 import io.neow3j.transaction.Transaction;
 import io.neow3j.transaction.Witness;
 import io.neow3j.transaction.exceptions.TransactionConfigurationException;
+import io.neow3j.transaction.witnessrule.CalledByContractCondition;
+import io.neow3j.transaction.witnessrule.WitnessAction;
+import io.neow3j.transaction.witnessrule.WitnessRule;
 import io.neow3j.types.ContractParameter;
 import io.neow3j.types.Hash160;
 import io.neow3j.types.Hash256;
@@ -53,7 +58,6 @@ import static io.flatfeestack.TestHelper.printFees;
 import static io.flatfeestack.TestHelper.sendAndWaitUntilTransactionIsExecuted;
 import static io.neow3j.contract.Token.toFractions;
 import static io.neow3j.transaction.AccountSigner.calledByEntry;
-import static io.neow3j.transaction.AccountSigner.global;
 import static io.neow3j.transaction.AccountSigner.none;
 import static io.neow3j.types.ContractParameter.array;
 import static io.neow3j.types.ContractParameter.hash160;
@@ -124,7 +128,11 @@ public class PayoutNeoIntegrationTest {
         DeployConfiguration config = new DeployConfiguration();
         ContractParameter ownerPubKeyParam = publicKey(ownerPubKey);
         config.setDeployParam(ownerPubKeyParam);
-        config.setSigner(global(owner));
+        WitnessRule rule = new WitnessRule(
+                WitnessAction.ALLOW,
+                new CalledByContractCondition(ContractManagement.SCRIPT_HASH)
+        );
+        config.setSigner((AccountSigner) none(owner).setRules(rule));
         return config;
     }
 
@@ -185,7 +193,7 @@ public class PayoutNeoIntegrationTest {
             throws Throwable {
 
         Hash256 txHash = payoutContract
-                .invokeFunction(setTeas, array(ownerIds), array(oldTea), array(newTea))
+                .invokeFunction(setTeas, array((Object[]) ownerIds), array((Object[]) oldTea), array((Object[]) newTea))
                 .signers(calledByEntry(owner))
                 .sign()
                 .send()
@@ -585,9 +593,9 @@ public class PayoutNeoIntegrationTest {
 
     @Test
     public void test1_batchPayout() throws Throwable {
-        ContractParameter accountsParam = array(devs);
-        ContractParameter ownerIdsParam = array(ownerIds);
-        ContractParameter teasParam = array(teas);
+        ContractParameter accountsParam = array((Object[]) devs);
+        ContractParameter ownerIdsParam = array((Object[]) ownerIds);
+        ContractParameter teasParam = array((Object[]) teas);
         Transaction tx = payoutContract.invokeFunction(batchPayout, ownerIdsParam, accountsParam, teasParam)
                 .signers(calledByEntry(owner)).sign();
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
@@ -609,9 +617,9 @@ public class PayoutNeoIntegrationTest {
         for (BigInteger ownerId : ownerIds) {
             setTea(ownerId, BigInteger.ZERO, presetTea);
         }
-        ContractParameter ownerIdsParam = array(ownerIds);
-        ContractParameter accountsParam = array(devs);
-        ContractParameter teasParam = array(teas);
+        ContractParameter ownerIdsParam = array((Object[]) ownerIds);
+        ContractParameter accountsParam = array((Object[]) devs);
+        ContractParameter teasParam = array((Object[]) teas);
         Transaction tx = payoutContract.invokeFunction(batchPayout, ownerIdsParam, accountsParam, teasParam)
                 .signers(calledByEntry(owner)).sign();
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
@@ -633,9 +641,9 @@ public class PayoutNeoIntegrationTest {
         for (int i = 0; i < nrAccounts; i++) {
             setTea(ownerIds[i], BigInteger.ZERO, presetTeas[i]);
         }
-        ContractParameter ownerIdsParam = array(ownerIds);
-        ContractParameter accountsParam = array(devs);
-        ContractParameter teasParam = array(teas);
+        ContractParameter ownerIdsParam = array((Object[]) ownerIds);
+        ContractParameter accountsParam = array((Object[]) devs);
+        ContractParameter teasParam = array((Object[]) teas);
         Transaction tx = payoutContract.invokeFunction(batchPayout, ownerIdsParam, accountsParam, teasParam)
                 .signers(calledByEntry(owner)).sign();
         Hash256 txHash = tx.send().getSendRawTransaction().getHash();
@@ -668,9 +676,9 @@ public class PayoutNeoIntegrationTest {
         BigInteger[] teas = new BigInteger[2];
         teas[0] = contractGasBalance;
         teas[1] = BigInteger.ONE;
-        ContractParameter ownerIdsParam = array(ownerIds);
-        ContractParameter accountsParam = array(devs);
-        ContractParameter teasParam = array(teas);
+        ContractParameter ownerIdsParam = array((Object[]) ownerIds);
+        ContractParameter accountsParam = array((Object[]) devs);
+        ContractParameter teasParam = array((Object[]) teas);
 
         TransactionConfigurationException thrown = assertThrows(TransactionConfigurationException.class,
                 () -> payoutContract.invokeFunction(batchPayout, ownerIdsParam, accountsParam, teasParam)
