@@ -177,3 +177,5 @@ gradle.properties
 **/gradle.properties
 .java-version
 
+.DS_Store
+.ipynb_checkpoints/

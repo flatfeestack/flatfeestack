@@ -1,7 +1,7 @@
 # payout-neo-contracts
 
-This repository contains a PoC implementation of a Smart Contract (SC) for the Neo N3 blockchain. It introduces a mechanism for transparent 
-and scalable blockchain-based payments for the FlatFeeStack project.
+This repository contains a PoC implementation of a smart contract for the Neo N3 blockchain. It introduces a mechanism
+for transparent and scalable blockchain-based payments for the FlatFeeStack project.
 
 ### Dependencies
 
@@ -19,8 +19,8 @@ neow3jCompiler {
 }
 ```
 
-Then run the following command to compile the https://github.com/flatfeestack/payout-eth-contracts and find its compiled components as a `.nef` and a `.manifest.json` file in 
-the `/build` folder.
+Then run the following command to compile the PayoutNeo smart contract and find its compiled components as a `.nef` and
+a `.manifest.json` file in the `/build` folder.
 
 ```bash
 ./gradlew neow3jCompile
@@ -28,9 +28,8 @@ the `/build` folder.
 
 ### Testing
 
-The SCs `PayoutNeo` and `PayoutNeoForEvaluation` have been tested thoroughly. The tests are run on a local Neo N3 network 
-utilizing the [neo3-privatenet-docker](https://github.com/AxLabs/neo3-privatenet-docker) provided by [AxLabs](https://axlabs.com/). Its 
-configuration is specified in the resources folder `/node-config` and set up in the file `NeoTestContainer`. 
+The smart contracts `PayoutNeo` and `PayoutNeoForEvaluation` have been tested thoroughly. The tests run with neow3j's
+integrated test framework which requires docker.
 
 ### Evaluation
 
