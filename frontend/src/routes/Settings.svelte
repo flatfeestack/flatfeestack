@@ -45,6 +45,11 @@
     currenciesWithoutWallet = tmp;
   }
 
+  $: {
+    const [firstKey] = currenciesWithoutWallet.keys();
+    newPayoutCurrency = newPayoutCurrency || firstKey;
+  }
+
   async function handleAddPayoutAddress() {
     try {
       let regex;
@@ -57,19 +62,21 @@
         case "XTZ":
           break;
         default:
-          $error = "Invalid currency";
+          throw "Invalid currency";
       }
 
       if (!newPayoutCurrency || (regex && !newPayoutAddress.match(regex))) {
-        $error = "Invalid ethereum address";
+        throw "Invalid ethereum address";
       }
 
-      let confirmedPayoutAddress: PayoutAddress =
+      const confirmedPayoutAddress: PayoutAddress =
         await API.user.addPayoutAddress(newPayoutCurrency, newPayoutAddress);
+
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = "";
+      newPayoutCurrency = "";
     } catch (e) {
-      if (e.response.status === 409) {
+      if (typeof e !== "string" && e.response.status === 409) {
         $error =
           "Wallet Address is already used by someone else. Please use one Wallet per user.";
         return;
