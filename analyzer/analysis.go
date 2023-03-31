@@ -233,6 +233,10 @@ func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Tra
 }
 
 func addToMap(authorEmail string, authorName string, authorMap map[string]Contribution, stats *git.DiffStats, authorFactor float64, merge int) {
+	if strings.Contains(authorEmail, "users.noreply.github.com") {
+		return
+	}
+
 	c1, _ := authorMap[authorEmail]
 
 	names := authorMap[authorEmail].Names

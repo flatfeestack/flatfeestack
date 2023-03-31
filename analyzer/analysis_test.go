@@ -239,52 +239,47 @@ func TestFilteringNoReplyAddresses(t *testing.T) {
 	expectedOutput := make(map[string]FlatFeeWeight)
 	expectedOutput["github+dockerlibrarybot@infosiftr.com"] = FlatFeeWeight{
 		Names:  []string{"Docker Library Bot"},
-		Weight: 0.6960680833387077,
+		Weight: 0.7308813697691079,
 	}
 
 	expectedOutput["admwiggin@gmail.com"] = FlatFeeWeight{
 		Names:  []string{"Tianon Gravi"},
-		Weight: 0.09601060712181603,
+		Weight: 0.09803996012354967,
 	}
 
 	expectedOutput["tim@bastelstu.be"] = FlatFeeWeight{
 		Names:  []string{"Tim Düsterhus"},
-		Weight: 0.06343008222593352,
-	}
-
-	expectedOutput["45041769+jnoordsij@users.noreply.github.com"] = FlatFeeWeight{
-		Names:  []string{"Jesper Noordsij"},
-		Weight: 0.04348378390633717,
+		Weight: 0.06702303713647892,
 	}
 
 	expectedOutput["jesper@sslleiden.nl"] = FlatFeeWeight{
 		Names:  []string{"Jesper Noordsij"},
-		Weight: 0.03821310125341885,
+		Weight: 0.039972300652016166,
 	}
 
 	expectedOutput["kevin@dunglas.fr"] = FlatFeeWeight{
 		Names:  []string{"Kévin Dunglas"},
-		Weight: 0.01969302281330777,
+		Weight: 0.02010545925252148,
 	}
 
 	expectedOutput["jakob@linskeseder.com"] = FlatFeeWeight{
 		Names:  []string{"Jakob Linskeseder"},
-		Weight: 0.009927253962858824,
+		Weight: 0.010139343706406269,
 	}
 
 	expectedOutput["joe@infosiftr.com"] = FlatFeeWeight{
 		Names:  []string{"Joe Ferguson"},
-		Weight: 0.009671066844501173,
+		Weight: 0.009864526897964366,
 	}
 
 	expectedOutput["yosifkit@gmail.com"] = FlatFeeWeight{
 		Names:  []string{"Joseph Ferguson"},
-		Weight: 0.009624898908669284,
+		Weight: 0.009815001672578297,
 	}
 
 	expectedOutput["joseph.ferguson@docker.com"] = FlatFeeWeight{
 		Names:  []string{"yosifkit"},
-		Weight: 0.01387809962444965,
+		Weight: 0.014159000789376939,
 	}
 
 	startDate, err := time.Parse(time.RFC3339, "2022-10-01T12:00:00Z")
@@ -294,6 +289,10 @@ func TestFilteringNoReplyAddresses(t *testing.T) {
 
 	outputScore, err := weightContributions(c)
 	require.Nil(t, err)
+
+	for _, v := range outputScore {
+		fmt.Printf("out: %v\n", v)
+	}
 
 	sumOfScores := 0.0
 	for _, v := range outputScore {
