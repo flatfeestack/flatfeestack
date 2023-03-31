@@ -232,6 +232,82 @@ func TestAnalyzeRepositoryFromRepository_DateRange(t *testing.T) {
 	_ = os.RemoveAll("./test-repository")
 }
 
+func TestFilteringNoReplyAddresses(t *testing.T) {
+	opts = &Opts{}
+	opts.GitBasePath = "/tmp"
+
+	expectedOutput := make(map[string]FlatFeeWeight)
+	expectedOutput["github+dockerlibrarybot@infosiftr.com"] = FlatFeeWeight{
+		Names:  []string{"Docker Library Bot"},
+		Weight: 0.6960680833387077,
+	}
+
+	expectedOutput["admwiggin@gmail.com"] = FlatFeeWeight{
+		Names:  []string{"Tianon Gravi"},
+		Weight: 0.09601060712181603,
+	}
+
+	expectedOutput["tim@bastelstu.be"] = FlatFeeWeight{
+		Names:  []string{"Tim Düsterhus"},
+		Weight: 0.06343008222593352,
+	}
+
+	expectedOutput["45041769+jnoordsij@users.noreply.github.com"] = FlatFeeWeight{
+		Names:  []string{"Jesper Noordsij"},
+		Weight: 0.04348378390633717,
+	}
+
+	expectedOutput["jesper@sslleiden.nl"] = FlatFeeWeight{
+		Names:  []string{"Jesper Noordsij"},
+		Weight: 0.03821310125341885,
+	}
+
+	expectedOutput["kevin@dunglas.fr"] = FlatFeeWeight{
+		Names:  []string{"Kévin Dunglas"},
+		Weight: 0.01969302281330777,
+	}
+
+	expectedOutput["jakob@linskeseder.com"] = FlatFeeWeight{
+		Names:  []string{"Jakob Linskeseder"},
+		Weight: 0.009927253962858824,
+	}
+
+	expectedOutput["joe@infosiftr.com"] = FlatFeeWeight{
+		Names:  []string{"Joe Ferguson"},
+		Weight: 0.009671066844501173,
+	}
+
+	expectedOutput["yosifkit@gmail.com"] = FlatFeeWeight{
+		Names:  []string{"Joseph Ferguson"},
+		Weight: 0.009624898908669284,
+	}
+
+	expectedOutput["joseph.ferguson@docker.com"] = FlatFeeWeight{
+		Names:  []string{"yosifkit"},
+		Weight: 0.01387809962444965,
+	}
+
+	startDate, err := time.Parse(time.RFC3339, "2022-10-01T12:00:00Z")
+	endDate, err := time.Parse(time.RFC3339, "2023-02-28T12:00:00Z")
+	c, err := analyzeRepository(startDate, endDate, "https://github.com/docker-library/php.git")
+	require.Nil(t, err)
+
+	outputScore, err := weightContributions(c)
+	require.Nil(t, err)
+
+	sumOfScores := 0.0
+	for _, v := range outputScore {
+		expected, found := expectedOutput[v.Email]
+		sumOfScores += v.Weight
+		assert.Equal(t, true, found)
+		assert.Equal(t, fmt.Sprintf("%.12f", expected.Weight), fmt.Sprintf("%.12f", v.Weight))
+	}
+
+	assert.Equal(t, len(outputScore), len(expectedOutput))
+	assert.Equal(t, 1.0, roundToDecimals(sumOfScores, 12))
+	assert.Equal(t, nil, err)
+}
+
 // Helpers
 func roundToDecimals(f float64, decimals int) float64 {
 	return math.Round(f*float64(10)*float64(decimals)) / (float64(10) * float64(decimals))
