@@ -233,6 +233,6 @@
   </main>
 
   <footer class="text-center">
-    We used the following <a href="stats.html">dependencies</a>
+    We used the following <a href="/stats.html">dependencies</a>
   </footer>
 </div>
