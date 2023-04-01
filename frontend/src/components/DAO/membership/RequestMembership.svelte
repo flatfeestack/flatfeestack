@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getContext } from "svelte";
+  import { bylawsUrl } from "../../../ts/daoStore";
 
   let isAgreed = false;
 
@@ -34,11 +35,11 @@
       <label>
         <input type="checkbox" bind:checked={isAgreed} />
         I agree with the current
-        <a
-          href="https://flatfeestack.github.io/bylaws/"
-          target="_blank"
-          rel="noreferrer">bylaws</a
-        >
+        {#if $bylawsUrl === null}bylaws{:else}<a
+            href={$bylawsUrl}
+            target="_blank"
+            rel="noreferrer">bylaws</a
+          >{/if}
       </label>
     </div>
   </div>

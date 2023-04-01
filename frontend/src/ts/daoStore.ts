@@ -152,3 +152,19 @@ export const walletContract = derived(
     }
   }
 );
+
+export const bylawsUrl = derived<Readable<Contract | null>, string | null>(
+  daoContract,
+  ($daoContract, set) => {
+    if ($daoContract === null) {
+      set(null);
+    } else {
+      // the empty bylaws URLs is a special scenario in the first week after DAO deployment
+      // the DAO starts up without any bylaws attached, the first bylaws need to be confirmed in the first assembly
+      // scheduled for a week after deployment
+      $daoContract.bylawsUrl().then((retrievedBylawsUrl: string) => {
+        set(retrievedBylawsUrl === "" ? null : retrievedBylawsUrl);
+      });
+    }
+  }
+);

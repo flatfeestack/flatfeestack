@@ -1,5 +1,6 @@
 <script lang="ts">
   import Navigation from "../../components/DAO/Navigation.svelte";
+  import { bylawsUrl } from "../../ts/daoStore";
 </script>
 
 <Navigation>
@@ -24,11 +25,11 @@
   </p>
 
   <p>
-    The rights and obligations of DAO members are governed by the DAO's <a
-      href="https://flatfeestack.github.io/bylaws/"
-      target="_blank"
-      rel="noreferrer">bylaws</a
-    >
+    The rights and obligations of DAO members are governed by the DAO's {#if $bylawsUrl === null}bylaws{:else}<a
+        href={$bylawsUrl}
+        target="_blank"
+        rel="noreferrer">bylaws</a
+      >{/if}
     and the
     <a
       href="https://www.fedlex.admin.ch/eli/cc/24/233_245_233/en"
