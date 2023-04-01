@@ -16,7 +16,7 @@
       const res1 = await pr1;
       const res2 = await pr2;
 
-      contributionSummaries = res1 ? res1 : contributionSummaries;
+      contributionSummaries = res1 || contributionSummaries;
       user = res2;
     } catch (e) {
       $error = e;
@@ -30,7 +30,7 @@
 <div class="container-col">
   {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="px-2">
-      Supported Repositories for {user.name ? user.name : user.id}
+      Supported Repositories for {user.name || user.id}
     </h2>
     {#if user.image}
       <img class="image-org" src={user.image} alt="supported user repository" />

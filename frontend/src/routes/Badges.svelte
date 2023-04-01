@@ -17,8 +17,7 @@
 
   let contributionSummaries: ContributionSummary[] = [];
   let contributions: Contributions[] = [];
-  let canvas;
-  let showGraph;
+  let showGraph: string | undefined;
   let offset = 0;
 
   Chart.register(...registerables);
@@ -76,10 +75,10 @@
       const pr3 = API.user.contributionsSummary();
 
       const res2 = await pr2;
-      contributions = res2 ? res2 : contributions;
+      contributions = res2 || contributions;
 
       const res3 = await pr3;
-      contributionSummaries = res3 ? res3 : contributionSummaries;
+      contributionSummaries = res3 || contributionSummaries;
     } catch (e) {
       $error = e;
     }
@@ -204,7 +203,7 @@
               <td>{contribution.repoName}</td>
               {#if contribution.contributorEmail}
                 <td>{contribution.contributorEmail}</td>
-                <td>{contribution.contributorWeight * 100}%</td>
+                <td>{(contribution.contributorWeight || 1) * 100}%</td>
                 <td>
                   {#if contribution.contributorUserId}
                     Realized
@@ -212,12 +211,17 @@
                     Unclaimed
                   {/if}
                 </td>
-                <td>{formatBalance(contribution.balance, "TODO")}</td>
+                <td
+                  >{formatBalance(
+                    contribution.balance,
+                    contribution.currency
+                  )}</td
+                >
               {:else}
                 <td colspan="4"
                   >Unprocessed: {formatBalance(
-                    contribution.balanceRepo,
-                    "TODO"
+                    contribution.balance,
+                    contribution.currency
                   )} (analysis pending)</td
                 >
               {/if}

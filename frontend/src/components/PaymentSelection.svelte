@@ -2,7 +2,7 @@
   import FiatTab from "./PaymentTabs/FiatTab.svelte";
   import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
   import Tabs from "./Tabs.svelte";
-  import { user, config, userBalances, error } from "../ts/mainStore";
+  import { config, userBalances, error } from "../ts/mainStore";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import type { Plan } from "../types/users";
@@ -15,9 +15,6 @@
 
   let currentFreq = $config.plans[0].freq;
   let currentSeats = 1;
-  let isSubmitting = false;
-  let paymentProcessing = false;
-  let showSuccess = false;
   let selectedPlan: Plan;
   $: {
     selectedPlan = $config.plans.find((e) => e.freq == currentFreq);
@@ -108,7 +105,7 @@
       <div>
         Sponsoring Amount:<span class="bold">${remaining.toFixed(2)}</span>
       </div>
-      {#if current.toFixed(2) > 0}
+      {#if current > 0}
         <div class="small">
           (${total.toFixed(0)} [{currentSeats} x {selectedPlan.price}
           {selectedPlan.freq > 365 ? " x " + selectedPlan.freq / 365 : ""}] - ${current.toFixed(
