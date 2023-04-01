@@ -5,6 +5,7 @@
   import { error, user } from "../ts/mainStore";
   import type { Contributions, ContributionSummary } from "../types/users";
   import { formatDay, formatBalance } from "../ts/services";
+  import { Chart, registerables } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
   import Fa from "svelte-fa";
   import {
@@ -19,6 +20,8 @@
   let canvas;
   let showGraph;
   let offset = 0;
+
+  Chart.register(...registerables);
 
   //https://www.chartjs.org/docs/latest/configuration/tooltip.html
   let dataOptions = {
