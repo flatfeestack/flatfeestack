@@ -11,6 +11,8 @@
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
   import Navigation from "../../components/DAO/Navigation.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import { onDestroy } from "svelte";
 
   interface VoteValues {
     canVote: boolean;
@@ -37,6 +39,8 @@
   let voteValues: VoteValuesContainer = {};
   let votes: VotesContainer = {};
   let hasAnyVotes = false;
+
+  checkUndefinedProvider();
 
   $: {
     if ($votingSlots === null) {
@@ -152,6 +156,10 @@
       }
     }
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <style>

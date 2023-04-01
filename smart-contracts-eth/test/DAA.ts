@@ -48,10 +48,12 @@ describe("DAO", () => {
     const DAO = await ethers.getContractFactory("DAO");
     const bylawsHash =
       "3d3cb723c544b48169a908737027aadfdc56540a7b9121e6bf90695e214e209c";
+    const bylawsUrl = "https://flatfeestack.github.io/bylaws/";
     const dao = await upgrades.deployProxy(DAO, [
       membership.address,
       timelock.address,
       bylawsHash,
+      bylawsUrl,
     ]);
     await dao.deployed();
 
@@ -123,6 +125,7 @@ describe("DAO", () => {
     await dao.connect(firstCouncilMember).execute(...initialProposalArgs);
 
     expect(await dao.bylawsHash()).to.eq(bylawsHash);
+    expect(await dao.bylawsUrl()).to.eq(bylawsUrl);
 
     // create proposal slot
     const firstVotingSlot =
@@ -1219,19 +1222,20 @@ describe("DAO", () => {
     });
   });
 
-  describe("setNewBylawsHash", () => {
-    it("can set new bylaws hash via proposal", async () => {
+  describe("setNewBylaws", () => {
+    it("can set new bylaws via proposal", async () => {
       const fixtures = await deployFixture();
       const { dao, timelock } = fixtures.contracts;
       const { firstCouncilMember, secondCouncilMember, regularMember } =
         fixtures.entities;
       const { firstVotingSlot } = fixtures;
 
-      const oldHash = await dao.bylawsHash();
       const newHash =
         "0466442ae9a903c3028fbea8cb271e7e1ca0ac0ea51ab8823955d3c7e93809b4";
+      const newUrl = "https://www.nyan.cat/";
+
       const transferCalldatas = [
-        dao.interface.encodeFunctionData("setNewBylawsHash", [newHash]),
+        dao.interface.encodeFunctionData("setNewBylaws", [newHash, newUrl]),
       ];
 
       const targets = [dao.address];
@@ -1254,7 +1258,7 @@ describe("DAO", () => {
       await mine(await timelock.getMinDelay());
       await expect(dao.connect(firstCouncilMember).execute(...proposalArgs))
         .to.emit(dao, "BylawsChanged")
-        .withArgs(oldHash, newHash);
+        .withArgs(newUrl, newHash);
     });
 
     it("bylaws hash can not be set directly", async () => {
@@ -1264,8 +1268,10 @@ describe("DAO", () => {
 
       const newHash =
         "0466442ae9a903c3028fbea8cb271e7e1ca0ac0ea51ab8823955d3c7e93809b4";
+      const newUrl = "https://www.nyan.cat/";
+
       await expect(
-        dao.connect(firstCouncilMember).setNewBylawsHash(newHash)
+        dao.connect(firstCouncilMember).setNewBylaws(newHash, newUrl)
       ).to.revertedWith("Governor: onlyGovernance");
     });
   });

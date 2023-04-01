@@ -13,6 +13,8 @@
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import { onDestroy } from "svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;
@@ -50,6 +52,8 @@
     proposalId: string;
     proposalDescription: string;
   }
+
+  checkUndefinedProvider();
 
   $: {
     if (
@@ -175,6 +179,10 @@
       }
     }
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <style>

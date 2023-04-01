@@ -1,16 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import detectEthereumProvider from "@metamask/detect-provider";
-  import { navigate } from "svelte-routing";
-
-  onMount(async () => {
-    try {
-      const provider = await detectEthereumProvider();
-      if (provider !== null) {
-        navigate("/dao/home");
-      }
-    } catch {}
-  });
 </script>
 
 <div class="centerContainer">

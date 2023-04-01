@@ -6,6 +6,10 @@
   import CancelVotingSlot from "../../components/DAO/council/CancelVotingSlot.svelte";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import MembershipRequests from "../../components/DAO/council/MembershipRequests.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import { onDestroy } from "svelte";
+
+  checkUndefinedProvider();
 
   $: {
     if ($councilMembers === null || $userEthereumAddress === null) {
@@ -19,6 +23,10 @@
       $isSubmitting = false;
     }
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <Navigation>

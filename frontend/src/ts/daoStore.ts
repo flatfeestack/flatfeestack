@@ -5,7 +5,10 @@ import { DAOABI } from "../contracts/DAO";
 import { MembershipABI } from "../contracts/Membership";
 import { WalletABI } from "../contracts/Wallet";
 
-export const provider = writable<Web3Provider | null>(null);
+// provider is null when it's not initialized
+// undefined when we did not detect any provider
+// this case should be handled by the components themselves
+export const provider = writable<Web3Provider | null | undefined>(null);
 export const signer = writable<JsonRpcSigner | null>(null);
 
 export const currentBlockNumber = derived<
@@ -14,7 +17,7 @@ export const currentBlockNumber = derived<
 >(
   provider,
   ($provider, set) => {
-    if ($provider === null) {
+    if ($provider === null || $provider === undefined) {
       set(null);
     } else {
       $provider.getBlockNumber().then((blockNumber) => {
@@ -31,7 +34,11 @@ export const currentBlockTimestamp = derived<
 >(
   [provider, currentBlockNumber],
   ([$provider, $currentBlockNumber], set) => {
-    if ($provider === null || $currentBlockNumber === null) {
+    if (
+      $provider === null ||
+      $provider === undefined ||
+      $currentBlockNumber === null
+    ) {
       set(null);
     } else {
       $provider.getBlock($currentBlockNumber).then((currentBlock) => {
@@ -45,7 +52,7 @@ export const currentBlockTimestamp = derived<
 export const daoContract = derived(
   [provider, signer],
   ([$provider, $signer]) => {
-    if ($provider === null) {
+    if ($provider === null || $provider === undefined) {
       return null;
     } else if ($signer === null) {
       return new ethers.Contract(
@@ -80,7 +87,7 @@ export const userEthereumAddress = derived(
 export const membershipContract = derived(
   [provider, signer],
   ([$provider, $signer]) => {
-    if ($provider === null || $signer === null) {
+    if ($provider === null || $provider === undefined || $signer === null) {
       return null;
     } else {
       return new ethers.Contract(
@@ -134,7 +141,7 @@ export const councilMembers = derived<
 export const walletContract = derived(
   [provider, signer],
   ([$provider, $signer]) => {
-    if ($provider === null || $signer === null) {
+    if ($provider === null || $provider === undefined || $signer === null) {
       return null;
     } else {
       return new ethers.Contract(
@@ -142,6 +149,22 @@ export const walletContract = derived(
         WalletABI,
         $signer
       );
+    }
+  }
+);
+
+export const bylawsUrl = derived<Readable<Contract | null>, string | null>(
+  daoContract,
+  ($daoContract, set) => {
+    if ($daoContract === null) {
+      set(null);
+    } else {
+      // the empty bylaws URLs is a special scenario in the first week after DAO deployment
+      // the DAO starts up without any bylaws attached, the first bylaws need to be confirmed in the first assembly
+      // scheduled for a week after deployment
+      $daoContract.bylawsUrl().then((retrievedBylawsUrl: string) => {
+        set(retrievedBylawsUrl === "" ? null : retrievedBylawsUrl);
+      });
     }
   }
 );

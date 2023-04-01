@@ -24,6 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
             membership.address,
             timelock.address,
             "9f2984a2694119e92a301a51dcc800d1ee41bfaa29205b1a5474f2bde22ae3a6",
+            "https://flatfeestack.github.io/bylaws",
           ],
         },
       },

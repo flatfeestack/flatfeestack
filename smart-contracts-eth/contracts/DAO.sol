@@ -38,16 +38,22 @@ contract DAO is
     uint256 public extraordinaryVoteQuorumNominator;
     uint256 public associationDissolutionQuorumNominator;
     uint256 public votingSlotAnnouncementPeriod;
+    string public bylawsUrl;
 
-    event BylawsChanged(string indexed oldHash, string indexed newHash);
+    event BylawsChanged(
+        string indexed newBylawsUrl,
+        string indexed newBylawsHash
+    );
 
     function initialize(
         Membership _membership,
         TimelockControllerUpgradeable _timelock,
-        string memory bylaws
+        string memory bylawsHash,
+        string memory bylawsUrl
     ) public initializer {
         _membershipContract = Membership(_membership);
         _foundingSetupDone = false;
+
         extraOrdinaryAssemblyVotingPeriod = 50400;
         extraordinaryVoteQuorumNominator = 20;
         associationDissolutionQuorumNominator = 20;
@@ -58,7 +64,7 @@ contract DAO is
         governorCountingSimpleInit();
         governorVotesQuorumFractionInit(5);
         governorTimelockControlInit(_timelock);
-        setupDAOFoundingSlotAndProposal(bylaws);
+        setupDAOFoundingSlotAndProposal(bylawsHash, bylawsUrl);
     }
 
     function votingDelay() public pure override returns (uint256) {
@@ -290,13 +296,20 @@ contract DAO is
         return super.supportsInterface(interfaceId);
     }
 
-    function setNewBylawsHash(string memory newHash) external onlyGovernance {
-        string memory oldHash = bylawsHash;
-        bylawsHash = newHash;
-        emit BylawsChanged(oldHash, bylawsHash);
+    function setNewBylaws(
+        string memory newBylawsHash,
+        string memory newBylawsUrl
+    ) external onlyGovernance {
+        bylawsHash = newBylawsHash;
+        bylawsUrl = newBylawsUrl;
+
+        emit BylawsChanged(bylawsUrl, bylawsHash);
     }
 
-    function setupDAOFoundingSlotAndProposal(string memory bylaws) internal {
+    function setupDAOFoundingSlotAndProposal(
+        string memory newBylawsHash,
+        string memory newBylawsUrl
+    ) internal {
         require(_foundingSetupDone == false, "already done");
 
         // Create slot
@@ -306,7 +319,10 @@ contract DAO is
         emit NewTimeslotSet(slotBlockNumber);
 
         // CreateProposal
-        bytes memory calldatas = abi.encodeCall(DAO.setNewBylawsHash, bylaws);
+        bytes memory calldatas = abi.encodeCall(
+            DAO.setNewBylaws,
+            (newBylawsHash, newBylawsUrl)
+        );
         string memory description = "Founding Proposal. Set initial bylaws.";
         address[] memory targets = new address[](1);
         targets[0] = address(this);
