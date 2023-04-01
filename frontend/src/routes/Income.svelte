@@ -2,7 +2,7 @@
   import Navigation from "../components/Navigation.svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/mainStore";
-  import { formatDate, timeSince } from "../ts/services";
+  import { formatBalance, formatDate, timeSince } from "../ts/services";
 </script>
 
 <Navigation>
@@ -37,7 +37,12 @@
                   ? contribution.sponsorName
                   : "[no name]"}</td
               >
-              <td>{contribution.balance}</td>
+              <td
+                >{formatBalance(
+                  contribution.balance,
+                  contribution.currency
+                )}</td
+              >
               <td>{contribution.currency}</td>
               <td>
                 {#if contribution.contributorUserId}
