@@ -1,6 +1,6 @@
 <script lang="ts">
   import { BigNumber, ethers } from "ethers";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import {
     currentBlockNumber,
@@ -14,6 +14,7 @@
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import Navigation from "../../components/DAO/Navigation.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
 
   enum TransactionEventType {
     AcceptPayment,
@@ -33,6 +34,8 @@
   let transactions: TransactionEvent[] | null = null;
   let totalBalance: BigNumber = BigNumber.from("0");
   let totalAllowance: BigNumber = BigNumber.from("0");
+
+  checkUndefinedProvider();
 
   currentBlockNumber.subscribe(async (_currentBlockNumber) => {
     await prepareView();
@@ -133,6 +136,10 @@
   async function withdrawFunds() {
     await $walletContract.withdrawMoney($userEthereumAddress);
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <Navigation>

@@ -9,9 +9,13 @@
     queueProposal,
   } from "../../utils/proposalFunctions";
   import Navigation from "../../components/DAO/Navigation.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import { onDestroy } from "svelte";
 
   export let blockNumber: string;
   let proposals = [];
+
+  checkUndefinedProvider();
 
   $: {
     if (
@@ -65,6 +69,10 @@
 
     $isSubmitting = false;
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <Navigation>

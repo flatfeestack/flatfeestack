@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import {
     daoContract,
@@ -17,6 +17,9 @@
   import RemoveCouncilMember from "../../components/DAO/proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
   import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+
+  checkUndefinedProvider();
 
   const proposalTypes: ProposalType[] = [
     {
@@ -93,6 +96,10 @@
     $isSubmitting = false;
     navigate("/dao/votes");
   }
+
+  onDestroy(() => {
+    $isSubmitting = false;
+  });
 </script>
 
 <style>

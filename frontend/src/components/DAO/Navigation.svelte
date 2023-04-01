@@ -2,16 +2,16 @@
   import { Web3Provider } from "@ethersproject/providers";
   import {
     faHippo,
-    faList,
     faHome,
+    faList,
     faMoneyBill,
     faPerson,
     faUserAstronaut,
   } from "@fortawesome/free-solid-svg-icons";
   import detectEthereumProvider from "@metamask/detect-provider";
-  import { getContext, onMount } from "svelte";
+  import { onMount } from "svelte";
   import Fa from "svelte-fa";
-  import { links, navigate } from "svelte-routing";
+  import { links } from "svelte-routing";
   import {
     councilMembers,
     membershipStatusValue,
@@ -19,11 +19,12 @@
     signer,
     userEthereumAddress,
   } from "../../ts/daoStore";
-  import { isSubmitting, route } from "../../ts/mainStore";
+  import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
+  import showMetaMaskRequired from "../../utils/showMetaMaskRequired";
+  import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
-  import truncateEthAddress from "../../utils/truncateEthereumAddress";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -32,19 +33,17 @@
 
   let membershipStatus: string;
 
-  const showMetaMaskRequired = () => navigate("/dao/metamask");
-
   onMount(async () => {
     try {
       const ethProv = await detectEthereumProvider();
       $provider = new Web3Provider(<any>ethProv);
-    } catch {
-      showMetaMaskRequired();
+    } catch (error) {
+      $provider = undefined;
     }
   });
 
   async function connectWallet() {
-    if ($provider === null) {
+    if ($provider === undefined) {
       showMetaMaskRequired();
     } else {
       await $provider.send("eth_requestAccounts", []);
