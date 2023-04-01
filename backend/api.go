@@ -851,40 +851,44 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 	s := m["seats"]
 
 	u, err := findUserByEmail(n)
-	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+	if err != nil || u == nil {
+		writeErrorf(w, http.StatusBadRequest, "Unable to find user from given e-mail address: %v", err)
 		return
 	}
 
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not determine amount of seats: %v", err)
 		return
 	}
 
 	paymentCycleInId, err := insertNewPaymentCycleIn(365, seats, timeNow())
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not create new payment cycle: %v", err)
 		return
 	}
+
+	balance := big.NewInt(120000000)
 
 	ubNew := UserBalance{
 		PaymentCycleInId: paymentCycleInId,
 		UserId:           u.Id,
-		Balance:          big.NewInt(2970),
+		Balance:          balance,
 		BalanceType:      "PAY",
 		CreatedAt:        timeNow(),
+		Split:            new(big.Int).Div(balance, big.NewInt(365*seats)),
+		Currency:         "USD",
 	}
 
 	err = insertUserBalance(ubNew)
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not create new user balance: %v", err)
 		return
 	}
 
 	err = updatePaymentCycleInId(u.Id, paymentCycleInId)
 	if err != nil {
-		writeErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		writeErrorf(w, http.StatusBadRequest, "Could not update payment cycle: %v", err)
 		return
 	}
 	return
