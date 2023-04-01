@@ -30,21 +30,21 @@ jobs:
           context: analyzer
           load: true
           target: builder
-          tags: ghcr.io/flatfeestack/flatfeestack/analyzer:test
+          tags: analyzer
 
       - name: Run tests
         run: |
-          docker run -v $(pwd)/analyzer:/app --rm ghcr.io/flatfeestack/flatfeestack/analyzer:test go test -v ./...
+          docker run -v $(pwd)/analyzer:/app --rm analyzer go test -v ./...
 
       - name: Build container
         uses: docker/build-push-action@v4
         with:
           context: analyzer
           load: true
-          tags: ghcr.io/flatfeestack/flatfeestack/analyzer:test
+          tags: analyzer
 
       - name: Run analyzer
-        run: docker run --env-file analyzer/.example.env --rm -d -p 9083:9083 ghcr.io/flatfeestack/flatfeestack/analyzer:test
+        run: docker run --env-file analyzer/.example.env --rm -d -p 9083:9083 analyzer
 
       - name: Check if analyzer is reachable
         uses: nick-fields/retry@v2
@@ -52,35 +52,3 @@ jobs:
           timeout_seconds: 15
           max_attempts: 5
           command: curl -v localhost:9083
-
-      - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.CR_PAT_USERNAME }}
-          password: ${{ secrets.CR_PAT_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            ghcr.io/flatfeestack/flatfeestack/analyzer
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha
-
-      - name: Push
-        uses: docker/build-push-action@v4
-        with:
-          context: analyzer
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}

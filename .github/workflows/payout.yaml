@@ -29,10 +29,10 @@ jobs:
         with:
           context: payout
           load: true
-          tags: ghcr.io/flatfeestack/flatfeestack/payout:test
+          tags: payout
 
       - name: Run payout
-        run: docker run --env-file payout/.example.env --rm -d -p 9084:9084 -e ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 -e NEO_URL=http://seed1t4.neo.org:20332 ghcr.io/flatfeestack/flatfeestack/payout:test
+        run: docker run --env-file payout/.example.env --rm -d -p 9084:9084 -e ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 -e NEO_URL=http://seed1t4.neo.org:20332 payout
 
       - name: Check if payout is reachable
         uses: nick-fields/retry@v2
