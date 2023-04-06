@@ -11,7 +11,7 @@ require (
 	github.com/libgit2/git2go/v34 v34.0.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/text v0.8.0
+	golang.org/x/text v0.9.0
 )
 
 require (
