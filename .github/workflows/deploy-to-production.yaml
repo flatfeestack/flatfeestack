@@ -1,0 +1,24 @@
+# Note that this pipeline will essentially pull the last tag of the defined from DigitalOcean registry
+# and re-deploy the components
+# this means, even if you deploy it from a feature branch, it won't deploy your feature branch, but always main
+
+name: Deploy to production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-to-production:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Trigger production deployment
+        run: doctl apps create-deployment --wait $(doctl apps list --output json | python3 -c "import sys, json; print(json.load(sys.stdin)[0]['id'])")
