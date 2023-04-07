@@ -32,9 +32,8 @@ jobs:
           context: analyzer
           load: true
           tags: "registry.digitalocean.com/flatfeestack/analyzer:${{ github.ref_name }}"
-          cache-from: |
-            "registry.digitalocean.com/flatfeestack/analyzer:${{ github.ref_name }}"
-            "registry.digitalocean.com/flatfeestack/analyzer:main"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run analyzer
         run: docker run --env-file analyzer/.example.env --rm -d -p 9083:9083 "registry.digitalocean.com/flatfeestack/analyzer:${{ github.ref_name }}"
@@ -52,7 +51,6 @@ jobs:
           context: analyzer
           push: true
           tags: "registry.digitalocean.com/flatfeestack/analyzer:${{ github.ref_name }}"
-          cache-to: type=registry,ref=registry.digitalocean.com/flatfeestack/analyzer:${{ github.ref_name }},mode=max
 
   build-and-push-backend:
     runs-on: ubuntu-latest
@@ -80,9 +78,8 @@ jobs:
           context: backend
           load: true
           tags: "registry.digitalocean.com/flatfeestack/backend:${{ github.ref_name }}"
-          cache-from: |
-            "registry.digitalocean.com/flatfeestack/backend:${{ github.ref_name }}"
-            "registry.digitalocean.com/flatfeestack/backend:main"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run Postgres server for testing
         run: docker run --env-file db/.example.env -p 5432:5432 -d postgres:15-alpine
@@ -103,7 +100,6 @@ jobs:
           context: backend
           push: true
           tags: "registry.digitalocean.com/flatfeestack/backend:${{ github.ref_name }}"
-          cache-to: type=registry,ref=registry.digitalocean.com/flatfeestack/backend:${{ github.ref_name }},mode=max
 
   build-and-push-fastauth:
     runs-on: ubuntu-latest
@@ -131,9 +127,8 @@ jobs:
           context: fastauth
           load: true
           tags: "registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}"
-          cache-from: |
-            "registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}"
-            "registry.digitalocean.com/flatfeestack/fastauth:main"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run Postgres server for testing
         run: docker run --env-file db/.example.env -p 5432:5432 -d postgres:15-alpine
@@ -154,7 +149,6 @@ jobs:
           context: fastauth
           push: true
           tags: "registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}"
-          cache-to: type=registry,ref=registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }},mode=max
 
   build-and-push-frontend:
     runs-on: ubuntu-latest
@@ -182,9 +176,8 @@ jobs:
           context: frontend
           load: true
           tags: "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
-          cache-from: |
-            "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
-            "registry.digitalocean.com/flatfeestack/frontend:main"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run frontend
         run: docker run --env-file frontend/.example.env --rm -d -p 9085:9085 "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
@@ -202,7 +195,6 @@ jobs:
           context: frontend
           push: true
           tags: "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
-          cache-to: type=registry,ref=registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }},mode=max
 
   build-and-push-payout:
     runs-on: ubuntu-latest
@@ -230,9 +222,8 @@ jobs:
           context: payout
           load: true
           tags: "registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }}"
-          cache-from: |
-            "registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }}"
-            "registry.digitalocean.com/flatfeestack/payout:main"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run payout
         run: docker run --env-file payout/.example.env --rm -d -p 9084:9084 -e ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161 -e NEO_URL=http://seed1t4.neo.org:20332 "registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }}"
@@ -250,4 +241,3 @@ jobs:
           context: payout
           push: true
           tags: "registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }}"
-          cache-to: type=registry,ref=registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }},mode=max
