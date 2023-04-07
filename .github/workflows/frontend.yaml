@@ -73,11 +73,11 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: frontend
-          tags: flatfeestack/frontend
+          tags: frontend
           load: true
 
       - name: Start container
-        run: docker run -d -p 9085:9085 flatfeestack/frontend
+        run: docker run -d -p 9085:9085 frontend
 
       - name: Check if frontend is reachable
         uses: nick-fields/retry@v2
