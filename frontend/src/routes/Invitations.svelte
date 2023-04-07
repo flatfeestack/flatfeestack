@@ -65,6 +65,7 @@
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
+
       const res1 = API.invite.inviteAuth(inviteEmail);
       const res2 = API.invite.invite(inviteEmail);
       const inv: Invitation = {
@@ -77,7 +78,8 @@
       await res1;
       await res2;
     } catch (e) {
-      $error = e;
+      $error =
+        "Duplicate email address. Can't invite the same address multiple times.";
     } finally {
       isAddInviteSubmitting = false;
     }
@@ -149,6 +151,7 @@
                 size="24"
                 maxlength="50"
                 type="email"
+                required
                 bind:value={inviteEmail}
               />&nbsp;
               <button

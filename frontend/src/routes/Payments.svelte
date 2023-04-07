@@ -3,20 +3,18 @@
   import { error, userBalances } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type { Repos } from "../types/users";
+  import type { Repo } from "../types/users";
   import { connectWs, formatDate, formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
-  let sponsoredRepos: Repos[] = [];
-  let invite_email;
-  let isSubmitting = false;
+  let sponsoredRepos: Repo[] = [];
 
   onMount(async () => {
     try {
       const pr1 = connectWs();
       const pr2 = API.user.getSponsored();
       const res2 = await pr2;
-      sponsoredRepos = res2 === null ? [] : res2;
+      sponsoredRepos = res2 || [];
       await pr1;
     } catch (e) {
       $error = e;

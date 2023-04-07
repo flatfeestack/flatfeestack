@@ -45,6 +45,11 @@
     currenciesWithoutWallet = tmp;
   }
 
+  $: {
+    const [firstKey] = currenciesWithoutWallet.keys();
+    newPayoutCurrency = newPayoutCurrency || firstKey;
+  }
+
   async function handleAddPayoutAddress() {
     try {
       let regex;
@@ -57,19 +62,21 @@
         case "XTZ":
           break;
         default:
-          $error = "Invalid currency";
+          throw "Invalid currency";
       }
 
       if (!newPayoutCurrency || (regex && !newPayoutAddress.match(regex))) {
-        $error = "Invalid ethereum address";
+        throw "Invalid ethereum address";
       }
 
-      let confirmedPayoutAddress: PayoutAddress =
+      const confirmedPayoutAddress: PayoutAddress =
         await API.user.addPayoutAddress(newPayoutCurrency, newPayoutAddress);
+
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = "";
+      newPayoutCurrency = "";
     } catch (e) {
-      if (e.response.status === 409) {
+      if (typeof e !== "string" && e.response.status === 409) {
         $error =
           "Wallet Address is already used by someone else. Please use one Wallet per user.";
         return;
@@ -78,7 +85,7 @@
     }
   }
 
-  async function removePaymentAddress(addressNumber: number) {
+  async function removePaymentAddress(addressNumber: string) {
     try {
       await API.user.removePayoutAddress(addressNumber);
       payoutAddresses = payoutAddresses.filter((e) => e.id !== addressNumber);
@@ -117,7 +124,7 @@
       gitEmails = [...gitEmails, ge];
       newEmail = "";
     } catch (e) {
-      $error = e;
+      $error = "Duplicate email address. Email can only be used once.";
     }
   }
 
@@ -195,7 +202,7 @@
   <p class="p-2 m-2">
     If you have multiple git email addresses, you can connect these addresses to
     your FlatFeeStack account. You must verify your git email address. Once it
-    has been validated, the confirm date will show the data of validation.
+    has been validated, the confirm date will show the date of validation.
   </p>
 
   <div class="min-w20 container">
@@ -232,14 +239,15 @@
         <tr>
           <td colspan="3">
             <div class="container-small">
-              <input
-                id="email-input"
-                name="email"
-                type="text"
-                bind:value={newEmail}
-                placeholder="Email"
-              />
               <form class="p-2" on:submit|preventDefault={handleAddEmail}>
+                <input
+                  id="email-input"
+                  name="email"
+                  type="email"
+                  required
+                  bind:value={newEmail}
+                  placeholder="Email"
+                />
                 <button class="ml-5 p-2 button1" type="submit"
                   >Add Git Email</button
                 >
