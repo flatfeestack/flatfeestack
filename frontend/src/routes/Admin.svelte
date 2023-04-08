@@ -12,6 +12,7 @@
   import Fa from "svelte-fa";
   import type { Repo } from "../types/users";
   import Dots from "../components/Dots.svelte";
+  import { navigate } from "svelte-routing";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
@@ -129,6 +130,7 @@
       const u = await API.user.get();
       user.set(u);
       loadedSponsoredRepos.set(false);
+      navigate("/user/search");
     } catch (e) {
       $error = e;
     }
@@ -267,7 +269,7 @@
             <td colspan="4">
               <form class="flex" on:submit|preventDefault={handleLinkGitUrl}>
                 <input
-                  input-size="32"
+                  size="32"
                   id="address-input"
                   name="address"
                   type="text"
@@ -296,7 +298,8 @@
     on:click={() => handleFakePayment(fakePaymentEmail, seats)}
     >Add Fake Payment</button
   >
-  Email: <input bind:value={fakePaymentEmail} /> Seats: <input bind:value={seats} />
+  Email: <input bind:value={fakePaymentEmail} /> Seats:
+  <input bind:value={seats} />
   <h2>Fake Contribution</h2>
   <button
     class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
