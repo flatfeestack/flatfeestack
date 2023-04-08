@@ -3,7 +3,7 @@ version: "3.9"
 services:
 
   auth:
-    image: ghcr.io/flatfeestack/flatfeestack/fastauth:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     build: ./fastauth
     restart: always
     env_file:
@@ -17,7 +17,7 @@ services:
       - platform
 
   backend:
-    image: ghcr.io/flatfeestack/flatfeestack/backend:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/backend:${TAG_IMAGE:-latest}
     build: ./backend
     restart: always
     env_file:
@@ -33,7 +33,7 @@ services:
       - platform
 
   analyzer:
-    image: ghcr.io/flatfeestack/flatfeestack/analyzer:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/analyzer:${TAG_IMAGE:-latest}
     build: ./analyzer
     restart: always
     env_file:
@@ -48,7 +48,7 @@ services:
       - platform
 
   payout:
-    image: ghcr.io/flatfeestack/flatfeestack/payout:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/payout:${TAG_IMAGE:-latest}
     build: ./payout
     restart: always
     env_file:
@@ -61,7 +61,7 @@ services:
       - platform
 
   frontend:
-    image: ghcr.io/flatfeestack/flatfeestack/frontend:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/frontend:${TAG_IMAGE:-latest}
     build: ./frontend
     ports:
       - "9085:9085"
@@ -87,7 +87,7 @@ services:
       - platform
 
   caddy:
-    image: ghcr.io/flatfeestack/flatfeestack/caddy:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/caddy:${TAG_IMAGE:-latest}
     build: ./caddy
     ports:
       - "8080:8080"
