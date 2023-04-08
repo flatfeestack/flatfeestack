@@ -1,0 +1,204 @@
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+databases:
+  - cluster_name: app-39560780-4a70-444b-a848-2e5c6c3b5f6e
+    db_name: db
+    db_user: db
+    engine: PG
+    name: db
+    num_nodes: 1
+    production: true
+    size: basic-xxs
+    version: "12"
+ingress:
+  rules:
+    - component:
+        name: analyzer
+      match:
+        path:
+          prefix: /analyzer
+    - component:
+        name: fastauth
+      match:
+        path:
+          prefix: /auth
+    - component:
+        name: payout
+      match:
+        path:
+          prefix: /payout
+    - component:
+        name: frontend
+      match:
+        path:
+          prefix: /
+    - component:
+        name: backend
+      match:
+        path:
+          prefix: /backend
+    - component:
+        name: backend
+      match:
+        path:
+          prefix: /hooks
+    - component:
+        name: backend
+      match:
+        path:
+          prefix: /ws
+name: flatfeestack
+region: fra
+services:
+  - envs:
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:nwFG+VO3e71TQ9wEzyxWA4Nssv3RbqYZ:OUtu/k+foj3PrukfWqFEXuCvbyj2tEh/Lg==]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: analyzer
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: analyzer
+  - envs:
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:Y+/Iicv6S4bjztM2xMhweAu515vBEkah:mRWQcbat2SsP5aQPZbS4SQfQxNPQTDQhRJ0PklDZaIg8+DeymOTuCQ==]
+      - key: ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+      - key: EMAIL_FROM
+        scope: RUN_AND_BUILD_TIME
+        value: info@flatfeestack.io
+      - key: EMAIL_FROM_NAME
+        scope: RUN_AND_BUILD_TIME
+        value: FlatFeeStack
+      - key: EMAIL_PREFIX
+        scope: RUN_AND_BUILD_TIME
+        value: https://jellyfish-app-jirmg.ondigitalocean.app
+      - key: WS_BASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://jellyfish-app-jirmg.ondigitalocean.app
+      - key: DB_PATH
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:OYK8gUNlsO/NMUDOKGxrFrVXQTHEcJW7:Bm6eszdJvGSHoZO7/rhG09HPT7Q17wCYXK0c0tACEncOx9I3q1qGeYlvd1SRyOEt1Oq10T4X7GuigBsKjPNx7jNUQo/ukvttDUREHcU0kNCVqQiH0FDN3xsYm4CDDjVKWFkiWatpURldFLdrpNLzkskrk34t6vBnb6agAfkJeCwwrj5MP374XdxdIkEZJrx55nWvaWWKQxfWUM7if3+YdXhlVP/p]
+      - key: DB_SCRIPTS
+        scope: RUN_AND_BUILD_TIME
+        value: init.sql
+      - key: EMAIL_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://api.sendgrid.com/v3/mail/send
+      - key: EMAIL_TOKEN
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:9EVsdscOblFVg5QpcOWVlM2mGXe1Iwxq:rxcwsZ5SCL40rzfQX/xdMVl2JTx3ob6JSLLzVpy+M/pMFykrukMGsgmUpZIF2OzN60iS5ETfONlvYesHP5DliORPQEG9roR+MkVY9lRTlEpAcntD6A==]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: backend
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: backend
+  - envs:
+      - key: ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:I2oSrev4z3DJWj/LJ0Dut3YKlaWU49oI:LydN7ZAAXG2ZDgqyOUINjYoN+1K83KNtNyeRm+oKwBb/CztOPyCItA==]
+      - key: EMAIL_FROM
+        scope: RUN_AND_BUILD_TIME
+        value: info@flatfeestack.io
+      - key: EMAIL_FROM_NAME
+        scope: RUN_AND_BUILD_TIME
+        value: FlatFeeStack
+      - key: EMAIL_PREFIX
+        scope: RUN_AND_BUILD_TIME
+        value: https://jellyfish-app-jirmg.ondigitalocean.app
+      - key: PWFLOW
+        scope: RUN_AND_BUILD_TIME
+        value: "true"
+      - key: DETAILS
+        scope: RUN_AND_BUILD_TIME
+        value: "false"
+      - key: USER_ENDPOINTS
+        scope: RUN_AND_BUILD_TIME
+        value: "true"
+      - key: DB_PATH
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:9BqsUJ4KlLXT9cVAOxDRbesu5WjcZh8m:ioaNHV1KqTSMmjjnDCaKyy4IaqpY4t5SdwfH3lX5vPtWbj2kBUOcylPLbO+7B2b30k3IniRcglZGO5HIPTpTsu+BoNhsjD+NKx1No2rqQrEKonD5N+P1Oz2LaoGylCB2NX2TnYqparrCp0QbmTIGGaQk1OoKrNkCVEAiQ3pbKD4i6dhGTsVEUdX4D29iAnfdi2A+EYz8OiQ14Vx+M6hMGaAZS0nb]
+      - key: DB_DRIVER
+        scope: RUN_AND_BUILD_TIME
+        value: postgres
+      - key: DB_SCRIPTS
+        scope: RUN_AND_BUILD_TIME
+        value: init.sql
+      - key: EMAIL_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://api.sendgrid.com/v3/mail/send
+      - key: EMAIL_TOKEN
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:rJxuxPgmoenEp43JtX41Mmmvb5EzMbWm:rTxxKsU102hA+XfN+qZO9zsxD9u3Wt0mQG++4FJdywEjbgNjPl86NDo10mV3s10oYR6iAZpDp4FgTzbuEHWHCNmVM28TyoC0ggALJDxnKDwGP0QkLA==]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: fastauth
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: fastauth
+  - envs:
+      - key: ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:PA/Blxuh4UlkrTbASdElxzYBvmgnys9Y:uaP5BG89MU0N5jbeFq5RxxgmHSMW8nLpOoE1IASiq3xaiVlWTwTiHw==]
+      - key: ETH_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:akgXFiUOpxr48axMAyUd0NFZj/5utV7z:k8QP7kDMz7aicghqX6xWbjv0GlFiIKXsTV6LAtoz18tPFjQshRspxYG98hkn1aLHdrD10CvN0JFKrrWctCVXi9i5uScDqtGORhc8n/0=]
+      - key: NEO_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:H1gx3K9axnvyfDXY1QfrYdZjmy9xwDPz:uL/K+b/teDnrQBM1P9mk29jsiYLBZxZxQvb/T+P9WtZBS52hYKqIWp00]
+      - key: ETH_PRIVATE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:gXLq6H31Z48AhFg25tIUAnOr4vV7Up/3:aVACHMJA5lPdOC/PcckWHl/8FcLkqOZGbrjf5eNuaqznCyHLhdd/n2DQ/+jHR8PSR5msbkuiD3pkB5m2lQ7syx4LoJKlXRiNzK6cQwNPdKmoig==]
+      - key: NEO_PRIVATE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:beG7ASZOLRFfwQmhEGo6GL2cE6QK9DU1:f2IkI52RsxPr5x8i6JHsBmGYxcOqSO4SmEbOcrnQEpIg87tNu7CrvJ7z8jEjNEisAJcROvsQQOMSijVsEwmHUKYPquw=]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: payout
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: payout
+  - http_port: 9085
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: frontend
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: frontend
