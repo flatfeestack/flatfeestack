@@ -1,16 +1,16 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { API } from "../ts/api";
+  import { API } from "../../ts/api";
   import Spinner from "../components/Spinner.svelte";
-  import { formatDate, formatNowUTC, storeToken } from "../ts/services";
-  import { config, error, loadedSponsoredRepos, user } from "../ts/mainStore";
+  import { formatDate, formatNowUTC, storeToken } from "../../ts/services";
+  import { config, error, loadedSponsoredRepos, user } from "../../ts/mainStore";
   import {
     faSignInAlt,
     faCheck,
     faArrowsLeftRight,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import type { Repo } from "../types/users";
+  import type { Repo } from "../../types/users";
   import Dots from "../components/Dots.svelte";
   import { navigate } from "svelte-routing";
 

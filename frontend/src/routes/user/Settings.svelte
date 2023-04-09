@@ -1,13 +1,13 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, user, config } from "../ts/mainStore";
+  import { error, user, config } from "../../ts/mainStore";
   import Fa from "svelte-fa";
-  import { API } from "../ts/api";
+  import { API } from "../../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";
   import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
-  import type { GitUser, PayoutAddress, Currencies } from "../types/users";
+  import type { GitUser, PayoutAddress, Currencies } from "../../types/users";
   import { onMount } from "svelte";
-  import { formatDate, timeSince } from "../ts/services";
+  import { formatDate, timeSince } from "../../ts/services";
 
   let nameOrig = $user.name;
   let timeoutName;

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { login } from "../ts/services";
-  import Dots from "../components/Dots.svelte";
-  import { navigate, link } from "svelte-routing";
+  import { login } from "../../ts/services"
+  import Dots from "../../components/Dots.svelte";
+  import { goto } from '$app/navigation';
 
   let email = "";
   let password = "";
@@ -14,7 +14,7 @@
       isSubmitting = true;
       await login(email, password);
       isSubmitting = false;
-      navigate("/user/search");
+      goto("/user/search");
       email = "";
       password = "";
     } catch (e) {
@@ -77,7 +77,7 @@
       <div class="flex py-1">
         <label for="password">Password</label>
         <label for="password">
-          <a href="/forgot" use:link>Forgot password?</a>
+          <a href="/forgot">Forgot password?</a>
         </label>
       </div>
 
@@ -102,7 +102,7 @@
 
     <div class="divider" />
     <div class="flex">
-      New to FlatFeeStack?&nbsp;<a href="/signup" use:link>Sign up</a>
+      New to FlatFeeStack?&nbsp;<a href="/signup">Sign up</a>
     </div>
   </div>
 </div>

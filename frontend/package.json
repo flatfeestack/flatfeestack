@@ -36,5 +36,12 @@
     "typescript": "^5.0.4",
     "vite": "^4.2.1",
     "vite-plugin-compression": "^0.5.1"
+  },
+  "dependencies": {
+    "@ethersproject/providers": "^5.7.2",
+    "@metamask/detect-provider": "^2.0.0",
+    "@stripe/stripe-js": "^1.49.0",
+    "ethers": "^5.7.2",
+    "ky": "^0.33.3"
   }
 }
