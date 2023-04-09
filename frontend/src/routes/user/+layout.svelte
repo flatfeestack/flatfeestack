@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/stores';
   import {
     faUserFriends,
     faSearch,
@@ -9,7 +10,7 @@
     faShieldAlt,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import { isSubmitting, user, route } from "../../ts/mainStore";
+  import { isSubmitting, user } from "../../ts/mainStore";
   import Spinner from "../../components/Spinner.svelte";
 </script>
 
@@ -71,42 +72,42 @@
   <nav>
     <a
       href="/user/settings"
-      class={$route.pathname === `/user/settings` ? `selected` : ``}
+      class={$page.url.pathname === `/user/settings` ? `selected` : ``}
     >
       <Fa icon={faUserCog} size="sm" class="icon" />
       <span class="hide-sx">Settings</span>
     </a>
     <a
       href="/user/search"
-      class={$route.pathname === `/user/search` ? `selected` : ``}
+      class={$page.url.pathname === `/user/search` ? `selected` : ``}
     >
       <Fa icon={faSearch} size="sm" class="icon" />
       <span class="hide-sx">Search</span>
     </a>
     <a
       href="/user/payments"
-      class={$route.pathname === `/user/payments` ? `selected` : ``}
+      class={$page.url.pathname === `/user/payments` ? `selected` : ``}
     >
       <Fa icon={faCreditCard} size="sm" class="icon" />
       <span class="hide-sx">Payments</span>
     </a>
     <a
       href="/user/income"
-      class={$route.pathname === `/user/income` ? `selected` : ``}
+      class={$page.url.pathname === `/user/income` ? `selected` : ``}
     >
       <Fa icon={faHandHoldingUsd} size="sm" class="icon" />
       <span class="hide-sx">Income</span>
     </a>
     <a
       href="/user/invitations"
-      class={$route.pathname === `/user/invitations` ? `selected` : ``}
+      class={$page.url.pathname === `/user/invitations` ? `selected` : ``}
     >
       <Fa icon={faUserFriends} size="sm" class="icon" />
       <span class="hide-sx">Invitations</span>
     </a>
     <a
       href="/user/badges"
-      class={$route.pathname === `/user/badges` ? `selected` : ``}
+      class={$page.url.pathname === `/user/badges` ? `selected` : ``}
     >
       <Fa icon={faMedal} size="sm" class="icon" />
       <span class="hide-sx">Badges</span>
@@ -114,7 +115,7 @@
     {#if $user.role === "admin"}
       <a
         href="/user/admin"
-        class={$route.pathname === `/user/admin` ? `selected` : ``}
+        class={$page.url.pathname === `/user/admin` ? `selected` : ``}
       >
         <Fa icon={faShieldAlt} size="sm" class="icon" />
         <span class="hide-sx">Admin</span>

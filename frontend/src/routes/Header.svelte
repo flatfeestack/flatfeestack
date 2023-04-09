@@ -1,5 +1,4 @@
 <script>
-  //import { page } from '$app/stores';
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
 
@@ -61,9 +60,6 @@
   </a>
   <nav>
     {#if user.id}
-      <!--<li aria-current={$page.url.pathname === '/' ? 'page' : undefined}></li>
-					<a href="/">Home</a>
-				</li>-->
       <a href="/user/search"><Fa icon={faHome} size="sm" class="icon" /></a>
       {#if user.image}
         <img class="image-org-sx" src={user.image} alt="user profile img" />

@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import type { Users, UserBalances, Config, Repos, Repo } from "../types/users";
+import type { Users, UserBalances, Config, Repo } from "../types/users";
 
 export const error = writable("");
 export const isSubmitting = writable(false);
@@ -11,4 +11,3 @@ export const userBalances = writable<UserBalances>(<UserBalances>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
 export const loadedSponsoredRepos = writable<boolean>(false);
-export const route = writable("");
