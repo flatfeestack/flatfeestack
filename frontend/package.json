@@ -44,6 +44,7 @@
     "chart.js": "^4.2.1",
     "ethers": "^5.7.2",
     "ky": "^0.33.3",
-    "svelte-chartjs": "^3.1.2"
+    "svelte-chartjs": "^3.1.2",
+    "svelte-qr": "^1.0.0"
   }
 }

@@ -25,6 +25,7 @@ specifiers:
   svelte-chartjs: ^3.1.2
   svelte-check: ^3.2.0
   svelte-fa: ^3.0.3
+  svelte-qr: ^1.0.0
   tslib: ^2.5.0
   typescript: ^5.0.4
   vite: ^4.2.1
@@ -38,6 +39,7 @@ dependencies:
   ethers: 5.7.2
   ky: 0.33.3
   svelte-chartjs: 3.1.2_dxm4fd7lcnjhpwocw5zmf7bpa4
+  svelte-qr: 1.0.0
 
 devDependencies:
   '@fontsource/fira-mono': 4.5.10
@@ -2219,6 +2221,10 @@ packages:
       svelte: 3.58.0
       typescript: 5.0.4
     dev: true
+
+  /svelte-qr/1.0.0:
+    resolution: {integrity: sha512-7n/FPFhImPI68NCwChzYqzTbTpDhGCiFgGiCQY+IXS8sh0Xhzzd0wwQnN5n2BCJ0Uvti8s0RhKErwcw4Lp7RvQ==}
+    dev: false
 
   /svelte/3.58.0:
     resolution: {integrity: sha512-brIBNNB76mXFmU/Kerm4wFnkskBbluBDCjx/8TcpYRb298Yh2dztS2kQ6bhtjMcvUhd5ynClfwpz5h2gnzdQ1A==}

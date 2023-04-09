@@ -2,7 +2,10 @@
   import { onMount } from "svelte";
   import { API } from "../../../ts/api";
   import { error, user } from "../../../ts/mainStore";
-  import type { Contributions, ContributionSummary } from "../../../types/users";
+  import type {
+    Contributions,
+    ContributionSummary,
+  } from "../../../types/users";
   import { formatDay, formatBalance } from "../../../ts/services";
   import { Chart, registerables } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
@@ -27,11 +30,11 @@
       tooltip: {
         boxPadding: 6,
         callbacks: {
-          title: function (context) {
+          title: function (context: any) {
             let label = context[0].label || "";
             return "Git Metrics (3 Months) Until: " + label;
           },
-          afterTitle: function (context) {
+          afterTitle: function (context: any) {
             let label = context[0].dataset.label || "";
             let start = label.indexOf(";");
             if (label && start > 0) {
@@ -40,7 +43,7 @@
             }
             return label;
           },
-          label: function (context) {
+          label: function (context: any) {
             let label = context.dataset.label || "";
 
             let start = label.indexOf(";");

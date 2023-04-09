@@ -16,7 +16,7 @@
       sponsoredRepos = res2 || [];
       await pr1;
     } catch (e) {
-      $error = e;
+      $error = e as string;
     }
   });
 </script>

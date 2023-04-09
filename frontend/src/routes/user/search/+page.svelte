@@ -14,7 +14,7 @@
   import SearchResult from "../../../components/SearchResult.svelte";
 
   let search = "";
-  let searchRepos: Repo[] = [];
+  let searchRepos: Repo[] | null = [];
   let isSearchSubmitting = false;
 
   const handleSearch = async () => {
@@ -22,7 +22,7 @@
       isSearchSubmitting = true;
       searchRepos = await API.repos.search(search);
     } catch (e) {
-      $error = e;
+      $error = e as string;
     } finally {
       isSearchSubmitting = false;
     }
@@ -35,7 +35,7 @@
         $sponsoredRepos = await API.user.getSponsored();
         $loadedSponsoredRepos = true;
       } catch (e) {
-        $error = e;
+        $error = e as string;
       } finally {
         $isSubmitting = false;
       }
@@ -74,7 +74,7 @@
     </form>
   </div>
 
-  {#if searchRepos?.length > 0}
+  {#if searchRepos && searchRepos.length > 0}
     <h2>Results</h2>
     <div>
       {#each searchRepos as repo, key (repo.uuid)}

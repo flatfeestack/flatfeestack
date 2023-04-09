@@ -25,7 +25,7 @@
         return inv.email !== email || inv.inviteEmail !== inviteEmail;
       });
     } catch (e) {
-      $error = e;
+      $error = e as string;
     }
   }
 
@@ -36,7 +36,7 @@
         return inv.email !== email || inv.inviteEmail !== inviteEmail;
       });
     } catch (e) {
-      $error = e;
+      $error = e as string;
     }
   }
 
@@ -45,7 +45,7 @@
       await API.invite.confirmInvite(email);
       await refreshInvite();
     } catch (e) {
-      $error = e;
+      $error = e as string;
     }
   }
 
@@ -55,7 +55,7 @@
       const res1 = await API.invite.invites();
       invites = res1 === null ? [] : res1;
     } catch (e) {
-      $error = e;
+      $error = e as string;
     } finally {
       $isSubmitting = false;
     }

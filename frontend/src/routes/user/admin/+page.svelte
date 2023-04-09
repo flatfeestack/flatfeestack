@@ -30,7 +30,7 @@
   let repos: Repo[] = [];
   let isSearchSubmitting = false;
   let linkGitUrl = "";
-  let rootUuid = null;
+  let rootUuid = "";
   let warning = "";
   const handleSearch = async () => {
     try {
@@ -136,7 +136,7 @@
       loadedSponsoredRepos.set(false);
       navigate("/user/search");
     } catch (e) {
-      $error = e;
+      $error = e as string;
     }
   }
 </script>

@@ -13,8 +13,8 @@
   import { formatDate, timeSince } from "../../../ts/services";
 
   let nameOrig = $user.name;
-  let timeoutName;
-  let fileInput;
+  let timeoutName: number;
+  let fileInput: any;
 
   let gitEmails: GitUser[] = [];
   let newEmail = "";
@@ -78,7 +78,7 @@
       payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
       newPayoutAddress = "";
       newPayoutCurrency = "";
-    } catch (e) {
+    } catch (e: any) {
       if (typeof e !== "string" && e.response.status === 409) {
         $error =
           "Wallet Address is already used by someone else. Please use one Wallet per user.";
@@ -92,12 +92,12 @@
     try {
       await API.user.removePayoutAddress(addressNumber);
       payoutAddresses = payoutAddresses.filter((e) => e.id !== addressNumber);
-    } catch (e) {
+    } catch (e: any) {
       $error = e;
     }
   }
 
-  const onFileSelected = (e) => {
+  const onFileSelected = (e: any) => {
     let image = e.target.files[0];
     let reader = new FileReader();
     reader.readAsDataURL(image);
@@ -135,7 +135,7 @@
     try {
       await API.user.removeGitEmail(email);
       gitEmails = gitEmails.filter((e) => e.email !== email);
-    } catch (e) {
+    } catch (e: any) {
       $error = e;
     }
   }
@@ -148,7 +148,7 @@
       const res2 = await pr2;
       payoutAddresses = res2 ? res2 : payoutAddresses;
       gitEmails = res1 ? res1 : gitEmails;
-    } catch (e) {
+    } catch (e: any) {
       $error = e;
     }
   });
