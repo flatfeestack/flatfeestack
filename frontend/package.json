@@ -19,7 +19,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "prettify": "prettier --write --plugin-search-dir=. .",
-    "prettify:check": "prettier --check --plugin-search-dir=. ."
+    "prettify:check": "prettier --check --plugin-search-dir=. .",
+    "schema:backend": "npx openapi-typescript ../backend/backend.yaml --output ./src/types/generated-backend-types.ts"
   },
   "devDependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.3.0",
@@ -28,6 +29,7 @@
     "concurrently": "^8.0.0",
     "express": "^4.18.2",
     "npm-watch": "^0.11.0",
+    "openapi-typescript": "^6.2.1",
     "prettier": "^2.8.4",
     "prettier-plugin-svelte": "^2.9.0",
     "rollup-plugin-visualizer": "^5.9.0",

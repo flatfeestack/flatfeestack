@@ -38,7 +38,7 @@ type Repo struct {
 	Description *string   `json:"description"`
 	Score       uint32    `json:"score"`
 	Source      *string   `json:"source"`
-	CreatedAt   time.Time
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type PayoutRequest struct {

@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/mainStore";
-  import type { ContributionSummary, Users } from "../types/users";
+  import type { ContributionSummary, Users } from "../types/backend";
 
   export let uuid: string;
   let contributionSummaries: ContributionSummary[] = [];

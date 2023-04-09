@@ -5,7 +5,7 @@
   import { API } from "../ts/api";
   import { faUpload } from "@fortawesome/free-solid-svg-icons";
   import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
-  import type { GitUser, PayoutAddress, Currencies } from "../types/users";
+  import type { GitUser, Wallet, Currency } from "../types/backend";
   import { onMount } from "svelte";
   import { formatDate, timeSince } from "../ts/services";
 
@@ -16,8 +16,8 @@
   let gitEmails: GitUser[] = [];
   let newEmail = "";
 
-  let payoutAddresses: PayoutAddress[] = [];
-  let currenciesWithoutWallet: Map<string, Currencies>;
+  let payoutWallets: Wallet[] = [];
+  let currenciesWithoutWallet: Map<string, Currency>;
   let newPayoutCurrency: string;
   let newPayoutAddress: "";
 
@@ -34,11 +34,11 @@
   }
 
   $: {
-    let tmp: Map<string, Currencies> = new Map<string, Currencies>();
+    let tmp: Map<string, Currency> = new Map<string, Currency>();
     //https://stackoverflow.com/questions/34913675/how-to-iterate-keys-values-in-javascript
     const e = Object.entries($config.supportedCurrencies);
     for (const [key, value] of e) {
-      if (!payoutAddresses.find((e) => e.currency === key) && value.isCrypto) {
+      if (!payoutWallets.find((e) => e.currency === key) && value.isCrypto) {
         tmp.set(key, value);
       }
     }
@@ -69,10 +69,12 @@
         throw "Invalid ethereum address";
       }
 
-      const confirmedPayoutAddress: PayoutAddress =
-        await API.user.addPayoutAddress(newPayoutCurrency, newPayoutAddress);
+      const confirmedPayoutWallet: Wallet = await API.user.addPayoutWallet(
+        newPayoutCurrency,
+        newPayoutAddress
+      );
 
-      payoutAddresses = [...payoutAddresses, confirmedPayoutAddress];
+      payoutWallets = [...payoutWallets, confirmedPayoutWallet];
       newPayoutAddress = "";
       newPayoutCurrency = "";
     } catch (e) {
@@ -87,8 +89,8 @@
 
   async function removePaymentAddress(addressNumber: string) {
     try {
-      await API.user.removePayoutAddress(addressNumber);
-      payoutAddresses = payoutAddresses.filter((e) => e.id !== addressNumber);
+      await API.user.removePayoutWallet(addressNumber);
+      payoutWallets = payoutWallets.filter((e) => e.id !== addressNumber);
     } catch (e) {
       $error = e;
     }
@@ -140,10 +142,10 @@
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
-      const pr2 = API.user.getPayoutAddresses();
+      const pr2 = API.user.getPayoutWallets();
       const res1 = await pr1;
       const res2 = await pr2;
-      payoutAddresses = res2 ? res2 : payoutAddresses;
+      payoutWallets = res2 ? res2 : payoutWallets;
       gitEmails = res1 ? res1 : gitEmails;
     } catch (e) {
       $error = e;
@@ -278,7 +280,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each payoutAddresses as address}
+        {#each payoutWallets as address}
           <tr>
             <td><strong>{address.currency}</strong></td>
             <td>{address.address}</td>

@@ -2,7 +2,7 @@
   import { API } from "../ts/api";
   import { error, sponsoredRepos } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
-  import type { Repo } from "../types/users";
+  import type { Repo } from "../types/backend";
 
   export let repo: Repo;
   let star = true;

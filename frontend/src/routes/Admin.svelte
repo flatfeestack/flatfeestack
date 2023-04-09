@@ -10,7 +10,7 @@
     faArrowsLeftRight,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import type { Repo } from "../types/users";
+  import type { Repo } from "../types/backend";
   import Dots from "../components/Dots.svelte";
   import { navigate } from "svelte-routing";
 

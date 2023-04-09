@@ -7,7 +7,7 @@
     loadedSponsoredRepos,
     sponsoredRepos,
   } from "../ts/mainStore";
-  import type { Repo } from "../types/users";
+  import type { Repo } from "../types/backend";
 
   import Dots from "../components/Dots.svelte";
   import Navigation from "../components/Navigation.svelte";
