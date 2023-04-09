@@ -10,8 +10,9 @@
     faArrowsLeftRight,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import type { Repos } from "../types/users";
+  import type { Repo } from "../types/users";
   import Dots from "../components/Dots.svelte";
+  import { navigate } from "svelte-routing";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
@@ -22,7 +23,7 @@
   let search = "";
   //TODO: if we use github only, then the search name is unique and we don't need to spli
   //in case of change, make sure you split the repo according to the link id
-  let repos: Repos[] = [];
+  let repos: Repo[] = [];
   let isSearchSubmitting = false;
   let linkGitUrl = "";
   let rootUuid = null;
@@ -42,6 +43,7 @@
       isSearchSubmitting = false;
     }
   };
+  // this fn is not implemented in the backend
   async function handleLinkGitUrl() {
     try {
       repos = await API.repos.linkGitUrl(rootUuid, linkGitUrl);
@@ -50,6 +52,7 @@
       $error = e;
     }
   }
+  // this fn is not implemented in the backend.
   async function makeRoot(repoId: string) {
     try {
       repos = await API.repos.makeRoot(repoId, rootUuid);
@@ -88,7 +91,8 @@
     }
   };
 
-  let userEmail = "";
+  let fakeUserEmail = "";
+  let fakePaymentEmail = "";
   let exchangeRate = 0.0;
   let seats = 1;
 
@@ -126,6 +130,7 @@
       const u = await API.user.get();
       user.set(u);
       loadedSponsoredRepos.set(false);
+      navigate("/user/search");
     } catch (e) {
       $error = e;
     }
@@ -183,7 +188,7 @@
   <div class="container">
     {#await promiseUsers}
       <Spinner />
-    {:then users}
+    {:then userEmails}
       <table>
         <thead>
           <tr>
@@ -192,15 +197,15 @@
           </tr>
         </thead>
         <tbody>
-          {#if users && users.length > 1}
-            {#each users as row}
-              {#if $user.email !== row}
+          {#if userEmails && userEmails.length > 1}
+            {#each userEmails as userEmail}
+              {#if $user.email !== userEmail}
                 <tr>
-                  <td>{row}</td>
+                  <td>{userEmail}</td>
                   <td
                     ><button
                       class="accessible-btn"
-                      on:click={() => loginAs(row)}
+                      on:click={() => loginAs(userEmail)}
                     >
                       <Fa icon={faSignInAlt} size="md" /></button
                     >
@@ -264,7 +269,7 @@
             <td colspan="4">
               <form class="flex" on:submit|preventDefault={handleLinkGitUrl}>
                 <input
-                  input-size="32"
+                  size="32"
                   id="address-input"
                   name="address"
                   type="text"
@@ -284,22 +289,23 @@
   <h2>Fake User</h2>
   <button
     class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
-    on:click={() => handleFakeUsers(userEmail)}>Add Fake User</button
+    on:click={() => handleFakeUsers(fakeUserEmail)}>Add Fake User</button
   >
-  Email: <input bind:value={userEmail} />
+  Email: <input bind:value={fakeUserEmail} />
   <h2>Fake Payment</h2>
   <button
     class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
-    on:click={() => handleFakePayment(userEmail, seats)}
+    on:click={() => handleFakePayment(fakePaymentEmail, seats)}
     >Add Fake Payment</button
   >
-  Email: <input bind:value={userEmail} /> Seats: <input bind:value={seats} />
+  Email: <input bind:value={fakePaymentEmail} /> Seats:
+  <input bind:value={seats} />
   <h2>Fake Contribution</h2>
   <button
     class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
     on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button
   >
-  Email: <textarea bind:value={json} rows="10" cols="50" />
+  Contribution: <textarea bind:value={json} rows="10" cols="50" />
 
   <h2>Payout Action</h2>
   <button

@@ -183,13 +183,13 @@ export const API = {
         .get(`repos/search?q=${encodeURIComponent(s)}`)
         .json<Repo[] | null>(),
     searchName: (s: string) =>
-      backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repos[]>(),
+      backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     linkGitUrl: (repoId: string, gitUrl: string) =>
       backendToken
         .post(`repos/link/${repoId}`, { json: { gitUrl } })
-        .json<Repos[]>(),
+        .json<Repo[]>(),
     makeRoot: (repoId: string, rootUuid: string) =>
-      backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repos[]>(),
+      backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repo[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),
     tag: (repoId: string) =>
       backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
@@ -230,6 +230,6 @@ export const API = {
     config: () => backend.get(`config`).json<Config>(),
   },
   admin: {
-    users: () => backendToken.post(`admin/users`).json<String[]>(),
+    users: () => backendToken.post(`admin/users`).json<string[]>(),
   },
 };
