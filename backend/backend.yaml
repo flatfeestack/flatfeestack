@@ -1,0 +1,1258 @@
+openapi: "3.0.3"
+info:
+  title: FlatFeeStack - Backend
+  version: "1.0"
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://localhost:9082
+    description: Local dev server
+tags:
+  - name: Users
+    description: User management
+  - name: Repos
+    description: Repo management
+  - name: Hooks
+    description: Webhooks
+  - name: Admin
+    description: Admin
+  - name: Invite
+    description: Invite management
+  - name: Debug
+    description: Enpoints if debug mode is enabled
+paths:
+  /users/me:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [User]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /users/me/git-email:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GitUser'
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+    delete:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+  /users/me/method/:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: method
+          in: query
+          required: true
+          schema:
+            type: string
+    delete:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+  /users/me/sponsored:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
+  /users/me/name/{name}:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
+  /users/me/image:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+  /users/me/stripe:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSecret'
+        '400':
+          description: Bad Request
+    delete:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: freq
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: seats
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSecret'
+  /users/me/nowPayment:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: freq
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: seats
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '500':
+          description: Internal Server Error
+  /users/me/payment:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+  /users/me/payment-cycle:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCycle'
+  /users/me/sponsored-users:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatus'
+  /users/contrib-snd:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contribution'
+  /users/contrib-rcv:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contribution'
+  /users/me/contributions-summary:
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/js  on:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepoBalance'
+  /users/contributions-summary:
+    post:
+      tags:
+        - Users
+      parameters:
+        - name: uuid
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepoBalance'
+  /users/summary:
+    post:
+      tags:
+        - Users
+      parameters:
+        - name: uuid
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /users/me/wallets:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wallet'
+    post:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Wallet'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '500':
+          description: Internal Server Error
+        '409':
+          description: Conflict
+    delete:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: uuid
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /users/git-email:
+    post:
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailToken'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /repos/search:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+  /repos/name:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+  /repos/{id}:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '404':
+          description: Not Found
+  /repos/{id}/tag:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/untag:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/{offset}/graph:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: offset
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Data'
+        '400':
+          description: Bad Request
+  /hooks/stripe:
+    post:
+      tags:
+        - Hooks
+      responses:
+        '200':
+          description: OK
+        '503':
+          description: Service Unavailable
+  /hooks/nowpayments:
+    post:
+      tags:
+        - Hooks
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /hooks/analyzer:
+    post:
+      tags:
+        - Hooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCallback'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Internal Server Error
+  /admin/payout/{exchangeRate}:
+    post:
+      tags:
+        - Admin
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: exchangeRate
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /admin/time:
+    get:
+      tags:
+        - Admin
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Time'
+  /admin/users:
+    post:
+      tags:
+        - Admin
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Bad Request
+  /config:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '400':
+          description: Bad Request
+  /confirm/invite/{email}:
+    post:
+      tags:
+        - Invite
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /invite:
+    get:
+      tags:
+        - Invite
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+  /invite/by/{email}:
+    delete:
+      tags:
+        - Invite
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /invite/my/{email}:
+    delete:
+      tags:
+        - Invite
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /invite/{email}:
+    post:
+      tags:
+        - Invite
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /admin/fake/user/{email}:
+    post:
+      tags:
+        - Debug
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /admin/fake/payment/{email}/{seats}:
+    post:
+      tags:
+        - Debug
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+        - name: seats
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /admin/fake/contribution:
+    post:
+      tags:
+        - Debug
+      security:
+        - bearerAuth: [ Admin ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FakeRepoMapping'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /admin/timewarp/{hours}:
+    post:
+      tags:
+        - Debug
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: hours
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+  /nowpayments/crontester:
+    post:
+      tags:
+        - Debug
+      security:
+        - bearerAuth: [ Admin ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invitedId:
+          type: string
+          format: uuid
+        stripeId:
+          type: string
+          nullable: true
+        paymentCycleInId:
+          type: string
+          format: uuid
+          nullable: true
+        paymentCycleOutId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        paymentMethod:
+          type: string
+          nullable: true
+        last4:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        claims:
+          $ref: '#/components/schemas/Claims'
+          nullable: true
+        role:
+          type: string
+          nullable: true
+      required:
+        - id
+        - paymentCycleOutId
+        - email
+        - createdAt
+    Claims:
+      type: object
+      properties:
+        iss:
+          type: string
+          nullable: true
+        sub:
+          type: string
+          nullable: true
+        aud:
+          type: string
+          nullable: true
+        exp:
+          type: integer
+          format: int64
+          nullable: true
+        nbf:
+          type: integer
+          format: int64
+          nullable: true
+        iat:
+          type: integer
+          format: int64
+          nullable: true
+        jti:
+          type: string
+          nullable: true
+    GitUser:
+      type: object
+      properties:
+        email:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - email
+    Repo:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        url:
+          type: string
+          nullable: true
+        gitUrl:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        score:
+          type: integer
+          format: uint32
+        source:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - uuid
+        - score
+        - createdAt
+    PaymentCycle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        seats:
+          type: integer
+          format: int64
+        freq:
+          type: integer
+          format: int64
+      required:
+        - id
+        - seats
+        - freq
+    UserStatus:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        daysLeft:
+          type: integer
+    Contribution:
+      type: object
+      properties:
+        repoName:
+          type: string
+        repoUrl:
+          type: string
+        sponsorName:
+          type: string
+          nullable: true
+        sponsorEmail:
+          type: string
+        contributorName:
+          type: string
+          nullable: true
+        contributorEmail:
+          type: string
+        balance:
+          type: string
+          format: int64
+        currency:
+          type: string
+        paymentCycleInId:
+          type: string
+          format: uuid
+        day:
+          type: string
+          format: date-time
+      required:
+        - repoName
+        - repoUrl
+        - sponsorEmail
+        - contributorEmail
+        - balance
+        - currency
+        - paymentCycleInId
+        - day
+    RepoBalance:
+      type: object
+      properties:
+        repo:
+          $ref: "#/components/schemas/Repo"
+        currencyBalance:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - repo
+        - currencyBalance
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+        address:
+          type: string
+      required:
+        - id
+        - currency
+        - address
+    EmailToken:
+      type: object
+      properties:
+        email:
+          type: string
+        token:
+          type: string
+      required:
+        - email
+        - token
+    Data:
+      type: object
+      properties:
+        days:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
+        datasets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dataset"
+        labels:
+          type: array
+          items:
+            type: string
+    Dataset:
+      type: object
+      properties:
+        label:
+          type: string
+        data:
+          type: array
+          items:
+            type: number
+            format: float
+        fill:
+          type: boolean
+        backgroundColor:
+          type: string
+        borderColor:
+          type: string
+        pointBorderWidth:
+          type: integer
+          format: int32
+    WebhookCallback:
+        type: object
+        properties:
+          requestId:
+            type: string
+          error:
+            type: string
+            nullable: true
+          result:
+            type: array
+            items:
+              $ref: "#/components/schemas/FlatFeeWeight"
+    FlatFeeWeight:
+      type: object
+      properties:
+        names:
+          type: array
+          items:
+            type: string
+        email:
+          type: string
+        weight:
+          type: number
+    Time:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+        offset:
+          type: string
+    Config:
+      type: object
+      properties:
+        stripePublicApi:
+          type: string
+        wsBaseUrl:
+          type: string
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+        env:
+          type: string
+        supportedCurrencies:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Currency'
+    Currency:
+      type: object
+      properties:
+        name:
+          type: string
+        short:
+          type: string
+        smallest:
+          type: string
+        factorPow:
+          type: integer
+          format: int64
+        isCrypto:
+          type: boolean
+      example:
+        ETH:
+          name: Ethereum
+          short: ETH
+          smallest: wei
+          factorPow: 18
+          isCrypto: true
+      required:
+        - name
+        - short
+        - smallest
+        - factorPow
+        - isCrypto
+    Plan:
+      type: object
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+          format: float
+        freq:
+          type: integer
+          format: int64
+        desc:
+          type: string
+        disclaimer:
+          type: string
+        feePrm:
+          type: integer
+          format: int64
+      required:
+        - title
+        - price
+        - freq
+    Invitation:
+      type: object
+      properties:
+        email:
+          type: string
+        inviteEmail:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - email
+        - inviteEmail
+        - createdAt
+    ClientSecret:
+      type: object
+      properties:
+        clientSecret:
+          type: string
+      required:
+        - clientSecret
+    PaymentResponse:
+      type: object
+      properties:
+        payAddress:
+          type: string
+        payAmount:
+          type: string
+          format: int64
+        payCurrency:
+          type: string
+    FakeRepoMapping:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        weights:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlatFeeWeight'
+      required:
+        - startDate
+        - endDate
+        - name
+        - url

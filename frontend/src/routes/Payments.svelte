@@ -3,7 +3,7 @@
   import { error, userBalances } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type { Repo } from "../types/users";
+  import type { Repo } from "../types/backend";
   import { connectWs, formatDate, formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 

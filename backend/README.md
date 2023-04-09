@@ -14,8 +14,8 @@ POSTGRES_URL="postgresql://postgres:password@localhost:5432/flatfeestack?sslmode
 
 ```make && ./api```
 
-## Documentation
+## Development
 
-Swagger is included and available under `/swagger/index.html`
+Don't forget to change the openapi schema in `backend.yaml`, if you change the API.
 
 

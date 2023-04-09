@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error, user } from "../ts/mainStore";
-  import type { Contributions, ContributionSummary } from "../types/users";
+  import type { Contribution, ContributionSummary } from "../types/backend";
   import { formatDay, formatBalance } from "../ts/services";
   import { Chart, registerables } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
@@ -16,7 +16,7 @@
   import { htmlLegendPlugin } from "../ts/utils";
 
   let contributionSummaries: ContributionSummary[] = [];
-  let contributions: Contributions[] = [];
+  let contributions: Contribution[] = [];
   let showGraph: string | undefined;
   let offset = 0;
 

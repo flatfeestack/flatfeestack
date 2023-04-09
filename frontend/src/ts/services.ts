@@ -1,6 +1,7 @@
 import { token, user, loginFailed, userBalances, config } from "./mainStore";
 import { API } from "./api";
-import type { Token, Users } from "../types/users";
+import type { User } from "../types/backend";
+import type { Token } from "../types/auth";
 import { get } from "svelte/store";
 import { formatUnits } from "ethers/lib/utils";
 import { BigNumber } from "ethers";
@@ -101,7 +102,7 @@ export const removeSession = async () => {
 
 export const removeToken = () => {
   localStorage.removeItem("ffs-refresh");
-  user.set(<Users>{});
+  user.set(<User>{});
   token.set("");
   loginFailed.set(true);
 };

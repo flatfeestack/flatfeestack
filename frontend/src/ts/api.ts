@@ -4,23 +4,20 @@ import type {
   ChartDataTotal,
   ClientSecret,
   Config,
-  Contributions,
+  Contribution,
   ContributionSummary,
   GitUser,
   Invitation,
   PaymentCycle,
   PaymentResponse,
-  PayoutAddress,
-  PayoutInfo,
+  Wallet,
   Repo,
   RepoMapping,
-  Repos,
   Time,
-  Token,
-  UserAggBalance,
-  Users,
+  User,
   UserStatus,
-} from "../types/users";
+} from "../types/backend";
+import type { Token } from "../types/auth";
 import { token } from "./mainStore";
 import { refresh } from "./services";
 
@@ -124,7 +121,7 @@ export const API = {
         .json<Token>(),
   },
   user: {
-    get: () => backendToken.get(`users/me`).json<Users>(),
+    get: () => backendToken.get(`users/me`).json<User>(),
     gitEmails: () => backendToken.get(`users/me/git-email`).json<GitUser[]>(),
     confirmGitEmail: (email: string, token: string) =>
       backendToken.post("users/git-email", { json: { email, token } }),
@@ -132,16 +129,16 @@ export const API = {
       backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>
       backendToken.delete(`users/me/git-email/${encodeURIComponent(email)}`),
-    getPayoutAddresses: () =>
-      backendToken.get(`users/me/wallets`).json<PayoutAddress[]>(),
-    addPayoutAddress: (currency: string, address: string) =>
+    getPayoutWallets: () =>
+      backendToken.get(`users/me/wallets`).json<Wallet[]>(),
+    addPayoutWallet: (currency: string, address: string) =>
       backendToken
         .post(`users/me/wallets`, { json: { currency, address } })
-        .json<PayoutAddress>(),
-    removePayoutAddress: (id: string) =>
+        .json<Wallet>(),
+    removePayoutWallet: (id: string) =>
       backendToken.delete(`users/me/wallets/${id}`),
     updatePaymentMethod: (method: string) =>
-      backendToken.put(`users/me/method/${method}`).json<Users>(),
+      backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
@@ -163,9 +160,9 @@ export const API = {
     statusSponsoredUsers: () =>
       backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
     contributionsSend: () =>
-      backendToken.post(`users/contrib-snd`).json<Contributions[]>(),
+      backendToken.post(`users/contrib-snd`).json<Contribution[]>(),
     contributionsRcv: () =>
-      backendToken.post(`users/contrib-rcv`).json<Contributions[]>(),
+      backendToken.post(`users/contrib-rcv`).json<Contribution[]>(),
     contributionsSummary: () =>
       backendToken
         .post(`users/me/contributions-summary`)
@@ -175,7 +172,7 @@ export const API = {
         .post(`users/contributions-summary/${uuid}`)
         .json<ContributionSummary[]>(),
     summary: (uuid: string) =>
-      backendToken.post(`users/summary/${uuid}`).json<Users>(),
+      backendToken.post(`users/summary/${uuid}`).json<User>(),
   },
   repos: {
     search: (s: string) =>
@@ -212,10 +209,6 @@ export const API = {
     keywords: (keywords: string) => search.get(`search/${keywords}`),
   },
   payouts: {
-    pending: (type: string) =>
-      backendToken
-        .post(`admin/pending-payout/${type}`)
-        .json<UserAggBalance[]>(),
     time: () => backendToken.get(`admin/time`).json<Time>(),
     fakeUser: (email: string) => backendToken.post(`admin/fake/user/${email}`),
     fakePayment: (email: string, seats: number) =>
@@ -224,7 +217,6 @@ export const API = {
       backendToken.post(`admin/fake/contribution`, { json: repo }),
     payout: (exchangeRate: number) =>
       backendToken.post(`admin/payout/${exchangeRate}`),
-    payoutInfos: () => backendToken.get(`admin/payout`).json<PayoutInfo[]>(),
   },
   config: {
     config: () => backend.get(`config`).json<Config>(),

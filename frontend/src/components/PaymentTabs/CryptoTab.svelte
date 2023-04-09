@@ -4,7 +4,7 @@
   // noinspection TypeScriptCheckImport
   import QR from "svelte-qr";
   import { formatBalance, minBalanceName, qrString } from "../../ts/services";
-  import type { PaymentResponse } from "../../types/users";
+  import type { PaymentResponse } from "../../types/backend";
 
   export let remaining: number;
   export let current: number;

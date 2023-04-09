@@ -4,7 +4,7 @@
   import Fa from "svelte-fa";
   import { API } from "../ts/api";
   import { onMount } from "svelte";
-  import type { Invitation, UserStatus } from "../types/users";
+  import type { Invitation, UserStatus } from "../types/backend";
   import {
     faTrash,
     faSync,
