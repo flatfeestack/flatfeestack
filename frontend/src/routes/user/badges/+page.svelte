@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "../ts/api";
-  import { error, user } from "../ts/mainStore";
-  import type { Contributions, ContributionSummary } from "../types/users";
-  import { formatDay, formatBalance } from "../ts/services";
+  import { API } from "../../../ts/api";
+  import { error, user } from "../../../ts/mainStore";
+  import type { Contributions, ContributionSummary } from "../../../types/users";
+  import { formatDay, formatBalance } from "../../../ts/services";
   import { Chart, registerables } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
   import Fa from "svelte-fa";
@@ -12,7 +12,7 @@
     faArrowRight,
     faArrowLeft,
   } from "@fortawesome/free-solid-svg-icons";
-  import { htmlLegendPlugin } from "../ts/utils";
+  import { htmlLegendPlugin } from "../../../ts/utils";
 
   let contributionSummaries: ContributionSummary[] = [];
   let contributions: Contributions[] = [];

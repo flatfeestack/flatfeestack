@@ -41,7 +41,9 @@
     "@ethersproject/providers": "^5.7.2",
     "@metamask/detect-provider": "^2.0.0",
     "@stripe/stripe-js": "^1.49.0",
+    "chart.js": "^4.2.1",
     "ethers": "^5.7.2",
-    "ky": "^0.33.3"
+    "ky": "^0.33.3",
+    "svelte-chartjs": "^3.1.2"
   }
 }

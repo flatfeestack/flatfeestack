@@ -1,6 +1,6 @@
 <script lang="ts">
   import { API } from "../../../ts/api";
-  import Spinner from "../components/Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
   import { formatDate, formatNowUTC, storeToken } from "../../../ts/services";
   import {
     config,
@@ -15,7 +15,7 @@
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import type { Repo } from "../../../types/users";
-  import Dots from "../components/Dots.svelte";
+  import Dots from "../../../components/Dots.svelte";
   import { navigate } from "svelte-routing";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
