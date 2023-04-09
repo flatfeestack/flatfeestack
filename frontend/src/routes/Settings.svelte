@@ -265,7 +265,8 @@
     the pending income you can see which currencies have been sent to you. The
     payout will happen every month. For an Ethereum wallet you can use <a
       href="https://metamask.io/">Metamask</a
-    >, for NEO you can use <a href="https://neoline.io/en/">NeoLine</a>.
+    >, for NEO you can use
+    <a href="https://neoline.io/en/">NeoLine</a>.
   </p>
 
   <div class="container">
