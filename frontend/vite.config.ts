@@ -28,6 +28,9 @@ export default defineConfig({
   server: {
     port: 9085,
   },
+  preview: {
+    port: 9085,
+  },
 
   build: {
     minify: mode !== "dev",
