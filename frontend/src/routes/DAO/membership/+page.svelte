@@ -9,11 +9,11 @@
     userEthereumAddress,
     membershipContract,
     membershipStatusValue,
-  } from "../../../ts/daoStore";
-  import { error } from "../../../ts/mainStore";
-  import Dialog from "../../../components/Dialog.svelte";
+  } from "$lib/ts/daoStore";
+  import { error } from "$lib/ts/mainStore";
+  import Dialog from "$lib/components/Dialog.svelte";
   import RequestMembership from "./RequestMembership.svelte";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
 
   let membershipFeePaid = false;
   let walletConnected: boolean;

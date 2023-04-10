@@ -3,10 +3,10 @@
     membershipContract,
     provider,
     userEthereumAddress,
-  } from "../../../ts/daoStore";
-  import { error } from "../../../ts/mainStore";
-  import membershipStatusMapping from "../../../utils/membershipStatusMapping";
-  import Spinner from "../../../components/Spinner.svelte";
+  } from "$lib/ts/daoStore";
+  import { error } from "$lib/ts/mainStore";
+  import membershipStatusMapping from "$lib/utils/membershipStatusMapping";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   let isLoading = true;
   let membersToBeConfirmed: MemberToConfirm[] = [];

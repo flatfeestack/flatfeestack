@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bylawsUrl } from "../../ts/daoStore";
+  import { bylawsUrl } from "$lib/ts/daoStore";
 </script>
 
 <h1 class="text-secondary-900">Welcome to the FlatFeeStack DAO</h1>

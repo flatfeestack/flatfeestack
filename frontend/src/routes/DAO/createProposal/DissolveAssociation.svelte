@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
-  import { MembershipABI } from "../../../contracts/Membership";
-  import { membershipContract } from "../../../ts/daoStore";
-  import type { ProposalFormProps } from "../../../types/dao";
-  import truncateEthAddress from "../../../utils/truncateEthereumAddress";
-  import yup from "../../../utils/yup";
-  import Spinner from "../../../components/Spinner.svelte";
-  import { WalletABI } from "../../../contracts/Wallet";
-  import { DAOABI } from "../../../contracts/DAO";
+  import { MembershipABI } from "$lib/contracts/Membership";
+  import { membershipContract } from "$lib/ts/daoStore";
+  import type { ProposalFormProps } from "$lib/types/dao";
+  import truncateEthAddress from "$lib/utils/truncateEthereumAddress";
+  import yup from "$lib/utils/yup";
+  import Spinner from "$lib/components/Spinner.svelte";
+  import { WalletABI } from "$lib/contracts/Wallet";
+  import { DAOABI } from "$lib/contracts/DAO";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];

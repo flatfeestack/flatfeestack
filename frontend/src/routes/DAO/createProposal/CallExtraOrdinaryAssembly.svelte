@@ -1,15 +1,12 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
   import humanizeDuration from "humanize-duration";
-  import { DAOABI } from "../../../contracts/DAO";
-  import { currentBlockNumber, daoContract } from "../../../ts/daoStore";
-  import type { ProposalFormProps } from "../../../types/dao";
-  import {
-    futureBlockDate,
-    secondsPerBlock,
-  } from "../../../utils/futureBlockDate";
-  import yup from "../../../utils/yup";
-  import Spinner from "../../../components/Spinner.svelte";
+  import { DAOABI } from "$lib/contracts/DAO";
+  import { currentBlockNumber, daoContract } from "$lib/ts/daoStore";
+  import type { ProposalFormProps } from "$lib/types/dao";
+  import { futureBlockDate, secondsPerBlock } from "$lib/utils/futureBlockDate";
+  import yup from "$lib/utils/yup";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];

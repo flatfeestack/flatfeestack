@@ -6,16 +6,13 @@
     daoContract,
     membershipStatusValue,
     provider,
-  } from "../../../ts/daoStore";
-  import { isSubmitting } from "../../../ts/mainStore";
-  import {
-    proposalCreatedEvents,
-    votingSlots,
-  } from "../../../ts/proposalStore";
-  import formatDateTime from "../../../utils/formatDateTime";
-  import { futureBlockDate } from "../../../utils/futureBlockDate";
+  } from "$lib/ts/daoStore";
+  import { isSubmitting } from "$lib/ts/mainStore";
+  import { proposalCreatedEvents, votingSlots } from "$lib/ts/proposalStore";
+  import formatDateTime from "$lib/utils/formatDateTime";
+  import { futureBlockDate } from "$lib/utils/futureBlockDate";
   import ExtraOrdinaryAssemblies from "./ExtraOrdinaryAssemblies.svelte";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};

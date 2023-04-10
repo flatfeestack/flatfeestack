@@ -1,17 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "../../../ts/api";
+  import { API } from "$lib/ts/api";
   import {
     error,
     isSubmitting,
     loadedSponsoredRepos,
     sponsoredRepos,
-  } from "../../../ts/mainStore";
-  import type { Repo } from "../../../types/users";
+  } from "$lib/ts/mainStore";
+  import type { Repo } from "$lib/types/users";
 
-  import Dots from "../../../components/Dots.svelte";
-  import RepoCard from "../../../components/RepoCard.svelte";
-  import SearchResult from "../../../components/SearchResult.svelte";
+  import Dots from "$lib/components/Dots.svelte";
+  import RepoCard from "./RepoCard.svelte";
+  import SearchResult from "./SearchResult.svelte";
 
   let search = "";
   let searchRepos: Repo[] | null = [];

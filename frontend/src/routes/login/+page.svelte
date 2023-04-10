@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { login } from "../../ts/services";
-  import Dots from "../../components/Dots.svelte";
+  import { login } from "$lib/ts/services";
+  import Dots from "$lib/components/Dots.svelte";
   import { goto } from "$app/navigation";
 
   let email = "";

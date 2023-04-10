@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "./../ts/api";
-  import { error } from "../ts/mainStore";
+  import { API } from "$lib/ts/api";
+  import { error } from "$lib/ts/mainStore";
   import { goto } from "$app/navigation";
 
   export let email: string;

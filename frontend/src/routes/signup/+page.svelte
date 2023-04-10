@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { API } from "../../ts/api";
-  import Dots from "../../components/Dots.svelte";
-  import { removeToken } from "../../ts/services";
+  import { API } from "$lib/ts/api";
+  import Dots from "$lib/components/Dots.svelte";
+  import { removeToken } from "$lib/ts/services";
 
   let email = "";
   let password = "";

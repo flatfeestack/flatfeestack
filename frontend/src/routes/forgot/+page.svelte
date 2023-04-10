@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { API } from "../../ts/api";
-  import Dots from "../../components/Dots.svelte";
+  import { API } from "$lib/ts/api";
+  import Dots from "$lib/components/Dots.svelte";
 
   let email = "";
   let error = "";

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { confirmEmail } from "../ts/services";
+  import { confirmEmail } from "$lib/ts/services";
   import { goto } from "$app/navigation";
-  import Spinner from "../components/Spinner.svelte";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   export let email: string;
   export let token: string;

@@ -8,12 +8,12 @@
     provider,
     userEthereumAddress,
     walletContract,
-  } from "../../../ts/daoStore";
-  import { error, isSubmitting } from "../../../ts/mainStore";
-  import formateDateTime from "../../../utils/formatDateTime";
-  import { secondsPerBlock } from "../../../utils/futureBlockDate";
-  import truncateEthAddress from "../../../utils/truncateEthereumAddress";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  } from "$lib/ts/daoStore";
+  import { error, isSubmitting } from "$lib/ts/mainStore";
+  import formateDateTime from "$lib/utils/formatDateTime";
+  import { secondsPerBlock } from "$lib/utils/futureBlockDate";
+  import truncateEthAddress from "$lib/utils/truncateEthereumAddress";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
 
   enum TransactionEventType {
     AcceptPayment,

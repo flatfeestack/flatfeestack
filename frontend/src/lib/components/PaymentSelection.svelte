@@ -2,10 +2,10 @@
   import FiatTab from "./PaymentTabs/FiatTab.svelte";
   import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
   import Tabs from "./Tabs.svelte";
-  import { config, userBalances, error } from "../ts/mainStore";
+  import { config, userBalances, error } from "$lib/ts/mainStore";
   import { onMount } from "svelte";
-  import { API } from "../ts/api";
-  import type { Plan } from "../types/users";
+  import { API } from "$lib/ts/api";
+  import type { Plan } from "$lib/types/users";
 
   // List of tab items with labels, values and assigned components
   let items = [

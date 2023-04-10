@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Dots from "../components/Dots.svelte";
-  import { confirmReset } from "../ts/services";
+  import Dots from "$lib/components/Dots.svelte";
+  import { confirmReset } from "$lib/ts/services";
   import { goto } from "$app/navigation";
 
   export let email: string;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ethers, providers } from "ethers";
-  import { ABI } from "../../types/contract";
-  import { error, user, config } from "../../ts/mainStore";
+  import { ABI } from "$lib/types/contract";
+  import { error, user, config } from "$lib/ts/mainStore";
   import detectEthereumProvider from "@metamask/detect-provider";
   import { onMount } from "svelte";
   import Spinner from "../Spinner.svelte";

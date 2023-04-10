@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { daoContract } from "../../../ts/daoStore";
-  import { votingSlots } from "../../../ts/proposalStore";
-  import Spinner from "../../../components/Spinner.svelte";
+  import { daoContract } from "$lib/ts/daoStore";
+  import { votingSlots } from "$lib/ts/proposalStore";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   let isLoading = true;
   let reason = "";

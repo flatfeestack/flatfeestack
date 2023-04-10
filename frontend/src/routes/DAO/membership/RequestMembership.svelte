@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from "svelte";
-  import { bylawsUrl } from "../../../ts/daoStore";
+  import { bylawsUrl } from "$lib/ts/daoStore";
 
   let isAgreed = false;
 

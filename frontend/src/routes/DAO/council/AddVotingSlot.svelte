@@ -1,14 +1,7 @@
 <script lang="ts">
-  import {
-    currentBlockNumber,
-    daoContract,
-    provider,
-  } from "../../../ts/daoStore";
-  import {
-    futureBlockDate,
-    secondsPerBlock,
-  } from "../../../utils/futureBlockDate";
-  import Spinner from "../../../components/Spinner.svelte";
+  import { currentBlockNumber, daoContract, provider } from "$lib/ts/daoStore";
+  import { futureBlockDate, secondsPerBlock } from "$lib/utils/futureBlockDate";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   let isLoading = true;
   let plannedBlockNumber = 0;

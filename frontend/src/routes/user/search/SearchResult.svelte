@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { API } from "../ts/api";
-  import { error, sponsoredRepos } from "../ts/mainStore";
-  import { getColor1 } from "../ts/utils";
-  import type { Repo } from "../types/users";
+  import { API } from "$lib/ts/api";
+  import { error, sponsoredRepos } from "$lib/ts/mainStore";
+  import { getColor1 } from "$lib/ts/utils";
+  import type { Repo } from "$lib/types/users";
 
   export let repo: Repo;
   let star = false;

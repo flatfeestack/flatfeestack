@@ -2,10 +2,10 @@
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import { goto } from "$app/navigation";
   import Fa from "svelte-fa";
-  import { API } from "../ts/api";
+  import { API } from "$lib/ts/api";
 
-  import { user, loginFailed } from "../ts/mainStore";
-  import { removeSession } from "../ts/services";
+  import { user, loginFailed } from "$lib/ts/mainStore";
+  import { removeSession } from "$lib/ts/services";
 
   import favicon from "$lib/images/favicon.svg";
   import ffsLogo from "$lib/images/ffs-logo.svg";

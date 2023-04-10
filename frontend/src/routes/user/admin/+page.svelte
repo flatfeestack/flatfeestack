@@ -1,21 +1,16 @@
 <script lang="ts">
-  import { API } from "../../../ts/api";
-  import Spinner from "../../../components/Spinner.svelte";
-  import { formatDate, formatNowUTC, storeToken } from "../../../ts/services";
-  import {
-    config,
-    error,
-    loadedSponsoredRepos,
-    user,
-  } from "../../../ts/mainStore";
+  import { API } from "$lib/ts/api";
+  import Spinner from "$lib/components/Spinner.svelte";
+  import { formatDate, formatNowUTC, storeToken } from "$lib/ts/services";
+  import { config, error, loadedSponsoredRepos, user } from "$lib/ts/mainStore";
   import {
     faSignInAlt,
     faCheck,
     faArrowsLeftRight,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import type { Repo } from "../../../types/users";
-  import Dots from "../../../components/Dots.svelte";
+  import type { Repo } from "$lib/types/users";
+  import Dots from "$lib/components/Dots.svelte";
   import { goto } from "$app/navigation";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();

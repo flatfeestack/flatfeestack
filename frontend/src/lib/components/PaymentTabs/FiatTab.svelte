@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { error, user, config, userBalances } from "../../ts/mainStore";
+  import { error, user, config, userBalances } from "$lib/ts/mainStore";
   import Dots from "../Dots.svelte";
   import {
     formatBalance,
     stripePayment,
     stripePaymentMethod,
-  } from "../../ts/services";
+  } from "$lib/ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
-  import { API } from "../../ts/api";
+  import { API } from "$lib/ts/api";
 
   export let remaining: number;
   export let current: number;

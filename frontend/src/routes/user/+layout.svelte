@@ -10,8 +10,8 @@
     faShieldAlt,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import { isSubmitting, user } from "../../ts/mainStore";
-  import Spinner from "../../components/Spinner.svelte";
+  import { isSubmitting, user } from "$lib/ts/mainStore";
+  import Spinner from "$lib/components/Spinner.svelte";
 </script>
 
 <style>

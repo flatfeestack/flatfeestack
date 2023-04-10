@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "../ts/api";
-  import { error } from "../ts/mainStore";
-  import type { ContributionSummary, Users } from "../types/users";
+  import { API } from "$lib/ts/api";
+  import { error } from "$lib/ts/mainStore";
+  import type { ContributionSummary, Users } from "$lib/types/users";
 
   export let uuid: string;
   let contributionSummaries: ContributionSummary[] = [];

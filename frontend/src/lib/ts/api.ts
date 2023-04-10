@@ -20,9 +20,9 @@ import type {
   UserAggBalance,
   Users,
   UserStatus,
-} from "../types/users";
-import { token } from "./mainStore";
-import { refresh } from "./services";
+} from "$lib/types/users";
+import { token } from "$lib/ts/mainStore";
+import { refresh } from "$lib/ts/services";
 
 async function addToken(request: Request) {
   const t = get(token);

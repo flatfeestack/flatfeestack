@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { error, isSubmitting, user } from "../../../ts/mainStore";
+  import { error, isSubmitting, user } from "$lib/ts/mainStore";
   import Fa from "svelte-fa";
-  import { API } from "../../../ts/api";
+  import { API } from "$lib/ts/api";
   import { onMount } from "svelte";
-  import type { Invitation, UserStatus } from "../../../types/users";
+  import type { Invitation, UserStatus } from "$lib/types/users";
   import {
     faTrash,
     faSync,
     faClock,
     faCheck,
   } from "@fortawesome/free-solid-svg-icons";
-  import { formatDate, timeSince } from "../../../ts/services";
-  import Dots from "../../../components/Dots.svelte";
+  import { formatDate, timeSince } from "$lib/ts/services";
+  import Dots from "$lib/components/Dots.svelte";
 
   let invites: Invitation[] = [];
   let inviteEmail: string;

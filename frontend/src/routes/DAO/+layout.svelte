@@ -17,13 +17,13 @@
     provider,
     signer,
     userEthereumAddress,
-  } from "../../ts/daoStore";
-  import { isSubmitting } from "../../ts/mainStore";
-  import membershipStatusMapping from "../../utils/membershipStatusMapping";
-  import showMetaMaskRequired from "../../utils/showMetaMaskRequired";
-  import truncateEthAddress from "../../utils/truncateEthereumAddress";
-  import NavItem from "../../components/NavItem.svelte";
-  import Spinner from "../../components/Spinner.svelte";
+  } from "$lib/ts/daoStore";
+  import { isSubmitting } from "$lib/ts/mainStore";
+  import membershipStatusMapping from "$lib/utils/membershipStatusMapping";
+  import showMetaMaskRequired from "$lib/utils/showMetaMaskRequired";
+  import truncateEthAddress from "$lib/utils/truncateEthereumAddress";
+  import NavItem from "$lib/components/NavItem.svelte";
+  import Spinner from "$lib/components/Spinner.svelte";
 
   let membershipStatus: string;
 

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { Interface } from "ethers/lib/utils";
-  import { MembershipABI } from "../../../contracts/Membership";
-  import { councilMembers } from "../../../ts/daoStore";
-  import type { ProposalFormProps } from "../../../types/dao";
-  import truncateEthAddress from "../../../utils/truncateEthereumAddress";
-  import yup from "../../../utils/yup";
-  import Spinner from "../../../components/Spinner.svelte";
-  import { membershipContract } from "../../../ts/daoStore";
+  import { MembershipABI } from "$lib/contracts/Membership";
+  import { councilMembers } from "$lib/ts/daoStore";
+  import type { ProposalFormProps } from "$lib/types/dao";
+  import truncateEthAddress from "$lib/utils/truncateEthereumAddress";
+  import yup from "$lib/utils/yup";
+  import Spinner from "$lib/components/Spinner.svelte";
+  import { membershipContract } from "$lib/ts/daoStore";
   import type { BigNumber } from "ethers";
 
   interface $$Props extends ProposalFormProps {}

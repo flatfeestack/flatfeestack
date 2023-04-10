@@ -1,18 +1,15 @@
 <script lang="ts">
   import type { Event } from "ethers";
   import humanizeDuration from "humanize-duration";
-  import { daoContract, userEthereumAddress } from "../../../ts/daoStore";
-  import { isSubmitting } from "../../../ts/mainStore";
+  import { daoContract, userEthereumAddress } from "$lib/ts/daoStore";
+  import { isSubmitting } from "$lib/ts/mainStore";
   import {
     extraOrdinaryAssemblyRequestProposalIds,
     proposalCreatedEvents,
     votesCasted,
-  } from "../../../ts/proposalStore";
-  import { futureBlockDate } from "../../../utils/futureBlockDate";
-  import {
-    executeProposal,
-    queueProposal,
-  } from "../../../utils/proposalFunctions";
+  } from "$lib/ts/proposalStore";
+  import { futureBlockDate } from "$lib/utils/futureBlockDate";
+  import { executeProposal, queueProposal } from "$lib/utils/proposalFunctions";
   import VoteButtonGroup from "./VoteButtonGroup.svelte";
 
   let extraOrdinaryAssemblyRequests = [];

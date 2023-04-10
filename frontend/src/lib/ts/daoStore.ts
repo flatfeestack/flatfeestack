@@ -1,9 +1,9 @@
 import type { JsonRpcSigner, Web3Provider } from "@ethersproject/providers";
 import { BigNumber, Contract, ethers, Signer } from "ethers";
 import { derived, writable, type Readable } from "svelte/store";
-import { DAOABI } from "../contracts/DAO";
-import { MembershipABI } from "../contracts/Membership";
-import { WalletABI } from "../contracts/Wallet";
+import { DAOABI } from "$lib/contracts/DAO";
+import { MembershipABI } from "$lib/contracts/Membership";
+import { WalletABI } from "$lib/contracts/Wallet";
 
 // provider is null when it's not initialized
 // undefined when we did not detect any provider

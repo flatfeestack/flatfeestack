@@ -6,9 +6,9 @@
     membershipContract,
     membershipStatusValue,
     signer,
-  } from "../../../ts/daoStore";
-  import { error, isSubmitting } from "../../../ts/mainStore";
-  import type { Call, ProposalType } from "../../../types/dao";
+  } from "$lib/ts/daoStore";
+  import { error, isSubmitting } from "$lib/ts/mainStore";
+  import type { Call, ProposalType } from "$lib/types/dao";
   import AddCouncilMember from "./AddCouncilMember.svelte";
   import CallExtraOrdinaryAssembly from "./CallExtraOrdinaryAssembly.svelte";
   import DissolveAssociation from "./DissolveAssociation.svelte";
@@ -16,7 +16,7 @@
   import RemoveCouncilMember from "./RemoveCouncilMember.svelte";
   import RemoveMember from "./RemoveMember.svelte";
   import RequestFunds from "./RequestFunds.svelte";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
 
   checkUndefinedProvider();
 

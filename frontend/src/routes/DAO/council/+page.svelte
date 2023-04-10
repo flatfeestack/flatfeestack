@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { councilMembers, userEthereumAddress } from "../../../ts/daoStore";
-  import { error, isSubmitting } from "../../../ts/mainStore";
+  import { councilMembers, userEthereumAddress } from "$lib/ts/daoStore";
+  import { error, isSubmitting } from "$lib/ts/mainStore";
   import AddVotingSlot from "./AddVotingSlot.svelte";
   import CancelVotingSlot from "./CancelVotingSlot.svelte";
   import MembershipRequests from "./MembershipRequests.svelte";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
   checkUndefinedProvider();

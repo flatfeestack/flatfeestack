@@ -1,9 +1,9 @@
 <script lang="ts">
   import { ethers } from "ethers";
   import { Interface } from "ethers/lib/utils";
-  import { WalletABI } from "../../../contracts/Wallet";
-  import type { ProposalFormProps } from "../../../types/dao";
-  import yup from "../../../utils/yup";
+  import { WalletABI } from "$lib/contracts/Wallet";
+  import type { ProposalFormProps } from "$lib/types/dao";
+  import yup from "$lib/utils/yup";
 
   // as described in https://github.com/sveltejs/svelte/issues/7605#issuecomment-1156000553
   interface $$Props extends ProposalFormProps {}

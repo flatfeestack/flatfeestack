@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { config, error } from "../../ts/mainStore";
-  import { API } from "../../ts/api";
+  import { config, error } from "$lib/ts/mainStore";
+  import { API } from "$lib/ts/api";
   // noinspection TypeScriptCheckImport
   import QR from "svelte-qr";
-  import { formatBalance, minBalanceName, qrString } from "../../ts/services";
-  import type { PaymentResponse } from "../../types/users";
+  import { formatBalance, minBalanceName, qrString } from "$lib/ts/services";
+  import type { PaymentResponse } from "$lib/types/users";
 
   export let remaining: number;
   export let current: number;

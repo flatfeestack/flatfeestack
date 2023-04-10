@@ -1,17 +1,11 @@
 <script lang="ts">
   import humanizeDuration from "humanize-duration";
   import { goto } from "$app/navigation";
-  import { currentBlockTimestamp, daoContract } from "../../../ts/daoStore";
-  import { error, isSubmitting } from "../../../ts/mainStore";
-  import {
-    proposalCreatedEvents,
-    votingSlots,
-  } from "../../../ts/proposalStore";
-  import {
-    executeProposal,
-    queueProposal,
-  } from "../../../utils/proposalFunctions";
-  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
+  import { currentBlockTimestamp, daoContract } from "$lib/ts/daoStore";
+  import { error, isSubmitting } from "$lib/ts/mainStore";
+  import { proposalCreatedEvents, votingSlots } from "$lib/ts/proposalStore";
+  import { executeProposal, queueProposal } from "$lib/utils/proposalFunctions";
+  import checkUndefinedProvider from "$lib/utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
   export let blockNumber: string;

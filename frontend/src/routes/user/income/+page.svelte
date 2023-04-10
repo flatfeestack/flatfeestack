@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { API } from "../../../ts/api";
-  import { error } from "../../../ts/mainStore";
-  import { formatBalance, formatDate, timeSince } from "../../../ts/services";
+  import { API } from "$lib/ts/api";
+  import { error } from "$lib/ts/mainStore";
+  import { formatBalance, formatDate, timeSince } from "$lib/ts/services";
 </script>
 
 <h2 class="p-2 m-2">Income</h2>
