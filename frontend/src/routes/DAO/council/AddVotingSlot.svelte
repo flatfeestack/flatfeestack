@@ -8,7 +8,7 @@
     futureBlockDate,
     secondsPerBlock,
   } from "../../../utils/futureBlockDate";
-  import Spinner from "../../Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
 
   let isLoading = true;
   let plannedBlockNumber = 0;

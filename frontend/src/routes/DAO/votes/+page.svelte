@@ -14,7 +14,7 @@
   } from "../../../ts/proposalStore";
   import formatDateTime from "../../../utils/formatDateTime";
   import { futureBlockDate } from "../../../utils/futureBlockDate";
-  import ExtraOrdinaryAssemblies from "../../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
+  import ExtraOrdinaryAssemblies from "./ExtraOrdinaryAssemblies.svelte";
   import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 

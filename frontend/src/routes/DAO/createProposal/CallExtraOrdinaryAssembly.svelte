@@ -9,7 +9,7 @@
     secondsPerBlock,
   } from "../../../utils/futureBlockDate";
   import yup from "../../../utils/yup";
-  import Spinner from "../../Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];

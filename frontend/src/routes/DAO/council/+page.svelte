@@ -2,9 +2,9 @@
   import { goto } from "$app/navigation";
   import { councilMembers, userEthereumAddress } from "../../../ts/daoStore";
   import { error, isSubmitting } from "../../../ts/mainStore";
-  import AddVotingSlot from "../../../components/DAO/council/AddVotingSlot.svelte";
-  import CancelVotingSlot from "../../../components/DAO/council/CancelVotingSlot.svelte";
-  import MembershipRequests from "../../../components/DAO/council/MembershipRequests.svelte";
+  import AddVotingSlot from "./AddVotingSlot.svelte";
+  import CancelVotingSlot from "./CancelVotingSlot.svelte";
+  import MembershipRequests from "./MembershipRequests.svelte";
   import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 

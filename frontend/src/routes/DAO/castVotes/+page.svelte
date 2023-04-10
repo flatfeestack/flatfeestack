@@ -7,10 +7,13 @@
   import type { Event } from "ethers";
   import Fa from "svelte-fa";
   import { goto } from "$app/navigation";
-  import { daoContract, userEthereumAddress } from "../../ts/daoStore";
-  import { error, isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import { daoContract, userEthereumAddress } from "../../../ts/daoStore";
+  import { error, isSubmitting } from "../../../ts/mainStore";
+  import {
+    proposalCreatedEvents,
+    votingSlots,
+  } from "../../../ts/proposalStore";
+  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
   interface VoteValues {

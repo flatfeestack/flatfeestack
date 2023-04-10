@@ -6,17 +6,17 @@
     membershipContract,
     membershipStatusValue,
     signer,
-  } from "../../ts/daoStore";
-  import { error, isSubmitting } from "../../ts/mainStore";
-  import type { Call, ProposalType } from "../../types/dao";
-  import AddCouncilMember from "../../components/DAO/proposals/AddCouncilMember.svelte";
-  import CallExtraOrdinaryAssembly from "../../components/DAO/proposals/CallExtraOrdinaryAssembly.svelte";
-  import DissolveAssociation from "../../components/DAO/proposals/DissolveAssociation.svelte";
-  import FreeText from "../../components/DAO/proposals/FreeText.svelte";
-  import RemoveCouncilMember from "../../components/DAO/proposals/RemoveCouncilMember.svelte";
-  import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
-  import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  } from "../../../ts/daoStore";
+  import { error, isSubmitting } from "../../../ts/mainStore";
+  import type { Call, ProposalType } from "../../../types/dao";
+  import AddCouncilMember from "./AddCouncilMember.svelte";
+  import CallExtraOrdinaryAssembly from "./CallExtraOrdinaryAssembly.svelte";
+  import DissolveAssociation from "./DissolveAssociation.svelte";
+  import FreeText from "./FreeText.svelte";
+  import RemoveCouncilMember from "./RemoveCouncilMember.svelte";
+  import RemoveMember from "./RemoveMember.svelte";
+  import RequestFunds from "./RequestFunds.svelte";
+  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
 
   checkUndefinedProvider();
 

@@ -6,7 +6,7 @@
   } from "../../../ts/daoStore";
   import { error } from "../../../ts/mainStore";
   import membershipStatusMapping from "../../../utils/membershipStatusMapping";
-  import Spinner from "../../Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
 
   let isLoading = true;
   let membersToBeConfirmed: MemberToConfirm[] = [];

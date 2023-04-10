@@ -5,7 +5,7 @@
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
-  import Spinner from "../../Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
   import { membershipContract } from "../../../ts/daoStore";
   import type { BigNumber } from "ethers";
 

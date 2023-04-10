@@ -5,7 +5,7 @@
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
-  import Spinner from "../../Spinner.svelte";
+  import Spinner from "../../../components/Spinner.svelte";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];

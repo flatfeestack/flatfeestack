@@ -12,7 +12,7 @@
   } from "../../../ts/daoStore";
   import { error } from "../../../ts/mainStore";
   import Dialog from "../../../components/Dialog.svelte";
-  import RequestMembership from "../../../components/DAO/membership/RequestMembership.svelte";
+  import RequestMembership from "./RequestMembership.svelte";
   import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
 
   let membershipFeePaid = false;
