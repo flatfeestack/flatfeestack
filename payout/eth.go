@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,6 +16,14 @@ import (
 	"math/big"
 	"time"
 )
+
+type EthSignature struct {
+	Raw  []byte `json:"raw"`
+	Hash string `json:"hash"`
+	R    string `json:"r"`
+	S    string `json:"s"`
+	V    uint8  `json:"v"`
+}
 
 // PayoutEthMetaData contains all meta data concerning the PayoutEth contract.
 var PayoutEthMetaData = &bind.MetaData{
@@ -133,4 +142,26 @@ func warpChain(seconds int, rpc *rpc.Client) error {
 	}
 
 	return nil
+}
+
+func getEthSignature(data PayoutRequest2) (EthSignature, error) {
+	privateKey, err := crypto.HexToECDSA(opts.Ethereum.PrivateKey)
+	if err != nil {
+		return EthSignature{}, err
+	}
+
+	hashRaw := crypto.Keccak256([]byte(data.UserId.String() + "#" + data.Amount.String()))
+	signature, err := crypto.Sign(hashRaw, privateKey)
+	if err != nil {
+		return EthSignature{}, err
+	}
+
+	//https://ethereum.stackexchange.com/questions/45580/validating-go-ethereum-key-signature-with-ecrecover
+	return EthSignature{
+		signature,
+		hex.EncodeToString(hashRaw),
+		hex.EncodeToString(signature[:32]),
+		hex.EncodeToString(signature[32:64]),
+		uint8(int(signature[64])) + 27,
+	}, nil
 }

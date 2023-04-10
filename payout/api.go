@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -22,11 +20,11 @@ type Config struct {
 }
 
 type PayoutRequest2 struct {
-	UserId uuid.UUID `json:"userId"`
 	Amount *big.Int  `json:"amount"`
+	UserId uuid.UUID `json:"userId"`
 }
 
-func sign(w http.ResponseWriter, r *http.Request) {
+func signNeo(w http.ResponseWriter, r *http.Request) {
 	var data PayoutRequest2
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -34,34 +32,30 @@ func sign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	privateKey, err := crypto.HexToECDSA(opts.Ethereum.PrivateKey)
+	signature, err := getNeoSignature(data)
+	if err == nil {
+		writeJson(w, signature)
+	} else {
+		writeErr(w, http.StatusBadRequest, "error when generating signature %v", err)
+		return
+	}
+}
+
+func signEth(w http.ResponseWriter, r *http.Request) {
+	var data PayoutRequest2
+	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "private key error %v", err)
+		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	b1, _ := data.UserId.MarshalBinary()
-	b2 := make([]byte, 32-len(b1))
-	b3 := append(b1, b2...)
-	b4 := math.U256Bytes(data.Amount)
-
-	hashRaw := crypto.Keccak256(b3, []byte{'#'}, b4)
-	signature, err := crypto.Sign(hashRaw, privateKey)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "private key error %v", err)
+	signature, err := getEthSignature(data)
+	if err == nil {
+		writeJson(w, signature)
+	} else {
+		writeErr(w, http.StatusBadRequest, "error when generating signature %v", err)
 		return
 	}
-
-	//https://ethereum.stackexchange.com/questions/45580/validating-go-ethereum-key-signature-with-ecrecover
-	sig := Signature{
-		signature,
-		bytes32(hashRaw),
-		bytes32(signature[:32]),
-		bytes32(signature[32:64]),
-		uint8(int(signature[65])) + 27, // Yes add 27, weird Ethereum quirk
-	}
-
-	writeJson(w, sig)
 }
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {

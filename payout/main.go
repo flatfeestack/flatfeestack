@@ -16,14 +16,6 @@ import (
 	"time"
 )
 
-type Signature struct {
-	Raw  []byte   `json:"raw"`
-	Hash [32]byte `json:"hash"`
-	R    [32]byte `json:"r"`
-	S    [32]byte `json:"s"`
-	V    uint8    `json:"v"`
-}
-
 type Timewarp struct {
 	Offset int `json:"offset"`
 }
@@ -162,7 +154,7 @@ func neoInit() *neo.Client {
 	}
 	if err != nil {
 		//log.Fatal("Could not initialize NEO network", err)
-		log.Debugf("Could not initialize NEO network", err)
+		log.Debugf("Could not initialize NEO network %v", err)
 	}
 	return neoClient
 }
@@ -190,8 +182,11 @@ func main() {
 
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
+
 	//this can only be called by an internal server
-	router.HandleFunc("/admin/sign/{userId}/{totalPayedOut}", jwtAuth(jwtAuthServer(sign))).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/eth", jwtAuth(jwtAuthServer(signEth))).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/neo", jwtAuth(jwtAuthServer(signNeo))).Methods(http.MethodPost)
+
 	//this can be called from frontend, but only the admin
 	if debug {
 		router.HandleFunc("/admin/time", jwtAuth(jwtAuthAdmin(serverTime, admins))).Methods(http.MethodGet)

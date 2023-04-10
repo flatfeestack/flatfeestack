@@ -75,7 +75,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 func jwtAuthServer(next func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request, *TokenClaims) {
 	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		if claims.Subject == "ffs-server" {
-			log.Printf("Authenticated server %s\n")
+			log.Printf("Authenticated server ffs-server")
 			next(w, r)
 			return
 		}
