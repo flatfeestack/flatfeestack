@@ -1,15 +1,33 @@
 <script>
   import { faHome } from "@fortawesome/free-solid-svg-icons";
+  import { goto } from "$app/navigation";
   import Fa from "svelte-fa";
+  import { API } from "../ts/api";
+
+  import { user, loginFailed } from "../ts/mainStore";
+  import { removeSession } from "../ts/services";
 
   import favicon from "$lib/images/favicon.svg";
   import ffsLogo from "$lib/images/ffs-logo.svg";
+  import { onMount } from "svelte";
 
-  const user = { id: 1, image: "", email: "test" };
+  let loading = true;
 
   function logout() {
-    console.log("logout");
+    removeSession();
+    goto("/login");
   }
+
+  onMount(async () => {
+    try {
+      loading = true;
+      $user = await API.user.get();
+    } catch (e) {
+      $loginFailed = true;
+    } finally {
+      loading = false;
+    }
+  });
 </script>
 
 <style>
@@ -59,12 +77,12 @@
     <img class="hide-sx imgNormalLogo" src={ffsLogo} alt="FlatFeeStack" />
   </a>
   <nav>
-    {#if user.id}
+    {#if $user.id}
       <a href="/user/search"><Fa icon={faHome} size="sm" class="icon" /></a>
-      {#if user.image}
-        <img class="image-org-sx" src={user.image} alt="user profile img" />
+      {#if $user.image}
+        <img class="image-org-sx" src={$user.image} alt="user profile img" />
       {/if}
-      {user.email}
+      {$user.email}
       <form on:submit|preventDefault={logout}>
         <button class="button3 center mx-2" type="submit">Sign out</button>
       </form>
