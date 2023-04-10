@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { confirmEmail } from "../ts/services";
-  import { navigate, link } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import Spinner from "../components/Spinner.svelte";
 
   export let email: string;
@@ -11,7 +11,7 @@
   onMount(async () => {
     try {
       await confirmEmail(email, token);
-      navigate("/user/settings");
+      goto("/user/settings");
     } catch (e) {
       error = e;
     }
@@ -42,7 +42,7 @@
 
       <div class="divider" />
       <div class="flex">
-        Already have an account?&nbsp;<a href="/login" use:link>Log in</a>
+        Already have an account?&nbsp;<a href="/login">Log in</a>
       </div>
     </div>
   </div>

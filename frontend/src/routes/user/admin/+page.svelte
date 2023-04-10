@@ -16,7 +16,7 @@
   import Fa from "svelte-fa";
   import type { Repo } from "../../../types/users";
   import Dots from "../../../components/Dots.svelte";
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
@@ -134,7 +134,7 @@
       const u = await API.user.get();
       user.set(u);
       loadedSponsoredRepos.set(false);
-      navigate("/user/search");
+      goto("/user/search");
     } catch (e) {
       $error = e as string;
     }

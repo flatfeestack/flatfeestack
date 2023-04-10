@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import {
     currentBlockNumber,
     currentBlockTimestamp,
@@ -261,17 +261,17 @@
         {#if $membershipStatusValue == 3}
           {#if slotInfo.votingSlotState == VotingSlotState.ProposalsOpen}
             <button
-              on:click={() => navigate("/dao/createProposal")}
+              on:click={() => goto("/dao/createProposal")}
               class="py-2 button3">Create Proposal</button
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/dao/castVotes/${blockNumber}`)}
+              on:click={() => goto(`/dao/castVotes/${blockNumber}`)}
               class="py-2 button3">Vote</button
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/dao/executeProposals/${blockNumber}`)}
+              on:click={() => goto(`/dao/executeProposals/${blockNumber}`)}
               class="py-2 button3">Execute proposals</button
             >
           {/if}

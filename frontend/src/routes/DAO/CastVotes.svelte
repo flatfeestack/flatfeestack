@@ -6,7 +6,7 @@
   } from "@fortawesome/free-solid-svg-icons";
   import type { Event } from "ethers";
   import Fa from "svelte-fa";
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import { daoContract, userEthereumAddress } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
@@ -54,7 +54,7 @@
   async function prepareView() {
     if (!$votingSlots.includes(Number(blockNumber))) {
       $error = "Invalid voting slot.";
-      navigate("/dao/votes");
+      goto("/dao/votes");
     }
 
     const votingPower = await $daoContract.getVotes(
@@ -63,7 +63,7 @@
     );
     if (votingPower.toNumber() < 1) {
       $error = "You are not allowed to vote in this cycle.";
-      navigate("/dao/votes");
+      goto("/dao/votes");
     }
 
     const amountOfProposals =

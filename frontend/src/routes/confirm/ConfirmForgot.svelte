@@ -1,7 +1,7 @@
 <script lang="ts">
   import Dots from "../components/Dots.svelte";
   import { confirmReset } from "../ts/services";
-  import { navigate, link } from "svelte-routing";
+  import { goto } from "$app/navigation";
 
   export let email: string;
   export let token: string;
@@ -15,7 +15,7 @@
       error = "";
       isSubmitting = true;
       await confirmReset(email, password, token);
-      navigate("/user/search");
+      goto("/user/search");
       isSubmitting = false;
       email = "";
       password = "";
@@ -97,7 +97,7 @@
 
     <div class="divider" />
     <div class="flex">
-      Already have an account?&nbsp;<a href="/login" use:link>Log in</a>
+      Already have an account?&nbsp;<a href="/login">Log in</a>
     </div>
   </div>
 </div>

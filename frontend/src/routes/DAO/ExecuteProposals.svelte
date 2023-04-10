@@ -1,6 +1,6 @@
 <script lang="ts">
   import humanizeDuration from "humanize-duration";
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import { currentBlockTimestamp, daoContract } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
@@ -33,7 +33,7 @@
   async function prepareView() {
     if (!$votingSlots.includes(Number(blockNumber))) {
       $error = "Invalid voting slot.";
-      navigate("/dao/votes");
+      goto("/dao/votes");
     }
 
     const amountOfProposals =

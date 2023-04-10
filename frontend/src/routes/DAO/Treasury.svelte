@@ -1,7 +1,7 @@
 <script lang="ts">
   import { BigNumber, ethers } from "ethers";
   import { onDestroy, onMount } from "svelte";
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import {
     currentBlockNumber,
     membershipStatusValue,
@@ -56,7 +56,7 @@
   onMount(() => {
     if ($membershipStatusValue != 3) {
       $error = "You are not allowed to view this page.";
-      navigate("/dao/home");
+      goto("/dao/home");
       return;
     }
 

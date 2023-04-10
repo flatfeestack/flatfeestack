@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import {
     daoContract,
     membershipContract,
@@ -70,7 +70,7 @@
 
   function moveToVotesPage() {
     $error = "You are not allowed to view this page.";
-    navigate("/dao/home");
+    goto("/dao/home");
   }
 
   async function createProposal() {
@@ -94,7 +94,7 @@
     );
 
     $isSubmitting = false;
-    navigate("/dao/votes");
+    goto("/dao/votes");
   }
 
   onDestroy(() => {

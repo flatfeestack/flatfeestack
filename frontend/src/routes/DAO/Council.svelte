@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { navigate } from "svelte-routing";
+  import { goto } from "$app/navigation";
   import { councilMembers, userEthereumAddress } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import AddVotingSlot from "../../components/DAO/council/AddVotingSlot.svelte";
@@ -18,7 +18,7 @@
       !$councilMembers.some((member) => member == $userEthereumAddress)
     ) {
       $error = "You are not allowed to view this page.";
-      navigate("/dao/home");
+      goto("/dao/home");
     } else {
       $isSubmitting = false;
     }

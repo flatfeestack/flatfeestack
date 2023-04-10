@@ -1,4 +1,4 @@
-import { navigate } from "svelte-routing";
+import { goto } from "$app/navigation";
 
-const showMetaMaskRequired = () => navigate("/dao/metamask");
+const showMetaMaskRequired = () => goto("/dao/metamask");
 export default showMetaMaskRequired;
