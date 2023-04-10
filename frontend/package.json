@@ -6,7 +6,8 @@
   "scripts": {
     "hmr": "MODE=hmr vite --host",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "MODE=dev vite build",
+    "prod": "MODE=prod vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
