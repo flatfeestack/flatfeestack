@@ -6,14 +6,16 @@
     daoContract,
     membershipStatusValue,
     provider,
-  } from "../../ts/daoStore";
-  import { isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import formatDateTime from "../../utils/formatDateTime";
-  import { futureBlockDate } from "../../utils/futureBlockDate";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  } from "../../../ts/daoStore";
+  import { isSubmitting } from "../../../ts/mainStore";
+  import {
+    proposalCreatedEvents,
+    votingSlots,
+  } from "../../../ts/proposalStore";
+  import formatDateTime from "../../../utils/formatDateTime";
+  import { futureBlockDate } from "../../../utils/futureBlockDate";
+  import ExtraOrdinaryAssemblies from "../../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
+  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
@@ -198,85 +200,83 @@
   }
 </style>
 
-<Navigation>
-  <p>Last updated (block): #{$currentBlockNumber}</p>
-  <p>
-    Last updated (time): Current-Time: {currentTime}
+<p>Last updated (block): #{$currentBlockNumber}</p>
+<p>
+  Last updated (time): Current-Time: {currentTime}
 
-    <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
+  <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
 
-    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
-      <div class="card">
-        <h2 class="text-secondary-900">
-          Voting slot #{slotInfo.id}
-        </h2>
+  {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
+    <div class="card">
+      <h2 class="text-secondary-900">
+        Voting slot #{slotInfo.id}
+      </h2>
 
-        {#if slotInfo.votingSlotState === VotingSlotState.ProposalsOpen}
-          <p>
-            Proposal creation open until #{slotInfo.dates
-              .proposalCreationOpenBlockNumber} (approx. {slotInfo.dates
-              .proposalCreationOpenDate})
-          </p>
-          <p>
-            Voting scheduled for #{blockNumber} (approx. {slotInfo.dates
-              .votingStartDate})
-          </p>
-        {:else if slotInfo.votingSlotState === VotingSlotState.ProposalFreeze}
-          <p>
-            Proposal creation closed since #{slotInfo.dates
-              .proposalCreationOpenBlockNumber} ({slotInfo.dates
-              .proposalCreationOpenDate})
-          </p>
-          <p>
-            Voting start scheduled for #{blockNumber} (approx. {slotInfo.dates
-              .votingStartDate})
-          </p>
+      {#if slotInfo.votingSlotState === VotingSlotState.ProposalsOpen}
+        <p>
+          Proposal creation open until #{slotInfo.dates
+            .proposalCreationOpenBlockNumber} (approx. {slotInfo.dates
+            .proposalCreationOpenDate})
+        </p>
+        <p>
+          Voting scheduled for #{blockNumber} (approx. {slotInfo.dates
+            .votingStartDate})
+        </p>
+      {:else if slotInfo.votingSlotState === VotingSlotState.ProposalFreeze}
+        <p>
+          Proposal creation closed since #{slotInfo.dates
+            .proposalCreationOpenBlockNumber} ({slotInfo.dates
+            .proposalCreationOpenDate})
+        </p>
+        <p>
+          Voting start scheduled for #{blockNumber} (approx. {slotInfo.dates
+            .votingStartDate})
+        </p>
 
-          <p>
-            Voting end scheduled for #{slotInfo.dates.votingEndBlockNumber} (approx.
-            {slotInfo.dates.votingEndDate})
-          </p>
-        {:else if slotInfo.votingSlotState === VotingSlotState.VotingOpen}
-          <p>
-            Voting open until #{slotInfo.dates.votingEndBlockNumber} (approx. {slotInfo
-              .dates.votingEndDate})
-          </p>
-        {:else}
-          <p>
-            Voting closed since #{slotInfo.dates.votingEndBlockNumber} ({slotInfo
-              .dates.votingEndDate})
-          </p>
+        <p>
+          Voting end scheduled for #{slotInfo.dates.votingEndBlockNumber} (approx.
+          {slotInfo.dates.votingEndDate})
+        </p>
+      {:else if slotInfo.votingSlotState === VotingSlotState.VotingOpen}
+        <p>
+          Voting open until #{slotInfo.dates.votingEndBlockNumber} (approx. {slotInfo
+            .dates.votingEndDate})
+        </p>
+      {:else}
+        <p>
+          Voting closed since #{slotInfo.dates.votingEndBlockNumber} ({slotInfo
+            .dates.votingEndDate})
+        </p>
+      {/if}
+
+      {#if slotInfo.proposalInfos.length > 0}
+        <ul>
+          {#each slotInfo.proposalInfos as proposalInfo, i}
+            <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="italic">No proposals submitted.</p>
+      {/if}
+
+      {#if $membershipStatusValue == 3}
+        {#if slotInfo.votingSlotState == VotingSlotState.ProposalsOpen}
+          <button
+            on:click={() => goto("/dao/createProposal")}
+            class="py-2 button3">Create Proposal</button
+          >
+        {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
+          <button
+            on:click={() => goto(`/dao/castVotes/${blockNumber}`)}
+            class="py-2 button3">Vote</button
+          >
+        {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
+          <button
+            on:click={() => goto(`/dao/executeProposals/${blockNumber}`)}
+            class="py-2 button3">Execute proposals</button
+          >
         {/if}
-
-        {#if slotInfo.proposalInfos.length > 0}
-          <ul>
-            {#each slotInfo.proposalInfos as proposalInfo, i}
-              <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="italic">No proposals submitted.</p>
-        {/if}
-
-        {#if $membershipStatusValue == 3}
-          {#if slotInfo.votingSlotState == VotingSlotState.ProposalsOpen}
-            <button
-              on:click={() => goto("/dao/createProposal")}
-              class="py-2 button3">Create Proposal</button
-            >
-          {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
-            <button
-              on:click={() => goto(`/dao/castVotes/${blockNumber}`)}
-              class="py-2 button3">Vote</button
-            >
-          {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
-            <button
-              on:click={() => goto(`/dao/executeProposals/${blockNumber}`)}
-              class="py-2 button3">Execute proposals</button
-            >
-          {/if}
-        {/if}
-      </div>
-    {/each}
-  </p>
-</Navigation>
+      {/if}
+    </div>
+  {/each}
+</p>

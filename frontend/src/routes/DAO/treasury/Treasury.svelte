@@ -8,13 +8,12 @@
     provider,
     userEthereumAddress,
     walletContract,
-  } from "../../ts/daoStore";
-  import { error, isSubmitting } from "../../ts/mainStore";
-  import formateDateTime from "../../utils/formatDateTime";
-  import { secondsPerBlock } from "../../utils/futureBlockDate";
-  import truncateEthAddress from "../../utils/truncateEthereumAddress";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  } from "../../../ts/daoStore";
+  import { error, isSubmitting } from "../../../ts/mainStore";
+  import formateDateTime from "../../../utils/formatDateTime";
+  import { secondsPerBlock } from "../../../utils/futureBlockDate";
+  import truncateEthAddress from "../../../utils/truncateEthereumAddress";
+  import checkUndefinedProvider from "../../../utils/checkUndefinedProvider";
 
   enum TransactionEventType {
     AcceptPayment,
@@ -56,7 +55,7 @@
   onMount(() => {
     if ($membershipStatusValue != 3) {
       $error = "You are not allowed to view this page.";
-      goto("/dao/home");
+      goto("/dao");
       return;
     }
 
@@ -142,66 +141,64 @@
   });
 </script>
 
-<Navigation>
-  <h1 class="text-secondary-900">Treasury</h1>
+<h1 class="text-secondary-900">Treasury</h1>
 
-  <ul>
-    <li>Total balance: {ethers.utils.formatEther(totalBalance)} ETH</li>
-    <li>
-      Total funds to be claimed: {ethers.utils.formatEther(totalAllowance)} ETH
-    </li>
-    <li>
-      Available funds: {ethers.utils.formatEther(
-        totalBalance.sub(totalAllowance)
-      )} ETH
-    </li>
-  </ul>
+<ul>
+  <li>Total balance: {ethers.utils.formatEther(totalBalance)} ETH</li>
+  <li>
+    Total funds to be claimed: {ethers.utils.formatEther(totalAllowance)} ETH
+  </li>
+  <li>
+    Available funds: {ethers.utils.formatEther(
+      totalBalance.sub(totalAllowance)
+    )} ETH
+  </li>
+</ul>
 
-  <h2>Withdraw funds</h2>
-  {#if availableFunds.gt(BigNumber.from("0"))}
-    <p>
-      You have {ethers.utils.formatEther(availableFunds)} ETH available to be withdrawn.
-    </p>
+<h2>Withdraw funds</h2>
+{#if availableFunds.gt(BigNumber.from("0"))}
+  <p>
+    You have {ethers.utils.formatEther(availableFunds)} ETH available to be withdrawn.
+  </p>
 
-    <button on:click={() => withdrawFunds()} class="button4">Withdraw</button>
-  {:else}
-    You have no funds available.
-  {/if}
+  <button on:click={() => withdrawFunds()} class="button4">Withdraw</button>
+{:else}
+  You have no funds available.
+{/if}
 
-  <h2>Activities in the last 90 days</h2>
+<h2>Activities in the last 90 days</h2>
 
-  {#if transactions?.length > 0}
-    <table>
-      <thead>
+{#if transactions?.length > 0}
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Block number</th>
+        <th>Type</th>
+        <th>Source</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each transactions as transaction}
         <tr>
-          <th>Date</th>
-          <th>Block number</th>
-          <th>Type</th>
-          <th>Source</th>
-          <th>Amount</th>
+          <td>{transaction.blockDate}</td>
+          <td>{transaction.blockNumber}</td>
+          <td
+            >{#if transaction.type === TransactionEventType.AcceptPayment}
+              Payment received
+            {:else if transaction.type === TransactionEventType.IncreaseAllowance}
+              Allowance increased
+            {:else}
+              Funds withdrawn
+            {/if}</td
+          >
+          <td>{truncateEthAddress(transaction.source)}</td>
+          <td>{ethers.utils.formatEther(transaction.amount)} ETH</td>
         </tr>
-      </thead>
-      <tbody>
-        {#each transactions as transaction}
-          <tr>
-            <td>{transaction.blockDate}</td>
-            <td>{transaction.blockNumber}</td>
-            <td
-              >{#if transaction.type === TransactionEventType.AcceptPayment}
-                Payment received
-              {:else if transaction.type === TransactionEventType.IncreaseAllowance}
-                Allowance increased
-              {:else}
-                Funds withdrawn
-              {/if}</td
-            >
-            <td>{truncateEthAddress(transaction.source)}</td>
-            <td>{ethers.utils.formatEther(transaction.amount)} ETH</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {:else}
-    No transactions in the last 90 days.
-  {/if}
-</Navigation>
+      {/each}
+    </tbody>
+  </table>
+{:else}
+  No transactions in the last 90 days.
+{/if}

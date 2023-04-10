@@ -90,6 +90,6 @@
       <a href="/login" class="button3 center mx-2">Login</a>
       <a href="/signup" class="button1 center mx-2" type="submit">Sign Up</a>
     {/if}
-    <a href="/dao/home" class="button4 center mx-2">DAO</a>
+    <a href="/dao" class="button4 center mx-2">DAO</a>
   </nav>
 </header>

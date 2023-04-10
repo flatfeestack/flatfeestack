@@ -10,7 +10,6 @@
   import { daoContract, userEthereumAddress } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import Navigation from "../../components/DAO/Navigation.svelte";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
   import { onDestroy } from "svelte";
 
@@ -174,73 +173,71 @@
   }
 </style>
 
-<Navigation>
-  <h1 class="text-secondary-900">Cast votes</h1>
+<h1 class="text-secondary-900">Cast votes</h1>
 
-  {#each proposals as proposal, i}
-    <h2>Proposal {i + 1}</h2>
+{#each proposals as proposal, i}
+  <h2>Proposal {i + 1}</h2>
 
-    <p>Proposer: {proposal.proposer}</p>
+  <p>Proposer: {proposal.proposer}</p>
 
-    <p>{proposal.description}</p>
+  <p>{proposal.description}</p>
+
+  <div>
+    <p>State of the vote:</p>
+    <ul>
+      <li>For votes: {votes[proposal.id].forVotes}</li>
+      <li>Against votes: {votes[proposal.id].againstVotes}</li>
+      <li>Abstain votes: {votes[proposal.id].abstainVotes}</li>
+    </ul>
+  </div>
+
+  <div class="vote-container">
+    <p>Your vote:</p>
+    <div>
+      <button
+        disabled={!voteValues[proposal.id].canVote}
+        class={voteValues[proposal.id].value === 0 ? "button4" : "button3"}
+        on:click={() => handleVoteValue(proposal.id, 0)}
+      >
+        <Fa icon={faXmark} size="sm" class="icon px-2" />
+      </button>
+
+      <button
+        disabled={!voteValues[proposal.id].canVote}
+        class={voteValues[proposal.id].value === 1 ? "button4" : "button3"}
+        on:click={() => handleVoteValue(proposal.id, 1)}
+      >
+        <Fa icon={faCheck} size="sm" class="icon px-2" />
+      </button>
+
+      <button
+        disabled={!voteValues[proposal.id].canVote}
+        class={voteValues[proposal.id].value === 2 ? "button4" : "button3"}
+        on:click={() => handleVoteValue(proposal.id, 2)}
+      >
+        <Fa icon={faQuestion} size="sm" class="icon px-2" />
+      </button>
+    </div>
+  </div>
+
+  {#if voteValues[proposal.id].canVote}
+    <p>Reason (optional):</p>
 
     <div>
-      <p>State of the vote:</p>
-      <ul>
-        <li>For votes: {votes[proposal.id].forVotes}</li>
-        <li>Against votes: {votes[proposal.id].againstVotes}</li>
-        <li>Abstain votes: {votes[proposal.id].abstainVotes}</li>
-      </ul>
+      <textarea
+        class="box-sizing-border"
+        bind:value={voteValues[proposal.id].reason}
+        rows="10"
+        cols="50"
+      />
     </div>
+  {:else if voteValues[proposal.id].reason.trim() == ""}
+    <p>Reason: (no reason given)</p>
+  {:else}
+    <p>Reason: {voteValues[proposal.id].reason}</p>
+  {/if}
+{/each}
 
-    <div class="vote-container">
-      <p>Your vote:</p>
-      <div>
-        <button
-          disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 0 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 0)}
-        >
-          <Fa icon={faXmark} size="sm" class="icon px-2" />
-        </button>
-
-        <button
-          disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 1 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 1)}
-        >
-          <Fa icon={faCheck} size="sm" class="icon px-2" />
-        </button>
-
-        <button
-          disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 2 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 2)}
-        >
-          <Fa icon={faQuestion} size="sm" class="icon px-2" />
-        </button>
-      </div>
-    </div>
-
-    {#if voteValues[proposal.id].canVote}
-      <p>Reason (optional):</p>
-
-      <div>
-        <textarea
-          class="box-sizing-border"
-          bind:value={voteValues[proposal.id].reason}
-          rows="10"
-          cols="50"
-        />
-      </div>
-    {:else if voteValues[proposal.id].reason.trim() == ""}
-      <p>Reason: (no reason given)</p>
-    {:else}
-      <p>Reason: {voteValues[proposal.id].reason}</p>
-    {/if}
-  {/each}
-
-  <button disabled={!hasAnyVotes} on:click={() => castVotes()} class="button4"
-    >Cast votes</button
-  >
-</Navigation>
+<button disabled={!hasAnyVotes} on:click={() => castVotes()} class="button4"
+  >Cast votes</button
+>

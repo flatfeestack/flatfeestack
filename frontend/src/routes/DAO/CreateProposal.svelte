@@ -9,7 +9,6 @@
   } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { Call, ProposalType } from "../../types/dao";
-  import Navigation from "../../components/DAO/Navigation.svelte";
   import AddCouncilMember from "../../components/DAO/proposals/AddCouncilMember.svelte";
   import CallExtraOrdinaryAssembly from "../../components/DAO/proposals/CallExtraOrdinaryAssembly.svelte";
   import DissolveAssociation from "../../components/DAO/proposals/DissolveAssociation.svelte";
@@ -70,7 +69,7 @@
 
   function moveToVotesPage() {
     $error = "You are not allowed to view this page.";
-    goto("/dao/home");
+    goto("/dao");
   }
 
   async function createProposal() {
@@ -118,27 +117,25 @@
   }
 </style>
 
-<Navigation>
-  <h1 class="text-secondary-900">Create a proposal</h1>
+<h1 class="text-secondary-900">Create a proposal</h1>
 
-  <div class="wrapper">
-    <label for="proposalType">Proposal type</label>
-    <select bind:value={selected} name="proposalType" required>
-      {#each proposalTypes as proposalType, index}
-        <option value={index}>
-          {proposalType.text}
-        </option>
-      {/each}
-    </select>
+<div class="wrapper">
+  <label for="proposalType">Proposal type</label>
+  <select bind:value={selected} name="proposalType" required>
+    {#each proposalTypes as proposalType, index}
+      <option value={index}>
+        {proposalType.text}
+      </option>
+    {/each}
+  </select>
 
-    <svelte:component this={proposalTypes[selected].component} bind:calls />
-  </div>
+  <svelte:component this={proposalTypes[selected].component} bind:calls />
+</div>
 
-  <p>Description</p>
+<p>Description</p>
 
-  <textarea class="box-sizing-border" bind:value={description} rows="10" />
+<textarea class="box-sizing-border" bind:value={description} rows="10" />
 
-  <button class="button4" on:click={() => createProposal()}
-    >Create proposal</button
-  >
-</Navigation>
+<button class="button4" on:click={() => createProposal()}
+  >Create proposal</button
+>
