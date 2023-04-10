@@ -248,7 +248,7 @@
           For a flat fee of $125/year, sponsor any open source projects. Show
           your supported projects badge.
         </h3>
-        <a href="/user/signup">
+        <a href="/signup">
           <button class="button1">Sign Up</button>
         </a>
       </div>
@@ -257,7 +257,7 @@
           Earn money if your open source project is sponsored. All you need is a
           public git repository.
         </h3>
-        <a href="/user/signup">
+        <a href="/signup">
           <button class="button1">Sign Up</button>
         </a>
       </div>
