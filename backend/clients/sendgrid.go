@@ -1,4 +1,4 @@
-package main
+package clients
 
 import (
 	"encoding/json"
@@ -336,7 +336,7 @@ func (p *Personalization) AddTos(to ...*Email) {
 	p.To = append(p.To, to...)
 }
 
-//AddFrom ...
+// AddFrom ...
 func (p *Personalization) AddFrom(from *Email) {
 	p.From = from
 }

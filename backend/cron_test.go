@@ -1,6 +1,10 @@
 package main
 
 import (
+	"backend/api"
+	"backend/clients"
+	db "backend/db"
+	"backend/utils"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -51,16 +55,16 @@ func TestDailyRunnerOneContributor(t *testing.T) {
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
-	m1, err := findSumDailyContributors(*contributors[0])
+	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	//120 / 365 * 1'000'000
 	assert.Equal(t, m1["USD"].Balance.String(), "328767")
 
-	m2, err := findSumDailySponsors(*sponsors[0], *payId)
+	m2, err := db.FindSumDailySponsors(*sponsors[0], *payId)
 	assert.Nil(t, err)
 	assert.Equal(t, m2["USD"].Balance.String(), "328767")
 
-	m3, err := findSumDailyContributors(*contributors[1])
+	m3, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(m3))
 
@@ -99,7 +103,7 @@ func TestDailyRunnerOneContributorLowFunds(t *testing.T) {
 	err = dailyRunner(day3)
 	assert.Nil(t, err)
 	//check send
-	assert.Equal(t, 1, emailNotifications)
+	assert.Equal(t, 1, clients.EmailNotifications)
 }
 
 func TestDailyRunnerOneFuture(t *testing.T) {
@@ -120,7 +124,7 @@ func TestDailyRunnerOneFuture(t *testing.T) {
 
 	//now check the daily_contribution
 
-	m1, err := findSumDailySponsors(*sponsors[0], *payId)
+	m1, err := db.FindSumDailySponsors(*sponsors[0], *payId)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m1) {
 		assert.Equal(t, m1["USD"].Balance.String(), "328767")
@@ -181,29 +185,29 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	//luc gets from mic 1/4, from arm 1/4 for repo neow3j
 
 	//now check the daily_contribution
-	m1, err := findSumDailyContributors(*contributors[0])
+	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	assert.Equal(t, m1["USD"].Balance.String(), "328765")
 
-	m2, err := findSumDailyContributors(*contributors[1])
+	m2, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
 	assert.Equal(t, m2["USD"].Balance.String(), "438353")
 
-	m3, err := findSumDailyContributors(*contributors[2])
+	m3, err := db.FindSumDailyContributors(*contributors[2])
 	assert.Nil(t, err)
 	assert.Equal(t, m3["USD"].Balance.String(), "219176")
 
 	mtot1 := m1["USD"].Balance.Int64() + m2["USD"].Balance.Int64() + m3["USD"].Balance.Int64()
 
-	m4, err := findSumDailySponsors(*sponsors[0], *payId1)
+	m4, err := db.FindSumDailySponsors(*sponsors[0], *payId1)
 	assert.Nil(t, err)
 	assert.Equal(t, m4["USD"].Balance.String(), "328766")
 
-	m5, err := findSumDailySponsors(*sponsors[1], *payId2)
+	m5, err := db.FindSumDailySponsors(*sponsors[1], *payId2)
 	assert.Nil(t, err)
 	assert.Equal(t, m5["USD"].Balance.String(), "328764")
 
-	m6, err := findSumDailySponsors(*sponsors[2], *payId3)
+	m6, err := db.FindSumDailySponsors(*sponsors[2], *payId3)
 	assert.Nil(t, err)
 	assert.Equal(t, m6["USD"].Balance.String(), "328764")
 
@@ -259,29 +263,29 @@ func TestDailyRunnerThreeContributorsTwice(t *testing.T) {
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
-	_, err = findSumDailyContributors(*contributors[0])
+	_, err = db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	// assert.Equal(t, "657530", m1["USD"].Balance.String())
 
-	_, err = findSumDailyContributors(*contributors[1])
+	_, err = db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
 	// assert.Equal(t, "876706", m2["USD"].Balance.String())
 
-	_, err = findSumDailyContributors(*contributors[2])
+	_, err = db.FindSumDailyContributors(*contributors[2])
 	assert.Nil(t, err)
 	// assert.Equal(t, "438352", m3["USD"].Balance.String())
 
 	// mtot1 := m1["USD"].Balance.Int64() + m2["USD"].Balance.Int64() + m3["USD"].Balance.Int64()
 
-	_, err = findSumDailySponsors(*sponsors[0], *payId1)
+	_, err = db.FindSumDailySponsors(*sponsors[0], *payId1)
 	assert.Nil(t, err)
 	// assert.Equal(t, "986299", m4["USD"].Balance.String())
 
-	_, err = findSumDailySponsors(*sponsors[1], *payId2)
+	_, err = db.FindSumDailySponsors(*sponsors[1], *payId2)
 	assert.Nil(t, err)
 	// assert.Equal(t, "986294", m5["USD"].Balance.String())
 
-	_, err = findSumDailySponsors(*sponsors[2], *payId3)
+	_, err = db.FindSumDailySponsors(*sponsors[2], *payId3)
 	assert.Nil(t, err)
 	// assert.Equal(t, "986294", m6["USD"].Balance.String())
 
@@ -304,7 +308,7 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
-	m2, err := findSumDailySponsors(*sponsors[0], *payId)
+	m2, err := db.FindSumDailySponsors(*sponsors[0], *payId)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m2) {
 		assert.Equal(t, m2["USD"].Balance.String(), "328767")
@@ -321,13 +325,13 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 	err = dailyRunner(day4)
 	assert.Nil(t, err)
 
-	m3, err := findSumDailySponsors(*sponsors[0], *payId)
+	m3, err := db.FindSumDailySponsors(*sponsors[0], *payId)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m3) {
 		assert.Equal(t, m3["USD"].Balance.String(), "657534")
 	}
 
-	m4, err := findSumDailyContributors(*contributors[0])
+	m4, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m4) {
 		assert.Equal(t, m4["USD"].Balance.String(), "657534")
@@ -357,11 +361,11 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
-	m2, err := findSumDailySponsors(*sponsors[1], *payId1)
+	m2, err := db.FindSumDailySponsors(*sponsors[1], *payId1)
 	assert.Nil(t, err)
 	assert.Nil(t, m2["USD"])
 
-	m3, err := findSumDailySponsors(*sponsors[0], *payId2)
+	m3, err := db.FindSumDailySponsors(*sponsors[0], *payId2)
 	// no contributor registered so far
 	if assert.NotEmpty(t, m3) {
 		assert.Equal(t, m3["USD"].Balance.String(), "328767")
@@ -370,19 +374,19 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	err = dailyRunner(day4)
 	assert.Nil(t, err)
 
-	m4, err := findSumDailySponsors(*sponsors[0], *payId2)
+	m4, err := db.FindSumDailySponsors(*sponsors[0], *payId2)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m4) {
 		assert.Equal(t, "657534", m4["USD"].Balance.String())
 	}
 
-	m5, err := findSumDailySponsors(*sponsors[1], *payId3)
+	m5, err := db.FindSumDailySponsors(*sponsors[1], *payId3)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m5) {
 		assert.Equal(t, "164383560", m5["GAS"].Balance.String())
 	}
 
-	m6, err := findSumDailyContributors(*contributors[0])
+	m6, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m6) {
 		assert.Equal(t, "164383560", m6["GAS"].Balance.String())
@@ -414,58 +418,58 @@ func TestDailyRunnerSponsor(t *testing.T) {
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
-	m1, err := findSumDailyContributors(*contributors[0])
+	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m1) {
 		assert.Equal(t, "657534", m1["USD"].Balance.String())
 	}
 
-	m2, err := findSumDailySponsors(*sponsors[0], *payId)
+	m2, err := db.FindSumDailySponsors(*sponsors[0], *payId)
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m2) {
 		assert.Equal(t, "657534", m2["USD"].Balance.String())
 	}
 
-	m3, err := findSumDailySponsors(*sponsors[1], *payId)
+	m3, err := db.FindSumDailySponsors(*sponsors[1], *payId)
 	assert.Nil(t, err)
 	assert.Empty(t, m3)
 }
 
 func setupSponsorUser(t *testing.T, uid1 uuid.UUID, uid2 uuid.UUID) {
-	err := updateUserInviteId(uid2, uid1)
+	err := db.UpdateUserInviteId(uid2, uid1)
 	assert.Nil(t, err)
 }
 
 func setupGitEmail(t *testing.T, user uuid.UUID, email string) {
-	now := timeNow()
-	err := insertGitEmail(user, email, nil, now)
+	now := utils.TimeNow()
+	err := db.InsertGitEmail(user, email, nil, now)
 	assert.Nil(t, err)
 }
 
 func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Time, email []string, weight []float64) {
-	now := timeNow()
+	now := utils.TimeNow()
 	//id uuid.UUID, repo_id uuid.UUID, date_from time.Time, date_to time.Time, branch string
-	a := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    repoId,
-		DateFrom:  from,
-		DateTo:    to,
-		GitUrl:    "test",
+	a := db.AnalysisRequest{
+		Id:       uuid.New(),
+		RepoId:   repoId,
+		DateFrom: from,
+		DateTo:   to,
+		GitUrl:   "test",
 	}
-	err := insertAnalysisRequest(a, now)
+	err := db.InsertAnalysisRequest(a, now)
 	assert.Nil(t, err)
 	for k, v := range email {
-		err = insertAnalysisResponse(a.RequestId, v, []string{v}, weight[k], now)
+		err = db.InsertAnalysisResponse(a.Id, v, []string{v}, weight[k], now)
 		assert.Nil(t, err)
 	}
 }
 
 func setupFunds(t *testing.T, uid uuid.UUID, currency string, freq int64, balance int64, oldPaymentCycleId *uuid.UUID, now time.Time) *uuid.UUID {
-	pow, err := getFactorInt(currency)
+	pow, err := utils.GetFactorInt(currency)
 	assert.Nil(t, err)
-	paymentCycleId, err := insertNewPaymentCycleIn(1, freq, now)
+	paymentCycleId, err := db.InsertNewPaymentCycleIn(1, freq, now)
 	assert.Nil(t, err)
-	err = paymentSuccess(uid, oldPaymentCycleId, paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
+	err = api.PaymentSuccess(uid, oldPaymentCycleId, paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
 	assert.Nil(t, err)
 	return paymentCycleId
 }
@@ -491,37 +495,37 @@ func setupRepos(t *testing.T, repoNames ...string) []*uuid.UUID {
 }
 
 func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
-	e := SponsorEvent{
+	e := db.SponsorEvent{
 		Id:        uuid.New(),
 		Uid:       *userId,
 		RepoId:    *repoId,
-		EventType: Active,
+		EventType: db.Active,
 		SponsorAt: day,
 	}
-	return insertOrUpdateSponsor(&e)
+	return db.InsertOrUpdateSponsor(&e)
 }
 
 func setupUnSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
-	e := SponsorEvent{
+	e := db.SponsorEvent{
 		Id:          uuid.New(),
 		Uid:         *userId,
 		RepoId:      *repoId,
-		EventType:   Inactive,
+		EventType:   db.Inactive,
 		UnSponsorAt: &day,
 	}
-	return insertOrUpdateSponsor(&e)
+	return db.InsertOrUpdateSponsor(&e)
 }
 
 func setupUser(email string) (*uuid.UUID, error) {
 	payOutId := uuid.New()
-	u := User{
+	u := db.User{
 		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
+		StripeId:          utils.StringPointer("strip-id"),
 		PaymentCycleOutId: payOutId,
 		Email:             email,
 	}
 
-	err := insertUser(&u)
+	err := db.InsertUser(&u)
 	if err != nil {
 		return nil, err
 	}
@@ -529,16 +533,16 @@ func setupUser(email string) (*uuid.UUID, error) {
 }
 
 func setupRepo(url string) (*uuid.UUID, error) {
-	r := Repo{
+	r := db.Repo{
 		Id:          uuid.New(),
-		Url:         stringPointer(url),
-		GitUrl:      stringPointer(url),
-		Source:      stringPointer("github"),
-		Name:        stringPointer("name"),
-		Description: stringPointer("desc"),
+		Url:         utils.StringPointer(url),
+		GitUrl:      utils.StringPointer(url),
+		Source:      utils.StringPointer("github"),
+		Name:        utils.StringPointer("name"),
+		Description: utils.StringPointer("desc"),
 		CreatedAt:   time.Time{},
 	}
-	err := insertOrUpdateRepo(&r)
+	err := db.InsertOrUpdateRepo(&r)
 	if err != nil {
 		return nil, err
 	}

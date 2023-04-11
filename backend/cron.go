@@ -7,10 +7,13 @@
 package main
 
 import (
+	"backend/api"
+	"backend/clients"
+	db "backend/db"
+	"backend/utils"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"math"
 	"math/big"
@@ -39,7 +42,7 @@ func init() {
 				for again {
 					again = false
 					for k, job := range jobs {
-						if job.nextExecAt.Before(timeNow()) {
+						if job.nextExecAt.Before(utils.TimeNow()) {
 							log.Printf("About to execute job [daily] at %v", job.nextExecAt)
 							err := job.job(job.nextExecAt)
 							if err != nil {
@@ -86,7 +89,7 @@ func timeHourPlusOne(now time.Time) time.Time {
 
 func hourlyRunner(now time.Time) error {
 	//find repos that have an analysis older than 2 days
-	a, err := findAllLatestAnalysisRequest(now.AddDate(0, 0, -1))
+	a, err := db.FindAllLatestAnalysisRequest(now.AddDate(0, 0, -1))
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func hourlyRunner(now time.Time) error {
 	nr := 0
 	for _, v := range a {
 		//check if we need analysis request
-		err := analysisRequest(v.RepoId, v.GitUrl)
+		err := clients.AnalysisReq(v.RepoId, v.GitUrl)
 		if err != nil {
 			log.Warnf("analysis request failed %v", err)
 		} else {
@@ -113,27 +116,16 @@ func dailyRunner(now time.Time) error {
 
 	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
 
-	rows, err := db.Query(`		
-			SELECT user_id, ARRAY_AGG(repo_id)
-			FROM sponsor_event
-			WHERE sponsor_at < $1 AND (un_sponsor_at IS NULL OR un_sponsor_at >= $2)
-			GROUP BY user_id`, yesterdayStart.Format("2023-01-01"), yesterdayStop.Format("2023-01-01"))
+	sponsorResults, err := db.FindSponsorsBetween(yesterdayStart, yesterdayStop)
 	if err != nil {
 		return err
 	}
-	defer closeAndLog(rows)
 
 	nr := 0
-	for ; rows.Next(); nr++ {
-		uid := uuid.UUID{}
-		rids := []uuid.UUID{}
-		err = rows.Scan(&uid, pq.Array(&rids))
-		if err != nil {
-			return err
-		}
-
-		if len(rids) > 0 {
-			err = calcContribution(uid, rids, yesterdayStart)
+	for _, sponsorResult := range sponsorResults {
+		if len(sponsorResult.RepoIds) > 0 {
+			err = calcContribution(sponsorResult.UserId, sponsorResult.RepoIds, yesterdayStart)
+			nr++
 			if err != nil {
 				return err
 			}
@@ -143,7 +135,7 @@ func dailyRunner(now time.Time) error {
 	log.Printf("Daily runner inserted %v entries", nr)
 
 	//aggregate marketing emails
-	ms, err := findMarketingEmails()
+	ms, err := db.FindMarketingEmails()
 	for _, v := range ms {
 		balanceMap, err := addUp(v.Balances, v.Currencies)
 		if err != nil {
@@ -151,13 +143,13 @@ func dailyRunner(now time.Time) error {
 		}
 		repoNames := []string{}
 		for _, v := range v.RepoIds {
-			repo, err := findRepoById(v)
+			repo, err := db.FindRepoById(v)
 			if err != nil {
 				return err
 			}
 			repoNames = append(repoNames, *repo.Name)
 		}
-		sendMarketingEmail(v.Email, balanceMap, repoNames)
+		clients.SendMarketingEmail(v.Email, balanceMap, repoNames)
 	}
 
 	return nil
@@ -184,13 +176,13 @@ func addUp(balances []string, currencies []string) (map[string]*big.Int, error) 
 }
 
 func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
-	u, err := findUserById(uid)
+	u, err := db.FindUserById(uid)
 	if err != nil {
 		return fmt.Errorf("cannot find user %v", err)
 	}
 	//first check if the sponsor has enough funds
 	if u.InvitedId != nil {
-		u1, err := findUserById(*u.InvitedId)
+		u1, err := db.FindUserById(*u.InvitedId)
 		if err != nil {
 			return fmt.Errorf("cannot find invited user %v", err)
 		}
@@ -201,7 +193,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 	return calcAndDeduct(u, rids, yesterdayStart, nil)
 }
 
-func calcAndDeduct(u *User, rids []uuid.UUID, yesterdayStart time.Time, uOrig *User) error {
+func calcAndDeduct(u *db.User, rids []uuid.UUID, yesterdayStart time.Time, uOrig *db.User) error {
 	currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, err := calcShare(u.PaymentCycleInId, int64(len(rids)))
 	if err != nil {
 		return fmt.Errorf("cannot calc share %v", err)
@@ -224,14 +216,14 @@ func calcAndDeduct(u *User, rids []uuid.UUID, yesterdayStart time.Time, uOrig *U
 func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, paymentCycleInId *uuid.UUID, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
 	for _, rid := range rids {
 		//get weights for the contributors
-		a, err := findLatestAnalysisRequest(rid)
+		a, err := db.FindLatestAnalysisRequest(rid)
 		if err != nil {
 			return err
 		}
 		if a == nil {
 			continue
 		}
-		ars, err := findAnalysisResults(a.Id)
+		ars, err := db.FindAnalysisResults(a.Id)
 		if err != nil {
 			return err
 		}
@@ -239,7 +231,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 		uidNotInMap := map[string]float64{}
 		total := 0.0
 		for _, ar := range ars {
-			uidGit, err := findUserByGitEmail(ar.GitEmail)
+			uidGit, err := db.FindUserByGitEmail(ar.GitEmail)
 			if err != nil {
 				return err
 			}
@@ -253,7 +245,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 
 		for email, v := range uidNotInMap {
 			amount := calcSharePerUser(distributeAdd, v, math.Max(total, v))
-			err = insertUnclaimed(email, rid, amount, currency, yesterdayStart, timeNow())
+			err = db.InsertUnclaimed(email, rid, amount, currency, yesterdayStart, utils.TimeNow())
 			if err != nil {
 				log.Errorf("insertUnclaimed failed: %v, %v\n", opts.EmailUrl, err)
 			}
@@ -261,7 +253,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 
 		if len(uidInMap) == 0 {
 			//no contribution park the sponsoring separately
-			err = insertFutureBalance(uid, rid, paymentCycleInId, distributeDeduct, currency, yesterdayStart, timeNow())
+			err = db.InsertFutureBalance(uid, rid, paymentCycleInId, distributeDeduct, currency, yesterdayStart, utils.TimeNow())
 			if err != nil {
 				return err
 			}
@@ -269,19 +261,19 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, payment
 			for k, v := range uidInMap {
 				//we can distribute more, as we may have future balances
 				if deductFutureContribution != nil {
-					err = insertFutureBalance(uid, rid, paymentCycleInId, deductFutureContribution, currency, yesterdayStart, timeNow())
+					err = db.InsertFutureBalance(uid, rid, paymentCycleInId, deductFutureContribution, currency, yesterdayStart, utils.TimeNow())
 					if err != nil {
 						return err
 					}
 				}
 
-				uidGit, err := findUserById(k)
+				uidGit, err := db.FindUserById(k)
 				if err != nil {
 					return err
 				}
 
 				amount := calcSharePerUser(distributeAdd, v, total)
-				err = insertContribution(uid, k, rid, paymentCycleInId, uidGit.PaymentCycleOutId, amount, currency, yesterdayStart, timeNow())
+				err = db.InsertContribution(uid, k, rid, paymentCycleInId, uidGit.PaymentCycleOutId, amount, currency, yesterdayStart, utils.TimeNow())
 				if err != nil {
 					return err
 				}
@@ -304,24 +296,24 @@ func calcSharePerUser(distributeAdd *big.Int, v float64, total float64) *big.Int
 
 func calcShare(paymentCycleInId *uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
 	//mAdd is what the user paid in the current cycle
-	mAdd, err := findSumUserBalanceByCurrency(paymentCycleInId)
+	mAdd, err := db.FindSumUserBalanceByCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
 	//either the user spent it on a repo that does not have any devs who can claim
-	mFut, err := findSumFutureBalanceByCurrency(paymentCycleInId)
+	mFut, err := db.FindSumFutureBalanceByCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum user balance %v", err)
 	}
 
 	//or the user spent it on for a repo with a dev who can claim
-	mSub, err := findSumDailyBalanceCurrency(paymentCycleInId)
+	mSub, err := db.FindSumDailyBalanceCurrency(paymentCycleInId)
 	if err != nil {
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum daily balance %v", err)
 	}
 
-	currency, freq, s := strategyDeductMax(mAdd, mSub, mFut)
+	currency, freq, s := api.StrategyDeductMax(mAdd, mSub, mFut)
 
 	if s == nil {
 		return currency, freq, nil, nil, nil, nil
@@ -338,16 +330,16 @@ func calcShare(paymentCycleInId *uuid.UUID, repoLen int64) (string, int64, *big.
 	return currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, nil
 }
 
-func reminderTopUp(u User, uOrig *User) error {
+func reminderTopUp(u db.User, uOrig *db.User) error {
 
 	//check if user has stripe
 	if u.PaymentCycleInId != nil && u.StripeId != nil && u.PaymentMethod != nil {
-		_, err := stripePaymentRecurring(u)
+		_, err := api.StripePaymentRecurring(u)
 		if err != nil {
 			return err
 		}
 
-		err = sendStripeTopUp(u)
+		err = clients.SendStripeTopUp(u)
 		if err != nil {
 			return err
 		}
@@ -355,18 +347,18 @@ func reminderTopUp(u User, uOrig *User) error {
 		//No stripe, just send email
 		isSponsor := uOrig != nil
 		if isSponsor {
-			err := sendTopUpSponsor(u)
+			err := clients.SendTopUpSponsor(u)
 			if err != nil {
 				return err
 			}
 		} else {
 			if u.InvitedId != nil {
-				err := sendTopUpInvited(u)
+				err := clients.SendTopUpInvited(u)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := sendTopUpOther(u)
+				err := clients.SendTopUpOther(u)
 				if err != nil {
 					return err
 				}

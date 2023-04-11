@@ -1,0 +1,63 @@
+package db
+
+import (
+	"database/sql"
+	"fmt"
+	"github.com/google/uuid"
+)
+
+func InsertOrUpdateRepo(repo *Repo) error {
+	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+									ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+	}
+	defer closeAndLog(stmt)
+
+	var lastInsertId uuid.UUID
+	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
+	if err != nil {
+		return err
+	}
+	repo.Id = lastInsertId
+	return nil
+}
+
+func FindRepoById(repoId uuid.UUID) (*Repo, error) {
+	var r Repo
+	err := db.
+		QueryRow("SELECT id, url, git_url, name, description, source FROM repo WHERE id=$1", repoId).
+		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &r, nil
+	default:
+		return nil, err
+	}
+}
+
+func FindReposByName(name string) ([]Repo, error) {
+	rows, err := db.Query("SELECT id, url, git_url, name, description, source FROM repo WHERE name=$1", name)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+	return ScanRepo(rows)
+}
+
+func ScanRepo(rows *sql.Rows) ([]Repo, error) {
+	repos := []Repo{}
+	for rows.Next() {
+		var r Repo
+		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, r)
+	}
+	return repos, nil
+}

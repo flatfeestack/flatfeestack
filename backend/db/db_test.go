@@ -1,11 +1,95 @@
-package main
+package db
 
 import (
+	"fmt"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
+
+var (
+	day1  = time.Time{}
+	day11 = time.Time{}.Add(time.Duration(1) * time.Second)
+	day2  = time.Time{}.Add(time.Duration(1*24) * time.Hour)
+	day3  = time.Time{}.Add(time.Duration(2*24) * time.Hour)
+	day4  = time.Time{}.Add(time.Duration(3*24) * time.Hour)
+	day5  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
+)
+
+func TestMain(m *testing.M) {
+	file, err := os.CreateTemp("", "sqlite")
+	defer os.Remove(file.Name())
+
+	err = InitDb("sqlite3", file.Name(), "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	code := m.Run()
+
+	err = db.Close()
+	if err != nil {
+		log.Warnf("Could not start resource: %s", err)
+	}
+
+	if err != nil {
+		log.Warnf("Could not start resource: %s", err)
+	}
+
+	os.Exit(code)
+}
+
+func runSQL(files ...string) error {
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+		if _, err := os.Stat(file); err == nil {
+			fileBytes, err := ioutil.ReadFile(file)
+			if err != nil {
+				return err
+			}
+
+			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
+			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+			newBytes := re.ReplaceAll(fileBytes, nil)
+
+			requests := strings.Split(string(newBytes), ";")
+			for _, request := range requests {
+				request = strings.TrimSpace(request)
+				if len(request) > 0 {
+					_, err := db.Exec(request)
+					if err != nil {
+						return fmt.Errorf("[%v] %v", request, err)
+					}
+				}
+			}
+		} else {
+			log.Printf("ignoring file %v (%v)", file, err)
+		}
+	}
+	return nil
+}
+
+func setup() {
+	err := runSQL("init.sql")
+	if err != nil {
+		log.Fatalf("Could not run init.sql scripts: %s", err)
+	}
+}
+func teardown() {
+	err := runSQL("drop_test.sql")
+	if err != nil {
+		log.Fatalf("Could not run drop_test.sql: %s", err)
+	}
+}
 
 func TestUser(t *testing.T) {
 	setup()
@@ -19,27 +103,27 @@ func TestUser(t *testing.T) {
 		Email:             "email",
 	}
 
-	err := insertUser(&u)
+	err := InsertUser(&u)
 	assert.Nil(t, err)
 
-	u2, err := findUserByEmail("email2")
+	u2, err := FindUserByEmail("email2")
 	assert.Nil(t, err)
 	assert.Nil(t, u2)
 
-	u3, err := findUserByEmail("email")
+	u3, err := FindUserByEmail("email")
 	assert.Nil(t, err)
 	assert.NotNil(t, u3)
 
 	u.Email = "email2"
-	err = updateUser(&u)
+	err = UpdateUser(&u)
 	assert.Nil(t, err)
 
 	//cannot change Email
-	u4, err := findUserByEmail("email2")
+	u4, err := FindUserByEmail("email2")
 	assert.Nil(t, err)
 	assert.Nil(t, u4)
 
-	u5, err := findUserById(u.Id)
+	u5, err := FindUserById(u.Id)
 	assert.Nil(t, err)
 	assert.NotNil(t, u5)
 }
@@ -64,7 +148,7 @@ func TestSponsor(t *testing.T) {
 		Name:        stringPointer("name"),
 		Description: stringPointer("desc"),
 	}
-	err := insertUser(&u)
+	err := InsertUser(&u)
 	assert.Nil(t, err)
 	err = insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
@@ -161,7 +245,7 @@ func saveTestUser(t *testing.T, email string) uuid.UUID {
 		Email:             email,
 	}
 
-	err := insertUser(&u)
+	err := InsertUser(&u)
 	assert.Nil(t, err)
 	return u.Id
 }
@@ -172,21 +256,21 @@ func TestGitEmail(t *testing.T) {
 
 	uid := saveTestUser(t, "email1")
 
-	err := insertGitEmail(uid, "email1", stringPointer("A"), timeNow())
+	err := InsertGitEmail(uid, "email1", stringPointer("A"), time.Now())
 	assert.Nil(t, err)
-	err = insertGitEmail(uid, "email2", stringPointer("A"), timeNow())
+	err = InsertGitEmail(uid, "email2", stringPointer("A"), time.Now())
 	assert.Nil(t, err)
-	emails, err := findGitEmailsByUserId(uid)
+	emails, err := FindGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(emails))
-	err = deleteGitEmail(uid, "email2")
+	err = DeleteGitEmail(uid, "email2")
 	assert.Nil(t, err)
-	emails, err = findGitEmailsByUserId(uid)
+	emails, err = FindGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(emails))
-	err = deleteGitEmail(uid, "email1")
+	err = DeleteGitEmail(uid, "email1")
 	assert.Nil(t, err)
-	emails, err = findGitEmailsByUserId(uid)
+	emails, err = FindGitEmailsByUserId(uid)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(emails))
 }
@@ -206,25 +290,25 @@ func TestAnalysisRequest(t *testing.T) {
 	err := insertOrUpdateRepo(&r)
 	assert.Nil(t, err)
 
-	ar, err := findLatestAnalysisRequest(r.Id)
+	ar, err := FindLatestAnalysisRequest(r.Id)
 	assert.Nil(t, err)
 	assert.Nil(t, ar)
 
 	a := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r.Id,
-		DateFrom:  day1,
-		DateTo:    day2,
-		GitUrl:    *r.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r.Id,
+		DateFrom: day1,
+		DateTo:   day2,
+		GitUrl:   *r.GitUrl,
 	}
-	err = insertAnalysisRequest(a, timeNow())
+	err = InsertAnalysisRequest(a, time.Now())
 	assert.Nil(t, err)
 
 	//insertAnalysisResponse
 
-	abd, err := findLatestAnalysisRequest(r.Id)
+	abd, err := FindLatestAnalysisRequest(r.Id)
 	assert.Nil(t, err)
-	assert.Equal(t, abd.Id, a.RequestId)
+	assert.Equal(t, abd.Id, a.Id)
 	assert.Equal(t, abd.RepoId, a.RepoId)
 }
 
@@ -255,66 +339,66 @@ func TestAnalysisRequest2(t *testing.T) {
 	assert.Nil(t, err)
 
 	a1 := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r1.Id,
-		DateFrom:  day1,
-		DateTo:    day2,
-		GitUrl:    *r1.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r1.Id,
+		DateFrom: day1,
+		DateTo:   day2,
+		GitUrl:   *r1.GitUrl,
 	}
-	err = insertAnalysisRequest(a1, timeNow())
+	err = InsertAnalysisRequest(a1, time.Now())
 	assert.Nil(t, err)
 
 	a2 := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r1.Id,
-		DateFrom:  day2,
-		DateTo:    day3,
-		GitUrl:    *r1.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r1.Id,
+		DateFrom: day2,
+		DateTo:   day3,
+		GitUrl:   *r1.GitUrl,
 	}
-	err = insertAnalysisRequest(a2, timeNow())
+	err = InsertAnalysisRequest(a2, time.Now())
 	assert.Nil(t, err)
 
 	//insertAnalysisResponse
 
-	abd, err := findLatestAnalysisRequest(r1.Id)
+	abd, err := FindLatestAnalysisRequest(r1.Id)
 	assert.Nil(t, err)
-	assert.Equal(t, abd.Id, a2.RequestId)
+	assert.Equal(t, abd.Id, a2.Id)
 	assert.Equal(t, abd.RepoId, a2.RepoId)
 
 	a3 := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r2.Id,
-		DateFrom:  day3,
-		DateTo:    day4,
-		GitUrl:    *r2.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r2.Id,
+		DateFrom: day3,
+		DateTo:   day4,
+		GitUrl:   *r2.GitUrl,
 	}
-	err = insertAnalysisRequest(a3, timeNow())
+	err = InsertAnalysisRequest(a3, time.Now())
 	assert.Nil(t, err)
 
 	//insertAnalysisResponse
 
-	abd, err = findLatestAnalysisRequest(r1.Id)
+	abd, err = FindLatestAnalysisRequest(r1.Id)
 	assert.Nil(t, err)
-	assert.Equal(t, abd.Id, a2.RequestId)
+	assert.Equal(t, abd.Id, a2.Id)
 	assert.Equal(t, abd.RepoId, a2.RepoId)
 
 	a4 := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r2.Id,
-		DateFrom:  day4,
-		DateTo:    day5,
-		GitUrl:    *r2.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r2.Id,
+		DateFrom: day4,
+		DateTo:   day5,
+		GitUrl:   *r2.GitUrl,
 	}
-	err = insertAnalysisRequest(a4, timeNow())
+	err = InsertAnalysisRequest(a4, time.Now())
 	assert.Nil(t, err)
 
-	alar, err := findAllLatestAnalysisRequest(day2)
+	alar, err := FindAllLatestAnalysisRequest(day2)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(alar))
 	assert.Equal(t, alar[0].RepoId, r1.Id)
 	assert.Equal(t, alar[1].RepoId, r2.Id)
 
-	alar, err = findAllLatestAnalysisRequest(day3)
+	alar, err = FindAllLatestAnalysisRequest(day3)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(alar))
 	assert.Equal(t, alar[0].RepoId, r1.Id)
@@ -337,31 +421,33 @@ func TestAnalysisResponse(t *testing.T) {
 	assert.Nil(t, err)
 
 	a := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    r.Id,
-		DateFrom:  day1,
-		DateTo:    day2,
-		GitUrl:    *r.GitUrl,
+		Id:       uuid.New(),
+		RepoId:   r.Id,
+		DateFrom: day1,
+		DateTo:   day2,
+		GitUrl:   *r.GitUrl,
 	}
-	err = insertAnalysisRequest(a, timeNow())
+	err = InsertAnalysisRequest(a, time.Now())
 	assert.Nil(t, err)
 
-	err = insertAnalysisResponse(a.RequestId, "tom", []string{"tom"}, 0.5, timeNow())
+	err = InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.5, time.Now())
 	assert.Nil(t, err)
-	err = insertAnalysisResponse(a.RequestId, "tom", []string{"tom"}, 0.4, timeNow())
+	err = InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.4, time.Now())
 	assert.NotNil(t, err)
-	err = insertAnalysisResponse(a.RequestId, "tom2", []string{"tom2"}, 0.4, timeNow())
+	err = InsertAnalysisResponse(a.Id, "tom2", []string{"tom2"}, 0.4, time.Now())
 	assert.Nil(t, err)
 
-	ar, err := findAnalysisResults(a.RequestId)
+	ar, err := FindAnalysisResults(a.Id)
 	assert.Equal(t, 2, len(ar))
 	assert.Equal(t, ar[0].GitNames[0], "tom")
 	assert.Equal(t, ar[1].GitNames[0], "tom2")
 
-	err = updateAnalysisRequest(a.RequestId, day2, stringPointer("test"))
+	fmt.Printf("AAAA %v\n", a.Id)
+
+	err = UpdateAnalysisRequest(a.Id, day2, stringPointer("test"))
 	assert.Nil(t, err)
 
-	alr, err := findLatestAnalysisRequest(r.Id)
+	alr, err := FindLatestAnalysisRequest(r.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, day3.Nanosecond(), alr.ReceivedAt.Nanosecond())
 }

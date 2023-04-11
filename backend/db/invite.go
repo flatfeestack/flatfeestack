@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -6,15 +6,15 @@ import (
 	"time"
 )
 
-type dbInvite struct {
+type Invite struct {
 	Email       string     `json:"email"`
 	InviteEmail string     `json:"inviteEmail"`
 	ConfirmedAt *time.Time `json:"confirmedAt"`
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 
-func findInvitationsByAnyEmail(email string) ([]dbInvite, error) {
-	var res []dbInvite
+func FindInvitationsByAnyEmail(email string) ([]Invite, error) {
+	var res []Invite
 	query := `SELECT email, invite_email, confirmed_at, created_at 
               FROM invite 
               WHERE invite_email=$1 OR email=$1`
@@ -26,7 +26,7 @@ func findInvitationsByAnyEmail(email string) ([]dbInvite, error) {
 	case nil:
 		defer closeAndLog(rows)
 		for rows.Next() {
-			var inv dbInvite
+			var inv Invite
 			err = rows.Scan(&inv.Email, &inv.InviteEmail, &inv.ConfirmedAt, &inv.CreatedAt)
 			if err != nil {
 				return nil, err
@@ -39,8 +39,8 @@ func findInvitationsByAnyEmail(email string) ([]dbInvite, error) {
 	}
 }
 
-func findMyInvitations(email string) ([]dbInvite, error) {
-	var res []dbInvite
+func FindMyInvitations(email string) ([]Invite, error) {
+	var res []Invite
 	query := `SELECT email, invite_email, confirmed_at, created_at 
               FROM invite 
               WHERE email=$1`
@@ -52,7 +52,7 @@ func findMyInvitations(email string) ([]dbInvite, error) {
 	case nil:
 		defer closeAndLog(rows)
 		for rows.Next() {
-			var inv dbInvite
+			var inv Invite
 			err = rows.Scan(&inv.Email, &inv.InviteEmail, &inv.ConfirmedAt, &inv.CreatedAt)
 			if err != nil {
 				return nil, err
@@ -65,7 +65,7 @@ func findMyInvitations(email string) ([]dbInvite, error) {
 	}
 }
 
-func deleteInvite(myEmail string, inviteEmail string) error {
+func DeleteInvite(myEmail string, inviteEmail string) error {
 	stmt, err := db.Prepare("DELETE FROM invite WHERE email = $1 AND invite_email = $2")
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM invite %v statement failed: %v", myEmail, err)
@@ -79,7 +79,7 @@ func deleteInvite(myEmail string, inviteEmail string) error {
 	return handleErrMustInsertOne(res)
 }
 
-func insertInvite(email string, inviteEmail string, now time.Time) error {
+func InsertInvite(email string, inviteEmail string, now time.Time) error {
 	stmt, err := db.Prepare("INSERT INTO invite (email, invite_email, created_at) VALUES ($1, $2, $3)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO invite for %v statement failed: %v", email, err)
@@ -110,7 +110,7 @@ func insertInvite(email string, inviteEmail string, now time.Time) error {
 	}
 }*/
 
-func updateConfirmInviteAt(email string, inviteEmail string, now time.Time) error {
+func UpdateConfirmInviteAt(email string, inviteEmail string, now time.Time) error {
 	stmt, err := db.Prepare("UPDATE invite SET confirmed_at = $1 WHERE email = $2 and invite_email=$3")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE invite statement failed: %v", err)

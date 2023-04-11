@@ -1,44 +1,38 @@
 package main
 
 import (
+	"backend/api"
+	"backend/clients"
+	db2 "backend/db"
+	"backend/utils"
 	"crypto/rsa"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/base32"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v74"
 	"golang.org/x/crypto/ed25519"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
-)
-
-const (
-	Active = iota + 1
-	Inactive
 )
 
 var (
-	db         *sql.DB
-	opts       *Opts
-	jwtKey     []byte
-	privRSA    *rsa.PrivateKey
-	privEdDSA  *ed25519.PrivateKey
-	debug      bool
-	admins     []string
-	secondsAdd int
-	km         = KeyedMutex{}
+	opts      *Opts
+	jwtKey    []byte
+	privRSA   *rsa.PrivateKey
+	privEdDSA *ed25519.PrivateKey
+	debug     bool
+	admins    []string
+	km        = KeyedMutex{}
 )
 
 type Opts struct {
@@ -106,7 +100,7 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.ServerKey, "server-key", lookupEnv("SERVER_KEY"), "make secure calls to the subsystems")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Printf("Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -151,7 +145,11 @@ func lookupEnv(key string, defaultValues ...string) string {
 	}
 	for _, v := range defaultValues {
 		if v != "" {
-			os.Setenv(key, v)
+			err := os.Setenv(key, v)
+			if err != nil {
+				log.Printf("LookupEnvInt[%s]: %v", key, err)
+				return ""
+			}
 			return v
 		}
 	}
@@ -169,7 +167,11 @@ func lookupEnvInt(key string, defaultValues ...int) int {
 	}
 	for _, v := range defaultValues {
 		if v != 0 {
-			os.Setenv(key, strconv.Itoa(v))
+			err := os.Setenv(key, strconv.Itoa(v))
+			if err != nil {
+				log.Printf("LookupEnvInt[%s]: %v", key, err)
+				return 0
+			}
 			return v
 		}
 	}
@@ -189,6 +191,12 @@ func main() {
 	//this will set the default ENVs
 	opts = NewOpts()
 
+	clients.Init(opts.PayoutUrl, opts.ServerKey, opts.AnalysisUrl)
+	clients.InitEmail(opts.EmailUrl, opts.EmailFromName, opts.EmailFrom, opts.EmailToken, opts.Env, opts.EmailMarketing, opts.EmailLinkPrefix)
+	api.InitStripe(opts.StripeAPISecretKey, opts.StripeWebhookSecretKey)
+	api.InitNow(opts.NowpaymentsApiUrl, opts.NowpaymentsToken, opts.NowpaymentsIpnCallbackUrl, opts.NowpaymentsIpnKey)
+	api.InitApi(opts.StripeAPIPublicKey, opts.WebSocketBaseUrl, opts.Env)
+
 	f, err := os.Open("banner.txt")
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
@@ -196,7 +204,7 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	db, err = initDb()
+	err = db2.InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -210,79 +218,72 @@ func main() {
 	})
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	//user
-	router.HandleFunc("/users/me", jwtAuthUser(getMyUser)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwtAuthUser(getMyConnectedEmails)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwtAuthUser(addGitEmail)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(removeGitEmail)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(updateMethod)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(updateImage), 200*1024)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(stripePaymentInitial)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwtAuthUser(nowPayment)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/payment", jwtAuthUser(ws)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(paymentCycle)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(statusSponsoredUsers)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-snd", jwtAuthUser(contributionsSend)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(contributionsRcv)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(contributionsSum)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contributions-summary/{uuid}", contributionsSum2).Methods(http.MethodPost)
-	router.HandleFunc("/users/summary/{uuid}", userSummary2).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/wallets", jwtAuthUser(getUserWallets)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/wallets", jwtAuthUser(addUserWallet)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(deleteUserWallet)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/git-email", jwtAuthUser(api.GetMyConnectedEmails)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/git-email", jwtAuthUser(api.AddGitEmail)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(api.RemoveGitEmail)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me", jwtAuthUser(api.GetMyUser)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(api.UpdateMethod)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/method", jwtAuthUser(api.DeleteMethod)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(api.UpdateName)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(api.UpdateImage), 200*1024)).Methods(http.MethodPost)
+	//unauthenticated
+	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodPost)
+	router.HandleFunc("/users/git-email", api.ConfirmConnectedEmails).Methods(http.MethodPost)
+	//repo
+	router.HandleFunc("/users/me/sponsored", jwtAuthUser(api.GetSponsoredRepos)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/name", jwtAuthUser(api.SearchRepoNames)).Methods(http.MethodGet)
 
-	//
-	router.HandleFunc("/users/git-email", confirmConnectedEmails).Methods(http.MethodPost)
-	//repo github
-	router.HandleFunc("/repos/search", jwtAuthUser(searchRepoGitHub)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/name", jwtAuthUser(searchRepoNames)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/{id}", jwtAuthUser(getRepoByID)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(tagRepo)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(unTagRepo)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/{offset}/graph", jwtAuthUser(graph)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payment", jwtAuthUser(api.WebSocket)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(api.PaymentCycle)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
+	//contributions
+	router.HandleFunc("/users/contrib-snd", jwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
+	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
+	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodPost)
+	//wallet
+	router.HandleFunc("/users/me/wallets", jwtAuthUser(api.GetUserWallets)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/wallets", jwtAuthUser(api.AddUserWallet)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(api.DeleteUserWallet)).Methods(http.MethodDelete)
+	//github
+	router.HandleFunc("/repos/search", jwtAuthUser(api.SearchRepoGitHub)).Methods(http.MethodGet)
+	//repo
+	router.HandleFunc("/repos/{id}", jwtAuthUser(api.GetRepoByID)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/{id}/tag", jwtAuthUser(api.TagRepo)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/untag", jwtAuthUser(api.UnTagRepo)).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/{offset}/graph", jwtAuthUser(api.Graph)).Methods(http.MethodGet)
 	//payment
 
 	//hooks
-	router.HandleFunc("/hooks/stripe", maxBytes(stripeWebhook, 65536)).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/nowpayments", nowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analyzer", jwtAuthAdmin(analysisEngineHook, []string{"ffs-server"})).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/stripe", maxBytes(api.StripeWebhook, 65536)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", api.NowWebhook).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analyzer", jwtAuthAdmin(api.AnalysisEngineHook, []string{"ffs-server"})).Methods(http.MethodPost)
 
 	//admin
-	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(monthlyPayout, admins)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/time", jwtAuthAdmin(serverTime, admins)).Methods(http.MethodGet)
-	router.HandleFunc("/admin/users", jwtAuthAdmin(users, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(api.MonthlyPayout, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/time", jwtAuthAdmin(api.ServerTime, admins)).Methods(http.MethodGet)
+	router.HandleFunc("/admin/users", jwtAuthAdmin(api.Users, admins)).Methods(http.MethodPost)
 
-	router.HandleFunc("/config", config).Methods(http.MethodGet)
+	router.HandleFunc("/config", api.Config).Methods(http.MethodGet)
 
 	//dev settings
 	if debug {
-		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(fakeUser, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(fakePayment, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(fakeContribution, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(timeWarp, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/nowpayments/crontester", jwtAuthAdmin(crontester, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/user/{email}", jwtAuthAdmin(api.FakeUser, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwtAuthAdmin(api.FakePayment, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/contribution", jwtAuthAdmin(api.FakeContribution, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/timewarp/{hours}", jwtAuthAdmin(api.TimeWarp, admins)).Methods(http.MethodPost)
 	}
 
-	router.HandleFunc("/confirm/invite/{email}", jwtAuthUser(confirmInvite)).Methods(http.MethodPost)
-	router.HandleFunc("/invite", jwtAuthUser(invitations)).Methods(http.MethodGet)
-	router.HandleFunc("/invite/by/{email}", jwtAuthUser(inviteByDelete)).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/my/{email}", jwtAuthUser(inviteMyDelete)).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/{email}", jwtAuthUser(inviteOther)).Methods(http.MethodPost)
-	/**
-	//invites
-	router.HandleFunc("/confirm/invite-new", confirmInviteNew).Methods(http.MethodPost)
-
-	//invites
-	router.HandleFunc("/invite", jwtAuth(inviteOther)).Methods(http.MethodPost)
-
-
-	//TODO: not yet in the frontend
-	router.HandleFunc("/invite", jwtAuth(inviteResetMyToken)).Methods(http.MethodPatch)
-	*/
+	//invite
+	router.HandleFunc("/confirm/invite/{email}", jwtAuthUser(api.ConfirmInvite)).Methods(http.MethodPost)
+	router.HandleFunc("/invite", jwtAuthUser(api.Invitations)).Methods(http.MethodGet)
+	router.HandleFunc("/invite/by/{email}", jwtAuthUser(api.InviteByDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/my/{email}", jwtAuthUser(api.InviteMyDelete)).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/{email}", jwtAuthUser(api.InviteOther)).Methods(http.MethodPost)
 
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[404] no route matched for: %s, %s", r.URL, r.Method)
@@ -290,60 +291,18 @@ func main() {
 	})
 
 	//scheduler
-	cronJobDay(dailyRunner, timeNow())
-	cronJobHour(hourlyRunner, timeNow())
+	cronJobDay(dailyRunner, utils.TimeNow())
+	cronJobHour(hourlyRunner, utils.TimeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 	cronStop()
 }
 
-func writeErrorf(w http.ResponseWriter, code int, format string, a ...interface{}) {
-	msg := fmt.Sprintf(format, a...)
-	log.Error(msg)
-	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Pragma", "no-cache")
-	w.WriteHeader(code)
-	if debug {
-		w.Write([]byte(`{"error":"` + msg + `"}`))
-	}
-}
-
 func maxBytes(next func(w http.ResponseWriter, r *http.Request), size int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, size)
 		next(w, r)
-	}
-}
-
-func createUser(email string) (*User, error) {
-	payOutId := uuid.New()
-
-	user := User{
-		Id:                uuid.New(),
-		PaymentCycleOutId: payOutId,
-		Email:             email,
-		CreatedAt:         timeNow(),
-	}
-
-	err := insertUser(&user)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("user %v created", user)
-	return &user, nil
-}
-
-func stringPointer(s string) *string {
-	return &s
-}
-
-func timeNow() time.Time {
-	if debug {
-		return time.Now().Add(time.Duration(secondsAdd) * time.Second).UTC()
-	} else {
-		return time.Now().UTC()
 	}
 }
 
@@ -357,13 +316,4 @@ func (m *KeyedMutex) Lock(key string) func() {
 	mtx.Lock()
 
 	return func() { mtx.Unlock() }
-}
-
-func validateEmail(email string) error {
-	var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
-	if len(email) > 254 || !rxEmail.MatchString(email) {
-		return fmt.Errorf("[%s] is not a valid email address", email)
-	}
-	return nil
 }

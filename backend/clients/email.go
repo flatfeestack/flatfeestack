@@ -1,6 +1,9 @@
-package main
+package clients
 
 import (
+	"backend/api"
+	db "backend/db"
+	"backend/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -30,14 +33,51 @@ const (
 )
 
 var (
-	queue                chan *EmailRequest
-	emailNotifications   = 0
-	emailNoNotifications = 0
+	queue                chan *api.EmailRequest
+	EmailNotifications   = 0
+	EmailNoNotifications = 0
 	lastMailTo           = ""
 )
 
+var (
+	emailUrl        string
+	emailFromName   string
+	emailFrom       string
+	emailToken      string
+	env             string
+	emailMarketing  string
+	emailLinkPrefix string
+)
+
+func InitEmail(emailUrl0 string, emailFromName0 string, emailFrom0 string, emailToken0 string, env0 string, emailMarketing0 string, emailLinkPrefix0 string) {
+	emailUrl = emailUrl0
+	emailFromName = emailFromName0
+	emailFrom = emailFrom0
+	emailToken = emailToken0
+	env = env0
+	emailMarketing = emailMarketing0
+	emailLinkPrefix = emailLinkPrefix0
+}
+
+type WebhookResponse struct {
+	ActuallyPaid     float64    `json:"actually_paid"`
+	InvoiceId        int64      `json:"invoice_id"`
+	OrderDescription *uuid.UUID `json:"order_description"`
+	OrderId          *uuid.UUID `json:"order_id"`
+	OutcomeAmount    float64    `json:"outcome_amount"`
+	OutcomeCurrency  string     `json:"outcome_currency"`
+	PayAddress       string     `json:"pay_address"`
+	PayAmount        float64    `json:"pay_amount"`
+	PayCurrency      string     `json:"pay_currency"`
+	PaymentId        int64      `json:"payment_id"`
+	PaymentStatus    string     `json:"payment_status"`
+	PriceAmount      float64    `json:"price_amount"`
+	PriceCurrency    string     `json:"price_currency"`
+	PurchaseId       string     `json:"purchase_id"`
+}
+
 func init() {
-	queue = make(chan *EmailRequest)
+	queue = make(chan *api.EmailRequest)
 	go func() {
 		for {
 			select {
@@ -49,7 +89,7 @@ func init() {
 
 }
 
-func sendEmail(e *EmailRequest) {
+func sendEmail(e *api.EmailRequest) {
 	queue <- e
 }
 
@@ -57,9 +97,9 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 	c := 0
 	var err error
 	if uId != nil {
-		c, err = countEmailSentById(*uId, key)
+		c, err = db.CountEmailSentById(*uId, key)
 	} else {
-		c, err = countEmailSentByEmail(email, key)
+		c, err = db.CountEmailSentByEmail(email, key)
 	}
 	if err != nil {
 		return false, err
@@ -67,28 +107,28 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 
 	if c > 0 {
 		log.Printf("we already sent a notification %v", email)
-		emailNoNotifications++
+		EmailNoNotifications++
 		return false, nil
 	}
-	err = insertEmailSent(uId, email, key, timeNow())
+	err = db.InsertEmailSent(uId, email, key, utils.TimeNow())
 	if err != nil {
 		return false, err
 	}
-	emailNotifications++
+	EmailNotifications++
 	lastMailTo = email
 	return true, nil
 }
 
-func sendEmailQueue(e *EmailRequest) error {
+func sendEmailQueue(e *api.EmailRequest) error {
 	c := &http.Client{
 		Timeout: 15 * time.Second,
 	}
 
 	var jsonData []byte
 	var err error
-	if strings.Contains(opts.EmailUrl, "sendgrid") {
+	if strings.Contains(emailUrl, "sendgrid") {
 		sendGridReq := NewSingleEmailPlainText(
-			NewEmail(opts.EmailFromName, opts.EmailFrom),
+			NewEmail(emailFromName, emailFrom),
 			e.Subject,
 			NewEmail("", e.MailTo),
 			e.TextMessage)
@@ -101,12 +141,12 @@ func sendEmailQueue(e *EmailRequest) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", opts.EmailUrl, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", emailUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
 
-	req.Header.Add("Authorization", "Bearer "+opts.EmailToken)
+	req.Header.Add("Authorization", "Bearer "+emailToken)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.Do(req)
 	if err != nil {
@@ -128,17 +168,17 @@ func prepareEmail(
 	defaultText string,
 	lang string) error {
 
-	subject := parseTemplate("template-subject-"+templateKey+"_"+lang+".tmpl", data)
+	subject := utils.ParseTemplate("template-subject-"+templateKey+"_"+lang+".tmpl", data)
 	if subject == "" {
 		subject = defaultSubject
 	}
-	textMessage := parseTemplate("template-plain-"+templateKey+"_"+lang+".tmpl", data)
+	textMessage := utils.ParseTemplate("template-plain-"+templateKey+"_"+lang+".tmpl", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
-	htmlMessage := parseTemplate("template-html-"+templateKey+"_"+lang+".tmpl", data)
+	htmlMessage := utils.ParseTemplate("template-html-"+templateKey+"_"+lang+".tmpl", data)
 
-	e := EmailRequest{
+	e := api.EmailRequest{
 		MailTo:      data["mailTo"],
 		Subject:     subject,
 		TextMessage: textMessage,
@@ -153,7 +193,7 @@ func prepareEmail(
 	if b {
 		log.Debugf("sending %v email to %v/%v", data["key"], data["email"], data["mailTo"])
 		lastMailTo = e.MailTo
-		if opts.Env != "test" {
+		if env != "test" {
 			sendEmail(&e)
 		}
 	} else {
@@ -165,17 +205,17 @@ func prepareEmail(
 
 //******************** These are called by the application
 
-func sendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames []string) error {
+func SendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames []string) error {
 	var other = map[string]string{}
 	other["email"] = email
 	//dont spam in testing...
-	if opts.EmailMarketing != "live" {
-		email = opts.EmailMarketing
+	if emailMarketing != "live" {
+		email = emailMarketing
 	}
 	other["mailTo"] = email
-	other["url"] = opts.EmailLinkPrefix
+	other["url"] = emailLinkPrefix
 	other["lang"] = "en"
-	weekly := int(timeNow().Unix() / WaitToSendEmail)
+	weekly := int(utils.TimeNow().Unix() / WaitToSendEmail)
 	other["key"] = KeyMarketing + other["email"] + strconv.Itoa(weekly)
 
 	return prepareEmail(
@@ -184,16 +224,16 @@ func sendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames 
 		KeyMarketing,
 		"[Marketing] Someone Likes Your Contribution for "+fmt.Sprint(repoNames),
 		"Thanks for keep building and maintaining "+fmt.Sprint(repoNames)+". Someone sponsored you with "+
-			printMap(balanceMap)+". \nGo to "+other["url"]+" and claim your support!",
+			utils.PrintMap(balanceMap)+". \nGo to "+other["url"]+" and claim your support!",
 		other["lang"])
 }
 
-func sendStripeTopUp(u User) error {
+func SendStripeTopUp(u db.User) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	key := KeyTopUpStripe
 	if u.PaymentCycleInId != nil {
@@ -210,12 +250,12 @@ func sendStripeTopUp(u User) error {
 		other["lang"])
 }
 
-func sendTopUpSponsor(u User) error {
+func SendTopUpSponsor(u db.User) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 
 	//we are sponser, and the user beneficiaryEmail could not donate
@@ -229,12 +269,12 @@ func sendTopUpSponsor(u User) error {
 		other["lang"])
 }
 
-func sendTopUpInvited(u User) error {
+func SendTopUpInvited(u db.User) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = u.PaymentCycleInId.String() + KeyTopUpUser1
 	return prepareEmail(
@@ -246,12 +286,12 @@ func sendTopUpInvited(u User) error {
 		other["lang"])
 }
 
-func sendTopUpOther(u User) error {
+func SendTopUpOther(u db.User) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 
 	key := KeyTopUpUser2
@@ -270,12 +310,12 @@ func sendTopUpOther(u User) error {
 
 }
 
-func sendAddGit(email string, addGitEmailToken string, lang string) error {
+func SendAddGit(email string, addGitEmailToken string, lang string) error {
 	var other = map[string]string{}
 	other["token"] = addGitEmailToken
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
+	other["url"] = emailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
 	other["lang"] = lang
 	other["key"] = KeyAddGit + email
 
@@ -288,12 +328,12 @@ func sendAddGit(email string, addGitEmailToken string, lang string) error {
 		other["lang"])
 }
 
-func sendPaymentNowFinished(user *User, data WebhookResponse) error {
+func SendPaymentNowFinished(user *db.User, data WebhookResponse) error {
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyPaymentNowFinished + data.OrderId.String()
 
@@ -306,12 +346,12 @@ func sendPaymentNowFinished(user *User, data WebhookResponse) error {
 		other["lang"])
 }
 
-func sendPaymentNowPartially(user User, data WebhookResponse) error {
+func SendPaymentNowPartially(user db.User, data WebhookResponse) error {
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyPaymentNowPartially + data.OrderId.String()
 
@@ -325,12 +365,12 @@ func sendPaymentNowPartially(user User, data WebhookResponse) error {
 		other["lang"])
 }
 
-func sendPaymentNowRefunded(user User, data WebhookResponse, status string) error {
+func SendPaymentNowRefunded(user db.User, data WebhookResponse, status string) error {
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyPaymentNowRefunded + status + "-" + data.OrderId.String()
 
@@ -344,12 +384,12 @@ func sendPaymentNowRefunded(user User, data WebhookResponse, status string) erro
 		other["lang"])
 }
 
-func sendStripeSuccess(u User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeSuccess(u db.User, newPaymentCycleInId *uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyStripeSuccess + newPaymentCycleInId.String()
 
@@ -362,12 +402,12 @@ func sendStripeSuccess(u User, newPaymentCycleInId *uuid.UUID) error {
 		other["lang"])
 }
 
-func sendStripeAction(u User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeAction(u db.User, newPaymentCycleInId *uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyStripeAction + newPaymentCycleInId.String()
 
@@ -380,12 +420,12 @@ func sendStripeAction(u User, newPaymentCycleInId *uuid.UUID) error {
 		other["lang"])
 }
 
-func sendStripeFailed(u User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeFailed(u db.User, newPaymentCycleInId *uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
-	other["url"] = opts.EmailLinkPrefix + "/user/payments"
+	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 	other["key"] = KeyStripeFailed + newPaymentCycleInId.String()
 

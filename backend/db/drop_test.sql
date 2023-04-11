@@ -1,0 +1,15 @@
+delete from payment_cycle_in;
+delete from payment_cycle_out;
+delete from users;
+delete from user_balances;
+delete from repo;
+delete from git_email;
+delete from sponsor_event;
+delete from analysis_request;
+delete from analysis_response;
+delete from daily_contribution;
+delete from unclaimed;
+delete from future_contribution;
+delete from wallet_address;
+delete from invite;
+delete from user_emails_sent;
