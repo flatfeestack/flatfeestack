@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"backend/api"
 	db2 "backend/db"
 	"bytes"
 	"crypto/rand"
@@ -21,6 +20,20 @@ import (
 var (
 	debug bool
 )
+
+type Currencies struct {
+	Name      string `json:"name"`
+	Short     string `json:"short"`
+	Smallest  string `json:"smallest"`
+	FactorPow int64  `json:"factorPow"`
+	IsCrypto  bool   `json:"isCrypto"`
+}
+
+var SupportedCurrencies = map[string]Currencies{
+	"ETH": {Name: "Ethereum", Short: "ETH", Smallest: "wei", FactorPow: 18, IsCrypto: true},
+	"GAS": {Name: "Neo Gas", Short: "GAS", Smallest: "mGAS", FactorPow: 8, IsCrypto: true},
+	"USD": {Name: "US Dollar", Short: "USD", Smallest: "mUSD", FactorPow: 6, IsCrypto: false},
+}
 
 func StringPointer(s string) *string {
 	return &s
@@ -108,7 +121,7 @@ func IsValidUrl(s string) *string {
 
 func PrintMap(balanceMap map[string]*big.Int) string {
 	s := ""
-	for k, c := range api.SupportedCurrencies {
+	for k, c := range SupportedCurrencies {
 		v := balanceMap[k]
 		if v != nil {
 			vf := new(big.Float).SetInt(v)
@@ -126,7 +139,7 @@ const (
 )
 
 func GetFactorInt(currency string) (int64, error) {
-	for supportedCurrency, cryptoCurrency := range api.SupportedCurrencies {
+	for supportedCurrency, cryptoCurrency := range SupportedCurrencies {
 		if supportedCurrency == strings.ToUpper(currency) {
 			return IntPow(10, cryptoCurrency.FactorPow), nil
 		}
@@ -135,7 +148,7 @@ func GetFactorInt(currency string) (int64, error) {
 }
 
 func GetFactor(currency string) (*big.Int, error) {
-	for supportedCurrency, cryptoCurrency := range api.SupportedCurrencies {
+	for supportedCurrency, cryptoCurrency := range SupportedCurrencies {
 		if supportedCurrency == strings.ToUpper(currency) {
 			return new(big.Int).Exp(big.NewInt(10), big.NewInt(cryptoCurrency.FactorPow), nil), nil
 		}

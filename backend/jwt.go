@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/api"
 	db "backend/db"
 	"backend/utils"
 	"fmt"
@@ -42,7 +43,7 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.User
 				utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
 			} else {
 				//we use websocket
-				wsNoAuth(w, r)
+				api.WsNoAuth(w, r)
 			}
 			return
 		} else if claims == nil && err != nil {

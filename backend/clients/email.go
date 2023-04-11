@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"backend/api"
 	db "backend/db"
 	"backend/utils"
 	"bytes"
@@ -33,7 +32,7 @@ const (
 )
 
 var (
-	queue                chan *api.EmailRequest
+	queue                chan *EmailRequest
 	EmailNotifications   = 0
 	EmailNoNotifications = 0
 	lastMailTo           = ""
@@ -48,6 +47,13 @@ var (
 	emailMarketing  string
 	emailLinkPrefix string
 )
+
+type EmailRequest struct {
+	MailTo      string `json:"mail_to,omitempty"`
+	Subject     string `json:"subject"`
+	TextMessage string `json:"text_message"`
+	HtmlMessage string `json:"html_message"`
+}
 
 func InitEmail(emailUrl0 string, emailFromName0 string, emailFrom0 string, emailToken0 string, env0 string, emailMarketing0 string, emailLinkPrefix0 string) {
 	emailUrl = emailUrl0
@@ -77,7 +83,7 @@ type WebhookResponse struct {
 }
 
 func init() {
-	queue = make(chan *api.EmailRequest)
+	queue = make(chan *EmailRequest)
 	go func() {
 		for {
 			select {
@@ -89,7 +95,7 @@ func init() {
 
 }
 
-func sendEmail(e *api.EmailRequest) {
+func sendEmail(e *EmailRequest) {
 	queue <- e
 }
 
@@ -119,7 +125,7 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 	return true, nil
 }
 
-func sendEmailQueue(e *api.EmailRequest) error {
+func sendEmailQueue(e *EmailRequest) error {
 	c := &http.Client{
 		Timeout: 15 * time.Second,
 	}
@@ -178,7 +184,7 @@ func prepareEmail(
 	}
 	htmlMessage := utils.ParseTemplate("template-html-"+templateKey+"_"+lang+".tmpl", data)
 
-	e := api.EmailRequest{
+	e := EmailRequest{
 		MailTo:      data["mailTo"],
 		Subject:     subject,
 		TextMessage: textMessage,

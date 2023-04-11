@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"backend/api"
 	db "backend/db"
 	"backend/utils"
 	"bytes"
@@ -16,6 +15,25 @@ import (
 	"strconv"
 	"time"
 )
+
+type PayoutsResponse struct {
+	BatchId   uuid.UUID
+	TxHash    string
+	Error     *string
+	CreatedAt time.Time
+	Payouts   PayoutResponse
+}
+
+type PayoutResponse struct {
+	TxHash   string           `json:"tx_hash"`
+	Currency string           `json:"currency"`
+	Payout   []PayoutRequest2 `json:"payout_cryptos"`
+}
+
+type PayoutRequest2 struct {
+	UserId uuid.UUID `json:"userId"`
+	Amount *big.Int  `json:"amount"`
+}
 
 type AnalysisRequest struct {
 	Id         uuid.UUID `json:"reqId"`
@@ -43,12 +61,12 @@ func Init(payoutUrl0 string, serverKey0 string, analysisUrl0 string) {
 	analysisUrl = analysisUrl0
 }
 
-func PayoutRequest(userId uuid.UUID, amount *big.Int) (*api.PayoutResponse, error) {
+func PayoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	preq := api.PayoutRequest2{
+	preq := PayoutRequest2{
 		userId,
 		amount,
 	}
@@ -68,7 +86,7 @@ func PayoutRequest(userId uuid.UUID, amount *big.Int) (*api.PayoutResponse, erro
 	}
 	defer resp.Body.Close()
 
-	var presp api.PayoutResponse
+	var presp PayoutResponse
 	err = json.NewDecoder(resp.Body).Decode(&presp)
 	if err != nil {
 		return nil, err
