@@ -1,19 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {PayoutBase} from "./PayoutBase.sol";
 
-import "hardhat/console.sol";
-
-contract Payout is OwnableUpgradeable {
-    /**
-     * @dev Maps each userId to its current already payed out amount. The userId never changes
-     */
-    mapping(bytes32 => uint256) public payedOut;
-
+contract Payout is PayoutBase {
     function initialize() public initializer {
-        __Ownable_init();
+        payoutInit();
     }
 
     receive() external payable {}
@@ -21,43 +13,15 @@ contract Payout is OwnableUpgradeable {
     /**
      * @dev Send back from contract in case something is wrong. This should rarely happen
      */
-    function sndRecoverEth(
+    function sendRecover(
         address payable receiver,
         uint256 amount
-    ) external onlyOwner {
+    ) external override onlyOwner {
         receiver.transfer(amount);
     }
 
     /**
-     * @dev Send back from contract in case something is wrong. This should never happen
-     */
-    function sndRecoverToken(
-        address receiver,
-        address contractAddress,
-        uint256 amount
-    ) external onlyOwner {
-        IERC20Upgradeable(contractAddress).transfer(receiver, amount);
-    }
-
-    /**
-     * @dev Gets the tea for the provided address.
-     */
-    function getPayedOut(bytes32 userId) external view returns (uint256) {
-        return payedOut[userId];
-    }
-
-    /**
-     * @dev Gets the tea for the provided address.
-     */
-    function getClaimableAmount(
-        bytes32 userId,
-        uint256 totalPayOut
-    ) external view returns (uint256) {
-        return totalPayOut - payedOut[userId];
-    }
-
-    /**
-     * @dev Withdraws the earned amount. The signature has to be created by the contract owner and the signed message
+     * @dev Withdraw the earned amount. The signature has to be created by the contract owner and the signed message
      * is the hash of the concatenation of the account and tea.
      *
      * @param dev The address to withdraw to.
@@ -74,20 +38,10 @@ contract Payout is OwnableUpgradeable {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external {
-        bytes32 payloadHash = keccak256(abi.encode(userId, "#", totalPayOut));
-        bytes32 messageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", payloadHash)
-        );
+    ) external override {
+        uint256 toBePaid = calculateWithdraw(userId, totalPayOut, v, r, s);
 
-        require(totalPayOut > payedOut[userId], "No new funds to be withdrawn");
-        require(
-            ecrecover(messageHash, v, r, s) == owner(),
-            "Signature no match"
-        );
-        uint256 old = payedOut[userId];
-        payedOut[userId] = totalPayOut;
         // transfer reverts transaction if not successful.
-        dev.transfer(totalPayOut - old);
+        dev.transfer(toBePaid);
     }
 }
