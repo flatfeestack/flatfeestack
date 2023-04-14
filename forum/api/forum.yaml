@@ -9,6 +9,12 @@ tags:
   - name: Admin
     description: Admin
 paths:
+  /metrics:
+    get:
+      summary: Get metrics
+      responses:
+        '200':
+          description: ok
   /posts:
     post:
       summary: Create a new post

@@ -4,6 +4,7 @@ import (
 	"backend/api"
 	"backend/clients"
 	db2 "backend/db"
+	prom "backend/prometheus"
 	"backend/utils"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -15,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v74"
 	"golang.org/x/crypto/ed25519"
@@ -214,10 +216,19 @@ func main() {
 
 	// Routes
 	router := mux.NewRouter()
+	router.Use(prom.PrometheusMiddleware)
 	router.Use(func(next http.Handler) http.Handler {
 		return logRequestHandler(next)
 	})
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
+	router.Path("/metrics").Handler(promhttp.HandlerFor(
+		prom.Registry,
+		promhttp.HandlerOpts{
+			Registry: prom.Registry,
+			// Opt into OpenMetrics to support exemplars.
+			EnableOpenMetrics: true,
+		},
+	))
 	//user
 	router.HandleFunc("/users/me", jwtAuthUser(api.GetMyUser)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(api.GetMyConnectedEmails)).Methods(http.MethodGet)

@@ -22,6 +22,9 @@ import (
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get metrics
+	// (GET /metrics)
+	GetMetrics(w http.ResponseWriter, r *http.Request)
 	// Get all posts
 	// (GET /posts)
 	GetPosts(w http.ResponseWriter, r *http.Request)
@@ -62,6 +65,21 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.HandlerFunc) http.HandlerFunc
+
+// GetMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMetrics(w, r)
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler(w, r.WithContext(ctx))
+}
 
 // GetPosts operation middleware
 func (siw *ServerInterfaceWrapper) GetPosts(w http.ResponseWriter, r *http.Request) {
@@ -446,6 +464,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	r.HandleFunc(options.BaseURL+"/metrics", wrapper.GetMetrics).Methods("GET")
+
 	r.HandleFunc(options.BaseURL+"/posts", wrapper.GetPosts).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/posts", wrapper.PostPosts).Methods("POST")
@@ -490,6 +510,21 @@ type NotFoundJSONResponse struct {
 
 type UnauthorizedJSONResponse struct {
 	Error string `json:"error"`
+}
+
+type GetMetricsRequestObject struct {
+}
+
+type GetMetricsResponseObject interface {
+	VisitGetMetricsResponse(w http.ResponseWriter) error
+}
+
+type GetMetrics200Response struct {
+}
+
+func (response GetMetrics200Response) VisitGetMetricsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type GetPostsRequestObject struct {
@@ -937,6 +972,9 @@ func (response PutPostsPostIdCommentsCommentId500Response) VisitPutPostsPostIdCo
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Get metrics
+	// (GET /metrics)
+	GetMetrics(ctx context.Context, request GetMetricsRequestObject) (GetMetricsResponseObject, error)
 	// Get all posts
 	// (GET /posts)
 	GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error)
@@ -997,6 +1035,30 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetMetrics operation middleware
+func (sh *strictHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	var request GetMetricsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMetrics(ctx, request.(GetMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMetrics")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMetricsResponseObject); ok {
+		if err := validResponse.VisitGetMetricsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
 }
 
 // GetPosts operation middleware
@@ -1288,25 +1350,25 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xZUW/bNhD+K8Rtj1yltOmL3pJ0GbwNmbEu2EMQDIx0jllIJEtS7TxD/30gKVmSrUR2",
-	"4jgu0JcgMo/kx+/uPn6Wl5DKQkmBwhpIlqCYZgVa1P7pQhYFCjvJ3EOGJtVcWS4FJDD5QOSM2DmSNAQB",
-	"Be4GFLNzoCBYgZBAulqBgsbPJdeYQWJ1iRRMOseCuaVnUhfMQgJlyV2kXSg32VjNxT1UFYWpNCMwlDQP",
-	"YFBh7nMAVG6yUVIY9MScs+xP/Fyise4plcI6BpIlMKVynjKHLvpkHMRlZxulpUJteVgEtZba/bN53Bbp",
-	"TR12uwIl7z5hagOoPhnnLCMNrIrCpdR3PMtQHBPGFlRFYSIsasHyj6i/oP652WstxXUQCVEkhFUUruRF",
-	"e6gnno+LmRw+3uhJriRp9vdg7KUsRXZMXF9JSwKoisK1YKWdS83/w6MC2cPlhsPOXf3ZRBGmbNG5tHvO",
-	"zTGNzGL2D7O9pTJm8SfLCxxaj2dbbVuqbMel1xj0yzbgaXPiHuZNeulKsoUqB3jrkFGwf39HcW/nkLyP",
-	"YwoFF83zyRi2ZpkhAE6pv8WESRWEsh64kzJH5lXKcpvjIJz9JDmsP5bsGuFDlO+U8JN4NOOdY/cn7lYp",
-	"62cbUAQKBtNSc7v46Do/4L5DplGflW6T5umy4ffXv/+CWid8qvxoy/XcWhWUplH3vuKcTSdkJjVh7m9Z",
-	"ECNn9ivTuEqFv6XKgpxNJ0DhC2oTJp68id/ETa0wxSGBd/4j6h2HBx45t+H/u0dPu8uGl1ZnX+AXtFMf",
-	"sGYo3sbxTqLMLRZ+4o8aZ5DAD1Hr46JaQSPfiu1VxrRmiyEJ/uM3F/U2Pn1owRXUqL1zKwrvA+jHZwzd",
-	"8T7pZVEwvQicEJbnJDBXUW/YNqlzp2m58y7nXGaLnWgbYyt0UdWvYmcWq418nex146G0XITmd4ycbsN0",
-	"x5T6KSfjU/qX73MzWrcxJDf9Br6Ba4MabqvbbtrD8QgjAr8G9+4WCf0TLYNpr0L35mhxsyA++M99SUwb",
-	"i9/9/nIzfJA2JKqnOVxD3bifLnlCIh4n8ywruFhnM5BBGJmG70GW3ZtuMH1cj16GwBdtj5CP0+3yYVc+",
-	"eJ+iRYzClM94WtcvhfoSXlOucn8kv7ruHS6xh5G80/jd+KTet9YDl9xuqnrtLSlhDypqlObSeDXdolYv",
-	"fOwBZPV76hLwZNeZ8wZ1Vmo7R00w49YQJrLmXZsZTmwzOGY+69w24a8l+lt52OYVwAva2Fe9QvK8k9RR",
-	"67vPzO3/Jum9eziwiV7VyVH46KPWmbMsI6ypOmLlo5dFXWrRcvUmfzdP3tTqReeHgKcVLR2NbPc4wNWz",
-	"U4KfY+jb31c2Pf02V/grJuAYJCY+hMR8t6z7sKxpl2DjFw0FWuocEoiY4r6w6j7YeK/n22L1s194rG6r",
-	"/wMAAP//WlPeCOQcAAA=",
+	"H4sIAAAAAAAC/+xZX3Ojthf9Kpr7+z2qC9nNvvCWeJuO+yf1dJvpQybTUeA61hYkVhK7dT18944kMGCI",
+	"sRPHcWf2JRPMvdLROVdHF1hBLLNcChRGQ7SCnCmWoUHlriYyy1CYaWIvEtSx4rnhUkAE0w9EzolZIIl9",
+	"EFDg9kbOzAIoCJYhRBCvR6Cg8HPBFSYQGVUgBR0vMGN26LlUGTMQQVFwG2mWuU3WRnHxAGVJYSb1CIxc",
+	"6kcw5D73OQBKm6xzKTQ6Yi5Z8ht+LlAbexVLYSwD0QpYnqc8ZhZd8ElbiKvWNLmSOSrD/SColFT2n/5y",
+	"G6S3VdjdGpS8/4Sx8aC6ZFyyhNSwSgpXUt3zJEFxShgbUCWFqTCoBEs/ovqC6vt6rg2JqyDio4gPKylc",
+	"y0mzqCeuj4u5HF7e6EquJannd2DMlSxEckpcX0tDPKiSwo1ghVlIxf/BkwLZwWVv+5nb/tNH4VN22Lm0",
+	"vc7+PYXMYPInM52hEmbwO8MzHBqPJztNW+TJnkNvMOiGrcHTesUdzH166dqyRV4M8NYiI2N//4ziwSwg",
+	"eh+GFDIu6uuzMWz1MEMArFP/FwWTuTfK6sa9lCky51KGmxQH4RxGZD/+mNgVwsco30vws3BU8dayu4n7",
+	"Vcrm2gYcgYLGuFDcLD/ane9x3yNTqC4KO0l9dVXz++Mfv0PlE04qd7fhemFM7p2mdveu41zMpmQuFWH2",
+	"b5ERLefmK1O4lsKdUkVGLmZToPAFlfaJZ2/CN2FdKyznEME79xN1HYcDHmRoFI/d/w/oiLd6OHO1DQz8",
+	"gOaXKmSjqXgbhn2w8i9PUZFlTC19PqnnsHcC295snW7mAoYn2/kU4AYzl/h/hXOI4H9B0zgGlWUHbu83",
+	"ZydTii2HPP/Xn2zU2/D8sQHXUIPmkC8pvPegt2cMNRV9ClmaEs9cSV2H2KfOrqbhzrVVlzJZ7kXbGFt+",
+	"25bdbWO707Kn19lBJx6SZeLdxjJyvgvTrS7YpZyNp3RP++cqWvkGRLddx7iFG40K7sq7tux+eYQRgV/9",
+	"40Kzf4KVf0oo/Q5M0WC/ID64311JzOpnivYD0+3wQpqQoEqzuMa3/lN3yROE2E7mRZJxscmmJ4MwMvMP",
+	"XoY96HYw3e5HL0Pgi24Pr8f5bnqYdeN9SNMiOseYz3lc1S+F6tTfcK7icCS/uu8dT9jjWN55+G48qfOY",
+	"fOSS289Vb1wPTNijjhrEqdTOTXeo1YmLPYKtfpMuAkd2pZzriOeFMgtUBBNuNGEiqV/u6WFh65tjzWel",
+	"bR3+Wqa/Uw9bv3N4wTb2VY+QNG2JOtr6HlK5w58knZcdR26i13VyEn30SfvMRZIQVlcdMXLrYVGVWrBa",
+	"fzrYryeva3XS+vLwtKKlo5HNHEc4evYS+DkNffNBp9/T73KEv6IAp2Ax4TEs5lvLeoiWNW4TrN2gvkAL",
+	"lUIEAcu5K6xqH/ReJLptsf7O6C/Lu/LfAAAA//+3BMzhVR0AAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

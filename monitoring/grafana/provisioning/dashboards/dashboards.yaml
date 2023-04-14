@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'FFS'
+    folder: 'FlatFeeStack'
+    folderUid: 'b8976d22'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 20
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
