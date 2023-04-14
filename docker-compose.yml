@@ -31,6 +31,7 @@ services:
         condition: service_healthy
     profiles:
       - platform
+
   forum:
     image: registry.digitalocean.com/flatfeestack/forum:${TAG_IMAGE:-latest}
     build: ./forum
@@ -88,6 +89,7 @@ services:
 
   db:
     image: postgres:15-alpine
+    user: postgres
     volumes:
       - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data
     ports:
@@ -129,4 +131,3 @@ services:
       - ".ganache:/ganache"
     profiles:
       - smart-contracts-eth
-

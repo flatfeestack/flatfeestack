@@ -8,6 +8,7 @@ import (
 	database "forum/db"
 	"forum/globals"
 	"forum/jwt"
+	prom "forum/prometheus"
 	"forum/types"
 	"forum/utils"
 	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
@@ -15,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -106,7 +108,16 @@ func main() {
 	validator := middleware.OapiRequestValidatorWithOptions(swagger, utils.EmptyOptions())
 
 	router := mux.NewRouter()
+	router.Use(prom.PrometheusMiddleware)
 	router.Use(validator)
+	router.Path("/metrics").Handler(promhttp.HandlerFor(
+		prom.Registry,
+		promhttp.HandlerOpts{
+			Registry: prom.Registry,
+			// Opt into OpenMetrics to support exemplars.
+			EnableOpenMetrics: true,
+		},
+	))
 
 	serverOptions := api.GorillaServerOptions{
 		BaseURL:    "",

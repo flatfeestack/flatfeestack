@@ -4,6 +4,7 @@ COPY go.* ./
 RUN go mod download
 
 FROM base as builder
+COPY prometheus/*.go ./prometheus/
 COPY /api/*.go ./api/
 COPY /db/*.go /db/*.sql ./db/
 COPY /globals/*.go ./globals/

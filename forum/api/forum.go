@@ -20,6 +20,10 @@ func NewStrictServerImpl() *StrictServerImpl {
 	return &StrictServerImpl{}
 }
 
+func (s *StrictServerImpl) GetMetrics(ctx context.Context, request GetMetricsRequestObject) (GetMetricsResponseObject, error) {
+	return GetMetrics200Response{}, nil
+}
+
 func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error) {
 	posts, err := database.GetAllPosts()
 	if err != nil {

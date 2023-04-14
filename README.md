@@ -201,4 +201,19 @@ Get wallet information on private blockchain
 ```
 docker exec -it flatfeestack-flextesa flobox info
 ```
+# Monitoring
+
+Everything who is related to monitoring is stored in the folder `monitoring`.
+
+For grafana to be able to read from the database, a user with the following permissions needs to be created:
+```
+CREATE USER grafanareader WITH PASSWORD 'password';
+GRANT USAGE ON SCHEMA public TO grafanareader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafanareader;
+```
+
+To start the monitoring stack, run the following command:
+```shell
+docker compose -f monitoring/docker-compose.yml up -d
+```
 
