@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
+import "hardhat/console.sol";
+
 contract Payout is OwnableUpgradeable {
     /**
      * @dev Maps each userId to its current already payed out amount. The userId never changes
@@ -73,14 +75,14 @@ contract Payout is OwnableUpgradeable {
         bytes32 r,
         bytes32 s
     ) external {
+        bytes32 payloadHash = keccak256(abi.encode(userId, "#", totalPayOut));
+        bytes32 messageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", payloadHash)
+        );
+
         require(totalPayOut > payedOut[userId], "No new funds to be withdrawn");
         require(
-            ecrecover(
-                keccak256(abi.encodePacked(userId, "#", totalPayOut)),
-                v,
-                r,
-                s
-            ) == owner(),
+            ecrecover(messageHash, v, r, s) == owner(),
             "Signature no match"
         );
         uint256 old = payedOut[userId];
