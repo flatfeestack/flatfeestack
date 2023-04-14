@@ -2,13 +2,19 @@
 pragma solidity ^0.8.17;
 
 import {PayoutBase} from "./PayoutBase.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-contract Payout is PayoutBase {
-    function initialize() public initializer {
+contract PayoutERC20 is PayoutBase {
+    IERC20Upgradeable token;
+
+    function initialize(IERC20Upgradeable _token) public initializer {
         payoutInit();
+        token = _token;
     }
 
-    receive() external payable {}
+    function getContractBalance() public view onlyOwner returns (uint) {
+        return token.balanceOf(address(this));
+    }
 
     /**
      * @dev Send back from contract in case something is wrong. This should rarely happen
@@ -17,7 +23,10 @@ contract Payout is PayoutBase {
         address payable receiver,
         uint256 amount
     ) external override onlyOwner {
-        receiver.transfer(amount);
+        require(
+            token.transfer(receiver, amount),
+            "Transfer was not successful!"
+        );
     }
 
     /**
@@ -42,6 +51,6 @@ contract Payout is PayoutBase {
         uint256 toBePaid = calculateWithdraw(userId, totalPayOut, v, r, s);
 
         // transfer reverts transaction if not successful.
-        dev.transfer(toBePaid);
+        require(token.transfer(dev, toBePaid), "Transfer was not successful!");
     }
 }
