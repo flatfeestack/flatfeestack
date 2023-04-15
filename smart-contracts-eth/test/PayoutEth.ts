@@ -59,7 +59,7 @@ describe("PayoutEth", () => {
 
       const userId = ethers.utils.formatBytes32String("someUserId");
       const amount = 10000;
-      const signature = await generateSignature(amount, owner, userId);
+      const signature = await generateSignature(amount, owner, userId, "ETH");
 
       await expect(
         payoutEth
@@ -97,7 +97,8 @@ describe("PayoutEth", () => {
       const firstSignature = await generateSignature(
         firstWithdraw,
         owner,
-        userId
+        userId,
+        "ETH"
       );
 
       await expect(
@@ -118,7 +119,12 @@ describe("PayoutEth", () => {
 
       const secondWithdraw = 20000;
       const tea = secondWithdraw + firstWithdraw;
-      const secondSignature = await generateSignature(tea, owner, userId);
+      const secondSignature = await generateSignature(
+        tea,
+        owner,
+        userId,
+        "ETH"
+      );
 
       await expect(
         payoutEth

@@ -7,9 +7,12 @@ import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20
 contract PayoutERC20 is PayoutBase {
     IERC20Upgradeable token;
 
-    function initialize(IERC20Upgradeable _token) public initializer {
-        payoutInit();
+    function initialize(
+        IERC20Upgradeable _token,
+        string memory _symbol
+    ) public initializer {
         token = _token;
+        payoutInit(_symbol);
     }
 
     function getContractBalance() public view onlyOwner returns (uint) {

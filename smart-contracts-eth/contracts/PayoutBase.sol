@@ -9,13 +9,18 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
      * @dev Maps each userId to its current already payed out amount. The userId never changes
      */
     mapping(bytes32 => uint256) public payedOut;
+    string private currencyCode;
 
-    function payoutInit() internal onlyInitializing {
+    function payoutInit(string memory _currencyCode) internal onlyInitializing {
         __Ownable_init();
-        payoutInitUnchained();
+        payoutInitUnchained(_currencyCode);
     }
 
-    function payoutInitUnchained() internal onlyInitializing {}
+    function payoutInitUnchained(
+        string memory _currencyCode
+    ) internal onlyInitializing {
+        currencyCode = _currencyCode;
+    }
 
     function sendRecover(
         address payable receiver,
@@ -58,7 +63,9 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
     ) internal returns (uint256) {
         require(totalPayOut > payedOut[userId], "No new funds to be withdrawn");
 
-        bytes32 payloadHash = keccak256(abi.encode(userId, "#", totalPayOut));
+        bytes32 payloadHash = keccak256(
+            abi.encode(userId, "#", totalPayOut, currencyCode)
+        );
         bytes32 messageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", payloadHash)
         );

@@ -5,7 +5,7 @@ import {PayoutBase} from "./PayoutBase.sol";
 
 contract PayoutEth is PayoutBase {
     function initialize() public initializer {
-        payoutInit();
+        payoutInit("ETH");
     }
 
     receive() external payable {}

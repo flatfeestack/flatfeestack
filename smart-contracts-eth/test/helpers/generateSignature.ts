@@ -5,11 +5,12 @@ import { ethers } from "hardhat";
 async function generateSignature(
   amount: Number,
   owner: SignerWithAddress,
-  userId: string
+  userId: string,
+  symbol: string
 ): Promise<Signature> {
   const payload = ethers.utils.defaultAbiCoder.encode(
-    ["bytes32", "string", "uint256"],
-    [userId, "#", amount]
+    ["bytes32", "string", "uint256", "string"],
+    [userId, "#", amount, symbol]
   );
   const payloadHash = ethers.utils.keccak256(payload);
 

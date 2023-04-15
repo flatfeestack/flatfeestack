@@ -17,6 +17,7 @@ describe("PayoutERC20", () => {
     });
     const payoutERC20 = await upgrades.deployProxy(PayoutERC20, [
       ffsToken.address,
+      "FFST",
     ]);
     await payoutERC20.deployed();
 
@@ -66,7 +67,12 @@ describe("PayoutERC20", () => {
 
       const userId = ethers.utils.formatBytes32String("someUserId");
       const amount = 10;
-      const signature = await generateSignature(amount, payoutOwner, userId);
+      const signature = await generateSignature(
+        amount,
+        payoutOwner,
+        userId,
+        "FFST"
+      );
 
       const previousBalanceContract = await ffsToken.balanceOf(
         payoutERC20.address
@@ -117,7 +123,8 @@ describe("PayoutERC20", () => {
       const firstSignature = await generateSignature(
         firstWithdraw,
         payoutOwner,
-        userId
+        userId,
+        "FFST"
       );
 
       const previousBalanceContract = await ffsToken.balanceOf(
@@ -147,7 +154,12 @@ describe("PayoutERC20", () => {
 
       const secondWithdraw = 20;
       const tea = secondWithdraw + firstWithdraw;
-      const secondSignature = await generateSignature(tea, payoutOwner, userId);
+      const secondSignature = await generateSignature(
+        tea,
+        payoutOwner,
+        userId,
+        "FFST"
+      );
 
       await payoutERC20
         .connect(developer)

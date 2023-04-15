@@ -14,6 +14,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     tokenAddress = ffsToken.address;
   }
 
+  const tokenDeployed = await ethers.getContractAt(
+    "ERC20Upgradeable",
+    tokenAddress
+  );
+  const symbol = await tokenDeployed.symbol();
+
   const { firstCouncilMember } = await getNamedAccounts();
 
   await deploy("PayoutERC20", {
@@ -24,7 +30,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       execute: {
         init: {
           methodName: "initialize",
-          args: [tokenAddress],
+          args: [tokenAddress, symbol],
         },
       },
     },
