@@ -94,6 +94,9 @@
       ]
     }
   ],
+  "postUpdateOptions": [
+    "gomodTidy", "npmDedupe", "pnpmDedupe"
+  ],
   "schedule": [
     "before 12pm every thursday"
   ]
