@@ -4,26 +4,26 @@ import generateSignature from "./helpers/generateSignature";
 
 describe("PayoutERC20", () => {
   async function deployFixture() {
-    const [ffsTokenOwner, payoutOwner, developer] = await ethers.getSigners();
+    const [usdcTokenOwner, payoutOwner, developer] = await ethers.getSigners();
 
-    const FFSToken = await ethers.getContractFactory("FlatFeeStackToken", {
-      signer: ffsTokenOwner,
+    const USDCToken = await ethers.getContractFactory("USDC", {
+      signer: usdcTokenOwner,
     });
-    const ffsToken = await upgrades.deployProxy(FFSToken, []);
-    await ffsToken.deployed();
+    const usdcToken = await upgrades.deployProxy(USDCToken, []);
+    await usdcToken.deployed();
 
     const PayoutERC20 = await ethers.getContractFactory("PayoutERC20", {
       signer: payoutOwner,
     });
     const payoutERC20 = await upgrades.deployProxy(PayoutERC20, [
-      ffsToken.address,
-      "FFST",
+      usdcToken.address,
+      "USDC",
     ]);
     await payoutERC20.deployed();
 
-    await ffsToken.connect(ffsTokenOwner).transfer(payoutERC20.address, 100);
+    await usdcToken.connect(usdcTokenOwner).transfer(payoutERC20.address, 100);
 
-    return { payoutOwner, ffsToken, payoutERC20, developer };
+    return { payoutOwner, usdcToken, payoutERC20, developer };
   }
 
   describe("withdraw", () => {
@@ -62,7 +62,7 @@ describe("PayoutERC20", () => {
     });
 
     it("should retrieve funds with correct signature", async () => {
-      const { payoutOwner, payoutERC20, ffsToken, developer } =
+      const { payoutOwner, payoutERC20, usdcToken, developer } =
         await deployFixture();
 
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
@@ -71,13 +71,13 @@ describe("PayoutERC20", () => {
         amount,
         payoutOwner,
         userId,
-        "FFST"
+        "USDC"
       );
 
-      const previousBalanceContract = await ffsToken.balanceOf(
+      const previousBalanceContract = await usdcToken.balanceOf(
         payoutERC20.address
       );
-      const previousBalanceDeveloper = await ffsToken.balanceOf(
+      const previousBalanceDeveloper = await usdcToken.balanceOf(
         developer.address
       );
 
@@ -92,10 +92,10 @@ describe("PayoutERC20", () => {
           signature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(amount)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(amount)
       );
 
@@ -115,7 +115,7 @@ describe("PayoutERC20", () => {
     });
 
     it("should only payoutEth difference", async () => {
-      const { payoutOwner, payoutERC20, ffsToken, developer } =
+      const { payoutOwner, payoutERC20, usdcToken, developer } =
         await deployFixture();
 
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
@@ -124,13 +124,13 @@ describe("PayoutERC20", () => {
         firstWithdraw,
         payoutOwner,
         userId,
-        "FFST"
+        "USDC"
       );
 
-      const previousBalanceContract = await ffsToken.balanceOf(
+      const previousBalanceContract = await usdcToken.balanceOf(
         payoutERC20.address
       );
-      const previousBalanceDeveloper = await ffsToken.balanceOf(
+      const previousBalanceDeveloper = await usdcToken.balanceOf(
         developer.address
       );
 
@@ -145,10 +145,10 @@ describe("PayoutERC20", () => {
           firstSignature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(firstWithdraw)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(firstWithdraw)
       );
 
@@ -158,7 +158,7 @@ describe("PayoutERC20", () => {
         tea,
         payoutOwner,
         userId,
-        "FFST"
+        "USDC"
       );
 
       await payoutERC20
@@ -172,10 +172,10 @@ describe("PayoutERC20", () => {
           secondSignature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(tea)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(tea)
       );
     });

@@ -25,7 +25,7 @@ const config: HardhatUserConfig = {
     member: {
       1337: "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
     },
-    payoutERC20Contract: {
+    usdcTokenAddress: {
       1337: null,
     },
   },

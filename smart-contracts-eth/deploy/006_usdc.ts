@@ -11,7 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { firstCouncilMember } = await getNamedAccounts();
 
-  await deploy("FlatFeeStackToken", {
+  await deploy("USDC", {
     from: firstCouncilMember,
     log: true,
     proxy: {
@@ -27,4 +27,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["FlatFeeStackToken"];
+func.tags = ["USDC"];

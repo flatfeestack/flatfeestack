@@ -1,24 +1,14 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import generateSignature from "./helpers/generateSignature";
-import { HardhatConfig } from "hardhat/types";
 
 describe("PayoutEth", () => {
   async function deployFixture() {
-    const hh = require('hardhat');
-
     const [owner, developer] = await ethers.getSigners();
-
-    const accounts = hh.config.networks.hardhat.accounts;
-    const index = 0; // first wallet, increment for next wallets
-    const wallet1 = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${index}`);
-    
-    const privateKey1 = wallet1.privateKey
-    console.log(privateKey1)
-
     const PayoutEth = await ethers.getContractFactory("PayoutEth", {
       signer: owner,
     });
+
     const payoutEth = await upgrades.deployProxy(PayoutEth, []);
     await payoutEth.deployed();
 
@@ -71,7 +61,6 @@ describe("PayoutEth", () => {
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const amount = 10000;
       const signature = await generateSignature(amount, owner, userId, "ETH");
-      console.log(signature)
 
       await expect(
         payoutEth

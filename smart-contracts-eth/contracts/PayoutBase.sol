@@ -30,7 +30,9 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
     /**
      * @dev Gets the tea for the provided address.
      */
-    function getPayedOut(string calldata userId) external view returns (uint256) {
+    function getPayedOut(
+        string calldata userId
+    ) external view returns (uint256) {
         return payedOut[userId];
     }
 
