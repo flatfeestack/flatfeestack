@@ -9,7 +9,7 @@ async function generateSignature(
   symbol: string
 ): Promise<Signature> {
   const payload = ethers.utils.defaultAbiCoder.encode(
-    ["bytes32", "string", "uint256", "string"],
+    ["string", "string", "uint256", "string"],
     [userId, "#", amount, symbol]
   );
   const payloadHash = ethers.utils.keccak256(payload);

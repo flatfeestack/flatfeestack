@@ -45,7 +45,7 @@ contract PayoutERC20 is PayoutBase {
      */
     function withdraw(
         address payable dev,
-        bytes32 userId,
+        string calldata userId,
         uint256 totalPayOut,
         uint8 v,
         bytes32 r,

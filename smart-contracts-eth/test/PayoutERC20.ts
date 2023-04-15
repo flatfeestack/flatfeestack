@@ -35,7 +35,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            ethers.utils.hashMessage("someUserId"),
+            "someUserId",
             0,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -52,7 +52,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            ethers.utils.hashMessage("someUserId"),
+            "someUserId",
             100,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -65,7 +65,7 @@ describe("PayoutERC20", () => {
       const { payoutOwner, payoutERC20, ffsToken, developer } =
         await deployFixture();
 
-      const userId = ethers.utils.formatBytes32String("someUserId");
+      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const amount = 10;
       const signature = await generateSignature(
         amount,
@@ -118,7 +118,7 @@ describe("PayoutERC20", () => {
       const { payoutOwner, payoutERC20, ffsToken, developer } =
         await deployFixture();
 
-      const userId = ethers.utils.formatBytes32String("someUserId");
+      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const firstWithdraw = 10;
       const firstSignature = await generateSignature(
         firstWithdraw,
