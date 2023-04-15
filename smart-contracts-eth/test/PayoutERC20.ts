@@ -98,6 +98,7 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(amount)
       );
+      expect(await payoutERC20.getPayedOut(userId)).to.eq(amount);
 
       // also check that using the signature a second time does not work
       await expect(
@@ -112,6 +113,7 @@ describe("PayoutERC20", () => {
             signature.s
           )
       ).to.be.revertedWith("No new funds to be withdrawn");
+      expect(await payoutERC20.getPayedOut(userId)).to.eq(amount);
     });
 
     it("should only payoutEth difference", async () => {
@@ -151,6 +153,7 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(firstWithdraw)
       );
+      expect(await payoutERC20.getPayedOut(userId)).to.eq(firstWithdraw);
 
       const secondWithdraw = 20;
       const tea = secondWithdraw + firstWithdraw;
@@ -178,6 +181,7 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(tea)
       );
+      expect(await payoutERC20.getPayedOut(userId)).to.eq(tea);
     });
   });
 });

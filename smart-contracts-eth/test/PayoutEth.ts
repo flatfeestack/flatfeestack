@@ -74,6 +74,7 @@ describe("PayoutEth", () => {
             signature.s
           )
       ).to.changeEtherBalances([developer, payoutEth], [amount, amount * -1]);
+      expect(await payoutEth.getPayedOut(userId)).to.eq(amount);
 
       // also check that using the signature a second time does not work
       await expect(
@@ -88,6 +89,7 @@ describe("PayoutEth", () => {
             signature.s
           )
       ).to.be.revertedWith("No new funds to be withdrawn");
+      expect(await payoutEth.getPayedOut(userId)).to.eq(amount);
     });
 
     it("should only payoutEth difference", async () => {
@@ -117,6 +119,7 @@ describe("PayoutEth", () => {
         [developer, payoutEth],
         [firstWithdraw, firstWithdraw * -1]
       );
+      expect(await payoutEth.getPayedOut(userId)).to.eq(firstWithdraw);
 
       const secondWithdraw = 20000;
       const tea = secondWithdraw + firstWithdraw;
@@ -142,6 +145,7 @@ describe("PayoutEth", () => {
         [developer, payoutEth],
         [secondWithdraw, secondWithdraw * -1]
       );
+      expect(await payoutEth.getPayedOut(userId)).to.eq(tea);
     });
   });
 });
