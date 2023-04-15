@@ -35,7 +35,7 @@ func TestPostSignEth(t *testing.T) {
 		body, _ := io.ReadAll(response.Body)
 		assert.Equal(
 			t,
-			"{\"r\":\"0x97dc9357711575f0c457b5f0d30754d3fda6e40270cac4de6464fe71b00ff3f7\",\"s\":\"0x7271ce6eb6807bb375751d66a9c4652322ae7b460ceaa36ec1725104c636e463\",\"v\":28}\n",
+			"{\"r\":\"0x7343340d4047870048ef076635ef0b7cd54643e89b2869d24be57d6e5bd5463c\",\"s\":\"0x6c38031deeaa94cc448c3c303703f27c492c47387d468e3e8a3b83da5fab8009\",\"v\":27}\n",
 			string(body),
 		)
 	})
@@ -63,7 +63,7 @@ func TestPostSignUsdc(t *testing.T) {
 		body, _ := io.ReadAll(response.Body)
 		assert.Equal(
 			t,
-			"{\"r\":\"0x6aa5ddb34ed10d5e9cf0019c2ea2e6f768c70deb8be91da9a22c575f8af8dbe8\",\"s\":\"0x45708a3ce8cd80b6574b4308ec25e450a29893fd7ecd653792861dc0f4126a2c\",\"v\":28}\n",
+			"{\"r\":\"0x2244246b407d1974a590de53c7179af6153802e342828dda9ef81a3447de20ae\",\"s\":\"0x3a700bb665f97296bc71f0b586c2952fbbe5150d9416d9c4a99376fbfbd7391a\",\"v\":27}\n",
 			string(body),
 		)
 	})

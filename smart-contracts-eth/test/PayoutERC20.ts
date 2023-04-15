@@ -4,7 +4,7 @@ import generateSignature from "./helpers/generateSignature";
 
 describe("PayoutERC20", () => {
   async function deployFixture() {
-    const [usdcTokenOwner, payoutOwner, developer] = await ethers.getSigners();
+    const [payoutOwner, usdcTokenOwner, developer] = await ethers.getSigners();
 
     const USDCToken = await ethers.getContractFactory("USDC", {
       signer: usdcTokenOwner,
@@ -35,7 +35,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            "someUserId",
+            ethers.utils.formatBytes32String("someUserId"),
             0,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -52,7 +52,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            "someUserId",
+            ethers.utils.formatBytes32String("someUserId"),
             100,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -67,7 +67,7 @@ describe("PayoutERC20", () => {
 
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const amount = 10;
-      const signature = await generateSignature(
+      const { encodedUserId, signature } = await generateSignature(
         amount,
         payoutOwner,
         userId,
@@ -85,7 +85,7 @@ describe("PayoutERC20", () => {
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           amount,
           signature.v,
           signature.r,
@@ -98,7 +98,7 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(amount)
       );
-      expect(await payoutERC20.getPayedOut(userId)).to.eq(amount);
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(amount);
 
       // also check that using the signature a second time does not work
       await expect(
@@ -106,14 +106,14 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            userId,
+            encodedUserId,
             amount,
             signature.v,
             signature.r,
             signature.s
           )
       ).to.be.revertedWith("No new funds to be withdrawn");
-      expect(await payoutERC20.getPayedOut(userId)).to.eq(amount);
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(amount);
     });
 
     it("should only payoutEth difference", async () => {
@@ -122,12 +122,8 @@ describe("PayoutERC20", () => {
 
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const firstWithdraw = 10;
-      const firstSignature = await generateSignature(
-        firstWithdraw,
-        payoutOwner,
-        userId,
-        "USDC"
-      );
+      const { encodedUserId, signature: firstSignature } =
+        await generateSignature(firstWithdraw, payoutOwner, userId, "USDC");
 
       const previousBalanceContract = await usdcToken.balanceOf(
         payoutERC20.address
@@ -140,7 +136,7 @@ describe("PayoutERC20", () => {
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           firstWithdraw,
           firstSignature.v,
           firstSignature.r,
@@ -153,11 +149,11 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(firstWithdraw)
       );
-      expect(await payoutERC20.getPayedOut(userId)).to.eq(firstWithdraw);
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(firstWithdraw);
 
       const secondWithdraw = 20;
       const tea = secondWithdraw + firstWithdraw;
-      const secondSignature = await generateSignature(
+      const { signature: secondSignature } = await generateSignature(
         tea,
         payoutOwner,
         userId,
@@ -168,7 +164,7 @@ describe("PayoutERC20", () => {
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           tea,
           secondSignature.v,
           secondSignature.r,
@@ -181,7 +177,7 @@ describe("PayoutERC20", () => {
       expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(tea)
       );
-      expect(await payoutERC20.getPayedOut(userId)).to.eq(tea);
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(tea);
     });
   });
 });

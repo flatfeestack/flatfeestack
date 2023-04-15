@@ -60,45 +60,8 @@ describe("PayoutEth", () => {
 
       const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const amount = 10000;
-      const signature = await generateSignature(amount, owner, userId, "ETH");
-
-      await expect(
-        payoutEth
-          .connect(developer)
-          .withdraw(
-            developer.address,
-            userId,
-            amount,
-            signature.v,
-            signature.r,
-            signature.s
-          )
-      ).to.changeEtherBalances([developer, payoutEth], [amount, amount * -1]);
-      expect(await payoutEth.getPayedOut(userId)).to.eq(amount);
-
-      // also check that using the signature a second time does not work
-      await expect(
-        payoutEth
-          .connect(developer)
-          .withdraw(
-            developer.address,
-            userId,
-            amount,
-            signature.v,
-            signature.r,
-            signature.s
-          )
-      ).to.be.revertedWith("No new funds to be withdrawn");
-      expect(await payoutEth.getPayedOut(userId)).to.eq(amount);
-    });
-
-    it("should only payoutEth difference", async () => {
-      const { owner, payoutEth, developer } = await deployFixture();
-
-      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
-      const firstWithdraw = 10000;
-      const firstSignature = await generateSignature(
-        firstWithdraw,
+      const { encodedUserId, signature } = await generateSignature(
+        amount,
         owner,
         userId,
         "ETH"
@@ -109,7 +72,45 @@ describe("PayoutEth", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            userId,
+            encodedUserId,
+            amount,
+            signature.v,
+            signature.r,
+            signature.s
+          )
+      ).to.changeEtherBalances([developer, payoutEth], [amount, amount * -1]);
+      expect(await payoutEth.getPayedOut(encodedUserId)).to.eq(amount);
+
+      // also check that using the signature a second time does not work
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            encodedUserId,
+            amount,
+            signature.v,
+            signature.r,
+            signature.s
+          )
+      ).to.be.revertedWith("No new funds to be withdrawn");
+      expect(await payoutEth.getPayedOut(encodedUserId)).to.eq(amount);
+    });
+
+    it("should only payoutEth difference", async () => {
+      const { owner, payoutEth, developer } = await deployFixture();
+
+      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
+      const firstWithdraw = 10000;
+      const { encodedUserId, signature: firstSignature } =
+        await generateSignature(firstWithdraw, owner, userId, "ETH");
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            encodedUserId,
             firstWithdraw,
             firstSignature.v,
             firstSignature.r,
@@ -119,11 +120,11 @@ describe("PayoutEth", () => {
         [developer, payoutEth],
         [firstWithdraw, firstWithdraw * -1]
       );
-      expect(await payoutEth.getPayedOut(userId)).to.eq(firstWithdraw);
+      expect(await payoutEth.getPayedOut(encodedUserId)).to.eq(firstWithdraw);
 
       const secondWithdraw = 20000;
       const tea = secondWithdraw + firstWithdraw;
-      const secondSignature = await generateSignature(
+      const { signature: secondSignature } = await generateSignature(
         tea,
         owner,
         userId,
@@ -135,7 +136,7 @@ describe("PayoutEth", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            userId,
+            encodedUserId,
             tea,
             secondSignature.v,
             secondSignature.r,
@@ -145,7 +146,7 @@ describe("PayoutEth", () => {
         [developer, payoutEth],
         [secondWithdraw, secondWithdraw * -1]
       );
-      expect(await payoutEth.getPayedOut(userId)).to.eq(tea);
+      expect(await payoutEth.getPayedOut(encodedUserId)).to.eq(tea);
     });
   });
 });

@@ -8,7 +8,7 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
     /**
      * @dev Maps each userId to its current already payed out amount. The userId never changes
      */
-    mapping(string => uint256) public payedOut;
+    mapping(bytes32 => uint256) public payedOut;
     string private currencyCode;
 
     function payoutInit(string memory _currencyCode) internal onlyInitializing {
@@ -30,9 +30,7 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
     /**
      * @dev Gets the tea for the provided address.
      */
-    function getPayedOut(
-        string calldata userId
-    ) external view returns (uint256) {
+    function getPayedOut(bytes32 userId) external view returns (uint256) {
         return payedOut[userId];
     }
 
@@ -40,7 +38,7 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
      * @dev Gets the tea for the provided address.
      */
     function getClaimableAmount(
-        string calldata userId,
+        bytes32 userId,
         uint256 totalPayOut
     ) external view returns (uint256) {
         return totalPayOut - payedOut[userId];
@@ -57,7 +55,7 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
      * @param s The s value of the signature.
      */
     function calculateWithdraw(
-        string calldata userId,
+        bytes32 userId,
         uint256 totalPayOut,
         uint8 v,
         bytes32 r,
@@ -84,7 +82,7 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
 
     function withdraw(
         address payable dev,
-        string calldata userId,
+        bytes32 userId,
         uint256 totalPayOut,
         uint8 v,
         bytes32 r,

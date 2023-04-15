@@ -145,7 +145,7 @@ func warpChain(seconds int, rpc *rpc.Client) error {
 func getEthSignature(data PayoutRequest2, symbol string) (EthSignature, error) {
 	var arguments abi.Arguments
 	arguments = append(arguments, abi.Argument{
-		Type: abi.Type{T: abi.StringTy},
+		Type: abi.Type{T: abi.FixedBytesTy, Size: 32},
 	})
 	arguments = append(arguments, abi.Argument{
 		Type: abi.Type{T: abi.StringTy},
@@ -162,7 +162,8 @@ func getEthSignature(data PayoutRequest2, symbol string) (EthSignature, error) {
 		return EthSignature{}, err
 	}
 
-	packed, err := arguments.Pack(data.UserId.String(), "#", data.Amount, symbol)
+	encodedUserId := [32]byte(crypto.Keccak256([]byte(data.UserId.String())))
+	packed, err := arguments.Pack(encodedUserId, "#", data.Amount, symbol)
 	hashRaw := crypto.Keccak256(packed)
 
 	// Add Ethereum Signed Message prefix to hash
