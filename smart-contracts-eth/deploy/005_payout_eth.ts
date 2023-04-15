@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { firstCouncilMember } = await getNamedAccounts();
 
-  await deploy("Payout", {
+  await deploy("PayoutEth", {
     from: firstCouncilMember,
     log: true,
     proxy: {
@@ -23,4 +23,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Payout"];
+func.tags = ["PayoutEth"];

@@ -1,0 +1,146 @@
+import { ethers, upgrades } from "hardhat";
+import { expect } from "chai";
+import generateSignature from "./helpers/generateSignature";
+
+describe("PayoutEth", () => {
+  async function deployFixture() {
+    const [owner, developer] = await ethers.getSigners();
+    const PayoutEth = await ethers.getContractFactory("PayoutEth", {
+      signer: owner,
+    });
+    const payoutEth = await upgrades.deployProxy(PayoutEth, []);
+    await payoutEth.deployed();
+
+    await owner.sendTransaction({
+      to: payoutEth.address,
+      value: ethers.utils.parseEther("1.0"),
+    });
+
+    return { owner, payoutEth: payoutEth, developer };
+  }
+
+  describe("withdraw", () => {
+    it("throws error when requesting 0 amount", async () => {
+      const { payoutEth, developer } = await deployFixture();
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            ethers.utils.hashMessage("someUserId"),
+            0,
+            0,
+            ethers.utils.formatBytes32String("test"),
+            ethers.utils.formatBytes32String("test")
+          )
+      ).to.be.revertedWith("No new funds to be withdrawn");
+    });
+
+    it("throws error when requesting with invalid signature", async () => {
+      const { payoutEth, developer } = await deployFixture();
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            ethers.utils.hashMessage("someUserId"),
+            100,
+            0,
+            ethers.utils.formatBytes32String("test"),
+            ethers.utils.formatBytes32String("test")
+          )
+      ).to.be.revertedWith("Signature no match");
+    });
+
+    it("should retrieve funds with correct signature", async () => {
+      const { owner, payoutEth, developer } = await deployFixture();
+
+      const userId = ethers.utils.formatBytes32String("someUserId");
+      const amount = 10000;
+      const signature = await generateSignature(amount, owner, userId, "ETH");
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            userId,
+            amount,
+            signature.v,
+            signature.r,
+            signature.s
+          )
+      ).to.changeEtherBalances([developer, payoutEth], [amount, amount * -1]);
+
+      // also check that using the signature a second time does not work
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            userId,
+            amount,
+            signature.v,
+            signature.r,
+            signature.s
+          )
+      ).to.be.revertedWith("No new funds to be withdrawn");
+    });
+
+    it("should only payoutEth difference", async () => {
+      const { owner, payoutEth, developer } = await deployFixture();
+
+      const userId = ethers.utils.formatBytes32String("someUserId");
+      const firstWithdraw = 10000;
+      const firstSignature = await generateSignature(
+        firstWithdraw,
+        owner,
+        userId,
+        "ETH"
+      );
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            userId,
+            firstWithdraw,
+            firstSignature.v,
+            firstSignature.r,
+            firstSignature.s
+          )
+      ).to.changeEtherBalances(
+        [developer, payoutEth],
+        [firstWithdraw, firstWithdraw * -1]
+      );
+
+      const secondWithdraw = 20000;
+      const tea = secondWithdraw + firstWithdraw;
+      const secondSignature = await generateSignature(
+        tea,
+        owner,
+        userId,
+        "ETH"
+      );
+
+      await expect(
+        payoutEth
+          .connect(developer)
+          .withdraw(
+            developer.address,
+            userId,
+            tea,
+            secondSignature.v,
+            secondSignature.r,
+            secondSignature.s
+          )
+      ).to.changeEtherBalances(
+        [developer, payoutEth],
+        [secondWithdraw, secondWithdraw * -1]
+      );
+    });
+  });
+});
