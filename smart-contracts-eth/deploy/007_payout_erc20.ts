@@ -5,9 +5,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
+  let tokenAddress: string;
+
+  if (hre.network.name != "localhost") {
+    tokenAddress = (await getNamedAccounts()).payoutERC20Contract;
+  } else {
+    const ffsToken = await deployments.get("FlatFeeStackToken");
+    tokenAddress = ffsToken.address;
+  }
+
   const { firstCouncilMember } = await getNamedAccounts();
 
-  await deploy("Payout", {
+  await deploy("PayoutERC20", {
     from: firstCouncilMember,
     log: true,
     proxy: {
@@ -15,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       execute: {
         init: {
           methodName: "initialize",
-          args: [],
+          args: [tokenAddress],
         },
       },
     },
@@ -23,4 +32,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Payout"];
+func.tags = ["PayoutERC20"];
