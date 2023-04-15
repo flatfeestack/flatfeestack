@@ -9,9 +9,9 @@
     faShieldAlt,
   } from "@fortawesome/free-solid-svg-icons";
   import { links } from "svelte-routing";
-  import Fa from "svelte-fa";
-  import { isSubmitting, user, route } from "../ts/mainStore";
+  import { isSubmitting, user } from "../ts/mainStore";
   import Spinner from "./Spinner.svelte";
+  import NavItem from "./NavItem.svelte";
 </script>
 
 <style>
@@ -70,56 +70,19 @@
 
 <div class="page">
   <nav use:links>
-    <a
-      href="/user/settings"
-      class={$route.pathname === `/user/settings` ? `selected` : ``}
-    >
-      <Fa icon={faUserCog} size="sm" class="icon" />
-      <span class="hide-sx">Settings</span>
-    </a>
-    <a
-      href="/user/search"
-      class={$route.pathname === `/user/search` ? `selected` : ``}
-    >
-      <Fa icon={faSearch} size="sm" class="icon" />
-      <span class="hide-sx">Search</span>
-    </a>
-    <a
-      href="/user/payments"
-      class={$route.pathname === `/user/payments` ? `selected` : ``}
-    >
-      <Fa icon={faCreditCard} size="sm" class="icon" />
-      <span class="hide-sx">Payments</span>
-    </a>
-    <a
-      href="/user/income"
-      class={$route.pathname === `/user/income` ? `selected` : ``}
-    >
-      <Fa icon={faHandHoldingUsd} size="sm" class="icon" />
-      <span class="hide-sx">Income</span>
-    </a>
-    <a
+    <NavItem href="/user/settings" icon={faUserCog} label="Settings" />
+    <NavItem href="/user/search" icon={faSearch} label="Search" />
+    <NavItem href="/user/payments" icon={faCreditCard} label="Payments" />
+    <NavItem href="/user/income" icon={faHandHoldingUsd} label="Income" />
+    <NavItem
       href="/user/invitations"
-      class={$route.pathname === `/user/invitations` ? `selected` : ``}
-    >
-      <Fa icon={faUserFriends} size="sm" class="icon" />
-      <span class="hide-sx">Invitations</span>
-    </a>
-    <a
-      href="/user/badges"
-      class={$route.pathname === `/user/badges` ? `selected` : ``}
-    >
-      <Fa icon={faMedal} size="sm" class="icon" />
-      <span class="hide-sx">Badges</span>
-    </a>
+      icon={faUserFriends}
+      label="Invitations"
+    />
+    <NavItem href="/user/badges" icon={faMedal} label="Badges" />
+
     {#if $user.role === "admin"}
-      <a
-        href="/user/admin"
-        class={$route.pathname === `/user/admin` ? `selected` : ``}
-      >
-        <Fa icon={faShieldAlt} size="sm" class="icon" />
-        <span class="hide-sx">Admin</span>
-      </a>
+      <NavItem href="/user/admin" icon={faShieldAlt} label="Admin" />
     {/if}
   </nav>
   <div>
