@@ -13,15 +13,17 @@ import (
 	"testing"
 )
 
+// private key, UUID and amount are the same as we use to test the smart contracts
+// the resulting signature (r, s, v) are the same as in the generateSignature function in the test helpers
 func TestPostSignEth(t *testing.T) {
 	opts = &Opts{}
-	opts.Ethereum.PrivateKey = "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e"
+	opts.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	t.Run("should generate a signature for ETH", func(t *testing.T) {
-		uuid, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
+		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
 		jsonData, _ := json.Marshal(PayoutRequest2{
-			Amount: big.NewInt(12345678),
-			UserId: uuid,
+			Amount: big.NewInt(10000),
+			UserId: userId,
 		})
 
 		request, _ := http.NewRequest(http.MethodPost, "/admin/sign/eth", bytes.NewBuffer(jsonData))
@@ -33,7 +35,7 @@ func TestPostSignEth(t *testing.T) {
 		body, _ := io.ReadAll(response.Body)
 		assert.Equal(
 			t,
-			"{\"raw\":\"LF+KC6UIoWd3GIw7va/36pKET9AosfhQ2TF2vtrvYAkOUbFSoYOeuwRc+T0Duwf5hd6A/zw6AmrjYYcqv1CFhAA=\",\"hash\":\"b50f0a01234bfce2876b2957db6e81f068038b5669f5d70215739c8844ddab12\",\"r\":\"2c5f8a0ba508a16777188c3bbdaff7ea92844fd028b1f850d93176bedaef6009\",\"s\":\"0e51b152a1839ebb045cf93d03bb07f985de80ff3c3a026ae361872abf508584\",\"v\":27}\n",
+			"{\"r\":\"0x97dc9357711575f0c457b5f0d30754d3fda6e40270cac4de6464fe71b00ff3f7\",\"s\":\"0x7271ce6eb6807bb375751d66a9c4652322ae7b460ceaa36ec1725104c636e463\",\"v\":28}\n",
 			string(body),
 		)
 	})
@@ -44,10 +46,10 @@ func TestPostSignNeo(t *testing.T) {
 	opts.NEO.PrivateKey = "KxyjQ8eUa4FHt3Gvioyt1Wz29cTUrE4eTqX3yFSk1YFCsPL8uNsY"
 
 	t.Run("should generate a signature for NEO", func(t *testing.T) {
-		uuid, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
+		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
 		jsonData, _ := json.Marshal(PayoutRequest2{
 			Amount: big.NewInt(12345678),
-			UserId: uuid,
+			UserId: userId,
 		})
 
 		request, _ := http.NewRequest(http.MethodPost, "/admin/sign/neo", bytes.NewBuffer(jsonData))

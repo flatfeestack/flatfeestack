@@ -49,7 +49,7 @@ func signEth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature, err := getEthSignature(data)
+	signature, err := getEthSignature(data, "ETH")
 	if err == nil {
 		writeJson(w, signature)
 	} else {

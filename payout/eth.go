@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -18,11 +18,9 @@ import (
 )
 
 type EthSignature struct {
-	Raw  []byte `json:"raw"`
-	Hash string `json:"hash"`
-	R    string `json:"r"`
-	S    string `json:"s"`
-	V    uint8  `json:"v"`
+	R string `json:"r"`
+	S string `json:"s"`
+	V uint8  `json:"v"`
 }
 
 // PayoutEthMetaData contains all meta data concerning the PayoutEth contract.
@@ -144,24 +142,41 @@ func warpChain(seconds int, rpc *rpc.Client) error {
 	return nil
 }
 
-func getEthSignature(data PayoutRequest2) (EthSignature, error) {
+func getEthSignature(data PayoutRequest2, symbol string) (EthSignature, error) {
+	var arguments abi.Arguments
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{Size: 256, T: abi.UintTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+
 	privateKey, err := crypto.HexToECDSA(opts.Ethereum.PrivateKey)
 	if err != nil {
 		return EthSignature{}, err
 	}
 
-	hashRaw := crypto.Keccak256([]byte(data.UserId.String() + "#" + data.Amount.String()))
-	signature, err := crypto.Sign(hashRaw, privateKey)
+	packed, err := arguments.Pack(data.UserId.String(), "#", data.Amount, symbol)
+	hashRaw := crypto.Keccak256(packed)
+
+	// Add Ethereum Signed Message prefix to hash
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	prefixedHash := crypto.Keccak256(append(prefix, hashRaw[:]...))
+
+	signature, err := crypto.Sign(prefixedHash[:], privateKey)
 	if err != nil {
 		return EthSignature{}, err
 	}
 
-	//https://ethereum.stackexchange.com/questions/45580/validating-go-ethereum-key-signature-with-ecrecover
 	return EthSignature{
-		signature,
-		hex.EncodeToString(hashRaw),
-		hex.EncodeToString(signature[:32]),
-		hex.EncodeToString(signature[32:64]),
+		hexutil.Encode(signature[:32]),
+		hexutil.Encode(signature[32:64]),
 		uint8(int(signature[64])) + 27,
 	}, nil
 }
