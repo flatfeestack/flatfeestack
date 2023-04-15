@@ -42,6 +42,15 @@ func signNeo(w http.ResponseWriter, r *http.Request) {
 }
 
 func signEth(w http.ResponseWriter, r *http.Request) {
+	signForEth(w, r, "ETH")
+
+}
+
+func signUsdc(w http.ResponseWriter, r *http.Request) {
+	signForEth(w, r, "USDC")
+}
+
+func signForEth(w http.ResponseWriter, r *http.Request, symbol string) {
 	var data PayoutRequest2
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -49,7 +58,7 @@ func signEth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature, err := getEthSignature(data, "ETH")
+	signature, err := getEthSignature(data, symbol)
 	if err == nil {
 		writeJson(w, signature)
 	} else {

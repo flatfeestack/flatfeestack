@@ -186,6 +186,7 @@ func main() {
 	//this can only be called by an internal server
 	router.HandleFunc("/admin/sign/eth", jwtAuth(jwtAuthServer(signEth))).Methods(http.MethodPost)
 	router.HandleFunc("/admin/sign/neo", jwtAuth(jwtAuthServer(signNeo))).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/usdc", jwtAuth(jwtAuthServer(signUsdc))).Methods(http.MethodPost)
 
 	//this can be called from frontend, but only the admin
 	if debug {
