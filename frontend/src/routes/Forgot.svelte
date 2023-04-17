@@ -90,7 +90,7 @@
 
     <div class="divider" />
     <div class="flex">
-      Already have an account?&nbsp;<a href="/signin" use:link>Log in</a>
+      Already have an account?&nbsp;<a href="/login" use:link>Log in</a>
     </div>
   </div>
 </div>
