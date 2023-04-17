@@ -71,14 +71,14 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		dbUser.Claims = *claims
 
-		log.Info("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
+		log.Info(fmt.Sprintf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method))
 
 		switch scopesSlice[0] {
 		case "Admin":
 			log.Debug("Admin scope")
 			for _, email := range globals.ADMINS {
 				if claims.Subject == email {
-					log.Info("Authenticated admin %s\n", email)
+					log.Info(fmt.Sprintf("Authenticated admin %s\n", email))
 					dbUser.Role = "Admin"
 					ctx = context.WithValue(ctx, CurrentUser, dbUser)
 					next.ServeHTTP(w, r.WithContext(ctx))
