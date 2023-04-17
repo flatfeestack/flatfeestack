@@ -4,26 +4,26 @@ import generateSignature from "./helpers/generateSignature";
 
 describe("PayoutERC20", () => {
   async function deployFixture() {
-    const [ffsTokenOwner, payoutOwner, developer] = await ethers.getSigners();
+    const [payoutOwner, usdcTokenOwner, developer] = await ethers.getSigners();
 
-    const FFSToken = await ethers.getContractFactory("FlatFeeStackToken", {
-      signer: ffsTokenOwner,
+    const USDCToken = await ethers.getContractFactory("USDC", {
+      signer: usdcTokenOwner,
     });
-    const ffsToken = await upgrades.deployProxy(FFSToken, []);
-    await ffsToken.deployed();
+    const usdcToken = await upgrades.deployProxy(USDCToken, []);
+    await usdcToken.deployed();
 
     const PayoutERC20 = await ethers.getContractFactory("PayoutERC20", {
       signer: payoutOwner,
     });
     const payoutERC20 = await upgrades.deployProxy(PayoutERC20, [
-      ffsToken.address,
-      "FFST",
+      usdcToken.address,
+      "USDC",
     ]);
     await payoutERC20.deployed();
 
-    await ffsToken.connect(ffsTokenOwner).transfer(payoutERC20.address, 100);
+    await usdcToken.connect(usdcTokenOwner).transfer(payoutERC20.address, 100);
 
-    return { payoutOwner, ffsToken, payoutERC20, developer };
+    return { payoutOwner, usdcToken, payoutERC20, developer };
   }
 
   describe("withdraw", () => {
@@ -35,7 +35,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            ethers.utils.hashMessage("someUserId"),
+            ethers.utils.formatBytes32String("someUserId"),
             0,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -52,7 +52,7 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            ethers.utils.hashMessage("someUserId"),
+            ethers.utils.formatBytes32String("someUserId"),
             100,
             0,
             ethers.utils.formatBytes32String("test"),
@@ -62,22 +62,22 @@ describe("PayoutERC20", () => {
     });
 
     it("should retrieve funds with correct signature", async () => {
-      const { payoutOwner, payoutERC20, ffsToken, developer } =
+      const { payoutOwner, payoutERC20, usdcToken, developer } =
         await deployFixture();
 
-      const userId = ethers.utils.formatBytes32String("someUserId");
+      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const amount = 10;
-      const signature = await generateSignature(
+      const { encodedUserId, signature } = await generateSignature(
         amount,
         payoutOwner,
         userId,
-        "FFST"
+        "USDC"
       );
 
-      const previousBalanceContract = await ffsToken.balanceOf(
+      const previousBalanceContract = await usdcToken.balanceOf(
         payoutERC20.address
       );
-      const previousBalanceDeveloper = await ffsToken.balanceOf(
+      const previousBalanceDeveloper = await usdcToken.balanceOf(
         developer.address
       );
 
@@ -85,19 +85,20 @@ describe("PayoutERC20", () => {
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           amount,
           signature.v,
           signature.r,
           signature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(amount)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(amount)
       );
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(amount);
 
       // also check that using the signature a second time does not work
       await expect(
@@ -105,32 +106,29 @@ describe("PayoutERC20", () => {
           .connect(developer)
           .withdraw(
             developer.address,
-            userId,
+            encodedUserId,
             amount,
             signature.v,
             signature.r,
             signature.s
           )
       ).to.be.revertedWith("No new funds to be withdrawn");
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(amount);
     });
 
     it("should only payoutEth difference", async () => {
-      const { payoutOwner, payoutERC20, ffsToken, developer } =
+      const { payoutOwner, payoutERC20, usdcToken, developer } =
         await deployFixture();
 
-      const userId = ethers.utils.formatBytes32String("someUserId");
+      const userId = "4fed2b83-f968-45cc-8869-a36f844cefdb";
       const firstWithdraw = 10;
-      const firstSignature = await generateSignature(
-        firstWithdraw,
-        payoutOwner,
-        userId,
-        "FFST"
-      );
+      const { encodedUserId, signature: firstSignature } =
+        await generateSignature(firstWithdraw, payoutOwner, userId, "USDC");
 
-      const previousBalanceContract = await ffsToken.balanceOf(
+      const previousBalanceContract = await usdcToken.balanceOf(
         payoutERC20.address
       );
-      const previousBalanceDeveloper = await ffsToken.balanceOf(
+      const previousBalanceDeveloper = await usdcToken.balanceOf(
         developer.address
       );
 
@@ -138,46 +136,48 @@ describe("PayoutERC20", () => {
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           firstWithdraw,
           firstSignature.v,
           firstSignature.r,
           firstSignature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(firstWithdraw)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(firstWithdraw)
       );
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(firstWithdraw);
 
       const secondWithdraw = 20;
       const tea = secondWithdraw + firstWithdraw;
-      const secondSignature = await generateSignature(
+      const { signature: secondSignature } = await generateSignature(
         tea,
         payoutOwner,
         userId,
-        "FFST"
+        "USDC"
       );
 
       await payoutERC20
         .connect(developer)
         .withdraw(
           developer.address,
-          userId,
+          encodedUserId,
           tea,
           secondSignature.v,
           secondSignature.r,
           secondSignature.s
         );
 
-      expect(await ffsToken.balanceOf(payoutERC20.address)).to.eq(
+      expect(await usdcToken.balanceOf(payoutERC20.address)).to.eq(
         previousBalanceContract.sub(tea)
       );
-      expect(await ffsToken.balanceOf(developer.address)).to.eq(
+      expect(await usdcToken.balanceOf(developer.address)).to.eq(
         previousBalanceDeveloper.add(tea)
       );
+      expect(await payoutERC20.getPayedOut(encodedUserId)).to.eq(tea);
     });
   });
 });

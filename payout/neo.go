@@ -15,6 +15,10 @@ import (
 	"math/big"
 )
 
+type NeoSignature struct {
+	Raw []byte `json:"raw"`
+}
+
 func getNeoClient(endpoint string) (*neo.Client, error) {
 	neoClient, err := neo.New(context.Background(), endpoint, neo.Options{})
 
@@ -86,4 +90,24 @@ func CreateBatchPayoutTx(c *neo.Client, payoutNeoHash util.Uint160, acc *wallet.
 		log.Fatalf("send raw transaction err: %v", err)
 	}
 	return hash.StringLE()
+}
+
+func getNeoSignature(data PayoutRequest2) (NeoSignature, error) {
+	privateKey, err := keys.NewPrivateKeyFromWIF(opts.NEO.PrivateKey)
+	if err != nil {
+		return NeoSignature{}, err
+	}
+
+	ownerIdBytes, _ := data.UserId.MarshalBinary()
+	teaArray := data.Amount.Bytes()
+	for i := 0; i < len(teaArray)/2; i++ {
+		opp := len(teaArray) - 1 - i
+		teaArray[i], teaArray[opp] = teaArray[opp], teaArray[i]
+	}
+	message := append(ownerIdBytes, teaArray...)
+	signature := privateKey.Sign(message)
+
+	return NeoSignature{
+		signature,
+	}, nil
 }

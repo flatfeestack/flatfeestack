@@ -1,22 +1,23 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { ethers } from "hardhat";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  let tokenAddress: string;
+  let usdcTokenAddress: string;
 
   if (hre.network.name != "localhost") {
-    tokenAddress = (await getNamedAccounts()).payoutERC20Contract;
+    usdcTokenAddress = (await getNamedAccounts()).usdcTokenAddress;
   } else {
-    const ffsToken = await deployments.get("FlatFeeStackToken");
-    tokenAddress = ffsToken.address;
+    const usdcToken = await deployments.get("USDC");
+    usdcTokenAddress = usdcToken.address;
   }
 
   const tokenDeployed = await ethers.getContractAt(
     "ERC20Upgradeable",
-    tokenAddress
+    usdcTokenAddress
   );
   const symbol = await tokenDeployed.symbol();
 
@@ -30,7 +31,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       execute: {
         init: {
           methodName: "initialize",
-          args: [tokenAddress, symbol],
+          args: [usdcTokenAddress, symbol],
         },
       },
     },

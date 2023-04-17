@@ -7,15 +7,20 @@ async function generateSignature(
   owner: SignerWithAddress,
   userId: string,
   symbol: string
-): Promise<Signature> {
+) {
+  const encodedUserId = ethers.utils.id(userId);
   const payload = ethers.utils.defaultAbiCoder.encode(
     ["bytes32", "string", "uint256", "string"],
-    [userId, "#", amount, symbol]
+    [encodedUserId, "#", amount, symbol]
   );
   const payloadHash = ethers.utils.keccak256(payload);
 
   const signature = await owner.signMessage(ethers.utils.arrayify(payloadHash));
-  return ethers.utils.splitSignature(signature);
+
+  return {
+    encodedUserId,
+    signature: ethers.utils.splitSignature(signature),
+  };
 }
 
 export default generateSignature;

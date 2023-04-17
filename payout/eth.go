@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,6 +16,12 @@ import (
 	"math/big"
 	"time"
 )
+
+type EthSignature struct {
+	R string `json:"r"`
+	S string `json:"s"`
+	V uint8  `json:"v"`
+}
 
 // PayoutEthMetaData contains all meta data concerning the PayoutEth contract.
 var PayoutEthMetaData = &bind.MetaData{
@@ -133,4 +140,44 @@ func warpChain(seconds int, rpc *rpc.Client) error {
 	}
 
 	return nil
+}
+
+func getEthSignature(data PayoutRequest2, symbol string) (EthSignature, error) {
+	var arguments abi.Arguments
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.FixedBytesTy, Size: 32},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{Size: 256, T: abi.UintTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+
+	privateKey, err := crypto.HexToECDSA(opts.Ethereum.PrivateKey)
+	if err != nil {
+		return EthSignature{}, err
+	}
+
+	encodedUserId := [32]byte(crypto.Keccak256([]byte(data.UserId.String())))
+	packed, err := arguments.Pack(encodedUserId, "#", data.Amount, symbol)
+	hashRaw := crypto.Keccak256(packed)
+
+	// Add Ethereum Signed Message prefix to hash
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	prefixedHash := crypto.Keccak256(append(prefix, hashRaw[:]...))
+
+	signature, err := crypto.Sign(prefixedHash[:], privateKey)
+	if err != nil {
+		return EthSignature{}, err
+	}
+
+	return EthSignature{
+		hexutil.Encode(signature[:32]),
+		hexutil.Encode(signature[32:64]),
+		uint8(int(signature[64])) + 27,
+	}, nil
 }
