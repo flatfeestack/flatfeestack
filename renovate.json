@@ -44,6 +44,16 @@
       ]
     },
     {
+      "groupName": "forum - all non-major dependencies",
+      "matchPaths": [
+        "forum/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
       "groupName": "caddy - all non-major dependencies",
       "matchPaths": [
         "caddy/"

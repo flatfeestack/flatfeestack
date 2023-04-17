@@ -7,6 +7,7 @@ This repo combines all Flatfeestack packages using `docker-compose`.
 # Create example .env files
 cp analyzer/.example.env analyzer/.env
 cp backend/.example.env backend/.env
+cp forum/.example.env forum/.env
 cp fastauth/.example.env fastauth/.env
 cp payout/.example.env payout/.env
 echo "HOST=http://localhost:8080" >> caddy/.env
@@ -61,11 +62,10 @@ Afterwards you can visit the same URL and use the frontend but this time with HM
 To register a user:
 
 1. Open `localhost:8080` and register a new user.
-2. Connect to the database: `docker exec -it flatfeestack-db-1 psql -U postgres`
-3. Switch to the FlatFeeStack database: `\c flatfeestack`
-4. Show content of the `auth` table: `TABLE auth;`.
-5. Get the token for the user you just registered.
-6. Exit the PSQL session and confirm the user registration: `curl "http://localhost:9081/confirm/signup/{email}/{token}"`
+2. Connect to the database: `docker exec -it flatfeestack-db-1 psql -d flatfeestack -U postgres`
+3. Show content of the `auth` table: `TABLE auth;`.
+4. Get the token for the user you just registered.
+5. Exit the PSQL session and confirm the user registration: `curl "http://localhost:9081/confirm/signup/{email}/{token}"`
 
 If you want to stop, and clean everything up:
 
