@@ -338,8 +338,7 @@ typechain-types
 # openzeppelin artifacts
 .openzeppelin
 
-# local ganache chain artifacts
-ganache
+# Deployments to localhost
 deployments/localhost
 
 # Solidity coverage
