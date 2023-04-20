@@ -15,7 +15,7 @@ const (
 
 // Comment defines model for Comment.
 type Comment struct {
-	Author    string             `json:"author"`
+	Author    openapi_types.UUID `json:"author"`
 	Content   string             `json:"content"`
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`
@@ -29,7 +29,7 @@ type CommentInput struct {
 
 // Post defines model for Post.
 type Post struct {
-	Author    string             `json:"author"`
+	Author    openapi_types.UUID `json:"author"`
 	Content   string             `json:"content"`
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`

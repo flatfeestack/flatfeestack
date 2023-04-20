@@ -206,6 +206,7 @@ components:
           type: string
         author:
           type: string
+          format: uuid
         created_at:
           type: string
           format: date-time
@@ -230,6 +231,7 @@ components:
         content:
           type: string
         author:
+          format: uuid
           type: string
         created_at:
           type: string
