@@ -87,17 +87,39 @@ type Plan struct {
 }
 
 type Currencies struct {
-	Name      string `json:"name"`
-	Short     string `json:"short"`
-	Smallest  string `json:"smallest"`
-	FactorPow int64  `json:"factorPow"`
-	IsCrypto  bool   `json:"isCrypto"`
+	Name       string `json:"name"`
+	Short      string `json:"short"`
+	Smallest   string `json:"smallest"`
+	FactorPow  int64  `json:"factorPow"`
+	IsCrypto   bool   `json:"isCrypto"`
+	PayoutName string
 }
 
 var supportedCurrencies = map[string]Currencies{
-	"ETH": {Name: "Ethereum", Short: "ETH", Smallest: "wei", FactorPow: 18, IsCrypto: true},
-	"GAS": {Name: "Neo Gas", Short: "GAS", Smallest: "mGAS", FactorPow: 8, IsCrypto: true},
-	"USD": {Name: "US Dollar", Short: "USD", Smallest: "mUSD", FactorPow: 6, IsCrypto: false},
+	"ETH": {
+		Name:       "Ethereum",
+		Short:      "ETH",
+		Smallest:   "wei",
+		FactorPow:  18,
+		IsCrypto:   true,
+		PayoutName: "eth",
+	},
+	"GAS": {
+		Name:       "Neo Gas",
+		Short:      "GAS",
+		Smallest:   "mGAS",
+		FactorPow:  8,
+		IsCrypto:   true,
+		PayoutName: "neo",
+	},
+	"USD": {
+		Name:       "US Dollar",
+		Short:      "USD",
+		Smallest:   "mUSD",
+		FactorPow:  6,
+		IsCrypto:   false,
+		PayoutName: "usdc",
+	},
 }
 
 type PayoutMeta struct {
@@ -1057,6 +1079,62 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 
 	writeJson(w, rbs)
+}
+
+func requestPayout(w http.ResponseWriter, r *http.Request, user *User) {
+	m := mux.Vars(r)
+	targetCurrency := m["targetCurrency"]
+
+	currencyMetadata, ok := supportedCurrencies[targetCurrency]
+	if !ok {
+		writeErrorf(w, http.StatusBadRequest, "Unsupported currency requested")
+		return
+	}
+
+	ownContributionIds, err := findOwnContributionIds(user.Id, targetCurrency)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Unable to retrieve contributions: %v", err)
+		return
+	}
+
+	totalEarnedAmount, err := sumTotalEarnedAmountForContributionIds(ownContributionIds)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Unable to retrieve already earned amount in target currency: %v", err)
+		return
+	}
+
+	if targetCurrency == "USD" {
+		// For USDC, 1 unit is 1 dollar
+		// interesting, people seem to trade in fractions, which apparently is possible
+		// https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+		// https://ethereum.stackexchange.com/a/101893
+		// but this would mean our contract needs to accept byte32 encoded stuff for the amount, which makes things rather messy
+		powerOfTen := new(big.Int).Exp(big.NewInt(10), big.NewInt(currencyMetadata.FactorPow), nil)
+		if (totalEarnedAmount.Cmp(powerOfTen)) == -1 {
+			writeErrorf(w, http.StatusUnprocessableEntity, "You need to request at least 1 dollar for a payout")
+			return
+		}
+
+		newTotalAmountAsFloat := new(big.Float).SetInt(totalEarnedAmount)
+
+		// Divide the float by the power of 10
+		newTotalAmountAsFloat.Quo(newTotalAmountAsFloat, new(big.Float).SetInt(powerOfTen))
+		newTotalAmountAsFloat.Int(totalEarnedAmount)
+	}
+
+	signature, err := payoutRequest(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Error when generating signature: %v", err)
+		return
+	}
+
+	err = markContributionAsClaimed(ownContributionIds)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Error when marking contributions as claimed: %v", err)
+		return
+	} else {
+		writeJson(w, signature)
+	}
 }
 
 func lang(r *http.Request) string {

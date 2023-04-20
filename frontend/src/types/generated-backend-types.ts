@@ -334,6 +334,25 @@ export interface paths {
       };
     };
   };
+  "/users/me/request-payout": {
+    post: {
+      parameters: {
+        query: {
+          targetCurrency: "ETH" | "GAS" | "USD";
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PayoutEthSignature"] | components["schemas"]["PayoutNeoSignature"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
   "/repos/search": {
     get: {
       responses: {
@@ -782,6 +801,8 @@ export interface components {
       paymentCycleInId: string;
       /** Format: date-time */
       day: string;
+      /** Format: date-time */
+      claimedAt?: string;
     };
     RepoBalance: {
       repo: components["schemas"]["Repo"];
@@ -893,6 +914,14 @@ export interface components {
       name: string;
       url: string;
       weights?: (components["schemas"]["FlatFeeWeight"])[];
+    };
+    PayoutEthSignature: {
+      r: string;
+      s: string;
+      v: string;
+    };
+    PayoutNeoSignature: {
+      raw: string;
     };
   };
   responses: never;

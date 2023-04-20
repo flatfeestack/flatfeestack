@@ -422,6 +422,31 @@ paths:
           description: OK
         '400':
           description: Bad Request
+  /users/me/request-payout:
+    post:
+      tags:
+        - Users
+      parameters:
+        - name: targetCurrency
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - ETH
+              - GAS
+              - USD
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PayoutEthSignature'
+                  - $ref: '#/components/schemas/PayoutNeoSignature'
+        '400':
+          description: Bad Request
   /repos/search:
     get:
       tags:
@@ -1023,6 +1048,9 @@ components:
         day:
           type: string
           format: date-time
+        claimedAt:
+          type: string
+          format: date-time
       required:
         - repoName
         - repoUrl
@@ -1256,3 +1284,25 @@ components:
         - endDate
         - name
         - url
+
+    PayoutEthSignature:
+      type: object
+      properties:
+        r:
+          type: string
+        s:
+          type: string
+        v:
+          type: string
+      required:
+        - r
+        - s
+        - v
+
+    PayoutNeoSignature:
+      type: object
+      properties:
+        raw:
+          type: string
+      required:
+        - raw

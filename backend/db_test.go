@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"math/big"
 	"testing"
 	"time"
 )
@@ -364,4 +366,50 @@ func TestAnalysisResponse(t *testing.T) {
 	alr, err := findLatestAnalysisRequest(r.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, day3.Nanosecond(), alr.ReceivedAt.Nanosecond())
+}
+
+func TestSumTotalEarnedAmountForContributionIds(t *testing.T) {
+	t.Run("returns 0 without any elements in array", func(t *testing.T) {
+		setup()
+		defer teardown()
+
+		array := []uuid.UUID{}
+		result, err := sumTotalEarnedAmountForContributionIds(array)
+
+		require.Nil(t, err)
+		assert.Equal(t, big.NewInt(0), result)
+	})
+
+	t.Run("returns sum of received contributions", func(t *testing.T) {
+		setup()
+		defer teardown()
+		payOutId := uuid.New()
+
+		repoId, err := setupRepo("github.com/hello-world")
+		require.Nil(t, err)
+
+		user := User{
+			Id:                uuid.New(),
+			StripeId:          stringPointer("strip-id"),
+			PaymentCycleOutId: payOutId,
+			Email:             "email",
+		}
+		err = insertUser(&user)
+		require.Nil(t, err)
+
+		paymentCycleId, err := insertNewPaymentCycleIn(1, 365, timeNow())
+		require.Nil(t, err)
+
+		err = insertContribution(user.Id, user.Id, *repoId, paymentCycleId, payOutId, big.NewInt(1), "USD", timeDayPlusOne(timeNow()), timeNow())
+		require.Nil(t, err)
+
+		ids, err := findOwnContributionIds(user.Id, "USD")
+		require.Nil(t, err)
+		assert.Equal(t, 1, len(ids))
+
+		result, err := sumTotalEarnedAmountForContributionIds(ids)
+
+		require.Nil(t, err)
+		assert.Equal(t, big.NewInt(1), result)
+	})
 }

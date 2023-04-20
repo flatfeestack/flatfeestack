@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,24 +35,28 @@ type AnalysisResponse2 struct {
 }
 
 type PayoutRequest2 struct {
-	UserId uuid.UUID `json:"userId"`
 	Amount *big.Int  `json:"amount"`
+	UserId uuid.UUID `json:"userId"`
 }
 
-type PayoutResponse struct {
-	TxHash   string           `json:"tx_hash"`
-	Currency string           `json:"currency"`
-	Payout   []PayoutRequest2 `json:"payout_cryptos"`
+type PayoutResponseEth struct {
+	R string `json:"r"`
+	S string `json:"s"`
+	V uint8  `json:"v"`
 }
 
-func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
+type PayoutResponseNeo struct {
+	Raw []byte `json:"raw"`
+}
+
+func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (interface{}, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	preq := PayoutRequest2{
-		userId,
 		amount,
+		userId,
 	}
 
 	body, err := json.Marshal(preq)
@@ -58,7 +64,7 @@ func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign/"+strings.ToLower(currency), bytes.NewBuffer(body))
 	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
@@ -68,12 +74,23 @@ func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var presp PayoutResponse
-	err = json.NewDecoder(resp.Body).Decode(&presp)
-	if err != nil {
-		return nil, err
+	if strings.ToLower(currency) == "eth" || strings.ToLower(currency) == "usdc" {
+		var presp PayoutResponseEth
+		err = json.NewDecoder(resp.Body).Decode(&presp)
+		if err != nil {
+			return nil, err
+		}
+		return &presp, nil
+	} else if strings.ToLower(currency) == "gas" {
+		var presp PayoutResponseNeo
+		err = json.NewDecoder(resp.Body).Decode(&presp)
+		if err != nil {
+			return nil, err
+		}
+		return &presp, nil
+	} else {
+		return nil, errors.New("unknown currency")
 	}
-	return &presp, nil
 }
 
 func analysisRequest(repoId uuid.UUID, repoUrl string) error {
