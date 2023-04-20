@@ -11,11 +11,13 @@ import (
 	"forum/jwt"
 	"forum/types"
 	"forum/utils"
+	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -68,6 +70,13 @@ func main() {
 		log.Printf("Could not find env file [%v], using defaults", err)
 	}
 	globals.OPTS = NewOpts()
+
+	f, err := os.Open("banner.txt")
+	if err == nil {
+		banner.Init(os.Stdout, true, false, f)
+	} else {
+		log.Printf("could not display banner...")
+	}
 
 	globals.DB, err = database.InitDb()
 	if err != nil {

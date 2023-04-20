@@ -1,0 +1,5 @@
+{{ .Title "Forum" "big" 0 }}
+GoVersion: {{ .GoVersion }}, GOOS: {{ .GOOS }}, GOARCH: {{ .GOARCH }}, NumCPU: {{ .NumCPU }}
+GOROOT: {{ .GOROOT }}, PORT: {{ .Env "PORT" }}, ENV: {{ .Env "ENV" }}, DB: {{ .Env "DB_DRIVER" }}
+Compiler: {{ .Compiler }}, Start time: {{ .Now "2023/01/01 15:04:05" }}
+===============================================================================
