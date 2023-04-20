@@ -10,13 +10,13 @@ COPY /globals/*.go ./globals/
 COPY /jwt/*.go ./jwt/
 COPY /types/*.go ./types/
 COPY /utils/*.go ./utils/
-COPY *.go *.sql ./
+COPY *.go *.sql banner.txt ./
 RUN ls -all
 RUN go build
 
 FROM alpine:3.17
 RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
 WORKDIR /app
-COPY --from=builder /app/forum /app/init.sql ./
+COPY --from=builder /app/forum /app/init.sql /app/banner.txt ./
 USER nonroot
 ENTRYPOINT ["/app/forum"]
