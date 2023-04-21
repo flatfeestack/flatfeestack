@@ -229,7 +229,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run frontend
-        run: docker run --env-file frontend/.example.env --rm -d -p 9085:9085 "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
+        run: docker run --rm -d -p 9085:9085 "registry.digitalocean.com/flatfeestack/frontend:${{ github.ref_name }}"
 
       - name: Check if frontend is reachable
         uses: nick-fields/retry@v2
