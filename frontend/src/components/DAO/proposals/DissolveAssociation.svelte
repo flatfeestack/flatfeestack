@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Interface } from "ethers/lib/utils";
-  import { MembershipABI } from "../../../contracts/Membership";
-  import { membershipContract } from "../../../ts/daoStore";
+  import {
+    daoContract,
+    membershipContract,
+    walletContract,
+  } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
   import Spinner from "../../Spinner.svelte";
-  import { WalletABI } from "../../../contracts/Wallet";
-  import { DAOABI } from "../../../contracts/DAO";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];
@@ -40,10 +40,6 @@
     isLoading = false;
   }
 
-  const membershipInterface = new Interface(MembershipABI);
-  const walletInterface = new Interface(WalletABI);
-  const daoInterface = new Interface(DAOABI);
-
   const schema = yup.object().shape({
     liquidator: yup.string().isEthereumAddress().required(),
   });
@@ -60,21 +56,23 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_WALLET_CONTRACT_ADDRESS,
-        transferCallData: walletInterface.encodeFunctionData("liquidate", [
-          formValues.liquidator,
-        ]),
+        target: $walletContract?.address,
+        transferCallData: $walletContract?.interface.encodeFunctionData(
+          "liquidate",
+          [formValues.liquidator]
+        ),
         value: 0,
       },
       {
-        target: import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
+        target: $membershipContract?.address,
         transferCallData:
-          membershipInterface.encodeFunctionData("lockMembership"),
+          $membershipContract?.interface.encodeFunctionData("lockMembership"),
         value: 0,
       },
       {
-        target: import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
-        transferCallData: daoInterface.encodeFunctionData("dissolveDAO"),
+        target: $daoContract?.address,
+        transferCallData:
+          $daoContract.interface.encodeFunctionData("dissolveDAO"),
         value: 0,
       },
     ];

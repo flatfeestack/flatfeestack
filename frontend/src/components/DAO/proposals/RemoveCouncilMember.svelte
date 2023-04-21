@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { Interface } from "ethers/lib/utils";
-  import { MembershipABI } from "../../../contracts/Membership";
-  import { councilMembers } from "../../../ts/daoStore";
+  import type { BigNumber } from "ethers";
+  import { councilMembers, membershipContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
   import Spinner from "../../Spinner.svelte";
-  import { membershipContract } from "../../../ts/daoStore";
-  import type { BigNumber } from "ethers";
 
   interface $$Props extends ProposalFormProps {}
   export let calls: $$Props["calls"];
@@ -17,8 +14,6 @@
   };
   let isLoading = false;
   let minimumCouncilMembers = 0;
-
-  const membershipInterface = new Interface(MembershipABI);
 
   const schema = yup.object().shape({
     councilMemberToBeRemoved: yup.string().isEthereumAddress().required(),
@@ -52,8 +47,8 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
-        transferCallData: membershipInterface.encodeFunctionData(
+        target: $membershipContract?.address,
+        transferCallData: $membershipContract?.interface.encodeFunctionData(
           "removeCouncilMember",
           [formValues.councilMemberToBeRemoved]
         ),

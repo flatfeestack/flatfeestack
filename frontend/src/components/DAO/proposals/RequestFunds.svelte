@@ -1,7 +1,6 @@
 <script lang="ts">
   import { ethers } from "ethers";
-  import { Interface } from "ethers/lib/utils";
-  import { WalletABI } from "../../../contracts/Wallet";
+  import { walletContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
@@ -10,7 +9,6 @@
   export let calls: $$Props["calls"];
 
   const currencies = ["ETH", "Wei"];
-  const walletInterface = new Interface(WalletABI);
 
   let formValues = {
     amount: 0,
@@ -35,8 +33,8 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_WALLET_CONTRACT_ADDRESS,
-        transferCallData: walletInterface.encodeFunctionData(
+        target: $walletContract?.address,
+        transferCallData: $walletContract?.interface.encodeFunctionData(
           "increaseAllowance",
           [
             formValues.targetWalletAddress,
