@@ -13,10 +13,16 @@ import (
 	"time"
 )
 
-type Config struct {
-	PayoutContractAddress string `json:"payoutContractAddress"`
-	ChainId               int64  `json:"chainId"`
-	Env                   string `json:"env"`
+type PayoutAddresses struct {
+	Eth  string `json:"eth"`
+	Neo  string `json:"neo"`
+	Usdc string `json:"usdc"`
+}
+
+type PayoutConfig struct {
+	PayoutContractAddresses PayoutAddresses `json:"payoutContractAddresses"`
+	ChainId                 int64           `json:"chainId"`
+	Env                     string          `json:"env"`
 }
 
 type PayoutRequest2 struct {
@@ -108,13 +114,23 @@ func timeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("time warp: %v", timeNow())
 }
 
-func config(w http.ResponseWriter, _ *http.Request) {
-	cfg := Config{
-		PayoutContractAddress: opts.Ethereum.Contract,
-		ChainId:               ethClient.chainId.Int64(),
-		Env:                   opts.Env,
+func payoutConfig(w http.ResponseWriter, _ *http.Request) {
+	payoutAddresses := PayoutAddresses{
+		Eth:  opts.Ethereum.Contract,
+		Neo:  opts.NEO.Contract,
+		Usdc: opts.Usdc.Contract,
+	}
+
+	cfg := PayoutConfig{
+		PayoutContractAddresses: payoutAddresses,
+		ChainId:                 ethClient.chainId.Int64(),
+		Env:                     opts.Env,
 	}
 	writeJson(w, cfg)
+}
+
+func daoConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJson(w, opts.Dao)
 }
 
 //Generic helpers

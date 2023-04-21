@@ -1,9 +1,17 @@
 import type { JsonRpcSigner, Web3Provider } from "@ethersproject/providers";
 import { BigNumber, Contract, ethers, Signer } from "ethers";
-import { derived, writable, type Readable } from "svelte/store";
+import { derived, writable, type Readable, readable } from "svelte/store";
 import { DAOABI } from "../contracts/DAO";
 import { MembershipABI } from "../contracts/Membership";
 import { WalletABI } from "../contracts/Wallet";
+import type { DaoConfig } from "../types/payout";
+import { API } from "./api";
+
+export const daoConfig = readable<DaoConfig | null>(null, (set) => {
+  API.payout.daoConfig().then((daoConfig) => {
+    set(daoConfig);
+  });
+});
 
 // provider is null when it's not initialized
 // undefined when we did not detect any provider
@@ -50,22 +58,18 @@ export const currentBlockTimestamp = derived<
 );
 
 export const daoContract = derived(
-  [provider, signer],
-  ([$provider, $signer]) => {
-    if ($provider === null || $provider === undefined) {
+  [daoConfig, provider, signer],
+  ([$daoConfig, $provider, $signer]) => {
+    if (
+      $provider === null ||
+      $provider === undefined ||
+      $daoConfig === undefined
+    ) {
       return null;
     } else if ($signer === null) {
-      return new ethers.Contract(
-        import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
-        DAOABI,
-        $provider
-      );
+      return new ethers.Contract($daoConfig.dao, DAOABI, $provider);
     } else {
-      return new ethers.Contract(
-        import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
-        DAOABI,
-        $signer
-      );
+      return new ethers.Contract($daoConfig.dao, DAOABI, $signer);
     }
   }
 );
@@ -85,16 +89,17 @@ export const userEthereumAddress = derived(
 );
 
 export const membershipContract = derived(
-  [provider, signer],
-  ([$provider, $signer]) => {
-    if ($provider === null || $provider === undefined || $signer === null) {
+  [daoConfig, provider, signer],
+  ([$daoConfig, $provider, $signer]) => {
+    if (
+      $daoConfig === null ||
+      $provider === null ||
+      $provider === undefined ||
+      $signer === null
+    ) {
       return null;
     } else {
-      return new ethers.Contract(
-        import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
-        MembershipABI,
-        $signer
-      );
+      return new ethers.Contract($daoConfig.membership, MembershipABI, $signer);
     }
   }
 );
@@ -139,16 +144,12 @@ export const councilMembers = derived<
 });
 
 export const walletContract = derived(
-  [provider, signer],
-  ([$provider, $signer]) => {
+  [daoConfig, provider, signer],
+  ([$daoConfig, $provider, $signer]) => {
     if ($provider === null || $provider === undefined || $signer === null) {
       return null;
     } else {
-      return new ethers.Contract(
-        import.meta.env.VITE_WALLET_CONTRACT_ADDRESS,
-        WalletABI,
-        $signer
-      );
+      return new ethers.Contract($daoConfig.wallet, WalletABI, $signer);
     }
   }
 );

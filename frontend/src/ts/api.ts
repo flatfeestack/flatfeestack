@@ -20,6 +20,7 @@ import type {
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
 import { refresh } from "./services";
+import type { DaoConfig } from "../types/payout";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -83,6 +84,11 @@ const auth = ky.create({
 
 const backend = ky.create({
   prefixUrl: "/backend",
+  timeout: restTimeout,
+});
+
+const payout = ky.create({
+  prefixUrl: "/payout",
   timeout: restTimeout,
 });
 
@@ -223,5 +229,8 @@ export const API = {
   },
   admin: {
     users: () => backendToken.post(`admin/users`).json<string[]>(),
+  },
+  payout: {
+    daoConfig: () => payout.get(`config/dao`).json<DaoConfig>(),
   },
 };

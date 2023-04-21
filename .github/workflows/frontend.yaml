@@ -57,11 +57,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: copy file
-        uses: canastro/copy-file-action@master
-        with:
-          source: "frontend/.example.env"
-          target: "frontend/.env"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { Interface } from "ethers/lib/utils";
-  import { MembershipABI } from "../../../contracts/Membership";
   import { membershipContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
@@ -38,8 +36,6 @@
     isLoading = false;
   }
 
-  const membershipInterface = new Interface(MembershipABI);
-
   const schema = yup.object().shape({
     memberToBeRemoved: yup.string().isEthereumAddress().required(),
   });
@@ -56,8 +52,8 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_MEMBERSHIP_CONTRACT_ADDRESS,
-        transferCallData: membershipInterface.encodeFunctionData(
+        target: $membershipContract?.address,
+        transferCallData: $membershipContract?.interface.encodeFunctionData(
           "removeMember",
           [formValues.memberToBeRemoved]
         ),

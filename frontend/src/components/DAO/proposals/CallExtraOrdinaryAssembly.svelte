@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { Interface } from "ethers/lib/utils";
   import humanizeDuration from "humanize-duration";
-  import { DAOABI } from "../../../contracts/DAO";
   import { currentBlockNumber, daoContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import {
@@ -29,8 +27,6 @@
 
   let extraOrdinaryAssemblyParameters: ExtraOrdinaryAssemblyParameters | null =
     null;
-
-  const daoInterface = new Interface(DAOABI);
 
   const schema = yup.object().shape({
     proposedBlockNumber: yup.number().min(minimumBlockNumber).required(),
@@ -80,8 +76,6 @@
       votingSlotAnnouncementPeriod: votingSlotAnnouncementPeriod.toNumber(),
     };
 
-    console.log(extraOrdinaryAssemblyParameters);
-
     minimumBlockNumber =
       $currentBlockNumber +
       extraOrdinaryAssemblyParameters.timelockMinimumDelay / secondsPerBlock +
@@ -92,10 +86,11 @@
   function updateCalldata() {
     calls = [
       {
-        target: import.meta.env.VITE_DAO_CONTRACT_ADDRESS,
-        transferCallData: daoInterface.encodeFunctionData("setVotingSlot", [
-          formValues.proposedBlockNumber,
-        ]),
+        target: $daoContract?.address,
+        transferCallData: $daoContract?.interface.encodeFunctionData(
+          "setVotingSlot",
+          [formValues.proposedBlockNumber]
+        ),
         value: 0,
       },
     ];
