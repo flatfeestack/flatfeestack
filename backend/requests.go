@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -34,34 +33,31 @@ type AnalysisResponse2 struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type PayoutRequest2 struct {
+type PayoutRequest struct {
 	Amount *big.Int  `json:"amount"`
 	UserId uuid.UUID `json:"userId"`
 }
 
-type PayoutResponseEth struct {
-	R string `json:"r"`
-	S string `json:"s"`
-	V uint8  `json:"v"`
+type PayoutResponse struct {
+	Amount        *big.Int `json:"amount"`
+	Currency      string   `json:"currency"`
+	EncodedUserId string   `json:"encodedUserId"`
+	Signature     string   `json:"signature"`
 }
 
-type PayoutResponseNeo struct {
-	Raw []byte `json:"raw"`
-}
-
-func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (interface{}, error) {
+func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	preq := PayoutRequest2{
+	preq := PayoutRequest{
 		amount,
 		userId,
 	}
 
 	body, err := json.Marshal(preq)
 	if err != nil {
-		return nil, err
+		return PayoutResponse{}, err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign/"+strings.ToLower(currency), bytes.NewBuffer(body))
@@ -70,27 +66,16 @@ func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (interfac
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return nil, err
+		return PayoutResponse{}, err
 	}
 	defer resp.Body.Close()
 
-	if strings.ToLower(currency) == "eth" || strings.ToLower(currency) == "usdc" {
-		var presp PayoutResponseEth
-		err = json.NewDecoder(resp.Body).Decode(&presp)
-		if err != nil {
-			return nil, err
-		}
-		return &presp, nil
-	} else if strings.ToLower(currency) == "gas" {
-		var presp PayoutResponseNeo
-		err = json.NewDecoder(resp.Body).Decode(&presp)
-		if err != nil {
-			return nil, err
-		}
-		return &presp, nil
-	} else {
-		return nil, errors.New("unknown currency")
+	var presp PayoutResponse
+	err = json.NewDecoder(resp.Body).Decode(&presp)
+	if err != nil {
+		return PayoutResponse{}, err
 	}
+	return presp, nil
 }
 
 func analysisRequest(repoId uuid.UUID, repoUrl string) error {

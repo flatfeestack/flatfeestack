@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/go-jose/go-jose/v3/json"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ func TestPostSignEth(t *testing.T) {
 
 	t.Run("should generate a signature for ETH", func(t *testing.T) {
 		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
-		jsonData, _ := json.Marshal(PayoutRequest2{
+		jsonData, _ := json.Marshal(PayoutRequest{
 			Amount: big.NewInt(10000),
 			UserId: userId,
 		})
@@ -35,7 +34,7 @@ func TestPostSignEth(t *testing.T) {
 		body, _ := io.ReadAll(response.Body)
 		assert.Equal(
 			t,
-			"{\"r\":\"0x7343340d4047870048ef076635ef0b7cd54643e89b2869d24be57d6e5bd5463c\",\"s\":\"0x6c38031deeaa94cc448c3c303703f27c492c47387d468e3e8a3b83da5fab8009\",\"v\":27}\n",
+			"{\"amount\":10000,\"currency\":\"ETH\",\"encodedUserId\":\"0x06c73e4796c7cea53afe1e6145c9e3c8a5804d7d464d9ad0d7a76c988be1293f\",\"signature\":\"0x7343340d4047870048ef076635ef0b7cd54643e89b2869d24be57d6e5bd5463c6c38031deeaa94cc448c3c303703f27c492c47387d468e3e8a3b83da5fab800900\"}\n",
 			string(body),
 		)
 	})
@@ -49,7 +48,7 @@ func TestPostSignUsdc(t *testing.T) {
 
 	t.Run("should generate a signature for USDC", func(t *testing.T) {
 		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
-		jsonData, _ := json.Marshal(PayoutRequest2{
+		jsonData, _ := json.Marshal(PayoutRequest{
 			Amount: big.NewInt(10),
 			UserId: userId,
 		})
@@ -63,7 +62,7 @@ func TestPostSignUsdc(t *testing.T) {
 		body, _ := io.ReadAll(response.Body)
 		assert.Equal(
 			t,
-			"{\"r\":\"0x2244246b407d1974a590de53c7179af6153802e342828dda9ef81a3447de20ae\",\"s\":\"0x3a700bb665f97296bc71f0b586c2952fbbe5150d9416d9c4a99376fbfbd7391a\",\"v\":27}\n",
+			"{\"amount\":10,\"currency\":\"USDC\",\"encodedUserId\":\"0x06c73e4796c7cea53afe1e6145c9e3c8a5804d7d464d9ad0d7a76c988be1293f\",\"signature\":\"0x2244246b407d1974a590de53c7179af6153802e342828dda9ef81a3447de20ae3a700bb665f97296bc71f0b586c2952fbbe5150d9416d9c4a99376fbfbd7391a00\"}\n",
 			string(body),
 		)
 	})
@@ -75,7 +74,7 @@ func TestPostSignNeo(t *testing.T) {
 
 	t.Run("should generate a signature for NEO", func(t *testing.T) {
 		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
-		jsonData, _ := json.Marshal(PayoutRequest2{
+		jsonData, _ := json.Marshal(PayoutRequest{
 			Amount: big.NewInt(12345678),
 			UserId: userId,
 		})
@@ -87,10 +86,9 @@ func TestPostSignNeo(t *testing.T) {
 
 		assert.Equal(t, 200, response.Code)
 		body, _ := io.ReadAll(response.Body)
-		fmt.Printf(string(body))
 		assert.Equal(
 			t,
-			"{\"raw\":\"YNt4yC7TPasvH2+ywr6jEUt7EnHaVfUUseMglMa8AzmNSrYiiGyRrntbFQCwF7czkrUTG5ME1LNf1muKxz7ujg==\"}\n",
+			"{\"amount\":12345678,\"currency\":\"GAS\",\"encodedUserId\":\"4fed2b83f96845cc8869a36f844cefdb\",\"signature\":\"60db78c82ed33dab2f1f6fb2c2bea3114b7b1271da55f514b1e32094c6bc03398d4ab622886c91ae7b5b1500b017b73392b5131b9304d4b35fd66b8ac73eee8e\"}\n",
 			string(body),
 		)
 	})

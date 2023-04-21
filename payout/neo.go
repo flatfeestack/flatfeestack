@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/nspcc-dev/neo-go/pkg/core/transaction"
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neo-go/pkg/encoding/address"
@@ -14,10 +15,6 @@ import (
 	"log"
 	"math/big"
 )
-
-type NeoSignature struct {
-	Raw []byte `json:"raw"`
-}
 
 func getNeoClient(endpoint string) (*neo.Client, error) {
 	neoClient, err := neo.New(context.Background(), endpoint, neo.Options{})
@@ -92,10 +89,10 @@ func CreateBatchPayoutTx(c *neo.Client, payoutNeoHash util.Uint160, acc *wallet.
 	return hash.StringLE()
 }
 
-func getNeoSignature(data PayoutRequest2) (NeoSignature, error) {
+func getNeoSignature(data PayoutRequest) (PayoutResponse, error) {
 	privateKey, err := keys.NewPrivateKeyFromWIF(opts.NEO.PrivateKey)
 	if err != nil {
-		return NeoSignature{}, err
+		return PayoutResponse{}, err
 	}
 
 	ownerIdBytes, _ := data.UserId.MarshalBinary()
@@ -107,7 +104,10 @@ func getNeoSignature(data PayoutRequest2) (NeoSignature, error) {
 	message := append(ownerIdBytes, teaArray...)
 	signature := privateKey.Sign(message)
 
-	return NeoSignature{
-		signature,
+	return PayoutResponse{
+		Amount:        data.Amount,
+		Currency:      "GAS",
+		EncodedUserId: hex.EncodeToString(ownerIdBytes),
+		Signature:     hex.EncodeToString(signature),
 	}, nil
 }

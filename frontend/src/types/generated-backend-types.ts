@@ -345,7 +345,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["PayoutEthSignature"] | components["schemas"]["PayoutNeoSignature"];
+            "application/json": components["schemas"]["PayoutResponse"];
           };
         };
         /** @description Bad Request */
@@ -915,13 +915,14 @@ export interface components {
       url: string;
       weights?: (components["schemas"]["FlatFeeWeight"])[];
     };
-    PayoutEthSignature: {
-      r: string;
-      s: string;
-      v: string;
-    };
-    PayoutNeoSignature: {
-      raw: string;
+    PayoutResponse: {
+      /** Format: int64 */
+      amount: string;
+      currency?: string;
+      /** Format: byte */
+      encodedUserId: string;
+      /** Format: byte */
+      signature: string;
     };
   };
   responses: never;

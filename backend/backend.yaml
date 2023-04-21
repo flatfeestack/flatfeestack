@@ -442,9 +442,7 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/PayoutEthSignature'
-                  - $ref: '#/components/schemas/PayoutNeoSignature'
+                $ref: '#/components/schemas/PayoutResponse'
         '400':
           description: Bad Request
   /repos/search:
@@ -1285,24 +1283,21 @@ components:
         - name
         - url
 
-    PayoutEthSignature:
+    PayoutResponse:
       type: object
       properties:
-        r:
+        amount:
           type: string
-        s:
+          format: int64
+        currency:
           type: string
-        v:
+        encodedUserId:
           type: string
+          format: byte
+        signature:
+          type: string
+          format: byte
       required:
-        - r
-        - s
-        - v
-
-    PayoutNeoSignature:
-      type: object
-      properties:
-        raw:
-          type: string
-      required:
-        - raw
+        - amount
+        - encodedUserId
+        - signature

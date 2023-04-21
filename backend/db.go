@@ -132,13 +132,6 @@ type AnalysisResponse struct {
 	Weight    float64
 }
 
-type PayoutRequest struct {
-	Id        uuid.UUID
-	Balance   *big.Int
-	Currency  string
-	CreatedAt time.Time
-}
-
 // *********************************************************************************
 // ********************************* Wallet ****************************************
 // *********************************************************************************
