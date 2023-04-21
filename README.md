@@ -128,17 +128,20 @@ If you want to fast-forward your chain can run this script.
 npm run hardhat:script -- --network localhost scripts/mineBlocks.ts
 ```
 
-Now, you can export the ABIs of the smart contracts and the addresses of the proxies to the frontend:
+Now, you can export the ABIs of the smart contracts to the frontend:
 
 ```shell
-npm run hardhat:script -- scripts/exportInterfacesToFrontend.ts
+npm run hardhat:script -- --network localhost scripts/exportAbisToFrontend.ts
 ```
 
-- This does not yet work with the dockerized version of the frontend.
 - The contracts' ABI will be written to `src/contracts`.
-- The contracts' addresses will be written to a `.env` file. You can retrieve them via `VITE_${Contract name}_CONTRACT_ADDRESS` in the frontend.
-- Always restart vite after a new interface export!
 - When you access the frontend, make sure you connect MetaMask to the `localhost` network.
+
+Also export the contract addresses to the payout service.
+
+```shell
+npm run hardhat:script -- --network localhost scripts/exportContractAddressesToPayout.ts
+```
 
 ## NEO smart contract
 
