@@ -4,13 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/base32"
 	"flag"
-	"fmt"
 	"forum/api"
 	database "forum/db"
 	"forum/globals"
 	"forum/jwt"
 	"forum/types"
 	"forum/utils"
+	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
 	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -83,8 +83,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := &api.Server{}
+	swagger, err := api.GetSwagger()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Clear out the servers array in the swagger spec, that skips validating
+	// that server names match. We don't know how this thing will be run.
+	swagger.Servers = nil
+
+	server := api.NewStrictServerImpl()
+	serverInterface := api.NewStrictHandler(server, nil)
+
+	validator := middleware.OapiRequestValidatorWithOptions(swagger, utils.EmptyOptions())
+
 	router := mux.NewRouter()
+	router.Use(validator)
 
 	serverOptions := api.GorillaServerOptions{
 		BaseURL:    "",
@@ -94,12 +107,12 @@ func main() {
 		},
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			// Define your custom error handling logic
-			fmt.Println("Handling error:", err.Error())
+			log.Fatalln("Handling error:", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		},
 	}
 
-	handler := api.HandlerWithOptions(server, serverOptions)
+	handler := api.HandlerWithOptions(serverInterface, serverOptions)
 
 	log.Println("Starting forum on port " + strconv.Itoa(globals.OPTS.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(globals.OPTS.Port), handler))

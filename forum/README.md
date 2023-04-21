@@ -8,12 +8,12 @@ To generate as much boilerplate code from the specification as possible, the too
 
 If changes are made on the types in the specification, the types can be generated with the following command:
 ```shell
-oapi-codegen -generate types -package api -o ./api/forum-types.gen.go ./api/forum.yaml
+oapi-codegen -config ./api/types.cfg.yaml ./api/forum.yaml
 ```
 
 If changes are made on the routes in the specification, the routes and server-code can be generated with the following command:
 ```shell
-oapi-codegen -generate gorilla -package api -o ./api/forum-server.gen.go ./api/forum.yaml
+oapi-codegen -config ./api/server.cfg.yaml ./api/forum.yaml
 ```
 
 ## Structure

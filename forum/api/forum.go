@@ -1,62 +1,59 @@
 package api
 
 import (
-	"fmt"
-	"net/http"
+	"context"
 )
 
-type Server struct{}
-
-// Get all posts
-// (GET /posts)
-func (s *Server) GetPosts(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "GetPosts called")
+type StrictServerImpl struct {
+	// Implement any necessary dependencies or data stores here
 }
 
-// Create a new post
-// (POST /posts)
-func (s *Server) PostPosts(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "PostPosts called")
+func NewStrictServerImpl() *StrictServerImpl {
+	// Initialize and return a new instance of StrictServerImpl
+	return &StrictServerImpl{}
 }
 
-// Delete a Post
-// (DELETE /posts/{postId})
-func (s *Server) DeletePostsPostId(w http.ResponseWriter, r *http.Request, postId PostId) {
-	fmt.Fprintf(w, "DeletePostsPostId called with postId=%s", postId)
+func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error) {
+	// Implementation of GetPosts method
+	return nil, nil
 }
 
-// Get a specific post
-// (GET /posts/{postId})
-func (s *Server) GetPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId) {
-	fmt.Fprintf(w, "GetPostsPostId called with postId=%s", postId)
+func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error) {
+	// Implementation of PostPosts method
+	return nil, nil
 }
 
-// Get all comments
-// (GET /posts/{postId}/comments)
-func (s *Server) GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
-	fmt.Fprintf(w, "GetPostsPostIdComments called with postId=%s", postId)
+func (s *StrictServerImpl) DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error) {
+	// Implementation of DeletePostsPostId method
+	return nil, nil
 }
 
-// Add a comment to a post
-// (POST /posts/{postId}/comments)
-func (s *Server) PostPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
-	fmt.Fprintf(w, "PostPostsPostIdComments called with postId=%s", postId)
+func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsPostIdRequestObject) (GetPostsPostIdResponseObject, error) {
+	// Implementation of GetPostsPostId method
+	return nil, nil
 }
 
-// Update a post
-// (PUT /posts/{postId}/comments)
-func (s *Server) PutPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
-	fmt.Fprintf(w, "PutPostsPostIdComments called with postId=%s", postId)
+func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error) {
+	// Implementation of GetPostsPostIdComments method
+	return nil, nil
 }
 
-// Delete a comment
-// (DELETE /posts/{postId}/comments/{commentId})
-func (s *Server) DeletePostsPostIdCommentsCommentId(w http.ResponseWriter, r *http.Request, postId PostId, commentId CommentId) {
-	fmt.Fprintf(w, "DeletePostsPostIdCommentsCommentId called with postId=%s, commentId=%s", postId, commentId)
+func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error) {
+	// Implementation of PostPostsPostIdComments method
+	return nil, nil
 }
 
-// Update a comment
-// (PUT /posts/{postId}/comments/{commentId})
-func (s *Server) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, r *http.Request, postId PostId, commentId CommentId) {
-	fmt.Fprintf(w, "PutPostsPostIdCommentsCommentId called with postId=%s, commentId=%s", postId, commentId)
+func (s *StrictServerImpl) PutPostsPostIdComments(ctx context.Context, request PutPostsPostIdCommentsRequestObject) (PutPostsPostIdCommentsResponseObject, error) {
+	// Implementation of PutPostsPostIdComments method
+	return nil, nil
+}
+
+func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error) {
+	// Implementation of DeletePostsPostIdCommentsCommentId method
+	return nil, nil
+}
+
+func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
+	// Implementation of PutPostsPostIdCommentsCommentId method
+	return nil, nil
 }

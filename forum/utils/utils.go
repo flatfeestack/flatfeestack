@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
+	"github.com/getkin/kin-openapi/openapi3filter"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -65,4 +67,17 @@ func (m *KeyedMutex) Lock(key string) func() {
 	mtx.Lock()
 
 	return func() { mtx.Unlock() }
+}
+
+func EmptyOptions() *middleware.Options {
+	// To deactivate authentication in the validator, set the AuthenticationFunc to NoopAuthenticationFunc
+	// Validation is done
+	options := &openapi3filter.Options{
+		AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+	}
+
+	options2 := &middleware.Options{
+		Options: *options,
+	}
+	return options2
 }
