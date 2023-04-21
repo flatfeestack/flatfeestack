@@ -129,6 +129,10 @@ func payoutConfig(w http.ResponseWriter, _ *http.Request) {
 	writeJson(w, cfg)
 }
 
+func daoConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJson(w, opts.Dao)
+}
+
 //Generic helpers
 
 func bytes32(b []byte) [32]byte {

@@ -27,6 +27,12 @@ type Blockchain struct {
 	Deploy     bool
 }
 
+type DaoAddresses struct {
+	Dao        string `json:"dao"`
+	Membership string `json:"membership"`
+	Wallet     string `json:"wallet"`
+}
+
 type Opts struct {
 	Port     int
 	Env      string
@@ -35,6 +41,7 @@ type Opts struct {
 	NEO      Blockchain
 	Usdc     Blockchain
 	Admins   string
+	Dao      DaoAddresses
 }
 
 var (
@@ -76,6 +83,10 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
 	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT"), "NEO contract address")
 	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL"), "NEO URL")
+
+	flag.StringVar(&o.Dao.Dao, "dao-dao-address", lookupEnv("DAO_DAO_CONTRACT"), "Address of the main DAO contract")
+	flag.StringVar(&o.Dao.Membership, "dao-membership-address", lookupEnv("DAO_MEMBERSHIP_CONTRACT"), "Address of the membership contract")
+	flag.StringVar(&o.Dao.Wallet, "dao-wallet-address", lookupEnv("DAO_WALLET_CONTRACT"), "Address of the Wallet contract")
 
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 
@@ -203,6 +214,7 @@ func main() {
 		router.HandleFunc("/admin/timewarp/{hours}", jwtAuth(jwtAuthAdmin(timeWarp, admins))).Methods(http.MethodPost)
 	}
 	//available for the public
+	router.HandleFunc("/config/dao", daoConfig).Methods(http.MethodGet)
 	router.HandleFunc("/config/payout", payoutConfig).Methods(http.MethodGet)
 
 	log.Printf("listing on port %v", opts.Port)
