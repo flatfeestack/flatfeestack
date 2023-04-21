@@ -4,11 +4,19 @@
 package api
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
+	"strings"
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gorilla/mux"
 )
 
@@ -426,4 +434,761 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments/{commentId}", wrapper.PutPostsPostIdCommentsCommentId).Methods("PUT")
 
 	return r
+}
+
+type BadRequestJSONResponse struct {
+	Error string `json:"error"`
+}
+
+type ForbiddenJSONResponse struct {
+	Error string `json:"error"`
+}
+
+type NotFoundJSONResponse struct {
+	Error string `json:"error"`
+}
+
+type UnauthorizedJSONResponse struct {
+	Error string `json:"error"`
+}
+
+type GetPostsRequestObject struct {
+}
+
+type GetPostsResponseObject interface {
+	VisitGetPostsResponse(w http.ResponseWriter) error
+}
+
+type GetPosts200JSONResponse []Post
+
+func (response GetPosts200JSONResponse) VisitGetPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPosts404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPosts404JSONResponse) VisitGetPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPostsRequestObject struct {
+	Body *PostPostsJSONRequestBody
+}
+
+type PostPostsResponseObject interface {
+	VisitPostPostsResponse(w http.ResponseWriter) error
+}
+
+type PostPosts201JSONResponse Post
+
+func (response PostPosts201JSONResponse) VisitPostPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPosts400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PostPosts400JSONResponse) VisitPostPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPosts401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PostPosts401JSONResponse) VisitPostPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostsPostIdRequestObject struct {
+	PostId PostId `json:"postId"`
+}
+
+type DeletePostsPostIdResponseObject interface {
+	VisitDeletePostsPostIdResponse(w http.ResponseWriter) error
+}
+
+type DeletePostsPostId204Response struct {
+}
+
+func (response DeletePostsPostId204Response) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePostsPostId401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeletePostsPostId401JSONResponse) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostsPostId403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeletePostsPostId403JSONResponse) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsPostIdRequestObject struct {
+	PostId PostId `json:"postId"`
+}
+
+type GetPostsPostIdResponseObject interface {
+	VisitGetPostsPostIdResponse(w http.ResponseWriter) error
+}
+
+type GetPostsPostId200JSONResponse Post
+
+func (response GetPostsPostId200JSONResponse) VisitGetPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsPostId404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPostsPostId404JSONResponse) VisitGetPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsPostIdCommentsRequestObject struct {
+	PostId PostId `json:"postId"`
+}
+
+type GetPostsPostIdCommentsResponseObject interface {
+	VisitGetPostsPostIdCommentsResponse(w http.ResponseWriter) error
+}
+
+type GetPostsPostIdComments200JSONResponse []Comment
+
+func (response GetPostsPostIdComments200JSONResponse) VisitGetPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsPostIdComments404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPostsPostIdComments404JSONResponse) VisitGetPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPostsPostIdCommentsRequestObject struct {
+	PostId PostId `json:"postId"`
+	Body   *PostPostsPostIdCommentsJSONRequestBody
+}
+
+type PostPostsPostIdCommentsResponseObject interface {
+	VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error
+}
+
+type PostPostsPostIdComments201JSONResponse Comment
+
+func (response PostPostsPostIdComments201JSONResponse) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPostsPostIdComments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PostPostsPostIdComments400JSONResponse) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPostsPostIdComments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PostPostsPostIdComments401JSONResponse) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsRequestObject struct {
+	PostId PostId `json:"postId"`
+	Body   *PutPostsPostIdCommentsJSONRequestBody
+}
+
+type PutPostsPostIdCommentsResponseObject interface {
+	VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error
+}
+
+type PutPostsPostIdComments200JSONResponse Post
+
+func (response PutPostsPostIdComments200JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdComments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PutPostsPostIdComments400JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdComments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutPostsPostIdComments401JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdComments403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PutPostsPostIdComments403JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdComments404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PutPostsPostIdComments404JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostsPostIdCommentsCommentIdRequestObject struct {
+	PostId    PostId    `json:"postId"`
+	CommentId CommentId `json:"commentId"`
+}
+
+type DeletePostsPostIdCommentsCommentIdResponseObject interface {
+	VisitDeletePostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error
+}
+
+type DeletePostsPostIdCommentsCommentId204Response struct {
+}
+
+func (response DeletePostsPostIdCommentsCommentId204Response) VisitDeletePostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeletePostsPostIdCommentsCommentId401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeletePostsPostIdCommentsCommentId401JSONResponse) VisitDeletePostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostsPostIdCommentsCommentId403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeletePostsPostIdCommentsCommentId403JSONResponse) VisitDeletePostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsCommentIdRequestObject struct {
+	PostId    PostId    `json:"postId"`
+	CommentId CommentId `json:"commentId"`
+	Body      *PutPostsPostIdCommentsCommentIdJSONRequestBody
+}
+
+type PutPostsPostIdCommentsCommentIdResponseObject interface {
+	VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error
+}
+
+type PutPostsPostIdCommentsCommentId200JSONResponse Comment
+
+func (response PutPostsPostIdCommentsCommentId200JSONResponse) VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsCommentId400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PutPostsPostIdCommentsCommentId400JSONResponse) VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsCommentId401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutPostsPostIdCommentsCommentId401JSONResponse) VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsCommentId403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PutPostsPostIdCommentsCommentId403JSONResponse) VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdCommentsCommentId404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PutPostsPostIdCommentsCommentId404JSONResponse) VisitPutPostsPostIdCommentsCommentIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+// StrictServerInterface represents all server handlers.
+type StrictServerInterface interface {
+	// Get all posts
+	// (GET /posts)
+	GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error)
+	// Create a new post
+	// (POST /posts)
+	PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error)
+	// Delete a Post
+	// (DELETE /posts/{postId})
+	DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error)
+	// Get a specific post
+	// (GET /posts/{postId})
+	GetPostsPostId(ctx context.Context, request GetPostsPostIdRequestObject) (GetPostsPostIdResponseObject, error)
+	// Get all comments
+	// (GET /posts/{postId}/comments)
+	GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error)
+	// Add a comment to a post
+	// (POST /posts/{postId}/comments)
+	PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error)
+	// Update a post
+	// (PUT /posts/{postId}/comments)
+	PutPostsPostIdComments(ctx context.Context, request PutPostsPostIdCommentsRequestObject) (PutPostsPostIdCommentsResponseObject, error)
+	// Delete a comment
+	// (DELETE /posts/{postId}/comments/{commentId})
+	DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error)
+	// Update a comment
+	// (PUT /posts/{postId}/comments/{commentId})
+	PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error)
+}
+
+type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, args interface{}) (interface{}, error)
+
+type StrictMiddlewareFunc func(f StrictHandlerFunc, operationID string) StrictHandlerFunc
+
+type StrictHTTPServerOptions struct {
+	RequestErrorHandlerFunc  func(w http.ResponseWriter, r *http.Request, err error)
+	ResponseErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		},
+	}}
+}
+
+func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc, options StrictHTTPServerOptions) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: options}
+}
+
+type strictHandler struct {
+	ssi         StrictServerInterface
+	middlewares []StrictMiddlewareFunc
+	options     StrictHTTPServerOptions
+}
+
+// GetPosts operation middleware
+func (sh *strictHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
+	var request GetPostsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPosts(ctx, request.(GetPostsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPosts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostsResponseObject); ok {
+		if err := validResponse.VisitGetPostsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PostPosts operation middleware
+func (sh *strictHandler) PostPosts(w http.ResponseWriter, r *http.Request) {
+	var request PostPostsRequestObject
+
+	var body PostPostsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostPosts(ctx, request.(PostPostsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostPosts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostPostsResponseObject); ok {
+		if err := validResponse.VisitPostPostsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// DeletePostsPostId operation middleware
+func (sh *strictHandler) DeletePostsPostId(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request DeletePostsPostIdRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePostsPostId(ctx, request.(DeletePostsPostIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePostsPostId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePostsPostIdResponseObject); ok {
+		if err := validResponse.VisitDeletePostsPostIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// GetPostsPostId operation middleware
+func (sh *strictHandler) GetPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request GetPostsPostIdRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostsPostId(ctx, request.(GetPostsPostIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostsPostId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostsPostIdResponseObject); ok {
+		if err := validResponse.VisitGetPostsPostIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// GetPostsPostIdComments operation middleware
+func (sh *strictHandler) GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request GetPostsPostIdCommentsRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostsPostIdComments(ctx, request.(GetPostsPostIdCommentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostsPostIdComments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostsPostIdCommentsResponseObject); ok {
+		if err := validResponse.VisitGetPostsPostIdCommentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PostPostsPostIdComments operation middleware
+func (sh *strictHandler) PostPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request PostPostsPostIdCommentsRequestObject
+
+	request.PostId = postId
+
+	var body PostPostsPostIdCommentsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostPostsPostIdComments(ctx, request.(PostPostsPostIdCommentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostPostsPostIdComments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostPostsPostIdCommentsResponseObject); ok {
+		if err := validResponse.VisitPostPostsPostIdCommentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PutPostsPostIdComments operation middleware
+func (sh *strictHandler) PutPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request PutPostsPostIdCommentsRequestObject
+
+	request.PostId = postId
+
+	var body PutPostsPostIdCommentsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutPostsPostIdComments(ctx, request.(PutPostsPostIdCommentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutPostsPostIdComments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutPostsPostIdCommentsResponseObject); ok {
+		if err := validResponse.VisitPutPostsPostIdCommentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// DeletePostsPostIdCommentsCommentId operation middleware
+func (sh *strictHandler) DeletePostsPostIdCommentsCommentId(w http.ResponseWriter, r *http.Request, postId PostId, commentId CommentId) {
+	var request DeletePostsPostIdCommentsCommentIdRequestObject
+
+	request.PostId = postId
+	request.CommentId = commentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePostsPostIdCommentsCommentId(ctx, request.(DeletePostsPostIdCommentsCommentIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePostsPostIdCommentsCommentId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePostsPostIdCommentsCommentIdResponseObject); ok {
+		if err := validResponse.VisitDeletePostsPostIdCommentsCommentIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PutPostsPostIdCommentsCommentId operation middleware
+func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, r *http.Request, postId PostId, commentId CommentId) {
+	var request PutPostsPostIdCommentsCommentIdRequestObject
+
+	request.PostId = postId
+	request.CommentId = commentId
+
+	var body PutPostsPostIdCommentsCommentIdJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutPostsPostIdCommentsCommentId(ctx, request.(PutPostsPostIdCommentsCommentIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutPostsPostIdCommentsCommentId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutPostsPostIdCommentsCommentIdResponseObject); ok {
+		if err := validResponse.VisitPutPostsPostIdCommentsCommentIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// Base64 encoded, gzipped, json marshaled Swagger object
+var swaggerSpec = []string{
+
+	"H4sIAAAAAAAC/+xYUW/jNgz+KwK3R+3s7LoXv6U5dOg2dMG2Yg9FMag20+gQWzqJvlsW+L8PkmzHidO6",
+	"7rK0HfZSVLEoffxIfqS9gVTlWhVYkIVkA1oYkSOh8auZynMs6DJziwxtaqQmqQpI4PIDUwtGS2Rp2AQc",
+	"pHugBS2BQyFyhATS9gQOBj+V0mAGCZkSOdh0iblwRy+UyQVBAmUp3U5aa2dsycjiHqqKw1zZARha2Qcw",
+	"6GD7TwBUzthqVVj0xJyL7Bf8VKIlt0pVQY6BZANC65VMhUMXfbQO4qZzjTZKoyEZDkFjlHH/9N3dIr2p",
+	"t922oNTdR0wpgNol41xkrIFVcbhQ5k5mGRavCeMWVMXhStGFKovsNQG8UsQCqIrDdSFKWioj/8JXBXIH",
+	"l3scbu4WbR9FMHlCuvOun/1nBgVh9oegnaMyQfgNyRwPnSezJ11b6mzk0XsM+mMb8LzxeAdzn17e6lyh",
+	"ywO8dcjIxZ8/YXFPS0i+i2MOuSya9WQIW3PMIQBO3t5iwJQO6lI/uFNqhcKXNkla4UE4xwlyOH8o2DXC",
+	"hygfFfBJPBjxjtu7huMyZd+3A4rAwWJaGknrX13lB9x3KAyaaekuaVYXDb8//P4b1DrhQ+WfbrleEumg",
+	"NLJYqH6jnc4v2UIZJtzfMmdWLeiLMNiGwkt7mbPp/BI4fEZjg+HkXfwubnJFaAkJvPc/cd+mPfDItWj/",
+	"3z162l00vLS6ng/fI839hr0u/G0cjxJlSZh7w68NLiCBr6Lt8BPVChr5UqxaXoQxYn1Ign/+0e06i88e",
+	"OrCFGrVtzsetzHNh1sEtJlYrFpyvuB9U+t47QFv3fXc/V9l6lOdDDodCqHYT0Q1JVY/yyVEvPsTsLNRv",
+	"oDceprczjHmTybBJv3/W1QTJzW4d3cC1RQO31W03dAEiE6zAL2HydIeENI42YeCsQhGtkLAf1A/+dx/W",
+	"eTOedmfvm8MebLdEtZnDtRehs371Xik2q0P2PIqc0ftho8509zip0yyXxT6rgRQm2DzM8iTubXczf1we",
+	"jk5k/K+n+pFEhFmNqVzI9MFcjOoXsWGRDXTMmu0vxeaTtLoZdU8q1y2Tw4p9TC6PL/w7U++Jtb+N3JuU",
+	"/2mWMdEkAiPFRF14HOqBci8hyreQDyMHgdOp4ymSYHyDe5aajMuza/+q1GbXI7IebdovbePmjiYZZ50P",
+	"dc/LSj64c3vHf3Jq2X4I7Q8uI2ThJSLxGppLfIrm8r+kNJKSdkmyaD43SVaaFSQQuVd1Z1rncu97gE/t",
+	"9ht7WFa31d8BAAD//0ttgr1RGAAA",
+}
+
+// GetSwagger returns the content of the embedded swagger specification file
+// or error if failed to decode
+func decodeSpec() ([]byte, error) {
+	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+	if err != nil {
+		return nil, fmt.Errorf("error base64 decoding spec: %s", err)
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(zipped))
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %s", err)
+	}
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %s", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+var rawSpec = decodeSpecCached()
+
+// a naive cached of a decoded swagger spec
+func decodeSpecCached() func() ([]byte, error) {
+	data, err := decodeSpec()
+	return func() ([]byte, error) {
+		return data, err
+	}
+}
+
+// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
+func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
+	var res = make(map[string]func() ([]byte, error))
+	if len(pathToFile) > 0 {
+		res[pathToFile] = rawSpec
+	}
+
+	return res
+}
+
+// GetSwagger returns the Swagger specification corresponding to the generated code
+// in this file. The external references of Swagger specification are resolved.
+// The logic of resolving external references is tightly connected to "import-mapping" feature.
+// Externally referenced files must be embedded in the corresponding golang packages.
+// Urls can be supported but this task was out of the scope.
+func GetSwagger() (swagger *openapi3.T, err error) {
+	var resolvePath = PathToRawSpec("")
+
+	loader := openapi3.NewLoader()
+	loader.IsExternalRefsAllowed = true
+	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
+		var pathToFile = url.String()
+		pathToFile = path.Clean(pathToFile)
+		getSpec, ok := resolvePath[pathToFile]
+		if !ok {
+			err1 := fmt.Errorf("path not found: %s", pathToFile)
+			return nil, err1
+		}
+		return getSpec()
+	}
+	var specData []byte
+	specData, err = rawSpec()
+	if err != nil {
+		return
+	}
+	swagger, err = loader.LoadFromData(specData)
+	if err != nil {
+		return
+	}
+	return
 }
