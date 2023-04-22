@@ -132,15 +132,6 @@ CREATE TABLE IF NOT EXISTS future_contribution (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS future_contribution_index ON future_contribution(user_sponsor_id, repo_id, currency, day);
 
-CREATE TABLE IF NOT EXISTS wallet_address (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id     UUID CONSTRAINT fk_user_id_duc REFERENCES users (id),
-    currency    VARCHAR(8) NOT NULL,
-    address  	VARCHAR(255),
-    is_deleted	BOOLEAN
-);
-CREATE UNIQUE INDEX IF NOT EXISTS wallet_address_index ON wallet_address(address);
-
 CREATE TABLE IF NOT EXISTS invite (
     email VARCHAR(64),
     invite_email VARCHAR(64),

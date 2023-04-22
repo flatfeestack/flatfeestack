@@ -351,62 +351,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-  /users/me/wallets:
-    get:
-      tags:
-        - Users
-      security:
-        - bearerAuth: [ User ]
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Wallet'
-    post:
-      tags:
-        - Users
-      security:
-        - bearerAuth: [ User ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Wallet'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Wallet'
-        '500':
-          description: Internal Server Error
-        '409':
-          description: Conflict
-    delete:
-      tags:
-        - Users
-      security:
-        - bearerAuth: [ User ]
-      parameters:
-        - name: uuid
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: OK
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal Server Error
   /users/git-email:
     post:
       tags:
@@ -1070,20 +1014,7 @@ components:
       required:
         - repo
         - currencyBalance
-    Wallet:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        currency:
-          type: string
-        address:
-          type: string
-      required:
-        - id
-        - currency
-        - address
+
     EmailToken:
       type: object
       properties:

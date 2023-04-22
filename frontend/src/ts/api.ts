@@ -10,7 +10,6 @@ import type {
   Invitation,
   PaymentCycle,
   PaymentResponse,
-  Wallet,
   Repo,
   RepoMapping,
   Time,
@@ -136,14 +135,6 @@ export const API = {
       backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>
       backendToken.delete(`users/me/git-email/${encodeURIComponent(email)}`),
-    getPayoutWallets: () =>
-      backendToken.get(`users/me/wallets`).json<Wallet[]>(),
-    addPayoutWallet: (currency: string, address: string) =>
-      backendToken
-        .post(`users/me/wallets`, { json: { currency, address } })
-        .json<Wallet>(),
-    removePayoutWallet: (id: string) =>
-      backendToken.delete(`users/me/wallets/${id}`),
     updatePaymentMethod: (method: string) =>
       backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),

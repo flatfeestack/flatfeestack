@@ -273,52 +273,6 @@ export interface paths {
       };
     };
   };
-  "/users/me/wallets": {
-    get: {
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": (components["schemas"]["Wallet"])[];
-          };
-        };
-      };
-    };
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Wallet"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Wallet"];
-          };
-        };
-        /** @description Conflict */
-        409: never;
-        /** @description Internal Server Error */
-        500: never;
-      };
-    };
-    delete: {
-      parameters: {
-        query: {
-          uuid: string;
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: never;
-        /** @description Forbidden */
-        403: never;
-        /** @description Internal Server Error */
-        500: never;
-      };
-    };
-  };
   "/users/git-email": {
     post: {
       requestBody: {
@@ -809,12 +763,6 @@ export interface components {
       currencyBalance: {
         [key: string]: string | undefined;
       };
-    };
-    Wallet: {
-      /** Format: uuid */
-      id: string;
-      currency: string;
-      address: string;
     };
     EmailToken: {
       email: string;

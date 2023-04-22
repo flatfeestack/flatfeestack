@@ -1,13 +1,16 @@
 <script lang="ts">
-  import Navigation from "../components/Navigation.svelte";
-  import { error, user, config } from "../ts/mainStore";
-  import Fa from "svelte-fa";
-  import { API } from "../ts/api";
-  import { faUpload } from "@fortawesome/free-solid-svg-icons";
-  import { faTrash, faClock } from "@fortawesome/free-solid-svg-icons";
-  import type { GitUser, Wallet, Currency } from "../types/backend";
+  import {
+    faClock,
+    faTrash,
+    faUpload,
+  } from "@fortawesome/free-solid-svg-icons";
   import { onMount } from "svelte";
+  import Fa from "svelte-fa";
+  import Navigation from "../components/Navigation.svelte";
+  import { API } from "../ts/api";
+  import { error, user } from "../ts/mainStore";
   import { formatDate, timeSince } from "../ts/services";
+  import type { GitUser } from "../types/backend";
 
   let nameOrig = $user.name;
   let timeoutName;
@@ -15,11 +18,6 @@
 
   let gitEmails: GitUser[] = [];
   let newEmail = "";
-
-  let payoutWallets: Wallet[] = [];
-  let currenciesWithoutWallet: Map<string, Currency>;
-  let newPayoutCurrency: string;
-  let newPayoutAddress: "";
 
   $: {
     if (timeoutName) {
@@ -31,69 +29,6 @@
         nameOrig = $user.name;
       }
     }, 1000);
-  }
-
-  $: {
-    let tmp: Map<string, Currency> = new Map<string, Currency>();
-    //https://stackoverflow.com/questions/34913675/how-to-iterate-keys-values-in-javascript
-    const e = Object.entries($config.supportedCurrencies);
-    for (const [key, value] of e) {
-      if (!payoutWallets.find((e) => e.currency === key) && value.isCrypto) {
-        tmp.set(key, value);
-      }
-    }
-    currenciesWithoutWallet = tmp;
-  }
-
-  $: {
-    const [firstKey] = currenciesWithoutWallet.keys();
-    newPayoutCurrency = newPayoutCurrency || firstKey;
-  }
-
-  async function handleAddPayoutAddress() {
-    try {
-      let regex;
-      switch (newPayoutCurrency) {
-        case "ETH":
-          regex = /^0x[a-fA-F0-9]{40}$/g;
-          break;
-        case "GAS":
-          break;
-        case "XTZ":
-          break;
-        default:
-          throw "Invalid currency";
-      }
-
-      if (!newPayoutCurrency || (regex && !newPayoutAddress.match(regex))) {
-        throw "Invalid ethereum address";
-      }
-
-      const confirmedPayoutWallet: Wallet = await API.user.addPayoutWallet(
-        newPayoutCurrency,
-        newPayoutAddress
-      );
-
-      payoutWallets = [...payoutWallets, confirmedPayoutWallet];
-      newPayoutAddress = "";
-      newPayoutCurrency = "";
-    } catch (e) {
-      if (typeof e !== "string" && e.response.status === 409) {
-        $error =
-          "Wallet Address is already used by someone else. Please use one Wallet per user.";
-        return;
-      }
-      $error = e;
-    }
-  }
-
-  async function removePaymentAddress(addressNumber: string) {
-    try {
-      await API.user.removePayoutWallet(addressNumber);
-      payoutWallets = payoutWallets.filter((e) => e.id !== addressNumber);
-    } catch (e) {
-      $error = e;
-    }
   }
 
   const onFileSelected = (e) => {
@@ -142,10 +77,7 @@
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
-      const pr2 = API.user.getPayoutWallets();
       const res1 = await pr1;
-      const res2 = await pr2;
-      payoutWallets = res2 ? res2 : payoutWallets;
       gitEmails = res1 ? res1 : gitEmails;
     } catch (e) {
       $error = e;
@@ -256,73 +188,6 @@
               </form>
             </div>
           </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2 class="p-2 ml-5 mb-5 mt-60">Add Your Payout Address</h2>
-  <p class="p-2 m-2">
-    You need to add a wallet address for each currency to receive the funds. In
-    the pending income you can see which currencies have been sent to you. The
-    payout will happen every month. For an Ethereum wallet you can use <a
-      href="https://metamask.io/">Metamask</a
-    >, for NEO you can use <a href="https://neoline.io/en/">NeoLine</a>.
-  </p>
-
-  <div class="container">
-    <table>
-      <thead>
-        <tr>
-          <th>Currency</th>
-          <th>Payout Address</th>
-          <th>Delete</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each payoutWallets as address}
-          <tr>
-            <td><strong>{address.currency}</strong></td>
-            <td>{address.address}</td>
-            <td>
-              <button
-                class="accessible-btn"
-                on:click={() => removePaymentAddress(address.id)}
-              >
-                <Fa icon={faTrash} size="md" />
-              </button>
-            </td>
-          </tr>
-        {/each}
-        <tr>
-          {#if [...currenciesWithoutWallet].length > 0}
-            <td colspan="3">
-              <div class="container-small">
-                <select bind:value={newPayoutCurrency}>
-                  {#each [...currenciesWithoutWallet] as [key, value]}
-                    <option value={key}>
-                      {value.name}
-                    </option>
-                  {/each}
-                </select>
-                <input
-                  id="address-input"
-                  name="address"
-                  type="text"
-                  bind:value={newPayoutAddress}
-                  placeholder="Address"
-                />
-                <form
-                  class="p-2"
-                  on:submit|preventDefault={handleAddPayoutAddress}
-                >
-                  <button class="ml-5 p-2 button1" type="submit"
-                    >Add address</button
-                  >
-                </form>
-              </div>
-            </td>
-          {/if}
         </tr>
       </tbody>
     </table>

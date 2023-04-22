@@ -128,7 +128,7 @@
 <Navigation>
   {#if !walletConnected}
     <div class="centerContainer">
-      <p>Please connect you Wallet.</p>
+      <p>Please connect your wallet.</p>
     </div>
   {:else}
     <div>
