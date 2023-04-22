@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS daily_contribution (
     balance              NUMERIC(78), /*256 bits*/
     currency             VARCHAR(8) NOT NULL,
     day                  DATE NOT NULL,
-    created_at           TIMESTAMP NOT NULL
+    created_at           TIMESTAMP NOT NULL,
+    claimed_at           TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS daily_contribution_index ON daily_contribution(user_sponsor_id, user_contributor_id, repo_id, currency, day);
 

@@ -6,7 +6,10 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"regexp"
 	"strings"
@@ -128,8 +131,29 @@ func setup() {
 	}
 }
 func teardown() {
+	opts = &Opts{}
+
 	err := runSQL("drop_test.sql")
 	if err != nil {
 		log.Fatalf("Could not run drop_test.sql: %s", err)
 	}
+}
+
+func setupPayoutTestServer(t *testing.T) *httptest.Server {
+	usdcData, err := os.ReadFile("./fixtures/payout_response_usdc.json")
+	require.Nil(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/admin/sign/usdc":
+			w.WriteHeader(200)
+			w.Write(usdcData)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+
+	opts.PayoutUrl = server.URL
+
+	return server
 }

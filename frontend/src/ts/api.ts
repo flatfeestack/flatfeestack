@@ -16,11 +16,12 @@ import type {
   Time,
   User,
   UserStatus,
+  PayoutResponse,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
 import { refresh } from "./services";
-import type { DaoConfig } from "../types/payout";
+import type { DaoConfig, PayoutConfig } from "../types/payout";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -179,6 +180,10 @@ export const API = {
         .json<ContributionSummary[]>(),
     summary: (uuid: string) =>
       backendToken.post(`users/summary/${uuid}`).json<User>(),
+    requestPayout: (targetCurrency: "ETH" | "GAS" | "USD") =>
+      backendToken
+        .post(`users/me/request-payout/${targetCurrency}`)
+        .json<PayoutResponse>(),
   },
   repos: {
     search: (s: string) =>
@@ -232,5 +237,6 @@ export const API = {
   },
   payout: {
     daoConfig: () => payout.get(`config/dao`).json<DaoConfig>(),
+    payoutConfig: () => payout.get(`config/payout`).json<PayoutConfig>(),
   },
 };

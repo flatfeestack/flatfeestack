@@ -4,6 +4,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/go-jose/go-jose/v3/json"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -39,24 +40,6 @@ type Repo struct {
 	Score       uint32    `json:"score"`
 	Source      *string   `json:"source"`
 	CreatedAt   time.Time `json:"createdAt"`
-}
-
-type PayoutRequest struct {
-	UserId       uuid.UUID
-	BatchId      uuid.UUID
-	Currency     string
-	ExchangeRate big.Float
-	Tea          int64
-	Address      string
-	CreatedAt    time.Time
-}
-
-type PayoutsResponse struct {
-	BatchId   uuid.UUID
-	TxHash    string
-	Error     *string
-	CreatedAt time.Time
-	Payouts   PayoutResponse
 }
 
 type GitEmail struct {
@@ -95,17 +78,32 @@ type PaymentCycle struct {
 	Freq  int64     `json:"freq"`
 }
 
+// https://stackoverflow.com/a/33072822
+type JsonNullTime struct {
+	sql.NullTime
+}
+
+func (v JsonNullTime) MarshalJSON() ([]byte, error) {
+	if v.Valid {
+		return json.Marshal(v.Time)
+	} else {
+		return json.Marshal(nil)
+	}
+}
+
 type Contribution struct {
-	RepoName         string    `json:"repoName"`
-	RepoUrl          string    `json:"repoUrl"`
-	SponsorName      *string   `json:"sponsorName,omitempty"`
-	SponsorEmail     string    `json:"sponsorEmail"`
-	ContributorName  *string   `json:"contributorName,omitempty"`
-	ContributorEmail string    `json:"contributorEmail"`
-	Balance          *big.Int  `json:"balance"`
-	Currency         string    `json:"currency"`
-	PaymentCycleInId uuid.UUID `json:"paymentCycleInId"`
-	Day              time.Time `json:"day"`
+	Id               uuid.UUID
+	RepoName         string       `json:"repoName"`
+	RepoUrl          string       `json:"repoUrl"`
+	SponsorName      *string      `json:"sponsorName,omitempty"`
+	SponsorEmail     string       `json:"sponsorEmail"`
+	ContributorName  *string      `json:"contributorName,omitempty"`
+	ContributorEmail string       `json:"contributorEmail"`
+	Balance          *big.Int     `json:"balance"`
+	Currency         string       `json:"currency"`
+	PaymentCycleInId uuid.UUID    `json:"paymentCycleInId"`
+	Day              time.Time    `json:"day"`
+	ClaimedAt        JsonNullTime `json:"claimedAt"`
 }
 
 type Wallet struct {
@@ -305,6 +303,29 @@ func findSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 	return scanRepo(rows)
 }
 
+func findOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uuid.UUID, error) {
+	contributionIds := []uuid.UUID{}
+
+	s := `SELECT id FROM daily_contribution WHERE user_contributor_id = $1 AND currency = $2`
+	rows, err := db.Query(s, contributorUserId, currency)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var id uuid.UUID
+		err = rows.Scan(&id)
+
+		if err != nil {
+			return nil, err
+		}
+
+		contributionIds = append(contributionIds, id)
+	}
+	return contributionIds, nil
+}
+
 func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
 	cs := []Contribution{}
 	subQuery := "d.user_sponsor_id"
@@ -312,7 +333,7 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 		subQuery = "d.user_contributor_id"
 	}
 	s := `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
-                 d.balance, d.currency, d.payment_cycle_in_id, d.day
+                 d.balance, d.currency, d.payment_cycle_in_id, d.day, d.claimed_at
             FROM daily_contribution d
                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
                 INNER JOIN users co ON d.user_contributor_id = co.id
@@ -338,7 +359,9 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 			&b,
 			&c.Currency,
 			&c.PaymentCycleInId,
-			&c.Day)
+			&c.Day,
+			&c.ClaimedAt,
+		)
 
 		if err != nil {
 			return nil, err
@@ -352,6 +375,27 @@ func findContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 		cs = append(cs, c)
 	}
 	return cs, nil
+}
+
+func markContributionAsClaimed(contributionIds []uuid.UUID) error {
+	stmt, err := db.Prepare(`
+		UPDATE daily_contribution
+		set claimed_at = $2
+		WHERE id = ANY($1)
+		AND claimed_at IS NULL
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE daily_contribution for statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var _ sql.Result
+	_, err = stmt.Exec(pq.Array(contributionIds), timeNow().Format("2006-01-02T15:04:05"))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // *********************************************************************************
@@ -803,8 +847,6 @@ func insertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, re
 		return err
 	}
 	return handleErrMustInsertOne(res)
-
-	return nil
 }
 
 func findSumDailyContributors(userContributorId uuid.UUID) (map[string]*Balance, error) {
@@ -1195,6 +1237,25 @@ func countEmailSentByEmail(email string, emailType string) (int, error) {
 		return c, nil
 	default:
 		return 0, err
+	}
+}
+
+func sumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
+	var c string
+	err := db.
+		QueryRow(`SELECT COALESCE(SUM(balance), 0) AS c FROM daily_contribution WHERE id = ANY($1)`, pq.Array(contributionIds)).
+		Scan(&c)
+	switch err {
+	case sql.ErrNoRows:
+		return big.NewInt(0), nil
+	case nil:
+		b1, ok := new(big.Int).SetString(c, 10)
+		if !ok {
+			return big.NewInt(0), fmt.Errorf("not a big.int %v", b1)
+		}
+		return b1, nil
+	default:
+		return big.NewInt(0), err
 	}
 }
 

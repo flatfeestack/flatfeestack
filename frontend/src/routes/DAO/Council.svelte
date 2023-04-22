@@ -1,13 +1,14 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { navigate } from "svelte-routing";
-  import { councilMembers, userEthereumAddress } from "../../ts/daoStore";
-  import { error, isSubmitting } from "../../ts/mainStore";
+  import Navigation from "../../components/DAO/Navigation.svelte";
   import AddVotingSlot from "../../components/DAO/council/AddVotingSlot.svelte";
   import CancelVotingSlot from "../../components/DAO/council/CancelVotingSlot.svelte";
-  import Navigation from "../../components/DAO/Navigation.svelte";
   import MembershipRequests from "../../components/DAO/council/MembershipRequests.svelte";
+  import { councilMembers } from "../../ts/daoStore";
+  import { userEthereumAddress } from "../../ts/ethStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
-  import { onDestroy } from "svelte";
 
   checkUndefinedProvider();
 

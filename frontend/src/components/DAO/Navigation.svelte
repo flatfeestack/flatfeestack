@@ -12,16 +12,11 @@
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
   import { links } from "svelte-routing";
-  import {
-    councilMembers,
-    membershipStatusValue,
-    provider,
-    signer,
-    userEthereumAddress,
-  } from "../../ts/daoStore";
+  import { councilMembers, membershipStatusValue } from "../../ts/daoStore";
+  import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
-  import showMetaMaskRequired from "../../utils/showMetaMaskRequired";
+  import setSigner from "../../utils/setSigner";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
@@ -42,15 +37,6 @@
     }
   });
 
-  async function connectWallet() {
-    if ($provider === undefined) {
-      showMetaMaskRequired();
-    } else {
-      await $provider.send("eth_requestAccounts", []);
-      $signer = $provider.getSigner();
-    }
-  }
-
   $: {
     if ($membershipStatusValue === null || $councilMembers === null) {
       membershipStatus = "Loading ...";
@@ -68,6 +54,10 @@
     }
 
     return membershipStatusMapping[$membershipStatusValue];
+  }
+
+  async function triggerSetSigner() {
+    await setSigner($provider);
   }
 </script>
 
@@ -146,7 +136,9 @@
       <Fa class="mb-5" icon={faUserAstronaut} size="3x" />
 
       {#if $userEthereumAddress === null}
-        <button class="button4" on:click={connectWallet}>Connect wallet</button>
+        <button class="button4" on:click={() => triggerSetSigner()}
+          >Connect wallet</button
+        >
       {:else}
         <p>
           Hello {truncateEthAddress($userEthereumAddress)}! <br />

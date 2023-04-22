@@ -1,4 +1,4 @@
-import { provider } from "../ts/daoStore";
+import { provider } from "../ts/ethStore";
 import showMetaMaskRequired from "./showMetaMaskRequired";
 
 const checkUndefinedProvider = () =>

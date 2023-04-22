@@ -1,0 +1,6 @@
+{
+  "amount": 10,
+  "currency": "USDC",
+  "encodedUserId": "0x06c73e4796c7cea53afe1e6145c9e3c8a5804d7d464d9ad0d7a76c988be1293f",
+  "signature": "0x2244246b407d1974a590de53c7179af6153802e342828dda9ef81a3447de20ae3a700bb665f97296bc71f0b586c2952fbbe5150d9416d9c4a99376fbfbd7391a00"
+}

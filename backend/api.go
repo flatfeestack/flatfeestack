@@ -87,17 +87,39 @@ type Plan struct {
 }
 
 type Currencies struct {
-	Name      string `json:"name"`
-	Short     string `json:"short"`
-	Smallest  string `json:"smallest"`
-	FactorPow int64  `json:"factorPow"`
-	IsCrypto  bool   `json:"isCrypto"`
+	Name       string `json:"name"`
+	Short      string `json:"short"`
+	Smallest   string `json:"smallest"`
+	FactorPow  int64  `json:"factorPow"`
+	IsCrypto   bool   `json:"isCrypto"`
+	PayoutName string
 }
 
 var supportedCurrencies = map[string]Currencies{
-	"ETH": {Name: "Ethereum", Short: "ETH", Smallest: "wei", FactorPow: 18, IsCrypto: true},
-	"GAS": {Name: "Neo Gas", Short: "GAS", Smallest: "mGAS", FactorPow: 8, IsCrypto: true},
-	"USD": {Name: "US Dollar", Short: "USD", Smallest: "mUSD", FactorPow: 6, IsCrypto: false},
+	"ETH": {
+		Name:       "Ethereum",
+		Short:      "ETH",
+		Smallest:   "wei",
+		FactorPow:  18,
+		IsCrypto:   true,
+		PayoutName: "eth",
+	},
+	"GAS": {
+		Name:       "Neo Gas",
+		Short:      "GAS",
+		Smallest:   "mGAS",
+		FactorPow:  8,
+		IsCrypto:   true,
+		PayoutName: "neo",
+	},
+	"USD": {
+		Name:       "US Dollar",
+		Short:      "USD",
+		Smallest:   "mUSD",
+		FactorPow:  6,
+		IsCrypto:   false,
+		PayoutName: "usdc",
+	},
 }
 
 type PayoutMeta struct {
@@ -1057,6 +1079,54 @@ func contributionsSum(w http.ResponseWriter, _ *http.Request, user *User) {
 	}
 
 	writeJson(w, rbs)
+}
+
+func requestPayout(w http.ResponseWriter, r *http.Request, user *User) {
+	m := mux.Vars(r)
+	targetCurrency := m["targetCurrency"]
+
+	currencyMetadata, ok := supportedCurrencies[targetCurrency]
+	if !ok {
+		writeErrorf(w, http.StatusBadRequest, "Unsupported currency requested")
+		return
+	}
+
+	ownContributionIds, err := findOwnContributionIds(user.Id, targetCurrency)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Unable to retrieve contributions: %v", err)
+		return
+	}
+
+	totalEarnedAmount, err := sumTotalEarnedAmountForContributionIds(ownContributionIds)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Unable to retrieve already earned amount in target currency: %v", err)
+		return
+	}
+
+	if targetCurrency == "USD" {
+		// For USDC, 10^18 units are one dollar
+		// See explorer https://explorer.bitquery.io/bsc/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
+		// And https://docs.openzeppelin.com/contracts/4.x/erc20#a-note-on-decimals
+		// FlatFeeStack already calculates in micro dollars, so we need to blow up the value a bit
+		usdcDecimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(18-currencyMetadata.FactorPow), nil)
+
+		// Divide the float by the power of 10
+		totalEarnedAmount.Mul(totalEarnedAmount, usdcDecimals)
+	}
+
+	signature, err := payoutRequest(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Error when generating signature: %v", err)
+		return
+	}
+
+	err = markContributionAsClaimed(ownContributionIds)
+	if err != nil {
+		writeErrorf(w, http.StatusBadRequest, "Error when marking contributions as claimed: %v", err)
+		return
+	} else {
+		writeJson(w, signature)
+	}
 }
 
 func lang(r *http.Request) string {

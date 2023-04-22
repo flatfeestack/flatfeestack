@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,48 +33,49 @@ type AnalysisResponse2 struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type PayoutRequest2 struct {
-	UserId uuid.UUID `json:"userId"`
+type PayoutRequest struct {
 	Amount *big.Int  `json:"amount"`
+	UserId uuid.UUID `json:"userId"`
 }
 
 type PayoutResponse struct {
-	TxHash   string           `json:"tx_hash"`
-	Currency string           `json:"currency"`
-	Payout   []PayoutRequest2 `json:"payout_cryptos"`
+	Amount        *big.Int `json:"amount"`
+	Currency      string   `json:"currency"`
+	EncodedUserId string   `json:"encodedUserId"`
+	Signature     string   `json:"signature"`
 }
 
-func payoutRequest(userId uuid.UUID, amount *big.Int) (*PayoutResponse, error) {
+func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	preq := PayoutRequest2{
-		userId,
+	preq := PayoutRequest{
 		amount,
+		userId,
 	}
 
 	body, err := json.Marshal(preq)
 	if err != nil {
-		return nil, err
+		return PayoutResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign/"+strings.ToLower(currency), bytes.NewBuffer(body))
 	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return nil, err
+		return PayoutResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	var presp PayoutResponse
 	err = json.NewDecoder(resp.Body).Decode(&presp)
 	if err != nil {
-		return nil, err
+		return PayoutResponse{}, err
 	}
-	return &presp, nil
+	return presp, nil
 }
 
 func analysisRequest(repoId uuid.UUID, repoUrl string) error {

@@ -25,13 +25,20 @@ type PayoutConfig struct {
 	Env                     string          `json:"env"`
 }
 
-type PayoutRequest2 struct {
+type PayoutRequest struct {
 	Amount *big.Int  `json:"amount"`
 	UserId uuid.UUID `json:"userId"`
 }
 
+type PayoutResponse struct {
+	Amount        *big.Int `json:"amount"`
+	Currency      string   `json:"currency"`
+	EncodedUserId string   `json:"encodedUserId"`
+	Signature     string   `json:"signature"`
+}
+
 func signNeo(w http.ResponseWriter, r *http.Request) {
-	var data PayoutRequest2
+	var data PayoutRequest
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -49,7 +56,6 @@ func signNeo(w http.ResponseWriter, r *http.Request) {
 
 func signEth(w http.ResponseWriter, r *http.Request) {
 	signForEth(w, r, "ETH")
-
 }
 
 func signUsdc(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +63,7 @@ func signUsdc(w http.ResponseWriter, r *http.Request) {
 }
 
 func signForEth(w http.ResponseWriter, r *http.Request, symbol string) {
-	var data PayoutRequest2
+	var data PayoutRequest
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())

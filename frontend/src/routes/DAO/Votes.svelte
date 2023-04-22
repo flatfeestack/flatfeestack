@@ -1,20 +1,20 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { navigate } from "svelte-routing";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
   import {
     currentBlockNumber,
     currentBlockTimestamp,
     daoContract,
     membershipStatusValue,
-    provider,
   } from "../../ts/daoStore";
+  import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
-  import { onDestroy } from "svelte";
 
   let viewVotingSlots: VotingSlotsContainer = {};
   let slotCloseTime: number = 0;

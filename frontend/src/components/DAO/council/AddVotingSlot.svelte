@@ -1,9 +1,6 @@
 <script lang="ts">
-  import {
-    currentBlockNumber,
-    daoContract,
-    provider,
-  } from "../../../ts/daoStore";
+  import { currentBlockNumber, daoContract } from "../../../ts/daoStore";
+  import { provider } from "../../../ts/ethStore";
   import {
     futureBlockDate,
     secondsPerBlock,

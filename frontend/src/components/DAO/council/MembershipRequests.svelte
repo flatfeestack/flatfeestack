@@ -1,9 +1,6 @@
 <script lang="ts">
-  import {
-    membershipContract,
-    provider,
-    userEthereumAddress,
-  } from "../../../ts/daoStore";
+  import { membershipContract } from "../../../ts/daoStore";
+  import { provider, userEthereumAddress } from "../../../ts/ethStore";
   import { error } from "../../../ts/mainStore";
   import membershipStatusMapping from "../../../utils/membershipStatusMapping";
   import Spinner from "../../Spinner.svelte";

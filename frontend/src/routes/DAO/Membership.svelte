@@ -5,15 +5,12 @@
   } from "@fortawesome/free-solid-svg-icons";
   import { getContext } from "svelte";
   import Fa from "svelte-fa";
-  import {
-    userEthereumAddress,
-    membershipContract,
-    membershipStatusValue,
-  } from "../../ts/daoStore";
-  import { error } from "../../ts/mainStore";
   import Navigation from "../../components/DAO/Navigation.svelte";
-  import Dialog from "../../components/Dialog.svelte";
   import RequestMembership from "../../components/DAO/membership/RequestMembership.svelte";
+  import Dialog from "../../components/Dialog.svelte";
+  import { membershipContract, membershipStatusValue } from "../../ts/daoStore";
+  import { userEthereumAddress } from "../../ts/ethStore";
+  import { error } from "../../ts/mainStore";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
 
   let membershipFeePaid = false;
