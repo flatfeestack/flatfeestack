@@ -7,8 +7,16 @@ Authorization: Bearer {{token}}
   "title": "Title of Post",
   "content": "The content of the post"
 }
+> {%
+    client.global.set("new_post_id", response.body.id);
+%}
 
 ### Get all posts
 GET http://{{host}}/posts
+
+### Delete post
+DELETE http://{{host}}/posts/{{new_post_id}}
+Authorization: Bearer {{token}}
+
 
 

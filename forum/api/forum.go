@@ -23,7 +23,7 @@ func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequest
 		return GetPosts500Response{}, nil
 	}
 	if posts == nil {
-		return GetPosts204Response{}, nil
+		return GetPosts204JSONResponse{}, nil
 	}
 	var response GetPosts200JSONResponse
 	for _, dbPost := range posts {
@@ -51,8 +51,12 @@ func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsReque
 }
 
 func (s *StrictServerImpl) DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error) {
-	// Implementation of DeletePostsPostId method
-	return nil, nil
+	err := database.DeletePost(request.PostId)
+	if err != nil {
+		errMsg := err.Error()
+		return DeletePostsPostId204JSONResponse{NoContentJSONResponse{Info: &errMsg}}, err
+	}
+	return DeletePostsPostId200Response{}, nil
 }
 
 func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsPostIdRequestObject) (GetPostsPostIdResponseObject, error) {
