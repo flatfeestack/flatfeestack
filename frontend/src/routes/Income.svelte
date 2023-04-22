@@ -54,12 +54,13 @@
       await contract.withdraw(
         await $signer.getAddress(),
         payoutSignature.encodedUserId,
-        BigNumber.from(payoutSignature.amount),
+        BigNumber.from(String(payoutSignature.amount)),
         ethSignature.v,
         ethSignature.r,
         ethSignature.s
       );
     } catch (exception) {
+      console.error(exception)
       $error = exception.data.data.reason;
       resetViewAfterPayout();
     }

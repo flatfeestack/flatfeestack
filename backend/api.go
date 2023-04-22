@@ -1104,22 +1104,14 @@ func requestPayout(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 
 	if targetCurrency == "USD" {
-		// For USDC, 1 unit is 1 dollar
-		// interesting, people seem to trade in fractions, which apparently is possible
-		// https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
-		// https://ethereum.stackexchange.com/a/101893
-		// but this would mean our contract needs to accept byte32 encoded stuff for the amount, which makes things rather messy
-		powerOfTen := new(big.Int).Exp(big.NewInt(10), big.NewInt(currencyMetadata.FactorPow), nil)
-		if (totalEarnedAmount.Cmp(powerOfTen)) == -1 {
-			writeErrorf(w, http.StatusUnprocessableEntity, "You need to request at least 1 dollar for a payout")
-			return
-		}
-
-		newTotalAmountAsFloat := new(big.Float).SetInt(totalEarnedAmount)
+		// For USDC, 10^18 units are one dollar
+		// See explorer https://explorer.bitquery.io/bsc/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
+		// And https://docs.openzeppelin.com/contracts/4.x/erc20#a-note-on-decimals
+		// FlatFeeStack already calculates in micro dollars, so we need to blow up the value a bit
+		usdcDecimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(18-currencyMetadata.FactorPow), nil)
 
 		// Divide the float by the power of 10
-		newTotalAmountAsFloat.Quo(newTotalAmountAsFloat, new(big.Float).SetInt(powerOfTen))
-		newTotalAmountAsFloat.Int(totalEarnedAmount)
+		totalEarnedAmount.Mul(totalEarnedAmount, usdcDecimals)
 	}
 
 	signature, err := payoutRequest(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
