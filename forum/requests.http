@@ -1,0 +1,14 @@
+### Insert a post
+POST http://{{host}}/posts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Title of Post",
+  "content": "The content of the post"
+}
+
+### Get all posts
+GET http://{{host}}/posts
+
+

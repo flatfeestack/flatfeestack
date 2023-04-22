@@ -31,6 +31,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         '401':
           $ref: "#/components/responses/Unauthorized"
+        '500':
+          $ref: "#/components/responses/InternalServerError"
     get:
       summary: Get all posts
       responses:
@@ -42,8 +44,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Post"
-        '404':
-          $ref: "#/components/responses/NotFound"
+        '204':
+          $ref: "#/components/responses/NoContent"
+        '500':
+          $ref: "#/components/responses/InternalServerError"
   /posts/{postId}:
     get:
       summary: Get a specific post
@@ -312,6 +316,10 @@ components:
                 type: string
             required:
               - error
+    NoContent:
+      description: No Content
+    InternalServerError:
+      description: Internal Server Error
   parameters:
     PostId:
       name: postId
