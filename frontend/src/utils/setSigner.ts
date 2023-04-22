@@ -1,7 +1,7 @@
-import detectEthereumProvider from "@metamask/detect-provider";
-import { signer } from "../ts/daoStore";
-import showMetaMaskRequired from "./showMetaMaskRequired";
 import { Web3Provider } from "@ethersproject/providers";
+import detectEthereumProvider from "@metamask/detect-provider";
+import { signer } from "../ts/ethStore";
+import showMetaMaskRequired from "./showMetaMaskRequired";
 
 async function setSigner(providerValue: Web3Provider | null) {
   if (providerValue === null || providerValue === undefined) {

@@ -1,14 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import {
-    daoContract,
-    membershipContract,
-    membershipStatusValue,
-    signer,
-  } from "../../ts/daoStore";
-  import { error, isSubmitting } from "../../ts/mainStore";
-  import type { Call, ProposalType } from "../../types/dao";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import AddCouncilMember from "../../components/DAO/proposals/AddCouncilMember.svelte";
   import CallExtraOrdinaryAssembly from "../../components/DAO/proposals/CallExtraOrdinaryAssembly.svelte";
@@ -17,6 +9,14 @@
   import RemoveCouncilMember from "../../components/DAO/proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
   import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
+  import {
+    daoContract,
+    membershipContract,
+    membershipStatusValue,
+  } from "../../ts/daoStore";
+  import { signer } from "../../ts/ethStore";
+  import { error, isSubmitting } from "../../ts/mainStore";
+  import type { Call, ProposalType } from "../../types/dao";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
 
   checkUndefinedProvider();

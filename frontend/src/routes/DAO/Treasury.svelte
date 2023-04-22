@@ -2,19 +2,18 @@
   import { BigNumber, ethers } from "ethers";
   import { onDestroy, onMount } from "svelte";
   import { navigate } from "svelte-routing";
+  import Navigation from "../../components/DAO/Navigation.svelte";
   import {
     currentBlockNumber,
     membershipStatusValue,
-    provider,
-    userEthereumAddress,
     walletContract,
   } from "../../ts/daoStore";
+  import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
+  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
   import formateDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
 
   enum TransactionEventType {
     AcceptPayment,

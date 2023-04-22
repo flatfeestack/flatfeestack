@@ -5,14 +5,15 @@
     faXmark,
   } from "@fortawesome/free-solid-svg-icons";
   import type { Event } from "ethers";
+  import { onDestroy } from "svelte";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
-  import { daoContract, userEthereumAddress } from "../../ts/daoStore";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import { daoContract } from "../../ts/daoStore";
+  import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import Navigation from "../../components/DAO/Navigation.svelte";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
-  import { onDestroy } from "svelte";
 
   interface VoteValues {
     canVote: boolean;

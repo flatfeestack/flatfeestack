@@ -1,23 +1,18 @@
-import type { JsonRpcSigner, Web3Provider } from "@ethersproject/providers";
-import { BigNumber, Contract, ethers, Signer } from "ethers";
-import { derived, writable, type Readable, readable } from "svelte/store";
+import type { Web3Provider } from "@ethersproject/providers";
+import { BigNumber, Contract, ethers } from "ethers";
+import { derived, readable, type Readable } from "svelte/store";
 import { DAOABI } from "../contracts/DAO";
 import { MembershipABI } from "../contracts/Membership";
 import { WalletABI } from "../contracts/Wallet";
 import type { DaoConfig } from "../types/payout";
 import { API } from "./api";
+import { provider, signer, userEthereumAddress } from "./ethStore";
 
 export const daoConfig = readable<DaoConfig | null>(null, (set) => {
   API.payout.daoConfig().then((daoConfig) => {
     set(daoConfig);
   });
 });
-
-// provider is null when it's not initialized
-// undefined when we did not detect any provider
-// this case should be handled by the components themselves
-export const provider = writable<Web3Provider | null | undefined>(null);
-export const signer = writable<JsonRpcSigner | null>(null);
 
 export const currentBlockNumber = derived<
   Readable<null | Web3Provider>,
@@ -70,20 +65,6 @@ export const daoContract = derived(
   }
 );
 
-export const userEthereumAddress = derived(
-  signer,
-  ($signer, set) => {
-    if ($signer === null) {
-      set(null);
-    } else {
-      Promise.resolve($signer.getAddress()).then((signerAddress: String) => {
-        set(signerAddress);
-      });
-    }
-  },
-  null
-);
-
 export const membershipContract = derived(
   [daoConfig, provider, signer],
   ([$daoConfig, $provider, $signer]) => {
@@ -118,7 +99,7 @@ export const membershipStatusValue = derived(
 
 export const councilMembers = derived<
   Readable<Contract | null>,
-  Signer[] | null
+  string[] | null
 >(membershipContract, ($membershipContract, set) => {
   if ($membershipContract === null) {
     set(null);

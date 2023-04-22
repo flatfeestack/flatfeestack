@@ -1,7 +1,7 @@
-import type { JsonRpcProvider } from "@ethersproject/providers";
 import type { BigNumber, Contract, Event } from "ethers";
-import { derived, get, type Readable, writable } from "svelte/store";
-import { daoContract, userEthereumAddress } from "./daoStore";
+import { derived, get, writable, type Readable } from "svelte/store";
+import { daoContract } from "./daoStore";
+import { userEthereumAddress } from "./ethStore";
 
 interface ProposalCreatedEvent {
   proposalId: string;
@@ -107,7 +107,7 @@ export const extraOrdinaryAssemblyRequestProposalIds = derived<
 );
 
 export const votesCasted = derived<
-  [Readable<Contract | null>, Readable<JsonRpcProvider | null>],
+  [Readable<Contract | null>, Readable<string | null>],
   Event[] | null
 >(
   [daoContract, userEthereumAddress],

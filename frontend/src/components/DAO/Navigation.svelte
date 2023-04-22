@@ -12,12 +12,8 @@
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
   import { links } from "svelte-routing";
-  import {
-    councilMembers,
-    membershipStatusValue,
-    provider,
-    userEthereumAddress,
-  } from "../../ts/daoStore";
+  import { councilMembers, membershipStatusValue } from "../../ts/daoStore";
+  import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import setSigner from "../../utils/setSigner";

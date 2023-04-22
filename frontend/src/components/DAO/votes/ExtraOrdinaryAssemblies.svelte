@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Event } from "ethers";
   import humanizeDuration from "humanize-duration";
-  import { daoContract, userEthereumAddress } from "../../../ts/daoStore";
+  import { daoContract } from "../../../ts/daoStore";
+  import { userEthereumAddress } from "../../../ts/ethStore";
   import { isSubmitting } from "../../../ts/mainStore";
   import {
     extraOrdinaryAssemblyRequestProposalIds,
