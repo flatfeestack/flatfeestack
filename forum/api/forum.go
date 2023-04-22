@@ -2,6 +2,9 @@ package api
 
 import (
 	"context"
+	database "forum/db"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type StrictServerImpl struct {
@@ -14,13 +17,37 @@ func NewStrictServerImpl() *StrictServerImpl {
 }
 
 func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error) {
-	// Implementation of GetPosts method
-	return nil, nil
+	posts, err := database.GetAllPosts()
+	if err != nil {
+		log.Fatal(err)
+		return GetPosts500Response{}, nil
+	}
+	if posts == nil {
+		return GetPosts204Response{}, nil
+	}
+	var response GetPosts200JSONResponse
+	for _, dbPost := range posts {
+		post := mapDbPostToPost(dbPost)
+		response = append(response, post)
+	}
+	return response, nil
 }
 
 func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error) {
-	// Implementation of PostPosts method
-	return nil, nil
+	id := getCurrentUserId(ctx)
+	newPost, err := database.InsertPost(*id, request.Body.Title, request.Body.Content)
+	if err != nil {
+		return PostPosts500Response{}, err
+	}
+	return PostPosts201JSONResponse{
+		Author:    newPost.Author,
+		Content:   newPost.Content,
+		CreatedAt: newPost.CreatedAt,
+		Id:        newPost.Id,
+		Open:      newPost.Open,
+		Title:     newPost.Title,
+		UpdatedAt: newPost.UpdatedAt,
+	}, nil
 }
 
 func (s *StrictServerImpl) DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error) {
@@ -56,4 +83,26 @@ func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Contex
 func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
 	// Implementation of PutPostsPostIdCommentsCommentId method
 	return nil, nil
+}
+
+func getCurrentUserId(ctx context.Context) *uuid.UUID {
+	user, ok := ctx.Value("currentUser").(*database.DbUser)
+	if !ok {
+		log.Fatal("value is not a *database.DbUser")
+		return nil
+	}
+	return &user.Id
+}
+
+// Function to map DbPost to Post
+func mapDbPostToPost(dbPost database.DbPost) Post {
+	return Post{
+		Author:    dbPost.Author,
+		Content:   dbPost.Content,
+		CreatedAt: dbPost.CreatedAt,
+		Id:        dbPost.Id,
+		Open:      dbPost.Open,
+		Title:     dbPost.Title,
+		UpdatedAt: dbPost.UpdatedAt,
+	}
 }
