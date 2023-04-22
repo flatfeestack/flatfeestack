@@ -27,8 +27,6 @@ export type RepoMapping = components["schemas"]["FakeRepoMapping"];
 
 export type Contribution = components["schemas"]["Contribution"];
 
-export type Wallet = components["schemas"]["Wallet"];
-
 export type Currency = components["schemas"]["Currency"];
 
 export type PaymentResponse = components["schemas"]["PaymentResponse"];
