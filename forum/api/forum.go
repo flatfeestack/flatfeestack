@@ -80,8 +80,27 @@ func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsP
 }
 
 func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error) {
-	// Implementation of GetPostsPostIdComments method
-	return nil, nil
+	exists, err := database.CheckIfPostExists(request.PostId)
+	if err != nil {
+		return GetPosts500Response{}, err
+	}
+	if !exists {
+		return GetPostsPostIdComments404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+
+	dbComments, err := database.GetAllComments(request.PostId)
+	if err != nil {
+		return GetPosts500Response{}, err
+	}
+	if dbComments == nil {
+		return GetPostsPostIdComments204JSONResponse{}, nil
+	}
+	var response GetPostsPostIdComments200JSONResponse
+	for _, dbComment := range dbComments {
+		comment := mapDbCommentToApiComment(dbComment)
+		response = append(response, comment)
+	}
+	return response, nil
 }
 
 func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error) {
@@ -124,4 +143,15 @@ func mapDbPostToPost(dbPost database.DbPost) Post {
 		Title:     dbPost.Title,
 		UpdatedAt: dbPost.UpdatedAt,
 	}
+}
+
+func mapDbCommentToApiComment(dbComment database.DbComment) Comment {
+	comment := Comment{
+		Author:    dbComment.Author,
+		Content:   dbComment.Content,
+		CreatedAt: dbComment.CreatedAt,
+		Id:        dbComment.ID,
+		UpdatedAt: dbComment.UpdatedAt,
+	}
+	return comment
 }
