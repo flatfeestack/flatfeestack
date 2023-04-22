@@ -1,15 +1,21 @@
 <script lang="ts">
+  import { BigNumber, ethers, type Contract, type Signature } from "ethers";
+  import { splitSignature } from "ethers/lib/utils";
   import { onMount } from "svelte";
   import Navigation from "../components/Navigation.svelte";
+  import Spinner from "../components/Spinner.svelte";
+  import { PayoutERC20ABI } from "../contracts/PayoutERC20";
+  import { PayoutEthABI } from "../contracts/PayoutEth";
   import { API } from "../ts/api";
+  import { provider, signer } from "../ts/daoStore";
   import { error } from "../ts/mainStore";
   import { formatBalance, formatDate, timeSince } from "../ts/services";
   import type { PayoutResponse } from "../types/backend";
   import type { PayoutConfig } from "../types/payout";
-  import type { Signature } from "ethers";
-  import { splitSignature } from "ethers/lib/utils";
+  import setSigner from "../utils/setSigner";
 
   let ethSignature: Signature;
+  let isLoading = false;
   let payoutConfig: PayoutConfig;
   let payoutSignature: PayoutResponse;
 
@@ -19,6 +25,52 @@
     if (selectedCurrency !== "GAS") {
       ethSignature = splitSignature(payoutSignature.signature);
     }
+  }
+
+  async function doEthPayout() {
+    isLoading = true;
+
+    if ($signer === null) {
+      await setSigner($provider);
+    }
+
+    let contract: Contract;
+
+    if (payoutSignature.currency === "ETH") {
+      contract = new ethers.Contract(
+        payoutConfig.payoutContractAddresses.eth,
+        PayoutEthABI,
+        $signer
+      );
+    } else {
+      contract = new ethers.Contract(
+        payoutConfig.payoutContractAddresses.usdc,
+        PayoutERC20ABI,
+        $signer
+      );
+    }
+
+    try {
+      await contract.withdraw(
+        await $signer.getAddress(),
+        payoutSignature.encodedUserId,
+        BigNumber.from(payoutSignature.amount),
+        ethSignature.v,
+        ethSignature.r,
+        ethSignature.s
+      );
+    } catch (exception) {
+      $error = exception.data.data.reason;
+      resetViewAfterPayout();
+    }
+
+    resetViewAfterPayout();
+  }
+
+  function resetViewAfterPayout() {
+    payoutSignature = undefined;
+    isLoading = false;
+    document.body.scrollIntoView();
   }
 
   onMount(async () => {
@@ -50,46 +102,63 @@
   {#await API.user.contributionsRcv()}
     ...waiting
   {:then contributions}
-    <div class="container">
-      {#if contributions.some((contribution) => contribution.currency === "USD")}
-        <button on:click={() => requestPayout("USD")} class="button1"
-          >Request USDC payout</button
-        >
-      {/if}
-
-      {#if contributions.some((contribution) => contribution.currency === "ETH")}
-        <button on:click={() => requestPayout("ETH")} class="button1"
-          >Request ETH payout</button
-        >
-      {/if}
-
-      {#if contributions.some((contribution) => contribution.currency === "GAS")}
-        <button on:click={() => requestPayout("GAS")} class="button1"
-          >Request NEO Gas payout</button
-        >
-      {/if}
-    </div>
-
-    {#if payoutSignature !== undefined}
-      <p class="p-2 m-2">
-        Great, a signature for payout has been generated! Please call the
-        withdraw function of our smart contract at {payoutConfig
-          .payoutContractAddresses[payoutSignature.currency.toLowerCase()]} with
-        the following parameters:
-      </p>
-
-      <ul>
-        <li>The address where you want to receive the payout</li>
-        <li>{payoutSignature.encodedUserId}</li>
-        <li>{payoutSignature.amount}</li>
-        {#if ethSignature !== undefined}
-          <li>{ethSignature.v}</li>
-          <li>{ethSignature.r}</li>
-          <li>{ethSignature.s}</li>
-        {:else}
-          <li>{payoutSignature.signature}</li>
+    {#if isLoading}
+      <Spinner />
+    {:else}
+      <div class="container">
+        {#if contributions.some((contribution) => contribution.currency === "USD")}
+          <button on:click={() => requestPayout("USD")} class="button1"
+            >Request USDC payout</button
+          >
         {/if}
-      </ul>
+
+        {#if contributions.some((contribution) => contribution.currency === "ETH")}
+          <button on:click={() => requestPayout("ETH")} class="button1"
+            >Request ETH payout</button
+          >
+        {/if}
+
+        {#if contributions.some((contribution) => contribution.currency === "GAS")}
+          <button on:click={() => requestPayout("GAS")} class="button1"
+            >Request NEO Gas payout</button
+          >
+        {/if}
+      </div>
+
+      {#if payoutSignature !== undefined}
+        <p class="p-2 m-2">
+          Great, a signature for payout has been generated! Please call the
+          withdraw function of our smart contract at {payoutConfig
+            .payoutContractAddresses[payoutSignature.currency.toLowerCase()]} with
+          the following parameters:
+        </p>
+
+        <ul>
+          <li>The address where you want to receive the payout</li>
+          <li>{payoutSignature.encodedUserId}</li>
+          <li>{payoutSignature.amount}</li>
+          {#if ethSignature !== undefined}
+            <li>{ethSignature.v}</li>
+            <li>{ethSignature.r}</li>
+            <li>{ethSignature.s}</li>
+          {:else}
+            <li>{payoutSignature.signature}</li>
+          {/if}
+        </ul>
+
+        {#if ethSignature !== undefined}
+          <p class="p-2 m-2">
+            ... or click the button below to connect MetaMask and let us prepare
+            the transaction.
+          </p>
+
+          <div class="container">
+            <button on:click={() => doEthPayout()} class="button1"
+              >Withdraw!</button
+            >
+          </div>
+        {/if}
+      {/if}
     {/if}
 
     {#if contributions.length > 0}
@@ -125,10 +194,10 @@
                 >
                 <td>{contribution.currency}</td>
                 <td>
-                  {#if contribution.claimedWith != "00000000-0000-0000-0000-000000000000"}
-                    Realized
-                  {:else}
+                  {#if contribution.claimedAt === null}
                     Unclaimed
+                  {:else}
+                    Realized
                   {/if}
                 </td>
                 <td title={formatDate(new Date(contribution.day))}>

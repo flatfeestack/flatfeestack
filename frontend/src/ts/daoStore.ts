@@ -60,11 +60,7 @@ export const currentBlockTimestamp = derived<
 export const daoContract = derived(
   [daoConfig, provider, signer],
   ([$daoConfig, $provider, $signer]) => {
-    if (
-      $provider === null ||
-      $provider === undefined ||
-      $daoConfig === undefined
-    ) {
+    if ($provider === null || $provider === undefined || $daoConfig === null) {
       return null;
     } else if ($signer === null) {
       return new ethers.Contract($daoConfig.dao, DAOABI, $provider);
@@ -146,7 +142,12 @@ export const councilMembers = derived<
 export const walletContract = derived(
   [daoConfig, provider, signer],
   ([$daoConfig, $provider, $signer]) => {
-    if ($provider === null || $provider === undefined || $signer === null) {
+    if (
+      $provider === null ||
+      $provider === undefined ||
+      $signer === null ||
+      $daoConfig === null
+    ) {
       return null;
     } else {
       return new ethers.Contract($daoConfig.wallet, WalletABI, $signer);
