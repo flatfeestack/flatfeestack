@@ -132,11 +132,11 @@
     </div>
   </div>
 
-  <h2 class="p-2 mt-40 ml-5 mb-0">Connect your Git Email to this Account</h2>
+  <h2 class="p-2 ml-5 mb-0">Connect your Git Email to this Account</h2>
   <p class="p-2 m-2">
     If you have multiple git email addresses, you can connect these addresses to
-    your FlatFeeStack account. You must verify your git email address. Once it
-    has been validated, the confirm date will show the date of validation.
+    your FlatFeeStack account. You must verify your git email address. Once
+    validated, the confirmed date will show the validation date.
   </p>
 
   <div class="min-w20 container">
