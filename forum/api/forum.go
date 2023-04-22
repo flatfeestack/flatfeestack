@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	database "forum/db"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -60,8 +61,22 @@ func (s *StrictServerImpl) DeletePostsPostId(ctx context.Context, request Delete
 }
 
 func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsPostIdRequestObject) (GetPostsPostIdResponseObject, error) {
-	// Implementation of GetPostsPostId method
-	return nil, nil
+	dbPost, err := database.GetPostById(request.PostId)
+	if err != nil {
+		return GetPostsPostId500Response{}, err
+	}
+	if dbPost == nil {
+		return GetPostsPostId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+	return GetPostsPostId200JSONResponse{
+		Author:    dbPost.Author,
+		Content:   dbPost.Content,
+		CreatedAt: dbPost.CreatedAt,
+		Id:        dbPost.Id,
+		Open:      dbPost.Open,
+		Title:     dbPost.Title,
+		UpdatedAt: dbPost.UpdatedAt,
+	}, nil
 }
 
 func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error) {
