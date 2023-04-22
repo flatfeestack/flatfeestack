@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { ethers } from "hardhat";
+import { BigNumber } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -23,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { firstCouncilMember } = await getNamedAccounts();
 
-  await deploy("PayoutERC20", {
+  const deploymentResult = await deploy("PayoutERC20", {
     from: firstCouncilMember,
     log: true,
     proxy: {
@@ -36,6 +37,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       },
     },
   });
+
+  if (hre.network.name === "localhost") {
+    const usdc = await deployments.get("USDC");
+    const usdcContract = await ethers.getContractAt("USDC", usdc.address);
+    const tokenQuantityForPayout = await usdcContract.balanceOf(
+      deploymentResult.address
+    );
+
+    if (tokenQuantityForPayout.eq(BigNumber.from(0))) {
+      console.log("Transfering some USDC tokens to payout contract");
+
+      await (
+        await usdcContract.transfer(deploymentResult.address, 10000)
+      ).wait();
+    }
+  }
 };
 
 export default func;
