@@ -5,7 +5,6 @@ import (
 	"forum/globals"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"io"
 	"time"
 )
 
@@ -94,9 +93,11 @@ func GetPostById(id uuid.UUID) (*DbPost, error) {
 	return &post, nil
 }
 
-func closeAndLog(c io.Closer) {
-	err := c.Close()
+func CheckIfPostExists(postId uuid.UUID) (bool, error) {
+	var exists bool
+	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM post WHERE id = $1)`, postId).Scan(&exists)
 	if err != nil {
-		log.Printf("could not close: %v", err)
+		return false, err
 	}
+	return exists, nil
 }

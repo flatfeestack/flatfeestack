@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"forum/globals"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -70,4 +71,11 @@ func InitDb() (*sql.DB, error) {
 
 	log.Infof("Successfully connected to Database!")
 	return db, nil
+}
+
+func closeAndLog(c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		log.Printf("could not close: %v", err)
+	}
 }

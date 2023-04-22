@@ -18,5 +18,9 @@ GET http://{{host}}/posts
 DELETE http://{{host}}/posts/{{new_post_id}}
 Authorization: Bearer {{token}}
 
+### Get all comments to post
+GET http://{{host}}/posts/{{new_post_id}}/comments
+
+
 
 
