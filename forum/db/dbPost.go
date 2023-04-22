@@ -1,6 +1,8 @@
 package database
 
 import (
+	"database/sql"
+	"fmt"
 	"forum/globals"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -60,9 +62,38 @@ func InsertPost(author uuid.UUID, title string, content string) (*DbPost, error)
 	return &post, nil
 }
 
+func DeletePost(id uuid.UUID) error {
+	stmt, err := globals.DB.Prepare(`DELETE FROM post WHERE id = $1`)
+	if err != nil {
+		return err
+	}
+	defer closeAndLog(stmt)
+
+	res, err := stmt.Exec(id)
+	nr, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if nr != 1 {
+		return fmt.Errorf("id %v does not exist", id)
+	}
+	return nil
+}
+
 func closeAndLog(c io.Closer) {
 	err := c.Close()
 	if err != nil {
 		log.Printf("could not close: %v", err)
 	}
+}
+
+func handleErrMustInsertOne(res sql.Result) error {
+	nr, err := res.RowsAffected()
+	if nr == 0 || err != nil {
+		return err
+	}
+	if nr != 1 {
+		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
+	}
+	return nil
 }

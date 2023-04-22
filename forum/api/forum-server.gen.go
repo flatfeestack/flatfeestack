@@ -447,7 +447,8 @@ type ForbiddenJSONResponse struct {
 type InternalServerErrorResponse struct {
 }
 
-type NoContentResponse struct {
+type NoContentJSONResponse struct {
+	Info *string `json:"info,omitempty"`
 }
 
 type NotFoundJSONResponse struct {
@@ -474,11 +475,13 @@ func (response GetPosts200JSONResponse) VisitGetPostsResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetPosts204Response = NoContentResponse
+type GetPosts204JSONResponse struct{ NoContentJSONResponse }
 
-func (response GetPosts204Response) VisitGetPostsResponse(w http.ResponseWriter) error {
+func (response GetPosts204JSONResponse) VisitGetPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(204)
-	return nil
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type GetPosts500Response = InternalServerErrorResponse
@@ -538,12 +541,21 @@ type DeletePostsPostIdResponseObject interface {
 	VisitDeletePostsPostIdResponse(w http.ResponseWriter) error
 }
 
-type DeletePostsPostId204Response struct {
+type DeletePostsPostId200Response struct {
 }
 
-func (response DeletePostsPostId204Response) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response DeletePostsPostId200Response) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
+}
+
+type DeletePostsPostId204JSONResponse struct{ NoContentJSONResponse }
+
+func (response DeletePostsPostId204JSONResponse) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(204)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type DeletePostsPostId401JSONResponse struct{ UnauthorizedJSONResponse }
@@ -551,15 +563,6 @@ type DeletePostsPostId401JSONResponse struct{ UnauthorizedJSONResponse }
 func (response DeletePostsPostId401JSONResponse) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type DeletePostsPostId403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response DeletePostsPostId403JSONResponse) VisitDeletePostsPostIdResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -1120,24 +1123,24 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xZ32/bNhD+V4jbHrlKbt0XvTnuMngbMmNdsIcgGBjpHLOQRJai2nmG/veBpH5aSmQl",
-	"XuoOfQlM8Y78+N3xu5Oyh1AkUqSY6gyCPUimWIIalR0tRZJgqleRGUSYhYpLzUUKAazeEbEheoskdEZA",
-	"gZsJyfQWKKQsQQggrFegoPBjzhVGEGiVI4Us3GLCzNIboRKmIYA858ZS76RxzrTi6T0UBYW1yEZgSJE9",
-	"gEE63+cAKIxzJkWaoSXmgkW/48ccM21GoUi1YSDYA5My5iEz6LwPmYG4b20jlZCoNHeLoFJCmR/94zZI",
-	"b0qz2xqUuPuAoXagumRcsIhUsAoKl0Ld8SjC9JwwNqAKCqtUo0pZ/B7VJ1Q/VnsdhLg0Is6KOLOCwpVY",
-	"Nofq+lwJUs1ZQ30p8jQ6Jx6uhCYOVEHhOmW53grF/8GzAtnBZabdzm1t6KNwLkfcKto+Z39OIdMY/cV0",
-	"Z6mIafxB8wSH1uPRUdvmMpq49AGDdtkKPK1O3MHcp5fWcprKfIC3FhkJ+/tXTO/1FoK3vk8h4Wk1no1h",
-	"q5YZAmBU9GsMmJBOxMqJOyFiZFZBNNcxDsI5TZDd+mPBLhE+RPmkgM/80Yi3jt11nJYph2cbUAQKGYa5",
-	"4nr33tx8h/sOmUK1yM0m1eiy4vfnP/+AUidsqOxsw/VWa+mUhqcb0RfuxXpFNkIRZv7mCcnERn9mCutQ",
-	"2AqSJ2SxXgGFT6gy5zh75b/yq1xhkkMAb+wjarsBC9wznYD9dY+WdhMNK62mtYCfUK+twUGxf+37k0SZ",
-	"a0ys4/cKNxDAd17TY3mlgnr2KhY1L0wpthuS4N9+MVav/flDC9ZQvaYeFhTeOtCPewzVXxv0PEmY2jlO",
-	"CItj4pgrqG2m+tSZ0zTc2Q7kQkS7SbSNseVuUdHNYtPIFb14zU668VBYlu7yG0bmxzDdahity2zcpVt8",
-	"nxvR8hpDcNO9wDdwnaGC2+K2HXZ3PMJIip9dZ20WcffH27uGunC3N0aN/YR4Z5/blFhX7Xf73eJm+CCN",
-	"iVe6GVwH0Z2P9XtPonfuvxl3anWvj5O6iBKeHrLqSCGMrN27imb3WduYPq5LJyfS/8+viVOv+XHqVTbp",
-	"AwJEMokh3/DwwVz0yhfNcXV3dCwr8y/F5lFFouqxj64Tz2Y6jknN5Ljan5LL0xeNTrv9wnWjjtwZlI7p",
-	"8r+IIsKqRCBaEFZePAplJ3uQEPnXkA8Tm4iXU8eX6R+mFrgnqcm0PLu272h1dj0i696+/pI4re+oknHZ",
-	"+hD5tKyko5bNHv/LrqX50NtvXCbIwpeIxDkUF/8liss3SakkJWyTlNnXIZdkuYohAI9JbpOjzOXehwib",
-	"2vX/ENywuC3+DQAA//+VpbJdMRkAAA==",
+	"H4sIAAAAAAAC/+xZ32/bNhD+V4jbHrlKad0XvTnuMngbMmNdsIcgGBjpHLOQRJai2nmG/veBpH5aSmQl",
+	"rusCfSkii0d+993ddyd2B6FIpEgx1RkEO5BMsQQ1Kvu0EEmCqV5G5iHCLFRcai5SCGD5jog10RskoVsE",
+	"FLh5IZneAIWUJQgBhPUOFBR+zLnCCAKtcqSQhRtMmNl6LVTCNASQ59ys1FtpjDOtePoARUFhJbIRGFJk",
+	"j2CQzvYlAApjnEmRZmiJuWTRn/gxx0ybp1Ck2jAQ7IBJGfOQGXTeh8xA3LWOkUpIVJq7TVApocwffXcb",
+	"pLflsrsalLj/gKF2oLpkXLKIVLAKCldC3fMowvScMDagCgrLVKNKWfwe1SdUP1dn7YW4XETcKuKWFRSu",
+	"xaJx6pn+8XQtht0b9eRakOp8C0ZfiTyNzonra6GJA1VQuElZrjdC8f/wrEB2cJnX7uS2/vRROJMDKpe2",
+	"/ey/U8g0Rv8w3dkqYhp/0jzBof14dNCxuYwmbr3HoN22Ak8rjzuY+/TSWrJTmQ/w1iIjYf/+jumD3kDw",
+	"1vcpJDytni/GsFXbDAEwSv0tBkxIJ5Tli3shYmRWpTTXMQ7COU6Q3f5jwS4RPkb5pIBf+KMRb7ndNZyW",
+	"Kfu+DSgChQzDXHG9fW8q3+G+R6ZQzXNzSPV0VfH7699/QakTNlT2bcP1RmvplKZS967izFdLshaKMPNv",
+	"npBMrPVnprAOhe1SeULmqyVQ+IQqc4YXr/xXfpUrTHII4I39idqJwwL3zLRh/3pAS7uJhpVWM77AL6hX",
+	"dsHeQPHa9yeJMteYWMMfFa4hgB+8Zo7zSgX1bCk2rYwpxbZDEvzHb2bVa3/22IY1VK/puQWFtw700xZD",
+	"Pd4GPU8SpraOE8LimDjmCmoHtj51xpuGOzvlXIpoO4m2MbZcFRXdLDbDYtGL18VRDx4Ky8IVv2FkdgjT",
+	"raHUmlyMm3Sb70sjWpYxBLfdAr6FmwwV3BV37bA79wgjKX5207vZxNWPt3NDe+GqN0aN/YR4Z3+3KbGq",
+	"Rvz298vtsCPNEq80M7iGqvE4VfKMQDxN5jxKeLrPpiODMLJy30GaPWTtxfRpPfoyBH7R8nDxmB0Wj3I4",
+	"HxAekkkM+ZqHj+agV37Ejqu6o2NRLf9abB7UHKrZ+uD+8GKm45jUTI6r/DG5PH6z6IzZJ+4XdeTOoGVM",
+	"l/15FBFWJQLRgrCy8CiUE+xeQuTfQj5MHB5Op46nmRtm/ptxo87VzzPUZFqe3dhvszq7npB1b1ffUk6b",
+	"N6pkXLQuOZ+XlXR0ZXPGQHuY9aeV7u3USYL6kqmluUTuDy4TZOFrROIcmot/iubyXVIqSQnbJGX2M8gl",
+	"Wa5iCMBjktvkKHO5dwFhU7v+/wn3WNwV/wcAAP//OPjeEI0ZAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

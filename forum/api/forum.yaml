@@ -71,12 +71,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PostId"
       responses:
+        '200':
+          description: OK
         '204':
-          description: No Content
+          $ref: "#/components/responses/NoContent"
         '401':
           $ref: "#/components/responses/Unauthorized"
-        '403':
-          $ref: "#/components/responses/Forbidden"
 
   /posts/{postId}/comments:
     get:
@@ -318,6 +318,13 @@ components:
               - error
     NoContent:
       description: No Content
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              info:
+                type: string
     InternalServerError:
       description: Internal Server Error
   parameters:
