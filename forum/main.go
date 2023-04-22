@@ -106,9 +106,8 @@ func main() {
 			jwt.AuthMiddleware,
 		},
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			// Define your custom error handling logic
-			log.Fatalln("Handling error:", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.WriteErrorf(w, http.StatusInternalServerError, "Internal Server Error: %v", err.Error())
+			return
 		},
 	}
 

@@ -40,7 +40,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		scopesSlice, ok := scopes.([]string)
 		if !ok {
-			log.Fatal("value is not a []string")
+			log.Error("value is not a []string")
 			utils.WriteErrorf(w, http.StatusInternalServerError, "Auth-Scope is not a []string")
 			return
 		}
