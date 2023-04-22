@@ -19,7 +19,7 @@ func NewStrictServerImpl() *StrictServerImpl {
 func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error) {
 	posts, err := database.GetAllPosts()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return GetPosts500Response{}, nil
 	}
 	if posts == nil {
@@ -88,7 +88,7 @@ func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, 
 func getCurrentUserId(ctx context.Context) *uuid.UUID {
 	user, ok := ctx.Value("currentUser").(*database.DbUser)
 	if !ok {
-		log.Fatal("value is not a *database.DbUser")
+		log.Error("value is not a *database.DbUser")
 		return nil
 	}
 	return &user.Id
