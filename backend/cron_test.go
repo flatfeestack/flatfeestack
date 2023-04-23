@@ -467,11 +467,12 @@ func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Ti
 func setupFunds(t *testing.T, uid uuid.UUID, currency string, freq int64, balance int64, oldPaymentCycleId *uuid.UUID, now time.Time) *uuid.UUID {
 	pow, err := utils.GetFactorInt(currency)
 	assert.Nil(t, err)
-	paymentCycleId, err := db.InsertNewPaymentCycleIn(1, freq, now)
+	paymentCycleId := uuid.New()
+	err = db.InsertNewPaymentCycleIn(paymentCycleId, 1, freq, now)
 	assert.Nil(t, err)
-	err = api.PaymentSuccess(uid, oldPaymentCycleId, paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
+	err = api.PaymentSuccess(uid, oldPaymentCycleId, &paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
 	assert.Nil(t, err)
-	return paymentCycleId
+	return &paymentCycleId
 }
 
 func setupUsers(t *testing.T, userNames ...string) []*uuid.UUID {
