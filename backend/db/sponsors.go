@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type SponsorEvent struct {
+	Id          uuid.UUID  `json:"id"`
+	Uid         uuid.UUID  `json:"uid"`
+	RepoId      uuid.UUID  `json:"repo_id"`
+	EventType   uint8      `json:"event_type"`
+	SponsorAt   *time.Time `json:"sponsor_at"`
+	UnSponsorAt *time.Time `json:"un_sponsor_at"`
+}
+
 func InsertOrUpdateSponsor(event *SponsorEvent) error {
 	//first get last sponsored event to check if we need to insertOrUpdateSponsor or unsponsor
 	//TODO: use mutex
@@ -16,22 +25,47 @@ func InsertOrUpdateSponsor(event *SponsorEvent) error {
 		return err
 	}
 
+	//no event found
 	if id == nil && event.EventType == Inactive {
 		return fmt.Errorf("we want to unsponsor, but we are currently not sponsoring this repo")
 	}
 
-	if id != nil && event.EventType == Inactive && unSponsorAt != nil {
-		return fmt.Errorf("we want to unsponsor, but we already unsponsored it")
-	}
+	//event found
+	if id != nil {
+		if event.EventType == Inactive {
+			if event.SponsorAt != nil || event.UnSponsorAt == nil {
+				return fmt.Errorf("to unsponser, we must set the unsponser_at, but not the sponser_at: "+
+					"event.SponsorAt: %v, event.UnSponsorAt: %v", event.SponsorAt, event.UnSponsorAt)
+			}
+			if unSponsorAt != nil {
+				return fmt.Errorf("we want to unsponsor, but we already unsponsored it: unSponsorAt: %v", unSponsorAt)
+			}
+			if unSponsorAt == nil && event.UnSponsorAt.Before(*sponsorAt) {
+				return fmt.Errorf("we want to unsponsor, but the unsponsor date is before the sponsor date: sponsorAt: "+
+					"%v, event.UnSponsorAt: %v", sponsorAt, event.UnSponsorAt)
+			}
+		} else if event.EventType == Active {
+			if event.SponsorAt == nil || event.UnSponsorAt != nil {
+				return fmt.Errorf("to sponser, we must set the sponsor_at, but not the unsponser_at: "+
+					"event.SponsorAt: %v, event.UnSponsorAt: %v", event.SponsorAt, event.UnSponsorAt)
+			}
+			if unSponsorAt == nil {
+				return fmt.Errorf("we want to sponsor, but we are already sponsoring this repo: "+
+					"sponsor_at: %v, un_sponsor_at: %v", event.SponsorAt, unSponsorAt)
+			} else {
+				if event.SponsorAt.Before(*sponsorAt) {
+					return fmt.Errorf("we want to sponsor, but we want want to sponser this repo in the past: "+
+						"event.SponsorAt: %v, sponsorAt: %v", event.SponsorAt, sponsorAt)
+				}
+				if event.SponsorAt.Before(*unSponsorAt) {
+					return fmt.Errorf("we want to sponsor, but we want want to sponser this repo in the past: "+
+						"event.SponsorAt: %v, unSponsorAt: %v", event.SponsorAt, unSponsorAt)
+				}
+			}
+		} else {
+			return fmt.Errorf("unknown event type %v", event.EventType)
+		}
 
-	if id != nil && event.EventType == Active && (unSponsorAt == nil || event.SponsorAt.Before(*unSponsorAt)) {
-		return fmt.Errorf("we want to insertOrUpdateSponsor, but we are already sponsoring this repo: "+
-			"sponsor_at: %v, un_sponsor_at: %v", event.SponsorAt, unSponsorAt)
-	}
-
-	if id != nil && event.EventType == Active && !sponsorAt.Before(event.SponsorAt) {
-		return fmt.Errorf("we want to insertOrUpdateSponsor, but we want to sponsor at an earlier time: "+
-			"sponsor_at: %v, sponsor_at(db): %v, un_sponsor_at: %v, %v", event.SponsorAt, sponsorAt, unSponsorAt, event.SponsorAt.Before(*unSponsorAt))
 	}
 
 	if event.EventType == Active {
@@ -87,7 +121,7 @@ func FindLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 	}
 }
 
-func FindSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
+func FindSponsoredReposByUserId(userId uuid.UUID) ([]Repo, error) {
 	//we want to send back an empty array, don't change
 	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
             FROM sponsor_event s
@@ -98,7 +132,7 @@ func FindSponsoredReposById(userId uuid.UUID) ([]Repo, error) {
 		return nil, err
 	}
 	defer closeAndLog(rows)
-	return ScanRepo(rows)
+	return scanRepo(rows)
 }
 
 type SponsorResult struct {

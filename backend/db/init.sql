@@ -26,18 +26,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at            TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS user_balances (
+CREATE TABLE IF NOT EXISTS payment_event (
     id                  UUID PRIMARY KEY,
     payment_cycle_in_id UUID CONSTRAINT fk_payment_cycle_in_id_ub REFERENCES payment_cycle_in (id),
     user_id             UUID CONSTRAINT fk_user_id_ub REFERENCES users (id),
-    from_user_id        UUID CONSTRAINT fk_from_user_id_ub REFERENCES users (id),
-    balance             NUMERIC(78), /*256 bits*/
-    split               NUMERIC(78), /*256 bits*/
+    balance             NUMERIC(78), /*256 bits, to be precise: 259.5 bits */
+    daily_spending      NUMERIC(78), /*256 bits, to be precise: 259.5 bits */
     currency            VARCHAR(8) NOT NULL,
     balance_type        VARCHAR(16) NOT NULL,
     created_at          TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS user_balances_index ON user_balances (payment_cycle_in_id, user_id, balance_type, currency, split);
+CREATE UNIQUE INDEX IF NOT EXISTS payment_event_index ON payment_event (payment_cycle_in_id, user_id, balance_type, currency);
 
 CREATE TABLE IF NOT EXISTS repo (
     id          UUID PRIMARY KEY,

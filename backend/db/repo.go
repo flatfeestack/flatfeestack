@@ -4,7 +4,19 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
+	"time"
 )
+
+type Repo struct {
+	Id          uuid.UUID `json:"uuid"`
+	Url         *string   `json:"url"`
+	GitUrl      *string   `json:"gitUrl"`
+	Name        *string   `json:"name"`
+	Description *string   `json:"description"`
+	Score       uint32    `json:"score"`
+	Source      *string   `json:"source"`
+	CreatedAt   time.Time
+}
 
 func InsertOrUpdateRepo(repo *Repo) error {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
@@ -46,10 +58,10 @@ func FindReposByName(name string) ([]Repo, error) {
 		return nil, err
 	}
 	defer closeAndLog(rows)
-	return ScanRepo(rows)
+	return scanRepo(rows)
 }
 
-func ScanRepo(rows *sql.Rows) ([]Repo, error) {
+func scanRepo(rows *sql.Rows) ([]Repo, error) {
 	repos := []Repo{}
 	for rows.Next() {
 		var r Repo

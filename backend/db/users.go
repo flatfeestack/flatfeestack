@@ -112,7 +112,7 @@ func InsertUser(user *User) error {
 	return handleErrMustInsertOne(res)
 }
 
-func UpdateUser(user *User) error {
+func UpdateStripe(user *User) error {
 	stmt, err := db.Prepare(`UPDATE users SET 
                                            stripe_id=$1,  
                                            stripe_payment_method=$2, 

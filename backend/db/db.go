@@ -27,29 +27,9 @@ var (
 	agg string
 )
 
-type SponsorEvent struct {
-	Id          uuid.UUID  `json:"id"`
-	Uid         uuid.UUID  `json:"uid"`
-	RepoId      uuid.UUID  `json:"repo_id"`
-	EventType   uint8      `json:"event_type"`
-	SponsorAt   time.Time  `json:"sponsor_at"`
-	UnSponsorAt *time.Time `json:"un_sponsor_at"`
-}
-
 type RepoBalance struct {
 	Repo            Repo                `json:"repo"`
 	CurrencyBalance map[string]*big.Int `json:"currencyBalance"`
-}
-
-type Repo struct {
-	Id          uuid.UUID `json:"uuid"`
-	Url         *string   `json:"url"`
-	GitUrl      *string   `json:"gitUrl"`
-	Name        *string   `json:"name"`
-	Description *string   `json:"description"`
-	Score       uint32    `json:"score"`
-	Source      *string   `json:"source"`
-	CreatedAt   time.Time
 }
 
 type PayoutRequest struct {
@@ -72,17 +52,6 @@ type UserBalanceCore struct {
 	UserId   uuid.UUID `json:"userId"`
 	Balance  *big.Int  `json:"balance"`
 	Currency string    `json:"currency"`
-}
-
-type UserBalance struct {
-	UserId           uuid.UUID  `json:"userId"`
-	Balance          *big.Int   `json:"balance"`
-	Split            *big.Int   `json:"split"`
-	PaymentCycleInId *uuid.UUID `json:"paymentCycleInId"`
-	FromUserId       *uuid.UUID `json:"fromUserId"`
-	BalanceType      string     `json:"balanceType"`
-	Currency         string     `json:"currency"`
-	CreatedAt        time.Time  `json:"createdAt"`
 }
 
 type UserStatus struct {
@@ -117,8 +86,8 @@ type PayoutInfo struct {
 }
 
 type Balance struct {
-	Balance *big.Int
-	Split   *big.Int
+	Balance       *big.Int
+	DailySpending *big.Int
 }
 
 type AnalysisResponse struct {

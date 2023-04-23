@@ -78,8 +78,8 @@ func setup() {
 	}
 }
 func teardown() {
-	err := runSQL("drop_test.sql")
+	err := runSQL("delAll_test.sql")
 	if err != nil {
-		log.Fatalf("Could not run drop_test.sql: %s", err)
+		log.Fatalf("Could not run delAll_test.sql: %s", err)
 	}
 }

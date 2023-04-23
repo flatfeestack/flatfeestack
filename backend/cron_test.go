@@ -500,7 +500,7 @@ func setupSponsor(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.T
 		Uid:       *userId,
 		RepoId:    *repoId,
 		EventType: db.Active,
-		SponsorAt: day,
+		SponsorAt: &day,
 	}
 	return db.InsertOrUpdateSponsor(&e)
 }

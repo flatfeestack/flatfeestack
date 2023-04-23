@@ -1,7 +1,7 @@
 delete from payment_cycle_in;
 delete from payment_cycle_out;
 delete from users;
-delete from user_balances;
+delete from payment_event;
 delete from repo;
 delete from git_email;
 delete from sponsor_event;
