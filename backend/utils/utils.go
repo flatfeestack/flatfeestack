@@ -78,10 +78,7 @@ func IntPow(n int64, m int64) int64 {
 	return result
 }
 
-func IsUUIDZero(id *uuid.UUID) bool {
-	if id == nil {
-		return true
-	}
+func IsUUIDZero(id uuid.UUID) bool {
 	for x := 0; x < 16; x++ {
 		if id[x] != 0 {
 			return false

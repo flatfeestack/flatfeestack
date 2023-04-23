@@ -131,15 +131,15 @@ func UpdateStripe(user *User) error {
 	return handleErrMustInsertOne(res)
 }
 
-func UpdatePaymentCycleInId(id uuid.UUID, paymentCycleInId *uuid.UUID) error {
+func UpdatePaymentCycleInId(userId uuid.UUID, paymentCycleInId uuid.UUID) error {
 	stmt, err := db.Prepare("UPDATE users SET payment_cycle_in_id=$1 WHERE id=$2")
 	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", id, err)
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", userId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(paymentCycleInId, id)
+	res, err = stmt.Exec(paymentCycleInId, userId)
 	if err != nil {
 		return err
 	}

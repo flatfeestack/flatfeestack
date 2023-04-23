@@ -390,7 +390,7 @@ func SendPaymentNowRefunded(user db.User, data WebhookResponse, status string) e
 		other["lang"])
 }
 
-func SendStripeSuccess(u db.User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeSuccess(u db.User, newPaymentCycleInId uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -408,7 +408,7 @@ func SendStripeSuccess(u db.User, newPaymentCycleInId *uuid.UUID) error {
 		other["lang"])
 }
 
-func SendStripeAction(u db.User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeAction(u db.User, newPaymentCycleInId uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -426,7 +426,7 @@ func SendStripeAction(u db.User, newPaymentCycleInId *uuid.UUID) error {
 		other["lang"])
 }
 
-func SendStripeFailed(u db.User, newPaymentCycleInId *uuid.UUID) error {
+func SendStripeFailed(u db.User, newPaymentCycleInId uuid.UUID) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email

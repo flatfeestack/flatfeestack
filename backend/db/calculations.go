@@ -136,7 +136,7 @@ func FindSumDailySponsors(userSponsorId uuid.UUID, paymentCycleInId uuid.UUID) (
 	return m1, nil
 }
 
-func FindSumDailyBalanceCurrency(paymentCycleInId *uuid.UUID) (map[string]*big.Int, error) {
+func FindSumDailyBalanceCurrency(paymentCycleInId uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := db.
 		Query(`	SELECT currency, COALESCE(sum(balance), 0)
         				FROM daily_contribution 
@@ -202,7 +202,7 @@ func FindSumFutureBalanceByRepoId(repoId *uuid.UUID) (map[string]*big.Int, error
 	return m, nil
 }
 
-func FindSumFutureBalanceByCurrency(paymentCycleInId *uuid.UUID) (map[string]*big.Int, error) {
+func FindSumFutureBalanceByCurrency(paymentCycleInId uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := db.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
                              FROM future_contribution 

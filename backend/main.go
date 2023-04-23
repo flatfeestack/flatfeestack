@@ -245,10 +245,6 @@ func main() {
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
 	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodPost)
-	//wallet
-	router.HandleFunc("/users/me/wallets", jwtAuthUser(api.GetUserWallets)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/wallets", jwtAuthUser(api.AddUserWallet)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/wallets/{uuid}", jwtAuthUser(api.DeleteUserWallet)).Methods(http.MethodDelete)
 	//github
 	router.HandleFunc("/repos/search", jwtAuthUser(api.SearchRepoGitHub)).Methods(http.MethodGet)
 	//repo

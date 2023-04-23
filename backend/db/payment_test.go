@@ -98,6 +98,19 @@ func TestPaymentFailed(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestFindPaymentCycle(t *testing.T) {
+	setup()
+	defer teardown()
+	u := insertTestUser(t, "email")
+	pid := insertPaymentCycle(t)
+	//on successful payment, the payment cycle id gets updated
+	err := UpdatePaymentCycleInId(u.Id, pid)
+	assert.Nil(t, err)
+	p, err := FindPaymentCycleLast(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, pid, p.Id)
+}
+
 func TestUserBalanceAndType(t *testing.T) {
 	setup()
 	defer teardown()
@@ -115,4 +128,21 @@ func TestUserBalanceAndType(t *testing.T) {
 	ub, err := FindBalance(pid, u.Id, "TEST", "XBTC")
 	assert.Nil(t, err)
 	assert.Equal(t, ub.Balance, big.NewInt(1))
+}
+
+func TestFindSumUserBalanceByCurrency(t *testing.T) {
+	setup()
+	defer teardown()
+	u := insertTestUser(t, "email")
+	pid := insertPaymentCycle(t)
+	insertUserBalance(t, u.Id, pid, "TEST1", "XBTC")
+	insertUserBalance(t, u.Id, pid, "TEST2", "XBTC")
+
+	insertUserBalance(t, u.Id, pid, "TEST1", "CHF")
+	insertUserBalance(t, u.Id, pid, "TEST2", "CHF")
+
+	m, err := FindSumUserBalanceByCurrency(pid)
+	assert.Nil(t, err)
+	assert.Equal(t, m["XBTC"].Balance, big.NewInt(2))
+	assert.Equal(t, m["CHF"].Balance, big.NewInt(2))
 }

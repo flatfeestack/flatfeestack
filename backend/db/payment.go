@@ -60,7 +60,7 @@ func FindUserBalances(userId uuid.UUID) ([]UserBalance, error) {
 	return userBalances, nil
 }
 
-func FindSumUserBalanceByCurrency(paymentCycleInId *uuid.UUID) (map[string]*Balance, error) {
+func FindSumUserBalanceByCurrency(paymentCycleInId uuid.UUID) (map[string]*Balance, error) {
 	rows, err := db.
 		Query(`SELECT currency, daily_spending, COALESCE(sum(balance), 0)
                              FROM payment_event 
@@ -127,7 +127,7 @@ func UpdateFreq(paymentCycleInId *uuid.UUID, freq int) error {
 	return handleErrMustInsertOne(res)
 }
 
-func FindPaymentCycle(paymentCycleInId *uuid.UUID) (*PaymentCycle, error) {
+func FindPaymentCycle(paymentCycleInId uuid.UUID) (*PaymentCycle, error) {
 	var pc PaymentCycle
 	err := db.
 		QueryRow(`SELECT id, seats, freq FROM payment_cycle_in WHERE id=$1`, paymentCycleInId).

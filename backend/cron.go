@@ -194,7 +194,10 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 }
 
 func calcAndDeduct(u *db.User, rids []uuid.UUID, yesterdayStart time.Time, uOrig *db.User) error {
-	currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, err := calcShare(u.PaymentCycleInId, int64(len(rids)))
+	if u.PaymentCycleInId == nil {
+		return fmt.Errorf("paymen cycle is nil")
+	}
+	currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, err := calcShare(*u.PaymentCycleInId, int64(len(rids)))
 	if err != nil {
 		return fmt.Errorf("cannot calc share %v", err)
 	}
@@ -294,7 +297,7 @@ func calcSharePerUser(distributeAdd *big.Int, v float64, total float64) *big.Int
 	return amount
 }
 
-func calcShare(paymentCycleInId *uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
+func calcShare(paymentCycleInId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.Int, *big.Int, error) {
 	//mAdd is what the user paid in the current cycle
 	mAdd, err := db.FindSumUserBalanceByCurrency(paymentCycleInId)
 	if err != nil {
