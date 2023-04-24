@@ -92,7 +92,16 @@ func main() {
 	swagger.Servers = nil
 
 	server := api.NewStrictServerImpl()
-	serverInterface := api.NewStrictHandler(server, nil)
+	options := api.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			utils.WriteErrorf(w, http.StatusBadRequest, "Bad Request: %v", err.Error())
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			// Custom implementation for handling response errors
+			utils.WriteErrorf(w, http.StatusInternalServerError, "Internal Server Error: %v", err.Error())
+		},
+	}
+	serverInterface := api.NewStrictHandlerWithOptions(server, nil, options)
 
 	validator := middleware.OapiRequestValidatorWithOptions(swagger, utils.EmptyOptions())
 

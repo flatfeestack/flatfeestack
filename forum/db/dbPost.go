@@ -51,7 +51,10 @@ func InsertPost(author uuid.UUID, title string, content string) (*DbPost, error)
 	defer closeAndLog(stmt)
 
 	var post DbPost
-	stmt.QueryRow(author, content, title).Scan(&post.Id, &post.CreatedAt, &post.Open, &post.UpdatedAt)
+	err = stmt.QueryRow(author, content, title).Scan(&post.Id, &post.CreatedAt, &post.Open, &post.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
 
 	post.Author = author
 	post.Content = content
@@ -96,7 +99,6 @@ func GetPostById(id uuid.UUID) (*DbPost, error) {
 func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost, error) {
 	stmt, err := globals.DB.Prepare(`UPDATE post SET title=$1, content = $2, updated_at = $3 WHERE id = $4 RETURNING id, author, content, created_at, "open" ,title, updated_at`)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	defer closeAndLog(stmt)
@@ -104,7 +106,6 @@ func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost
 	var post DbPost
 	err = stmt.QueryRow(title, content, time.Now(), postId).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	return &post, nil
@@ -114,7 +115,6 @@ func GetPostAuthorId(postId uuid.UUID) uuid.UUID {
 	var authorId = uuid.Nil
 	err := globals.DB.QueryRow(`SELECT author FROM post WHERE id = $1`, postId).Scan(&authorId)
 	if err != nil {
-		log.Error(err)
 		return uuid.Nil
 	}
 	return authorId
