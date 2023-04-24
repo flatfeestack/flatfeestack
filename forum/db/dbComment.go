@@ -76,7 +76,7 @@ func DeleteComment(commentId uuid.UUID) error {
 		return err
 	}
 	if nr != 1 {
-		return fmt.Errorf("id %v does not exist", commentId)
+		return fmt.Errorf("comment with id %v does not exist", commentId)
 	}
 	return nil
 }
