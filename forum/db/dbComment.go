@@ -18,7 +18,7 @@ type DbComment struct {
 	Content   string     `db:"content"`
 	CreatedAt time.Time  `db:"created_at"`
 	UpdatedAt *time.Time `db:"updated_at"`
-	PostID    string     `db:"post_id"`
+	PostID    uuid.UUID  `db:"post_id"`
 }
 
 func GetAllComments(postId uuid.UUID) ([]DbComment, error) {
@@ -40,4 +40,24 @@ func GetAllComments(postId uuid.UUID) ([]DbComment, error) {
 		comments = append(comments, comment)
 	}
 	return comments, nil
+}
+
+func InsertComment(postId uuid.UUID, author uuid.UUID, content string) (*DbComment, error) {
+	stmt, err := globals.DB.Prepare(`INSERT INTO comment (author, content, post_id) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(stmt)
+
+	var comment DbComment
+	err = stmt.QueryRow(author, content, postId).Scan(&comment.ID, &comment.CreatedAt, &comment.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	comment.Author = author
+	comment.Content = content
+	comment.PostID = postId
+
+	return &comment, nil
 }
