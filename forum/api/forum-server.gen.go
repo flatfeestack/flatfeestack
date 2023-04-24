@@ -34,15 +34,15 @@ type ServerInterface interface {
 	// Get a specific post
 	// (GET /posts/{postId})
 	GetPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId)
+	// Update a post
+	// (PUT /posts/{postId})
+	PutPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Get all comments
 	// (GET /posts/{postId}/comments)
 	GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Add a comment to a post
 	// (POST /posts/{postId}/comments)
 	PostPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId)
-	// Update a post
-	// (PUT /posts/{postId}/comments)
-	PutPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Delete a comment
 	// (DELETE /posts/{postId}/comments/{commentId})
 	DeletePostsPostIdCommentsCommentId(w http.ResponseWriter, r *http.Request, postId PostId, commentId CommentId)
@@ -146,6 +146,34 @@ func (siw *ServerInterfaceWrapper) GetPostsPostId(w http.ResponseWriter, r *http
 	handler(w, r.WithContext(ctx))
 }
 
+// PutPostsPostId operation middleware
+func (siw *ServerInterfaceWrapper) PutPostsPostId(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "postId" -------------
+	var postId PostId
+
+	err = runtime.BindStyledParameter("simple", false, "postId", mux.Vars(r)["postId"], &postId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{"User"})
+
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutPostsPostId(w, r, postId)
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler(w, r.WithContext(ctx))
+}
+
 // GetPostsPostIdComments operation middleware
 func (siw *ServerInterfaceWrapper) GetPostsPostIdComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -191,34 +219,6 @@ func (siw *ServerInterfaceWrapper) PostPostsPostIdComments(w http.ResponseWriter
 
 	var handler = func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostPostsPostIdComments(w, r, postId)
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler(w, r.WithContext(ctx))
-}
-
-// PutPostsPostIdComments operation middleware
-func (siw *ServerInterfaceWrapper) PutPostsPostIdComments(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// ------------- Path parameter "postId" -------------
-	var postId PostId
-
-	err = runtime.BindStyledParameter("simple", false, "postId", mux.Vars(r)["postId"], &postId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
-		return
-	}
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{"User"})
-
-	var handler = func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PutPostsPostIdComments(w, r, postId)
 	}
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -423,11 +423,11 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}", wrapper.GetPostsPostId).Methods("GET")
 
+	r.HandleFunc(options.BaseURL+"/posts/{postId}", wrapper.PutPostsPostId).Methods("PUT")
+
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments", wrapper.GetPostsPostIdComments).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments", wrapper.PostPostsPostIdComments).Methods("POST")
-
-	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments", wrapper.PutPostsPostIdComments).Methods("PUT")
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments/{commentId}", wrapper.DeletePostsPostIdCommentsCommentId).Methods("DELETE")
 
@@ -600,6 +600,67 @@ func (response GetPostsPostId500Response) VisitGetPostsPostIdResponse(w http.Res
 	return nil
 }
 
+type PutPostsPostIdRequestObject struct {
+	PostId PostId `json:"postId"`
+	Body   *PutPostsPostIdJSONRequestBody
+}
+
+type PutPostsPostIdResponseObject interface {
+	VisitPutPostsPostIdResponse(w http.ResponseWriter) error
+}
+
+type PutPostsPostId200JSONResponse Post
+
+func (response PutPostsPostId200JSONResponse) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostId400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PutPostsPostId400JSONResponse) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostId401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutPostsPostId401JSONResponse) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostId403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PutPostsPostId403JSONResponse) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostId404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PutPostsPostId404JSONResponse) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostId500Response = InternalServerErrorResponse
+
+func (response PutPostsPostId500Response) VisitPutPostsPostIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(500)
+	return nil
+}
+
 type GetPostsPostIdCommentsRequestObject struct {
 	PostId PostId `json:"postId"`
 }
@@ -692,60 +753,6 @@ type PostPostsPostIdComments500Response = InternalServerErrorResponse
 func (response PostPostsPostIdComments500Response) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
 	w.WriteHeader(500)
 	return nil
-}
-
-type PutPostsPostIdCommentsRequestObject struct {
-	PostId PostId `json:"postId"`
-	Body   *PutPostsPostIdCommentsJSONRequestBody
-}
-
-type PutPostsPostIdCommentsResponseObject interface {
-	VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error
-}
-
-type PutPostsPostIdComments200JSONResponse Post
-
-func (response PutPostsPostIdComments200JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PutPostsPostIdComments400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response PutPostsPostIdComments400JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PutPostsPostIdComments401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response PutPostsPostIdComments401JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PutPostsPostIdComments403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response PutPostsPostIdComments403JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PutPostsPostIdComments404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response PutPostsPostIdComments404JSONResponse) VisitPutPostsPostIdCommentsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
 }
 
 type DeletePostsPostIdCommentsCommentIdRequestObject struct {
@@ -852,15 +859,15 @@ type StrictServerInterface interface {
 	// Get a specific post
 	// (GET /posts/{postId})
 	GetPostsPostId(ctx context.Context, request GetPostsPostIdRequestObject) (GetPostsPostIdResponseObject, error)
+	// Update a post
+	// (PUT /posts/{postId})
+	PutPostsPostId(ctx context.Context, request PutPostsPostIdRequestObject) (PutPostsPostIdResponseObject, error)
 	// Get all comments
 	// (GET /posts/{postId}/comments)
 	GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error)
 	// Add a comment to a post
 	// (POST /posts/{postId}/comments)
 	PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error)
-	// Update a post
-	// (PUT /posts/{postId}/comments)
-	PutPostsPostIdComments(ctx context.Context, request PutPostsPostIdCommentsRequestObject) (PutPostsPostIdCommentsResponseObject, error)
 	// Delete a comment
 	// (DELETE /posts/{postId}/comments/{commentId})
 	DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error)
@@ -1006,6 +1013,39 @@ func (sh *strictHandler) GetPostsPostId(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// PutPostsPostId operation middleware
+func (sh *strictHandler) PutPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request PutPostsPostIdRequestObject
+
+	request.PostId = postId
+
+	var body PutPostsPostIdJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutPostsPostId(ctx, request.(PutPostsPostIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutPostsPostId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutPostsPostIdResponseObject); ok {
+		if err := validResponse.VisitPutPostsPostIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
 // GetPostsPostIdComments operation middleware
 func (sh *strictHandler) GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
 	var request GetPostsPostIdCommentsRequestObject
@@ -1058,39 +1098,6 @@ func (sh *strictHandler) PostPostsPostIdComments(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostPostsPostIdCommentsResponseObject); ok {
 		if err := validResponse.VisitPostPostsPostIdCommentsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
-	}
-}
-
-// PutPostsPostIdComments operation middleware
-func (sh *strictHandler) PutPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
-	var request PutPostsPostIdCommentsRequestObject
-
-	request.PostId = postId
-
-	var body PutPostsPostIdCommentsJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PutPostsPostIdComments(ctx, request.(PutPostsPostIdCommentsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutPostsPostIdComments")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PutPostsPostIdCommentsResponseObject); ok {
-		if err := validResponse.VisitPutPostsPostIdCommentsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1162,24 +1169,24 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

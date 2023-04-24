@@ -60,6 +60,11 @@ type Forbidden struct {
 	Error string `json:"error"`
 }
 
+// NoContent defines model for NoContent.
+type NoContent struct {
+	Info *string `json:"info,omitempty"`
+}
+
 // NotFound defines model for NotFound.
 type NotFound struct {
 	Error string `json:"error"`
@@ -73,11 +78,11 @@ type Unauthorized struct {
 // PostPostsJSONRequestBody defines body for PostPosts for application/json ContentType.
 type PostPostsJSONRequestBody = PostInput
 
+// PutPostsPostIdJSONRequestBody defines body for PutPostsPostId for application/json ContentType.
+type PutPostsPostIdJSONRequestBody = PostInput
+
 // PostPostsPostIdCommentsJSONRequestBody defines body for PostPostsPostIdComments for application/json ContentType.
 type PostPostsPostIdCommentsJSONRequestBody = CommentInput
-
-// PutPostsPostIdCommentsJSONRequestBody defines body for PutPostsPostIdComments for application/json ContentType.
-type PutPostsPostIdCommentsJSONRequestBody = PostInput
 
 // PutPostsPostIdCommentsCommentIdJSONRequestBody defines body for PutPostsPostIdCommentsCommentId for application/json ContentType.
 type PutPostsPostIdCommentsCommentIdJSONRequestBody = CommentInput

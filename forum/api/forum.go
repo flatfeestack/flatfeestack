@@ -36,7 +36,7 @@ func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequest
 
 func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error) {
 	id := getCurrentUserId(ctx)
-	newPost, err := database.InsertPost(*id, request.Body.Title, request.Body.Content)
+	newPost, err := database.InsertPost(id, request.Body.Title, request.Body.Content)
 	if err != nil {
 		return PostPosts500Response{}, err
 	}
@@ -79,6 +79,35 @@ func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsP
 	}, nil
 }
 
+func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsPostIdRequestObject) (PutPostsPostIdResponseObject, error) {
+	exists, err := database.CheckIfPostExists(request.PostId)
+	if err != nil {
+		return PutPostsPostId500Response{}, err
+	}
+	if !exists {
+		return PutPostsPostId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+	id := getCurrentUserId(ctx)
+	authorId := database.GetPostAuthorId(request.PostId)
+	if id == uuid.Nil || authorId == uuid.Nil || id != authorId {
+		log.Errorf("user %v tried to update post: %v but post was written by %v", id, authorId, request.PostId)
+		return PutPostsPostId403JSONResponse{ForbiddenJSONResponse{Error: fmt.Sprintf("you not author of this post: %v", request.PostId)}}, err
+	}
+	updatedPost, err := database.UpdatePostByPostID(request.PostId, request.Body.Title, request.Body.Content)
+	if err != nil {
+		return PutPostsPostId500Response{}, err
+	}
+	return PutPostsPostId200JSONResponse{
+		Id:        updatedPost.Id,
+		Author:    updatedPost.Author,
+		Title:     updatedPost.Title,
+		Content:   updatedPost.Content,
+		CreatedAt: updatedPost.CreatedAt,
+		UpdatedAt: updatedPost.UpdatedAt,
+		Open:      updatedPost.Open,
+	}, nil
+}
+
 func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error) {
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
@@ -112,7 +141,7 @@ func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request 
 		return PostPostsPostIdComments404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
 	}
 	id := getCurrentUserId(ctx)
-	comment, err := database.InsertComment(request.PostId, *id, request.Body.Content)
+	comment, err := database.InsertComment(request.PostId, id, request.Body.Content)
 	if err != nil {
 		return PostPostsPostIdComments500Response{}, err
 	}
@@ -126,11 +155,6 @@ func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request 
 	}, nil
 }
 
-func (s *StrictServerImpl) PutPostsPostIdComments(ctx context.Context, request PutPostsPostIdCommentsRequestObject) (PutPostsPostIdCommentsResponseObject, error) {
-	// Implementation of PutPostsPostIdComments method
-	return nil, nil
-}
-
 func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error) {
 	// Implementation of DeletePostsPostIdCommentsCommentId method
 	return nil, nil
@@ -141,13 +165,13 @@ func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, 
 	return nil, nil
 }
 
-func getCurrentUserId(ctx context.Context) *uuid.UUID {
+func getCurrentUserId(ctx context.Context) uuid.UUID {
 	user, ok := ctx.Value("currentUser").(*database.DbUser)
 	if !ok {
 		log.Error("value is not a *database.DbUser")
-		return nil
+		return uuid.Nil
 	}
-	return &user.Id
+	return user.Id
 }
 
 // Function to map DbPost to Post

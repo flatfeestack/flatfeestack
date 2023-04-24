@@ -79,6 +79,35 @@ paths:
           $ref: "#/components/responses/NoContent"
         '401':
           $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update a post
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        '400':
+          $ref: "#/components/responses/BadRequest"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          $ref: "#/components/responses/Forbidden"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '500':
+          $ref: "#/components/responses/InternalServerError"
 
   /posts/{postId}/comments:
     get:
@@ -127,33 +156,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         '500':
           $ref: "#/components/responses/InternalServerError"
-    put:
-      summary: Update a post
-      security:
-        - bearerAuth: [ User ]
-      parameters:
-        - $ref: "#/components/parameters/PostId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PostInput"
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Post"
-        '400':
-          $ref: "#/components/responses/BadRequest"
-        '401':
-          $ref: "#/components/responses/Unauthorized"
-        '403':
-          $ref: "#/components/responses/Forbidden"
-        '404':
-          $ref: "#/components/responses/NotFound"
 
   /posts/{postId}/comments/{commentId}:
     put:
