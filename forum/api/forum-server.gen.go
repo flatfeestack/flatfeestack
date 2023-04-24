@@ -678,6 +678,22 @@ func (response PostPostsPostIdComments401JSONResponse) VisitPostPostsPostIdComme
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostPostsPostIdComments404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PostPostsPostIdComments404JSONResponse) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPostsPostIdComments500Response = InternalServerErrorResponse
+
+func (response PostPostsPostIdComments500Response) VisitPostPostsPostIdCommentsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(500)
+	return nil
+}
+
 type PutPostsPostIdCommentsRequestObject struct {
 	PostId PostId `json:"postId"`
 	Body   *PutPostsPostIdCommentsJSONRequestBody
@@ -1146,24 +1162,24 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

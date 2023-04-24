@@ -1,5 +1,18 @@
+### Login to get a token
+POST http://{{host}}:{{port-auth}}/login
+Content-Type: application/json
+
+{
+  "email": "test@test.ch",
+  "password": "12345678"
+}
+> {%
+    client.global.set("token", JSON.parse(response.body).access_token);
+%}
+
+
 ### Insert a post
-POST http://{{host}}/posts
+POST http://{{host}}:{{port-forum}}/posts
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -12,14 +25,28 @@ Authorization: Bearer {{token}}
 %}
 
 ### Get all posts
-GET http://{{host}}/posts
+GET http://{{host}}:{{port-forum}}/posts
 
 ### Delete post
-DELETE http://{{host}}/posts/{{new_post_id}}
+DELETE http://{{host}}:{{port-forum}}/posts/{{new_post_id}}
 Authorization: Bearer {{token}}
 
+
+### Insert a comment to post
+POST http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "The content of the comment"
+}
+
+> {%
+    client.global.set("new_comment_id", response.body.id);
+%}
+
 ### Get all comments to post
-GET http://{{host}}/posts/{{new_post_id}}/comments
+GET http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments
 
 
 

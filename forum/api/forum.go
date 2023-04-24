@@ -104,8 +104,26 @@ func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request G
 }
 
 func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error) {
-	// Implementation of PostPostsPostIdComments method
-	return nil, nil
+	exists, err := database.CheckIfPostExists(request.PostId)
+	if err != nil {
+		return PostPostsPostIdComments500Response{}, err
+	}
+	if !exists {
+		return PostPostsPostIdComments404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+	id := getCurrentUserId(ctx)
+	comment, err := database.InsertComment(request.PostId, *id, request.Body.Content)
+	if err != nil {
+		return PostPostsPostIdComments500Response{}, err
+	}
+
+	return PostPostsPostIdComments201JSONResponse{
+		Author:    comment.Author,
+		Content:   comment.Content,
+		CreatedAt: comment.CreatedAt,
+		Id:        comment.ID,
+		UpdatedAt: comment.UpdatedAt,
+	}, nil
 }
 
 func (s *StrictServerImpl) PutPostsPostIdComments(ctx context.Context, request PutPostsPostIdCommentsRequestObject) (PutPostsPostIdCommentsResponseObject, error) {
