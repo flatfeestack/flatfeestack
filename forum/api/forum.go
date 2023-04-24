@@ -174,8 +174,38 @@ func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Contex
 }
 
 func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
-	// Implementation of PutPostsPostIdCommentsCommentId method
-	return nil, nil
+	postExists, err := database.CheckIfPostExists(request.PostId)
+	if !postExists {
+		return PutPostsPostIdCommentsCommentId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+	commentExists, err := database.CheckIfCommentExists(request.CommentId)
+	if !commentExists {
+		return PutPostsPostIdCommentsCommentId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("comment with id %v does not exist", request.CommentId)}}, nil
+	}
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostIdCommentsCommentId500Response{}, nil
+	}
+
+	id := getCurrentUserId(ctx)
+	authorId := database.GetCommentAuthor(request.CommentId)
+	if id == uuid.Nil || authorId == uuid.Nil || id != authorId {
+		log.Errorf("user %v tried to update comment: %v but comment was written by %v", id, request.CommentId, authorId)
+		return PutPostsPostIdCommentsCommentId403JSONResponse{ForbiddenJSONResponse{Error: fmt.Sprintf("you not author of this comment: %v", request.CommentId)}}, nil
+	}
+
+	comment, err := database.UpdateComment(request.CommentId, request.Body.Content)
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostIdCommentsCommentId500Response{}, nil
+	}
+	return PutPostsPostIdCommentsCommentId200JSONResponse{
+		Id:        comment.ID,
+		Author:    comment.Author,
+		Content:   comment.Content,
+		CreatedAt: comment.CreatedAt,
+		UpdatedAt: comment.UpdatedAt,
+	}, nil
 }
 
 func getCurrentUserId(ctx context.Context) uuid.UUID {
