@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"forum/globals"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -60,4 +61,31 @@ func InsertComment(postId uuid.UUID, author uuid.UUID, content string) (*DbComme
 	comment.PostID = postId
 
 	return &comment, nil
+}
+
+func DeleteComment(commentId uuid.UUID) error {
+	stmt, err := globals.DB.Prepare(`DELETE FROM comment WHERE id = $1`)
+	if err != nil {
+		return err
+	}
+	defer closeAndLog(stmt)
+
+	res, err := stmt.Exec(commentId)
+	nr, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if nr != 1 {
+		return fmt.Errorf("id %v does not exist", commentId)
+	}
+	return nil
+}
+
+func CheckIfCommentExists(commentId uuid.UUID) (bool, error) {
+	var exists bool
+	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM comment WHERE id = $1)`, commentId).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }

@@ -156,8 +156,11 @@ func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request 
 }
 
 func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error) {
-	// Implementation of DeletePostsPostIdCommentsCommentId method
-	return nil, nil
+	err := database.DeleteComment(request.CommentId)
+	if err != nil {
+		return DeletePostsPostIdCommentsCommentId404JSONResponse{NotFoundJSONResponse{Error: err.Error()}}, err
+	}
+	return DeletePostsPostIdCommentsCommentId200Response{}, nil
 }
 
 func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
