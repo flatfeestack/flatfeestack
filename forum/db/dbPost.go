@@ -93,6 +93,33 @@ func GetPostById(id uuid.UUID) (*DbPost, error) {
 	return &post, nil
 }
 
+func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost, error) {
+	stmt, err := globals.DB.Prepare(`UPDATE post SET title=$1, content = $2, updated_at = $3 WHERE id = $4 RETURNING id, author, content, created_at, "open" ,title, updated_at`)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	defer closeAndLog(stmt)
+
+	var post DbPost
+	err = stmt.QueryRow(title, content, time.Now(), postId).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return &post, nil
+}
+
+func GetPostAuthorId(postId uuid.UUID) uuid.UUID {
+	var authorId = uuid.Nil
+	err := globals.DB.QueryRow(`SELECT author FROM post WHERE id = $1`, postId).Scan(&authorId)
+	if err != nil {
+		log.Error(err)
+		return uuid.Nil
+	}
+	return authorId
+}
+
 func CheckIfPostExists(postId uuid.UUID) (bool, error) {
 	var exists bool
 	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM post WHERE id = $1)`, postId).Scan(&exists)

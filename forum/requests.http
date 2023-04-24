@@ -31,6 +31,15 @@ GET http://{{host}}:{{port-forum}}/posts
 DELETE http://{{host}}:{{port-forum}}/posts/{{new_post_id}}
 Authorization: Bearer {{token}}
 
+### Update a post
+PUT http://{{host}}:{{port-forum}}/posts/{{new_post_id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "New Title of Post",
+  "content": "The new content of the post"
+}
 
 ### Insert a comment to post
 POST http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments
