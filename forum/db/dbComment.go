@@ -81,6 +81,24 @@ func DeleteComment(commentId uuid.UUID) error {
 	return nil
 }
 
+func UpdateComment(commentId uuid.UUID, content string) (*DbComment, error) {
+	stmt, err := globals.DB.Prepare(`UPDATE comment SET content = $1, updated_at = $2 WHERE id = $3 RETURNING id, author, created_at, updated_at, post_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(stmt)
+
+	var comment DbComment
+	err = stmt.QueryRow(content, time.Now(), commentId).Scan(&comment.ID, &comment.Author, &comment.CreatedAt, &comment.UpdatedAt, &comment.PostID)
+	if err != nil {
+		return nil, err
+	}
+
+	comment.Content = content
+
+	return &comment, nil
+}
+
 func CheckIfCommentExists(commentId uuid.UUID) (bool, error) {
 	var exists bool
 	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM comment WHERE id = $1)`, commentId).Scan(&exists)
@@ -88,4 +106,13 @@ func CheckIfCommentExists(commentId uuid.UUID) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+func GetCommentAuthor(commentId uuid.UUID) uuid.UUID {
+	var author uuid.UUID
+	err := globals.DB.QueryRow(`SELECT author FROM comment WHERE id = $1`, commentId).Scan(&author)
+	if err != nil {
+		return uuid.Nil
+	}
+	return author
 }

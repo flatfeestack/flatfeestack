@@ -61,6 +61,15 @@ GET http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments
 DELETE http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments/{{new_comment_id}}
 Authorization: Bearer {{token}}
 
+### Update a comment
+PUT http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments/{{new_comment_id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "The new content of the comment"
+}
+
 
 
 
