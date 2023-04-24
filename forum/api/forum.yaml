@@ -197,12 +197,12 @@ paths:
         - $ref: "#/components/parameters/PostId"
         - $ref: "#/components/parameters/CommentId"
       responses:
-        '204':
-          description: No Content
+        '200':
+          description: OK
         '401':
           $ref: "#/components/responses/Unauthorized"
-        '403':
-          $ref: "#/components/responses/Forbidden"
+        '404':
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     bearerAuth:
