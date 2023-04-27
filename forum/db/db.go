@@ -6,7 +6,6 @@ import (
 	"forum/globals"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -45,7 +44,7 @@ func InitDb() (*sql.DB, error) {
 		}
 		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
 		if _, err := os.Stat(file); err == nil {
-			fileBytes, err := ioutil.ReadFile(file)
+			fileBytes, err := os.ReadFile(file)
 			if err != nil {
 				return nil, err
 			}

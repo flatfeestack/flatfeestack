@@ -22,7 +22,11 @@ func LookupEnv(key string, defaultValues ...string) string {
 	}
 	for _, v := range defaultValues {
 		if v != "" {
-			os.Setenv(key, v)
+			err := os.Setenv(key, v)
+			if err != nil {
+				log.Error("Could not set env variable", key, v, err)
+				return ""
+			}
 			return v
 		}
 	}
@@ -40,7 +44,11 @@ func LookupEnvInt(key string, defaultValues ...int) int {
 	}
 	for _, v := range defaultValues {
 		if v != 0 {
-			os.Setenv(key, strconv.Itoa(v))
+			err := os.Setenv(key, strconv.Itoa(v))
+			if err != nil {
+				log.Error("Could not set env variable", key, v, err)
+				return 0
+			}
 			return v
 		}
 	}
@@ -54,7 +62,10 @@ func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 	w.WriteHeader(code)
-	w.Write([]byte(`{"error":"` + msg + `"}`))
+	_, err := w.Write([]byte(`{"error":"` + msg + `"}`))
+	if err != nil {
+		log.Error("Could not write error", err)
+	}
 }
 
 type KeyedMutex struct {
