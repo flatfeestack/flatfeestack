@@ -7,12 +7,10 @@ import (
 )
 
 func insertTestUser(t *testing.T, email string) *User {
-	payOutId := uuid.New()
 	u := User{
-		Id:                uuid.New(),
-		StripeId:          stringPointer("strip-id"),
-		PaymentCycleOutId: payOutId,
-		Email:             "email",
+		Id:       uuid.New(),
+		StripeId: stringPointer("strip-id"),
+		Email:    email,
 	}
 
 	err := InsertUser(&u)

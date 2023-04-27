@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func insertUserBalance(t *testing.T, userId uuid.UUID, paymentCycleIn uuid.UUID, bType string, currency string) *UserBalance {
+func insertUserBalance(t *testing.T, userId uuid.UUID, payInId uuid.UUID, bType string, currency string) *UserBalance {
 	ub := UserBalance{
 		UserId:           userId,
+		PaymentCycleInId: payInId,
 		Balance:          big.NewInt(1),
 		DailySpending:    big.NewInt(2),
-		PaymentCycleInId: paymentCycleIn,
 		BalanceType:      bType,
 		Currency:         currency,
 		CreatedAt:        time.Time{},
@@ -23,10 +23,17 @@ func insertUserBalance(t *testing.T, userId uuid.UUID, paymentCycleIn uuid.UUID,
 	return &ub
 }
 
-func insertPaymentCycle(t *testing.T) uuid.UUID {
+func insertPaymentCycleIn(t *testing.T, uid uuid.UUID) uuid.UUID {
 	id := uuid.New()
-	err := InsertNewPaymentCycleIn(id, 4, 4, time.Time{})
+	err := InsertNewPaymentCycleIn(id, uid, 4, 4, time.Time{})
 	assert.Nil(t, err)
+	return id
+}
+
+func insertPaymentCycleOut(t *testing.T) uuid.UUID {
+	id := uuid.New()
+	//err := Insertid, 4, 4, time.Time{})
+	//assert.Nil(t, err)
 	return id
 }
 
@@ -34,7 +41,7 @@ func TestPayment(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 
 	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
@@ -49,8 +56,8 @@ func TestPaymentTwice(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
-	pid = insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
+	pid = insertPaymentCycleIn(t, u.Id)
 	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
 	ubs, err := FindUserBalances(u.Id)
@@ -64,10 +71,10 @@ func TestTwoPaymentTwice(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
-	pid = insertPaymentCycle(t)
+	pid = insertPaymentCycleIn(t, u.Id)
 	ub = insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
 	ubs, err := FindUserBalances(u.Id)
@@ -81,7 +88,7 @@ func TestPaymentFailed(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 
 	insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
@@ -102,10 +109,10 @@ func TestFindPaymentCycle(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 	//on successful payment, the payment cycle id gets updated
-	err := UpdatePaymentCycleInId(u.Id, pid)
-	assert.Nil(t, err)
+	//err := UpdatePaymentCycleInId(u.Id, pid)
+	//assert.Nil(t, err)
 	p, err := FindPaymentCycleLast(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, pid, p.Id)
@@ -115,14 +122,14 @@ func TestUserBalanceAndType(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 	insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
 	insertUserBalance(t, u.Id, pid, "TEST", "XBTC2")
 
 	insertUserBalance(t, u.Id, pid, "TEST2", "XBTC")
 
-	pid2 := insertPaymentCycle(t)
+	pid2 := insertPaymentCycleIn(t, u.Id)
 	insertUserBalance(t, u.Id, pid2, "TEST", "XBTC")
 
 	ub, err := FindBalance(pid, u.Id, "TEST", "XBTC")
@@ -134,15 +141,16 @@ func TestFindSumUserBalanceByCurrency(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycle(t)
+	pid := insertPaymentCycleIn(t, u.Id)
 	insertUserBalance(t, u.Id, pid, "TEST1", "XBTC")
 	insertUserBalance(t, u.Id, pid, "TEST2", "XBTC")
+	insertUserBalance(t, u.Id, pid, "TEST3", "XBTC")
 
 	insertUserBalance(t, u.Id, pid, "TEST1", "CHF")
 	insertUserBalance(t, u.Id, pid, "TEST2", "CHF")
 
 	m, err := FindSumUserBalanceByCurrency(pid)
 	assert.Nil(t, err)
-	assert.Equal(t, m["XBTC"].Balance, big.NewInt(2))
+	assert.Equal(t, m["XBTC"].Balance, big.NewInt(3))
 	assert.Equal(t, m["CHF"].Balance, big.NewInt(2))
 }

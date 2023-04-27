@@ -112,10 +112,9 @@ type AnalysisRequest struct {
 
 func CreateUser(email string, now time.Time) (*User, error) {
 	user := User{
-		Id:                uuid.New(),
-		PaymentCycleOutId: uuid.New(),
-		Email:             email,
-		CreatedAt:         now,
+		Id:        uuid.New(),
+		Email:     email,
+		CreatedAt: now,
 	}
 
 	err := InsertUser(&user)
@@ -128,10 +127,12 @@ func CreateUser(email string, now time.Time) (*User, error) {
 
 func handleErrMustInsertOne(res sql.Result) error {
 	nr, err := res.RowsAffected()
-	if nr == 0 || err != nil {
+	if err != nil {
 		return err
 	}
-	if nr != 1 {
+	if nr == 0 {
+		return fmt.Errorf("0 rows affacted, need at least 1")
+	} else if nr != 1 {
 		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
 	}
 	return nil

@@ -1,5 +1,5 @@
-delete from payment_cycle_in;
-delete from payment_cycle_out;
+delete from payment_status;
+delete from payment_event;
 delete from users;
 delete from payment_event;
 delete from repo;
@@ -10,6 +10,5 @@ delete from analysis_response;
 delete from daily_contribution;
 delete from unclaimed;
 delete from future_contribution;
-delete from wallet_address;
 delete from invite;
 delete from user_emails_sent;

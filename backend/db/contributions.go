@@ -17,12 +17,12 @@ type Contributions struct {
 	Weight   float64
 }
 
-func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId *uuid.UUID, payOutIdGit uuid.UUID,
+func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, paymentCycleInId uuid.UUID, payOutIdGit uuid.UUID,
 	balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
 
 	stmt, err := db.Prepare(`
-				INSERT INTO daily_contribution(user_sponsor_id, user_contributor_id, repo_id, payment_cycle_in_id, payment_cycle_out_id, balance, 
-				                               currency, day, created_at) 
+				INSERT INTO daily_contribution(user_sponsor_id, user_contributor_id, repo_id, payment_cycle_in_id, 
+				                               payment_cycle_out_id, balance, currency, day, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", userSponsorId, err)

@@ -5,6 +5,7 @@ import (
 	"backend/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
@@ -92,8 +93,8 @@ func InviteOther(w http.ResponseWriter, r *http.Request, user *db.User) {
 		utils.WriteErrorf(w, http.StatusBadRequest, "email address not valid %v", err)
 		return
 	}
-
-	err = db.InsertInvite(user.Email, email, utils.TimeNow())
+	inviteId := uuid.New()
+	err = db.InsertInvite(inviteId, user.Email, email, utils.TimeNow())
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
 		return

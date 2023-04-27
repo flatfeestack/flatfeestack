@@ -97,15 +97,30 @@ func FindSumUserBalanceByCurrency(paymentCycleInId uuid.UUID) (map[string]*Balan
 	return m, nil
 }
 
-func InsertNewPaymentCycleIn(id uuid.UUID, seats int64, freq int64, createdAt time.Time) error {
-	stmt, err := db.Prepare(`INSERT INTO payment_cycle_in(id, seats, freq, created_at) VALUES($1, $2, $3, $4)`)
+func InsertNewPaymentCycleIn(id uuid.UUID, userId uuid.UUID, seats int64, freq int64, createdAt time.Time) error {
+	stmt, err := db.Prepare(`INSERT INTO payment_cycle_in(id, user_id, seats, freq, created_at) VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepareINSERT INTO payment_cycle_in statement event: %v", err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(id, seats, freq, createdAt)
+	res, err = stmt.Exec(id, userId, seats, freq, createdAt)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func InsertNewPaymentCycleOut(id uuid.UUID, userId uuid.UUID, createdAt time.Time) error {
+	stmt, err := db.Prepare(`INSERT INTO payment_cycle_out(id, userId, created_at) VALUES($1, $2, $3)`)
+	if err != nil {
+		return fmt.Errorf("prepareINSERT INTO payment_cycle_in statement event: %v", err)
+	}
+	defer closeAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(id, userId, createdAt)
 	if err != nil {
 		return err
 	}

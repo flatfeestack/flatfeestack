@@ -470,7 +470,7 @@ func setupFunds(t *testing.T, uid uuid.UUID, currency string, freq int64, balanc
 	paymentCycleId := uuid.New()
 	err = db.InsertNewPaymentCycleIn(paymentCycleId, 1, freq, now)
 	assert.Nil(t, err)
-	err = api.PaymentSuccess(uid, oldPaymentCycleId, &paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
+	err = api.PaymentSuccess(uid, oldPaymentCycleId, paymentCycleId, big.NewInt(balance*pow), currency, 1, freq, big.NewInt(0))
 	assert.Nil(t, err)
 	return &paymentCycleId
 }
