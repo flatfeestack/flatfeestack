@@ -20,7 +20,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "prettify": "prettier --write --plugin-search-dir=. .",
     "prettify:check": "prettier --check --plugin-search-dir=. .",
-    "schema:backend": "npx openapi-typescript ../backend/backend.yaml --output ./src/types/generated-backend-types.ts"
+    "schema:backend": "npx openapi-typescript ../backend/backend.yaml --output ./src/types/generated-backend-types.ts",
+    "schema:forum": "npx openapi-typescript ../forum/api/forum.yaml --output ./src/types/generated-forum-types.ts"
   },
   "devDependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.3.0",

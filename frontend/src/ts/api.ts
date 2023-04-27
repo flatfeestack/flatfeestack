@@ -21,6 +21,14 @@ import type { Token } from "../types/auth";
 import { token } from "./mainStore";
 import { refresh } from "./services";
 import type { DaoConfig, PayoutConfig } from "../types/payout";
+import type {
+  Comment,
+  CommentId,
+  CommentInput,
+  Post,
+  PostId,
+  PostInput,
+} from "../types/forum";
 
 async function addToken(request: Request) {
   const t = get(token);
@@ -94,6 +102,11 @@ const payout = ky.create({
 
 const search = ky.create({
   prefixUrl: "/search",
+  timeout: restTimeout,
+});
+
+const forum = ky.create({
+  prefixUrl: "/forum",
   timeout: restTimeout,
 });
 
@@ -229,5 +242,28 @@ export const API = {
   payout: {
     daoConfig: () => payout.get(`config/dao`).json<DaoConfig>(),
     payoutConfig: () => payout.get(`config/payout`).json<PayoutConfig>(),
+  },
+  forum: {
+    getAllPosts: () => forum.get(`/posts`).json<Post[]>(),
+    createPost: (postInput: PostInput) =>
+      forum.post(`/posts`, { json: postInput }).json<Post>(),
+    getPost: (postId: PostId) => forum.get(`/posts/${postId}`).json<Post>(),
+    deletePost: (postId: PostId) => forum.delete(`/posts/${postId}`),
+    updatePost: (postId: PostId, postInput: PostInput) =>
+      forum.put(`/posts/${postId}`, { json: postInput }).json<Post>(),
+    getAllComments: (postId: PostId) =>
+      forum.get(`/posts/${postId}/comments`).json<Comment[]>(),
+    createComment: (postId: PostId, commentInput: CommentInput) =>
+      forum
+        .post(`/posts/${postId}/comments`, { json: commentInput })
+        .json<Comment>(),
+    updateComment: (
+      postId: PostId,
+      commentId: CommentId,
+      commentInput: CommentInput
+    ) =>
+      forum
+        .put(`/posts/${postId}/comments/${commentId}`, { json: commentInput })
+        .json<Comment>(),
   },
 };
