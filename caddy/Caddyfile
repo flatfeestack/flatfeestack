@@ -59,6 +59,13 @@
     }
   }
 
+  handle /forum/* {
+    reverse_proxy forum:9086 {
+      header_up Host {upstream_hostport}
+      header_up X-Real-IP {remote}
+    }
+  }
+
   handle {
     reverse_proxy frontend:9085 {
       header_up Host {upstream_hostport}
