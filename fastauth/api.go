@@ -166,9 +166,9 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		//user already exists, send email to direct him to the invitations
 		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
 		e := prepareEmail(email, params,
-			"template-subject-invite-old_"+claims.Scope, "You have been invited by "+claims.Subject,
-			"template-plain-invite-old_"+claims.Scope, "Click on this link to see your invitation: "+params["url"].(string),
-			"template-html-invite-old_"+claims.Scope, params["lang"].(string))
+			"/invite-old", "You have been invited by "+claims.Subject,
+			"/invite-old", "Click on this link to see your invitation: "+params["url"].(string),
+			"/invite-old", params["lang"].(string))
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
@@ -201,9 +201,9 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		params["url"] = opts.EmailLinkPrefix + "/login"
 
 		e := prepareEmail(email, params,
-			"template-subject-login_"+claims.Scope, "You have been invited again by "+claims.Subject,
-			"template-plain-login_"+claims.Scope, "Click on this link to login: "+params["url"].(string),
-			"template-html-login_"+claims.Scope, params["lang"].(string))
+			"/login", "You have been invited again by "+claims.Subject,
+			"/login", "Click on this link to login: "+params["url"].(string),
+			"/login", params["lang"].(string))
 
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
@@ -219,9 +219,9 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		params["url"] = opts.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
 
 		e := prepareEmail(email, params,
-			"template-subject-invite-new_"+claims.Scope, "You have been invited by "+claims.Subject,
-			"template-plain-invite-new_"+claims.Scope, "Click on this link to create your account: "+params["url"].(string),
-			"template-html-invite-new_"+claims.Scope, params["lang"].(string))
+			"/invite-new", "You have been invited by "+claims.Subject,
+			"/invite-new", "Click on this link to create your account: "+params["url"].(string),
+			"/invite-new", params["lang"].(string))
 
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
@@ -338,9 +338,9 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	params["lang"] = lang(r)
 
 	e := prepareEmail(cred.Email, params,
-		"template-subject-signup_", "Validate your email",
-		"template-plain-signup_", "Click on this link: "+params["url"].(string),
-		"template-html-signup_", params["lang"].(string))
+		"/signup", "Validate your email",
+		"/signup", "Click on this link: "+params["url"].(string),
+		"/signup", params["lang"].(string))
 
 	go func() {
 		err = sendEmail(opts.EmailUrl, e)
@@ -550,9 +550,9 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 	params["lang"] = lang(r)
 
 	e := prepareEmail(email, params,
-		"template-subject-reset_", "Reset your email",
-		"template-plain-reset_", "Click on this link: "+params["url"].(string),
-		"template-html-reset_", params["lang"].(string))
+		"/reset", "Reset your email",
+		"/reset", "Click on this link: "+params["url"].(string),
+		"/reset", params["lang"].(string))
 
 	go func() {
 		err = sendEmail(opts.EmailUrl, e)

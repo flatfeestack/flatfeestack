@@ -55,18 +55,18 @@ func sendEmail(url string, e EmailRequest) error {
 
 func prepareEmail(mailTo string, data map[string]interface{}, templateSubject string, defaultSubject string,
 	templateText string, defaultText string, templateHtml string, lang string) EmailRequest {
-	subject := parseTemplate(templateSubject+lang+".txt", data)
+	subject := parseTemplate("subject/"+lang+templateSubject+".txt", data)
 	if subject == "" {
 		subject = defaultSubject
 	}
-	textMessage := parseTemplate(templateText+lang+".txt", data)
+	textMessage := parseTemplate("plain/"+lang+templateText+".txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
 
-	headerTemplate := parseTemplate("headerTemplate.html", data)
-	footerTemplate := parseTemplate("footerTemplate.html", data)
-	htmlBody := parseTemplate(templateHtml+lang+".html", data)
+	headerTemplate := parseTemplate("html/"+lang+"/header.html", data)
+	footerTemplate := parseTemplate("html/"+lang+"/footer.html", data)
+	htmlBody := parseTemplate("html/"+lang+templateHtml+".html", data)
 	htmlMessage := headerTemplate + htmlBody + footerTemplate
 
 	return EmailRequest{
