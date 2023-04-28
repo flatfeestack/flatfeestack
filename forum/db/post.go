@@ -142,3 +142,12 @@ func CheckIfPostExists(postId uuid.UUID) (bool, error) {
 	}
 	return exists, nil
 }
+
+func CheckIfPostIsClosed(postId uuid.UUID) (bool, error) {
+	var closed bool
+	err := globals.DB.QueryRow(`SELECT "open" FROM post WHERE id = $1`, postId).Scan(&closed)
+	if err != nil {
+		return false, err
+	}
+	return !closed, nil
+}
