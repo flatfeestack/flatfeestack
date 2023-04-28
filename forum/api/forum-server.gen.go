@@ -37,6 +37,9 @@ type ServerInterface interface {
 	// Update a post
 	// (PUT /posts/{postId})
 	PutPostsPostId(w http.ResponseWriter, r *http.Request, postId PostId)
+	// Close a post for further edits and comments
+	// (PUT /posts/{postId}/close)
+	PutPostsPostIdClose(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Get all comments
 	// (GET /posts/{postId}/comments)
 	GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId)
@@ -165,6 +168,34 @@ func (siw *ServerInterfaceWrapper) PutPostsPostId(w http.ResponseWriter, r *http
 
 	var handler = func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutPostsPostId(w, r, postId)
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler(w, r.WithContext(ctx))
+}
+
+// PutPostsPostIdClose operation middleware
+func (siw *ServerInterfaceWrapper) PutPostsPostIdClose(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "postId" -------------
+	var postId PostId
+
+	err = runtime.BindStyledParameter("simple", false, "postId", mux.Vars(r)["postId"], &postId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{"User"})
+
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutPostsPostIdClose(w, r, postId)
 	}
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -425,6 +456,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}", wrapper.PutPostsPostId).Methods("PUT")
 
+	r.HandleFunc(options.BaseURL+"/posts/{postId}/close", wrapper.PutPostsPostIdClose).Methods("PUT")
+
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments", wrapper.GetPostsPostIdComments).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}/comments", wrapper.PostPostsPostIdComments).Methods("POST")
@@ -661,6 +694,56 @@ func (response PutPostsPostId500Response) VisitPutPostsPostIdResponse(w http.Res
 	return nil
 }
 
+type PutPostsPostIdCloseRequestObject struct {
+	PostId PostId `json:"postId"`
+}
+
+type PutPostsPostIdCloseResponseObject interface {
+	VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error
+}
+
+type PutPostsPostIdClose200Response struct {
+}
+
+func (response PutPostsPostIdClose200Response) VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type PutPostsPostIdClose401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutPostsPostIdClose401JSONResponse) VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdClose403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PutPostsPostIdClose403JSONResponse) VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdClose404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PutPostsPostIdClose404JSONResponse) VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PutPostsPostIdClose500Response = InternalServerErrorResponse
+
+func (response PutPostsPostIdClose500Response) VisitPutPostsPostIdCloseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(500)
+	return nil
+}
+
 type GetPostsPostIdCommentsRequestObject struct {
 	PostId PostId `json:"postId"`
 }
@@ -869,6 +952,9 @@ type StrictServerInterface interface {
 	// Update a post
 	// (PUT /posts/{postId})
 	PutPostsPostId(ctx context.Context, request PutPostsPostIdRequestObject) (PutPostsPostIdResponseObject, error)
+	// Close a post for further edits and comments
+	// (PUT /posts/{postId}/close)
+	PutPostsPostIdClose(ctx context.Context, request PutPostsPostIdCloseRequestObject) (PutPostsPostIdCloseResponseObject, error)
 	// Get all comments
 	// (GET /posts/{postId}/comments)
 	GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error)
@@ -1053,6 +1139,32 @@ func (sh *strictHandler) PutPostsPostId(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// PutPostsPostIdClose operation middleware
+func (sh *strictHandler) PutPostsPostIdClose(w http.ResponseWriter, r *http.Request, postId PostId) {
+	var request PutPostsPostIdCloseRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutPostsPostIdClose(ctx, request.(PutPostsPostIdCloseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutPostsPostIdClose")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutPostsPostIdCloseResponseObject); ok {
+		if err := validResponse.VisitPutPostsPostIdCloseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
 // GetPostsPostIdComments operation middleware
 func (sh *strictHandler) GetPostsPostIdComments(w http.ResponseWriter, r *http.Request, postId PostId) {
 	var request GetPostsPostIdCommentsRequestObject
@@ -1176,24 +1288,25 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"/wMAAP//WlPeCOQcAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

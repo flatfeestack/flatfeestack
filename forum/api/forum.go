@@ -120,6 +120,33 @@ func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsP
 	}, nil
 }
 
+func (s *StrictServerImpl) PutPostsPostIdClose(ctx context.Context, request PutPostsPostIdCloseRequestObject) (PutPostsPostIdCloseResponseObject, error) {
+	exists, err := database.CheckIfPostExists(request.PostId)
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostIdClose500Response{}, nil
+	}
+	if !exists {
+		return PutPostsPostIdClose404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
+	}
+
+	if !isCurrentUserAdmin(ctx) {
+		id := getCurrentUserId(ctx)
+		authorId := database.GetPostAuthorId(request.PostId)
+		if id == uuid.Nil || authorId == uuid.Nil || id != authorId {
+			log.Errorf("user %v tried to close post: %v but post was written by %v", id, request.PostId, authorId)
+			return PutPostsPostIdClose403JSONResponse{ForbiddenJSONResponse{Error: fmt.Sprintf("you not author of this post: %v", request.PostId)}}, nil
+		}
+	}
+
+	err = database.ClosePost(request.PostId)
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostIdClose500Response{}, nil
+	}
+	return PutPostsPostIdClose200Response{}, nil
+}
+
 func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request GetPostsPostIdCommentsRequestObject) (GetPostsPostIdCommentsResponseObject, error) {
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
@@ -226,6 +253,15 @@ func getCurrentUserId(ctx context.Context) uuid.UUID {
 		return uuid.Nil
 	}
 	return user.Id
+}
+
+func isCurrentUserAdmin(ctx context.Context) bool {
+	user, ok := ctx.Value("currentUser").(*database.DbUser)
+	if !ok {
+		log.Error("value is not a *database.DbUser")
+		return false
+	}
+	return user.Role == "Admin"
 }
 
 // Function to map DbPost to Post

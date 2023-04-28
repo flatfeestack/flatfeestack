@@ -70,23 +70,25 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		log.Info(fmt.Sprintf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method))
 
+		dbUser.Role = "User"
+		for _, email := range globals.ADMINS {
+			if claims.Subject == email {
+				log.Info(fmt.Sprintf("Authenticated admin %s\n", email))
+				dbUser.Role = "Admin"
+
+			}
+		}
+		ctx = context.WithValue(ctx, CurrentUser, dbUser)
+
 		switch scopesSlice[0] {
 		case "Admin":
-			log.Debug("Admin scope")
-			for _, email := range globals.ADMINS {
-				if claims.Subject == email {
-					log.Info(fmt.Sprintf("Authenticated admin %s\n", email))
-					dbUser.Role = "Admin"
-					ctx = context.WithValue(ctx, CurrentUser, dbUser)
-					next.ServeHTTP(w, r.WithContext(ctx))
-					return
-				}
+			if dbUser.Role == "Admin" {
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
 			}
 			utils.WriteErrorf(w, http.StatusUnauthorized, "You are not admin: %v", claims.Subject)
 			return
 		case "User":
-			log.Debug("User scope")
-			ctx = context.WithValue(ctx, CurrentUser, dbUser)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		default:
 			utils.WriteErrorf(w, http.StatusInternalServerError, "Unknown scope")

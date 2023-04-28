@@ -109,6 +109,25 @@ paths:
         '500':
           $ref: "#/components/responses/InternalServerError"
 
+  /posts/{postId}/close:
+    put:
+      summary: Close a post for further edits and comments
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          $ref: "#/components/responses/Forbidden"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '500':
+          $ref: "#/components/responses/InternalServerError"
+
   /posts/{postId}/comments:
     get:
       summary: Get all comments
