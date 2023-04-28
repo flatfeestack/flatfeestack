@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+We received a request to reset the password for your account. If you did not make this request, please disregard this email.
+
+To reset your password, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team
