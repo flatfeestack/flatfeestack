@@ -23,6 +23,7 @@ export default defineConfig({
     visualizer({
       emitFile: true,
       filename: "stats.html",
+      include: { file: "**/node_modules/**" },
     }),
   ],
   server: {
