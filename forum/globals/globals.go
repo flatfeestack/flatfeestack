@@ -3,7 +3,6 @@ package globals
 import (
 	"database/sql"
 	"forum/types"
-	"forum/utils"
 )
 
 var (
@@ -11,5 +10,4 @@ var (
 	OPTS   *types.Opts
 	JwtKey []byte
 	ADMINS []string
-	KM     = utils.KeyedMutex{}
 )
