@@ -62,6 +62,14 @@ var (
 	})
 )
 
+const (
+	KeyInviteOld = "invite-old"
+	KeyInvite    = "invite-new"
+	KeyLogin     = "login"
+	KeyReset     = "reset"
+	KeySignup    = "signup"
+)
+
 func confirmEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	token := vars["token"]
@@ -166,7 +174,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		//user already exists, send email to direct him to the invitations
 		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
 		e := prepareEmail(email, params,
-			"/invite-old", "You have been invited by "+claims.Subject,
+			KeyInviteOld, "You have been invited by "+claims.Subject,
 			"Click on this link to see your invitation: "+params["url"].(string),
 			params["lang"].(string))
 		go func() {
@@ -201,7 +209,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		params["url"] = opts.EmailLinkPrefix + "/login"
 
 		e := prepareEmail(email, params,
-			"/login", "You have been invited again by "+claims.Subject,
+			KeyLogin, "You have been invited again by "+claims.Subject,
 			"Click on this link to login: "+params["url"].(string),
 			params["lang"].(string))
 
@@ -219,7 +227,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		params["url"] = opts.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
 
 		e := prepareEmail(email, params,
-			"/invite-new", "You have been invited by "+claims.Subject,
+			KeyInvite, "You have been invited by "+claims.Subject,
 			"Click on this link to create your account: "+params["url"].(string),
 			params["lang"].(string))
 
@@ -338,7 +346,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	params["lang"] = lang(r)
 
 	e := prepareEmail(cred.Email, params,
-		"/signup", "Validate your email",
+		KeySignup, "Validate your email",
 		"Click on this link: "+params["url"].(string),
 		params["lang"].(string))
 
@@ -550,7 +558,7 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 	params["lang"] = lang(r)
 
 	e := prepareEmail(email, params,
-		"/reset", "Reset your email",
+		KeyReset, "Reset your email",
 		"Click on this link: "+params["url"].(string),
 		params["lang"].(string))
 
