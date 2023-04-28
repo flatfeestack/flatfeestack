@@ -5,6 +5,13 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -12,12 +19,6 @@ import (
 	"github.com/spaolacci/murmur3"
 	"github.com/stripe/stripe-go/v74/paymentmethod"
 	"golang.org/x/text/language"
-	"math/big"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -1066,7 +1067,7 @@ func lang(r *http.Request) string {
 
 func parseTemplate(filename string, other map[string]string) string {
 	textMessage := ""
-	tmplPlain, err := template.ParseFiles(filename)
+	tmplPlain, err := template.ParseFiles("mail-templates/" + filename)
 	if err == nil {
 		var buf bytes.Buffer
 		err = tmplPlain.Execute(&buf, other)

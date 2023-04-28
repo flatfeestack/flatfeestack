@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+Your payment was successful.
+
+To view your payment, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

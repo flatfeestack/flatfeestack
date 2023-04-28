@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+We noticed that you are running low on funding.
+
+To add funds, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

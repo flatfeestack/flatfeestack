@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+We have only received partial payment; {{.actual}} of {{.total}}.
+
+To complete the payment, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

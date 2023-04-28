@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+Action is required for your payment.
+
+Please visit the following site and follow the instructions to continue:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team
