@@ -98,6 +98,14 @@ func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsP
 	if !exists {
 		return PutPostsPostId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
 	}
+	closed, err := database.CheckIfPostIsClosed(request.PostId)
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostId500Response{}, nil
+	}
+	if closed {
+		return PutPostsPostId403JSONResponse{ForbiddenJSONResponse{Error: fmt.Sprintf("this post is closed: %v", request.PostId)}}, nil
+	}
 	id := getCurrentUserId(ctx)
 	authorId := database.GetPostAuthorId(request.PostId)
 	if id == uuid.Nil || authorId == uuid.Nil || id != authorId {
@@ -223,6 +231,15 @@ func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, 
 	if err != nil {
 		log.Error(err)
 		return PutPostsPostIdCommentsCommentId500Response{}, nil
+	}
+
+	closed, err := database.CheckIfPostIsClosed(request.PostId)
+	if err != nil {
+		log.Error(err)
+		return PutPostsPostId500Response{}, nil
+	}
+	if closed {
+		return PutPostsPostIdCommentsCommentId403JSONResponse{ForbiddenJSONResponse{Error: fmt.Sprintf("the post to this comment is closed: %v", request.PostId)}}, nil
 	}
 
 	id := getCurrentUserId(ctx)
