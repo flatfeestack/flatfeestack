@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+Unfortunately your credit card transfer failed, because of insufficient funds.
+
+If you have enough funds, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

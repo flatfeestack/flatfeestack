@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+We noticed that your invited users could not sponsor anymore.
+
+To add funds, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -88,11 +89,12 @@ func sendEmailQueue(e *EmailRequest) error {
 	var jsonData []byte
 	var err error
 	if strings.Contains(opts.EmailUrl, "sendgrid") {
-		sendGridReq := mail.NewSingleEmailPlainText(
+		sendGridReq := mail.NewSingleEmail(
 			mail.NewEmail(opts.EmailFromName, opts.EmailFrom),
 			e.Subject,
 			mail.NewEmail("", e.MailTo),
-			e.TextMessage)
+			e.TextMessage,
+			e.HtmlMessage)
 		jsonData, err = json.Marshal(sendGridReq)
 	} else {
 		jsonData, err = json.Marshal(e)
@@ -129,15 +131,18 @@ func prepareEmail(
 	defaultText string,
 	lang string) error {
 
-	subject := parseTemplate("template-subject-"+templateKey+"_"+lang+".tmpl", data)
+	subject := parseTemplate("subject/"+lang+"/"+templateKey+".txt", data)
 	if subject == "" {
 		subject = defaultSubject
 	}
-	textMessage := parseTemplate("template-plain-"+templateKey+"_"+lang+".tmpl", data)
+	textMessage := parseTemplate("plain/"+lang+"/"+templateKey+".txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
-	htmlMessage := parseTemplate("template-html-"+templateKey+"_"+lang+".tmpl", data)
+	headerTemplate := parseTemplate("html/"+lang+"/header.html", data)
+	footerTemplate := parseTemplate("html/"+lang+"/footer.html", data)
+	htmlBody := parseTemplate("html/"+lang+"/"+templateKey+".html", data)
+	htmlMessage := headerTemplate + htmlBody + footerTemplate
 
 	e := EmailRequest{
 		MailTo:      data["mailTo"],

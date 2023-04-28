@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+We are about to top up your account.
+
+Thanks for supporting with FlatFeeStack:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

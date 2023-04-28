@@ -1,0 +1,13 @@
+Hi {{.email}},
+
+Thanks for keep building and maintaining {{.repoNames}}
+
+Someone sponsored you with {{.balanceMap}}
+
+To claim your support, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team

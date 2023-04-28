@@ -1,0 +1,11 @@
+Hi {{.email}},
+
+A new git email address was added to your profile.
+
+To confirm your address, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser.
+
+FlatFeeStack Team
