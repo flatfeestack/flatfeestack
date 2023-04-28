@@ -81,6 +81,20 @@ func DeletePost(id uuid.UUID) error {
 	return nil
 }
 
+func ClosePost(postId uuid.UUID) error {
+	stmt, err := globals.DB.Prepare(`UPDATE post SET "open" = false WHERE id = $1`)
+	if err != nil {
+		return err
+	}
+	defer closeAndLog(stmt)
+
+	_, err = stmt.Exec(postId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetPostById(id uuid.UUID) (*DbPost, error) {
 	var post DbPost
 	row, err := globals.DB.Query(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`, id)

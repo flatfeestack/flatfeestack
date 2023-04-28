@@ -41,6 +41,11 @@ Content-Type: application/json
   "content": "The new content of the post"
 }
 
+### Close a post
+PUT http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/close
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### Insert a comment to post
 POST http://{{host}}:{{port-forum}}/posts/{{new_post_id}}/comments
 Content-Type: application/json
