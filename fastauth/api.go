@@ -167,8 +167,8 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
 		e := prepareEmail(email, params,
 			"/invite-old", "You have been invited by "+claims.Subject,
-			"/invite-old", "Click on this link to see your invitation: "+params["url"].(string),
-			"/invite-old", params["lang"].(string))
+			"Click on this link to see your invitation: "+params["url"].(string),
+			params["lang"].(string))
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
 			if err != nil {
@@ -202,8 +202,8 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 		e := prepareEmail(email, params,
 			"/login", "You have been invited again by "+claims.Subject,
-			"/login", "Click on this link to login: "+params["url"].(string),
-			"/login", params["lang"].(string))
+			"Click on this link to login: "+params["url"].(string),
+			params["lang"].(string))
 
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
@@ -220,8 +220,8 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 		e := prepareEmail(email, params,
 			"/invite-new", "You have been invited by "+claims.Subject,
-			"/invite-new", "Click on this link to create your account: "+params["url"].(string),
-			"/invite-new", params["lang"].(string))
+			"Click on this link to create your account: "+params["url"].(string),
+			params["lang"].(string))
 
 		go func() {
 			err = sendEmail(opts.EmailUrl, e)
@@ -339,8 +339,8 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	e := prepareEmail(cred.Email, params,
 		"/signup", "Validate your email",
-		"/signup", "Click on this link: "+params["url"].(string),
-		"/signup", params["lang"].(string))
+		"Click on this link: "+params["url"].(string),
+		params["lang"].(string))
 
 	go func() {
 		err = sendEmail(opts.EmailUrl, e)
@@ -551,8 +551,8 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 
 	e := prepareEmail(email, params,
 		"/reset", "Reset your email",
-		"/reset", "Click on this link: "+params["url"].(string),
-		"/reset", params["lang"].(string))
+		"Click on this link: "+params["url"].(string),
+		params["lang"].(string))
 
 	go func() {
 		err = sendEmail(opts.EmailUrl, e)
