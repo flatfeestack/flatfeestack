@@ -53,20 +53,20 @@ func sendEmail(url string, e EmailRequest) error {
 	return nil
 }
 
-func prepareEmail(mailTo string, data map[string]interface{}, templateName string, defaultSubject string,
+func prepareEmail(mailTo string, data map[string]interface{}, templateKey string, defaultSubject string,
 	defaultText string, lang string) EmailRequest {
-	subject := parseTemplate("subject/"+lang+templateName+".txt", data)
+	subject := parseTemplate("subject/"+lang+"/"+templateKey+".txt", data)
 	if subject == "" {
 		subject = defaultSubject
 	}
-	textMessage := parseTemplate("plain/"+lang+templateName+".txt", data)
+	textMessage := parseTemplate("plain/"+lang+"/"+templateKey+".txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
 
 	headerTemplate := parseTemplate("html/"+lang+"/header.html", data)
 	footerTemplate := parseTemplate("html/"+lang+"/footer.html", data)
-	htmlBody := parseTemplate("html/"+lang+templateName+".html", data)
+	htmlBody := parseTemplate("html/"+lang+"/"+templateKey+".html", data)
 	htmlMessage := headerTemplate + htmlBody + footerTemplate
 
 	return EmailRequest{
