@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 func sendEmail(url string, e EmailRequest) error {
@@ -18,11 +19,12 @@ func sendEmail(url string, e EmailRequest) error {
 	var jsonData []byte
 	var err error
 	if strings.Contains(url, "sendgrid") {
-		sendGridReq := mail.NewSingleEmailPlainText(
+		sendGridReq := mail.NewSingleEmail(
 			mail.NewEmail(opts.EmailFromName, opts.EmailFrom),
 			e.Subject,
 			mail.NewEmail("", e.MailTo),
-			e.TextMessage)
+			e.TextMessage,
+			e.HtmlMessage)
 		jsonData, err = json.Marshal(sendGridReq)
 	} else {
 		jsonData, err = json.Marshal(e)
@@ -53,15 +55,19 @@ func sendEmail(url string, e EmailRequest) error {
 
 func prepareEmail(mailTo string, data map[string]interface{}, templateSubject string, defaultSubject string,
 	templateText string, defaultText string, templateHtml string, lang string) EmailRequest {
-	subject := parseTemplate(templateSubject+lang+".tmpl", data)
+	subject := parseTemplate(templateSubject+lang+".txt", data)
 	if subject == "" {
 		subject = defaultSubject
 	}
-	textMessage := parseTemplate(templateText+lang+".tmpl", data)
+	textMessage := parseTemplate(templateText+lang+".txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
-	htmlMessage := parseTemplate(templateHtml+lang+".tmpl", data)
+
+	headerTemplate := parseTemplate("headerTemplate.html", data)
+	footerTemplate := parseTemplate("footerTemplate.html", data)
+	htmlBody := parseTemplate(templateHtml+lang+".html", data)
+	htmlMessage := headerTemplate + htmlBody + footerTemplate
 
 	return EmailRequest{
 		MailTo:      mailTo,

@@ -9,12 +9,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/scrypt"
-	"golang.org/x/text/language"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -22,6 +16,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/go-jose/go-jose/v3"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/scrypt"
+	"golang.org/x/text/language"
 )
 
 type Timewarp struct {
@@ -365,7 +366,7 @@ func lang(r *http.Request) string {
 
 func parseTemplate(filename string, other map[string]interface{}) string {
 	textMessage := ""
-	tmplPlain, err := template.ParseFiles(filename)
+	tmplPlain, err := template.ParseFiles("mail-templates/" + filename)
 	if err == nil {
 		var buf bytes.Buffer
 		err = tmplPlain.Execute(&buf, other)
