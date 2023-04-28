@@ -6,11 +6,14 @@ import (
 	database "forum/db"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"sync"
 )
 
 type StrictServerImpl struct {
-	// Implement any necessary dependencies or data stores here
+	Lock sync.Mutex
 }
+
+var _ StrictServerInterface = (*StrictServerImpl)(nil)
 
 func NewStrictServerImpl() *StrictServerImpl {
 	// Initialize and return a new instance of StrictServerImpl
@@ -53,6 +56,8 @@ func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsReque
 }
 
 func (s *StrictServerImpl) DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	err := database.DeletePost(request.PostId)
 	if err != nil {
 		log.Error(err)
@@ -83,6 +88,8 @@ func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsP
 }
 
 func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsPostIdRequestObject) (PutPostsPostIdResponseObject, error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
 		log.Error(err)
@@ -165,6 +172,8 @@ func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request 
 }
 
 func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Context, request DeletePostsPostIdCommentsCommentIdRequestObject) (DeletePostsPostIdCommentsCommentIdResponseObject, error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	err := database.DeleteComment(request.CommentId)
 	if err != nil {
 		log.Error(err)
@@ -174,6 +183,8 @@ func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Contex
 }
 
 func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	postExists, err := database.CheckIfPostExists(request.PostId)
 	if !postExists {
 		return PutPostsPostIdCommentsCommentId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil

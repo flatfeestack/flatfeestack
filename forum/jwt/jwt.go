@@ -61,9 +61,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		unlock := globals.KM.Lock(claims.Subject)
-		defer unlock()
-
 		dbUser, err := database.FindUserByEmail(claims.Subject)
 		if err != nil {
 			utils.WriteErrorf(w, http.StatusBadRequest, "User find error: %v", err)

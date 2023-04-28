@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 )
 
 func init() {
@@ -66,18 +65,6 @@ func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{
 	if err != nil {
 		log.Error("Could not write error", err)
 	}
-}
-
-type KeyedMutex struct {
-	mutexes sync.Map // Zero value is empty and ready for use
-}
-
-func (m *KeyedMutex) Lock(key string) func() {
-	value, _ := m.mutexes.LoadOrStore(key, &sync.Mutex{})
-	mtx := value.(*sync.Mutex)
-	mtx.Lock()
-
-	return func() { mtx.Unlock() }
 }
 
 func EmptyOptions() *middleware.Options {
