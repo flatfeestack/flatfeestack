@@ -1,7 +1,9 @@
 Hi {{.email}},
 
 Thanks for signing up!
-Click on the link below to confirm your FlatFeeStack account: {{.url}}
+Click on the link below to confirm your FlatFeeStack account:
+
+{{.url}}
 
 Or copy the link and paste it in your browser.
 

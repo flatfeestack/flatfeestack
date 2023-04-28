@@ -1,0 +1,10 @@
+Hi {{.email}},
+
+You have been invited by {{.inviter}} to join their project.
+To view the invitation and login, please click on the following link:
+
+{{.url}}
+
+Or copy the link and paste it in your browser,
+
+FlatFeeStack Team
