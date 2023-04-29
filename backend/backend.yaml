@@ -139,6 +139,15 @@ paths:
             properties:
               image:
                 type: string
+  /users/me/clear/name:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
   /users/me/image:
     post:
       tags:
