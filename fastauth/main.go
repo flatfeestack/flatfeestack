@@ -209,9 +209,12 @@ func NewOpts() *Opts {
 
 	flag.Parse()
 
-	//set defaults
+	//set defaults, be explicit
 	if opts.Env == "local" || opts.Env == "dev" {
 		debug = true
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 
 	//set defaults

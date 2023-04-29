@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 	}
 
 	opts = &Opts{}
-	opts.Env = "test"
+	opts.Env = "local"
 
 	code := m.Run()
 
