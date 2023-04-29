@@ -13,19 +13,24 @@
     { label: "Crypto Currencies", value: 2, component: CryptoTab },
   ];
 
-  let currentFreq = $config.plans[0].freq;
+  let currentFreq: number = 365;
   let currentSeats = 1;
   let selectedPlan: Plan;
+
   $: {
-    selectedPlan = $config.plans.find((e) => e.freq == currentFreq);
-    if (!selectedPlan) {
-      selectedPlan = $config.plans[0];
+    if ($config && $config.plans) {
+      selectedPlan = $config.plans.find((e) => e.freq == currentFreq);
+      if (!selectedPlan) {
+        selectedPlan = $config.plans[0];
+      }
     }
   }
 
   let total: number;
   $: {
-    total = selectedPlan.price * currentSeats;
+    if (selectedPlan) {
+      total = selectedPlan.price * currentSeats;
+    }
   }
 
   let current: number;
@@ -80,20 +85,22 @@
   account in accordance with the terms of my agreement with you.
 </p>
 <div class="container-stretch">
-  {#each $config.plans as { title, desc, disclaimer, freq }}
-    <div
-      class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
-      freq
-        ? 'bg-green'
-        : ''}"
-    >
-      <button class="accessible-btn" on:click={() => (currentFreq = freq)}>
-        <h3 class="text-center font-bold text-lg">{title}</h3>
-        <div class="text-center">{@html desc}</div>
-        <div class="small text-center">{@html disclaimer}</div>
-      </button>
-    </div>
-  {/each}
+  {#if $config.plans}
+    {#each $config.plans as { title, desc, disclaimer, freq }}
+      <div
+        class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
+        freq
+          ? 'bg-green'
+          : ''}"
+      >
+        <button class="accessible-btn" on:click={() => (currentFreq = freq)}>
+          <h3 class="text-center font-bold text-lg">{title}</h3>
+          <div class="text-center">{@html desc}</div>
+          <div class="small text-center">{@html disclaimer}</div>
+        </button>
+      </div>
+    {/each}
+  {/if}
 </div>
 
 <div class="container page">
