@@ -290,3 +290,49 @@ jobs:
           context: payout
           push: true
           tags: "registry.digitalocean.com/flatfeestack/payout:${{ github.ref_name }}"
+
+  build-and-push-caddy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Login to DigitalOcean container registry
+        run: doctl registry login --expiry-seconds 10000
+
+      - name: Build container
+        uses: docker/build-push-action@v4
+        with:
+          context: caddy
+          load: true
+          tags: "registry.digitalocean.com/flatfeestack/caddy:${{ github.ref_name }}"
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Caddy
+        run: docker run --rm -d -p 8080:8080 -e HOST=http://localhost:8080 "registry.digitalocean.com/flatfeestack/caddy:${{ github.ref_name }}"
+
+      - name: Check if Caddy is reachable
+        uses: nick-fields/retry@v2
+        with:
+          timeout_seconds: 15
+          max_attempts: 5
+          command: curl -v localhost:8080
+
+      - name: Push
+        uses: docker/build-push-action@v4
+        with:
+          context: caddy
+          push: true
+          tags: "registry.digitalocean.com/flatfeestack/caddy:${{ github.ref_name }}"
