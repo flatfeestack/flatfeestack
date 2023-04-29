@@ -143,10 +143,6 @@ func NewOpts() *Opts {
 		o.EmailFrom = "info@flatfeestack.io"
 	}
 
-	if o.StripeWebhookSecretKey == "" {
-		o.StripeWebhookSecretKey = "whsec_BlO0hcHIJb82nUM9v8fpq0WP55FxKF2U"
-	}
-
 	return o
 }
 
