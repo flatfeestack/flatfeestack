@@ -813,7 +813,7 @@ func fakePayment(w http.ResponseWriter, r *http.Request, email string) {
 		return
 	}
 
-	paymentCycleInId, err := insertNewPaymentCycleIn(365, seats, timeNow())
+	paymentCycleInId, err := insertNewPaymentCycleIn(seats, 365, timeNow())
 	if err != nil {
 		writeErrorf(w, http.StatusBadRequest, "Could not create new payment cycle: %v", err)
 		return
