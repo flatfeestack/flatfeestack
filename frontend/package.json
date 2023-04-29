@@ -24,31 +24,31 @@
     "schema:forum": "npx openapi-typescript ../forum/api/forum.yaml --output ./src/types/generated-forum-types.ts"
   },
   "devDependencies": {
-    "@fortawesome/free-solid-svg-icons": "^6.3.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
     "@tsconfig/svelte": "^3.0.0",
-    "concurrently": "^8.0.0",
+    "concurrently": "^8.0.1",
     "express": "^4.18.2",
     "npm-watch": "^0.11.0",
-    "openapi-typescript": "^6.2.1",
-    "prettier": "^2.8.4",
+    "openapi-typescript": "^6.2.4",
+    "prettier": "^2.8.8",
     "prettier-plugin-svelte": "^2.9.0",
     "rollup-plugin-visualizer": "^5.9.0",
-    "svelte": "^3.57.0",
+    "svelte": "^3.58.0",
     "svelte-check": "^3.1.4",
     "svelte-fa": "^3.0.3",
     "svelte-preprocess": "^5.0.3",
     "tslib": "^2.5.0",
-    "typescript": "^5.0.0",
-    "vite": "^4.2.0",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.3",
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-ssr": "^0.4.97"
   },
   "dependencies": {
     "@ethersproject/providers": "^5.7.2",
     "@metamask/detect-provider": "^2.0.0",
-    "@stripe/stripe-js": "^1.49.0",
-    "chart.js": "^4.2.1",
+    "@stripe/stripe-js": "^1.52.1",
+    "chart.js": "^4.3.0",
     "ethers": "^5.7.2",
     "humanize-duration": "^3.28.0",
     "ky": "^0.33.0",
@@ -56,6 +56,6 @@
     "svelte-qr": "^1.0.0",
     "svelte-routing": "^1.6.0",
     "svelte-simple-modal": "^1.5.2",
-    "yup": "^1.0.0"
+    "yup": "^1.1.1"
   }
 }
