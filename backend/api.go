@@ -334,6 +334,14 @@ func updateName(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 }
 
+func clearName(w http.ResponseWriter, r *http.Request, user *User) {
+	err := clearUserName(user.Id)
+	if err != nil {
+		writeErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		return
+	}
+}
+
 func updateImage(w http.ResponseWriter, r *http.Request, user *User) {
 	var img ImageRequest
 	err := json.NewDecoder(r.Body).Decode(&img)
@@ -960,6 +968,7 @@ func userSummary2(w http.ResponseWriter, r *http.Request) {
 		Id:    user.Id,
 		Name:  user.Name,
 		Image: user.Image,
+		Email: user.Email,
 	}
 	writeJson(w, user2)
 }

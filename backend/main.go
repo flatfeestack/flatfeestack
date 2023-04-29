@@ -7,6 +7,14 @@ import (
 	"encoding/base32"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/dimiro1/banner"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -15,13 +23,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v74"
 	"golang.org/x/crypto/ed25519"
-	"net/http"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -223,6 +224,7 @@ func main() {
 	router.HandleFunc("/users/me/method", jwtAuthUser(deleteMethod)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/sponsored", jwtAuthUser(getSponsoredRepos)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(updateName)).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/clear/name", jwtAuthUser(clearName)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(updateImage), 200*1024)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(setupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(cancelSub)).Methods(http.MethodDelete)

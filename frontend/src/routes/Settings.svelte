@@ -12,23 +12,16 @@
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
 
-  let nameOrig = $user.name;
-  let timeoutName;
   let fileInput;
+  let username: undefined | string;
 
   let gitEmails: GitUser[] = [];
   let newEmail = "";
 
   $: {
-    if (timeoutName) {
-      clearTimeout(timeoutName);
+    if (typeof username === "undefined" && $user.name) {
+      username = $user.name;
     }
-    timeoutName = setTimeout(() => {
-      if ($user.name !== nameOrig) {
-        API.user.setName($user.name);
-        nameOrig = $user.name;
-      }
-    }, 1000);
   }
 
   const onFileSelected = (e) => {
@@ -49,6 +42,19 @@
       $user.image = data;
     };
   };
+
+  function handleUsernameChangeg() {
+    try {
+      if (username === "") {
+        API.user.clearName();
+      } else {
+        API.user.setName(username);
+        $user.name = username;
+      }
+    } catch (e) {
+      $error = e;
+    }
+  }
 
   async function handleAddEmail() {
     try {
@@ -91,6 +97,10 @@
     cursor: pointer;
     align-items: center;
   }
+  .user-hint {
+    grid-column: 2/2;
+    font-size: 16px;
+  }
 </style>
 
 <Navigation>
@@ -102,10 +112,17 @@
     <input
       id="username-input"
       type="text"
-      class="max-w20"
-      bind:value={$user.name}
+      class="m-4 max-w20"
+      bind:value={username}
+      on:change={handleUsernameChangeg}
       placeholder="Name on the badge"
     />
+    {#if username === "" || typeof username === "undefined"}
+      <p class="p-rl-4 m-0 user-hint">
+        If no username is set, your email address will be used for your public
+        badges.
+      </p>
+    {/if}
     <label for="profile-picture-upload" class="p-2 m-2 nobreak"
       >Profile picture:</label
     >
