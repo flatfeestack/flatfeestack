@@ -159,7 +159,7 @@ func prepareEmail(
 	if b {
 		log.Debugf("sending %v email to %v/%v", data["key"], data["email"], data["mailTo"])
 		lastMailTo = e.MailTo
-		if opts.Env != "test" {
+		if opts.Env != "local" {
 			sendEmail(&e)
 		}
 	} else {

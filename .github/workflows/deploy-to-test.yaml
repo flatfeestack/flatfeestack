@@ -30,20 +30,28 @@ jobs:
           sed -i 's#%%STRIPE_SECRET_WEBHOOK%%#${{ secrets.TEST_STRIPE_SECRET_WEBHOOK }}#g' backend/.env
           sed -i 's#%%NOWPAYMENTS_TOKEN%%#${{ secrets.TEST_NOWPAYMENTS_TOKEN }}#g' backend/.env
           sed -i 's#%%NOWPAYMENTS_IPN_KEY%%#${{ secrets.TEST_NOWPAYMENTS_IPN_KEY }}#g' backend/.env
-          cat backend/.env
+          sed -i 's#ENV=local#ENV=dev#g' backend/.env
 
       - name: Edit fastauth .env file
         run: |
           sed -i 's#%%EMAIL_TOKEN%%#${{ secrets.TEST_EMAIL_TOKEN }}#g' fastauth/.env
           sed -i 's#EMAIL_PREFIX=http://localhost:8080#EMAIL_PREFIX=https://test.flatfeestack.io#g' fastauth/.env
-          cat fastauth/.env
+          sed -i 's#ENV=local#ENV=dev#g' fastauth/.env
 
       - name: Edit payout .env file
         run: |
           sed -i 's#ETH_URL=http://ganache:8545#ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
           sed -i 's#NEO_URL=http://host.docker.internal:50012#NEO_URL=http://seed1t4.neo.org:20332#g' payout/.env
           sed -i 's#USDC_URL=http://ganache:8545#USDC_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
-          cat payout/.env
+          sed -i 's#ENV=local#ENV=dev#g' payout/.env
+
+      - name: Edit forum .env file
+        run: |
+          sed -i 's#ENV=local#ENV=dev#g' forum/.env
+
+      - name: Edit analyzer .env file
+        run: |
+          sed -i 's#ENV=local#ENV=dev#g' analyzer/.env
 
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
