@@ -93,8 +93,6 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>URL</th>
-            <th>Repos</th>
             <th>Description</th>
             <th>Unclaimed Sponsoring</th>
             <th>Graph</th>
@@ -103,11 +101,7 @@
         <tbody>
           {#each contributionSummaries as cs}
             <tr>
-              <td>{cs.repo.name}</td>
-              <td><a href={cs.repo.url}>{cs.repo.url}</a></td>
-              <td>
-                <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
-              </td>
+              <td><a href={cs.repo.url}>{cs.repo.name}</a></td>
               <td>{cs.repo.description}</td>
               <td
                 >{#each Object.entries(cs.currencyBalance) as [key, value]}{formatBalance(
