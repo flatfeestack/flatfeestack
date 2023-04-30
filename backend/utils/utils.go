@@ -1,7 +1,7 @@
 package utils
 
 import (
-	db2 "backend/db"
+	//db2 "backend/db"
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
@@ -131,9 +131,17 @@ func PrintMap(balanceMap map[string]*big.Int) string {
 	return s
 }
 
-const (
-	usdFactor = 1_000_000 // 10^6
-)
+func UsdBaseToCent(base int64) int64 {
+	return base / 10_000
+}
+
+func UsdBaseToPrice(base int64) float64 {
+	return float64(base) / 1_000_000
+}
+
+func UsdCentToBase(base int64) int64 {
+	return base * 10_000
+}
 
 func GetFactorInt(currency string) (int64, error) {
 	for supportedCurrency, cryptoCurrency := range SupportedCurrencies {
@@ -181,14 +189,4 @@ func GetColor1(input string) string {
 	b := strconv.Itoa(int(35 + 10*(5*myHash(input+"b"))))
 	c := strconv.Itoa(int(25 + 10*(5*myHash(input+"c"))))
 	return "hsl(" + a + "," + b + "%," + c + "%)"
-}
-
-func extractGitUrls(repos []db2.Repo) []string {
-	gitUrls := []string{}
-	for _, v := range repos {
-		if v.GitUrl != nil {
-			gitUrls = append(gitUrls, *v.GitUrl)
-		}
-	}
-	return gitUrls
 }

@@ -8,6 +8,26 @@ import (
 	"time"
 )
 
+type AnalysisRequest struct {
+	Id         uuid.UUID
+	RepoId     uuid.UUID
+	DateFrom   time.Time
+	DateTo     time.Time
+	GitUrl     string
+	ReceivedAt *time.Time
+	Error      *string
+}
+
+type AnalysisResponse struct {
+	Id        uuid.UUID
+	RequestId uuid.UUID `json:"request_id"`
+	DateFrom  time.Time
+	DateTo    time.Time
+	GitEmail  string
+	GitNames  []string
+	Weight    float64
+}
+
 func InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
 	stmt, err := db.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, created_at) VALUES($1, $2, $3, $4, $5, $6)")
 	if err != nil {
@@ -140,4 +160,37 @@ func FindAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
 		ars = append(ars, ar)
 	}
 	return ars, nil
+}
+
+func FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
+	var cs []Contributions
+
+	rows, err := db.Query(`SELECT areq.date_from, areq.date_to, ares.git_email, ares.git_names, ares.weight
+                        FROM analysis_request areq
+                        INNER JOIN analysis_response ares on areq.id = ares.analysis_request_id
+                        WHERE areq.repo_id=$1 AND areq.error IS NULL 
+                        ORDER BY areq.date_to, ares.weight DESC, ares.git_email`, repoId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer closeAndLog(rows)
+
+	for rows.Next() {
+		var c Contributions
+		var jsonNames string
+		err = rows.Scan(&c.DateFrom, &c.DateTo, &c.GitEmail, &jsonNames, &c.Weight)
+
+		var names []string
+		if err := json.Unmarshal([]byte(jsonNames), &names); err != nil {
+			return nil, err
+		}
+		c.GitNames = names
+
+		if err != nil {
+			return nil, err
+		}
+		cs = append(cs, c)
+	}
+	return cs, nil
 }

@@ -1,8 +1,8 @@
 package db
 
 import (
+	"backend/utils"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"time"
@@ -142,31 +142,40 @@ type SponsorResult struct {
 
 func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, error) {
 	rows, err := db.Query(`		
-			SELECT user_id, `+agg+`(repo_id)
+			SELECT user_id, repo_id
 			FROM sponsor_event
 			WHERE sponsor_at < $1 AND (un_sponsor_at IS NULL OR un_sponsor_at >= $2)
-			GROUP BY user_id`, start.Format("2006-02-01"), stop.Format("2006-02-01"))
+			GROUP BY user_id, repo_id
+			ORDER BY user_id`, start, stop)
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
 
 	sponsorResults := []SponsorResult{}
+	var userIdOld uuid.UUID
+	var userId uuid.UUID
+	sponsorResult := SponsorResult{}
 	for rows.Next() {
-		var sponsorResult SponsorResult
-		var repoIdsJSON string
-		err = rows.Scan(&sponsorResult.UserId, &repoIdsJSON)
+		var repoId uuid.UUID
+		err = rows.Scan(&userId, &repoId)
 		if err != nil {
 			return nil, err
 		}
-		var repoIds []uuid.UUID
-		err = json.Unmarshal([]byte(repoIdsJSON), &repoIds)
-		if err != nil {
-			return nil, err
+		sponsorResult.RepoIds = append(sponsorResult.RepoIds, repoId)
+		if userId != userIdOld && !utils.IsUUIDZero(userIdOld) {
+			sponsorResult.UserId = userIdOld
+			sponsorResults = append(sponsorResults, sponsorResult)
+			sponsorResult = SponsorResult{}
+			userIdOld = userId
 		}
-		sponsorResult.RepoIds = repoIds
-
-		sponsorResults = append(sponsorResults, sponsorResult)
+		if utils.IsUUIDZero(userIdOld) {
+			userIdOld = userId
+		}
 	}
+
+	sponsorResult.UserId = userId
+	sponsorResults = append(sponsorResults, sponsorResult)
+
 	return sponsorResults, nil
 }

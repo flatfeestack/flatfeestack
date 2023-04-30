@@ -11,11 +11,11 @@ import (
 	"net/http"
 )
 
-func GetMyUser(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func GetMyUser(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	utils.WriteJson(w, user)
 }
 
-func DeleteMethod(w http.ResponseWriter, r *http.Request, user *db.User) {
+func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	user.PaymentMethod = nil
 	user.Last4 = nil
 	err := db.UpdateStripe(user)
@@ -25,7 +25,7 @@ func DeleteMethod(w http.ResponseWriter, r *http.Request, user *db.User) {
 	}
 }
 
-func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.User) {
+func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	a := params["method"]
 
@@ -49,7 +49,7 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.User) {
 	utils.WriteJson(w, user)
 }
 
-func UpdateName(w http.ResponseWriter, r *http.Request, user *db.User) {
+func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	a := params["name"]
 	err := db.UpdateUserName(user.Id, a)
@@ -59,7 +59,7 @@ func UpdateName(w http.ResponseWriter, r *http.Request, user *db.User) {
 	}
 }
 
-func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.User) {
+func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	var img ImageRequest
 	err := json.NewDecoder(r.Body).Decode(&img)
 	if err != nil {
@@ -74,7 +74,7 @@ func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.User) {
 	}
 }
 
-func Users(w http.ResponseWriter, r *http.Request, _ string) {
+func Users(w http.ResponseWriter, _ *http.Request, _ string) {
 	u, err := db.FindAllEmails()
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could fetch users: %v", err)
@@ -83,28 +83,30 @@ func Users(w http.ResponseWriter, r *http.Request, _ string) {
 	utils.WriteJson(w, u)
 }
 
-func FakeUser(w http.ResponseWriter, r *http.Request, email string) {
+func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("fake user")
 	m := mux.Vars(r)
 	n := m["email"]
 
 	uid := uuid.New()
-	payOutI := uuid.New()
 
 	u := db.User{
-		Email:             n,
-		Id:                uid,
-		PaymentCycleOutId: payOutI,
-		CreatedAt:         utils.TimeNow(),
+		Email:     n,
+		Id:        uid,
+		CreatedAt: utils.TimeNow(),
+	}
+	ud := db.UserDetail{
+		User: u,
 	}
 
-	err := db.InsertUser(&u)
+	err := db.InsertUser(&ud)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
 	}
 
-	err = db.InsertGitEmail(uid, n, nil, utils.TimeNow())
+	id := uuid.New()
+	err = db.InsertGitEmail(id, uid, n, nil, utils.TimeNow())
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
 		return
@@ -132,9 +134,12 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user2 := db.User{
-		Id:    user.Id,
-		Name:  user.Name,
+		Id:   user.Id,
+		Name: user.Name,
+	}
+	user2D := db.UserDetail{
+		User:  user2,
 		Image: user.Image,
 	}
-	utils.WriteJson(w, user2)
+	utils.WriteJson(w, user2D)
 }

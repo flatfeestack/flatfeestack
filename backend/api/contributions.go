@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, false)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
@@ -19,7 +19,7 @@ func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.User) {
 	utils.WriteJson(w, cs)
 }
 
-func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, true)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
@@ -51,7 +51,7 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 	ContributionsSum(w, r, user)
 }
 
-func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
@@ -60,7 +60,7 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.User) {
 
 	rbs := []db.RepoBalance{}
 	for _, v := range repos {
-		repoBalances, err := db.FindSumFutureBalanceByRepoId(&v.Id)
+		repoBalances, err := db.FindSumFutureBalanceByRepoId(v.Id)
 		if err != nil {
 			utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
 			return

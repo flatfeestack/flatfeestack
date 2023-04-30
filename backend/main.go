@@ -22,7 +22,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var (
@@ -32,7 +31,6 @@ var (
 	privEdDSA *ed25519.PrivateKey
 	debug     bool
 	admins    []string
-	km        = KeyedMutex{}
 )
 
 type Opts struct {
@@ -54,7 +52,6 @@ type Opts struct {
 	EmailUrl                  string
 	EmailToken                string
 	EmailMarketing            string
-	WebSocketBaseUrl          string
 	NowpaymentsToken          string
 	NowpaymentsIpnKey         string
 	NowpaymentsApiUrl         string
@@ -90,8 +87,6 @@ func NewOpts() *Opts {
 		"http://localhost/"), "Email link prefix")
 	flag.StringVar(&o.EmailMarketing, "email-marketing", lookupEnv("EMAIL_MARKETING",
 		"tom.marketing@bocek.ch"), "Email marketing email. Set the value to 'live' to send out real emails")
-	flag.StringVar(&o.WebSocketBaseUrl, "ws-base-url", lookupEnv("WS_BASE_URL",
-		"ws://localhost"), "Websocket base URL")
 	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
 	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
@@ -195,7 +190,7 @@ func main() {
 	clients.InitEmail(opts.EmailUrl, opts.EmailFromName, opts.EmailFrom, opts.EmailToken, opts.Env, opts.EmailMarketing, opts.EmailLinkPrefix)
 	api.InitStripe(opts.StripeAPISecretKey, opts.StripeWebhookSecretKey)
 	api.InitNow(opts.NowpaymentsApiUrl, opts.NowpaymentsToken, opts.NowpaymentsIpnCallbackUrl, opts.NowpaymentsIpnKey)
-	api.InitApi(opts.StripeAPIPublicKey, opts.WebSocketBaseUrl, opts.Env)
+	api.InitApi(opts.StripeAPIPublicKey, opts.Env)
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -237,8 +232,6 @@ func main() {
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/payment", jwtAuthUser(api.WebSocket)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/payment-cycle", jwtAuthUser(api.PaymentCycle)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
 	//contributions
 	router.HandleFunc("/users/contrib-snd", jwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
@@ -260,7 +253,6 @@ func main() {
 	router.HandleFunc("/hooks/analyzer", jwtAuthAdmin(api.AnalysisEngineHook, []string{"ffs-server"})).Methods(http.MethodPost)
 
 	//admin
-	router.HandleFunc("/admin/payout/{exchangeRate}", jwtAuthAdmin(api.MonthlyPayout, admins)).Methods(http.MethodPost)
 	router.HandleFunc("/admin/time", jwtAuthAdmin(api.ServerTime, admins)).Methods(http.MethodGet)
 	router.HandleFunc("/admin/users", jwtAuthAdmin(api.Users, admins)).Methods(http.MethodPost)
 
@@ -300,16 +292,4 @@ func maxBytes(next func(w http.ResponseWriter, r *http.Request), size int64) fun
 		r.Body = http.MaxBytesReader(w, r.Body, size)
 		next(w, r)
 	}
-}
-
-type KeyedMutex struct {
-	mutexes sync.Map // Zero value is empty and ready for use
-}
-
-func (m *KeyedMutex) Lock(key string) func() {
-	value, _ := m.mutexes.LoadOrStore(key, &sync.Mutex{})
-	mtx := value.(*sync.Mutex)
-	mtx.Lock()
-
-	return func() { mtx.Unlock() }
 }

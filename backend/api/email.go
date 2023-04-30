@@ -6,12 +6,13 @@ import (
 	"backend/utils"
 	"encoding/base32"
 	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
 )
 
-func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	emails, err := db.FindGitEmailsByUserId(user.Id)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not find git emails %v", err)
@@ -35,7 +36,7 @@ func ConfirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.User) {
+func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	var body GitEmailRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -49,7 +50,8 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.User) {
 		return
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
-	err = db.InsertGitEmail(user.Id, body.Email, &addGitEmailToken, utils.TimeNow())
+	id := uuid.New()
+	err = db.InsertGitEmail(id, user.Id, body.Email, &addGitEmailToken, utils.TimeNow())
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save email: %v", err)
 		return
@@ -59,7 +61,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.User) {
 	clnt.SendAddGit(email, addGitEmailToken, lang(r))
 }
 
-func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.User) {
+func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	email := params["email"]
 

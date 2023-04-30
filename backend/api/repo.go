@@ -31,7 +31,7 @@ type Dataset struct {
 	PointBorderWidth int    `json:"pointBorderWidth"`
 }
 
-func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.User) {
+func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	params := mux.Vars(r)
 	id, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -51,7 +51,7 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.User) {
 	utils.WriteJson(w, repo)
 }
 
-func TagRepo(w http.ResponseWriter, r *http.Request, user *db.User) {
+func TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -61,7 +61,7 @@ func TagRepo(w http.ResponseWriter, r *http.Request, user *db.User) {
 	tagRepo0(w, user, repoId, db.Active)
 }
 
-func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.User) {
+func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -71,7 +71,7 @@ func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.User) {
 	tagRepo0(w, user, repoId, db.Inactive)
 }
 
-func Graph(w http.ResponseWriter, r *http.Request, _ *db.User) {
+func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -134,7 +134,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.User) {
 	utils.WriteJson(w, data)
 }
 
-func tagRepo0(w http.ResponseWriter, user *db.User, repoId uuid.UUID, newEventType uint8) {
+func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
 	repo, err := db.FindRepoById(repoId)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save to DB: %v", err)
@@ -186,7 +186,7 @@ func tagRepo0(w http.ResponseWriter, user *db.User, repoId uuid.UUID, newEventTy
 	utils.WriteJson(w, repo)
 }
 
-func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.User) {
+func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not get repos: %v", err)
@@ -196,7 +196,7 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.User) {
 	utils.WriteJson(w, repos)
 }
 
-func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.User) {
+func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	q := r.URL.Query().Get("q")
 	log.Infof("query %v", q)
 	if q == "" {
@@ -211,7 +211,7 @@ func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.User) {
 	utils.WriteJson(w, repos)
 }
 
-func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.User) {
+func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	q := r.URL.Query().Get("q")
 	log.Infof("query %v", q)
 	if q == "" {

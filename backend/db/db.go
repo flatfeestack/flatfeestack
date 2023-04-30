@@ -23,8 +23,7 @@ const (
 )
 
 var (
-	db  *sql.DB
-	agg string
+	db *sql.DB
 )
 
 type RepoBalance struct {
@@ -54,30 +53,10 @@ type UserBalanceCore struct {
 	Currency string    `json:"currency"`
 }
 
-type UserStatus struct {
-	UserId   uuid.UUID `json:"userId"`
-	Email    string    `json:"email"`
-	Name     *string   `json:"name,omitempty"`
-	DaysLeft int       `json:"daysLeft"`
-}
-
 type PaymentCycle struct {
 	Id    uuid.UUID `json:"id"`
 	Seats int64     `json:"seats"`
 	Freq  int64     `json:"freq"`
-}
-
-type Contribution struct {
-	RepoName         string    `json:"repoName"`
-	RepoUrl          string    `json:"repoUrl"`
-	SponsorName      *string   `json:"sponsorName,omitempty"`
-	SponsorEmail     string    `json:"sponsorEmail"`
-	ContributorName  *string   `json:"contributorName,omitempty"`
-	ContributorEmail string    `json:"contributorEmail"`
-	Balance          *big.Int  `json:"balance"`
-	Currency         string    `json:"currency"`
-	PaymentCycleInId uuid.UUID `json:"paymentCycleInId"`
-	Day              time.Time `json:"day"`
 }
 
 type PayoutInfo struct {
@@ -85,44 +64,27 @@ type PayoutInfo struct {
 	Amount   *big.Int `json:"amount"`
 }
 
-type Balance struct {
-	Balance       *big.Int
-	DailySpending *big.Int
-}
+//type Balance struct {
+//	Balance       *big.Int
+//	DailySpending *big.Int
+//}
 
-type AnalysisResponse struct {
-	Id        uuid.UUID
-	RequestId uuid.UUID `json:"request_id"`
-	DateFrom  time.Time
-	DateTo    time.Time
-	GitEmail  string
-	GitNames  []string
-	Weight    float64
-}
-
-type AnalysisRequest struct {
-	Id         uuid.UUID
-	RepoId     uuid.UUID
-	DateFrom   time.Time
-	DateTo     time.Time
-	GitUrl     string
-	ReceivedAt *time.Time
-	Error      *string
-}
-
-func CreateUser(email string, now time.Time) (*User, error) {
+func CreateUser(email string, now time.Time) (*UserDetail, error) {
 	user := User{
 		Id:        uuid.New(),
 		Email:     email,
 		CreatedAt: now,
 	}
+	userDetail := UserDetail{
+		User: user,
+	}
 
-	err := InsertUser(&user)
+	err := InsertUser(&userDetail)
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("user %v created", user)
-	return &user, nil
+	return &userDetail, nil
 }
 
 func handleErrMustInsertOne(res sql.Result) error {
@@ -206,14 +168,6 @@ func InitDb(dbDriver string, dbPath string, dbScripts string) error {
 		}
 	}
 
-	if dbDriver == "sqlite3" {
-		//https://database.guide/sqlite-json_group_array/
-		agg = "json_group_array"
-	} else if dbDriver == "postgres" {
-		//https://www.postgresql.org/docs/9.5/functions-aggregate.html
-		agg = "json_agg"
-	}
-
 	log.Infof("Successfully connected!")
 	return nil
 }
@@ -227,4 +181,14 @@ func closeAndLog(c io.Closer) {
 
 func stringPointer(s string) *string {
 	return &s
+}
+
+func extractGitUrls(repos []Repo) []string {
+	gitUrls := []string{}
+	for _, v := range repos {
+		if v.GitUrl != nil {
+			gitUrls = append(gitUrls, *v.GitUrl)
+		}
+	}
+	return gitUrls
 }

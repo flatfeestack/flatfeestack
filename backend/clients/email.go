@@ -88,7 +88,10 @@ func init() {
 		for {
 			select {
 			case e := <-queue:
-				sendEmailQueue(e)
+				err := sendEmailQueue(e)
+				if err != nil {
+					log.Errorf("cannot send email %v", err)
+				}
 			}
 		}
 	}()
@@ -116,7 +119,8 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 		EmailNoNotifications++
 		return false, nil
 	}
-	err = db.InsertEmailSent(uId, email, key, utils.TimeNow())
+	id := uuid.New()
+	err = db.InsertEmailSent(id, uId, email, key, utils.TimeNow())
 	if err != nil {
 		return false, err
 	}
@@ -234,16 +238,21 @@ func SendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames 
 		other["lang"])
 }
 
-func SendStripeTopUp(u db.User) error {
+func SendStripeTopUp(u db.UserDetail) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
+
 	key := KeyTopUpStripe
-	if u.PaymentCycleInId != nil {
-		key += u.PaymentCycleInId.String()
+	_, _, _, c, err := db.FindLatestDailyPayment(u.Id, "USD")
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		key += c.String()
 	}
 	other["key"] = key
 
@@ -256,7 +265,7 @@ func SendStripeTopUp(u db.User) error {
 		other["lang"])
 }
 
-func SendTopUpSponsor(u db.User) error {
+func SendTopUpSponsor(u db.UserDetail) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -264,8 +273,16 @@ func SendTopUpSponsor(u db.User) error {
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
 
-	//we are sponser, and the user beneficiaryEmail could not donate
-	other["key"] = u.PaymentCycleInId.String() + KeyTopUpOther
+	//we are sponsor, and the user beneficiaryEmail could not donate
+	_, _, _, c, err := db.FindLatestDailyPayment(u.Id, "USD")
+	if err != nil {
+		return err
+	}
+	if c == nil {
+		return fmt.Errorf("cannot have date as nil %v", c)
+	}
+	other["key"] = c.String() + KeyTopUpOther
+
 	return prepareEmail(
 		&u.Id,
 		other,
@@ -275,14 +292,23 @@ func SendTopUpSponsor(u db.User) error {
 		other["lang"])
 }
 
-func SendTopUpInvited(u db.User) error {
+func SendTopUpInvited(u db.UserDetail) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = u.PaymentCycleInId.String() + KeyTopUpUser1
+
+	_, _, _, c, err := db.FindLatestDailyPayment(u.Id, "USD")
+	if err != nil {
+		return err
+	}
+	if c == nil {
+		return fmt.Errorf("cannot have date as nil %v", c)
+	}
+	other["key"] = c.String() + KeyTopUpUser1
+
 	return prepareEmail(
 		&u.Id,
 		other,
@@ -292,7 +318,7 @@ func SendTopUpInvited(u db.User) error {
 		other["lang"])
 }
 
-func SendTopUpOther(u db.User) error {
+func SendTopUpOther(u db.UserDetail) error {
 	email := u.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -301,8 +327,12 @@ func SendTopUpOther(u db.User) error {
 	other["lang"] = "en"
 
 	key := KeyTopUpUser2
-	if u.PaymentCycleInId != nil {
-		key += u.PaymentCycleInId.String()
+	_, _, _, c, err := db.FindLatestDailyPayment(u.Id, "USD")
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		key += c.String()
 	}
 	other["key"] = key
 
@@ -334,7 +364,11 @@ func SendAddGit(email string, addGitEmailToken string, lang string) error {
 		other["lang"])
 }
 
-func SendPaymentNowFinished(user *db.User, data WebhookResponse) error {
+func SendPaymentNowFinished(userId uuid.UUID, data WebhookResponse) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -352,7 +386,11 @@ func SendPaymentNowFinished(user *db.User, data WebhookResponse) error {
 		other["lang"])
 }
 
-func SendPaymentNowPartially(user db.User, data WebhookResponse) error {
+func SendPaymentNowPartially(userId uuid.UUID, data WebhookResponse) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
@@ -371,36 +409,44 @@ func SendPaymentNowPartially(user db.User, data WebhookResponse) error {
 		other["lang"])
 }
 
-func SendPaymentNowRefunded(user db.User, data WebhookResponse, status string) error {
+func SendPaymentNowRefunded(userId uuid.UUID, status string, externalId uuid.UUID) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
 	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = KeyPaymentNowRefunded + status + "-" + data.OrderId.String()
+	other["key"] = KeyPaymentNowRefunded + status + "-" + externalId.String()
 
-	defaultMessage := fmt.Sprintf("Payment %v, please check payment: %s", data.PaymentStatus, other["url"])
+	defaultMessage := fmt.Sprintf("Payment %v, please check payment: %s", status, other["url"])
 	return prepareEmail(
 		&user.Id,
 		other,
 		KeyPaymentNowRefunded,
-		"Payment "+data.PaymentStatus,
+		"Payment "+status,
 		defaultMessage,
 		other["lang"])
 }
 
-func SendStripeSuccess(u db.User, newPaymentCycleInId uuid.UUID) error {
-	email := u.Email
+func SendStripeSuccess(userId uuid.UUID, externalId uuid.UUID) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
+	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = KeyStripeSuccess + newPaymentCycleInId.String()
+	other["key"] = KeyStripeSuccess + externalId.String()
 
 	return prepareEmail(
-		&u.Id,
+		&userId,
 		other,
 		KeyStripeSuccess,
 		"Payment successful",
@@ -408,17 +454,21 @@ func SendStripeSuccess(u db.User, newPaymentCycleInId uuid.UUID) error {
 		other["lang"])
 }
 
-func SendStripeAction(u db.User, newPaymentCycleInId uuid.UUID) error {
-	email := u.Email
+func SendStripeAction(userId uuid.UUID, externalId uuid.UUID) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
+	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = KeyStripeAction + newPaymentCycleInId.String()
+	other["key"] = KeyStripeAction + externalId.String()
 
 	return prepareEmail(
-		&u.Id,
+		&user.Id,
 		other,
 		KeyStripeAction,
 		"Authentication requested",
@@ -426,17 +476,21 @@ func SendStripeAction(u db.User, newPaymentCycleInId uuid.UUID) error {
 		other["lang"])
 }
 
-func SendStripeFailed(u db.User, newPaymentCycleInId uuid.UUID) error {
-	email := u.Email
+func SendStripeFailed(userId uuid.UUID, externalId uuid.UUID) error {
+	user, err := db.FindUserById(userId)
+	if err != nil {
+		return err
+	}
+	email := user.Email
 	var other = map[string]string{}
 	other["mailTo"] = email
 	other["email"] = email
 	other["url"] = emailLinkPrefix + "/user/payments"
 	other["lang"] = "en"
-	other["key"] = KeyStripeFailed + newPaymentCycleInId.String()
+	other["key"] = KeyStripeFailed + externalId.String()
 
 	return prepareEmail(
-		&u.Id,
+		&user.Id,
 		other,
 		KeyStripeFailed,
 		"Insufficient funds",

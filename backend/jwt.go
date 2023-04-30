@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backend/api"
 	db "backend/db"
 	"backend/utils"
 	"fmt"
@@ -33,26 +32,16 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	}
 }
 
-func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.User)) func(http.ResponseWriter, *http.Request) {
+func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.UserDetail)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth(r)
-
 		if claims != nil && err != nil {
-			if r.Header.Get("Sec-WebSocket-Protocol") == "" {
-				//no websocket
-				utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
-			} else {
-				//we use websocket
-				api.WsNoAuth(w, r)
-			}
+			utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
 			return
 		} else if claims == nil && err != nil {
 			utils.WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
-
-		unlock := km.Lock(claims.Subject)
-		defer unlock()
 
 		// Fetch user from DB
 		user, err := db.FindUserByEmail(claims.Subject)
@@ -87,10 +76,7 @@ func jwtAuth(r *http.Request) (*jwt.Claims, error) {
 	authHeader := r.Header.Get("Authorization")
 	var bearerToken = ""
 	if authHeader == "" {
-		authHeader = r.Header.Get("Sec-WebSocket-Protocol")
-		if authHeader == "" {
-			return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
-		}
+		return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
 	}
 	split := strings.Split(authHeader, " ")
 	if len(split) != 2 {

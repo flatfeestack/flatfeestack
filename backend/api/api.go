@@ -64,10 +64,11 @@ type FlatFeeWeight struct {
 type Plan struct {
 	Title       string  `json:"title"`
 	Price       float64 `json:"price"`
-	Freq        int64   `json:"freq"`
-	Description string  `json:"desc"`
-	Disclaimer  string  `json:"disclaimer"`
-	FeePrm      int64   `json:"feePrm"`
+	PriceBase   int64
+	Freq        int64  `json:"freq"`
+	Description string `json:"desc"`
+	Disclaimer  string `json:"disclaimer"`
+	FeePrm      int64  `json:"feePrm"`
 }
 
 type PayoutMeta struct {
@@ -91,6 +92,7 @@ var Plans = []Plan{
 	{
 		Title:       "Yearly",
 		Price:       125.47, //365 * 330000 / 1-(0.04)
+		PriceBase:   125468750,
 		Freq:        365,
 		FeePrm:      40,
 		Description: "You can help your sponsored projects on a yearly basis with a flat fee of <b>125.47 USD</b>",
@@ -99,6 +101,7 @@ var Plans = []Plan{
 	{
 		Title:       "5 Years",
 		Price:       624.09, //1825 * 330000 / 1-(0.035)
+		PriceBase:   624093265,
 		Freq:        1825,
 		FeePrm:      35,
 		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
@@ -107,6 +110,7 @@ var Plans = []Plan{
 	{
 		Title:       "Beta",
 		Price:       0.66,
+		PriceBase:   660000,
 		Freq:        2,
 		Description: "Beta testing: <b>" + big.NewFloat(0.66).String() + " USD</b>",
 		Disclaimer:  "",
@@ -115,17 +119,15 @@ var Plans = []Plan{
 
 var (
 	stripeAPIPublicKey string
-	webSocketBaseUrl   string
 	env                string
 )
 
-func InitApi(stripeAPIPublicKey0 string, webSocketBaseUrl0 string, env0 string) {
+func InitApi(stripeAPIPublicKey0 string, env0 string) {
 	stripeAPIPublicKey = stripeAPIPublicKey0
-	webSocketBaseUrl = webSocketBaseUrl0
 	env = env0
 }
 
-func ServerTime(w http.ResponseWriter, r *http.Request, email string) {
+func ServerTime(w http.ResponseWriter, _ *http.Request, _ string) {
 	currentTime := utils.TimeNow()
 	utils.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(utils.SecondsAdd)+`}`)
 }
@@ -139,8 +141,7 @@ func Config(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	utils.WriteJsonStr(w, `{
-			"stripePublicApi":"`+stripeAPIPublicKey+`", 
-			"wsBaseUrl":"`+webSocketBaseUrl+`",
+			"stripePublicApi":"`+stripeAPIPublicKey+`",
             "plans": `+string(b)+`,
 			"env":"`+env+`",
 			"supportedCurrencies":`+string(supportedCurrencies)+`

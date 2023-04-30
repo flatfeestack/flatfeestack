@@ -4,15 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"math/big"
 	"time"
 )
 
 type Marketing struct {
-	Email      string
-	RepoIds    []uuid.UUID
-	Balances   []string
-	Currencies []string
+	Email    string
+	Balances map[string]*big.Int
 }
 
 func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
@@ -35,15 +33,15 @@ func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	return gitEmails, nil
 }
 
-func InsertGitEmail(uid uuid.UUID, email string, token *string, now time.Time) error {
-	stmt, err := db.Prepare("INSERT INTO git_email(user_id, email, token, created_at) VALUES($1, $2, $3, $4)")
+func InsertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token *string, now time.Time) error {
+	stmt, err := db.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uid, email, token, now)
+	res, err = stmt.Exec(id, uid, email, token, now)
 	if err != nil {
 		return err
 	}
@@ -98,17 +96,17 @@ func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 
 //******* Emails Sent
 
-func InsertEmailSent(userId *uuid.UUID, email string, emailType string, now time.Time) error {
+func InsertEmailSent(id uuid.UUID, userId *uuid.UUID, email string, emailType string, now time.Time) error {
 	stmt, err := db.Prepare(`
-			INSERT INTO user_emails_sent(user_id, email, email_type, created_at) 
-			VALUES($1, $2, $3, $4)`)
+			INSERT INTO user_emails_sent(id, user_id, email, email_type, created_at) 
+			VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_emails_sent for %v statement event: %v", userId, err)
 	}
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(userId, email, emailType, now)
+	res, err = stmt.Exec(id, userId, email, emailType, now)
 	if err != nil {
 		return err
 	}
@@ -145,28 +143,78 @@ func CountEmailSentByEmail(email string, emailType string) (int, error) {
 	}
 }
 
-//******** Marketing
+func InsertUnclaimed(id uuid.UUID, email string, repoId uuid.UUID, balance *big.Int, currency string,
+	day time.Time, now time.Time) error {
+	stmt, err := db.Prepare(`
+			INSERT INTO unclaimed(id, email, repo_id, balance, currency, day, created_at) 
+			VALUES($1, $2, $3, $4, $5, $6, $7)`)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO unclaimed for %v statement event: %v", email, err)
+	}
+	defer closeAndLog(stmt)
 
+	var res sql.Result
+	res, err = stmt.Exec(id, email, repoId, balance.String(), currency, day, now)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+// ******** Marketing
 func FindMarketingEmails() ([]Marketing, error) {
 	ms := []Marketing{}
-	rows, err := db.Query(`SELECT u.email, array_agg(DISTINCT u.repo_id) as repo_ids, array_agg(u.balance) as balances,  array_agg(u.currency) as currencies
+	rows, err := db.Query(`SELECT u.email, u.currency, COALESCE(sum(u.balance), 0) as balances
                         FROM unclaimed u
                         LEFT JOIN git_email g ON u.email = g.email 
                         WHERE g.email IS NULL 
-                        GROUP BY u.email`)
+                        GROUP BY u.email, u.currency
+                        ORDER BY u.email, u.currency`)
 
 	if err != nil {
 		return nil, err
 	}
 	defer closeAndLog(rows)
 
+	mk := Marketing{}
+	m := make(map[string]*big.Int)
+	mk.Balances = m
+
+	var email string
+	var emailOld string
+
 	for rows.Next() {
-		var m Marketing
-		err = rows.Scan(&m.Email, pq.Array(&m.RepoIds), pq.Array(&m.Balances), pq.Array(&m.Currencies))
+		var c, b string
+		err = rows.Scan(&email, &c, &b)
 		if err != nil {
 			return nil, err
 		}
-		ms = append(ms, m)
+
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+
+		if emailOld != email && emailOld != "" {
+			mk.Email = emailOld
+			ms = append(ms, mk)
+
+			mk = Marketing{}
+			m = make(map[string]*big.Int)
+			mk.Balances = m
+			emailOld = email
+		}
+
+		if emailOld == "" {
+			emailOld = email
+		}
 	}
+	mk.Email = email
+	ms = append(ms, mk)
 	return ms, nil
 }

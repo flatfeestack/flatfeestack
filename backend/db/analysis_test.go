@@ -182,3 +182,35 @@ func TestAnalysisResponse(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, day3.Nanosecond(), alr.ReceivedAt.Nanosecond())
 }
+
+func TestFindRepoContribution(t *testing.T) {
+	setup()
+	defer teardown()
+	r := insertTestRepo(t)
+
+	a := AnalysisRequest{
+		Id:       uuid.New(),
+		RepoId:   r.Id,
+		DateFrom: day1,
+		DateTo:   day2,
+		GitUrl:   *r.GitUrl,
+	}
+	InsertAnalysisRequest(a, time.Now())
+	InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.5, time.Now())
+	InsertAnalysisResponse(a.Id, "tom2", []string{"tom2"}, 0.4, time.Now())
+
+	a2 := AnalysisRequest{
+		Id:       uuid.New(),
+		RepoId:   r.Id,
+		DateFrom: day2,
+		DateTo:   day3,
+		GitUrl:   *r.GitUrl,
+	}
+	InsertAnalysisRequest(a2, time.Now())
+	InsertAnalysisResponse(a2.Id, "tom", []string{"tom"}, 0.4, time.Now())
+	InsertAnalysisResponse(a2.Id, "tom2", []string{"tom2"}, 0.3, time.Now())
+
+	c, _ := FindRepoContribution(r.Id)
+	assert.Equal(t, 4, len(c))
+	assert.Equal(t, 0.3, c[3].Weight)
+}

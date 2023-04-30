@@ -20,8 +20,8 @@ type Repo struct {
 
 func InsertOrUpdateRepo(repo *Repo) error {
 	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
-									VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-									ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
+								   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+								   ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}

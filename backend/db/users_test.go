@@ -6,14 +6,17 @@ import (
 	"testing"
 )
 
-func insertTestUser(t *testing.T, email string) *User {
+func insertTestUser(t *testing.T, email string) *UserDetail {
 	u := User{
-		Id:       uuid.New(),
+		Id:    uuid.New(),
+		Email: email,
+	}
+	ud := UserDetail{
+		User:     u,
 		StripeId: stringPointer("strip-id"),
-		Email:    email,
 	}
 
-	err := InsertUser(&u)
+	err := InsertUser(&ud)
 	assert.Nil(t, err)
 	u2, err := FindUserById(u.Id)
 	assert.Nil(t, err)
@@ -59,4 +62,25 @@ func TestUserUpdate(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, u5)
 	assert.Equal(t, *u5.StripeId, "strip-id2")
+}
+
+func TestUserUpdateSeat(t *testing.T) {
+	setup()
+	defer teardown()
+	u := insertTestUser(t, "email")
+	UpdateSeatsFreq(u.Id, 12, 13)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, u2.Seats, 12)
+}
+
+func TestUserUpdateInvite(t *testing.T) {
+	setup()
+	defer teardown()
+	u := insertTestUser(t, "email")
+	i := uuid.New()
+	UpdateUserInviteId(u.Id, i)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, u2.InvitedId, &i)
 }

@@ -8,149 +8,144 @@ import (
 	"time"
 )
 
-func insertUserBalance(t *testing.T, userId uuid.UUID, payInId uuid.UUID, bType string, currency string) *UserBalance {
-	ub := UserBalance{
-		UserId:           userId,
-		PaymentCycleInId: payInId,
-		Balance:          big.NewInt(1),
-		DailySpending:    big.NewInt(2),
-		BalanceType:      bType,
-		Currency:         currency,
-		CreatedAt:        time.Time{},
+func insertPayInEvent(t *testing.T, externalId uuid.UUID, userId uuid.UUID, status string, currency string) *PayInEvent {
+	ub := PayInEvent{
+		Id:         uuid.New(),
+		ExternalId: externalId,
+		UserId:     userId,
+		Balance:    big.NewInt(1),
+		Status:     status,
+		Currency:   currency,
+		CreatedAt:  time.Time{},
 	}
-	err := InsertUserBalance(ub)
+	err := InsertPayInEvent(ub)
 	assert.Nil(t, err)
 	return &ub
-}
-
-func insertPaymentCycleIn(t *testing.T, uid uuid.UUID) uuid.UUID {
-	id := uuid.New()
-	err := InsertNewPaymentCycleIn(id, uid, 4, 4, time.Time{})
-	assert.Nil(t, err)
-	return id
-}
-
-func insertPaymentCycleOut(t *testing.T) uuid.UUID {
-	id := uuid.New()
-	//err := Insertid, 4, 4, time.Time{})
-	//assert.Nil(t, err)
-	return id
 }
 
 func TestPayment(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
+	e := uuid.New()
 
-	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
+	ub := insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
 
-	ubs, err := FindUserBalances(u.Id)
+	ubs, err := FindPayInUser(u.Id)
 	assert.Nil(t, err)
 
 	assert.Equal(t, ub.Balance, ubs[0].Balance)
 	assert.Equal(t, 1, len(ubs))
 }
 
-func TestPaymentTwice(t *testing.T) {
+func TestPaymentTwiceFailed(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-	pid = insertPaymentCycleIn(t, u.Id)
-	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
+	e := uuid.New()
 
-	ubs, err := FindUserBalances(u.Id)
-	assert.Nil(t, err)
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
 
-	assert.Equal(t, ub.Balance, ubs[0].Balance)
-	assert.Equal(t, 1, len(ubs))
+	ub2 := PayInEvent{
+		Id:         uuid.New(),
+		ExternalId: e,
+		UserId:     uuid.New(),
+		Balance:    big.NewInt(1),
+		Status:     "TEST",
+		Currency:   "currency",
+		CreatedAt:  time.Time{},
+	}
+	err := InsertPayInEvent(ub2)
+
+	assert.NotNil(t, err)
 }
 
 func TestTwoPaymentTwice(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-	ub := insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
 
-	pid = insertPaymentCycleIn(t, u.Id)
-	ub = insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
+	e := uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
 
-	ubs, err := FindUserBalances(u.Id)
+	e = uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
+
+	ubs, err := FindPayInUser(u.Id)
 	assert.Nil(t, err)
 
-	assert.Equal(t, ub.Balance, ubs[0].Balance)
+	assert.Equal(t, big.NewInt(1), ubs[0].Balance)
 	assert.Equal(t, 2, len(ubs))
-}
-
-func TestPaymentFailed(t *testing.T) {
-	setup()
-	defer teardown()
-	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-
-	insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
-
-	ub2 := UserBalance{
-		UserId:           u.Id,
-		Balance:          big.NewInt(1),
-		DailySpending:    big.NewInt(2),
-		PaymentCycleInId: pid,
-		BalanceType:      "TEST",
-		Currency:         "XBTC",
-		CreatedAt:        time.Time{},
-	}
-	err := InsertUserBalance(ub2)
-	assert.NotNil(t, err)
-}
-
-func TestFindPaymentCycle(t *testing.T) {
-	setup()
-	defer teardown()
-	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-	//on successful payment, the payment cycle id gets updated
-	//err := UpdatePaymentCycleInId(u.Id, pid)
-	//assert.Nil(t, err)
-	p, err := FindPaymentCycleLast(u.Id)
-	assert.Nil(t, err)
-	assert.Equal(t, pid, p.Id)
-}
-
-func TestUserBalanceAndType(t *testing.T) {
-	setup()
-	defer teardown()
-	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-	insertUserBalance(t, u.Id, pid, "TEST", "XBTC")
-
-	insertUserBalance(t, u.Id, pid, "TEST", "XBTC2")
-
-	insertUserBalance(t, u.Id, pid, "TEST2", "XBTC")
-
-	pid2 := insertPaymentCycleIn(t, u.Id)
-	insertUserBalance(t, u.Id, pid2, "TEST", "XBTC")
-
-	ub, err := FindBalance(pid, u.Id, "TEST", "XBTC")
-	assert.Nil(t, err)
-	assert.Equal(t, ub.Balance, big.NewInt(1))
 }
 
 func TestFindSumUserBalanceByCurrency(t *testing.T) {
 	setup()
 	defer teardown()
 	u := insertTestUser(t, "email")
-	pid := insertPaymentCycleIn(t, u.Id)
-	insertUserBalance(t, u.Id, pid, "TEST1", "XBTC")
-	insertUserBalance(t, u.Id, pid, "TEST2", "XBTC")
-	insertUserBalance(t, u.Id, pid, "TEST3", "XBTC")
 
-	insertUserBalance(t, u.Id, pid, "TEST1", "CHF")
-	insertUserBalance(t, u.Id, pid, "TEST2", "CHF")
+	e := uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
 
-	m, err := FindSumUserBalanceByCurrency(pid)
+	e = uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XETH")
+
+	e = uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
+
+	e = uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XETH")
+
+	e = uuid.New()
+	insertPayInEvent(t, e, u.Id, "TEST", "XBTC")
+
+	m, err := FindSumPaymentByCurrency(u.Id, "TEST")
 	assert.Nil(t, err)
-	assert.Equal(t, m["XBTC"].Balance, big.NewInt(3))
-	assert.Equal(t, m["CHF"].Balance, big.NewInt(2))
+	assert.Equal(t, m["XBTC"], big.NewInt(3))
+	assert.Equal(t, m["XETH"], big.NewInt(2))
+}
+
+func TestLatestCurrency(t *testing.T) {
+	setup()
+	defer teardown()
+
+	u := uuid.New()
+	ub := PayInEvent{
+		Id:         uuid.New(),
+		ExternalId: uuid.New(),
+		UserId:     u,
+		Balance:    big.NewInt(1),
+		Status:     "status",
+		Currency:   "XBTC",
+		CreatedAt:  time.Time{},
+	}
+	err := InsertPayInEvent(ub)
+	assert.Nil(t, err)
+
+	ub = PayInEvent{
+		Id:         uuid.New(),
+		ExternalId: uuid.New(),
+		UserId:     u,
+		Balance:    big.NewInt(2),
+		Status:     "status",
+		Currency:   "XETH",
+		CreatedAt:  time.Time{},
+	}
+
+	ub = PayInEvent{
+		Id:         uuid.New(),
+		ExternalId: uuid.New(),
+		UserId:     u,
+		Balance:    big.NewInt(4),
+		Status:     "status",
+		Currency:   "XETH",
+		CreatedAt:  time.Time{}.Add(1),
+	}
+	err = InsertPayInEvent(ub)
+	assert.Nil(t, err)
+
+	b, c, err := FindLatestDailyPayment(u, "XETH")
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(5), b)
+	c1 := time.Time{}.Add(1)
+	assert.Equal(t, &c1, c)
 }

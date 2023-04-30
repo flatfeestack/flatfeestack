@@ -14,7 +14,7 @@ import (
 
 //********************************************************************
 
-func Invitations(w http.ResponseWriter, _ *http.Request, user *db.User) {
+func Invitations(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	invites, err := db.FindInvitationsByAnyEmail(user.Email)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "ERR-invite-06, insert user failed: %v", err)
@@ -29,7 +29,7 @@ func Invitations(w http.ResponseWriter, _ *http.Request, user *db.User) {
 	w.Write(oauthEnc)
 }
 
-func InviteByDelete(w http.ResponseWriter, r *http.Request, user *db.User) {
+func InviteByDelete(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//delete the invite from me of other users
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
@@ -45,7 +45,7 @@ func InviteByDelete(w http.ResponseWriter, r *http.Request, user *db.User) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func InviteMyDelete(w http.ResponseWriter, r *http.Request, user *db.User) {
+func InviteMyDelete(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
@@ -60,7 +60,7 @@ func InviteMyDelete(w http.ResponseWriter, r *http.Request, user *db.User) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func ConfirmInvite(w http.ResponseWriter, r *http.Request, user *db.User) {
+func ConfirmInvite(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	m := mux.Vars(r)
 	email := m["email"]
 
@@ -84,7 +84,7 @@ func ConfirmInvite(w http.ResponseWriter, r *http.Request, user *db.User) {
 	}
 }
 
-func InviteOther(w http.ResponseWriter, r *http.Request, user *db.User) {
+func InviteOther(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	m := mux.Vars(r)
 	email := m["email"]
 
