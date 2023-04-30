@@ -143,7 +143,7 @@ func TestLatestCurrency(t *testing.T) {
 	err = InsertPayInEvent(ub)
 	assert.Nil(t, err)
 
-	b, c, err := FindLatestDailyPayment(u, "XETH")
+	b, _, _, c, err := FindLatestDailyPayment(u, "XETH")
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(5), b)
 	c1 := time.Time{}.Add(1)
