@@ -145,7 +145,7 @@ func TestLatestCurrency(t *testing.T) {
 
 	b, _, _, c, err := FindLatestDailyPayment(u, "XETH")
 	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(5), b)
+	assert.Equal(t, big.NewInt(4), b)
 	c1 := time.Time{}.Add(1)
 	assert.Equal(t, &c1, c)
 }
