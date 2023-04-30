@@ -9,7 +9,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"regexp"
@@ -136,15 +135,24 @@ func InitDb(dbDriver string, dbPath string, dbScripts string) error {
 		return err
 	}
 
-	//this will create or alter tables
-	//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
-	for _, file := range strings.Split(dbScripts, ":") {
+	files := strings.Split(dbScripts, ":")
+	err = RunSQL(files...)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Successfully connected!")
+	return nil
+}
+
+func RunSQL(files ...string) error {
+	for _, file := range files {
 		if file == "" {
 			continue
 		}
 		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
 		if _, err := os.Stat(file); err == nil {
-			fileBytes, err := ioutil.ReadFile(file)
+			fileBytes, err := os.ReadFile(file)
 			if err != nil {
 				return err
 			}
@@ -164,11 +172,9 @@ func InitDb(dbDriver string, dbPath string, dbScripts string) error {
 				}
 			}
 		} else {
-			log.Infof("ignoring file [%v] (%v)", file, err)
+			log.Printf("ignoring file %v (%v)", file, err)
 		}
 	}
-
-	log.Infof("Successfully connected!")
 	return nil
 }
 

@@ -1,12 +1,8 @@
 package db
 
 import (
-	"fmt"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
-	"regexp"
-	"strings"
 	"testing"
 	"time"
 )
@@ -43,47 +39,14 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func runSQL(files ...string) error {
-	for _, file := range files {
-		if file == "" {
-			continue
-		}
-		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
-		if _, err := os.Stat(file); err == nil {
-			fileBytes, err := ioutil.ReadFile(file)
-			if err != nil {
-				return err
-			}
-
-			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
-			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
-			newBytes := re.ReplaceAll(fileBytes, nil)
-
-			requests := strings.Split(string(newBytes), ";")
-			for _, request := range requests {
-				request = strings.TrimSpace(request)
-				if len(request) > 0 {
-					_, err := db.Exec(request)
-					if err != nil {
-						return fmt.Errorf("[%v] %v", request, err)
-					}
-				}
-			}
-		} else {
-			log.Printf("ignoring file %v (%v)", file, err)
-		}
-	}
-	return nil
-}
-
 func setup() {
-	err := runSQL("init.sql")
+	err := RunSQL("init.sql")
 	if err != nil {
 		log.Fatalf("Could not run init.sql scripts: %s", err)
 	}
 }
 func teardown() {
-	err := runSQL("delAll_test.sql")
+	err := RunSQL("delAll_test.sql")
 	if err != nil {
 		log.Fatalf("Could not run delAll_test.sql: %s", err)
 	}
