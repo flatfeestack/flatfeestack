@@ -153,18 +153,22 @@ func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64,
 	err := db.
 		QueryRow(`SELECT balance, seats, freq, created_at
                FROM payment_in_event 
-               WHERE user_id = $1 AND currency = $2
+               WHERE user_id = $1 AND currency = $2 AND status = $3
                ORDER BY created_at
-               LIMIT 1`, userId, currency).
+               LIMIT 1`, userId, currency, PayInSuccess).
 		Scan(&d, &seats, &freq, &c)
 
-	d1, ok := new(big.Int).SetString(d, 10)
-	if !ok {
-		return nil, 0, 0, nil, fmt.Errorf("not a big.int %v", d1)
+	var db *big.Int
+	if d != "" {
+		d1, ok := new(big.Int).SetString(d, 10)
+		if !ok {
+			return nil, 0, 0, nil, fmt.Errorf("not a big.int %v", d1)
+		}
+		db = new(big.Int).Div(d1, big.NewInt(seats))
+		db = new(big.Int).Div(db, big.NewInt(freq))
+	} else {
+		db = big.NewInt(0)
 	}
-
-	db := new(big.Int).Sub(d1, big.NewInt(seats))
-	db = new(big.Int).Sub(db, big.NewInt(freq))
 
 	switch err {
 	case sql.ErrNoRows:
@@ -174,4 +178,24 @@ func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64,
 	default:
 		return nil, 0, 0, nil, err
 	}
+}
+
+func PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
+	//closes the current cycle and opens a new one, rolls over all currencies
+	payInEvent, err := FindPayInExternal(externalId, PayInRequest)
+	if err != nil {
+		return nil
+	}
+	payInEvent.Id = uuid.New()
+	payInEvent.Status = PayInSuccess
+	payInEvent.Balance = new(big.Int).Sub(payInEvent.Balance, fee)
+	err = InsertPayInEvent(*payInEvent)
+	if err != nil {
+		return nil
+	}
+	//now also store fee
+	payInEvent.Id = uuid.New()
+	payInEvent.Status = PayInFee
+	payInEvent.Balance = fee
+	return InsertPayInEvent(*payInEvent)
 }

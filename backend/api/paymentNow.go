@@ -221,28 +221,32 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch data.PaymentStatus {
 	case "finished":
-		err = PaymentSuccess(externalId, big.NewInt(0))
+		err = db.PaymentSuccess(externalId, big.NewInt(0))
 		if err != nil {
 			utils.WriteErrorf(w, http.StatusInternalServerError, "Could not process nowpayment success: %v", err)
 			return
 		}
 		clnt.SendPaymentNowFinished(payInEvent.UserId, data)
 	case "partially_paid":
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInPartially
 		payInEvent.CreatedAt = utils.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowPartially(payInEvent.UserId, data)
 	case "expired":
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInExpired
 		payInEvent.CreatedAt = utils.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowRefunded(payInEvent.UserId, "expired", externalId)
 	case "failed":
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInFailed
 		payInEvent.CreatedAt = utils.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowRefunded(payInEvent.UserId, "failed", externalId)
 	case "refunded":
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInRefunded
 		payInEvent.CreatedAt = utils.TimeNow()
 		db.InsertPayInEvent(*payInEvent)

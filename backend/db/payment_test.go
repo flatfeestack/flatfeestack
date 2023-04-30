@@ -114,8 +114,10 @@ func TestLatestCurrency(t *testing.T) {
 		ExternalId: uuid.New(),
 		UserId:     u,
 		Balance:    big.NewInt(1),
-		Status:     "status",
+		Status:     PayInRequest,
 		Currency:   "XBTC",
+		Seats:      2,
+		Freq:       3,
 		CreatedAt:  time.Time{},
 	}
 	err := InsertPayInEvent(ub)
@@ -126,8 +128,10 @@ func TestLatestCurrency(t *testing.T) {
 		ExternalId: uuid.New(),
 		UserId:     u,
 		Balance:    big.NewInt(2),
-		Status:     "status",
+		Status:     PayInRequest,
 		Currency:   "XETH",
+		Seats:      2,
+		Freq:       3,
 		CreatedAt:  time.Time{},
 	}
 
@@ -135,9 +139,11 @@ func TestLatestCurrency(t *testing.T) {
 		Id:         uuid.New(),
 		ExternalId: uuid.New(),
 		UserId:     u,
-		Balance:    big.NewInt(4),
-		Status:     "status",
+		Balance:    big.NewInt(12),
+		Status:     PayInRequest,
 		Currency:   "XETH",
+		Seats:      2,
+		Freq:       3,
 		CreatedAt:  time.Time{}.Add(1),
 	}
 	err = InsertPayInEvent(ub)
@@ -145,7 +151,14 @@ func TestLatestCurrency(t *testing.T) {
 
 	b, _, _, c, err := FindLatestDailyPayment(u, "XETH")
 	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(4), b)
+	assert.Nil(t, b)
+	err = PaymentSuccess(ub.ExternalId, big.NewInt(0))
+	assert.Nil(t, err)
+	b, _, _, c, err = FindLatestDailyPayment(u, "XETH")
+	assert.Nil(t, err)
+	//why 7? we have a payin of 42, with 2 seats -> 42/2=21 and 3 days -> 21/3=7,
+	//so we pay daily 7 XETH. We will round down, so 41 would lead to daily payout of 6.
+	assert.Equal(t, big.NewInt(7), b)
 	c1 := time.Time{}.Add(1)
 	assert.Equal(t, &c1, c)
 }

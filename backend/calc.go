@@ -48,9 +48,9 @@ func dailyRunner(now time.Time) error {
 	}
 
 	nr := 0
-	for _, sponsorResult := range sponsorResults {
-		if len(sponsorResult.RepoIds) > 0 {
-			err = calcContribution(sponsorResult.UserId, sponsorResult.RepoIds, yesterdayStart)
+	for key, _ := range sponsorResults {
+		if len(sponsorResults[key].RepoIds) > 0 {
+			err = calcContribution(sponsorResults[key].UserId, sponsorResults[key].RepoIds, yesterdayStart)
 			nr++
 			if err != nil {
 				return err
@@ -89,6 +89,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 		return calcAndDeduct(u1, rids, yesterdayStart, u)
 	}
 	//TODO: also notify the not only the parent of insufficient funds
+	log.Printf("the user %v supports %v repos", u.Email, len(rids))
 	return calcAndDeduct(u, rids, yesterdayStart, nil)
 }
 

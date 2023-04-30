@@ -75,7 +75,7 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 		return
 	}
 
-	err = PaymentSuccess(e, big.NewInt(1))
+	err = db.PaymentSuccess(e, big.NewInt(1))
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
 		return
@@ -102,6 +102,7 @@ func StrategyDeductMax(userId uuid.UUID, balances map[string]*big.Int, subs map[
 		if err != nil {
 			return "N/A", 0, nil, err
 		}
+		log.Printf("newB %v / ds %v", newBalance, ds)
 		freq := new(big.Int).Div(newBalance, ds).Int64()
 		if freq > 0 {
 			if freq > maxFreq {
@@ -138,27 +139,4 @@ func StatusSponsoredUsers(w http.ResponseWriter, _ *http.Request, user *db.UserD
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
-}
-
-func PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
-	//closes the current cycle and opens a new one, rolls over all currencies
-	payInEvent, err := db.FindPayInExternal(externalId, db.PayInRequest)
-	if err != nil {
-		return nil
-	}
-	payInEvent.Status = db.PayInSuccess
-	payInEvent.Balance = new(big.Int).Sub(payInEvent.Balance, fee)
-	err = db.InsertPayInEvent(*payInEvent)
-	if err != nil {
-		return nil
-	}
-	//now also store fee
-	payInEvent.Status = db.PayInFee
-	payInEvent.Balance = fee
-	err = db.InsertPayInEvent(*payInEvent)
-	if err != nil {
-		return nil
-	}
-
-	return nil
 }

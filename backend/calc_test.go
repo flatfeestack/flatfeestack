@@ -27,7 +27,7 @@ func TestDailyRunnerOneContributor(t *testing.T) {
 
 	//we have 5 sponsors, but only the first sponsor added funds
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	setupFunds(t, *sponsors[0], "USD", 365, 120, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
 
 	//we have 4 contributors, 1 has added a git email
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
@@ -57,12 +57,12 @@ func TestDailyRunnerOneContributor(t *testing.T) {
 	//now check the daily_contribution
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
-	//120 / 365 * 1'000'000
-	assert.Equal(t, m1["USD"].String(), "328767")
+	//125468750 / 365 = 343750
+	assert.Equal(t, "330000", m1["USD"].String())
 
 	m2, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, m2["USD"].String(), "328767")
+	assert.Equal(t, "330000", m2["USD"].String())
 
 	m3, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
@@ -111,7 +111,7 @@ func TestDailyRunnerOneFuture(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	setupFunds(t, *sponsors[0], "USD", 365, 120, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
 
 	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 	setupContributor(t, *repos[0], day1, day1, []string{"hello@example.com"}, []float64{1.0})
@@ -119,15 +119,14 @@ func TestDailyRunnerOneFuture(t *testing.T) {
 	err := setupSponsor(t, sponsors[0], repos[0], day1)
 	assert.Nil(t, err)
 
-	err = dailyRunner(day2)
+	err = dailyRunner(day3)
 	assert.Nil(t, err)
 
 	//now check the daily_contribution
-
-	m1, err := db.FindSumDailySponsors(*sponsors[0])
+	m1, err := db.FindSumFutureSponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m1) {
-		assert.Equal(t, m1["USD"].String(), "328767")
+		assert.Equal(t, "330000", m1["USD"].String())
 	}
 }
 
@@ -136,9 +135,9 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	setupFunds(t, *sponsors[0], "USD", 365, 120, api.Plans[0].PriceBase, day1)
-	setupFunds(t, *sponsors[1], "USD", 365, 120, api.Plans[0].PriceBase, day1)
-	setupFunds(t, *sponsors[2], "USD", 365, 120, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[1], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[2], "USD", 1, 365, api.Plans[0].PriceBase, day1)
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 	setupGitEmail(t, *contributors[0], "ste@ste.ste")
@@ -172,30 +171,27 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	assert.Nil(t, err)
 
 	//the distribution needs to be as follows:
-	//full amount: 328767
-	//1/2: 164383
-	//1/4: 82191
-	//1/8: 41095
-	//ste gets from tom 1/2, from mic 1/4, from arm 1/4 for repo tomp2p
-	//pea gets from tom 1/2, from mic 1/4, from arm 1/4 for repo tomp2p
+	//neow3j repo has 2x 333000 funds, it is divided by
+	//ste gets from tom 1/2, from mic 1/4, from arm 1/4 for repo tomp2p -> 198
+	//pea gets from tom 1/2, from mic 1/4, from arm 1/4 for repo tomp2p -> 198
 
-	//neow3j repo has 328767 funds, it is diveded by
+	//neow3j repo has 333000 funds, it is divided by
 	//328767 / 0.6 * 0.4 for luc, 328767 / 0.6 * 0.2 for pea
-	//pea gets from mic 1/8, from arm 1/8 for repo neow3j
-	//luc gets from mic 1/4, from arm 1/4 for repo neow3j
+	//pea gets from mic 1/8, from arm 1/8 for repo neow3j -> 66
+	//luc gets from mic 1/4, from arm 1/4 for repo neow3j -> 132
 
 	//now check the daily_contribution
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, m1["USD"].String(), "328765")
+	assert.Equal(t, "198000", m1["USD"].String())
 
 	m2, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
-	assert.Equal(t, m2["USD"].String(), "438353")
+	assert.Equal(t, "264000", m2["USD"].String())
 
 	m3, err := db.FindSumDailyContributors(*contributors[2])
 	assert.Nil(t, err)
-	assert.Equal(t, m3["USD"].String(), "219176")
+	assert.Equal(t, "132000", m3["USD"].String())
 
 	mtot1 := m1["USD"].Int64() + m2["USD"].Int64() + m3["USD"].Int64()
 
@@ -399,7 +395,7 @@ func TestDailyRunnerSponsor(t *testing.T) {
 	defer teardown()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-	setupFunds(t, *sponsors[0], "USD", 365, 120, api.Plans[0].PriceBase, day1)
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
 	setupSponsorUser(t, *sponsors[0], *sponsors[1])
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
@@ -480,7 +476,7 @@ func setupFunds(t *testing.T, uid uuid.UUID, currency string, seats int64, freq 
 
 	err := db.InsertPayInEvent(payInEvent)
 	assert.Nil(t, err)
-	err = api.PaymentSuccess(payInEvent.ExternalId, big.NewInt(0))
+	err = db.PaymentSuccess(payInEvent.ExternalId, big.NewInt(13750*freq))
 	assert.Nil(t, err)
 	return &payInEvent
 }

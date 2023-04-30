@@ -230,7 +230,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 		fee = new(big.Int).Div(fee, big.NewInt(1000)) //we have promill
 		fee = new(big.Int).Add(fee, big.NewInt(1))    //round up
 
-		err = PaymentSuccess(externalId, fee)
+		err = db.PaymentSuccess(externalId, fee)
 		if err != nil {
 			log.Printf("User sum balance cann run for %v: %v\n", externalId, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -255,6 +255,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInAction
 		payInEvent.CreatedAt = utils.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)
@@ -288,6 +289,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInMethod
 		payInEvent.CreatedAt = utils.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -159,16 +160,20 @@ func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, erro
 	for rows.Next() {
 		var repoId uuid.UUID
 		err = rows.Scan(&userId, &repoId)
+
+		if userId != userIdOld && !utils.IsUUIDZero(userIdOld) {
+			sponsorResult.UserId = userIdOld
+			sponsorResults = append(sponsorResults, sponsorResult)
+
+			sponsorResult = SponsorResult{}
+			userIdOld = userId
+		}
+
+		log.Printf("looking into uid %v, repo: %v", userId, repoId)
 		if err != nil {
 			return nil, err
 		}
 		sponsorResult.RepoIds = append(sponsorResult.RepoIds, repoId)
-		if userId != userIdOld && !utils.IsUUIDZero(userIdOld) {
-			sponsorResult.UserId = userIdOld
-			sponsorResults = append(sponsorResults, sponsorResult)
-			sponsorResult = SponsorResult{}
-			userIdOld = userId
-		}
 		if utils.IsUUIDZero(userIdOld) {
 			userIdOld = userId
 		}

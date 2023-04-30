@@ -190,16 +190,6 @@ func FindMarketingEmails() ([]Marketing, error) {
 			return nil, err
 		}
 
-		b1, ok := new(big.Int).SetString(b, 10)
-		if !ok {
-			return nil, fmt.Errorf("not a big.int %v", b1)
-		}
-		if m[c] == nil {
-			m[c] = b1
-		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
-		}
-
 		if emailOld != email && emailOld != "" {
 			mk.Email = emailOld
 			ms = append(ms, mk)
@@ -208,6 +198,16 @@ func FindMarketingEmails() ([]Marketing, error) {
 			m = make(map[string]*big.Int)
 			mk.Balances = m
 			emailOld = email
+		}
+
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
 		}
 
 		if emailOld == "" {
