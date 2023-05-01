@@ -16,7 +16,7 @@
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
 
-  let viewVotingSlots: VotingSlotsContainer = {};
+  let viewVotingSlots: VotingSlot[] = [];
   let slotCloseTime: number = 0;
   let currentTime: string = "";
   let votingPeriod: number = 0;
@@ -44,10 +44,6 @@
     votingSlotState: VotingSlotState;
   }
 
-  interface VotingSlotsContainer {
-    [key: number]: VotingSlot;
-  }
-
   interface ProposalInfo {
     proposalId: string;
     proposalDescription: string;
@@ -63,7 +59,7 @@
       $votingSlots === null
     ) {
       $isSubmitting = true;
-    } else if (Object.keys(viewVotingSlots).length === 0) {
+    } else if (viewVotingSlots.length === 0) {
       $isSubmitting = true;
       prepareView();
     }
@@ -80,33 +76,26 @@
   }
 
   async function createVotingSlots() {
-    $votingSlots.forEach(async (votingSlotBlock: number, index) => {
-      const blockInfo = await createBlockInfo(votingSlotBlock);
-      const proposalInfos = await createProposalInfo(
-        blockInfo.votingStartBlockNumber
-      );
-      const votingSlotState = await getVotingSlotState(
-        blockInfo.votingStartBlockNumber
-      );
+    const creationOfSlots = $votingSlots.map(
+      async (votingSlotBlock: number, index) => {
+        const blockInfo = await createBlockInfo(votingSlotBlock);
+        const proposalInfos = await createProposalInfo(
+          blockInfo.votingStartBlockNumber
+        );
+        const votingSlotState = await getVotingSlotState(
+          blockInfo.votingStartBlockNumber
+        );
 
-      viewVotingSlots = {
-        ...viewVotingSlots,
-        [blockInfo.votingStartBlockNumber]: {
+        return {
           proposalInfos,
           dates: blockInfo,
-          id: index + 1,
+          id: $votingSlots.length - index,
           votingSlotState,
-        },
-      };
-    });
+        };
+      }
+    );
 
-    viewVotingSlots = Object.keys(viewVotingSlots)
-      .sort()
-      .reverse()
-      .reduce((obj, key) => {
-        obj[key] = viewVotingSlots[key];
-        return obj;
-      }, {});
+    viewVotingSlots = await Promise.all(creationOfSlots);
   }
 
   async function getDateForBlock(blockNumber): Promise<string> {
@@ -205,7 +194,7 @@
 
     <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
 
-    {#each Object.entries(viewVotingSlots).reverse() as [blockNumber, slotInfo]}
+    {#each viewVotingSlots as slotInfo}
       <div class="card">
         <h2 class="text-secondary-900">
           Voting slot #{slotInfo.id}
@@ -218,8 +207,8 @@
               .proposalCreationOpenDate})
           </p>
           <p>
-            Voting scheduled for #{blockNumber} (approx. {slotInfo.dates
-              .votingStartDate})
+            Voting scheduled for #{slotInfo.dates.votingStartBlockNumber} (approx.
+            {slotInfo.dates.votingStartDate})
           </p>
         {:else if slotInfo.votingSlotState === VotingSlotState.ProposalFreeze}
           <p>
@@ -228,8 +217,8 @@
               .proposalCreationOpenDate})
           </p>
           <p>
-            Voting start scheduled for #{blockNumber} (approx. {slotInfo.dates
-              .votingStartDate})
+            Voting start scheduled for #{slotInfo.dates.votingStartBlockNumber} (approx.
+            {slotInfo.dates.votingStartDate})
           </p>
 
           <p>
@@ -266,12 +255,18 @@
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.VotingOpen && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/dao/castVotes/${blockNumber}`)}
+              on:click={() =>
+                navigate(
+                  `/dao/castVotes/${slotInfo.dates.votingStartBlockNumber}`
+                )}
               class="py-2 button3">Vote</button
             >
           {:else if slotInfo.votingSlotState == VotingSlotState.ExecutionPhase && slotInfo.proposalInfos.length > 0}
             <button
-              on:click={() => navigate(`/dao/executeProposals/${blockNumber}`)}
+              on:click={() =>
+                navigate(
+                  `/dao/executeProposals/${slotInfo.dates.votingStartBlockNumber}`
+                )}
               class="py-2 button3">Execute proposals</button
             >
           {/if}
