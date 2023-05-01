@@ -64,7 +64,11 @@ export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
               )
             )
           ).then((slots: BigNumber[]) => {
-            set(slots.map((slot) => slot.toNumber()));
+            const sortedSlots = slots
+              .map((slot) => slot.toNumber())
+              .sort((slot1, slot2) => slot2 - slot1); // sort descending, slot with latest start to appear first
+
+            set(sortedSlots);
           });
         })
         .catch((reason) => {
