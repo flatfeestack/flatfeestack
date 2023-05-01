@@ -9,10 +9,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstCouncilMember } = await getNamedAccounts();
+  const { payoutUsdcDeployer } = await getNamedAccounts();
 
   await deploy("USDC", {
-    from: firstCouncilMember,
+    from: payoutUsdcDeployer,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",

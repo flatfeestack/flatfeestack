@@ -6,11 +6,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstCouncilMember, secondCouncilMember } = await getNamedAccounts();
+  const { daoContractDeployer, firstCouncilMember, secondCouncilMember } =
+    await getNamedAccounts();
   const wallet = await deployments.get("Wallet");
 
   const membership = await deploy("Membership", {
-    from: firstCouncilMember,
+    from: daoContractDeployer,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
@@ -30,7 +31,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(
       "Adding membership contract as known sender to wallet contract ..."
     );
-    await (await walletDeployed.addKnownSender(membership.address)).wait();
+
+    await (
+      await walletDeployed
+        .connect(walletDeployed.provider.getSigner(daoContractDeployer))
+        .addKnownSender(membership.address)
+    ).wait();
   }
 };
 

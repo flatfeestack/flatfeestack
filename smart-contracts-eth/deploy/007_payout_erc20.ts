@@ -22,10 +22,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const symbol = await tokenDeployed.symbol();
 
-  const { firstCouncilMember } = await getNamedAccounts();
+  const { payoutUsdcDeployer } = await getNamedAccounts();
 
   const deploymentResult = await deploy("PayoutERC20", {
-    from: firstCouncilMember,
+    from: payoutUsdcDeployer,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
@@ -46,14 +46,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     );
 
     if (tokenQuantityForPayout.eq(BigNumber.from(0))) {
-      console.log("Transfering some USDC tokens to payout contract");
+      console.log("Transfering some USDC tokens to payout contract ...");
       const decimals = await usdcContract.decimals();
 
       await (
-        await usdcContract.transfer(
-          deploymentResult.address,
-          BigNumber.from(50).mul(BigNumber.from(10).pow(decimals))
-        )
+        await usdcContract
+          .connect(usdcContract.provider.getSigner(payoutUsdcDeployer))
+          .transfer(
+            deploymentResult.address,
+            BigNumber.from(50).mul(BigNumber.from(10).pow(decimals))
+          )
       ).wait();
     }
   }

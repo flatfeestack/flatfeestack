@@ -7,13 +7,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstCouncilMember } = await getNamedAccounts();
+  const { daoContractDeployer } = await getNamedAccounts();
 
   const membership = await deployments.get("Membership");
   const timelock = await deployments.get("Timelock");
 
   await deploy("DAO", {
-    from: firstCouncilMember,
+    from: daoContractDeployer,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
@@ -38,13 +38,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const dao = await deployments.get("DAO");
 
-  await Promise.all([
-    addDaoAsProposer(timelockDeployed, dao),
-    revokeCouncilMemberAsAdmin(timelockDeployed, firstCouncilMember),
-  ]);
+  await addDaoAsProposer(timelockDeployed, dao, daoContractDeployer);
+  await revokeDeployerAsAdmin(
+    timelockDeployed,
+    daoContractDeployer
+  );
 };
 
-async function addDaoAsProposer(timelockDeployed: Contract, dao: Deployment) {
+async function addDaoAsProposer(
+  timelockDeployed: Contract,
+  dao: Deployment,
+  contractOwner: string
+) {
   const proposerRole = await timelockDeployed.PROPOSER_ROLE();
   const daoIsProposer = await timelockDeployed.hasRole(
     proposerRole,
@@ -53,25 +58,28 @@ async function addDaoAsProposer(timelockDeployed: Contract, dao: Deployment) {
 
   if (!daoIsProposer) {
     console.log("Granting proposer role to DAO on timelock controller ...");
-    await (await timelockDeployed.grantRole(proposerRole, dao.address)).wait();
+    await (
+      await timelockDeployed
+        .connect(timelockDeployed.provider.getSigner(contractOwner))
+        .grantRole(proposerRole, dao.address)
+    ).wait();
   }
 }
 
-async function revokeCouncilMemberAsAdmin(
+async function revokeDeployerAsAdmin(
   timelockDeployed: Contract,
-  councilMember: String
+  deployer: String,
 ) {
   const adminRole = await timelockDeployed.TIMELOCK_ADMIN_ROLE();
-  const councilMemberIsAdmin = await timelockDeployed.hasRole(
-    adminRole,
-    councilMember
-  );
+  const deployerIsAdmin = await timelockDeployed.hasRole(adminRole, deployer);
 
-  if (councilMemberIsAdmin) {
-    console.log(
-      "Revoking admin role for council member on timelock controller ..."
-    );
-    await (await timelockDeployed.revokeRole(adminRole, councilMember)).wait();
+  if (deployerIsAdmin) {
+    console.log("Revoking admin role for deployer on timelock controller ...");
+    await (
+      await timelockDeployed
+        .connect(timelockDeployed.provider.getSigner(deployer))
+        .revokeRole(adminRole, deployer)
+    ).wait();
   }
 }
 

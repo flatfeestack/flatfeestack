@@ -7,17 +7,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { firstCouncilMember } = await getNamedAccounts();
+  const { daoContractDeployer } = await getNamedAccounts();
 
   await deploy("Timelock", {
-    from: firstCouncilMember,
+    from: daoContractDeployer,
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         init: {
           methodName: "initialize",
-          args: [firstCouncilMember],
+          args: [daoContractDeployer],
         },
       },
     },
@@ -35,14 +35,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
 
   await Promise.all([
-    assignContractOwnershipToTimeLock(membershipDeployed, timelock.address),
-    assignContractOwnershipToTimeLock(walletDeployed, timelock.address),
+    assignContractOwnershipToTimeLock(
+      membershipDeployed,
+      timelock.address,
+      daoContractDeployer
+    ),
+    assignContractOwnershipToTimeLock(
+      walletDeployed,
+      timelock.address,
+      daoContractDeployer
+    ),
   ]);
 };
 
 async function assignContractOwnershipToTimeLock(
   contract: Contract,
-  timelockAddress: string
+  timelockAddress: string,
+  contractOwner: string
 ) {
   const isTimelockContractOwner = (await contract.owner()) === timelockAddress;
 
@@ -50,7 +59,11 @@ async function assignContractOwnershipToTimeLock(
     console.log(
       `Assigning ${contract.address} ownership to timelock controller ...`
     );
-    await (await contract.transferOwnership(timelockAddress)).wait();
+    await (
+      await contract
+        .connect(contract.provider.getSigner(contractOwner))
+        .transferOwnership(timelockAddress)
+    ).wait();
   }
 }
 

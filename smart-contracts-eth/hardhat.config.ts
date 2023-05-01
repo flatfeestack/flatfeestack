@@ -34,6 +34,15 @@ const config: HardhatUserConfig = {
     },
   },
   namedAccounts: {
+    daoContractDeployer: {
+      1337: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+    },
+    payoutEthDeployer: {
+      1337: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+    },
+    payoutUsdcDeployer: {
+      1337: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+    },
     firstCouncilMember: {
       1337: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     },
