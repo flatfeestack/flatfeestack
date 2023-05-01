@@ -210,7 +210,7 @@
         </table>
       </div>
     {:else}
-      No contributions received so far.
+      <p class="p-2 m-2">No contributions received so far.</p>
     {/if}
   {:catch err}
     {($error = err.message)}
