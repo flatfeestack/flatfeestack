@@ -153,6 +153,7 @@ export const API = {
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
+    clearName: () => backendToken.put(`users/me/clear/name`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     setupStripe: () =>

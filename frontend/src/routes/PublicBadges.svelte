@@ -2,11 +2,11 @@
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { error } from "../ts/mainStore";
-  import type { ContributionSummary, Users } from "../types/backend";
+  import type { ContributionSummary, User } from "../types/backend";
 
   export let uuid: string;
   let contributionSummaries: ContributionSummary[] = [];
-  let user: Users;
+  let user: User;
 
   onMount(async () => {
     try {
@@ -30,7 +30,7 @@
 <div class="container-col">
   {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="px-2">
-      Supported Repositories for {user.name || user.id}
+      Supported Repositories for {user.name || user.email}
     </h2>
     {#if user.image}
       <img class="image-org" src={user.image} alt="supported user repository" />
@@ -40,7 +40,6 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>URL</th>
             <th>Repos</th>
             <th>Description</th>
           </tr>
@@ -48,8 +47,7 @@
         <tbody>
           {#each contributionSummaries as cs}
             <tr>
-              <td>{cs.repo.name}</td>
-              <td><a href={cs.repo.url}>{cs.repo.url}</a></td>
+              <td><a href={cs.repo.url}>{cs.repo.name}</a></td>
               <td>
                 <a href={cs.repo.gitUrl}>{cs.repo.gitUrl}</a>
               </td>

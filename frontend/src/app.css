@@ -94,6 +94,10 @@ h1 {
 .p-300 {
   padding: 3rem;
 }
+.p-rl-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
 
 .mx-2 {
   margin-left: 0.5rem;
@@ -107,6 +111,9 @@ h1 {
 }
 .ml-5 {
   margin-left: 0.5rem;
+}
+.m-0 {
+  margin: 0;
 }
 
 .my-2 {

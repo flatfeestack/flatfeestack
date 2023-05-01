@@ -3,8 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -154,6 +155,20 @@ func updateUserName(uid uuid.UUID, name string) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(name, uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func clearUserName(uid uuid.UUID) error {
+	stmt, err := db.Prepare("UPDATE users SET name=NULL WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer closeAndLog(stmt)
+	var res sql.Result
+	res, err = stmt.Exec(uid)
 	if err != nil {
 		return err
 	}
