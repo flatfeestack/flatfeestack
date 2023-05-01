@@ -49,14 +49,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       console.log("Transfering some USDC tokens to payout contract ...");
       const decimals = await usdcContract.decimals();
 
-      await (
-        await usdcContract
-          .connect(usdcContract.provider.getSigner(payoutUsdcDeployer))
-          .transfer(
-            deploymentResult.address,
-            BigNumber.from(50).mul(BigNumber.from(10).pow(decimals))
-          )
-      ).wait();
+      const transaction = await usdcContract
+        .connect(usdcContract.provider.getSigner(payoutUsdcDeployer))
+        .transfer(
+          deploymentResult.address,
+          BigNumber.from(50).mul(BigNumber.from(10).pow(decimals))
+        );
+
+      console.log(`transaction hash: ${transaction.hash}`);
+      await transaction.wait();
     }
   }
 };

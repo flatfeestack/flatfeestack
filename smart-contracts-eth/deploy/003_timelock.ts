@@ -59,11 +59,12 @@ async function assignContractOwnershipToTimeLock(
     console.log(
       `Assigning ${contract.address} ownership to timelock controller ...`
     );
-    await (
-      await contract
-        .connect(contract.provider.getSigner(contractOwner))
-        .transferOwnership(timelockAddress)
-    ).wait();
+    const transaction = await contract
+      .connect(contract.provider.getSigner(contractOwner))
+      .transferOwnership(timelockAddress);
+
+    console.log(`transaction hash: ${transaction.hash}`);
+    await transaction.wait();
   }
 }
 
