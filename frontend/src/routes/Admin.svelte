@@ -61,16 +61,28 @@
     }
   }
 
-  const handleFakeUsers = async (email: string) => {
-    return API.payouts.fakeUser(email);
+  const handleFakeUsers = async () => {
+    try {
+      await API.payouts.fakeUser(fakeUserEmail);
+    } catch (e) {
+      $error = e;
+    }
   };
 
-  const handleFakePayment = async (email: string, seats: number) => {
-    return API.payouts.fakePayment(email, seats);
+  const handleFakePayment = async () => {
+    try {
+      await API.payouts.fakePayment(fakePaymentEmail, seats);
+    } catch (e) {
+      $error = e;
+    }
   };
 
-  const handleFakeContribution = async (json: string) => {
-    return API.payouts.fakeContribution(JSON.parse(json));
+  const handleFakeContribution = async () => {
+    try {
+      await API.payouts.fakeContribution(JSON.parse(json));
+    } catch (e) {
+      $error = e;
+    }
   };
 
   const handleWarp = async (hours: number) => {
@@ -84,10 +96,14 @@
     await p3;
   };
 
-  const payout = async (exchangeRate: number) => {
-    const res = await API.payouts.payout(exchangeRate);
-    if (res.ok) {
-      showSuccess = true;
+  const payout = async () => {
+    try {
+      const res = await API.payouts.payout(exchangeRate);
+      if (res.ok) {
+        showSuccess = true;
+      }
+    } catch (e) {
+      $error = e;
     }
   };
 
@@ -149,11 +165,30 @@
     width: 50%;
     text-align: center;
   }
+  .form-single label,
+  input {
+    display: inline-block;
+  }
+  .form-single button {
+    display: block;
+  }
+  .ml-2 {
+    margin-left: 0.5rem;
+  }
+  .mr-2 {
+    margin-right: 0.5rem;
+  }
+  .mt-2 {
+    margin-top: 0.5rem;
+  }
+  .mb-2 {
+    margin-bottom: 0.5rem;
+  }
 </style>
 
 <Navigation>
-  <h2 class="px-2">Time</h2>
-  <div class="container">
+  <h2 class="p-2 m-2">Time</h2>
+  <div class="container m-2 p-2">
     {#await promiseTime}
       Time on the backend / UTC: ...<br />
       Time on the frontend / UTC: {formatNowUTC()}
@@ -164,28 +199,28 @@
   </div>
 
   {#if $config.env == "local" || $config.env == "dev"}
-    <h2 class="px-2">Timewarp</h2>
+    <h2 class="p-2 m-2">Timewarp</h2>
     <div class="container">
-      <button class="button2 m-2" on:click={() => handleWarp(1)}>
+      <button class="button1 m-2" on:click={() => handleWarp(1)}>
         Timewarp 1 hour
       </button>
-      <button class="button2 m-2" on:click={() => handleWarp(24)}>
+      <button class="button1 m-2" on:click={() => handleWarp(24)}>
         Timewarp 1 day
       </button>
-      <button class="button2 m-2" on:click={() => handleWarp(160)}>
+      <button class="button1 m-2" on:click={() => handleWarp(160)}>
         Timewarp 1 week
       </button>
-      <button class="button2 m-2" on:click={() => handleWarp(600)}>
+      <button class="button1 m-2" on:click={() => handleWarp(600)}>
         Timewarp 25 days
       </button>
-      <button class="button2 m-2" on:click={() => handleWarp(8640)}>
+      <button class="button1 m-2" on:click={() => handleWarp(8640)}>
         Timewarp 360 days year
       </button>
     </div>
   {/if}
 
-  <h2 class="px-2">Login as User</h2>
-  <div class="container">
+  <h2 class="p-2 m-2">Login as User</h2>
+  <div class="container m-2 p-2">
     {#await promiseUsers}
       <Spinner />
     {:then userEmails}
@@ -225,8 +260,8 @@
     {/await}
   </div>
 
-  <h2 class="px-2">Link Repos</h2>
-  <div class="p-2 m-2">
+  <h2 class="p-2 m-2">Link Repos</h2>
+  <div class="container p-2 m-2">
     <form class="flex" on:submit|preventDefault={handleSearch}>
       <input type="text" bind:value={search} />
       <button class="button1" type="submit" disabled={isSearchSubmitting}
@@ -286,37 +321,84 @@
     {#if warning != ""}{warning}{/if}
   </div>
 
-  <h2>Fake User</h2>
-  <button
-    class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
-    on:click={() => handleFakeUsers(fakeUserEmail)}>Add Fake User</button
-  >
-  Email: <input bind:value={fakeUserEmail} />
-  <h2>Fake Payment</h2>
-  <button
-    class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
-    on:click={() => handleFakePayment(fakePaymentEmail, seats)}
-    >Add Fake Payment</button
-  >
-  Email: <input bind:value={fakePaymentEmail} /> Seats:
-  <input bind:value={seats} />
-  <h2>Fake Contribution</h2>
-  <button
-    class="button2 py-2 px-3 bg-primary-500 rounded-md text-white"
-    on:click={() => handleFakeContribution(json)}>Add Fake Contribution</button
-  >
-  Contribution: <textarea bind:value={json} rows="10" cols="50" />
+  <h2 class="p-2 m-2">Fake User</h2>
+  <div class="container m-2 p-2">
+    <form class="flex form-single" on:submit|preventDefault={handleFakeUsers}>
+      <label class="mr-2" for="fake-user">Email:</label>
+      <input
+        class="ml-2"
+        name="fake-user"
+        type="text"
+        bind:value={fakeUserEmail}
+      />
+      <button class="button1 mt-2 mb-2" type="submit">Add Fake User</button>
+    </form>
+  </div>
 
-  <h2>Payout Action</h2>
-  <button
-    class="button2 py-2 px-3 bg-primary-500 rounded-md text-white mt-4 disabled:opacity-75"
-    on:click={() => payout(exchangeRate)}
-  >
-    Payout
-  </button>
-  Exchange Rate USD to ETH: <input bind:value={exchangeRate} />
+  <h2 class="p-2 m-2">Fake Payment</h2>
+  <div class="container m-2 p-2">
+    <form class="flex form-single" on:submit|preventDefault={handleFakePayment}>
+      <div class="mt-2 mb-2">
+        <label class="mr-2" for="fake-payment-email">Email:</label>
+        <input
+          class="ml-2"
+          type="text"
+          name="fake-payment-email"
+          bind:value={fakePaymentEmail}
+        />
+      </div>
+      <div class="mt-2 mb-2">
+        <label class="mr-2" for="fake-payment-seats">Seats:</label>
+        <input
+          class="ml-2"
+          type="text"
+          name="fake-payment-seats"
+          bind:value={seats}
+        />
+      </div>
 
-  {#if showSuccess}
-    <div class="p-2">Payment successful!</div>
-  {/if}
+      <button class="button1 mt-2 mb-2" type="submit">Add Fake Payment</button>
+    </form>
+  </div>
+
+  <h2 class="p-2 m-2">Fake Contribution</h2>
+  <div class="container m-2 p-2">
+    <form
+      class="flex form-single"
+      on:submit|preventDefault={handleFakeContribution}
+    >
+      <label class="mr-2" for="fake-contribution">Contribution:</label>
+      <textarea
+        name="fake-contribution"
+        class="ml-2"
+        bind:value={json}
+        rows="10"
+        cols="50"
+      />
+      <button class="button1 mt-2 mb-2" type="submit"
+        >Add Fake Contribution</button
+      >
+    </form>
+  </div>
+
+  <h2 class="p-2 m-2">Payout Action</h2>
+  <div class="container  m-2 p-2">
+    <form class="flex form-single" on:submit|preventDefault={payout}>
+      <label class="mr-2" for="fake-payout">Exchange Rate USD to ETH: </label>
+      <input
+        class="ml-2"
+        name="fake-payout"
+        type="text"
+        bind:value={exchangeRate}
+      />
+
+      <button class="button1 mt-2 mb-2 disabled:opacity-75" type="submit">
+        Payout
+      </button>
+
+      {#if showSuccess}
+        <div class="p-2 m-2">Payment successful!</div>
+      {/if}
+    </form>
+  </div>
 </Navigation>
