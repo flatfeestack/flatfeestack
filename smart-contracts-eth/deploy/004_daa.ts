@@ -38,10 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const dao = await deployments.get("DAO");
 
   await addDaoAsProposer(timelockDeployed, dao, daoContractDeployer);
-  await revokeDeployerAsAdmin(
-    timelockDeployed,
-    daoContractDeployer
-  );
+  await revokeDeployerAsAdmin(timelockDeployed, daoContractDeployer);
 };
 
 async function addDaoAsProposer(
@@ -57,28 +54,30 @@ async function addDaoAsProposer(
 
   if (!daoIsProposer) {
     console.log("Granting proposer role to DAO on timelock controller ...");
-    await (
-      await timelockDeployed
-        .connect(timelockDeployed.provider.getSigner(contractOwner))
-        .grantRole(proposerRole, dao.address)
-    ).wait();
+    const transaction = await timelockDeployed
+      .connect(timelockDeployed.provider.getSigner(contractOwner))
+      .grantRole(proposerRole, dao.address);
+
+    console.log(`transaction hash: ${transaction.hash}`);
+    await transaction.wait();
   }
 }
 
 async function revokeDeployerAsAdmin(
   timelockDeployed: Contract,
-  deployer: String,
+  deployer: String
 ) {
   const adminRole = await timelockDeployed.TIMELOCK_ADMIN_ROLE();
   const deployerIsAdmin = await timelockDeployed.hasRole(adminRole, deployer);
 
   if (deployerIsAdmin) {
     console.log("Revoking admin role for deployer on timelock controller ...");
-    await (
-      await timelockDeployed
-        .connect(timelockDeployed.provider.getSigner(deployer))
-        .revokeRole(adminRole, deployer)
-    ).wait();
+    const transaction = await timelockDeployed
+      .connect(timelockDeployed.provider.getSigner(deployer))
+      .revokeRole(adminRole, deployer);
+
+    console.log(`transaction hash: ${transaction.hash}`);
+    await transaction.wait();
   }
 }
 

@@ -32,11 +32,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       "Adding membership contract as known sender to wallet contract ..."
     );
 
-    await (
-      await walletDeployed
-        .connect(walletDeployed.provider.getSigner(daoContractDeployer))
-        .addKnownSender(membership.address)
-    ).wait();
+    const transaction = await walletDeployed
+      .connect(walletDeployed.provider.getSigner(daoContractDeployer))
+      .addKnownSender(membership.address);
+
+    console.log(`transaction hash: ${transaction.hash}`);
+    await transaction.wait();
   }
 };
 
