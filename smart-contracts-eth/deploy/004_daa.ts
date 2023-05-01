@@ -29,7 +29,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         },
       },
     },
-    gasPrice: "3000000000",
   });
 
   const timelockDeployed = await ethers.getContractAt(
