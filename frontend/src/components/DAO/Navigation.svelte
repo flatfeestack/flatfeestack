@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Web3Provider } from "@ethersproject/providers";
   import {
+    faComment,
     faHippo,
     faHome,
     faList,
@@ -148,6 +149,7 @@
     </div>
     <nav use:links>
       <NavItem href="/dao/home" icon={faHome} label="DAO Home" />
+      <NavItem href="/dao/discussions" icon={faComment} label="Discussions" />
       <NavItem href="/dao/votes" icon={faList} label="Votes" />
       {#if $membershipStatusValue == 3}
         <NavItem href="/dao/treasury" icon={faMoneyBill} label="Treasury" />
