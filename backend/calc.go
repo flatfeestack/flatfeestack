@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"math"
 	"math/big"
 	"time"
 )
@@ -85,7 +84,7 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 		if err != nil {
 			return fmt.Errorf("cannot find invited user %v", err)
 		}
-
+		log.Printf("the user %v, which is sponsored by %v supports %v repos", u.Email, u1.Email, len(rids))
 		return calcAndDeduct(u1, rids, yesterdayStart, u)
 	}
 	//TODO: also notify the not only the parent of insufficient funds
@@ -100,10 +99,12 @@ func calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterdayStart time.Time,
 	}
 
 	if freq <= 1 {
+		log.Printf("the user %v (id=%v) has 1 day or less left, top up!", u.Email, u.Id)
 		reminderTopUp(*u, uOrig)
 	}
 
 	if freq > 0 {
+		log.Printf("the user %v (id=%v) will support these repos: %v", u.Email, u.Id, rids)
 		err = doDeduct(u.Id, rids, yesterdayStart, currency, distributeDeduct, distributeAdd, deductFutureContribution)
 		return err
 	} else {
@@ -142,8 +143,12 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			}
 		}
 
-		for email, v := range uidNotInMap {
-			amount := calcSharePerUser(distributeAdd, v, math.Max(total, v))
+		for email, w := range uidNotInMap {
+			//pretend that this user is also part of the total, which he is not, but we want
+			//to show him what his/her share would be
+			newTotal := total + w
+			amount := calcSharePerUser(distributeAdd, w, newTotal)
+			log.Printf("unclaimed: for the user %v, from the amount for this repo %v, the user has a weight of %v from total %v, so he gets %v", uid, distributeAdd, w, newTotal, amount)
 			id := uuid.New()
 			err = db.InsertUnclaimed(id, email, rid, amount, currency, yesterdayStart, utils.TimeNow())
 			if err != nil {
@@ -153,12 +158,14 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 
 		if len(uidInMap) == 0 {
 			//no contribution park the sponsoring separately
+			log.Printf("unclaimed for repo %v, from the amount %v, from total %v, so this will be deducted %v",
+				rid, distributeAdd, total, distributeDeduct)
 			err = db.InsertFutureContribution(uid, rid, distributeDeduct, currency, yesterdayStart, utils.TimeNow())
 			if err != nil {
 				return err
 			}
 		} else {
-			for k, v := range uidInMap {
+			for contributorUserId, w := range uidInMap {
 				//we can distribute more, as we may have future balances
 				if deductFutureContribution != nil {
 					err = db.InsertFutureContribution(uid, rid, deductFutureContribution, currency, yesterdayStart, utils.TimeNow())
@@ -167,14 +174,13 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 					}
 				}
 
-				amount := calcSharePerUser(distributeAdd, v, total)
-				err = db.InsertContribution(uid, k, rid, amount, currency, yesterdayStart, utils.TimeNow())
+				amount := calcSharePerUser(distributeAdd, w, total)
+				log.Printf("user %v for repo %v, from the amount %v, the user has a weight of %v from total %v, so he gets %v",
+					contributorUserId, rid, distributeAdd, w, total, amount)
+				err = db.InsertContribution(uid, contributorUserId, rid, amount, currency, yesterdayStart, utils.TimeNow())
 				if err != nil {
 					return err
 				}
-				//TODO: notify users that they have funds, use the following steps
-				//use KW to send every week a mail, don't spam only if amount has
-				//increased by 20% in the meantime
 			}
 		}
 	}
@@ -183,9 +189,10 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 
 func calcSharePerUser(distributeAdd *big.Int, v float64, total float64) *big.Int {
 	distributeAddF := new(big.Float).SetInt(distributeAdd)
-	amountF := new(big.Float).Mul(big.NewFloat(v/total), distributeAddF)
+	amountF := new(big.Float).Mul(big.NewFloat(v), distributeAddF)
+	amountF2 := new(big.Float).Quo(amountF, big.NewFloat(total))
 	amount := new(big.Int)
-	amountF.Int(amount)
+	amountF2.Int(amount)
 	return amount
 }
 
@@ -215,14 +222,17 @@ func calcShare(userId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.I
 	}
 	//split the contribution among the repos
 	distributeDeduct := new(big.Int).Div(s, big.NewInt(repoLen))
-	distributeAdd := distributeDeduct
+	distributeFutureAdd := distributeDeduct
 	var deductFutureContribution *big.Int
 	if mFut[currency] != nil {
-		distributeAdd = new(big.Int).Add(distributeDeduct, mFut[currency])
+		distributeFutureAdd = new(big.Int).Add(distributeDeduct, mFut[currency])
 		//if we distribute more, we need to deduct this from the future balances
 		deductFutureContribution = new(big.Int).Neg(mFut[currency])
 	}
-	return currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, nil
+	log.Printf("for the currency %v, we have %v days left, we deduct %v, potentiall add to "+
+		"future contrib %v, or pontentiall deduct from future contrib %v",
+		currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution)
+	return currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution, nil
 }
 
 func reminderTopUp(u db.UserDetail, uOrig *db.UserDetail) error {

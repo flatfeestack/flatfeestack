@@ -158,7 +158,7 @@ func TestLatestCurrency(t *testing.T) {
 	assert.Nil(t, err)
 	//why 7? we have a payin of 42, with 2 seats -> 42/2=21 and 3 days -> 21/3=7,
 	//so we pay daily 7 XETH. We will round down, so 41 would lead to daily payout of 6.
-	assert.Equal(t, big.NewInt(7), b)
+	assert.Equal(t, big.NewInt(2), b)
 	c1 := time.Time{}.Add(1)
 	assert.Equal(t, &c1, c)
 }

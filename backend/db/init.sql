@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS payment_in_event (
 );
 CREATE INDEX IF NOT EXISTS payment_in_event_user_id_idx ON payment_in_event(user_id);
 CREATE INDEX IF NOT EXISTS payment_in_event_currency_idx ON payment_in_event(currency);
-CREATE INDEX IF NOT EXISTS payment_in_event_currency_idx ON payment_in_event(status);
+CREATE INDEX IF NOT EXISTS payment_in_event_status_idx ON payment_in_event(status);
 CREATE INDEX IF NOT EXISTS payment_in_event_created_at_idx ON payment_in_event(created_at);
 
 CREATE TABLE IF NOT EXISTS repo (

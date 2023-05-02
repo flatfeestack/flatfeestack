@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 	"time"
 )
@@ -101,6 +102,8 @@ func FindPayInExternal(externalId uuid.UUID, status string) (*PayInEvent, error)
 		return nil, fmt.Errorf("not a big.int %v", b1)
 	}
 	payInEvent.Balance = b1
+	payInEvent.ExternalId = externalId
+	payInEvent.Status = status
 
 	switch err {
 	case sql.ErrNoRows:
@@ -154,19 +157,22 @@ func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64,
 		QueryRow(`SELECT balance, seats, freq, created_at
                FROM payment_in_event 
                WHERE user_id = $1 AND currency = $2 AND status = $3
-               ORDER BY created_at
+               ORDER BY created_at DESC
                LIMIT 1`, userId, currency, PayInSuccess).
 		Scan(&d, &seats, &freq, &c)
 
 	var db *big.Int
 	if d != "" {
 		d1, ok := new(big.Int).SetString(d, 10)
+		log.Printf("last payed in balance is %v for currency %v", d1, currency)
 		if !ok {
 			return nil, 0, 0, nil, fmt.Errorf("not a big.int %v", d1)
 		}
 		db = new(big.Int).Div(d1, big.NewInt(seats))
 		db = new(big.Int).Div(db, big.NewInt(freq))
+		log.Printf("daily spending balance is %v", db)
 	} else {
+		log.Printf("nothing found for userId %v", userId)
 		db = big.NewInt(0)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -169,7 +168,6 @@ func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, erro
 			userIdOld = userId
 		}
 
-		log.Printf("looking into uid %v, repo: %v", userId, repoId)
 		if err != nil {
 			return nil, err
 		}

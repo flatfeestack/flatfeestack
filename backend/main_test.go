@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/clients"
 	db "backend/db"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -46,4 +47,6 @@ func teardown() {
 	if err != nil {
 		log.Fatalf("Could not run delAll_test.sql: %s", err)
 	}
+	clients.EmailNotifications = 0
+	clients.EmailNoNotifications = 0
 }
