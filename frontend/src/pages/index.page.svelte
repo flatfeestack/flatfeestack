@@ -35,6 +35,7 @@
   import DAOExecuteProposals from "../routes/DAO/ExecuteProposals.svelte";
   import DAOCouncil from "../routes/DAO/Council.svelte";
   import DAOTreasury from "../routes/DAO/Treasury.svelte";
+  import DAODiscussions from "../routes/DAO/Discussions.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -221,6 +222,7 @@
         />
         <Route path="/dao/council" component={DAOCouncil} />
         <Route path="/dao/treasury" component={DAOTreasury} />
+        <Route path="/dao/discussions" component={DAODiscussions} />
 
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />

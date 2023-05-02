@@ -245,18 +245,18 @@ export const API = {
     payoutConfig: () => payout.get(`config/payout`).json<PayoutConfig>(),
   },
   forum: {
-    getAllPosts: () => forum.get(`/posts`).json<Post[]>(),
+    getAllPosts: () => forum.get(`posts`).json<Post[]>(),
     createPost: (postInput: PostInput) =>
-      forum.post(`/posts`, { json: postInput }).json<Post>(),
-    getPost: (postId: PostId) => forum.get(`/posts/${postId}`).json<Post>(),
-    deletePost: (postId: PostId) => forum.delete(`/posts/${postId}`),
+      forum.post(`posts`, { json: postInput }).json<Post>(),
+    getPost: (postId: PostId) => forum.get(`posts/${postId}`).json<Post>(),
+    deletePost: (postId: PostId) => forum.delete(`posts/${postId}`),
     updatePost: (postId: PostId, postInput: PostInput) =>
-      forum.put(`/posts/${postId}`, { json: postInput }).json<Post>(),
+      forum.put(`posts/${postId}`, { json: postInput }).json<Post>(),
     getAllComments: (postId: PostId) =>
-      forum.get(`/posts/${postId}/comments`).json<Comment[]>(),
+      forum.get(`posts/${postId}/comments`).json<Comment[]>(),
     createComment: (postId: PostId, commentInput: CommentInput) =>
       forum
-        .post(`/posts/${postId}/comments`, { json: commentInput })
+        .post(`posts/${postId}/comments`, { json: commentInput })
         .json<Comment>(),
     updateComment: (
       postId: PostId,
@@ -264,7 +264,7 @@ export const API = {
       commentInput: CommentInput
     ) =>
       forum
-        .put(`/posts/${postId}/comments/${commentId}`, { json: commentInput })
+        .put(`posts/${postId}/comments/${commentId}`, { json: commentInput })
         .json<Comment>(),
   },
 };
