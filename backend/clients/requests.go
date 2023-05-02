@@ -1,6 +1,8 @@
-package main
+package clients
 
 import (
+	db "backend/db"
+	"backend/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,12 +17,27 @@ import (
 	"time"
 )
 
-/*
- *	==== Analysis Request  ====
- */
+type PayoutsResponse struct {
+	BatchId   uuid.UUID
+	TxHash    string
+	Error     *string
+	CreatedAt time.Time
+	Payouts   PayoutResponse
+}
+
+type PayoutResponse struct {
+	TxHash   string           `json:"tx_hash"`
+	Currency string           `json:"currency"`
+	Payout   []PayoutRequest2 `json:"payout_cryptos"`
+}
+
+type PayoutRequest2 struct {
+	UserId uuid.UUID `json:"userId"`
+	Amount *big.Int  `json:"amount"`
+}
+
 type AnalysisRequest struct {
-	Id         uuid.UUID
-	RequestId  uuid.UUID `json:"reqId"`
+	Id         uuid.UUID `json:"reqId"`
 	RepoId     uuid.UUID
 	DateFrom   time.Time `json:"dateFrom"`
 	DateTo     time.Time `json:"dateTo"`
@@ -33,26 +50,26 @@ type AnalysisResponse2 struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type PayoutRequest struct {
-	Amount *big.Int  `json:"amount"`
-	UserId uuid.UUID `json:"userId"`
+var (
+	payoutUrl   string
+	serverKey   string
+	analysisUrl string
+)
+
+func Init(payoutUrl0 string, serverKey0 string, analysisUrl0 string) {
+	payoutUrl = payoutUrl0
+	serverKey = serverKey0
+	analysisUrl = analysisUrl0
 }
 
-type PayoutResponse struct {
-	Amount        *big.Int `json:"amount"`
-	Currency      string   `json:"currency"`
-	EncodedUserId string   `json:"encodedUserId"`
-	Signature     string   `json:"signature"`
-}
-
-func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutResponse, error) {
+func PayoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutResponse, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	preq := PayoutRequest{
-		amount,
+	preq := PayoutRequest2{
 		userId,
+		amount,
 	}
 
 	body, err := json.Marshal(preq)
@@ -60,8 +77,8 @@ func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutRe
 		return PayoutResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, opts.PayoutUrl+"/admin/sign/"+strings.ToLower(currency), bytes.NewBuffer(body))
-	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
+	req, err := http.NewRequest(http.MethodPost, payoutUrl+"/admin/sign/"+strings.ToLower(currency), bytes.NewBuffer(body))
+	req.Header.Add("Authorization", "Bearer "+serverKey)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 
@@ -78,21 +95,21 @@ func payoutRequest(userId uuid.UUID, amount *big.Int, currency string) (PayoutRe
 	return presp, nil
 }
 
-func analysisRequest(repoId uuid.UUID, repoUrl string) error {
+func AnalysisReq(repoId uuid.UUID, repoUrl string) error {
 	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
-	now := timeNow()
-	ar := AnalysisRequest{
-		RequestId: uuid.New(),
-		RepoId:    repoId,
-		DateFrom:  now.AddDate(0, -3, 0),
-		DateTo:    now,
-		GitUrl:    repoUrl,
+	now := utils.TimeNow()
+	ar := db.AnalysisRequest{
+		Id:       uuid.New(),
+		RepoId:   repoId,
+		DateFrom: now.AddDate(0, -3, 0),
+		DateTo:   now,
+		GitUrl:   repoUrl,
 	}
 
-	err := insertAnalysisRequest(ar, now)
+	err := db.InsertAnalysisRequest(ar, now)
 	if err != nil {
 		return err
 	}
@@ -102,14 +119,14 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, opts.AnalysisUrl+"/analyze", bytes.NewBuffer(body))
-	req.Header.Add("Authorization", "Bearer "+opts.ServerKey)
+	req, err := http.NewRequest(http.MethodPost, analysisUrl+"/analyze", bytes.NewBuffer(body))
+	req.Header.Add("Authorization", "Bearer "+serverKey)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 
 	if err != nil {
 		e := err.Error()
-		errA := updateAnalysisRequest(ar.RequestId, now, &e)
+		errA := db.UpdateAnalysisRequest(ar.Id, now, &e)
 		if errA != nil {
 			log.Warnf("cannot send to analyze engine %v", errA)
 		}
@@ -118,7 +135,7 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("the request %v received the status code %v", ar.RequestId, resp.StatusCode)
+		return fmt.Errorf("the request %v received the status code %v", ar.Id, resp.StatusCode)
 	}
 
 	//just make sure we got the response
@@ -126,14 +143,14 @@ func analysisRequest(repoId uuid.UUID, repoUrl string) error {
 	err = json.NewDecoder(resp.Body).Decode(&awr)
 	if err != nil {
 		e := err.Error()
-		errA := updateAnalysisRequest(ar.RequestId, timeNow(), &e)
+		errA := db.UpdateAnalysisRequest(ar.Id, utils.TimeNow(), &e)
 		if errA != nil {
 			log.Warnf("cannot send to analyze engine %v", errA)
 		}
 		return err
 	}
-	if awr.RequestId != ar.RequestId {
-		return fmt.Errorf("we have a serious problem, request id does not match %v != %v", awr.RequestId, ar.RequestId)
+	if awr.RequestId != ar.Id {
+		return fmt.Errorf("we have a serious problem, request id does not match %v != %v", awr.RequestId, ar.Id)
 	}
 
 	return nil
@@ -190,7 +207,7 @@ type RepoSearch struct {
 	Score       json.Number `json:"score,omitempty"`
 }
 
-func fetchGithubRepoSearch(q string) ([]RepoSearch, error) {
+func FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
 	log.Print("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
 	res, err := http.Get("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
 	if err != nil {

@@ -1,0 +1,12 @@
+delete from users;
+delete from payment_in_event;
+delete from repo;
+delete from git_email;
+delete from sponsor_event;
+delete from analysis_request;
+delete from analysis_response;
+delete from daily_contribution;
+delete from unclaimed;
+delete from future_contribution;
+delete from invite;
+delete from user_emails_sent;
