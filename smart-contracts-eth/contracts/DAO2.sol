@@ -8,16 +8,24 @@ import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import "./SBT.sol";
 
-contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction {
-
+contract FlatFeeStackDAO is
+    Governor,
+    GovernorSettings,
+    GovernorCountingSimple,
+    GovernorVotes,
+    GovernorVotesQuorumFraction
+{
     string public bylawsHash;
     event BylawsChanged(string indexed oldHash, string indexed newHash);
 
-    constructor(IVotes _token)
+    constructor(
+        IVotes _token
+    )
         Governor("FFSDAO")
         GovernorSettings(2 days, 1 days, 1)
         GovernorVotes(_token)
-        GovernorVotesQuorumFraction(25) {}
+        GovernorVotesQuorumFraction(25)
+    {}
 
     // The following functions are overrides required by Solidity.
 
@@ -25,9 +33,14 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         public
         view
         override(IGovernor, GovernorSettings)
-        returns (uint256) {
+        returns (uint256)
+    {
         //slot is each 14 days, and you need to submit votingDelay() in advance.
-        uint256 nextSlot = ((block.timestamp + super.votingDelay()) / 60 / 60 / 24 / 14) + 1;
+        uint256 nextSlot = ((block.timestamp + super.votingDelay()) /
+            60 /
+            60 /
+            24 /
+            14) + 1;
         return nextSlot * 60 * 60 * 24 * 14;
     }
 
@@ -35,15 +48,19 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         public
         view
         override(IGovernor, GovernorSettings)
-        returns (uint256) {
+        returns (uint256)
+    {
         return super.votingPeriod();
     }
 
-    function quorum(uint256 blockNumber)
+    function quorum(
+        uint256 blockNumber
+    )
         public
         view
         override(IGovernor, GovernorVotesQuorumFraction)
-        returns (uint256) {
+        returns (uint256)
+    {
         return super.quorum(blockNumber);
     }
 
@@ -51,7 +68,8 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         public
         view
         override(Governor, GovernorSettings)
-        returns (uint256) {
+        returns (uint256)
+    {
         return super.proposalThreshold();
     }
 
@@ -61,9 +79,18 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) public payable override returns (uint256 proposalId) {
-        uint256 proposalId0 = hashProposal(targets, values, calldatas, descriptionHash);
+        uint256 proposalId0 = hashProposal(
+            targets,
+            values,
+            calldatas,
+            descriptionHash
+        );
         //timelock is votingDelay, so we have before voting the same delay as the timelock
-        require(proposalDeadline(proposalId0) + super.votingDelay() < block.timestamp, "Governor: timelock not expired yet");
+        require(
+            proposalDeadline(proposalId0) + super.votingDelay() <
+                block.timestamp,
+            "Governor: timelock not expired yet"
+        );
         require(!_paused);
         return super.execute(targets, values, calldatas, descriptionHash);
     }
@@ -71,16 +98,40 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
     function councilExecute(
         address[] memory targets,
         uint256[] memory values,
-        bytes[] memory calldatas, uint8 v1, bytes32 r1, bytes32 s1, uint8 v2, bytes32 r2, bytes32 s2) {
-            address council1 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1);
-            address council2 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2);
+        bytes[] memory calldatas,
+        uint8 v1,
+        bytes32 r1,
+        bytes32 s1,
+        uint8 v2,
+        bytes32 r2,
+        bytes32 s2
+    ) {
+        address council1 = ecrecover(
+            keccak256(abi.encodePacked(to, "#", timestamp)),
+            v1,
+            r1,
+            s1
+        );
+        address council2 = ecrecover(
+            keccak256(abi.encodePacked(to, "#", timestamp)),
+            v2,
+            r2,
+            s2
+        );
 
         //TODO: mark signature as exectude to stop replay
-        require(SBT(token).isCouncil(council1) && SBT(token).isCouncil(council2) && council1 != council2, "Signature not from council member");
+        require(
+            SBT(token).isCouncil(council1) &&
+                SBT(token).isCouncil(council2) &&
+                council1 != council2,
+            "Signature not from council member"
+        );
 
         string memory errorMessage = "DAO: call reverted without message";
         for (uint256 i = 0; i < targets.length; ++i) {
-            (bool success, bytes memory returndata) = targets[i].call{value: values[i]}(calldatas[i]);
+            (bool success, bytes memory returndata) = targets[i].call{
+                value: values[i]
+            }(calldatas[i]);
             Address.verifyCallResult(success, returndata, errorMessage);
         }
     }
@@ -89,17 +140,46 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
-        bytes32 descriptionHash, uint8 v1, bytes32 r1, bytes32 s1, uint8 v2, bytes32 r2, bytes32 s2
+        bytes32 descriptionHash,
+        uint8 v1,
+        bytes32 r1,
+        bytes32 s1,
+        uint8 v2,
+        bytes32 r2,
+        bytes32 s2
     ) public virtual override returns (uint256) {
-        uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
-        require(state(proposalId) == ProposalState.Pending, "Governor: too late to cancel");
-        address council1 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v1, r1, s1);
-        address council2 = ecrecover(keccak256(abi.encodePacked(to, "#", timestamp)), v2, r2, s2);
+        uint256 proposalId = hashProposal(
+            targets,
+            values,
+            calldatas,
+            descriptionHash
+        );
+        require(
+            state(proposalId) == ProposalState.Pending,
+            "Governor: too late to cancel"
+        );
+        address council1 = ecrecover(
+            keccak256(abi.encodePacked(to, "#", timestamp)),
+            v1,
+            r1,
+            s1
+        );
+        address council2 = ecrecover(
+            keccak256(abi.encodePacked(to, "#", timestamp)),
+            v2,
+            r2,
+            s2
+        );
 
         //TODO: mark signature as exectude to stop replay
-        boolean isCouncil = SBT(token).isCouncil(council1) && SBT(token).isCouncil(council2) && council1 != council2;
+        boolean isCouncil = SBT(token).isCouncil(council1) &&
+            SBT(token).isCouncil(council2) &&
+            council1 != council2;
 
-        require(_msgSender() == _proposals[proposalId].proposer || isCouncil, "Governor: only proposer can cancel");
+        require(
+            _msgSender() == _proposals[proposalId].proposer || isCouncil,
+            "Governor: only proposer can cancel"
+        );
         return _cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -123,5 +203,4 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bylawsHash = newHash;
         emit BylawsChanged(oldHash, bylawsHash);
     }
-
 }
