@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import { user } from "../../ts/mainStore";
   import { navigate } from "svelte-routing";
-  import yup from "../../utils/yup";
-  import type { ValidationError } from "yup";
-  import { API } from "../../ts/api";
+  import Navigation from "../../components/DAO/Navigation.svelte";
   import Spinner from "../../components/Spinner.svelte";
+  import { API } from "../../ts/api";
+  import { user } from "../../ts/mainStore";
+  import { getAllFormErrors } from "../../utils/validationHelpers";
+  import yup from "../../utils/yup";
 
   onMount(() => {
     if (Object.keys($user).length === 0) {
@@ -40,19 +40,10 @@
     }
   }
 
-  async function getAllFormErrors(): Promise<ValidationError[]> {
-    try {
-      await schema.validate(formValues, { abortEarly: false });
-      return [];
-    } catch (error) {
-      return error.inner;
-    }
-  }
-
   async function handleSubmit() {
     isSubmitting = true;
 
-    const validationErrors = await getAllFormErrors();
+    const validationErrors = await getAllFormErrors(formValues, schema);
     if (validationErrors.length > 0) {
       validationErrors.forEach((error) => {
         formErrors[error.path] = error.message;

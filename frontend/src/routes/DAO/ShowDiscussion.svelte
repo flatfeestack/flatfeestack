@@ -5,6 +5,7 @@
   import type { Comment, Post } from "../../types/forum";
   import { API } from "../../ts/api";
   import DiscussionThreadItem from "../../components/DAO/DiscussionThreadItem.svelte";
+  import CreateComment from "../../components/DAO/CreateComment.svelte";
 
   export let postId: string;
 
@@ -33,5 +34,7 @@
     {#each comments as comment (comment.id)}
       <DiscussionThreadItem item={comment} />
     {/each}
+
+    <CreateComment bind:comments postId={post.id} />
   {/if}
 </Navigation>
