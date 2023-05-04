@@ -68,9 +68,12 @@ const config: HardhatUserConfig = {
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       accounts: [
-        process.env.GOERLI_DAO_DEPLOYER_KEY!,
-        process.env.GOERLI_PAYOUT_ETH_DEPLOYER_KEY!,
-        process.env.GOERLI_PAYOUT_USDC_DEPLOYER_KEY!,
+        process.env.GOERLI_DAO_DEPLOYER_KEY ||
+          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        process.env.GOERLI_PAYOUT_ETH_DEPLOYER_KEY ||
+          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        process.env.GOERLI_PAYOUT_USDC_DEPLOYER_KEY ||
+          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
       ],
     },
     localhost: {
