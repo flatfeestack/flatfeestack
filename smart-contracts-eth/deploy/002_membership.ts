@@ -15,6 +15,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
+      viaAdminContract: {
+        artifact: "MyProxyAdmin",
+        name: "DefaultProxyAdmin",
+      },
       execute: {
         init: {
           methodName: "initialize",
@@ -31,12 +35,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(
       "Adding membership contract as known sender to wallet contract ..."
     );
-
     const transaction = await walletDeployed
       .connect(walletDeployed.provider.getSigner(daoContractDeployer))
       .addKnownSender(membership.address);
 
-    console.log(`transaction hash: ${transaction.hash}`);
+    console.log(`Transaction hash ${transaction.hash}`);
+
     await transaction.wait();
   }
 };

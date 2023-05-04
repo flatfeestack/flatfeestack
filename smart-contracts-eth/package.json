@@ -4,8 +4,11 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.8.1",
     "@openzeppelin/hardhat-upgrades": "^1.22.1",
+    "dotenv": "^16.0.3",
+    "envfile": "^6.18.0",
     "hardhat": "^2.12.7",
     "hardhat-deploy": "^0.11.24",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",

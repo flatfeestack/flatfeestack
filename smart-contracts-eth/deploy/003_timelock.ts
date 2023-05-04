@@ -14,6 +14,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
+      viaAdminContract: {
+        artifact: "MyProxyAdmin",
+        name: "DefaultProxyAdmin",
+      },
       execute: {
         init: {
           methodName: "initialize",
@@ -51,7 +55,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 async function assignContractOwnershipToTimeLock(
   contract: Contract,
   timelockAddress: string,
-  contractOwner: string
+  daoDeployer: string
 ) {
   const isTimelockContractOwner = (await contract.owner()) === timelockAddress;
 
@@ -60,10 +64,11 @@ async function assignContractOwnershipToTimeLock(
       `Assigning ${contract.address} ownership to timelock controller ...`
     );
     const transaction = await contract
-      .connect(contract.provider.getSigner(contractOwner))
+      .connect(contract.provider.getSigner(daoDeployer))
       .transferOwnership(timelockAddress);
 
-    console.log(`transaction hash: ${transaction.hash}`);
+    console.log(`Transaction hash ${transaction.hash}`);
+
     await transaction.wait();
   }
 }
