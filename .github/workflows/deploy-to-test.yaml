@@ -74,3 +74,4 @@ jobs:
           ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
           ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose --profile platform  up --pull always -d --force-recreate --no-build"
           ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
+          ssh -p 3000 axelra.net -l sibex "docker system prune -af"
