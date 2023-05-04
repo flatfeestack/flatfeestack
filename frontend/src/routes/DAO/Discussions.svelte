@@ -4,6 +4,7 @@
   import type { Post } from "../../types/forum";
   import { API } from "../../ts/api";
   import Spinner from "../../components/Spinner.svelte";
+  import { navigate } from "svelte-routing";
 
   let isLoading = true;
   let posts: Post[] = [];
@@ -12,6 +13,10 @@
     posts = await API.forum.getAllPosts();
     isLoading = false;
   });
+
+  const navigateToCreateDiscussion = () => {
+    navigate("/dao/createDiscussion");
+  };
 </script>
 
 <Navigation>
@@ -33,7 +38,9 @@
     {:else}
       <p>It looks like nobody did start any discussion so far.</p>
 
-      <button class="button1">Start a new discussion</button>
+      <button class="button1" on:click={navigateToCreateDiscussion}
+        >Start a new discussion</button
+      >
     {/if}
   {/if}
 </Navigation>
