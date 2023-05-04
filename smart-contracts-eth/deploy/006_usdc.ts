@@ -16,6 +16,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
+      viaAdminContract: {
+        artifact: "MyProxyAdmin",
+        name: "ProxyAdminPayoutUsdc",
+      },
       execute: {
         init: {
           methodName: "initialize",

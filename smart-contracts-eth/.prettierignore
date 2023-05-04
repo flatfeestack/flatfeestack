@@ -1,6 +1,6 @@
 artifacts
 cache
-deployments
+deployments/localhost
 node_modules
 typechain-types
 coverage

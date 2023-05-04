@@ -29,6 +29,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
+      viaAdminContract: {
+        artifact: "MyProxyAdmin",
+        name: "ProxyAdminPayoutUsdc",
+      },
       execute: {
         init: {
           methodName: "initialize",
@@ -46,7 +50,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     );
 
     if (tokenQuantityForPayout.eq(BigNumber.from(0))) {
-      console.log("Transfering some USDC tokens to payout contract ...");
+      console.log("Transfering some USDC tokens to payout contract");
       const decimals = await usdcContract.decimals();
 
       const transaction = await usdcContract
@@ -56,7 +60,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           BigNumber.from(50).mul(BigNumber.from(10).pow(decimals))
         );
 
-      console.log(`transaction hash: ${transaction.hash}`);
+      console.log(`Transaction hash ${transaction.hash}`);
+
       await transaction.wait();
     }
   }

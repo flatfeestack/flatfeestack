@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
-  const { daoContractDeployer } = await getNamedAccounts();
+  const { daoContractDeployer, firstCouncilMember } = await getNamedAccounts();
 
   const membership = await deployments.get("Membership");
   const timelock = await deployments.get("Timelock");
@@ -17,6 +17,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     proxy: {
       proxyContract: "OpenZeppelinTransparentProxy",
+      viaAdminContract: {
+        artifact: "MyProxyAdmin",
+        name: "DefaultProxyAdmin",
+      },
       execute: {
         init: {
           methodName: "initialize",
@@ -38,13 +42,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const dao = await deployments.get("DAO");
 
   await addDaoAsProposer(timelockDeployed, dao, daoContractDeployer);
-  await revokeDeployerAsAdmin(timelockDeployed, daoContractDeployer);
+  await revokeCouncilMemberAsAdmin(timelockDeployed, firstCouncilMember);
 };
 
 async function addDaoAsProposer(
   timelockDeployed: Contract,
   dao: Deployment,
-  contractOwner: string
+  daoContractDeployer: string
 ) {
   const proposerRole = await timelockDeployed.PROPOSER_ROLE();
   const daoIsProposer = await timelockDeployed.hasRole(
@@ -55,28 +59,33 @@ async function addDaoAsProposer(
   if (!daoIsProposer) {
     console.log("Granting proposer role to DAO on timelock controller ...");
     const transaction = await timelockDeployed
-      .connect(timelockDeployed.provider.getSigner(contractOwner))
+      .connect(timelockDeployed.provider.getSigner(daoContractDeployer))
       .grantRole(proposerRole, dao.address);
 
-    console.log(`transaction hash: ${transaction.hash}`);
+    console.log(`Transaction hash ${transaction.hash}`);
+
     await transaction.wait();
   }
 }
 
-async function revokeDeployerAsAdmin(
+async function revokeCouncilMemberAsAdmin(
   timelockDeployed: Contract,
-  deployer: String
+  contractDeployer: String
 ) {
   const adminRole = await timelockDeployed.TIMELOCK_ADMIN_ROLE();
-  const deployerIsAdmin = await timelockDeployed.hasRole(adminRole, deployer);
+  const deployerIsAdmin = await timelockDeployed.hasRole(
+    adminRole,
+    contractDeployer
+  );
 
   if (deployerIsAdmin) {
     console.log("Revoking admin role for deployer on timelock controller ...");
     const transaction = await timelockDeployed
-      .connect(timelockDeployed.provider.getSigner(deployer))
-      .revokeRole(adminRole, deployer);
+      .connect(timelockDeployed.provider.getSigner(contractDeployer))
+      .revokeRole(adminRole, contractDeployer);
 
-    console.log(`transaction hash: ${transaction.hash}`);
+    console.log(`Transaction hash ${transaction.hash}`);
+
     await transaction.wait();
   }
 }
