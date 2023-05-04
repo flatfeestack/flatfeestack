@@ -79,10 +79,6 @@
   textarea {
     font-size: 15px;
   }
-
-  .items-end {
-    align-items: flex-end;
-  }
 </style>
 
 <Navigation>

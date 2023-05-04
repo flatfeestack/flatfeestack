@@ -5,6 +5,7 @@
   import { API } from "../../ts/api";
   import Spinner from "../../components/Spinner.svelte";
   import { navigate } from "svelte-routing";
+  import DiscussionListItem from "../../components/DAO/DiscussionListItem.svelte";
 
   let isLoading = true;
   let posts: Post[] = [];
@@ -31,16 +32,18 @@
       proposal, feel free to create a discussion thread.
     </p>
 
-    <hr />
-
-    {#if posts.length > 0}
-      Display the posts
-    {:else}
-      <p>It looks like nobody did start any discussion so far.</p>
-
+    <div class="container-col2 items-start mt-2 mb-20">
       <button class="button1" on:click={navigateToCreateDiscussion}
         >Start a new discussion</button
       >
+    </div>
+
+    {#if posts.length > 0}
+      {#each posts as post (post.id)}
+        <DiscussionListItem {post} />
+      {/each}
+    {:else}
+      <p>It looks like nobody did start any discussion so far.</p>
     {/if}
   {/if}
 </Navigation>

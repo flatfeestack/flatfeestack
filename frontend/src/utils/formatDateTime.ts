@@ -1,4 +1,4 @@
-export default function formateDateTime(date: Date): string {
+export default function formatDateTime(date: Date): string {
   return new Intl.DateTimeFormat(navigator.language, {
     weekday: "short",
     year: "numeric",

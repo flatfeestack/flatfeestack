@@ -540,3 +540,11 @@ tbody tr:last-of-type {
   background-color: unset;
   border: unset;
 }
+
+.items-end {
+  align-items: flex-end;
+}
+
+.items-start {
+  align-items: flex-start;
+}

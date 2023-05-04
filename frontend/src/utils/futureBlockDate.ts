@@ -1,6 +1,6 @@
 import { get } from "svelte/store";
 import { currentBlockNumber, currentBlockTimestamp } from "../ts/daoStore";
-import formateDateTime from "./formatDateTime";
+import formatDateTime from "./formatDateTime";
 
 const secondsPerBlock = 12;
 
@@ -11,7 +11,7 @@ function futureBlockDate(futureBlockNumber: number): string {
   const date = new Date(get(currentBlockTimestamp) * 1000);
   date.setSeconds(date.getSeconds() + timeDifference);
 
-  return formateDateTime(date);
+  return formatDateTime(date);
 }
 
 export { futureBlockDate, secondsPerBlock };

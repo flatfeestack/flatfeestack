@@ -11,7 +11,7 @@
   import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
-  import formateDateTime from "../../utils/formatDateTime";
+  import formatDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
 
@@ -112,7 +112,7 @@
 
           return {
             amount: event.args[1],
-            blockDate: formateDateTime(new Date(blockTimestamp * 1000)),
+            blockDate: formatDateTime(new Date(blockTimestamp * 1000)),
             blockNumber: event.blockNumber,
             source: event.args[0],
             type: eventType,
