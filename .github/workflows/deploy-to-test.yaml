@@ -72,5 +72,5 @@ jobs:
           rsync -avzm -e 'ssh -p 3000' --include='*/' --include='.env' --exclude='*' . sibex@axelra.net:/Users/sibex/flatfeestack
           ssh -p 3000 axelra.net -l sibex "doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
           ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose --profile platform  up -d --force-recreate --no-build"
+          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose --profile platform  up --pull always -d --force-recreate --no-build"
           ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
