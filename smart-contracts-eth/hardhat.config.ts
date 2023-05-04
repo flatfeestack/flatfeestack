@@ -2,8 +2,26 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
-import { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig, subtask } from "hardhat/config";
 import "solidity-coverage";
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
+import path from "path";
+
+subtask(
+  TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS,
+  async (_, { config }, runSuper) => {
+    const paths = await runSuper();
+
+    return paths.filter((solidityFilePath: any) => {
+      const relativePath = path.relative(
+        config.paths.sources,
+        solidityFilePath
+      );
+
+      return relativePath !== "DAO2.sol" && relativePath !== "SBT.sol";
+    });
+  }
+);
 
 const config: HardhatUserConfig = {
   solidity: {
