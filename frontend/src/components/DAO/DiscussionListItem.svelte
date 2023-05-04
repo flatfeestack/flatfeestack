@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { navigate } from "svelte-routing";
   import type { Post } from "../../types/forum";
   import formatDateTime from "../../utils/formatDateTime";
 
@@ -12,18 +13,6 @@
 
   .border-bottom {
     border-bottom: 1px solid var(--secondary-300);
-  }
-
-  .font-size-small {
-    font-size: 1.05rem;
-  }
-
-  .flex {
-    display: flex;
-  }
-
-  .justify-between {
-    justify-content: space-between;
   }
 
   .pb-4 {
@@ -75,5 +64,9 @@
     </p>
   </div>
 
-  <button class="button3">View discussion</button>
+  <button
+    class="button3"
+    on:click={() => navigate(`/dao/discussion/${post.id}`)}
+    >View discussion</button
+  >
 </div>

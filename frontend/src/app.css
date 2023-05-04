@@ -140,6 +140,9 @@ h1 {
 .mt-60 {
   margin-top: 6rem;
 }
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
 .mb-20 {
   margin-bottom: 2rem;
 }
@@ -547,4 +550,20 @@ tbody tr:last-of-type {
 
 .items-start {
   align-items: flex-start;
+}
+
+.font-size-small {
+  font-size: 1.05rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.color-secondary-500 {
+  color: var(--secondary-500);
 }

@@ -61,9 +61,9 @@
       return;
     }
 
-    const response = await API.forum.createPost(formValues);
+    const post = await API.forum.createPost(formValues);
     isSubmitting = false;
-    // TODO: Navigate to page
+    navigate(`/dao/discussion/${post.id}`);
   }
 </script>
 
