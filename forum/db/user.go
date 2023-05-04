@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"forum/globals"
 	"forum/types"
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 type DbUser struct {
 	Id     uuid.UUID
 	Email  string
-	Name   string
+	Name   JsonNullString
 	Role   string
 	Claims types.TokenClaims
 }
@@ -28,5 +29,18 @@ func FindUserByEmail(email string) (*DbUser, error) {
 		return &u, nil
 	default:
 		return nil, err
+	}
+}
+
+// https://stackoverflow.com/a/33072822
+type JsonNullString struct {
+	sql.NullString
+}
+
+func (v JsonNullString) MarshalJSON() ([]byte, error) {
+	if v.Valid {
+		return json.Marshal(v.String)
+	} else {
+		return json.Marshal(nil)
 	}
 }
