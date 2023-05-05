@@ -1,4 +1,4 @@
-name: Build and push images
+name: Build images and deploy to staging
 
 on:
   workflow_dispatch:
@@ -336,3 +336,84 @@ jobs:
           context: caddy
           push: true
           tags: "registry.digitalocean.com/flatfeestack/caddy:${{ github.ref_name }}"
+
+  deploy-test:
+    runs-on: ubuntu-latest
+    needs:
+    - build-and-push-analyzer
+    - build-and-push-backend
+    - build-and-push-caddy
+    - build-and-push-fastauth
+    - build-and-push-forum
+    - build-and-push-frontend
+    - build-and-push-payout
+    env:
+      TAG_IMAGE: ${{ github.ref_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create .env files
+        run: |
+          cp analyzer/.example.env analyzer/.env
+          cp backend/.example.env backend/.env
+          cp forum/.example.env forum/.env
+          cp fastauth/.example.env fastauth/.env
+          cp payout/.example.env payout/.env
+          cp db/.example.env db/.env
+
+      - name: Edit backend .env file
+        run: |
+          sed -i 's#%%EMAIL_TOKEN%%#HS256=${{ secrets.TEST_EMAIL_TOKEN }}#g' backend/.env
+          sed -i 's#EMAIL_PREFIX=http://localhost:8080#EMAIL_PREFIX=https://test.flatfeestack.io#g' backend/.env
+          sed -i 's#%%STRIPE_SECRET_API%%#${{ secrets.TEST_STRIPE_SECRET_API }}#g' backend/.env
+          sed -i 's#%%STRIPE_PUBLIC_API%%#${{ secrets.TEST_STRIPE_PUBLIC_API }}#g' backend/.env
+          sed -i 's#%%STRIPE_SECRET_WEBHOOK%%#${{ secrets.TEST_STRIPE_SECRET_WEBHOOK }}#g' backend/.env
+          sed -i 's#%%NOWPAYMENTS_TOKEN%%#${{ secrets.TEST_NOWPAYMENTS_TOKEN }}#g' backend/.env
+          sed -i 's#%%NOWPAYMENTS_IPN_KEY%%#${{ secrets.TEST_NOWPAYMENTS_IPN_KEY }}#g' backend/.env
+          sed -i 's#ENV=local#ENV=dev#g' backend/.env
+
+      - name: Edit fastauth .env file
+        run: |
+          sed -i 's#%%EMAIL_TOKEN%%#${{ secrets.TEST_EMAIL_TOKEN }}#g' fastauth/.env
+          sed -i 's#EMAIL_PREFIX=http://localhost:8080#EMAIL_PREFIX=https://test.flatfeestack.io#g' fastauth/.env
+          sed -i 's#ENV=local#ENV=dev#g' fastauth/.env
+
+      - name: Edit payout .env file
+        run: |
+          sed -i 's#ETH_URL=http://ganache:8545#ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
+          sed -i 's#ETH_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80#ETH_PRIVATE_KEY=${{ secrets.TEST_ETH_PRIVATE_KEY }}#g' payout/.env
+          sed -i 's#ETH_CONTRACT=0x95401dc811bb5740090279Ba06cfA8fcF6113778#ETH_CONTRACT=0x194bbC28bA0C0105149ddEEE0800d81Cac307612#g' payout/.env
+          sed -i 's#NEO_URL=http://host.docker.internal:50012#NEO_URL=http://seed1t4.neo.org:20332#g' payout/.env
+          sed -i 's#USDC_URL=http://ganache:8545#USDC_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
+          sed -i 's#USDC_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80#USDC_PRIVATE_KEY=${{ secrets.TEST_USDC_PRIVATE_KEY }}#g' payout/.env
+          sed -i 's#USDC_CONTRACT=0x95401dc811bb5740090279Ba06cfA8fcF6113778#USDC_CONTRACT=0xf25f565A8c03d9401BEc46B61EACf89ce8F524D5#g' payout/.env
+          sed -i 's#DAO_WALLET_CONTRACT=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0#DAO_WALLET_CONTRACT=0xa10825Dc5C0A6bF05EbDB586cAf52BdB777BAe5a#g' payout/.env
+          sed -i 's#DAO_MEMBERSHIP_CONTRACT=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9#DAO_MEMBERSHIP_CONTRACT=0xA1c3770345287aF14f63098a3Fb044860474A2F3#g' payout/.env
+          sed -i 's#DAO_DAO_CONTRACT=0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e#DAO_DAO_CONTRACT=0x82293E85698C606E2fF88904873fD11a30263355#g' payout/.env
+          sed -i 's#ENV=local#ENV=dev#g' payout/.env
+
+      - name: Edit forum .env file
+        run: |
+          sed -i 's#ENV=local#ENV=dev#g' forum/.env
+
+      - name: Edit analyzer .env file
+        run: |
+          sed -i 's#ENV=local#ENV=dev#g' analyzer/.env
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.DEPLOY_MACMINI_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.DEPLOY_MACMINI_KNOWN_HOST }}
+
+      - name: Deploy - TEST
+        run: |
+          scp -P 3000 docker-compose.yml sibex@axelra.net:/Users/sibex/flatfeestack
+          rsync -avzm -e 'ssh -p 3000' --include='*/' --include='.env' --exclude='*' . sibex@axelra.net:/Users/sibex/flatfeestack
+          ssh -p 3000 axelra.net -l sibex "doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
+          ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
+          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose --profile platform  up --pull always -d --force-recreate --no-build"
+          ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
+          ssh -p 3000 axelra.net -l sibex "docker system prune -af"
+
