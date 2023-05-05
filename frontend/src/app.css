@@ -579,3 +579,7 @@ textarea {
 .gap-3 {
   gap: 0.75rem;
 }
+
+.items-center {
+  align-items: center;
+}

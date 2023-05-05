@@ -5,6 +5,8 @@
   import { getAllFormErrors } from "../../../utils/validationHelpers";
   import DiscussionThreadItem from "./DiscussionThreadItem.svelte";
 
+  export let comments: Comment[];
+  export let discussionOpen: boolean;
   export let item: Comment;
   export let postId: string;
 
@@ -54,6 +56,11 @@
     editMode = false;
     isSubmitting = false;
   }
+
+  async function deleteComment() {
+    await API.forum.deleteComment(postId, item.id);
+    comments = comments.filter((comment) => comment.id !== item.id);
+  }
 </script>
 
 <style>
@@ -62,7 +69,12 @@
   }
 </style>
 
-<DiscussionThreadItem {item} {editItem}>
+<DiscussionThreadItem
+  {item}
+  {editItem}
+  {discussionOpen}
+  deleteItem={deleteComment}
+>
   {#if editMode}
     {#if isSubmitting}
       Updating comment, one moment please ...
