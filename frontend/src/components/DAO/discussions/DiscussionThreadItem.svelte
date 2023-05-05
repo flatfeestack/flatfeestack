@@ -5,6 +5,7 @@
   import { timeSince } from "../../../ts/services";
   import type { Comment, Post } from "../../../types/forum";
   import ThreadItemBox from "../ThreadItemBox.svelte";
+  import { users } from "../../../ts/userStore";
 
   export let deleteItem: () => void;
   export let discussionOpen: boolean;
@@ -17,6 +18,12 @@
     margin-right: 0.5rem;
   }
 
+  .image {
+    border-radius: 9999px;
+    height: 2rem;
+    width: 2rem;
+  }
+
   p {
     margin: 0.1rem;
   }
@@ -24,7 +31,22 @@
 
 <ThreadItemBox>
   <div class="border-bottom flex justify-between">
-    <p class="bold">{item.author}</p>
+    <div class="flex gap-3 items-center">
+      {#await users.get(item.author)}
+        ...
+      {:then user}
+        {#if user.image}
+          <img
+            class="image"
+            src={user.image}
+            alt={`Profile picture of ${user.name || "[unknown]"}`}
+          />
+        {:else}
+          <div class="bg-green image" />
+        {/if}
+        <p class="bold">{user.name || "[unknown]"}</p>
+      {/await}
+    </div>
     <div class="color-secondary-500 flex gap-3 items-center mr-4">
       <div>
         <p>

@@ -16,6 +16,7 @@ import type {
   User,
   UserStatus,
   PayoutResponse,
+  PublicUser,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -201,6 +202,8 @@ export const API = {
       backendToken
         .post(`users/me/request-payout/${targetCurrency}`)
         .json<PayoutResponse>(),
+    getUser: (userId: string) =>
+      backendToken.get(`users/${userId}`).json<PublicUser>(),
   },
   repos: {
     search: (s: string) =>
