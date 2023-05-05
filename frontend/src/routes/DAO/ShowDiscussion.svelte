@@ -9,6 +9,9 @@
   import type { Comment, Post } from "../../types/forum";
   import { user } from "../../ts/mainStore";
   import StatusSpan from "../../components/DAO/discussions/StatusSpan.svelte";
+  import { navigate } from "svelte-routing";
+  import Fa from "svelte-fa";
+  import { faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
 
   export let postId: string;
 
@@ -28,6 +31,11 @@
   async function closeDiscussion() {
     await API.forum.closePost(postId);
     post.open = false;
+  }
+
+  async function deleteDiscussion() {
+    await API.forum.deletePost(postId);
+    navigate("/dao/discussions");
   }
 </script>
 
@@ -49,11 +57,23 @@
         </h1>
         <StatusSpan {post} />
       </div>
-      {#if $user.id === post.author && post.open}
-        <button class="button3" on:click={() => closeDiscussion()}
-          >Close discussion</button
-        >
-      {/if}
+      <div>
+        {#if $user.id === post.author && post.open}
+          <button
+            class="button3"
+            on:click={() => closeDiscussion()}
+            title="Close discussion"><Fa icon={faLock} /></button
+          >
+        {/if}
+
+        {#if $user.role === "admin"}
+          <button
+            class="button3"
+            on:click={() => deleteDiscussion()}
+            title="Delete discussion"><Fa icon={faTrash} /></button
+          >
+        {/if}
+      </div>
     </div>
 
     <PostThreadItem item={post} />
