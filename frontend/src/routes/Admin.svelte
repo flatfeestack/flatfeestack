@@ -1,65 +1,17 @@
 <script lang="ts">
-  import {
-    faArrowsLeftRight,
-    faCheck,
-    faSignInAlt,
-  } from "@fortawesome/free-solid-svg-icons";
+  import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
-  import Dots from "../components/Dots.svelte";
   import Navigation from "../components/Navigation.svelte";
   import Spinner from "../components/Spinner.svelte";
   import { API } from "../ts/api";
   import { config, error, loadedSponsoredRepos, user } from "../ts/mainStore";
   import { formatDate, formatNowUTC, storeToken } from "../ts/services";
-  import type { Repo } from "../types/backend";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
   let promiseUsers = API.admin.users();
   let showSuccess = false;
-
-  /* Search */
-  let search = "";
-  //TODO: if we use github only, then the search name is unique and we don't need to spli
-  //in case of change, make sure you split the repo according to the link id
-  let repos: Repo[] = [];
-  let isSearchSubmitting = false;
-  let linkGitUrl = "";
-  let rootUuid = null;
-  let warning = "";
-  const handleSearch = async () => {
-    try {
-      isSearchSubmitting = true;
-      repos = await API.repos.searchName(search);
-      if (repos.length == 0) {
-        warning = "Repo [" + search + "] not found";
-      } else {
-        rootUuid = repos.find((e) => e.link === e.uuid).uuid;
-      }
-    } catch (e) {
-      $error = e;
-    } finally {
-      isSearchSubmitting = false;
-    }
-  };
-  // this fn is not implemented in the backend
-  async function handleLinkGitUrl() {
-    try {
-      repos = await API.repos.linkGitUrl(rootUuid, linkGitUrl);
-      linkGitUrl = "";
-    } catch (e) {
-      $error = e;
-    }
-  }
-  // this fn is not implemented in the backend.
-  async function makeRoot(repoId: string) {
-    try {
-      repos = await API.repos.makeRoot(repoId, rootUuid);
-    } catch (e) {
-      $error = e;
-    }
-  }
 
   const handleFakeUsers = async () => {
     try {
@@ -258,67 +210,6 @@
     {:catch err}
       {error.set(err)}
     {/await}
-  </div>
-
-  <h2 class="p-2 m-2">Link Repos</h2>
-  <div class="container p-2 m-2">
-    <form class="flex" on:submit|preventDefault={handleSearch}>
-      <input type="text" bind:value={search} />
-      <button class="button1" type="submit" disabled={isSearchSubmitting}
-        >Search{#if isSearchSubmitting}<Dots />{/if}</button
-      >
-    </form>
-  </div>
-  <div class="container">
-    {#each repos as repos2, key (repos2.uuid)}
-      <div>
-        <table>
-          <thead>
-            <tr>
-              <th>URL</th>
-              <th>Git URL</th>
-              <th>Source</th>
-              <th>Root</th>
-            </tr>
-          </thead>
-          {#each repos2.repos as repo, key (repo.uuid)}
-            <tr>
-              <td>{repo.url}</td>
-              <td>{repo.gitUrl}</td>
-              <td>{repo.source}</td>
-              <td>
-                {#if repo.uuid !== repos2.uuid}
-                  <button
-                    class="accessible-btn"
-                    on:click={() => makeRoot(repo.uuid)}
-                  >
-                    <Fa icon={faArrowsLeftRight} size="md" />
-                  </button>
-                {:else}
-                  <Fa icon={faCheck} size="md" />
-                {/if}
-              </td>
-            </tr>
-          {/each}
-          <tr>
-            <td colspan="4">
-              <form class="flex" on:submit|preventDefault={handleLinkGitUrl}>
-                <input
-                  size="32"
-                  id="address-input"
-                  name="address"
-                  type="text"
-                  bind:value={linkGitUrl}
-                  placeholder="Add Git URL"
-                />
-                <button class="button1" type="submit">Link Git URL</button>
-              </form>
-            </td>
-          </tr>
-        </table>
-      </div>
-    {/each}
-    {#if warning != ""}{warning}{/if}
   </div>
 
   <h2 class="p-2 m-2">Fake User</h2>
