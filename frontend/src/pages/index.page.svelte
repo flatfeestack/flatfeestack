@@ -38,6 +38,7 @@
   import DAODiscussions from "../routes/DAO/Discussions.svelte";
   import DAOCreateDiscussion from "../routes/DAO/CreateDiscussion.svelte";
   import DAOShowDiscussion from "../routes/DAO/ShowDiscussion.svelte";
+  import DAOEditDiscussion from "../routes/DAO/EditDiscussion.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -227,6 +228,10 @@
         <Route path="/dao/discussions" component={DAODiscussions} />
         <Route path="/dao/createDiscussion" component={DAOCreateDiscussion} />
         <Route path="/dao/discussion/:postId" component={DAOShowDiscussion} />
+        <Route
+          path="/dao/discussion/:postId/edit"
+          component={DAOEditDiscussion}
+        />
 
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />

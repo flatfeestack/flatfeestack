@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { Link } from "svelte-routing";
-  import { API } from "../../ts/api";
-  import { user } from "../../ts/mainStore";
-  import type { Comment } from "../../types/forum";
-  import { getAllFormErrors } from "../../utils/validationHelpers";
-  import yup from "../../utils/yup";
-  import ThreadItemBox from "./ThreadItemBox.svelte";
+  import { API } from "../../../ts/api";
+  import { commentSchema } from "../../../ts/validationSchemas";
+  import type { Comment } from "../../../types/forum";
+  import { getAllFormErrors } from "../../../utils/validationHelpers";
+  import DiscussionThreadItem from "./DiscussionThreadItem.svelte";
 
+  export let item: Comment;
   export let postId: string;
-  export let comments: Comment[];
 
+  let editMode = false;
   let formValues = {
-    content: "",
+    content: item.content,
   };
 
   let formErrors = {
@@ -19,25 +18,28 @@
   };
 
   let isSubmitting = false;
-  let isLoggedIn = false;
-
-  const schema = yup.object().shape({
-    content: yup.string().min(1).max(500).required(),
-  });
 
   async function validateAt(property: string) {
     try {
-      await schema.validateAt(property, formValues);
+      await commentSchema.validateAt(property, formValues);
       formErrors[property] = null;
     } catch (error) {
       formErrors[property] = error.errors[0];
     }
   }
 
+  function cancelEdit() {
+    editMode = false;
+  }
+
+  function editItem() {
+    editMode = true;
+  }
+
   async function handleSubmit() {
     isSubmitting = true;
 
-    const validationErrors = await getAllFormErrors(formValues, schema);
+    const validationErrors = await getAllFormErrors(formValues, commentSchema);
     if (validationErrors.length > 0) {
       validationErrors.forEach((error) => {
         formErrors[error.path] = error.message;
@@ -47,26 +49,26 @@
       return;
     }
 
-    const comment = await API.forum.createComment(postId, formValues);
-    comments = [...comments, comment];
-    formValues = {
-      content: "",
-    };
-    isSubmitting = false;
-  }
+    item = await API.forum.updateComment(postId, item.id, formValues);
 
-  $: {
-    isLoggedIn = Object.keys($user).length !== 0;
+    editMode = false;
+    isSubmitting = false;
   }
 </script>
 
-<ThreadItemBox>
-  {#if isLoggedIn}
+<style>
+  p {
+    white-space: pre-line;
+  }
+</style>
+
+<DiscussionThreadItem {item} {editItem}>
+  {#if editMode}
     {#if isSubmitting}
-      Creating comment ...
+      Updating comment, one moment please ...
     {:else}
       <div class="container-col2 my-2">
-        <label class="bold" for="content">Add a new comment</label>
+        <label class="bold" for="content">Edit comment</label>
       </div>
 
       <div class="container-col2 my-2">
@@ -84,14 +86,18 @@
           <p class="invalid" style="color:red">{formErrors.content}</p>
         {/if}
 
-        <div class="container-col2 items-end mt-2">
+        <div class="flex gap-3 justify-end mt-2">
+          <button class="button3" type="submit" on:click={() => cancelEdit()}
+            >Cancel</button
+          >
+
           <button class="button1" type="submit" on:click={() => handleSubmit()}
-            >Create!</button
+            >Update!</button
           >
         </div>
       </div>
     {/if}
   {:else}
-    You need to <Link href="/login">sign in</Link> to post a comment.
+    <p class="mb-2 mt-2">{item.content}</p>
   {/if}
-</ThreadItemBox>
+</DiscussionThreadItem>
