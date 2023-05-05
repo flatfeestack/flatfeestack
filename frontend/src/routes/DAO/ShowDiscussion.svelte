@@ -1,17 +1,16 @@
 <script lang="ts">
+  import { faLock } from "@fortawesome/free-solid-svg-icons";
   import { onMount } from "svelte";
+  import Fa from "svelte-fa";
   import CreateComment from "../../components/DAO/CreateComment.svelte";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import CommentThreadItem from "../../components/DAO/discussions/CommentThreadItem.svelte";
   import PostThreadItem from "../../components/DAO/discussions/PostThreadItem.svelte";
+  import StatusSpan from "../../components/DAO/discussions/StatusSpan.svelte";
   import Spinner from "../../components/Spinner.svelte";
   import { API } from "../../ts/api";
-  import type { Comment, Post } from "../../types/forum";
   import { user } from "../../ts/mainStore";
-  import StatusSpan from "../../components/DAO/discussions/StatusSpan.svelte";
-  import { navigate } from "svelte-routing";
-  import Fa from "svelte-fa";
-  import { faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
+  import type { Comment, Post } from "../../types/forum";
 
   export let postId: string;
 
@@ -31,11 +30,6 @@
   async function closeDiscussion() {
     await API.forum.closePost(postId);
     post.open = false;
-  }
-
-  async function deleteDiscussion() {
-    await API.forum.deletePost(postId);
-    navigate("/dao/discussions");
   }
 </script>
 
@@ -65,14 +59,6 @@
             title="Close discussion"><Fa icon={faLock} /></button
           >
         {/if}
-
-        {#if $user.role === "admin"}
-          <button
-            class="button3"
-            on:click={() => deleteDiscussion()}
-            title="Delete discussion"><Fa icon={faTrash} /></button
-          >
-        {/if}
       </div>
     </div>
 
@@ -80,6 +66,7 @@
 
     {#each comments as comment (comment.id)}
       <CommentThreadItem
+        bind:comments
         bind:item={comment}
         {postId}
         discussionOpen={post.open}

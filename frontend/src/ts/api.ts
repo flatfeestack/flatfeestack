@@ -280,5 +280,7 @@ export const API = {
         .json<Comment>(),
     closePost: (postId) =>
       forumToken.put(`posts/${postId}/close`).json<String>(),
+    deleteComment: (postId, commentId) =>
+      forumToken.delete(`posts/${postId}/comments/${commentId}`),
   },
 };

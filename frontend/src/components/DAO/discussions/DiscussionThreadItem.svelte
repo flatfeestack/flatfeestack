@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import ThreadItemBox from "../ThreadItemBox.svelte";
-  import type { Comment, Post } from "../../../types/forum";
-  import { faPencil } from "@fortawesome/free-solid-svg-icons";
   import { user } from "../../../ts/mainStore";
   import { timeSince } from "../../../ts/services";
+  import type { Comment, Post } from "../../../types/forum";
+  import ThreadItemBox from "../ThreadItemBox.svelte";
 
+  export let deleteItem: () => void;
   export let discussionOpen: boolean;
   export let editItem: () => void;
   export let item: Post | Comment;
@@ -34,8 +35,22 @@
         {/if}
       </div>
       {#if item.author === $user.id && discussionOpen}
-        <button class="accessible-btn" on:click={() => editItem()}>
+        <button
+          class="accessible-btn"
+          on:click={() => editItem()}
+          title="Edit comment"
+        >
           <Fa class="ml-4" icon={faPencil} />
+        </button>
+      {/if}
+
+      {#if $user.role === "admin"}
+        <button
+          class="accessible-btn"
+          on:click={() => deleteItem()}
+          title="Delete item"
+        >
+          <Fa class="ml-4" icon={faTrash} />
         </button>
       {/if}
     </div>
