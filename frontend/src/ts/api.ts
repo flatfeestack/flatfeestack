@@ -278,5 +278,7 @@ export const API = {
       forumToken
         .put(`posts/${postId}/comments/${commentId}`, { json: commentInput })
         .json<Comment>(),
+    closePost: (postId) =>
+      forumToken.put(`posts/${postId}/close`).json<String>(),
   },
 };

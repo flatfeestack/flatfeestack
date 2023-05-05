@@ -6,17 +6,12 @@
   import { user } from "../../../ts/mainStore";
   import { timeSince } from "../../../ts/services";
 
+  export let discussionOpen: boolean;
   export let editItem: () => void;
   export let item: Post | Comment;
-
-  console.log(item);
 </script>
 
 <style>
-  .items-center {
-    align-items: center;
-  }
-
   .mr-4 {
     margin-right: 0.5rem;
   }
@@ -38,7 +33,7 @@
           <p>(edited)</p>
         {/if}
       </div>
-      {#if item.author === $user.id}
+      {#if item.author === $user.id && discussionOpen}
         <button class="accessible-btn" on:click={() => editItem()}>
           <Fa class="ml-4" icon={faPencil} />
         </button>

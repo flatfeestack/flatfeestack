@@ -5,6 +5,7 @@
   import { getAllFormErrors } from "../../../utils/validationHelpers";
   import DiscussionThreadItem from "./DiscussionThreadItem.svelte";
 
+  export let discussionOpen: boolean;
   export let item: Comment;
   export let postId: string;
 
@@ -62,7 +63,7 @@
   }
 </style>
 
-<DiscussionThreadItem {item} {editItem}>
+<DiscussionThreadItem {item} {editItem} {discussionOpen}>
   {#if editMode}
     {#if isSubmitting}
       Updating comment, one moment please ...

@@ -2,6 +2,7 @@
   import { navigate } from "svelte-routing";
   import type { Post } from "../../types/forum";
   import formatDateTime from "../../utils/formatDateTime";
+  import StatusSpan from "./discussions/StatusSpan.svelte";
 
   export let post: Post;
 </script>
@@ -27,26 +28,6 @@
   p {
     margin: 0.25rem;
   }
-
-  span {
-    border-radius: 4px;
-    display: inline-block;
-    font-size: 0.8rem;
-    margin-left: 0.25rem;
-    padding: 0.15rem;
-  }
-
-  span.open {
-    border: var(--primary-700) 1px solid;
-    background-color: var(--primary-300);
-    color: var(--primary-700);
-  }
-
-  span.closed {
-    border: var(--secondary-700) 1px solid;
-    background-color: var(--secondary-300);
-    color: var(--secondary-700);
-  }
 </style>
 
 <div
@@ -55,9 +36,7 @@
   <div>
     <p class="bold">
       {post.title}
-      {#if post.open}<span class="open">Open</span>{:else}<span class="closed"
-          >Closed</span
-        >{/if}
+      <StatusSpan {post} />
     </p>
     <p>
       Created on {formatDateTime(new Date(post.created_at))} by {post.author}

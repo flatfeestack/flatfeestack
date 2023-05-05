@@ -16,6 +16,6 @@
   }
 </style>
 
-<DiscussionThreadItem {item} {editItem}>
+<DiscussionThreadItem {item} {editItem} discussionOpen={item.open}>
   <p class="mb-2 mt-2">{item.content}</p>
 </DiscussionThreadItem>
