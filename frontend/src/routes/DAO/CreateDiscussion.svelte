@@ -66,10 +66,6 @@
   input {
     display: block;
   }
-
-  textarea {
-    font-size: 15px;
-  }
 </style>
 
 <Navigation>

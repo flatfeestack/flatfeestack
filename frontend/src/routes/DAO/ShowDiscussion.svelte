@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import Spinner from "../../components/Spinner.svelte";
-  import type { Comment, Post } from "../../types/forum";
-  import { API } from "../../ts/api";
-  import DiscussionThreadItem from "../../components/DAO/DiscussionThreadItem.svelte";
   import CreateComment from "../../components/DAO/CreateComment.svelte";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import CommentThreadItem from "../../components/DAO/discussions/CommentThreadItem.svelte";
+  import PostThreadItem from "../../components/DAO/discussions/PostThreadItem.svelte";
+  import Spinner from "../../components/Spinner.svelte";
+  import { API } from "../../ts/api";
+  import type { Comment, Post } from "../../types/forum";
 
   export let postId: string;
 
@@ -29,10 +30,10 @@
   {:else}
     <h1 class="text-secondary-900">{post.title}</h1>
 
-    <DiscussionThreadItem item={post} />
+    <PostThreadItem item={post} />
 
     {#each comments as comment (comment.id)}
-      <DiscussionThreadItem item={comment} />
+      <CommentThreadItem bind:item={comment} {postId} />
     {/each}
 
     <CreateComment bind:comments postId={post.id} />

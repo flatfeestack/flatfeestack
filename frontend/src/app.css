@@ -567,3 +567,15 @@ tbody tr:last-of-type {
 .color-secondary-500 {
   color: var(--secondary-500);
 }
+
+textarea {
+  font-size: 13px;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.gap-3 {
+  gap: 0.75rem;
+}
