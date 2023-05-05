@@ -212,12 +212,6 @@ export const API = {
         .json<Repo[] | null>(),
     searchName: (s: string) =>
       backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
-    linkGitUrl: (repoId: string, gitUrl: string) =>
-      backendToken
-        .post(`repos/link/${repoId}`, { json: { gitUrl } })
-        .json<Repo[]>(),
-    makeRoot: (repoId: string, rootUuid: string) =>
-      backendToken.get(`repos/root/${repoId}/${rootUuid}`).json<Repo[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),
     tag: (repoId: string) =>
       backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
