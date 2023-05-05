@@ -4,6 +4,8 @@
   import type { Post } from "../../types/forum";
   import { API } from "../../ts/api";
   import Spinner from "../../components/Spinner.svelte";
+  import { navigate } from "svelte-routing";
+  import DiscussionListItem from "../../components/DAO/DiscussionListItem.svelte";
 
   let isLoading = true;
   let posts: Post[] = [];
@@ -12,6 +14,10 @@
     posts = await API.forum.getAllPosts();
     isLoading = false;
   });
+
+  const navigateToCreateDiscussion = () => {
+    navigate("/dao/createDiscussion");
+  };
 </script>
 
 <Navigation>
@@ -26,14 +32,18 @@
       proposal, feel free to create a discussion thread.
     </p>
 
-    <hr />
+    <div class="container-col2 items-start mt-2 mb-20">
+      <button class="button1" on:click={navigateToCreateDiscussion}
+        >Start a new discussion</button
+      >
+    </div>
 
     {#if posts.length > 0}
-      Display the posts
+      {#each posts as post (post.id)}
+        <DiscussionListItem {post} />
+      {/each}
     {:else}
       <p>It looks like nobody did start any discussion so far.</p>
-
-      <button class="button1">Start a new discussion</button>
     {/if}
   {/if}
 </Navigation>

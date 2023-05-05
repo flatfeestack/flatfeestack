@@ -178,9 +178,6 @@
   .mr-2 {
     margin-right: 0.5rem;
   }
-  .mt-2 {
-    margin-top: 0.5rem;
-  }
   .mb-2 {
     margin-bottom: 0.5rem;
   }

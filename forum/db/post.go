@@ -97,13 +97,13 @@ func ClosePost(postId uuid.UUID) error {
 
 func GetPostById(id uuid.UUID) (*DbPost, error) {
 	var post DbPost
-	row, err := globals.DB.Query(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`, id)
+	stmt, err := globals.DB.Prepare(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(row)
+	defer closeAndLog(stmt)
 
-	err = row.Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
+	err = stmt.QueryRow(id).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

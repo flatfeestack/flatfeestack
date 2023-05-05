@@ -110,6 +110,18 @@ const forum = ky.create({
   timeout: restTimeout,
 });
 
+const forumToken = ky.create({
+  prefixUrl: "/forum",
+  timeout: restTimeout,
+  hooks: {
+    beforeRequest: [async (request) => addToken(request)],
+    afterResponse: [
+      async (request: Request, options: any, response: Response) =>
+        refreshToken(request, options, response),
+    ],
+  },
+});
+
 export const API = {
   authToken: {
     logout: () => authToken.get(`authen/logout?redirect_uri=/`),
@@ -247,15 +259,15 @@ export const API = {
   forum: {
     getAllPosts: () => forum.get(`posts`).json<Post[]>(),
     createPost: (postInput: PostInput) =>
-      forum.post(`posts`, { json: postInput }).json<Post>(),
+      forumToken.post(`posts`, { json: postInput }).json<Post>(),
     getPost: (postId: PostId) => forum.get(`posts/${postId}`).json<Post>(),
-    deletePost: (postId: PostId) => forum.delete(`posts/${postId}`),
+    deletePost: (postId: PostId) => forumToken.delete(`posts/${postId}`),
     updatePost: (postId: PostId, postInput: PostInput) =>
-      forum.put(`posts/${postId}`, { json: postInput }).json<Post>(),
+      forumToken.put(`posts/${postId}`, { json: postInput }).json<Post>(),
     getAllComments: (postId: PostId) =>
       forum.get(`posts/${postId}/comments`).json<Comment[]>(),
     createComment: (postId: PostId, commentInput: CommentInput) =>
-      forum
+      forumToken
         .post(`posts/${postId}/comments`, { json: commentInput })
         .json<Comment>(),
     updateComment: (
@@ -263,7 +275,7 @@ export const API = {
       commentId: CommentId,
       commentInput: CommentInput
     ) =>
-      forum
+      forumToken
         .put(`posts/${postId}/comments/${commentId}`, { json: commentInput })
         .json<Comment>(),
   },
