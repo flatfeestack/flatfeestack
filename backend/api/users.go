@@ -11,6 +11,28 @@ import (
 	"net/http"
 )
 
+func GetUserById(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	userId := params["id"]
+	convertedUserId, err := uuid.Parse(userId)
+
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusBadRequest, "Invalid user ID: %v", err)
+	}
+
+	user, err := db.FindPublicUserById(convertedUserId)
+
+	if user == nil {
+		utils.WriteErrorf(w, http.StatusNotFound, "User not found")
+	} else if err != nil {
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not fetch user: %v", err)
+	} else {
+		utils.WriteJson(w, user)
+	}
+
+	return
+}
+
 func GetMyUser(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	utils.WriteJson(w, user)
 }

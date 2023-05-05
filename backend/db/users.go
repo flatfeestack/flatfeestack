@@ -29,6 +29,12 @@ type UserDetail struct {
 	Role               *string `json:"role,omitempty"`
 }
 
+type PublicUser struct {
+	Id    uuid.UUID `json:"id"`
+	Name  *string   `json:"name,omitempty"`
+	Image *string   `json:"image"`
+}
+
 func FindAllEmails() ([]string, error) {
 	emails := []string{}
 	s := `SELECT email from users`
@@ -77,6 +83,23 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
                         WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
 			&u.StripeClientSecret, &u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &u, nil
+	default:
+		return nil, err
+	}
+}
+
+func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
+	var u PublicUser
+	err := db.
+		QueryRow(`SELECT id, name, image                       
+                        FROM users 
+                        WHERE id=$1`, uid).
+		Scan(&u.Id, &u.Name, &u.Image)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil

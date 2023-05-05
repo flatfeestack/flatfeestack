@@ -398,6 +398,30 @@ paths:
                 $ref: '#/components/schemas/PayoutResponse'
         '400':
           description: Bad Request
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicUser'
+        '400':
+          description: Bad Request
   /repos/search:
     get:
       tags:
@@ -1241,3 +1265,16 @@ components:
         - amount
         - encodedUserId
         - signature
+
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true

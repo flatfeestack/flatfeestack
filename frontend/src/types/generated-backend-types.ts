@@ -100,6 +100,14 @@ export interface paths {
       };
     };
   };
+  "/users/me/clear/name": {
+    put: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
   "/users/me/image": {
     post: {
       requestBody: {
@@ -300,6 +308,25 @@ export interface paths {
         200: {
           content: {
             "application/json": components["schemas"]["PayoutResponse"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/users/{id}": {
+    get: {
+      parameters: {
+        query: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["PublicUser"])[];
           };
         };
         /** @description Bad Request */
@@ -871,6 +898,12 @@ export interface components {
       encodedUserId: string;
       /** Format: byte */
       signature: string;
+    };
+    PublicUser: {
+      /** Format: uuid */
+      id?: string;
+      name?: string | null;
+      image?: string | null;
     };
   };
   responses: never;
