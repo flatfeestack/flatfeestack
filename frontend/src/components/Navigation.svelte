@@ -47,6 +47,12 @@
     color: var(--primary-900);
   }
 
+  @media screen and (max-width: 40em) {
+    nav {
+      min-width: unset;
+    }
+  }
+
   @media (max-width: 36rem) {
     .page {
       flex-direction: column;

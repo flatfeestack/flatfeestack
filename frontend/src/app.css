@@ -94,9 +94,9 @@ h1 {
 .p-300 {
   padding: 3rem;
 }
-.p-rl-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
+.p-rl-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .mx-2 {
@@ -320,7 +320,7 @@ textarea {
 }
 
 /* Small only */
-@media screen and (max-width: 39.9375em) {
+@media screen and (max-width: 40em) {
   .hide-sx {
     display: none;
   }
@@ -379,8 +379,8 @@ textarea {
   max-height: 2rem;
   max-width: 2rem;
   width: auto;
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
   border: 2px solid var(--primary-100);
 }
 

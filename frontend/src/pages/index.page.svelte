@@ -134,6 +134,14 @@
     padding-right: 0.25em;
     width: 10rem;
   }
+  .user-email {
+    padding: 0 0.25rem;
+  }
+  @media (max-width: 48rem) {
+    .user-email {
+      display: none;
+    }
+  }
 </style>
 
 <div class="all">
@@ -158,8 +166,9 @@
         {#if $user.image}
           <img class="image-org-sx" src={$user.image} alt="user profile img" />
         {/if}
-        &nbsp;
-        {$user.email}
+        <p class="user-email">
+          {$user.email}
+        </p>
         <form on:submit|preventDefault={logout}>
           <button class="button3 center mx-2" type="submit">Sign out</button>
         </form>
