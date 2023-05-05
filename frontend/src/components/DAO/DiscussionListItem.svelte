@@ -3,6 +3,7 @@
   import type { Post } from "../../types/forum";
   import formatDateTime from "../../utils/formatDateTime";
   import StatusSpan from "./discussions/StatusSpan.svelte";
+  import { users } from "../../ts/userStore";
 
   export let post: Post;
 </script>
@@ -39,7 +40,12 @@
       <StatusSpan {post} />
     </p>
     <p>
-      Created on {formatDateTime(new Date(post.created_at))} by {post.author}
+      {#await users.get(post.author)}
+        ...
+      {:then user}
+        Created on {formatDateTime(new Date(post.created_at))} by {user.name ||
+          "[unknown]"}
+      {/await}
     </p>
   </div>
 
