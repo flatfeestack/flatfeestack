@@ -56,6 +56,12 @@
   }
 </script>
 
+<style>
+  p {
+    white-space: pre-line;
+  }
+</style>
+
 <DiscussionThreadItem {item} {editItem}>
   {#if editMode}
     {#if isSubmitting}

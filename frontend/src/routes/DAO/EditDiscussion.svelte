@@ -1,19 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { navigate } from "svelte-routing";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import PostForm from "../../components/DAO/discussions/PostForm.svelte";
-  import Spinner from "../../components/Spinner.svelte";
-  import { API } from "../../ts/api";
   import { user } from "../../ts/mainStore";
-  import { postSchema } from "../../ts/validationSchemas";
+  import { navigate } from "svelte-routing";
+  import { API } from "../../ts/api";
   import { getAllFormErrors } from "../../utils/validationHelpers";
+  import { postSchema } from "../../ts/validationSchemas";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import Spinner from "../../components/Spinner.svelte";
+  import PostForm from "../../components/DAO/discussions/PostForm.svelte";
 
-  onMount(() => {
-    if (Object.keys($user).length === 0) {
-      navigate("/login");
-    }
-  });
+  export let postId: string;
 
   let formValues = {
     content: "",
@@ -25,7 +21,18 @@
     title: null,
   };
 
-  let isSubmitting = false;
+  let isSubmitting = true;
+
+  onMount(async () => {
+    if (Object.keys($user).length === 0) {
+      navigate("/login");
+    }
+
+    const post = await API.forum.getPost(postId);
+    formValues.content = post.content;
+    formValues.title = post.title;
+    isSubmitting = false;
+  });
 
   async function handleSubmit() {
     isSubmitting = true;
@@ -39,7 +46,7 @@
       return;
     }
 
-    const post = await API.forum.createPost(formValues);
+    const post = await API.forum.updatePost(postId, formValues);
     isSubmitting = false;
     navigate(`/dao/discussion/${post.id}`);
   }
@@ -49,13 +56,13 @@
   {#if isSubmitting}
     <Spinner />
   {:else}
-    <h1 class="text-secondary-900">Create a new discussion</h1>
+    <h1 class="text-secondary-900">Edit discussion {formValues.title}</h1>
 
     <PostForm
       bind:formValues
       bind:formErrors
       {handleSubmit}
-      submitButtonLabel="Create!"
+      submitButtonLabel="Update!"
     />
   {/if}
 </Navigation>
