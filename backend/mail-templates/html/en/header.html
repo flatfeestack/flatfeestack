@@ -4,23 +4,15 @@
 	<meta charset="UTF-8">
 	<title>FlatFeeStack</title>
 
-    <style>
-        :root {
-            --primary-100: #ecf3ef;
-            --primary-300: #a9d4ba;
-            --primary-400: #84d3a4;
-            --primary-500: #4caf50;
-            --primary-700: #499768;
-            --primary-900: #285338;
-        }
+	<style>
 		body {
-			background-color: #f8f8f8;
+			background-color: #f8f8f8 !important;
 			margin: 0;
 			padding: 0;
 			font-family: Arial, sans-serif;
 			font-size: 16px;
 			line-height: 1.5;
-			color: #333333;
+			color: #333333 !important;
 		}
 
 		.container {
@@ -30,6 +22,7 @@
 			padding: 20px;
 			box-sizing: border-box;
 			background-color: #ffffff;
+			color: #333333 !important;
 			border-radius: 4px;
 			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 		}
@@ -43,17 +36,19 @@
 			font-size: 24px;
 			font-weight: bold;
 			text-align: center;
+			color: #333333 !important;
 		}
 
 		p {
 			font-size: 18px;
 			text-align: center;
+			color: #333333 !important;
 		}
 
-		a.btn {
+		.container a.btn {
 			display: inline-block;
-			background-color: var(--primary-500);
-			color: var(--primary-100);
+			background-color: #4caf50;
+			color: #ecf3ef;
 			text-decoration: none;
 			font-size: 18px;
 			font-weight: bold;
@@ -62,22 +57,23 @@
 			transition: background-color 0.2s ease-in-out;
 		}
 
-		a.btn:hover {
-			background-color: var(--primary-700);;
-            color: var(--primary-100);;
+		.container a.btn:hover {
+			background-color: #499768;
+			color: #ecf3ef;
 		}
 
-        a {
-            color: var(--primary-500);
-        }
+		.container a {
+			color: #4caf50;
+		}
 
-        a:hover {
-            color: var(--primary-700);
-        }
+		.container a:hover {
+			color: #499768;
+		}
 
-        img {
-            width: 100%;
-        }
+		.container img {
+			width: 100%;
+			color: #333333 !important;
+		}
 	</style>
 </head>
 <body>
