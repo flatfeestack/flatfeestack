@@ -20,18 +20,25 @@ async function render(pageContext) {
   // data using our custom MetaTags Svelte component.
 
   return escapeInject`<!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-         <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" >
-        ${dangerouslySkipEscape(appHead)}
-        <style>${appCss}</style>
-      </head>
-      <body>
-        <div id="app">${dangerouslySkipEscape(appHtml)}</div>
-      </body>
-    </html>`;
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+          <link rel="manifest" href="/site.webmanifest" />
+          <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+          <meta name="msapplication-TileColor" content="#da532c" />
+          <meta name="theme-color" content="#ffffff" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <link rel="preconnect" href="https://fonts.gstatic.com">
+          <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" >
+            ${dangerouslySkipEscape(appHead)}
+            <style>${appCss}</style>
+          <title>FlatFeeStack</title>
+        </head>
+        <body>
+          <div id="app">${dangerouslySkipEscape(appHtml)}</div>
+        </body>
+      </html>`;
 }
