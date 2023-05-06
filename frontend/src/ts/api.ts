@@ -66,11 +66,17 @@ const restTimeout = 5000;
 const authToken = ky.create({
   prefixUrl: "/auth",
   timeout: restTimeout,
+  throwHttpErrors: false,
   hooks: {
     beforeRequest: [async (request) => addToken(request)],
     afterResponse: [
-      async (request: Request, options: any, response: Response) =>
-        refreshToken(request, options, response),
+      async (request: Request, options: any, response: Response) => {
+        refreshToken(request, options, response);
+        const body = await response.json();
+        if (body.error) {
+          throw new Error(body.error);
+        }
+      },
     ],
   },
 });
@@ -78,11 +84,17 @@ const authToken = ky.create({
 const backendToken = ky.create({
   prefixUrl: "/backend",
   timeout: restTimeout,
+  throwHttpErrors: false,
   hooks: {
     beforeRequest: [async (request) => addToken(request)],
     afterResponse: [
-      async (request: Request, options: any, response: Response) =>
-        refreshToken(request, options, response),
+      async (request: Request, options: any, response: Response) => {
+        refreshToken(request, options, response);
+        const body = await response.json();
+        if (body.error) {
+          throw new Error(body.error);
+        }
+      },
     ],
   },
 });
