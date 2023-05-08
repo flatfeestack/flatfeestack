@@ -1,10 +1,13 @@
 #!/bin/bash -e
 
 now=$(date +"%Y-%m-%d_%H-%M-%S")
-tar cfz "flatfeestack-env-${now}.tar.gz" \
- analyzer/.env \
- backend/.env \
- db/.env \
- fastauth/.env \
- payout/.env \
- .env
+
+find . \
+    -maxdepth 2 \
+    -type d ! \
+    -executable \
+    -prune \
+    -o \
+    -name ".env" \
+    -type f \
+    -printf "%P\n" | tar -czvf "flatfeestack-env-${now}.tar.gz" -T -
