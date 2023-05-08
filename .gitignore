@@ -10,3 +10,4 @@ env*.tar.gz
 /search-proj
 /landing-page
 .db_pw.txt
+stripe/config.toml

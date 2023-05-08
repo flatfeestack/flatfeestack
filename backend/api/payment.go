@@ -189,3 +189,17 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 		utils.WriteJson(w, signature)
 	}
 }
+
+func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	payInEvents, err := db.FindPayInUser(user.Id)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(payInEvents)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+}

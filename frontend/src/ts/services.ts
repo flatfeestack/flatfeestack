@@ -1,4 +1,4 @@
-import { token, user, loginFailed, userBalances, config } from "./mainStore";
+import { token, user, loginFailed, config } from "./mainStore";
 import { API } from "./api";
 import type { User } from "../types/backend";
 import type { Token } from "../types/auth";
@@ -119,72 +119,8 @@ export const storeToken = (tok: Token) => {
   localStorage.setItem("ffs-refresh", r);
 };
 
-const connect = (): Promise<WebSocket> => {
-  return new Promise(function (resolve, reject) {
-    console.log("connect");
-    const t = get(token);
-    const c = get(config);
-
-    const paymentEndpoint = `${c.wsBaseUrl}/users/me/payment`;
-    console.log(`ws to ${paymentEndpoint}`);
-    const server = new WebSocket(paymentEndpoint, ["access_token", t]);
-    server.onopen = function () {
-      console.log("open");
-      resolve(server);
-    };
-    server.onerror = function (err) {
-      console.log(err);
-      reject(err);
-    };
-  });
-};
-
-let timeoutOnclose;
-let timeoutOnerror;
-
-export const connectWs = async () => {
-  if (timeoutOnclose) {
-    clearTimeout(timeoutOnclose);
-    timeoutOnclose = undefined;
-  }
-  if (timeoutOnerror) {
-    clearTimeout(timeoutOnerror);
-    timeoutOnerror = undefined;
-  }
-  try {
-    const ws = await connect();
-    ws.onmessage = function (event: MessageEvent) {
-      try {
-        const json = JSON.parse(event.data);
-        userBalances.set(json);
-      } catch (e) {
-        console.log(e);
-      }
-    };
-    ws.onclose = async function (e: CloseEvent) {
-      console.log(
-        "Socket is closed. Reconnect will be attempted in 3 second.",
-        e
-      );
-      if (e.code === 4001) {
-        await refresh();
-        await connectWs();
-      } else {
-        timeoutOnclose = setTimeout(async function () {
-          await connectWs();
-        }, 3000);
-      }
-    };
-  } catch (e) {
-    console.log(e);
-    timeoutOnerror = setTimeout(async function () {
-      await connectWs();
-    }, 5000);
-  }
-};
-
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
-export const parseJwt = (token) => {
+/*export const parseJwt = (token) => {
   const base64Url = token.split(".")[1];
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
   const jsonPayload = decodeURIComponent(
@@ -197,7 +133,7 @@ export const parseJwt = (token) => {
   );
 
   return JSON.parse(jsonPayload);
-};
+};*/
 
 //https://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
 export const formatDate = (d: Date): string => {
@@ -229,9 +165,9 @@ export function formatNowUTC() {
   return formatDate(nowUtc);
 }
 
-export const formatPaymentCycle = (c: string): string => {
+/*export const formatPaymentCycle = (c: string): string => {
   return c.substring(0, 10) + "…";
-};
+};*/
 
 export const formatDay = (d: Date): string => {
   return (
@@ -340,9 +276,9 @@ export const stripePayment = async (
   }
 };
 
-export function isIterable(value) {
+/*export function isIterable(value) {
   return Symbol.iterator in Object(value);
-}
+}*/
 
 export function qrString(address, currency, value) {
   switch (currency) {

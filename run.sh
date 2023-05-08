@@ -68,7 +68,7 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db caddy ganache auth analyzer backend payout frontend'
+  internal='db caddy ganache auth analyzer backend payout frontend stripe-webhook'
 
   while :; do
     case "${1-}" in
@@ -79,9 +79,10 @@ parse_params() {
     -nb | --no-backend) external="${external} backend"; internal="${internal//backend/}";;
     -np | --no-payout) external="${external} payout"; internal="${internal//payout/}";;
     -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
+    -ns | --no-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}";;
     -sb | --skip-build) include_build=false;;
-    -db | --db-only) internal='db'; external='caddy ganache auth analyzer backend payout frontend'; break;; #if this is set everything else is ignored
-    -rm | --remove-data) rm -rf .db .chain;;
+    -db | --db-only) internal='db'; external='caddy ganache auth analyzer backend payout frontend stripe-webhook'; break;; #if this is set everything else is ignored
+    -rm | --remove-data) sudo rm -rf .db .ganache .repos;;
     -?*) die "Unknown option: $1";;
     *) break ;;
     esac
@@ -94,12 +95,15 @@ parse_params() {
 
 run_cmd() {
   if [ -f .env ]; then
-    source .env
-    if [ -n "${CMD-}" ]; then
-      msg "${GREEN}Running command [$CMD]"
-      eval "$CMD" &
-      PID=$!
-    fi
+    source .env set
+    for i in {0..9}; do
+      cmd="CMD$i"
+      #echo "${!cmd}"
+      if [ -n "${!cmd-}" ]; then
+        msg "${GREEN}Running command [${!cmd}]${NOFORMAT}"
+        source <(printf "${!cmd}")
+      fi
+    done
   fi
 }
 
@@ -108,20 +112,20 @@ setup_colors
 
 host_ip
 run_cmd
-mkdir -p .db .chain
+mkdir -p .db .ganache .repos
 
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
 [ -z "${external}" ] && external="localhost:127.0.0.1" || external="${external}:${host_ip}"
-msg "${GREEN}Setting DNS hosts to [${external}], started at $(date)"
+msg "${GREEN}Setting DNS hosts to [${external}], started at $(date)${NOFORMAT}"
 
 if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker-compose build --parallel ${internal}"
+  msg "${GREEN}Run: docker-compose build --parallel ${internal}${NOFORMAT}"
   EXTRA_HOSTS="${external}" docker-compose build --parallel ${internal}
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
-msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}"
+msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}${NOFORMAT}"
 EXTRA_HOSTS="${external}" docker-compose up --abort-on-container-exit ${internal}

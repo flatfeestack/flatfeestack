@@ -252,11 +252,13 @@ func main() {
 	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodPost)
 
+	//payment
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payment", jwtAuthUser(api.PaymentEvent)).Methods(http.MethodGet)
 
 	// get public user
 	router.HandleFunc("/users/{id}", api.GetUserById).Methods(http.MethodGet)

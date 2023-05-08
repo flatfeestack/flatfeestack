@@ -89,9 +89,8 @@ services:
 
   db:
     image: postgres:15-alpine
-    user: postgres
     volumes:
-      - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data
+      - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z
     ports:
       - "5432:5432"
     env_file:
@@ -131,3 +130,8 @@ services:
       - ".ganache:/ganache"
     profiles:
       - smart-contracts-eth
+
+  stripe-webhook:
+    build: ./stripe
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}

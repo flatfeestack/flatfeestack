@@ -4,17 +4,23 @@
   import { API } from "../ts/api";
   import { onMount } from "svelte";
   import type { Repo } from "../types/backend";
-  import { connectWs, formatDate, formatBalance } from "../ts/services";
+  import { formatDate, formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repo[] = [];
 
+  const fetchData = async () => {
+    const response = await API.user.get
+    data = response.data;
+  };
+
+  setInterval(fetchData, 10000);
+
   onMount(async () => {
     try {
-      const pr1 = connectWs();
-      const pr2 = API.user.getSponsored();
-      const res2 = await pr2;
-      sponsoredRepos = res2 || [];
+      const pr1 = API.user.getSponsored();
+      const res1 = await pr1;
+      sponsoredRepos = res1 || [];
       await pr1;
     } catch (e) {
       $error = e;
