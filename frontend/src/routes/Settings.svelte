@@ -67,7 +67,7 @@
       gitEmails = [...gitEmails, ge];
       newEmail = "";
     } catch (e) {
-      $error = "Duplicate email address. Email can only be used once.";
+      $error = e;
     }
   }
 
