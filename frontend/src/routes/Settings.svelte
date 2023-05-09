@@ -247,10 +247,10 @@
   </p>
 
   <div class="custom-table p-2 m-2">
-    <div class="wrapper">
-      <div class="header p-2 col col-6 b-r-w">Email</div>
-      <div class="header p-2 col col-3 b-r-w">Confirmation</div>
-      <div class="header p-2 col col-2">Delete</div>
+    <div class="wrapper header">
+      <div class="p-2 col col-6 b-r-w">Email</div>
+      <div class="p-2 col col-3 b-r-w">Confirmation</div>
+      <div class="p-2 col col-2">Delete</div>
     </div>
 
     {#each gitEmails as email, key (email.email)}

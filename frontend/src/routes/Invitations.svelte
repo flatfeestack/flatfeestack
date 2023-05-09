@@ -94,6 +94,83 @@
   });
 </script>
 
+<style>
+  .custom-table {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .header {
+    background-color: var(--primary-300);
+    color: #000;
+    text-align: left;
+    font-weight: bold;
+  }
+  .wrapper:not(.header):nth-of-type(odd) {
+    background-color: var(--primary-300);
+  }
+  .wrapper:not(.header):nth-of-type(even) {
+    background-color: var(--primary-100);
+  }
+  .wrapper {
+    display: flex;
+    width: 100%;
+    border-bottom: solid white 1px;
+  }
+  .wrapper > div {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+  }
+  .col-6 {
+    width: 50%;
+  }
+  .col-2 {
+    width: 20%;
+  }
+
+  .col-1 {
+    width: 10%;
+  }
+
+  .break-word {
+    word-break: break-all;
+  }
+
+  div.just-end {
+    justify-content: end;
+  }
+
+  .form-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .form-container {
+    margin: 0.5rem;
+  }
+
+  .wrapper .accessible-btn + .accessible-btn {
+    margin-left: 0.5rem;
+  }
+
+  @media screen and (max-width: 54em) {
+    .wrapper {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .col-6 {
+      width: 100%;
+    }
+    .col-1 {
+      width: 15%;
+    }
+    .col-2 {
+      width: 35%;
+    }
+  }
+</style>
+
 <Navigation>
   <h2 class="p-2 m-2">Invite Users</h2>
   <p class="p-2 m-2">
@@ -101,126 +178,111 @@
     a daily basis.
   </p>
 
-  <div class="container">
-    <table>
-      <thead>
-        <tr>
-          <th>Invited</th>
-          <th>Status</th>
-          <th>Date</th>
-          <th>Remove</th>
-          <th>
-            <button class="accessible-btn" on:click={refreshInvite}>
-              <Fa icon={faSync} size="md" />
-            </button>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.email === $user.email}
-            <tr>
-              <td>{inv.inviteEmail}</td>
-              <td class="text-center">
-                {#if inv.confirmedAt}
-                  <Fa icon={faCheck} size="md" />
-                {:else}
-                  <Fa icon={faClock} size="md" />
-                {/if}
-              </td>
-              <td title={formatDate(new Date(inv.createdAt))}>
-                {timeSince(new Date(inv.createdAt), new Date())} ago
-              </td>
-              <td class="text-center" colspan="2">
-                <button
-                  class="accessible-btn"
-                  on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
-                  ><Fa icon={faTrash} size="md" /></button
-                >
-              </td>
-            </tr>
+  <div class="custom-table p-2 m-2">
+    <div class="wrapper header">
+      <div class="p-2 col-6">Invited</div>
+      <div class="p-2 col-1">Status</div>
+      <div class="p-2 col-2">Date</div>
+      <div class="p-2 col-1">Remove</div>
+      <div class="p-2 col-1 just-end">
+        <button class="accessible-btn" on:click={refreshInvite}>
+          <Fa icon={faSync} size="md" />
+        </button>
+      </div>
+    </div>
+    {#each invites as inv, key (inv.email + inv.inviteEmail)}
+      {#if inv.email === $user.email}
+        <div class="wrapper">
+          <div class="col-6 p-2 break-word">{inv.inviteEmail}</div>
+          <div class="col-1 p-2">
+            {#if inv.confirmedAt}
+              <Fa icon={faCheck} size="md" />
+            {:else}
+              <Fa icon={faClock} size="md" />
+            {/if}
+          </div>
+          <div title={formatDate(new Date(inv.createdAt))} class="col-2 p-2">
+            {timeSince(new Date(inv.createdAt), new Date())} ago
+          </div>
+          <div class="col-2 p-2">
+            <button
+              class="accessible-btn"
+              on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
+              ><Fa icon={faTrash} size="md" /></button
+            >
+          </div>
+        </div>
+      {/if}
+    {/each}
+    <div class="wrapper">
+      <form on:submit|preventDefault={addInvite} class="form-container">
+        <label for="invite-mail-input" class="p-2">Invite by email:</label>
+        <input
+          id="invite-mail-input"
+          class="m-2"
+          size="24"
+          maxlength="50"
+          type="email"
+          required
+          bind:value={inviteEmail}
+        />
+        <button
+          class="ml-5 p-2 button1"
+          type="submit"
+          disabled={isAddInviteSubmitting}
+          >Invite
+          {#if isAddInviteSubmitting}
+            <Dots />
           {/if}
-        {/each}
-        <tr>
-          <td colspan="7">
-            <form on:submit|preventDefault={addInvite} class="container-small">
-              <label for="invite-mail-input" class="p-2">Invite by email:</label
-              >
-              <input
-                id="invite-mail-input"
-                size="24"
-                maxlength="50"
-                type="email"
-                required
-                bind:value={inviteEmail}
-              />&nbsp;
-              <button
-                class="ml-5 p-2 button1"
-                type="submit"
-                disabled={isAddInviteSubmitting}
-                >Invite
-                {#if isAddInviteSubmitting}
-                  <Dots />
-                {/if}
-              </button>
-            </form>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        </button>
+      </form>
+    </div>
   </div>
-
   <h2 class="p-2 m-2">Invited By</h2>
   <p class="p-2 m-2">Accept your invitation and fund your account.</p>
 
-  <div class="container">
-    <table>
-      <thead>
-        <tr>
-          <th>Invited By</th>
-          <th>Status</th>
-          <th>Date</th>
-          <th>Action</th>
-          <th
-            ><button class="accessible-btn" on:click={refreshInvite}
-              ><Fa icon={faSync} size="md" /></button
-            ></th
-          >
-        </tr>
-      </thead>
-      <tbody>
-        {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.inviteEmail === $user.email}
-            <tr>
-              <td>{inv.email}</td>
-              <td class="text-center">
-                {#if inv.confirmedAt}
-                  <Fa icon={faCheck} size="md" />
-                {:else}
-                  <Fa icon={faClock} size="md" />
-                {/if}
-              </td>
-              <td title={formatDate(new Date(inv.createdAt))}>
-                {timeSince(new Date(inv.createdAt), new Date())} ago
-              </td>
-              <td class="text-center" colspan="2">
-                <button
-                  class="accessible-btn"
-                  on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
-                  ><Fa icon={faTrash} size="md" /></button
-                >
-                {#if !inv.confirmedAt}
-                  <button
-                    class="accessible-btn"
-                    on:click={() => acceptInvite(inv.email)}
-                    ><Fa icon={faCheck} size="md" /></button
-                  >
-                {/if}
-              </td>
-            </tr>
-          {/if}
-        {/each}
-      </tbody>
-    </table>
+  <div class="custom-table p-2 m-2">
+    <div class="wrapper header">
+      <div class="p-2 col-6 b-r-w">Invited By</div>
+      <div class="p-2 col-1 b-r-w">Status</div>
+      <div class="p-2 col-2 b-r-w">Date</div>
+      <div class="p-2 col-1 b-r-w">Action</div>
+      <div class="p-2 col-1 just-end">
+        <button class="accessible-btn" on:click={refreshInvite}
+          ><Fa icon={faSync} size="md" /></button
+        >
+      </div>
+    </div>
+    {#each invites as inv, key (inv.email + inv.inviteEmail)}
+      {#if inv.inviteEmail === $user.email}
+        <div class="wrapper">
+          <div class="col-6 p-2 break-word">{inv.email}</div>
+          <div class="col-1 p-2">
+            {#if inv.confirmedAt}
+              <Fa icon={faCheck} size="md" />
+            {:else}
+              <Fa icon={faClock} size="md" />
+            {/if}
+          </div>
+          <div class="col-2 p-2" title={formatDate(new Date(inv.createdAt))}>
+            {timeSince(new Date(inv.createdAt), new Date())} ago
+          </div>
+          <div class="col-2 p-2">
+            <button
+              class="accessible-btn"
+              on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
+              ><Fa icon={faTrash} size="md" /></button
+            >
+            {#if !inv.confirmedAt}
+              <button
+                class="accessible-btn"
+                on:click={() => acceptInvite(inv.email)}
+                ><Fa icon={faCheck} size="md" /></button
+              >
+            {/if}
+          </div>
+        </div>
+      {/if}
+    {/each}
   </div>
 </Navigation>
