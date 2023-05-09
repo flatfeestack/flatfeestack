@@ -179,8 +179,7 @@ export const API = {
         .json<PaymentResponse>(),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
-    payment: () =>
-      backendToken.post(`users/me/payment`).json<PaymentCycle>(),
+    payment: () => backendToken.post(`users/me/payment`).json<PaymentCycle>(),
 
     statusSponsoredUsers: () =>
       backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),

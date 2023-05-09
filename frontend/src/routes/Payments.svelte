@@ -10,7 +10,7 @@
   let sponsoredRepos: Repo[] = [];
 
   const fetchData = async () => {
-    const response = await API.user.get
+    const response = await API.user.get;
     data = response.data;
   };
 
