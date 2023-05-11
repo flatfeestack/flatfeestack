@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS daily_contribution (
     currency             VARCHAR(8) NOT NULL,
     day                  DATE NOT NULL,
     created_at           TIMESTAMP NOT NULL,
+    claimed_at           TIMESTAMP,
     UNIQUE(user_sponsor_id, user_contributor_id, repo_id, day)
 );
 CREATE INDEX IF NOT EXISTS daily_contribution_user_sponsor_id_idx ON daily_contribution(user_sponsor_id);
