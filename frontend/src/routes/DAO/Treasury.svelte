@@ -5,12 +5,16 @@
   import Navigation from "../../components/DAO/Navigation.svelte";
   import {
     currentBlockNumber,
+    daoConfig,
     membershipStatusValue,
     walletContract,
   } from "../../ts/daoStore";
   import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
@@ -61,6 +65,10 @@
 
     $isSubmitting = true;
   });
+
+  $: {
+    ensureSameChainId($daoConfig?.chainId);
+  }
 
   async function prepareView() {
     if (

@@ -37,6 +37,13 @@ type PayoutResponse struct {
 	Signature     string   `json:"signature"`
 }
 
+type DaoConfigResponse struct {
+	Dao        string `json:"dao"`
+	Membership string `json:"membership"`
+	Wallet     string `json:"wallet"`
+	ChainId    int64  `json:"chainId"`
+}
+
 func signNeo(w http.ResponseWriter, r *http.Request) {
 	var data PayoutRequest
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -136,7 +143,14 @@ func payoutConfig(w http.ResponseWriter, _ *http.Request) {
 }
 
 func daoConfig(w http.ResponseWriter, _ *http.Request) {
-	writeJson(w, opts.Dao)
+	response := DaoConfigResponse{
+		ChainId:    ethClient.chainId.Int64(),
+		Dao:        opts.Dao.Dao,
+		Membership: opts.Dao.Membership,
+		Wallet:     opts.Dao.Wallet,
+	}
+
+	writeJson(w, response)
 }
 
 //Generic helpers

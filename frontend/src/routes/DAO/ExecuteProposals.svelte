@@ -1,16 +1,23 @@
 <script lang="ts">
   import humanizeDuration from "humanize-duration";
+  import { onDestroy } from "svelte";
   import { navigate } from "svelte-routing";
-  import { currentBlockTimestamp, daoContract } from "../../ts/daoStore";
+  import Navigation from "../../components/DAO/Navigation.svelte";
+  import {
+    currentBlockTimestamp,
+    daoConfig,
+    daoContract,
+  } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
   import {
     executeProposal,
     queueProposal,
   } from "../../utils/proposalFunctions";
-  import Navigation from "../../components/DAO/Navigation.svelte";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
-  import { onDestroy } from "svelte";
 
   export let blockNumber: string;
   let proposals = [];
@@ -18,6 +25,8 @@
   checkUndefinedProvider();
 
   $: {
+    ensureSameChainId($daoConfig?.chainId);
+
     if (
       $proposalCreatedEvents === null ||
       $votingSlots === null ||
