@@ -8,7 +8,7 @@ RUN go mod download
 COPY *.go ./
 RUN go build
 
-FROM alpine:3.17
+FROM alpine:3.18
 RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
 WORKDIR /app
 COPY banner.txt .
