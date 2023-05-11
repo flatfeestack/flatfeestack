@@ -52,7 +52,7 @@
 
   onMount(async () => {
     try {
-      const p = API.user.payment();
+      const p = API.user.get();
       const res = await p;
       if (res.freq && res.seats) {
         currentFreq = res.freq;

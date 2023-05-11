@@ -842,22 +842,18 @@ components:
         id:
           type: string
           format: uuid
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
         invitedId:
           type: string
           format: uuid
         stripeId:
-          type: string
-          nullable: true
-        paymentCycleInId:
-          type: string
-          format: uuid
-          nullable: true
-        paymentCycleOutId:
-          type: string
-          format: uuid
-        email:
-          type: string
-        name:
           type: string
           nullable: true
         image:
@@ -869,12 +865,12 @@ components:
         last4:
           type: string
           nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        claims:
-          $ref: '#/components/schemas/Claims'
-          nullable: true
+        seats:
+          type: integer
+          nullable: int64
+        freq:
+          type: integer
+          nullable: int64
         role:
           type: string
           nullable: true

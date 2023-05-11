@@ -695,21 +695,18 @@ export interface components {
     User: {
       /** Format: uuid */
       id: string;
+      email: string;
+      name?: string | null;
+      /** Format: date-time */
+      createdAt: string;
       /** Format: uuid */
       invitedId?: string;
       stripeId?: string | null;
-      /** Format: uuid */
-      paymentCycleInId?: string | null;
-      /** Format: uuid */
-      paymentCycleOutId: string;
-      email: string;
-      name?: string | null;
       image?: string | null;
       paymentMethod?: string | null;
       last4?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      claims?: components["schemas"]["Claims"];
+      seats?: number | null;
+      freq?: number | null;
       role?: string | null;
     };
     Claims: {
