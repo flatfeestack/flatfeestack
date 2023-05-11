@@ -11,7 +11,7 @@ COPY *.go *.sql login.html banner.txt ./
 COPY mail-templates ./mail-templates/
 RUN go build
 
-FROM alpine:3.17
+FROM alpine:3.18
 WORKDIR /app
 COPY --from=builder /app/login.html /app/banner.txt /app/fastauth /app/rmdb.sql /app/init.sql ./
 COPY --from=builder /app/mail-templates/ ./mail-templates/
