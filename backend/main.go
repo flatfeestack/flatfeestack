@@ -116,8 +116,10 @@ func NewOpts() *Opts {
 	//set defaults, be explicit
 	if o.Env == "local" || o.Env == "dev" {
 		debug = true
+		utils.SetDebug(true)
 		log.SetLevel(log.DebugLevel)
 	} else {
+		utils.SetDebug(false)
 		log.SetLevel(log.InfoLevel)
 	}
 

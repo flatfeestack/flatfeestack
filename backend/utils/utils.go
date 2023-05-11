@@ -37,6 +37,10 @@ var SupportedCurrencies = map[string]Currencies{
 	"USD": {Name: "US Dollar", Short: "USD", Smallest: "mUSD", FactorPow: 6, IsCrypto: false, PayoutName: "usdc"},
 }
 
+func SetDebug(b bool) {
+	debug = b
+}
+
 func StringPointer(s string) *string {
 	return &s
 }
