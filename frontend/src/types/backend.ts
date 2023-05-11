@@ -11,7 +11,7 @@ export type ClientSecret = components["schemas"]["ClientSecret"];
 
 export type UserStatus = components["schemas"]["UserStatus"];
 
-export type PaymentCycle = components["schemas"]["PaymentCycle"];
+export type PaymentEvent = components["schemas"]["PaymentEvent"];
 
 export type ContributionSummary = components["schemas"]["RepoBalance"];
 

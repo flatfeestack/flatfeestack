@@ -251,19 +251,10 @@ paths:
       responses:
         '200':
           description: OK
-  /users/me/payment-cycle:
-    post:
-      tags:
-        - Users
-      security:
-        - bearerAuth: [ User ]
-      responses:
-        '200':
-          description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaymentCycle'
+                $ref: '#/components/schemas/PaymentEvent'
   /users/me/sponsored-users:
     post:
       tags:
@@ -965,18 +956,37 @@ components:
         - uuid
         - score
         - createdAt
-    PaymentCycle:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        seats:
-          type: integer
-          format: int64
-        freq:
-          type: integer
-          format: int64
+    PaymentEvent:
+      labels:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            externalId:
+              type: string
+              format: uuid
+            userId:
+              type: string
+              format: uuid
+            balance:
+              type: integer
+              format: bigint
+            currency:
+              type: string
+            status:
+              type: string
+            seats:
+              type: integer
+              format: int64
+            freq:
+              type: integer
+              format: int64
+            createdAt:
+              type: string
+              format: date-time
       required:
         - id
         - seats

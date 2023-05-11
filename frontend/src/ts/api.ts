@@ -8,7 +8,7 @@ import type {
   ContributionSummary,
   GitUser,
   Invitation,
-  PaymentCycle,
+  PaymentEvent,
   PaymentResponse,
   Repo,
   RepoMapping,
@@ -179,7 +179,7 @@ export const API = {
         .json<PaymentResponse>(),
     cancelSub: () => backendToken.delete(`users/me/stripe`),
     timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
-    payment: () => backendToken.post(`users/me/payment`).json<PaymentCycle>(),
+    payment: () => backendToken.get(`users/me/payment`).json<PaymentEvent[]>(),
 
     statusSponsoredUsers: () =>
       backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),

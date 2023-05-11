@@ -72,7 +72,7 @@ func FindPayInUser(userId uuid.UUID) ([]PayInEvent, error) {
 	}
 	defer closeAndLog(rows)
 
-	var payInEvents []PayInEvent
+	payInEvents := []PayInEvent{}
 	for rows.Next() {
 		var payInEvent PayInEvent
 		payInEvent.UserId = userId

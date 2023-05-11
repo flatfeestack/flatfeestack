@@ -183,17 +183,9 @@ export interface paths {
     get: {
       responses: {
         /** @description OK */
-        200: never;
-      };
-    };
-  };
-  "/users/me/payment-cycle": {
-    post: {
-      responses: {
-        /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["PaymentCycle"];
+            "application/json": components["schemas"]["PaymentEvent"];
           };
         };
       };
@@ -752,14 +744,7 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
     };
-    PaymentCycle: {
-      /** Format: uuid */
-      id: string;
-      /** Format: int64 */
-      seats: number;
-      /** Format: int64 */
-      freq: number;
-    };
+    PaymentEvent: unknown;
     UserStatus: {
       /** Format: uuid */
       userId?: string;
