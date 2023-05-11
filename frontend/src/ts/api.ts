@@ -157,7 +157,9 @@ export const API = {
     get: () => backendToken.get(`users/me`).json<User>(),
     gitEmails: () => backendToken.get(`users/me/git-email`).json<GitUser[]>(),
     confirmGitEmail: (email: string, token: string) =>
-      backendToken.post("users/git-email", { json: { email, token } }),
+      backendToken.post("users/me/git-email/confirm", {
+        json: { email, token },
+      }),
     addEmail: (email: string) =>
       backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>

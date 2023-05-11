@@ -73,6 +73,7 @@ func init() {
 
 func NewOpts() *Opts {
 	o := &Opts{}
+
 	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
 		9082), "listening HTTP port")
@@ -233,6 +234,7 @@ func main() {
 	router.HandleFunc("/users/me", jwtAuthUser(api.GetMyUser)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(api.GetMyConnectedEmails)).Methods(http.MethodGet)
 	router.HandleFunc("/users/me/git-email", jwtAuthUser(api.AddGitEmail)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/git-email/confirm", jwtAuthUser(api.ConfirmConnectedEmails)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/git-email/{email}", jwtAuthUser(api.RemoveGitEmail)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/method/{method}", jwtAuthUser(api.UpdateMethod)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/method", jwtAuthUser(api.DeleteMethod)).Methods(http.MethodDelete)

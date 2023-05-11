@@ -21,7 +21,7 @@ func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.UserD
 	utils.WriteJson(w, emails)
 }
 
-func ConfirmConnectedEmails(w http.ResponseWriter, r *http.Request) {
+func ConfirmConnectedEmails(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	var emailToken EmailToken
 	err := json.NewDecoder(r.Body).Decode(&emailToken)
 	if err != nil {
