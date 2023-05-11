@@ -13,14 +13,19 @@
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
   import { links } from "svelte-routing";
-  import { councilMembers, membershipStatusValue } from "../../ts/daoStore";
-  import { provider, userEthereumAddress } from "../../ts/ethStore";
+  import {
+    councilMembers,
+    daoConfig,
+    membershipStatusValue,
+  } from "../../ts/daoStore";
+  import { provider, signer, userEthereumAddress } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import setSigner from "../../utils/setSigner";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
+  import { ensureSameChainId } from "../../utils/ethHelpers";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -30,11 +35,18 @@
   let membershipStatus: string;
 
   onMount(async () => {
-    try {
-      const ethProv = await detectEthereumProvider();
-      $provider = new Web3Provider(<any>ethProv);
-    } catch (error) {
-      $provider = undefined;
+    await setProvider();
+
+    if ($provider !== undefined) {
+      window.ethereum.on("chainChanged", (_networkId: string) => {
+        setProvider();
+      });
+
+      window.ethereum.on("accountsChanged", (_accounts: string[]) => {
+        if ($signer !== null) {
+          setSigner($provider);
+        }
+      });
     }
   });
 
@@ -57,7 +69,17 @@
     return membershipStatusMapping[$membershipStatusValue];
   }
 
+  async function setProvider() {
+    try {
+      const ethProv = await detectEthereumProvider();
+      $provider = new Web3Provider(<any>ethProv);
+    } catch (error) {
+      $provider = undefined;
+    }
+  }
+
   async function triggerSetSigner() {
+    ensureSameChainId($daoConfig.chainId);
     await setSigner($provider);
   }
 </script>

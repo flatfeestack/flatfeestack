@@ -9,11 +9,14 @@
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
   import Navigation from "../../components/DAO/Navigation.svelte";
-  import { daoContract } from "../../ts/daoStore";
+  import { daoConfig, daoContract } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
 
   interface VoteValues {
     canVote: boolean;
@@ -44,6 +47,8 @@
   checkUndefinedProvider();
 
   $: {
+    ensureSameChainId($daoConfig?.chainId);
+
     if ($votingSlots === null) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
