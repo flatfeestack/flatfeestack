@@ -1,26 +1,26 @@
 global:
-  scrape_interval:     15s
+  scrape_interval: 15s
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: prometheus
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ['prometheus:9090']
-  - job_name: backend
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['host.docker.internal:9082']
-        labels:
-          hostname: "go-backend-server"
-          service: "backend"
-  - job_name: forum
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['host.docker.internal:9086']
-        labels:
-          hostname: "go-forum-server"
-          service: "forum"
+      - targets: ['localhost:9090']
   - job_name: database
     metrics_path: /metrics
     static_configs:
       - targets: ['postgres-exporter:9187']
+  - job_name: backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9082"]
+        labels:
+          hostname: 'go-backend-server'
+          service: 'backend'
+  - job_name: forum
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9086"]
+        labels:
+          hostname: 'go-forum-server'
+          service: 'forum'

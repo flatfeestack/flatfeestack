@@ -199,9 +199,14 @@ CREATE USER grafanareader WITH PASSWORD 'password';
 GRANT USAGE ON SCHEMA public TO grafanareader;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafanareader;
 ```
+## Local
 
 To start the monitoring stack, run the following command:
 ```shell
 docker compose -f monitoring/docker-compose.yml up -d
 ```
+
+## Prod
+On the productive environment, the monitoring stack is deployed on a DigitalOcean droplet.
+See `.github/workflows/deploy-monitoring.yml` for the deployment script.
 
