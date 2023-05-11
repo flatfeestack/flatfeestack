@@ -10,6 +10,7 @@
   import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
   import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
   import {
+    daoConfig,
     daoContract,
     membershipContract,
     membershipStatusValue,
@@ -17,7 +18,10 @@
   import { signer } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { Call, ProposalType } from "../../types/dao";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
 
   checkUndefinedProvider();
 
@@ -67,6 +71,10 @@
       moveToVotesPage();
     }
   });
+
+  $: {
+    ensureSameChainId($daoConfig?.chainId);
+  }
 
   function moveToVotesPage() {
     $error = "You are not allowed to view this page.";

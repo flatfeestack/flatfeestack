@@ -8,10 +8,17 @@
   import Navigation from "../../components/DAO/Navigation.svelte";
   import RequestMembership from "../../components/DAO/membership/RequestMembership.svelte";
   import Dialog from "../../components/Dialog.svelte";
-  import { membershipContract, membershipStatusValue } from "../../ts/daoStore";
+  import {
+    daoConfig,
+    membershipContract,
+    membershipStatusValue,
+  } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error } from "../../ts/mainStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
 
   let membershipFeePaid = false;
   let walletConnected: boolean;
@@ -39,6 +46,8 @@
   }
 
   $: {
+    ensureSameChainId($daoConfig?.chainId);
+
     if (
       $membershipStatusValue !== null &&
       $membershipContract !== null &&

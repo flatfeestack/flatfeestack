@@ -6,13 +6,17 @@
   import {
     currentBlockNumber,
     currentBlockTimestamp,
+    daoConfig,
     daoContract,
     membershipStatusValue,
   } from "../../ts/daoStore";
   import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
 
@@ -52,6 +56,8 @@
   checkUndefinedProvider();
 
   $: {
+    ensureSameChainId($daoConfig?.chainId);
+
     if (
       $currentBlockNumber === null ||
       $currentBlockTimestamp === null ||

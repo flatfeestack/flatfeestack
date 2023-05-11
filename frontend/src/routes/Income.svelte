@@ -13,6 +13,7 @@
   import type { PayoutResponse } from "../types/backend";
   import type { PayoutConfig } from "../types/payout";
   import setSigner from "../utils/setSigner";
+  import { ensureSameChainId } from "../utils/ethHelpers";
 
   let ethSignature: Signature;
   let isLoading = false;
@@ -33,6 +34,8 @@
     if ($signer === null) {
       await setSigner($provider);
     }
+
+    ensureSameChainId(payoutConfig.chainId);
 
     let contract: Contract;
 

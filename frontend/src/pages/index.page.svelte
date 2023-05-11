@@ -25,6 +25,7 @@
   import Settings from "../routes/Settings.svelte";
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
+  import DifferentChainId from "../routes/DifferentChainId.svelte";
 
   import DAOHome from "../routes/DAO/Home.svelte";
   import DAOVotes from "../routes/DAO/Votes.svelte";
@@ -233,6 +234,7 @@
           component={DAOEditDiscussion}
         />
 
+        <Route path="/differentChainId" component={DifferentChainId} />
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />
         <Route path="/signup" component={Signup} />

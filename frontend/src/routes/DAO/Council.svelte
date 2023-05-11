@@ -5,14 +5,19 @@
   import AddVotingSlot from "../../components/DAO/council/AddVotingSlot.svelte";
   import CancelVotingSlot from "../../components/DAO/council/CancelVotingSlot.svelte";
   import MembershipRequests from "../../components/DAO/council/MembershipRequests.svelte";
-  import { councilMembers } from "../../ts/daoStore";
+  import { councilMembers, daoConfig } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import checkUndefinedProvider from "../../utils/checkUndefinedProvider";
+  import {
+    checkUndefinedProvider,
+    ensureSameChainId,
+  } from "../../utils/ethHelpers";
 
   checkUndefinedProvider();
 
   $: {
+    ensureSameChainId($daoConfig?.chainId);
+
     if ($councilMembers === null || $userEthereumAddress === null) {
       $isSubmitting = true;
     } else if (
