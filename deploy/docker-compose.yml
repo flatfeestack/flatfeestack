@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  auth:
+    image: registry.digitalocean.com/flatfeestack/fastauth:${TAG_IMAGE:-latest}
+    restart: always
+    env_file:
+      - ${BASE_PATH:-.}/fastauth/.env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    image: registry.digitalocean.com/flatfeestack/backend:${TAG_IMAGE:-latest}
+    restart: always
+    env_file:
+      - ${BASE_PATH:-.}/backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  forum:
+    image: registry.digitalocean.com/flatfeestack/forum:${TAG_IMAGE:-latest}
+    restart: always
+    env_file:
+      - ${BASE_PATH:-.}/forum/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+  analyzer:
+    image: registry.digitalocean.com/flatfeestack/analyzer:${TAG_IMAGE:-latest}
+    restart: always
+    env_file:
+      - ${BASE_PATH:-.}/analyzer/.env
+    volumes:
+      - ${BASE_PATH:-.}/.repos:/tmp/repos
+
+  payout:
+    image: registry.digitalocean.com/flatfeestack/payout:${TAG_IMAGE:-latest}
+    restart: always
+    env_file:
+      - ${BASE_PATH:-.}/payout/.env
+
+  frontend:
+    image: registry.digitalocean.com/flatfeestack/frontend:${TAG_IMAGE:-latest}
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z
+    env_file:
+      - ${BASE_PATH:-.}/db/.env
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  caddy:
+    image: registry.digitalocean.com/flatfeestack/caddy:${TAG_IMAGE:-latest}
+    restart: always
+    ports:
+      - "8080:8080"

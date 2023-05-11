@@ -202,7 +202,7 @@ export const API = {
         .post(`users/me/request-payout/${targetCurrency}`)
         .json<PayoutResponse>(),
     getUser: (userId: string) =>
-      backendToken.get(`users/${userId}`).json<PublicUser>(),
+      backend.get(`users/${userId}`).json<PublicUser>(),
   },
   repos: {
     search: (s: string) =>

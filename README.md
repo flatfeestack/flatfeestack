@@ -17,18 +17,6 @@ echo "POSTGRES_USER=postgres" >> db/.env
 echo "POSTGRES_DB=flatfeestack" >> db/.env
 ```
 
-There are different Docker compose profiles to boot up what you need to develop certain parts of the application.
-
-* `platform`: Starts all services needed for the Flatfeestack Platform.
-* `smart-contracts-eth`: Only starts the Ganache chain and the frontend, needed to develop the Flatfeestack DAO.
-* `blockexplorer`: A Ethereum block explorer. Nice to have when you need to inspect what happens in the local chain.
-
-Profiles can be used as follows:
-
-```shell
-docker compose --profile blockexplorer --profile smart-contracts-eth up --build
-```
-
 ### Local development - Frontend with Hot Module Reload (HMR)
 Especially while working on the frontend, HMR in local development enables you to instantly see your changes without having to rebuild the project or wait ages.
 
@@ -43,7 +31,7 @@ reverse_proxy host.docker.internal:9085
 
 Afterwards docker can be started up again
 ```shell
-docker compose --profile platform up --build
+docker compose up --build
 
 # Switch to a different tab / terminal and shut down the frontend
 docker compose stop frontend

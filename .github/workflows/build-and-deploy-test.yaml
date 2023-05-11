@@ -409,11 +409,10 @@ jobs:
 
       - name: Deploy - TEST
         run: |
-          scp -P 3000 docker-compose.yml sibex@axelra.net:/Users/sibex/flatfeestack
+          scp -P 3000 deploy/docker-compose.yml sibex@axelra.net:/Users/sibex/flatfeestack
           rsync -avzm -e 'ssh -p 3000' --include='*/' --include='.env' --exclude='*' . sibex@axelra.net:/Users/sibex/flatfeestack
           ssh -p 3000 axelra.net -l sibex "doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
           ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose --profile platform  up --pull always -d --force-recreate --no-build"
+          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose up --pull always -d --no-build"
           ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
           ssh -p 3000 axelra.net -l sibex "docker system prune -af"
-
