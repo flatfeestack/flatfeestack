@@ -11,3 +11,5 @@ env*.tar.gz
 /landing-page
 .db_pw.txt
 stripe/config.toml
+/monitoring/.grafana_data
+/monitoring/.prometheus_data

@@ -2,12 +2,21 @@ version: "3.9"
 
 services:
 
+  caddy:
+    build: ./caddy
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    ports:
+      - "8080:8080"
+      - "443:443"
+      - "443:443/udp"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus/:/etc/prometheus/
-      - prometheus_data:/prometheus
+      - ${BASE_PATH:-.}/.prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -20,24 +29,19 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     volumes:
-      - grafana_data:/var/lib/grafana
+      - ${BASE_PATH:-.}/.grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_AUTH_DISABLE_LOGIN_FORM=false
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    env_file:
+      - ./grafana/.env
     ports:
       - "3000:3000"
 
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:latest
     restart: always
-    environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:password@host.docker.internal:5432/flatfeestack?sslmode=disable"
+    env_file:
+      - ./postgres-exporter/.env
     ports:
       - "9187:9187"
 
-volumes:
-  grafana_data:
-  prometheus_data:
 
