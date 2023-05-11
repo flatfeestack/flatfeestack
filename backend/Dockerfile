@@ -19,6 +19,6 @@ RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
 WORKDIR /app
 COPY --from=builder /app/banner.txt /app/backend /app/db/init.sql ./
 COPY --from=builder /app/db/init.sql ./db/
-COPY mail-templates/ ./mail-templates/
+COPY mail-templates ./mail-templates/
 USER nonroot
 ENTRYPOINT ["/app/backend"]
