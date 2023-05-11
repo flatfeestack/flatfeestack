@@ -1,50 +1,33 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { error, user, config, userBalances } from "../../ts/mainStore";
+  import { error, user, config } from "../../ts/mainStore";
   import Dots from "../Dots.svelte";
   import {
-    formatBalance,
     stripePayment,
     stripePaymentMethod,
   } from "../../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
+  import {CardCvc, CardExpiry, CardNumber, Elements, PaymentElement} from 'svelte-stripe'
   import { API } from "../../ts/api";
 
-  export let remaining: number;
-  export let current: number;
+  export let total: number;
   export let seats: number;
   export let freq: number;
 
-  let stripe;
+  let stripe = null;
+
   let isSubmitting = false;
-  let card; // HTML div to mount card
   let cardElement;
   let paymentProcessing = false;
   let showSuccess = false;
 
   $: {
-    if (card) {
-      if ($user.paymentMethod || paymentProcessing) {
-        card.style.display = "none";
-      } else {
-        showSuccess = false;
-        card.style.display = "block";
-      }
+    if($config.stripePublicApi) {
+      load();
     }
   }
 
-  function createCardForm() {
-    if (!cardElement) {
-      console.log("called create");
-      let elements = stripe.elements();
-      cardElement = elements.create("card", { hidePostalCode: true });
-      cardElement.mount(card);
-      cardElement.on("change", (e) => {
-        if (e.error) {
-          $error = e.error;
-        }
-      });
-    }
+  async function load() {
+    stripe = await loadStripe($config.stripePublicApi);
   }
 
   const handleSubmit = async () => {
@@ -80,21 +63,14 @@
     }
   }
 
-  onMount(async () => {
-    stripe = await loadStripe($config.stripePublicApi);
-    createCardForm();
-  });
 </script>
 
 <style>
-  .w25 {
-    width: 25rem;
+  :global(.w20) {
+    width: 20rem;
   }
-
-  @media (max-width: 36rem) {
-    .w25 {
-      width: 20rem;
-    }
+  :global(.w4) {
+    width: 4rem;
   }
 </style>
 
@@ -115,34 +91,22 @@
   </div>
 {/if}
 
-{#if $userBalances && $userBalances.total}
-  <div class="container">
-    <p class="nobreak">Current balance:</p>
-    <div class="container">
-      {formatBalance($userBalances.total["USD"], "USD")}
-    </div>
-  </div>
-{/if}
-
 <div class="container">
-  <div class="p-2 m-2 w25 rounded border-primary-700" bind:this={card} />
   <div class="p-2">
-    <form on:submit|preventDefault={handleSubmit}>
-      <button
-        class="button1"
-        disabled={isSubmitting || remaining < current / 2}
-        type="submit"
-        >❤&nbsp;Support
-        {#if isSubmitting}
-          <Dots />
-        {/if}
-      </button>
-      {#if remaining < current / 2}
-        (No need to top-up your account, you still funds)
-      {:else}
-        for ${remaining.toFixed(2)}
-      {/if}
-    </form>
+    {#if stripe}
+      <form on:submit|preventDefault="{handleSubmit}">
+        <div class="container">
+          <Elements {stripe}>
+            <div class="container">
+              <CardNumber classes={{ base: 'w20 p-2 m-2 rounded border-primary-700' }} bind:element="{cardElement}"  />
+              <CardExpiry classes={{ base: 'w4 p-2 m-2 rounded border-primary-700' }}/>
+              <CardCvc classes={{ base: 'w4 p-2 m-2 rounded border-primary-700' }}/>
+            </div>
+          </Elements>
+          <button class="button1" type="submit">❤&nbsp;Support{#if isSubmitting}<Dots />{/if}</button> for ${total.toFixed(2)}
+        </div>
+      </form>
+    {/if}
   </div>
 </div>
 

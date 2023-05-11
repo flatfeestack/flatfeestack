@@ -36,3 +36,5 @@ export type ChartDataTotal = components["schemas"]["Data"];
 export type PayoutResponse = components["schemas"]["PayoutResponse"];
 
 export type PublicUser = components["schemas"]["PublicUser"];
+
+export type UserBalance = components["schemas"]["UserBalance"];

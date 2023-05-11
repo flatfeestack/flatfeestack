@@ -1,31 +1,38 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error, userBalances } from "../ts/mainStore";
+  import { error } from "../ts/mainStore";
   import { API } from "../ts/api";
-  import { onMount } from "svelte";
-  import type { Repo } from "../types/backend";
+  import { onMount, onDestroy } from "svelte";
+  import type { Repo, UserBalance } from "../types/backend";
   import { formatDate, formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let sponsoredRepos: Repo[] = [];
+  let userBalances: UserBalance[] = [];
+  let intervalId;
 
   const fetchData = async () => {
-    const response = await API.user.get;
-    data = response.data;
+    userBalances = await API.user.userBalance();
   };
-
-  setInterval(fetchData, 10000);
 
   onMount(async () => {
     try {
-      const pr1 = API.user.getSponsored();
-      const res1 = await pr1;
-      sponsoredRepos = res1 || [];
+      // Fetch data immediately on component mount
+      const pr1 = fetchData();
+      const pr2 = API.user.getSponsored();
+      const res2 = await pr2;
+      sponsoredRepos = res2 || [];
       await pr1;
+      intervalId = setInterval(fetchData, 5000); // Poll every 5 seconds
     } catch (e) {
       $error = e;
     }
   });
+
+  onDestroy(() => {
+    clearInterval(intervalId); // Clear interval on component unmount to prevent memory leaks
+  });
+
 </script>
 
 <Navigation>
@@ -41,7 +48,7 @@
 
   <PaymentSelection />
 
-  {#if $userBalances && $userBalances.userBalances}
+  {#if userBalances }
     <h2 class="p-2 m-2">Payment History</h2>
     <div class="container">
       <table>
@@ -49,19 +56,13 @@
           <tr>
             <th>Balance</th>
             <th>Currency</th>
-            <th>Date</th>
-            <th>Type</th>
           </tr>
         </thead>
         <tbody>
-          {#each $userBalances.userBalances as row}
+          {#each userBalances as row}
             <tr>
               <td>{formatBalance(row.balance, row.currency)}</td>
               <td>{row.currency}</td>
-              <td>{formatDate(new Date(row.createdAt))}</td>
-              <td title="Payment cycle Id: {row.paymentCycleId}"
-                >{row.balanceType}</td
-              >
             </tr>
           {:else}
             <tr>

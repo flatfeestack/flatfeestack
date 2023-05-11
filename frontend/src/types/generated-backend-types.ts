@@ -203,6 +203,18 @@ export interface paths {
       };
     };
   };
+  "/users/me/balance": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserStatus"];
+          };
+        };
+      };
+    };
+  };
   "/users/contrib-snd": {
     post: {
       responses: {
@@ -750,6 +762,7 @@ export interface components {
       name?: string | null;
       daysLeft?: number;
     };
+    UserBalance: (unknown)[];
     Contribution: {
       repoName: string;
       repoUrl: string;
@@ -811,7 +824,6 @@ export interface components {
     };
     Config: {
       stripePublicApi?: string;
-      wsBaseUrl?: string;
       plans?: (components["schemas"]["Plan"])[];
       env?: string;
       supportedCurrencies?: {

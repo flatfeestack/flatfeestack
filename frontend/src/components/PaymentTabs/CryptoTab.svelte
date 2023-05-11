@@ -6,8 +6,7 @@
   import { formatBalance, minBalanceName, qrString } from "../../ts/services";
   import type { PaymentResponse } from "../../types/backend";
 
-  export let remaining: number;
-  export let current: number;
+  export let total: number;
   export let seats: number;
   export let freq: number;
 
@@ -37,14 +36,10 @@
       </select>
     </div>
     <div class="p-2">
-      <button class="button1" type="submit" disabled={remaining < current / 2}
+      <button class="button1" type="submit"
         >❤&nbsp;Support</button
       >
-      {#if remaining < current / 2}
-        (No need to top-up your account, you still funds)
-      {:else}
-        for ${remaining.toFixed(2)}
-      {/if}
+      for ${total.toFixed(2)}
     </div>
   </div>
 </form>

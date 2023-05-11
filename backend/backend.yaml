@@ -268,6 +268,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserStatus'
+  /users/me/balance:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatus'
   /users/contrib-snd:
     post:
       tags:
@@ -1001,6 +1014,14 @@ components:
           nullable: true
         daysLeft:
           type: integer
+    UserBalance:
+      type: array
+      items:
+        currency:
+          type: string
+        balance:
+          type: integer
+          format: bigint
     Contribution:
       type: object
       properties:
@@ -1135,8 +1156,6 @@ components:
       type: object
       properties:
         stripePublicApi:
-          type: string
-        wsBaseUrl:
           type: string
         plans:
           type: array

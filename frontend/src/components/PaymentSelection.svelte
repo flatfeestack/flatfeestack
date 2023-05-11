@@ -2,7 +2,7 @@
   import FiatTab from "./PaymentTabs/FiatTab.svelte";
   import CryptoTab from "./PaymentTabs/CryptoTab.svelte";
   import Tabs from "./Tabs.svelte";
-  import { config, userBalances, error } from "../ts/mainStore";
+  import { config, error } from "../ts/mainStore";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import type { Plan } from "../types/backend";
@@ -19,41 +19,23 @@
 
   $: {
     if ($config && $config.plans) {
-      selectedPlan = $config.plans.find((e) => e.freq == currentFreq);
+      selectedPlan = $config.plans.find((e) => e.freq === currentFreq);
       if (!selectedPlan) {
         selectedPlan = $config.plans[0];
       }
     }
   }
 
-  let total: number;
+  let total: number = 0;
   $: {
     if (selectedPlan) {
       total = selectedPlan.price * currentSeats;
     }
   }
 
-  let current: number;
-  $: {
-    current =
-      $userBalances && $userBalances.total
-        ? $userBalances.total["USD"] / 1000000
-        : 0;
-  }
-
-  let remaining: number;
-  $: {
-    const rem = total - current;
-    remaining = rem > 0 ? rem : 0;
-  }
-
-  //$userBalances.userBalances.filter(e => e.paymentCycleId === $userBalances.paymentCycle.id)
-  //    .reduce((sum, record) => sum + record.value)
-
   onMount(async () => {
     try {
-      const p = API.user.get();
-      const res = await p;
+      const res = await API.user.get();
       if (res.freq && res.seats) {
         currentFreq = res.freq;
         currentSeats = res.seats;
@@ -87,12 +69,7 @@
 <div class="container-stretch">
   {#if $config.plans}
     {#each $config.plans as { title, desc, disclaimer, freq }}
-      <div
-        class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
-        freq
-          ? 'bg-green'
-          : ''}"
-      >
+      <div class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq === freq ? 'bg-green': ''}">
         <button class="accessible-btn" on:click={() => (currentFreq = freq)}>
           <h3 class="text-center font-bold text-lg">{title}</h3>
           <div class="text-center">{@html desc}</div>
@@ -108,22 +85,17 @@
     <input size="5" type="number" min="1" bind:value={currentSeats} /> Seats
   </div>
   <div class="p-2">
-    {#if remaining >= current / 2}
+    {#if $config.plans}
       <div>
-        Sponsoring Amount:<span class="bold">${remaining.toFixed(2)}</span>
+        Sponsoring Amount:<span class="bold">$ {total.toFixed(2)}</span>
       </div>
-      {#if current > 0}
-        <div class="small">
-          (${total.toFixed(0)} [{currentSeats} x {selectedPlan.price}
-          {selectedPlan.freq > 365 ? " x " + selectedPlan.freq / 365 : ""}] - ${current.toFixed(
-            0
-          )} [current balance])
-        </div>
-      {/if}
+      <div class="small">
+        ([{currentSeats} x {selectedPlan.price}])
+      </div>
     {/if}
   </div>
 </div>
 
 <div class="p-2 m-2">
-  <Tabs {items} {remaining} {current} seats={currentSeats} freq={currentFreq} />
+  <Tabs {items} {total} seats={currentSeats} freq={currentFreq} />
 </div>

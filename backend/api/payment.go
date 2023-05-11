@@ -36,8 +36,8 @@ type UserBalances struct {
 }
 
 type TotalUserBalance struct {
-	Currency string  `json:"currency"`
-	Balance  float64 `json:"balance"`
+	Currency string   `json:"currency"`
+	Balance  *big.Int `json:"balance"`
 }
 
 func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
@@ -202,4 +202,59 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
 		return
 	}
+}
+
+func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		return
+	}
+
+	//either the user spent it on a repo that does not have any devs who can claim
+	mFut, err := db.FindSumFutureSponsors(user.Id)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		return
+	}
+	//or the user spent it on for a repo with a dev who can claim
+	mSub, err := db.FindSumDailySponsors(user.Id)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		return
+	}
+
+	totalUserBalances := []TotalUserBalance{}
+	for currency, _ := range mAdd {
+		mAdd[currency] = new(big.Int).Sub(mAdd[currency], mSub[currency])
+		mSub[currency] = big.NewInt(0)
+		mAdd[currency] = new(big.Int).Sub(mAdd[currency], mFut[currency])
+		mFut[currency] = big.NewInt(0)
+		//
+		totalUserBalances = append(totalUserBalances, TotalUserBalance{
+			Currency: currency,
+			Balance:  mAdd[currency],
+		})
+	}
+
+	//now sanity check if all the deducted mSub/mFut are set to zero
+	for currency, balance := range mSub {
+		if balance.Cmp(big.NewInt(0)) != 0 {
+			utils.WriteErrorf(w, http.StatusBadRequest, "Something is off with: %v", currency)
+			return
+		}
+	}
+	for currency, balance := range mFut {
+		if balance.Cmp(big.NewInt(0)) != 0 {
+			utils.WriteErrorf(w, http.StatusBadRequest, "Something is off with: %v", currency)
+			return
+		}
+	}
+
+	err = json.NewEncoder(w).Encode(totalUserBalances)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		return
+	}
+
 }

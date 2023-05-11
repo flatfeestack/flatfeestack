@@ -246,6 +246,7 @@ func main() {
 	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/sponsored-users", jwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/request-payout/{targetCurrency}", jwtAuthUser(api.RequestPayout)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/balance", jwtAuthUser(api.UserBalance)).Methods(http.MethodGet)
 	router.HandleFunc("/users/contrib-snd", jwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
