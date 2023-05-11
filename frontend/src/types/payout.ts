@@ -1,4 +1,5 @@
 export interface DaoConfig {
+  chainId: number;
   dao: string;
   membership: string;
   wallet: string;

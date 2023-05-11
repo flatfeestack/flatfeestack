@@ -73,7 +73,7 @@ func getEthClient(ethUrl string, hexPrivateKey string, ethContract string) (*Cli
 		publicKey:  publicKeyECDSA,
 	}
 
-	chainId, err := c.c.NetworkID(context.Background())
+	chainId, err := c.c.ChainID(context.Background())
 	if err != nil {
 		return nil, err
 	}
