@@ -356,7 +356,7 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, int64, error) {
 	}
 
 	balance := big.NewInt(utils.UsdCentToBase(pi.Amount))
-	if payInEvent.Balance != balance {
+	if payInEvent.Balance.Cmp(balance) != 0 {
 		return uuid.Nil, 0, fmt.Errorf("balance do not match: %v != %v", balance, payInEvent.Balance)
 	}
 
