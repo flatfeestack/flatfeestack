@@ -6,15 +6,16 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/alecthomas/template"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
-	"github.com/spaolacci/murmur3"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/alecthomas/template"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
+	"github.com/spaolacci/murmur3"
 )
 
 var (
@@ -164,7 +165,7 @@ func GetFactor(currency string) (*big.Int, error) {
 
 func ParseTemplate(filename string, other map[string]string) string {
 	textMessage := ""
-	tmplPlain, err := template.ParseFiles(filename)
+	tmplPlain, err := template.ParseFiles("mail-templates/" + filename)
 	if err == nil {
 		var buf bytes.Buffer
 		err = tmplPlain.Execute(&buf, other)

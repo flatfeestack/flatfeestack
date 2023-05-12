@@ -6,10 +6,10 @@ import (
 	"backend/utils"
 	"encoding/base32"
 	"encoding/json"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"net/http"
-	"net/url"
 )
 
 func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
@@ -57,8 +57,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		return
 	}
 
-	email := url.QueryEscape(body.Email)
-	clnt.SendAddGit(email, addGitEmailToken, lang(r))
+	clnt.SendAddGit(body.Email, addGitEmailToken, lang(r))
 }
 
 func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
