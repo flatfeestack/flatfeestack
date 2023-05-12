@@ -226,10 +226,14 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	totalUserBalances := []TotalUserBalance{}
 	for currency, _ := range mAdd {
-		mAdd[currency] = new(big.Int).Sub(mAdd[currency], mSub[currency])
-		mSub[currency] = big.NewInt(0)
-		mAdd[currency] = new(big.Int).Sub(mAdd[currency], mFut[currency])
-		mFut[currency] = big.NewInt(0)
+		if mSub[currency] != nil {
+			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mSub[currency])
+			mSub[currency] = big.NewInt(0)
+		}
+		if mFut[currency] != nil {
+			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mFut[currency])
+			mFut[currency] = big.NewInt(0)
+		}
 		//
 		totalUserBalances = append(totalUserBalances, TotalUserBalance{
 			Currency: currency,
