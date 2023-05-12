@@ -35,7 +35,7 @@ async function render(pageContext) {
             http-equiv="Content-Security-Policy"
             content="default-src 'self';
               connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
-              script-src 'self' https://js.stripe.com; img-src 'self' https://*.stripe.com; 
+              script-src 'self' 'unsafe-inline' https://js.stripe.com; img-src 'self' data: https://*.stripe.com; 
               font-src 'self' fonts.gstatic.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com"
           />
           <link rel="preconnect" href="https://fonts.gstatic.com">
