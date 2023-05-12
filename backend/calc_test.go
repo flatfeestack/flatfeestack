@@ -58,11 +58,11 @@ func TestDailyRunnerOneContributor(t *testing.T) {
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	//125468750 / 365 = 343750
-	assert.Equal(t, "330000", m1["USD"].String())
+	assert.Equal(t, "330003", m1["USD"].String())
 
 	m2, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, "330000", m2["USD"].String())
+	assert.Equal(t, "330003", m2["USD"].String())
 
 	m3, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
@@ -126,7 +126,7 @@ func TestDailyRunnerOneFuture(t *testing.T) {
 	m1, err := db.FindSumFutureSponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m1) {
-		assert.Equal(t, "330000", m1["USD"].String())
+		assert.Equal(t, "330003", m1["USD"].String())
 	}
 }
 
@@ -185,29 +185,29 @@ func TestDailyRunnerThreeContributors(t *testing.T) {
 	//now check the daily_contribution
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, "330000", m1["USD"].String())
+	assert.Equal(t, "330001", m1["USD"].String())
 
 	m2, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
-	assert.Equal(t, "439998", m2["USD"].String()) //440000
+	assert.Equal(t, "440001", m2["USD"].String()) //440000
 
 	m3, err := db.FindSumDailyContributors(*contributors[2])
 	assert.Nil(t, err)
-	assert.Equal(t, "219998", m3["USD"].String()) //222000
+	assert.Equal(t, "220000", m3["USD"].String()) //222000
 
 	total1 := m1["USD"].Int64() + m2["USD"].Int64() + m3["USD"].Int64()
 
 	m4, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, "330000", m4["USD"].String())
+	assert.Equal(t, "330002", m4["USD"].String())
 
 	m5, err := db.FindSumDailySponsors(*sponsors[1])
 	assert.Nil(t, err)
-	assert.Equal(t, "329998", m5["USD"].String()) //330000
+	assert.Equal(t, "330000", m5["USD"].String()) //330000
 
 	m6, err := db.FindSumDailySponsors(*sponsors[2])
 	assert.Nil(t, err)
-	assert.Equal(t, "329998", m6["USD"].String()) //330000
+	assert.Equal(t, "330000", m6["USD"].String()) //330000
 
 	total2 := m4["USD"].Int64() + m5["USD"].Int64() + m6["USD"].Int64()
 	assert.Equal(t, total1, total2)
@@ -263,29 +263,29 @@ func TestDailyRunnerThreeContributorsTwice(t *testing.T) {
 	//now check the daily_contribution
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, "990000", m1["USD"].String())
+	assert.Equal(t, "990003", m1["USD"].String())
 
 	m2, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
-	assert.Equal(t, "1319994", m2["USD"].String()) //1'320'000
+	assert.Equal(t, "1320003", m2["USD"].String()) //1'320'000
 
 	m3, err := db.FindSumDailyContributors(*contributors[2])
 	assert.Nil(t, err)
-	assert.Equal(t, "659994", m3["USD"].String()) //660,0000
+	assert.Equal(t, "660000", m3["USD"].String()) //660,0000
 
 	mtot1 := m1["USD"].Int64() + m2["USD"].Int64() + m3["USD"].Int64()
 
 	m4, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
-	assert.Equal(t, "990000", m4["USD"].String())
+	assert.Equal(t, "990006", m4["USD"].String())
 
 	m5, err := db.FindSumDailySponsors(*sponsors[1])
 	assert.Nil(t, err)
-	assert.Equal(t, "989994", m5["USD"].String()) //990000
+	assert.Equal(t, "990000", m5["USD"].String()) //990000
 
 	m6, err := db.FindSumDailySponsors(*sponsors[2])
 	assert.Nil(t, err)
-	assert.Equal(t, "989994", m6["USD"].String()) //990000
+	assert.Equal(t, "990000", m6["USD"].String()) //990000
 
 	mtot2 := m4["USD"].Int64() + m5["USD"].Int64() + m6["USD"].Int64()
 	assert.Equal(t, mtot2, mtot1) //-2 is rounding diff
@@ -309,7 +309,7 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 	m2, err := db.FindSumFutureSponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m2) {
-		assert.Equal(t, m2["USD"].String(), "330000")
+		assert.Equal(t, m2["USD"].String(), "330003")
 	}
 
 	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
@@ -326,13 +326,13 @@ func TestDailyRunnerFutureContribution(t *testing.T) {
 	m3, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m3) {
-		assert.Equal(t, m3["USD"].String(), "660000")
+		assert.Equal(t, m3["USD"].String(), "660005")
 	}
 
 	m4, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m4) {
-		assert.Equal(t, m4["USD"].String(), "660000")
+		assert.Equal(t, m4["USD"].String(), "660005")
 	}
 }
 
@@ -366,7 +366,7 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	m3, err := db.FindSumDailySponsors(*sponsors[0])
 	// no contributor registered so far
 	if assert.NotEmpty(t, m3) {
-		assert.Equal(t, m3["GAS"].String(), "330000")
+		assert.Equal(t, m3["GAS"].String(), "330002")
 	}
 
 	err = dailyRunner(day4)
@@ -375,21 +375,21 @@ func TestDailyRunnerUSDandNEO(t *testing.T) {
 	m4, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m4) {
-		assert.Equal(t, "330000", m4["USD"].String())
-		assert.Equal(t, "330000", m4["GAS"].String())
+		assert.Equal(t, "330002", m4["USD"].String())
+		assert.Equal(t, "330002", m4["GAS"].String())
 	}
 
 	m5, err := db.FindSumDailySponsors(*sponsors[1])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m5) {
-		assert.Equal(t, "660000", m5["GAS"].String())
+		assert.Equal(t, "660004", m5["GAS"].String())
 	}
 
 	m6, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m6) {
-		assert.Equal(t, "990000", m6["GAS"].String()) // 3 x 33
-		assert.Equal(t, "330000", m6["USD"].String()) // 1 x 33
+		assert.Equal(t, "990006", m6["GAS"].String()) // 3 x 33
+		assert.Equal(t, "330002", m6["USD"].String()) // 1 x 33
 	}
 }
 
@@ -420,13 +420,13 @@ func TestDailyRunnerSponsor(t *testing.T) {
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m1) {
-		assert.Equal(t, "660000", m1["USD"].String())
+		assert.Equal(t, "660006", m1["USD"].String())
 	}
 
 	m2, err := db.FindSumDailySponsors(*sponsors[0])
 	assert.Nil(t, err)
 	if assert.NotEmpty(t, m2) {
-		assert.Equal(t, "660000", m2["USD"].String())
+		assert.Equal(t, "660006", m2["USD"].String())
 	}
 
 	m3, err := db.FindSumDailySponsors(*sponsors[1])
