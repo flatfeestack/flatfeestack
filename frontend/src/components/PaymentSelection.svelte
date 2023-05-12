@@ -69,7 +69,12 @@
 <div class="container-stretch">
   {#if $config.plans}
     {#each $config.plans as { title, desc, disclaimer, freq }}
-      <div class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq === freq ? 'bg-green': ''}">
+      <div
+        class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
+        freq
+          ? 'bg-green'
+          : ''}"
+      >
         <button class="accessible-btn" on:click={() => (currentFreq = freq)}>
           <h3 class="text-center font-bold text-lg">{title}</h3>
           <div class="text-center">{@html desc}</div>

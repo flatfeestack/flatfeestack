@@ -32,7 +32,6 @@
   onDestroy(() => {
     clearInterval(intervalId); // Clear interval on component unmount to prevent memory leaks
   });
-
 </script>
 
 <Navigation>
@@ -48,7 +47,7 @@
 
   <PaymentSelection />
 
-  {#if userBalances }
+  {#if userBalances}
     <h2 class="p-2 m-2">Payment History</h2>
     <div class="container">
       <table>

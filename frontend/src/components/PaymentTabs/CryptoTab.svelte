@@ -36,9 +36,7 @@
       </select>
     </div>
     <div class="p-2">
-      <button class="button1" type="submit"
-        >❤&nbsp;Support</button
-      >
+      <button class="button1" type="submit">❤&nbsp;Support</button>
       for ${total.toFixed(2)}
     </div>
   </div>
