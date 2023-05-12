@@ -213,7 +213,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	case "payment_intent.succeeded":
 		externalId, feePrm, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parer err from stripe: %v\n", err)
+			log.Printf("Parser err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -243,7 +243,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 		//again
 		externalId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parer err from stripe: %v\n", err)
+			log.Printf("Parser err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -277,7 +277,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 		}
 		externalId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parer err from stripe: %v\n", err)
+			log.Printf("Parser err from stripe: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
