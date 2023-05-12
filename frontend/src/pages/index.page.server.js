@@ -31,10 +31,13 @@ async function render(pageContext) {
           <meta name="msapplication-TileColor" content="#da532c" />
           <meta name="theme-color" content="#ffffff" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta http-equiv="Content-Security-Policy" content="default-src 'self';
-            connect-src 'https://checkout.stripe.com'; frame-src 'https://checkout.stripe.com';
-            script-src 'https://checkout.stripe.com'; img-src 'https://*.stripe.com'; font-src 'fonts.gstatic.com'; 
-            style-src 'self' 'fonts.googleapis.com'">
+          <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'self';
+              connect-src 'self' 'https://checkout.stripe.com'; frame-src 'https://checkout.stripe.com';
+              script-src 'self' 'https://checkout.stripe.com'; img-src 'self' 'https://*.stripe.com'; 
+              font-src 'self' 'fonts.gstatic.com'; style-src 'self' 'fonts.googleapis.com'"
+          />
           <link rel="preconnect" href="https://fonts.gstatic.com">
           <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" >
             ${dangerouslySkipEscape(appHead)}
