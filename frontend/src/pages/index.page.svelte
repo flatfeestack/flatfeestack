@@ -123,8 +123,13 @@
   }
 
   .err-container {
+    position: fixed;
+    width: 100%;
     display: flex;
     flex-direction: row;
+  }
+  .err-container button {
+    margin-right: 30px;
   }
 
   .imgSmallLogo {
