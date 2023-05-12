@@ -28,41 +28,17 @@ func TestPostHookStripe(t *testing.T) {
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
-
-		metadata := make(map[string]string)
-		metadata["userId"] = userDetail.Id.String()
-		metadata["externalId"] = payInEvent.ExternalId.String()
-		metadata["freq"] = strconv.FormatInt(365, 10)
-		metadata["seats"] = strconv.Itoa(1)
-		metadata["fee"] = strconv.FormatInt(40, 10)
-
-		paymentIntent := stripe.PaymentIntent{
-			Amount:   utils.UsdBaseToCent(Plans[0].PriceBase),
-			Metadata: metadata,
-		}
-
-		jsonBytes, err := json.Marshal(paymentIntent)
+		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.succeeded")
 		require.Nil(t, err)
 
-		eventData := stripe.EventData{
-			Raw: json.RawMessage(jsonBytes),
-		}
-		event := stripe.Event{
-			APIVersion: "2022-11-15",
-			Data:       &eventData,
-			Type:       "payment_intent.succeeded",
-		}
 		body, err := json.Marshal(event)
 		require.Nil(t, err)
 
 		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-		hasher := hmac.New(sha256.New, []byte("webhooksecret"))
-		hasher.Write(append([]byte(timestamp+"."), body...))
-		hmacBytes := hasher.Sum(nil)
-		hmacString := hex.EncodeToString(hmacBytes)
+		hmacString := generateStripeSignature(&timestamp, &body)
 
 		request, _ := http.NewRequest(http.MethodPost, "/hooks/stripe", bytes.NewReader(body))
-		request.Header.Set("Stripe-Signature", "t="+timestamp+",v1="+hmacString)
+		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
 		StripeWebhook(response, request)
@@ -82,4 +58,130 @@ func TestPostHookStripe(t *testing.T) {
 		assert.NotNil(t, feePayIn)
 		assert.Equal(t, int64(5018801), feePayIn.Balance.Int64())
 	})
+
+	t.Run("stripe requires action to continue payment", func(t *testing.T) {
+		setup()
+		defer teardown()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.requires_action")
+		require.Nil(t, err)
+
+		body, err := json.Marshal(event)
+		require.Nil(t, err)
+
+		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		hmacString := generateStripeSignature(&timestamp, &body)
+
+		request, _ := http.NewRequest(http.MethodPost, "/hooks/stripe", bytes.NewReader(body))
+		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
+		response := httptest.NewRecorder()
+
+		StripeWebhook(response, request)
+
+		assert.Equal(t, 200, response.Code)
+
+		// this should create a pay in action event
+		actionPayIn, err := db.FindPayInExternal(payInEvent.ExternalId, db.PayInAction)
+		assert.Nil(t, err)
+		assert.NotNil(t, actionPayIn)
+		assert.Equal(t, Plans[0].PriceBase, actionPayIn.Balance.Int64())
+	})
+
+	t.Run("stripe misses payment method", func(t *testing.T) {
+		setup()
+		defer teardown()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.payment_failed")
+		require.Nil(t, err)
+
+		event.Data.Object = make(map[string]interface{})
+		event.Data.Object["status"] = "requires_payment_method"
+
+		body, err := json.Marshal(event)
+		require.Nil(t, err)
+
+		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		hmacString := generateStripeSignature(&timestamp, &body)
+
+		request, _ := http.NewRequest(http.MethodPost, "/hooks/stripe", bytes.NewReader(body))
+		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
+		response := httptest.NewRecorder()
+
+		StripeWebhook(response, request)
+
+		assert.Equal(t, 200, response.Code)
+	})
+
+	t.Run("stripe has an actual issue with the provided payment method", func(t *testing.T) {
+		setup()
+		defer teardown()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.payment_failed")
+		require.Nil(t, err)
+
+		body, err := json.Marshal(event)
+		require.Nil(t, err)
+
+		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		hmacString := generateStripeSignature(&timestamp, &body)
+
+		request, _ := http.NewRequest(http.MethodPost, "/hooks/stripe", bytes.NewReader(body))
+		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
+		response := httptest.NewRecorder()
+
+		StripeWebhook(response, request)
+
+		assert.Equal(t, 200, response.Code)
+
+		// this should create a pay in method event
+		actionPayIn, err := db.FindPayInExternal(payInEvent.ExternalId, db.PayInMethod)
+		assert.Nil(t, err)
+		assert.NotNil(t, actionPayIn)
+		assert.Equal(t, Plans[0].PriceBase, actionPayIn.Balance.Int64())
+	})
+}
+
+func generateStripeSignature(timestamp *string, body *[]byte) string {
+	hasher := hmac.New(sha256.New, []byte("webhooksecret"))
+	hasher.Write(append([]byte(*timestamp+"."), *body...))
+	hmacBytes := hasher.Sum(nil)
+	return hex.EncodeToString(hmacBytes)
+}
+
+func getStripeSignatureHeaderContent(timestamp *string, hmacString *string) string {
+	return "t=" + *timestamp + ",v1=" + *hmacString
+}
+
+func generateWebhookPayload(userId string, externalId string, eventType string) (stripe.Event, error) {
+	metadata := make(map[string]string)
+	metadata["userId"] = userId
+	metadata["externalId"] = externalId
+	metadata["freq"] = strconv.FormatInt(365, 10)
+	metadata["seats"] = strconv.Itoa(1)
+	metadata["fee"] = strconv.FormatInt(40, 10)
+
+	paymentIntent := stripe.PaymentIntent{
+		Amount:   utils.UsdBaseToCent(Plans[0].PriceBase),
+		Metadata: metadata,
+	}
+
+	jsonBytes, err := json.Marshal(paymentIntent)
+	if err != nil {
+		return stripe.Event{}, err
+	}
+
+	eventData := stripe.EventData{
+		Raw: json.RawMessage(jsonBytes),
+	}
+	return stripe.Event{
+		APIVersion: "2022-11-15",
+		Data:       &eventData,
+		Type:       eventType,
+	}, nil
 }
