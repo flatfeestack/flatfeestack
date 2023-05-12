@@ -372,6 +372,9 @@ jobs:
           sed -i 's#%%NOWPAYMENTS_TOKEN%%#${{ secrets.TEST_NOWPAYMENTS_TOKEN }}#g' backend/.env
           sed -i 's#%%NOWPAYMENTS_IPN_KEY%%#${{ secrets.TEST_NOWPAYMENTS_IPN_KEY }}#g' backend/.env
           sed -i 's#ENV=local#ENV=dev#g' backend/.env
+          sed -i 's#ADMINS=jonas@flatfeestack.io#ADMINS=tom.test@bocek.ch;tom.t1@bocek.ch;tom.t2@bocek.ch;guil@axlabs.com;gsm@machados.org#g' backend/.env
+          ADMINS=jonas@flatfeestack.io
+
 
       - name: Edit fastauth .env file
         run: |
