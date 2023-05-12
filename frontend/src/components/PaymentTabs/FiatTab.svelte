@@ -1,12 +1,15 @@
 <script lang="ts">
   import { error, user, config } from "../../ts/mainStore";
   import Dots from "../Dots.svelte";
-  import {
-    stripePayment,
-    stripePaymentMethod,
-  } from "../../ts/services";
+  import { stripePayment, stripePaymentMethod } from "../../ts/services";
   import { loadStripe } from "@stripe/stripe-js/pure";
-  import {CardCvc, CardExpiry, CardNumber, Elements, PaymentElement} from 'svelte-stripe'
+  import {
+    CardCvc,
+    CardExpiry,
+    CardNumber,
+    Elements,
+    PaymentElement,
+  } from "svelte-stripe";
   import { API } from "../../ts/api";
 
   export let total: number;
@@ -21,7 +24,7 @@
   let showSuccess = false;
 
   $: {
-    if($config.stripePublicApi) {
+    if ($config.stripePublicApi) {
       load();
     }
   }
@@ -62,7 +65,6 @@
       isSubmitting = false;
     }
   }
-
 </script>
 
 <style>
@@ -94,16 +96,26 @@
 <div class="container">
   <div class="p-2">
     {#if stripe}
-      <form on:submit|preventDefault="{handleSubmit}">
+      <form on:submit|preventDefault={handleSubmit}>
         <div class="container">
           <Elements {stripe}>
             <div class="container">
-              <CardNumber classes={{ base: 'w20 p-2 m-2 rounded border-primary-700' }} bind:element="{cardElement}"  />
-              <CardExpiry classes={{ base: 'w4 p-2 m-2 rounded border-primary-700' }}/>
-              <CardCvc classes={{ base: 'w4 p-2 m-2 rounded border-primary-700' }}/>
+              <CardNumber
+                classes={{ base: "w20 p-2 m-2 rounded border-primary-700" }}
+                bind:element={cardElement}
+              />
+              <CardExpiry
+                classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
+              />
+              <CardCvc
+                classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
+              />
             </div>
           </Elements>
-          <button class="button1" type="submit">❤&nbsp;Support{#if isSubmitting}<Dots />{/if}</button> for ${total.toFixed(2)}
+          <button class="button1" type="submit"
+            >❤&nbsp;Support{#if isSubmitting}<Dots />{/if}</button
+          >
+          for ${total.toFixed(2)}
         </div>
       </form>
     {/if}

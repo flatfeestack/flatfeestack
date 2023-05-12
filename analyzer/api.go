@@ -11,18 +11,21 @@ import (
 	"time"
 )
 
-type WebhookRequest struct {
-	RequestId uuid.UUID `json:"reqId"`
-	DateFrom  time.Time `json:"dateFrom"`
-	DateTo    time.Time `json:"dateTo"`
-	GitUrl    string    `json:"gitUrl"`
+type AnalysisRequest struct {
+	Id         uuid.UUID
+	RepoId     uuid.UUID
+	DateFrom   time.Time
+	DateTo     time.Time
+	GitUrl     string
+	ReceivedAt *time.Time
+	Error      *string
 }
 
-type WebhookResponse struct {
+type AnalysisResponse struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-type WebhookCallback struct {
+type AnalysisCallback struct {
 	RequestId uuid.UUID       `json:"requestId"`
 	Error     string          `json:"error,omitempty"`
 	Result    []FlatFeeWeight `json:"result"`
@@ -35,7 +38,7 @@ type FlatFeeWeight struct {
 }
 
 func analyze(w http.ResponseWriter, r *http.Request) {
-	var request WebhookRequest
+	var request AnalysisRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
@@ -43,7 +46,7 @@ func analyze(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("analyze repo: %v", request)
 
-	err = json.NewEncoder(w).Encode(WebhookResponse{RequestId: request.RequestId})
+	err = json.NewEncoder(w).Encode(AnalysisResponse{RequestId: request.Id})
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -53,28 +56,28 @@ func analyze(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func analyzeBackground(request WebhookRequest) {
+func analyzeBackground(request AnalysisRequest) {
 	log.Debugf("---> webhook request for repository %s\n", request.GitUrl)
-	log.Debugf("Request id: %s\n", request.RequestId)
+	log.Debugf("Request id: %s\n", request.Id)
 
 	contributionMap, err := analyzeRepository(request.DateFrom, request.DateTo, request.GitUrl)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.CallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.CallbackUrl)
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(WebhookCallback{RequestId: request.RequestId, Error: "weightContributions: " + err.Error()}, opts.CallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.CallbackUrl)
 		return
 	}
 
-	callbackToWebhook(WebhookCallback{
-		RequestId: request.RequestId,
+	callbackToWebhook(AnalysisCallback{
+		RequestId: request.Id,
 		Result:    weightsMap,
 	}, opts.CallbackUrl)
 
-	log.Debugf("Finished request %s\n", request.RequestId)
+	log.Debugf("Finished request %s\n", request.Id)
 }
 
 // makeHttpStatusErr writes an http status error with a specific message
@@ -82,7 +85,7 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 	w.WriteHeader(httpStatusError)
 }
 
-func callbackToWebhook(body WebhookCallback, url string) {
+func callbackToWebhook(body AnalysisCallback, url string) {
 	if body.Error == "" {
 		log.Printf("About to returt the following data: %v", body.Result)
 	}

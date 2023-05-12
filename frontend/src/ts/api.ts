@@ -17,7 +17,7 @@ import type {
   UserStatus,
   PayoutResponse,
   PublicUser,
-  UserBalance
+  UserBalance,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -157,7 +157,9 @@ export const API = {
     get: () => backendToken.get(`users/me`).json<User>(),
     gitEmails: () => backendToken.get(`users/me/git-email`).json<GitUser[]>(),
     confirmGitEmail: (email: string, token: string) =>
-      backendToken.post("users/git-email", { json: { email, token } }),
+      backendToken.post("users/me/git-email/confirm", {
+        json: { email, token },
+      }),
     addEmail: (email: string) =>
       backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>
@@ -204,7 +206,8 @@ export const API = {
         .json<PayoutResponse>(),
     getUser: (userId: string) =>
       backend.get(`users/${userId}`).json<PublicUser>(),
-    userBalance: () => backendToken.get(`users/me/balance`).json<UserBalance[]>(),
+    userBalance: () =>
+      backendToken.get(`users/me/balance`).json<UserBalance[]>(),
   },
   repos: {
     search: (s: string) =>

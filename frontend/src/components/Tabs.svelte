@@ -59,12 +59,7 @@
 {#each items as item}
   {#if activeTabValue == item.value}
     <div class="box">
-      <svelte:component
-        this={item.component}
-        {total}
-        {seats}
-        {freq}
-      />
+      <svelte:component this={item.component} {total} {seats} {freq} />
     </div>
   {/if}
 {/each}
