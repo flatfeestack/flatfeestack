@@ -181,10 +181,6 @@ func prepareEmail(
 	defaultText string,
 	lang string) error {
 
-	subject := utils.ParseTemplate("subject/"+lang+"/"+templateKey+".txt", data)
-	if subject == "" {
-		subject = defaultSubject
-	}
 	textMessage := utils.ParseTemplate("plain/"+lang+"/"+templateKey+".txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
@@ -196,7 +192,7 @@ func prepareEmail(
 
 	e := EmailRequest{
 		MailTo:      data["mailTo"],
-		Subject:     subject,
+		Subject:     defaultSubject,
 		TextMessage: textMessage,
 		HtmlMessage: htmlMessage,
 	}
