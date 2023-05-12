@@ -91,8 +91,8 @@ type NameWeight struct {
 var Plans = []Plan{
 	{
 		Title:       "Yearly",
-		Price:       125.47, //365 * 330000 / 1-(0.04)
-		PriceBase:   125468750,
+		Price:       125.47,    //365 * 330000 / 1-(0.04)
+		PriceBase:   125470000, //125468750
 		Freq:        365,
 		FeePrm:      40,
 		Description: "You can help your sponsored projects on a yearly basis with a flat fee of <b>125.47 USD</b>",
@@ -100,8 +100,8 @@ var Plans = []Plan{
 	},
 	{
 		Title:       "5 Years",
-		Price:       624.09, //1825 * 330000 / 1-(0.035)
-		PriceBase:   624093265,
+		Price:       624.09,    //1825 * 330000 / 1-(0.035)
+		PriceBase:   624090000, //624093265
 		Freq:        1825,
 		FeePrm:      35,
 		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
