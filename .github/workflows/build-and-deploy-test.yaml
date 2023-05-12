@@ -373,8 +373,12 @@ jobs:
           sed -i 's#%%NOWPAYMENTS_IPN_KEY%%#${{ secrets.TEST_NOWPAYMENTS_IPN_KEY }}#g' backend/.env
           sed -i 's#ENV=local#ENV=dev#g' backend/.env
           sed -i 's#ADMINS=jonas@flatfeestack.io#ADMINS=tom.test@bocek.ch;tom.t1@bocek.ch;tom.t2@bocek.ch;guil@axlabs.com;gsm@machados.org#g' backend/.env
-          ADMINS=jonas@flatfeestack.io
-
+          sed -i 's#ANALYZER_USERNAME=flatfeestack#ANALYZER_USERNAME=${{ secrets.TEST_ANALYZER_USERNAME }}#g' backend/.env
+          sed -i 's#ANALYZER_PASSWORD=analyzer#ANALYZER_PASSWORD=${{ secrets.TEST_ANALYZER_PASSWORD }}#g' backend/.env
+          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' backend/.env
+          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' backend/.env
+          sed -i 's#PAYOUT_USERNAME=flatfeestack#PAYOUT_USERNAME=${{ secrets.TEST_PAYOUT_USERNAME }}#g' backend/.env
+          sed -i 's#PAYOUT_PASSWORD=payout#PAYOUT_PASSWORD=${{ secrets.TEST_PAYOUT_PASSWORD }}#g' backend/.env
 
       - name: Edit fastauth .env file
         run: |
@@ -395,6 +399,8 @@ jobs:
           sed -i 's#DAO_MEMBERSHIP_CONTRACT=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9#DAO_MEMBERSHIP_CONTRACT=0xA1c3770345287aF14f63098a3Fb044860474A2F3#g' payout/.env
           sed -i 's#DAO_DAO_CONTRACT=0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e#DAO_DAO_CONTRACT=0x82293E85698C606E2fF88904873fD11a30263355#g' payout/.env
           sed -i 's#ENV=local#ENV=dev#g' payout/.env
+          sed -i 's#PAYOUT_USERNAME=flatfeestack#PAYOUT_USERNAME=${{ secrets.TEST_PAYOUT_USERNAME }}#g' payout/.env
+          sed -i 's#PAYOUT_PASSWORD=payout#PAYOUT_PASSWORD=${{ secrets.TEST_PAYOUT_PASSWORD }}#g' payout/.env
 
       - name: Edit forum .env file
         run: |
@@ -402,6 +408,10 @@ jobs:
 
       - name: Edit analyzer .env file
         run: |
+          sed -i 's#ANALYZER_USERNAME=flatfeestack#ANALYZER_USERNAME=${{ secrets.TEST_ANALYZER_USERNAME }}#g' analyzer/.env
+          sed -i 's#ANALYZER_PASSWORD=analyzer#ANALYZER_PASSWORD=${{ secrets.TEST_ANALYZER_PASSWORD }}#g' analyzer/.env
+          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' analyzer/.env
+          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' analyzer/.env
           sed -i 's#ENV=local#ENV=dev#g' analyzer/.env
 
       - name: Install SSH key
