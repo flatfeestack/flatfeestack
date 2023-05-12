@@ -60,7 +60,7 @@
 
 <div class="max">
   <div class="box-container rounded p-5">
-    <h2 class="py-5 text-center text-primary-900">Create your account</h2>
+    <h2 class="py-5 text-center text-primary-900">Reset your password</h2>
 
     {#if info}
       <div class="bg-green rounded p-2">{info}</div>

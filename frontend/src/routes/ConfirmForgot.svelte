@@ -60,7 +60,7 @@
 
 <div class="max">
   <div class="box-container rounded p-5">
-    <h2 class="py-5 text-center text-primary-900">Create your account</h2>
+    <h2 class="py-5 text-center text-primary-900">Set your new password</h2>
 
     <form on:submit|preventDefault={handleSubmit}>
       <label for="email" class="py-1">Email address</label>
