@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
@@ -20,12 +19,16 @@ var (
 )
 
 type Opts struct {
-	Port         int
-	Env          string
-	HS256        string
-	BackendToken string
-	CallbackUrl  string
-	GitBasePath  string
+	Port               int
+	Env                string
+	HS256              string
+	BackendToken       string
+	BackendCallbackUrl string
+	GitBasePath        string
+	AnalyzerUsername   string
+	AnalyzerPassword   string
+	BackendUsername    string
+	BackendPassword    string
 }
 
 func init() {
@@ -43,10 +46,14 @@ func NewOpts() *Opts {
 
 	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
 	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT", 9083), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
-	flag.StringVar(&o.BackendToken, "token", lookupEnv("BACKEND_TOKEN"), "Backend Token")
-	flag.StringVar(&o.CallbackUrl, "callback", lookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
 	flag.StringVar(&o.GitBasePath, "git-base", lookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
+
+	flag.StringVar(&o.AnalyzerUsername, "analyzer-username", lookupEnv("ANALYZER_USERNAME"), "Username for accessing API")
+	flag.StringVar(&o.AnalyzerPassword, "analyzer-password", lookupEnv("ANALYZER_PASSWORD"), "Password for accessing API")
+
+	flag.StringVar(&o.BackendCallbackUrl, "callback", lookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
+	flag.StringVar(&o.BackendUsername, "backend-username", lookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&o.BackendPassword, "backend-password", lookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -60,15 +67,6 @@ func NewOpts() *Opts {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
-	}
-
-	if o.HS256 != "" {
-		h := sha256.New()
-		h.Write([]byte(o.HS256))
-		jwtKey = h.Sum(nil)
-		log.Debugf("jwtKey: %v", jwtKey)
-	} else {
-		log.Fatalf("HS256 seed is required, non was provided")
 	}
 
 	return o
@@ -122,7 +120,7 @@ func main() {
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/analyze", jwtAuth(jwtAuthServer(analyze))).Methods("POST")
+	router.HandleFunc("/analyze", basicAuth(analyze)).Methods("POST")
 	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }

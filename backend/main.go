@@ -40,6 +40,12 @@ var (
 	admins    []string
 )
 
+type Subsystem struct {
+	Url      string
+	Username string
+	Password string
+}
+
 type Opts struct {
 	Port                      int
 	HS256                     string
@@ -50,8 +56,6 @@ type Opts struct {
 	DBPath                    string
 	DBDriver                  string
 	DBScripts                 string
-	AnalysisUrl               string
-	PayoutUrl                 string
 	Admins                    string
 	EmailLinkPrefix           string
 	EmailFrom                 string
@@ -63,7 +67,10 @@ type Opts struct {
 	NowpaymentsIpnKey         string
 	NowpaymentsApiUrl         string
 	NowpaymentsIpnCallbackUrl string
-	ServerKey                 string
+	BackendUsername           string
+	BackendPassword           string
+	Payout                    Subsystem
+	Analyzer                  Subsystem
 }
 
 func init() {
@@ -86,10 +93,6 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
 	flag.StringVar(&o.DBScripts, "db-scripts", lookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&o.AnalysisUrl, "analyzer-url", lookupEnv("ANALYZER_URL",
-		"http://analyzer:9083"), "Analysis Url")
-	flag.StringVar(&o.PayoutUrl, "payout-url", lookupEnv("PAYOUT_URL",
-		"http://payout:9084"), "Payout Url")
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 	flag.StringVar(&o.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
 	flag.StringVar(&o.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
@@ -105,7 +108,17 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
 		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
 	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
-	flag.StringVar(&o.ServerKey, "server-key", lookupEnv("SERVER_KEY"), "make secure calls to the subsystems")
+
+	flag.StringVar(&o.BackendUsername, "backend-username", lookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&o.BackendPassword, "backend-password", lookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+
+	flag.StringVar(&o.Analyzer.Url, "analyzer-url", lookupEnv("ANALYZER_URL"), "URL to analysis engine")
+	flag.StringVar(&o.Analyzer.Username, "analyzer-username", lookupEnv("ANALYZER_USERNAME"), "Username to analysis engine")
+	flag.StringVar(&o.Analyzer.Password, "analyzer-password", lookupEnv("ANALYZER_PASSWORD"), "Password to analysis engine")
+
+	flag.StringVar(&o.Payout.Url, "payout-url", lookupEnv("PAYOUT_URL"), "URL to payout")
+	flag.StringVar(&o.Payout.Username, "payout-username", lookupEnv("PAYOUT_USERNAME"), "Username to payout")
+	flag.StringVar(&o.Payout.Password, "payout-password", lookupEnv("PAYOUT_PASSWORD"), "Password to payout")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -197,7 +210,8 @@ func main() {
 	//this will set the default ENVs
 	opts = NewOpts()
 
-	clients.Init(opts.PayoutUrl, opts.ServerKey, opts.AnalysisUrl)
+	clients.InitAnalyzer(opts.Analyzer.Url, opts.Analyzer.Password, opts.Analyzer.Username)
+	clients.InitPayout(opts.Payout.Url, opts.Payout.Password, opts.Payout.Username)
 	clients.InitEmail(opts.EmailUrl, opts.EmailFromName, opts.EmailFrom, opts.EmailToken, opts.Env, opts.EmailMarketing, opts.EmailLinkPrefix)
 	api.InitStripe(opts.StripeAPISecretKey, opts.StripeWebhookSecretKey)
 	api.InitNow(opts.NowpaymentsApiUrl, opts.NowpaymentsToken, opts.NowpaymentsIpnCallbackUrl, opts.NowpaymentsIpnKey)
@@ -285,7 +299,7 @@ func main() {
 	//hooks
 	router.HandleFunc("/hooks/stripe", maxBytes(api.StripeWebhook, 65536)).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/nowpayments", api.NowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analyzer", jwtAuthAdmin(api.AnalysisEngineHook, []string{"ffs-server"})).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analyzer", basicAuth(api.AnalysisEngineHook)).Methods(http.MethodPost)
 
 	//admin
 	router.HandleFunc("/admin/time", jwtAuthAdmin(api.ServerTime, admins)).Methods(http.MethodGet)
