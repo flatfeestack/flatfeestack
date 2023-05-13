@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Router, Route, navigate, link } from "svelte-routing";
   import { user, route, loginFailed, error, token } from "../ts/mainStore";
-  import {hasAccessToken, removeSession} from "../ts/services";
+  import { hasAccessToken, removeSession } from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { faHome } from "@fortawesome/free-solid-svg-icons";
@@ -63,15 +63,17 @@
     navigate("/login");
   }
 
-  $:{
-    if($token) {
+  $: {
+    if ($token) {
       auth = true;
     }
   }
 
   onMount(async () => {
-    const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth='));
-    if(authCookie || $token || hasAccessToken()) {
+    const authCookie = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth="));
+    if (authCookie || $token || hasAccessToken()) {
       auth = true;
     }
     try {
@@ -159,24 +161,32 @@
 </style>
 
 <div class="all">
-
-  <Header/>
+  <Header />
 
   <main>
     <Modal>
       <Router url={urlOriginal}>
         <Route path="/confirm/reset/:email/:token" component={ConfirmForgot} />
         <Route path="/confirm/signup/:email/:token" component={ConfirmSignup} />
-        <Route path="/confirm/git-email/:email/:token" component={ForwardGitEmail}/>
-        <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component={ConfirmInvite}/>
+        <Route
+          path="/confirm/git-email/:email/:token"
+          component={ForwardGitEmail}
+        />
+        <Route
+          path="/confirm/invite/:email/:emailToken/:inviteByEmail"
+          component={ConfirmInvite}
+        />
 
-        <Route path="/user/search" component={auth ? Search:Landing} />
-        <Route path="/user/payments" component={auth ? Payments:Landing} />
-        <Route path="/user/settings" component={auth ? Settings:Landing} />
-        <Route path="/user/income" component={auth ? Income:Landing} />
-        <Route path="/user/badges" component={auth ? Badges:Landing} />
-        <Route path="/user/admin" component={auth ? Admin:Landing} />
-        <Route path="/user/invitations" component={auth ? Invitations:Landing} />
+        <Route path="/user/search" component={auth ? Search : Landing} />
+        <Route path="/user/payments" component={auth ? Payments : Landing} />
+        <Route path="/user/settings" component={auth ? Settings : Landing} />
+        <Route path="/user/income" component={auth ? Income : Landing} />
+        <Route path="/user/badges" component={auth ? Badges : Landing} />
+        <Route path="/user/admin" component={auth ? Admin : Landing} />
+        <Route
+          path="/user/invitations"
+          component={auth ? Invitations : Landing}
+        />
 
         <Route path="/dao/home" component={DAOHome} />
         <Route path="/dao/votes" component={DAOVotes} />
@@ -184,13 +194,19 @@
         <Route path="/dao/metamask" component={DAOMetamaskRequired} />
         <Route path="/dao/createProposal" component={DAOCreateProposal} />
         <Route path="/dao/castVotes/:blockNumber" component={DAOCastVotes} />
-        <Route path="/dao/executeProposals/:blockNumber" component={DAOExecuteProposals}/>
+        <Route
+          path="/dao/executeProposals/:blockNumber"
+          component={DAOExecuteProposals}
+        />
         <Route path="/dao/council" component={DAOCouncil} />
         <Route path="/dao/treasury" component={DAOTreasury} />
         <Route path="/dao/discussions" component={DAODiscussions} />
         <Route path="/dao/createDiscussion" component={DAOCreateDiscussion} />
         <Route path="/dao/discussion/:postId" component={DAOShowDiscussion} />
-        <Route path="/dao/discussion/:postId/edit" component={DAOEditDiscussion}/>
+        <Route
+          path="/dao/discussion/:postId/edit"
+          component={DAOEditDiscussion}
+        />
 
         <Route path="/differentChainId" component={DifferentChainId} />
         <Route path="/badges/:uuid" component={PublicBadges} />
@@ -207,5 +223,5 @@
     </Modal>
   </main>
 
-<Footer/>
+  <Footer />
 </div>

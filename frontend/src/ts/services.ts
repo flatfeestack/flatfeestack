@@ -120,11 +120,11 @@ export const storeToken = (token1: Token) => {
 };
 
 export const hasAccessToken = () => {
-  if(localStorage.getItem("ffs-refresh")) {
+  if (localStorage.getItem("ffs-refresh")) {
     return true;
   }
   return false;
-}
+};
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
 /*export const parseJwt = (token) => {
