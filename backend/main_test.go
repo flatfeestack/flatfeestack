@@ -68,7 +68,7 @@ func setupPayoutTestServer(t *testing.T) *httptest.Server {
 		}
 	}))
 
-	opts.PayoutUrl = server.URL
+	opts.Payout.Url = server.URL
 
 	return server
 }

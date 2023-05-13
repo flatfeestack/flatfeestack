@@ -14,7 +14,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/prometheus/client_golang v1.15.1
 	github.com/sendgrid/sendgrid-go v3.12.0+incompatible
-	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.2

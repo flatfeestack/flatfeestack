@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -62,20 +63,20 @@ func analyzeBackground(request AnalysisRequest) {
 
 	contributionMap, err := analyzeRepository(request.DateFrom, request.DateTo, request.GitUrl)
 	if err != nil {
-		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.CallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.BackendCallbackUrl)
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.CallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.BackendCallbackUrl)
 		return
 	}
 
 	callbackToWebhook(AnalysisCallback{
 		RequestId: request.Id,
 		Result:    weightsMap,
-	}, opts.CallbackUrl)
+	}, opts.BackendCallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.Id)
 }
@@ -103,10 +104,8 @@ func callbackToWebhook(body AnalysisCallback, url string) {
 		return
 	}
 
-	if len(opts.BackendToken) > 0 {
-		req.Header.Add("Authorization", "Bearer "+opts.BackendToken)
-	}
-
+	auth := opts.BackendUsername + ":" + opts.BackendPassword
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Do(req)

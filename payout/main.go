@@ -34,14 +34,16 @@ type DaoAddresses struct {
 }
 
 type Opts struct {
-	Port     int
-	Env      string
-	HS256    string
-	Ethereum Blockchain
-	NEO      Blockchain
-	Usdc     Blockchain
-	Admins   string
-	Dao      DaoAddresses
+	Port           int
+	Env            string
+	HS256          string
+	Ethereum       Blockchain
+	NEO            Blockchain
+	Usdc           Blockchain
+	Admins         string
+	Dao            DaoAddresses
+	PayoutUsername string
+	PayoutPassword string
 }
 
 var (
@@ -87,6 +89,9 @@ func NewOpts() *Opts {
 	flag.StringVar(&o.Dao.Dao, "dao-dao-address", lookupEnv("DAO_DAO_CONTRACT"), "Address of the main DAO contract")
 	flag.StringVar(&o.Dao.Membership, "dao-membership-address", lookupEnv("DAO_MEMBERSHIP_CONTRACT"), "Address of the membership contract")
 	flag.StringVar(&o.Dao.Wallet, "dao-wallet-address", lookupEnv("DAO_WALLET_CONTRACT"), "Address of the Wallet contract")
+
+	flag.StringVar(&o.PayoutUsername, "payout-username", lookupEnv("PAYOUT_USERNAME"), "Username to payout")
+	flag.StringVar(&o.PayoutPassword, "payout-password", lookupEnv("PAYOUT_PASSWORD"), "Password to payout")
 
 	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
 
@@ -203,9 +208,9 @@ func main() {
 	router := mux.NewRouter()
 
 	//this can only be called by an internal server
-	router.HandleFunc("/admin/sign/eth", jwtAuth(jwtAuthServer(signEth))).Methods(http.MethodPost)
-	router.HandleFunc("/admin/sign/neo", jwtAuth(jwtAuthServer(signNeo))).Methods(http.MethodPost)
-	router.HandleFunc("/admin/sign/usdc", jwtAuth(jwtAuthServer(signUsdc))).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/eth", basicAuth(signEth)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/neo", basicAuth(signNeo)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/usdc", basicAuth(signUsdc)).Methods(http.MethodPost)
 
 	//this can be called from frontend, but only the admin
 	if debug {

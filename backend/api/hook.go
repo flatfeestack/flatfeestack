@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func AnalysisEngineHook(w http.ResponseWriter, r *http.Request, email string) {
+func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var data WebhookCallback
 	err := json.NewDecoder(r.Body).Decode(&data)

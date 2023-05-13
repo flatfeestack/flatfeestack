@@ -172,7 +172,7 @@ func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newE
 			log.Warningf("could not find latest analysis request: %v", err)
 		}
 		if ar == nil {
-			err = clnt.AnalysisReq(repo.Id, *repo.GitUrl)
+			err = clnt.RequestAnalysis(repo.Id, *repo.GitUrl)
 			if err != nil {
 				log.Warningf("Could not submit analysis request %v\n", err)
 			}

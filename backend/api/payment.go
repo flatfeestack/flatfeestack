@@ -175,7 +175,7 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 		totalEarnedAmount.Mul(totalEarnedAmount, usdcDecimals)
 	}
 
-	signature, err := clients.PayoutRequest(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
+	signature, err := clients.RequestPayout(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
 	if err != nil {
 		utils.WriteErrorf(w, http.StatusBadRequest, "Error when generating signature: %v", err)
 		return
