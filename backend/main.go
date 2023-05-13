@@ -4,7 +4,6 @@ import (
 	"backend/api"
 	"backend/clients"
 	db2 "backend/db"
-	prom "backend/prometheus"
 	"backend/utils"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -17,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/dimiro1/banner"
+	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -239,10 +239,11 @@ func main() {
 		return logRequestHandler(next)
 	})
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
+	registry := prom.CreateRegistry()
 	router.Path("/metrics").Handler(promhttp.HandlerFor(
-		prom.Registry,
+		registry,
 		promhttp.HandlerOpts{
-			Registry: prom.Registry,
+			Registry: registry,
 			// Opt into OpenMetrics to support exemplars.
 			EnableOpenMetrics: true,
 		},

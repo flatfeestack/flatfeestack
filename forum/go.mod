@@ -6,13 +6,14 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dimiro1/banner v1.1.0
+	github.com/flatfeestack/go-lib v0.0.1
 	github.com/getkin/kin-openapi v0.116.0
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
-	github.com/prometheus/client_golang v1.15.0
+	github.com/prometheus/client_golang v1.15.1
 	github.com/sirupsen/logrus v1.9.0
 )
 
