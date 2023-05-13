@@ -10,6 +10,20 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['postgres-exporter:9187']
+  - job_name: analyzer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9083"]
+        labels:
+          hostname: 'go-analyzer-server'
+          service: 'analyzer'
+  - job_name: auth
+    metrics_path: /metrics
+    static_configs:
+      - targets: [ "host.docker.internal:9081" ]
+        labels:
+          hostname: 'go-auth-server'
+          service: 'auth'
   - job_name: backend
     metrics_path: /metrics
     static_configs:
@@ -24,3 +38,10 @@ scrape_configs:
         labels:
           hostname: 'go-forum-server'
           service: 'forum'
+  - job_name: payout
+    metrics_path: /metrics
+    static_configs:
+      - targets: [ "host.docker.internal:9084" ]
+        labels:
+          hostname: 'go-payout-server'
+          service: 'payout'
