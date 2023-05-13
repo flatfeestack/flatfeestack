@@ -9,7 +9,6 @@ COPY api/ ./api/
 COPY clients/ ./clients/
 COPY db/ ./db/
 COPY utils/ ./utils/
-COPY prometheus/ ./prometheus/
 COPY *.go *.sql banner.txt ./
 
 RUN go build

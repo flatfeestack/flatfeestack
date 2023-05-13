@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/dimiro1/banner v1.1.0
 	github.com/felixge/httpsnoop v1.0.3
+	github.com/flatfeestack/go-lib v0.0.1
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
