@@ -125,11 +125,23 @@ func TestAnalysisRequest2(t *testing.T) {
 
 	alar, err := FindAllLatestAnalysisRequest(day2)
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(alar))
-	assert.Equal(t, alar[0].RepoId, r1.Id)
-	assert.Equal(t, alar[1].RepoId, r2.Id)
+	assert.Equal(t, 0, len(alar))
 
 	alar, err = FindAllLatestAnalysisRequest(day3)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(alar))
+
+	alar, err = FindAllLatestAnalysisRequest(day4)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(alar))
+	assert.Equal(t, alar[0].RepoId, r1.Id)
+
+	alar, err = FindAllLatestAnalysisRequest(day5)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(alar))
+	assert.Equal(t, alar[0].RepoId, r1.Id)
+
+	alar, err = FindAllLatestAnalysisRequest(day6)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(alar))
 	assert.Equal(t, alar[0].RepoId, r1.Id)
