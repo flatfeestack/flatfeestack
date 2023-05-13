@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	neo "github.com/nspcc-dev/neo-go/pkg/rpcclient"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -206,6 +208,16 @@ func main() {
 
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
+
+	registry := prom.CreateRegistry()
+	router.Path("/metrics").Handler(promhttp.HandlerFor(
+		registry,
+		promhttp.HandlerOpts{
+			Registry: registry,
+			// Opt into OpenMetrics to support exemplars.
+			EnableOpenMetrics: true,
+		},
+	))
 
 	//this can only be called by an internal server
 	router.HandleFunc("/admin/sign/eth", basicAuth(signEth)).Methods(http.MethodPost)
