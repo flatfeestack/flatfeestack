@@ -1,0 +1,201 @@
+<script lang="ts">
+    import { Router, Route, navigate, link } from "svelte-routing";
+    import { user, route, loginFailed, error, token } from "../ts/mainStore";
+    import {hasAccessToken, removeSession} from "../ts/services";
+    import { onMount } from "svelte";
+    import { API } from "../ts/api";
+    import { faHome } from "@fortawesome/free-solid-svg-icons";
+    import Fa from "svelte-fa";
+    import Modal from "svelte-simple-modal";
+
+    import Landing from "../routes/Landing.svelte";
+    import Badges from "../routes/Badges.svelte";
+    import PublicBadges from "../routes/PublicBadges.svelte";
+    import Login from "../routes/Login.svelte";
+    import Signup from "../routes/Signup.svelte";
+    import Forgot from "../routes/Forgot.svelte";
+    import ConfirmForgot from "../routes/ConfirmForgot.svelte";
+    import ConfirmSignup from "../routes/ConfirmSignup.svelte";
+    import Search from "../routes/Search.svelte";
+    import CatchAll from "../routes/CatchAllRoute.svelte";
+    import Income from "../routes/Income.svelte";
+    import Payments from "../routes/Payments.svelte";
+    import Admin from "../routes/Admin.svelte";
+    import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
+    import Settings from "../routes/Settings.svelte";
+    import ConfirmInvite from "../routes/ConfirmInvite.svelte";
+    import Invitations from "../routes/Invitations.svelte";
+    import DifferentChainId from "../routes/DifferentChainId.svelte";
+
+    import DAOHome from "../routes/DAO/Home.svelte";
+    import DAOVotes from "../routes/DAO/Votes.svelte";
+    import DAOMembership from "../routes/DAO/Membership.svelte";
+    import DAOMetamaskRequired from "../routes/DAO/MetaMaskRequired.svelte";
+    import DAOCreateProposal from "../routes/DAO/CreateProposal.svelte";
+    import DAOCastVotes from "../routes/DAO/CastVotes.svelte";
+    import DAOExecuteProposals from "../routes/DAO/ExecuteProposals.svelte";
+    import DAOCouncil from "../routes/DAO/Council.svelte";
+    import DAOTreasury from "../routes/DAO/Treasury.svelte";
+    import DAODiscussions from "../routes/DAO/Discussions.svelte";
+    import DAOCreateDiscussion from "../routes/DAO/CreateDiscussion.svelte";
+    import DAOShowDiscussion from "../routes/DAO/ShowDiscussion.svelte";
+    import DAOEditDiscussion from "../routes/DAO/EditDiscussion.svelte";
+
+    //https://github.com/EmilTholin/svelte-routing/issues/41
+    import { globalHistory } from "svelte-routing/src/history";
+
+    $route = globalHistory.location;
+    globalHistory.listen((history) => {
+        $route = history.location;
+    });
+
+    export let urlOriginal;
+    let loading = true;
+    let auth = false;
+
+    function logout() {
+        removeSession();
+        navigate("/login");
+    }
+
+    $:{
+        if($token) {
+            auth = true;
+        }
+    }
+
+    onMount(async () => {
+        const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth='));
+        if(authCookie || $token || hasAccessToken()) {
+            auth = true;
+        }
+        try {
+            loading = true;
+            $user = await API.user.get();
+        } catch (e) {
+            $loginFailed = true;
+        } finally {
+            loading = false;
+        }
+    });
+</script>
+
+<style>
+    .all {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    header {
+        padding: 1em;
+        background-color: #fff;
+        border-bottom: 1px #000 solid;
+        justify-content: space-between;
+        flex: 0 0 auto;
+    }
+
+    main {
+        flex: 1 0 auto;
+        display: flex;
+        height: 100%;
+    }
+
+
+
+    header,
+    nav {
+        display: flex;
+        align-items: center;
+        font-size: 1.1rem;
+    }
+
+
+
+    header :global(a),
+    header :global(a:visited),
+    header :global(a:active) {
+        text-decoration: none;
+        color: #000;
+    }
+
+    .close {
+        cursor: pointer;
+        text-align: right;
+    }
+
+    .err-container {
+        position: fixed;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+    }
+    .err-container button {
+        margin-right: 30px;
+    }
+
+    .imgSmallLogo {
+        padding-right: 0.25em;
+        width: 3rem;
+    }
+    .imgNormalLogo {
+        padding-right: 0.25em;
+        width: 10rem;
+    }
+</style>
+
+
+    <header>
+        <a href="/" use:link>
+            <img
+                    class="hide-mda imgSmallLogo"
+                    src="/images/favicon.svg"
+                    alt="FlatFeeStack"
+            />
+            <img
+                    class="hide-sx imgNormalLogo"
+                    src="/images/ffs-logo.svg"
+                    alt="FlatFeeStack"
+            />
+        </a>
+        <nav>
+            {#if $user.id}
+                <a href="/user/search" use:link>
+                    <Fa icon={faHome} size="sm" class="icon" />
+                </a>
+                {#if $user.image}
+                    <img class="image-org-sx" src={$user.image} alt="user profile img" />
+                {/if}
+
+                {$user.email}
+                <form on:submit|preventDefault={logout}>
+                    <button class="button3 center mx-2" type="submit">Sign out</button>
+                </form>
+            {:else}
+                <form on:submit|preventDefault={() => navigate("/login")}>
+                    <button class="button3 center mx-2" type="submit">Login</button>
+                </form>
+                <form on:submit|preventDefault={() => navigate("/signup")}>
+                    <button class="button1 center mx-2" type="submit">Sign Up</button>
+                </form>
+            {/if}
+            <button class="button4 center mx-2" on:click={() => navigate("/dao/home")}
+            >DAO</button
+            >
+        </nav>
+    </header>
+
+    {#if $error}<div class="bg-red p-2 parent err-container">
+        <div class="w-100">{@html $error}</div>
+        <div>
+            <button
+                    class="close accessible-btn"
+                    on:click|preventDefault={() => {
+            $error = null;
+          }}
+            >
+                ✕
+            </button>
+        </div>
+    </div>{/if}
+

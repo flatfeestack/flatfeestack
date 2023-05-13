@@ -9,6 +9,7 @@ export { passToClient };
 const passToClient = ["pageProps", "routeParams"];
 
 async function render(pageContext) {
+  pageContext.showEmptyUser = 'true'
   const app = pageContext.Page.render(pageContext);
   const appHtml = app.html;
   const appCss = app.css.code;

@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -69,6 +70,24 @@ const (
 	KeyReset     = "reset"
 	KeySignup    = "signup"
 )
+
+// this is an essential cookie to set if the user has once successfully logged in
+// with this we can determine which page to show
+func setCookie() *http.Cookie {
+	return &http.Cookie{
+		Name:     "auth",
+		Value:    "true",
+		Path:     "/",
+		MaxAge:   math.MaxInt32,
+		SameSite: http.SameSiteStrictMode,
+	}
+}
+
+func removeCookie() *http.Cookie {
+	cookie := setCookie()
+	cookie.MaxAge = -1 //delete cookie
+	return cookie
+}
 
 func confirmEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -458,26 +477,33 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if cred.CodeCodeChallengeMethod != "" {
 		//return the code flow
 		handleCode(w, cred.Email, cred.CodeChallenge, cred.CodeCodeChallengeMethod, cred.RedirectUri, cred.RedirectAs201)
-	} else {
-		refreshToken, err := resetRefreshToken(result.refreshToken)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-15, cannot reset refresh token %v", err)
-			return
-		}
-		encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(cred.Email, refreshToken)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-16, cannot verify refresh token %v", err)
-			return
-		}
-
-		oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
-		oauthEnc, err := json.Marshal(oauth)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-17, cannot encode refresh token %v", err)
-			return
-		}
-		w.Write(oauthEnc)
+		return
 	}
+
+	refreshToken, err := resetRefreshToken(result.refreshToken)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-15, cannot reset refresh token %v", err)
+		return
+	}
+	encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(cred.Email, refreshToken)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-16, cannot verify refresh token %v", err)
+		return
+	}
+
+	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
+	oauthEnc, err := json.Marshal(oauth)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-17, cannot encode refresh token %v", err)
+		return
+	}
+
+	//set cookie if not set yet
+	_, err = r.Cookie(setCookie().Name)
+	if err != nil {
+		http.SetCookie(w, setCookie())
+	}
+	w.Write(oauthEnc)
 }
 
 func handleCode(w http.ResponseWriter, email string, codeChallenge string, codeChallengeMethod string, redirectUri string, redirectAs201 bool) {
@@ -984,35 +1010,29 @@ func revoke(w http.ResponseWriter, r *http.Request) {
 
 func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	keys := r.URL.Query()
-	ru := keys.Get("redirect_uri")
+	redirectUri := keys.Get("redirect_uri")
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		if ru != "" {
-			log.Printf("ERR-oauth-06 %v", err)
-			w.Header().Set("Location", ru)
-			w.WriteHeader(http.StatusSeeOther)
-		} else {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "ERR-oauth-06 %v", err)
-		}
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "ERR-oauth-06 %v", err)
 		return
 	}
 
 	refreshToken := result.refreshToken
 	_, err = resetRefreshToken(refreshToken)
 	if err != nil {
-		if ru != "" {
-			log.Printf("ERR-oauth-07, unsupported grant type: %v", err)
-			w.Header().Set("Location", ru)
-			w.WriteHeader(http.StatusSeeOther)
-		} else {
-			writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", "ERR-oauth-07, unsupported grant type: %v", err)
-		}
+		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", "ERR-oauth-07, unsupported grant type: %v", err)
 		return
 	}
 
-	if ru != "" {
-		w.Header().Set("Location", ru)
+	//remove that we are logged in, only when present
+	cookie, err := r.Cookie(setCookie().Name)
+	if err == nil && cookie.MaxAge > 0 {
+		http.SetCookie(w, removeCookie())
+	}
+
+	if redirectUri != "" {
+		w.Header().Set("Location", redirectUri)
 		w.WriteHeader(http.StatusSeeOther)
 	} else {
 		w.WriteHeader(http.StatusOK)

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Router, Route, navigate, link } from "svelte-routing";
-  import { user, route, loginFailed, error } from "../ts/mainStore";
-  import { removeSession } from "../ts/services";
+  import { user, route, loginFailed, error, token } from "../ts/mainStore";
+  import {hasAccessToken, removeSession} from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { faHome } from "@fortawesome/free-solid-svg-icons";
@@ -43,6 +43,9 @@
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
+  import Header from "../components/Header.svelte";
+  import Footer from "../components/Footer.svelte";
+  import EmptyUser from "../routes/EmptyUser.svelte";
 
   $route = globalHistory.location;
   globalHistory.listen((history) => {
@@ -50,14 +53,27 @@
   });
 
   export let urlOriginal;
+  export let showEmptyUser;
+
   let loading = true;
+  let auth = false;
 
   function logout() {
     removeSession();
     navigate("/login");
   }
 
+  $:{
+    if($token) {
+      auth = true;
+    }
+  }
+
   onMount(async () => {
+    const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth='));
+    if(authCookie || $token || hasAccessToken()) {
+      auth = true;
+    }
     try {
       loading = true;
       $user = await API.user.get();
@@ -143,81 +159,24 @@
 </style>
 
 <div class="all">
-  <header>
-    <a href="/" use:link>
-      <img
-        class="hide-mda imgSmallLogo"
-        src="/images/favicon.svg"
-        alt="FlatFeeStack"
-      />
-      <img
-        class="hide-sx imgNormalLogo"
-        src="/images/ffs-logo.svg"
-        alt="FlatFeeStack"
-      />
-    </a>
-    <nav>
-      {#if $user.id}
-        <a href="/user/search" use:link
-          ><Fa icon={faHome} size="sm" class="icon" /></a
-        >
-        {#if $user.image}
-          <img class="image-org-sx" src={$user.image} alt="user profile img" />
-        {/if}
-        &nbsp;
-        {$user.email}
-        <form on:submit|preventDefault={logout}>
-          <button class="button3 center mx-2" type="submit">Sign out</button>
-        </form>
-      {:else}
-        <form on:submit|preventDefault={() => navigate("/login")}>
-          <button class="button3 center mx-2" type="submit">Login</button>
-        </form>
-        <form on:submit|preventDefault={() => navigate("/signup")}>
-          <button class="button1 center mx-2" type="submit">Sign Up</button>
-        </form>
-      {/if}
-      <button class="button4 center mx-2" on:click={() => navigate("/dao/home")}
-        >DAO</button
-      >
-    </nav>
-  </header>
 
-  {#if $error}<div class="bg-red p-2 parent err-container">
-      <div class="w-100">{@html $error}</div>
-      <div>
-        <button
-          class="close accessible-btn"
-          on:click|preventDefault={() => {
-            $error = null;
-          }}
-        >
-          ✕
-        </button>
-      </div>
-    </div>{/if}
+  <Header/>
 
   <main>
     <Modal>
       <Router url={urlOriginal}>
         <Route path="/confirm/reset/:email/:token" component={ConfirmForgot} />
         <Route path="/confirm/signup/:email/:token" component={ConfirmSignup} />
-        <Route
-          path="/confirm/git-email/:email/:token"
-          component={ForwardGitEmail}
-        />
-        <Route
-          path="/confirm/invite/:email/:emailToken/:inviteByEmail"
-          component={ConfirmInvite}
-        />
+        <Route path="/confirm/git-email/:email/:token" component={ForwardGitEmail}/>
+        <Route path="/confirm/invite/:email/:emailToken/:inviteByEmail" component={ConfirmInvite}/>
 
-        <Route path="/user/search" component={Search} />
-        <Route path="/user/payments" component={Payments} />
-        <Route path="/user/settings" component={Settings} />
-        <Route path="/user/income" component={Income} />
-        <Route path="/user/badges" component={Badges} />
-        <Route path="/user/admin" component={Admin} />
-        <Route path="/user/invitations" component={Invitations} />
+        <Route path="/user/search" component={auth ? Search:Landing} />
+        <Route path="/user/payments" component={auth ? Payments:Landing} />
+        <Route path="/user/settings" component={auth ? Settings:Landing} />
+        <Route path="/user/income" component={auth ? Income:Landing} />
+        <Route path="/user/badges" component={auth ? Badges:Landing} />
+        <Route path="/user/admin" component={auth ? Admin:Landing} />
+        <Route path="/user/invitations" component={auth ? Invitations:Landing} />
 
         <Route path="/dao/home" component={DAOHome} />
         <Route path="/dao/votes" component={DAOVotes} />
@@ -225,32 +184,28 @@
         <Route path="/dao/metamask" component={DAOMetamaskRequired} />
         <Route path="/dao/createProposal" component={DAOCreateProposal} />
         <Route path="/dao/castVotes/:blockNumber" component={DAOCastVotes} />
-        <Route
-          path="/dao/executeProposals/:blockNumber"
-          component={DAOExecuteProposals}
-        />
+        <Route path="/dao/executeProposals/:blockNumber" component={DAOExecuteProposals}/>
         <Route path="/dao/council" component={DAOCouncil} />
         <Route path="/dao/treasury" component={DAOTreasury} />
         <Route path="/dao/discussions" component={DAODiscussions} />
         <Route path="/dao/createDiscussion" component={DAOCreateDiscussion} />
         <Route path="/dao/discussion/:postId" component={DAOShowDiscussion} />
-        <Route
-          path="/dao/discussion/:postId/edit"
-          component={DAOEditDiscussion}
-        />
+        <Route path="/dao/discussion/:postId/edit" component={DAOEditDiscussion}/>
 
         <Route path="/differentChainId" component={DifferentChainId} />
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
-        <Route path="/" component={Landing} />
+        {#if showEmptyUser}
+          <Route path="/" component={EmptyUser} />
+        {:else}
+          <Route path="/" component={Landing} />
+        {/if}
         <Route path="*" component={CatchAll} />
       </Router>
     </Modal>
   </main>
 
-  <footer class="text-center">
-    We used the following <a href="/stats.html">dependencies</a>
-  </footer>
+<Footer/>
 </div>

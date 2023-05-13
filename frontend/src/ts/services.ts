@@ -107,9 +107,9 @@ export const removeToken = () => {
   loginFailed.set(true);
 };
 
-export const storeToken = (tok: Token) => {
-  const t = tok.access_token;
-  const r = tok.refresh_token;
+export const storeToken = (token1: Token) => {
+  const t = token1.access_token;
+  const r = token1.refresh_token;
   if (!t || !r) {
     loginFailed.set(true);
     throw "No token in the request";
@@ -118,6 +118,13 @@ export const storeToken = (tok: Token) => {
   token.set(t);
   localStorage.setItem("ffs-refresh", r);
 };
+
+export const hasAccessToken = () => {
+  if(localStorage.getItem("ffs-refresh")) {
+    return true;
+  }
+  return false;
+}
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
 /*export const parseJwt = (token) => {

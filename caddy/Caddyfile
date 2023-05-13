@@ -31,13 +31,6 @@
     }
   }
 
-  handle_path /ws/* {
-    reverse_proxy backend:9082 {
-      header_up Host {upstream_hostport}
-      header_up X-Real-IP {remote}
-    }
-  }
-
   handle_path /analyzer/* {
     reverse_proxy analyzer:9083 {
       header_up Host {upstream_hostport}

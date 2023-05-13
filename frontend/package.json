@@ -42,7 +42,7 @@
     "typescript": "^5.0.4",
     "vite": "^4.3.3",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-ssr": "^0.4.97"
+    "vite-plugin-ssr": "^0.4.123"
   },
   "dependencies": {
     "@ethersproject/providers": "^5.7.2",
