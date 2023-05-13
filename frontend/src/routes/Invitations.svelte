@@ -78,8 +78,7 @@
       await res1;
       await res2;
     } catch (e) {
-      $error =
-        "Duplicate email address. Can't invite the same address multiple times.";
+      $error = e;
     } finally {
       isAddInviteSubmitting = false;
     }

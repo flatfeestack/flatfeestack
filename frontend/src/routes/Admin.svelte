@@ -38,14 +38,18 @@
   };
 
   const handleWarp = async (hours: number) => {
-    const p1 = API.user.timeWarp(hours);
-    const p2 = API.authToken.timeWarp(hours);
-    const p3 = refresh();
+    try {
+      const p1 = API.user.timeWarp(hours);
+      const p2 = API.authToken.timeWarp(hours);
+      const p3 = refresh();
 
-    const res = await p2;
-    storeToken(res);
-    await p1;
-    await p3;
+      const res = await p2;
+      storeToken(res);
+      await p1;
+      await p3;
+    } catch (e) {
+      $error = e;
+    }
   };
 
   const payout = async () => {

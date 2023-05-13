@@ -17,11 +17,9 @@
       email = "";
       info =
         "Your email is on the way. To enable your account, click on the link in the email.";
-      console.log(res);
     } catch (e) {
       isSubmitting = false;
       error = "Something went wrong. Please try again.";
-      console.log(e);
     }
   }
 </script>
