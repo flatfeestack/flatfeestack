@@ -195,11 +195,11 @@ export const API = {
         .post(`users/me/contributions-summary`)
         .json<ContributionSummary[]>(),
     contributionsSummary2: (uuid: string) =>
-      backendToken
-        .post(`users/contributions-summary/${uuid}`)
+      backend
+        .get(`users/contributions-summary/${uuid}`)
         .json<ContributionSummary[]>(),
     summary: (uuid: string) =>
-      backendToken.post(`users/summary/${uuid}`).json<User>(),
+      backend.get(`users/summary/${uuid}`).json<User>(),
     requestPayout: (targetCurrency: "ETH" | "GAS" | "USD") =>
       backendToken
         .post(`users/me/request-payout/${targetCurrency}`)

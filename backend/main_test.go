@@ -3,6 +3,7 @@ package main
 import (
 	"backend/clients"
 	db "backend/db"
+	"github.com/go-jose/go-jose/v3/json"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -52,6 +53,26 @@ func teardown() {
 	}
 	clients.EmailNotifications = 0
 	clients.EmailNoNotifications = 0
+}
+
+func setupAnalysisTestServer(t *testing.T) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/analyze":
+			var request db.AnalysisRequest
+			err := json.NewDecoder(r.Body).Decode(&request)
+			require.Nil(t, err)
+
+			err = json.NewEncoder(w).Encode(clients.AnalysisResponse2{RequestId: request.Id})
+			require.Nil(t, err)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+
+	clients.InitAnalyzer(server.URL, "test", "test")
+
+	return server
 }
 
 func setupPayoutTestServer(t *testing.T) *httptest.Server {

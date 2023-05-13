@@ -3,14 +3,14 @@ apiVersion: 1
 datasources:
   - name: Postgres
     type: postgres
-    url: host.docker.internal:5432
-    user: grafanareader
+    url: {{ database.url }}
+    user: {{ database.user }}
     uid: 0YSE7REVz
     secureJsonData:
-      password: 'password'
+      password: '{{ database.password }}'
     jsonData:
       database: flatfeestack
-      sslmode: 'disable'
+      sslmode: 'require'
       maxIdleConns: 2
       connMaxLifetime: 14400
       postgresVersion: 1500

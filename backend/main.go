@@ -11,6 +11,11 @@ import (
 	"encoding/base32"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/dimiro1/banner"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -20,10 +25,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v74"
 	"golang.org/x/crypto/ed25519"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -268,8 +269,7 @@ func main() {
 	router.HandleFunc("/users/contrib-snd", jwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodPost)
-	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodPost)
+	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodGet)
 
 	//payment
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
@@ -286,7 +286,8 @@ func main() {
 	router.HandleFunc("/users/contrib-snd", jwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodPost)
+	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodGet)
+
 	//github
 	router.HandleFunc("/repos/search", jwtAuthUser(api.SearchRepoGitHub)).Methods(http.MethodGet)
 	//repo

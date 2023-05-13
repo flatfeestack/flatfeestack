@@ -1,0 +1,66 @@
+---
+- hosts: all
+  remote_user: root
+  become: yes
+  vars:
+    prometheus_targets:
+      - name: 'backend'
+        targets:
+          - 'jellyfish-app-jirmg.ondigitalocean.app'
+        metrics_path: '/backend/metrics'
+        labels:
+          hostname: "go-backend-server"
+          service: "backend"
+      - name: 'forum'
+        targets:
+          - 'jellyfish-app-jirmg.ondigitalocean.app'
+        metrics_path: '/forum/metrics'
+        labels:
+          hostname: "go-forum-server"
+          service: "forum"
+    database:
+      url: 'url'
+      user: 'grafanareader'
+      password: 'password'
+
+  tasks:
+
+    - name: Create Grafana data directory
+      become: yes
+      become_user: root
+      file:
+        path: /root/flatfeestack/.grafana_data
+        state: directory
+
+    - name: Set permissions for Grafana data directory
+      become: yes
+      become_user: root
+      file:
+        path: /root/flatfeestack/.grafana_data
+        state: directory
+        mode: '0777'
+
+    - name: Create Promethues data directory
+      become: yes
+      become_user: root
+      file:
+        path: /root/flatfeestack/.prometheus_data
+        state: directory
+
+    - name: Set permissions for Promethues data directory
+      become: yes
+      become_user: root
+      file:
+        path: /root/flatfeestack/.prometheus_data
+        state: directory
+        mode: '0777'
+
+    - name: Create Prometheus configuration file
+      template:
+        src: prometheus.yml.j2
+        dest: /root/flatfeestack/prometheus/prometheus.yml
+
+    - name: Create Postgres Configuration file
+      template:
+        src: postgres.yml.j2
+        dest: /root/flatfeestack/grafana/provisioning/datasources/postgres.yaml

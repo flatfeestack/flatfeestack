@@ -139,7 +139,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -147,7 +147,7 @@
             "uid": "14c03580"
           },
           "editorMode": "code",
-          "expr": "sum(http_response_time_seconds_sum) by (path) / sum(http_response_time_seconds_count) by (path)",
+          "expr": "sum(http_response_time_seconds_sum{job=\"$job\", path!=\"/metrics\"}) by (path) / sum(http_response_time_seconds_count{job=\"$job\", path!=\"/metrics\"}) by (path)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -166,7 +166,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "backend",
           "value": "backend"
         },
@@ -213,6 +213,6 @@
   "timezone": "",
   "title": "HTTP Dashboard",
   "uid": "n-8Wf2s4z",
-  "version": 6,
+  "version": 1,
   "weekStart": ""
 }

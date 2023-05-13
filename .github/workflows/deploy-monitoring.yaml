@@ -1,0 +1,70 @@
+name: Deploy Monitoring
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-monitoring.yaml"
+      - "monitoring/**"
+  workflow_dispatch:
+
+jobs:
+  deploy-monitoring:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: monitoring
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.DEPLOY_DROPLET_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.DEPLOY_DROPLET_KNOWN_HOST }}
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Install Docker
+        run: |
+          ansible-galaxy install geerlingguy.docker
+          ansible-playbook -i ${{ secrets.DROPLET_IP }}, ansible-docker.yaml
+
+      - name: Create .env files
+        run: |
+          cp grafana/.example.env grafana/.env
+          cp postgres-exporter/.example.env postgres-exporter/.env
+
+      - name: Edit grafana .env file
+        run: |
+          sed -i 's#%%ADMIN_USER%%#${{ secrets.GRAFANA_ADMIN_USER }}#g' grafana/.env
+          sed -i 's#%%ADMIN_PASSWORD%%#${{ secrets.GRAFANA_ADMIN_PW }}#g' grafana/.env
+
+      - name: Edit postgres-exporter .env file
+        run: |
+          sed -i 's#DATA_SOURCE_NAME=postgresql://postgres:password@host.docker.internal:5432/flatfeestack?sslmode=disable#DATA_SOURCE_NAME=${{ secrets.GRAFANA_POSTGRES_DATASOURCE }}#g' postgres-exporter/.env
+          cat postgres-exporter/.env
+
+      - name: Copy Files to Droplet
+        run: |
+          rsync -av -e "ssh" --rsync-path="sudo rsync" --relative grafana/ prometheus/ postgres-exporter/ caddy/ docker-compose.yml root@${{ secrets.DROPLET_IP }}:/root/flatfeestack/
+
+      - name: Adjust Ansible Vars
+        run: |
+          sed -i "s#'password'#'${{ secrets.POSTGRES_USER_GRAFANAREADER_PW }}'#g" ansible-grafana.yaml
+          sed -i "s#'url'#'${{ secrets.GRAFANA_POSTGRES_DB_HOST }}'#g" ansible-grafana.yaml
+          cat ansible-grafana.yaml
+
+      - name: Provision Grafana
+        run: |
+          ansible-playbook -i ${{ secrets.DROPLET_IP }}, ansible-grafana.yaml
+
+      - name: Deploy monitoring
+        run: |
+          ssh root@${{ secrets.DROPLET_IP }} "cd /root/flatfeestack && docker compose up --pull always -d --build"

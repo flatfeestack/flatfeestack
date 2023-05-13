@@ -1,0 +1,14 @@
+{
+    admin off
+    log {
+        output stdout
+        format json {
+            time_key time
+            time_format iso8601
+        }
+    }
+}
+
+metrics.flatfeestack.io {
+    reverse_proxy grafana:3000
+}
