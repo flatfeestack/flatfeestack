@@ -512,7 +512,7 @@ tbody tr:last-of-type {
 
 .image-org {
   height: 10rem;
-  width: fit-content;
+  width: max-content;
   margin: 0 1rem;
 }
 
