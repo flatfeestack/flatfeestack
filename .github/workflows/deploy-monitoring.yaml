@@ -67,4 +67,4 @@ jobs:
 
       - name: Deploy monitoring
         run: |
-          ssh root@${{ secrets.DROPLET_IP }} "cd /root/flatfeestack && docker compose up --pull always -d --build"
+          ssh root@${{ secrets.DROPLET_IP }} "cd /root/flatfeestack && docker compose up --pull always -d --build --force-recreate"

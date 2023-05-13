@@ -11,6 +11,20 @@
         labels:
           hostname: "go-backend-server"
           service: "backend"
+      - name: 'analyzer'
+        targets:
+          - 'jellyfish-app-jirmg.ondigitalocean.app'
+        metrics_path: '/analyzer/metrics'
+        labels:
+          hostname: "go-analyzer-server"
+          service: "analyzer"
+      - name: 'auth'
+        targets:
+          - 'jellyfish-app-jirmg.ondigitalocean.app'
+        metrics_path: '/auth/metrics'
+        labels:
+          hostname: "go-auth-server"
+          service: "auth"
       - name: 'forum'
         targets:
           - 'jellyfish-app-jirmg.ondigitalocean.app'
@@ -18,6 +32,13 @@
         labels:
           hostname: "go-forum-server"
           service: "forum"
+      - name: 'payout'
+        targets:
+          - 'jellyfish-app-jirmg.ondigitalocean.app'
+        metrics_path: '/payout/metrics'
+        labels:
+          hostname: "go-payout-server"
+          service: "payout"
     database:
       url: 'url'
       user: 'grafanareader'
