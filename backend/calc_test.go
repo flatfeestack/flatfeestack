@@ -497,7 +497,7 @@ func setupUsers(t *testing.T, userNames ...string) []*uuid.UUID {
 func setupRepos(t *testing.T, repoNames ...string) []*uuid.UUID {
 	var repos []*uuid.UUID
 	for _, v := range repoNames {
-		userId1, err := setupRepo(v)
+		userId1, err := db.SetupRepo(v)
 		assert.Nil(t, err)
 		repos = append(repos, userId1)
 	}
@@ -541,21 +541,4 @@ func setupUser(email string) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &u.Id, nil
-}
-
-func setupRepo(url string) (*uuid.UUID, error) {
-	r := db.Repo{
-		Id:          uuid.New(),
-		Url:         utils.StringPointer(url),
-		GitUrl:      utils.StringPointer(url),
-		Source:      utils.StringPointer("github"),
-		Name:        utils.StringPointer("name"),
-		Description: utils.StringPointer("desc"),
-		CreatedAt:   time.Time{},
-	}
-	err := db.InsertOrUpdateRepo(&r)
-	if err != nil {
-		return nil, err
-	}
-	return &r.Id, nil
 }
