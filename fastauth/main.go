@@ -15,12 +15,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/xlzd/gotp"
 	"golang.org/x/crypto/ed25519"
@@ -424,6 +425,15 @@ func serverRest(keepAlive bool) (*http.Server, <-chan bool, error) {
 	router.Use(func(next http.Handler) http.Handler {
 		return logRequestHandler(next)
 	})
+	registry := prom.CreateRegistry()
+	router.Path("/metrics").Handler(promhttp.HandlerFor(
+		registry,
+		promhttp.HandlerOpts{
+			Registry: registry,
+			// Opt into OpenMetrics to support exemplars.
+			EnableOpenMetrics: true,
+		},
+	))
 
 	if opts.UserEndpoints {
 		router.HandleFunc("/login", login).Methods(http.MethodPost)
