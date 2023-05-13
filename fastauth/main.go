@@ -425,6 +425,7 @@ func serverRest(keepAlive bool) (*http.Server, <-chan bool, error) {
 	router.Use(func(next http.Handler) http.Handler {
 		return logRequestHandler(next)
 	})
+	router.Use(prom.PrometheusMiddleware)
 	registry := prom.CreateRegistry()
 	router.Path("/metrics").Handler(promhttp.HandlerFor(
 		registry,

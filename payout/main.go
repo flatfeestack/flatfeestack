@@ -209,6 +209,7 @@ func main() {
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 
+	router.Use(prom.PrometheusMiddleware)
 	registry := prom.CreateRegistry()
 	router.Path("/metrics").Handler(promhttp.HandlerFor(
 		registry,
