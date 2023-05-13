@@ -123,6 +123,7 @@ func main() {
 
 	router := mux.NewRouter().StrictSlash(true)
 	registry := prom.CreateRegistry()
+	router.Use(prom.PrometheusMiddleware)
 	router.Path("/metrics").Handler(promhttp.HandlerFor(
 		registry,
 		promhttp.HandlerOpts{
