@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -120,6 +122,15 @@ func main() {
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
+	registry := prom.CreateRegistry()
+	router.Path("/metrics").Handler(promhttp.HandlerFor(
+		registry,
+		promhttp.HandlerOpts{
+			Registry: registry,
+			// Opt into OpenMetrics to support exemplars.
+			EnableOpenMetrics: true,
+		},
+	))
 	router.HandleFunc("/analyze", basicAuth(analyze)).Methods("POST")
 	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
