@@ -38,10 +38,15 @@ func TestHourlyRunner(t *testing.T) {
 		err := db.InsertAnalysisRequest(a, now)
 		require.Nil(t, err)
 
+		as, err := db.FindAllLatestAnalysisRequest(now)
+		require.Nil(t, err)
+		assert.Equal(t, 1, len(as))
+		assert.Equal(t, a.Id, as[0].Id)
+
 		err = hourlyRunner(now)
 		require.Nil(t, err)
 
-		as, err := db.FindAllLatestAnalysisRequest(now)
+		as, err = db.FindAllLatestAnalysisRequest(now.AddDate(0, 0, 2))
 		require.Nil(t, err)
 		assert.Equal(t, 1, len(as))
 		assert.NotEqual(t, a.Id, as[0].Id)

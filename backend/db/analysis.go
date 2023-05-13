@@ -36,7 +36,7 @@ func InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
 	defer closeAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(a.Id, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, now.Format("2006-02-01"))
+	res, err = stmt.Exec(a.Id, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, now.Format("2006-01-02"))
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func FindAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
                             RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
                             FROM analysis_request) AS x
                         WHERE dest_rank = 1 AND date_to <= $1
-                        ORDER BY git_url`, dateTo.Format("2006-02-01"))
+                        ORDER BY git_url`, dateTo.Format("2006-01-02"))
 
 	if err != nil {
 		return nil, err
