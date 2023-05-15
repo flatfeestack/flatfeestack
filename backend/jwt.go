@@ -1,19 +1,16 @@
 package main
 
 import (
-	db "backend/db"
+	"backend/db"
 	"backend/utils"
-	"fmt"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/flatfeestack/go-lib/auth"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 )
 
 func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, err := jwtAuth(r)
+		claims, err := auth.ValidateJwtInRequest(r, jwtKey)
 		if claims != nil && err != nil {
 			utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
 			return
@@ -34,7 +31,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 
 func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.UserDetail)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, err := jwtAuth(r)
+		claims, err := auth.ValidateJwtInRequest(r, jwtKey)
 		if claims != nil && err != nil {
 			utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
 			return
@@ -70,47 +67,4 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.User
 		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
 		next(w, r, user)
 	}
-}
-
-func jwtAuth(r *http.Request) (*jwt.Claims, error) {
-	authHeader := r.Header.Get("Authorization")
-	var bearerToken = ""
-	if authHeader == "" {
-		return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
-	}
-	split := strings.Split(authHeader, " ")
-	if len(split) != 2 {
-		return nil, fmt.Errorf("ERR-02, could not split token: %v", bearerToken)
-	}
-	bearerToken = split[1]
-
-	tok, err := jwt.ParseSigned(bearerToken)
-	if err != nil {
-		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
-	}
-
-	claims := &jwt.Claims{}
-
-	if tok.Headers[0].Algorithm == string(jose.RS256) {
-		err = tok.Claims(privRSA.Public(), claims)
-	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
-		err = tok.Claims(jwtKey, claims)
-	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
-		err = tok.Claims(privEdDSA.Public(), claims)
-	} else {
-		return nil, fmt.Errorf("ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("ERR-05, could not parse claims: err=%v for token=%v", err, bearerToken)
-	}
-
-	if claims.Expiry != nil && !claims.Expiry.Time().After(utils.TimeNow()) {
-		return claims, fmt.Errorf("ERR-06, unauthorized: %v", bearerToken)
-	}
-
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("ERR-07, no subject: %v", claims)
-	}
-	return claims, nil
 }
