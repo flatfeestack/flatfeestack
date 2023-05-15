@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"forum/globals"
-	"forum/types"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +13,7 @@ type DbUser struct {
 	Email  string
 	Name   JsonNullString
 	Role   string
-	Claims types.TokenClaims
+	Claims jwt.Claims
 }
 
 func FindUserByEmail(email string) (*DbUser, error) {

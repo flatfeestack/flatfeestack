@@ -6,14 +6,10 @@ import (
 	"forum/api"
 	database "forum/db"
 	"forum/globals"
-	"forum/types"
 	"forum/utils"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/flatfeestack/go-lib/auth"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
-	"time"
 )
 
 const (
@@ -50,7 +46,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		claims, err := jwtAuth(r)
+		claims, err := auth.ValidateJwtInRequest(r, globals.JwtKey)
 		if err != nil {
 			utils.WriteErrorf(w, http.StatusUnauthorized, "auth error: %v", err)
 			return
@@ -95,43 +91,4 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 	}
-}
-
-func jwtAuth(r *http.Request) (*types.TokenClaims, error) {
-	authHeader := r.Header.Get("Authorization")
-	var bearerToken = ""
-	if authHeader == "" {
-		return nil, fmt.Errorf("ERR-01, authorization header not set for %v", r.URL)
-	}
-	split := strings.Split(authHeader, " ")
-	if len(split) != 2 {
-		return nil, fmt.Errorf("ERR-02, could not split token: %v", bearerToken)
-	}
-	bearerToken = split[1]
-
-	tok, err := jwt.ParseSigned(bearerToken)
-	if err != nil {
-		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
-	}
-
-	claims := &types.TokenClaims{}
-
-	if tok.Headers[0].Algorithm == string(jose.HS256) {
-		err = tok.Claims(globals.JwtKey, claims)
-	} else {
-		return nil, fmt.Errorf("ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("ERR-05, could not parse claims: err=%v for token=%v", err, bearerToken)
-	}
-
-	if claims.Expiry != nil && !claims.Expiry.Time().After(time.Now().UTC()) {
-		return claims, fmt.Errorf("ERR-06, unauthorized: %v", bearerToken)
-	}
-
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("ERR-07, no subject: %v", claims)
-	}
-	return claims, nil
 }
