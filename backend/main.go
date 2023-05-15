@@ -5,7 +5,6 @@ import (
 	"backend/clients"
 	db2 "backend/db"
 	"backend/utils"
-	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base32"
 	"flag"
@@ -25,7 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v74"
-	"golang.org/x/crypto/ed25519"
 )
 
 const (
@@ -34,12 +32,10 @@ const (
 )
 
 var (
-	opts      *Opts
-	jwtKey    []byte
-	privRSA   *rsa.PrivateKey
-	privEdDSA *ed25519.PrivateKey
-	debug     bool
-	admins    []string
+	opts   *Opts
+	jwtKey []byte
+	debug  bool
+	admins []string
 )
 
 type Subsystem struct {
