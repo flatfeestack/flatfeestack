@@ -12,6 +12,7 @@ import (
 	"forum/utils"
 	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
 	"github.com/dimiro1/banner"
+	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -31,15 +32,15 @@ func init() {
 
 func NewOpts() *types.Opts {
 	o := &types.Opts{}
-	flag.StringVar(&o.Env, "env", utils.LookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", utils.LookupEnvInt("PORT", 9086), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", utils.LookupEnv("HS256", "test-seed"), "HS256 key")
-	flag.StringVar(&o.DBPath, "db-path", utils.LookupEnv("DB_PATH",
+	flag.StringVar(&o.Env, "env", env.LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&o.Port, "port", env.LookupEnvInt("PORT", 9086), "listening HTTP port")
+	flag.StringVar(&o.HS256, "hs256", env.LookupEnv("HS256", "test-seed"), "HS256 key")
+	flag.StringVar(&o.DBPath, "db-path", env.LookupEnv("DB_PATH",
 		"postgresql://postgres:password@localhost:5432/flatfeestack?sslmode=disable"), "DB path")
-	flag.StringVar(&o.DBDriver, "db-driver", utils.LookupEnv("DB_DRIVER",
+	flag.StringVar(&o.DBDriver, "db-driver", env.LookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
-	flag.StringVar(&o.DBScripts, "db-scripts", utils.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&o.Admins, "admins", utils.LookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&o.DBScripts, "db-scripts", env.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
+	flag.StringVar(&o.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
 
 	//set defaults, be explicit
 	if o.Env == "local" || o.Env == "dev" {
