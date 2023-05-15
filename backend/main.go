@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/dimiro1/banner"
+	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -82,44 +83,44 @@ func init() {
 func NewOpts() *Opts {
 	o := &Opts{}
 
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
+	flag.StringVar(&o.Env, "env", env.LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&o.Port, "port", env.LookupEnvInt("PORT",
 		9082), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
-	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", lookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
-	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", lookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
-	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", lookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
-	flag.StringVar(&o.DBPath, "db-path", lookupEnv("DB_PATH",
+	flag.StringVar(&o.HS256, "hs256", env.LookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&o.StripeAPISecretKey, "stripe-secret-api", env.LookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
+	flag.StringVar(&o.StripeAPIPublicKey, "stripe-public-api", env.LookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
+	flag.StringVar(&o.StripeWebhookSecretKey, "stripe-secret-webhook", env.LookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
+	flag.StringVar(&o.DBPath, "db-path", env.LookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
-	flag.StringVar(&o.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
+	flag.StringVar(&o.DBDriver, "db-driver", env.LookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
-	flag.StringVar(&o.DBScripts, "db-scripts", lookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
-	flag.StringVar(&o.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
-	flag.StringVar(&o.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
-	flag.StringVar(&o.EmailUrl, "email-url", lookupEnv("EMAIL_URL",
+	flag.StringVar(&o.DBScripts, "db-scripts", env.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
+	flag.StringVar(&o.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&o.EmailFrom, "email-from", env.LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&o.EmailFromName, "email-from-name", env.LookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
+	flag.StringVar(&o.EmailUrl, "email-url", env.LookupEnv("EMAIL_URL",
 		"http://localhost"), "Email service URL")
-	flag.StringVar(&o.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
-	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX",
+	flag.StringVar(&o.EmailToken, "email-token", env.LookupEnv("EMAIL_TOKEN"), "Email service token")
+	flag.StringVar(&o.EmailLinkPrefix, "email-prefix", env.LookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
-	flag.StringVar(&o.EmailMarketing, "email-marketing", lookupEnv("EMAIL_MARKETING",
+	flag.StringVar(&o.EmailMarketing, "email-marketing", env.LookupEnv("EMAIL_MARKETING",
 		"tom.marketing@bocek.ch"), "Email marketing email. Set the value to 'live' to send out real emails")
-	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", lookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
-	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", lookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
-	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", lookupEnv("NOWPAYMENTS_API_URL",
+	flag.StringVar(&o.NowpaymentsToken, "nowpayments-token", env.LookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
+	flag.StringVar(&o.NowpaymentsIpnKey, "nowpayments-ipn-key", env.LookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
+	flag.StringVar(&o.NowpaymentsApiUrl, "nowpayments-api-url", env.LookupEnv("NOWPAYMENTS_API_URL",
 		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
-	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", lookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
+	flag.StringVar(&o.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", env.LookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
 
-	flag.StringVar(&o.BackendUsername, "backend-username", lookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
-	flag.StringVar(&o.BackendPassword, "backend-password", lookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+	flag.StringVar(&o.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&o.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
 
-	flag.StringVar(&o.Analyzer.Url, "analyzer-url", lookupEnv("ANALYZER_URL"), "URL to analysis engine")
-	flag.StringVar(&o.Analyzer.Username, "analyzer-username", lookupEnv("ANALYZER_USERNAME"), "Username to analysis engine")
-	flag.StringVar(&o.Analyzer.Password, "analyzer-password", lookupEnv("ANALYZER_PASSWORD"), "Password to analysis engine")
+	flag.StringVar(&o.Analyzer.Url, "analyzer-url", env.LookupEnv("ANALYZER_URL"), "URL to analysis engine")
+	flag.StringVar(&o.Analyzer.Username, "analyzer-username", env.LookupEnv("ANALYZER_USERNAME"), "Username to analysis engine")
+	flag.StringVar(&o.Analyzer.Password, "analyzer-password", env.LookupEnv("ANALYZER_PASSWORD"), "Password to analysis engine")
 
-	flag.StringVar(&o.Payout.Url, "payout-url", lookupEnv("PAYOUT_URL"), "URL to payout")
-	flag.StringVar(&o.Payout.Username, "payout-username", lookupEnv("PAYOUT_USERNAME"), "Username to payout")
-	flag.StringVar(&o.Payout.Password, "payout-password", lookupEnv("PAYOUT_PASSWORD"), "Password to payout")
+	flag.StringVar(&o.Payout.Url, "payout-url", env.LookupEnv("PAYOUT_URL"), "URL to payout")
+	flag.StringVar(&o.Payout.Username, "payout-username", env.LookupEnv("PAYOUT_USERNAME"), "Username to payout")
+	flag.StringVar(&o.Payout.Password, "payout-password", env.LookupEnv("PAYOUT_PASSWORD"), "Password to payout")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -157,45 +158,6 @@ func NewOpts() *Opts {
 	}
 
 	return o
-}
-
-func lookupEnv(key string, defaultValues ...string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	for _, v := range defaultValues {
-		if v != "" {
-			err := os.Setenv(key, v)
-			if err != nil {
-				log.Printf("LookupEnvInt[%s]: %v", key, err)
-				return ""
-			}
-			return v
-		}
-	}
-	return ""
-}
-
-func lookupEnvInt(key string, defaultValues ...int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			log.Printf("LookupEnvInt[%s]: %v", key, err)
-			return 0
-		}
-		return v
-	}
-	for _, v := range defaultValues {
-		if v != 0 {
-			err := os.Setenv(key, strconv.Itoa(v))
-			if err != nil {
-				log.Printf("LookupEnvInt[%s]: %v", key, err)
-				return 0
-			}
-			return v
-		}
-	}
-	return 0
 }
 
 // @title To run locally, set these ENV vars=LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1;FAKETIME_NO_CACHE=1
