@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -160,48 +161,48 @@ func hash(s string) int64 {
 
 func NewOpts() *Opts {
 	opts := &Opts{}
-	flag.StringVar(&opts.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.StringVar(&opts.Dev, "dev", lookupEnv("DEV"), "Dev settings with initial secret")
-	flag.StringVar(&opts.Issuer, "issuer", lookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
-	flag.IntVar(&opts.Port, "port", lookupEnvInt("PORT",
+	flag.StringVar(&opts.Env, "env", env.LookupEnv("ENV"), "ENV variable")
+	flag.StringVar(&opts.Dev, "dev", env.LookupEnv("DEV"), "Dev settings with initial secret")
+	flag.StringVar(&opts.Issuer, "issuer", env.LookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
+	flag.IntVar(&opts.Port, "port", env.LookupEnvInt("PORT",
 		8080), "listening HTTP port")
-	flag.StringVar(&opts.DBPath, "db-path", lookupEnv("DB_PATH",
+	flag.StringVar(&opts.DBPath, "db-path", env.LookupEnv("DB_PATH",
 		"./fastauth.db"), "DB path")
-	flag.StringVar(&opts.DBDriver, "db-driver", lookupEnv("DB_DRIVER",
+	flag.StringVar(&opts.DBDriver, "db-driver", env.LookupEnv("DB_DRIVER",
 		"sqlite3"), "DB driver")
-	flag.StringVar(&opts.DBScripts, "db-scripts", lookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&opts.EmailFrom, "email-from", lookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
-	flag.StringVar(&opts.EmailFromName, "email-from-name", lookupEnv("EMAIL_FROM_NAME",
+	flag.StringVar(&opts.DBScripts, "db-scripts", env.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
+	flag.StringVar(&opts.EmailFrom, "email-from", env.LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&opts.EmailFromName, "email-from-name", env.LookupEnv("EMAIL_FROM_NAME",
 		"email@fastauth"), "Email from name, default is a empty string")
-	flag.StringVar(&opts.EmailUrl, "email-url", lookupEnv("EMAIL_URL"), "Email service URL")
-	flag.StringVar(&opts.EmailToken, "email-token", lookupEnv("EMAIL_TOKEN"), "Email service token")
-	flag.StringVar(&opts.EmailLinkPrefix, "email-prefix", lookupEnv("EMAIL_PREFIX"), "Email link prefix")
-	flag.StringVar(&opts.UrlSms, "sms-url", lookupEnv("SMS_URL"), "SMS service URL")
-	flag.StringVar(&opts.SmsToken, "sms-token", lookupEnv("SMS_TOKEN"), "SMS service token")
-	flag.StringVar(&opts.Audience, "audience", lookupEnv("AUDIENCE"), "Audience, default in dev is my-audience")
-	flag.IntVar(&opts.ExpireAccess, "expire-access", lookupEnvInt("EXPIRE_ACCESS",
+	flag.StringVar(&opts.EmailUrl, "email-url", env.LookupEnv("EMAIL_URL"), "Email service URL")
+	flag.StringVar(&opts.EmailToken, "email-token", env.LookupEnv("EMAIL_TOKEN"), "Email service token")
+	flag.StringVar(&opts.EmailLinkPrefix, "email-prefix", env.LookupEnv("EMAIL_PREFIX"), "Email link prefix")
+	flag.StringVar(&opts.UrlSms, "sms-url", env.LookupEnv("SMS_URL"), "SMS service URL")
+	flag.StringVar(&opts.SmsToken, "sms-token", env.LookupEnv("SMS_TOKEN"), "SMS service token")
+	flag.StringVar(&opts.Audience, "audience", env.LookupEnv("AUDIENCE"), "Audience, default in dev is my-audience")
+	flag.IntVar(&opts.ExpireAccess, "expire-access", env.LookupEnvInt("EXPIRE_ACCESS",
 		30*60), "Access token expiration in seconds, default 30min")
-	flag.IntVar(&opts.ExpireRefresh, "expire-refresh", lookupEnvInt("EXPIRE_REFRESH",
+	flag.IntVar(&opts.ExpireRefresh, "expire-refresh", env.LookupEnvInt("EXPIRE_REFRESH",
 		180*24*60*60), "Refresh token expiration in seconds, default 6month")
-	flag.IntVar(&opts.ExpireCode, "expire-code", lookupEnvInt("EXPIRE_CODE",
+	flag.IntVar(&opts.ExpireCode, "expire-code", env.LookupEnvInt("EXPIRE_CODE",
 		60), "Authtoken flow expiration in seconds, default 1min")
-	flag.StringVar(&opts.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
-	flag.StringVar(&opts.RS256, "rs256", lookupEnv("RS256"), "RS256 key")
-	flag.StringVar(&opts.EdDSA, "eddsa", lookupEnv("EDDSA"), "EdDSA key")
-	flag.StringVar(&opts.OAuthUser, "oauth-user", lookupEnv("OAUTH_USER"), "Basic auth username for the server meta data")
-	flag.StringVar(&opts.OAuthPass, "oauth-pass", lookupEnv("OAUTH_PASS"), "Basic auth password for the server meta data")
-	flag.BoolVar(&opts.ResetRefresh, "reset-refresh", lookupEnv("RESET_REFRESH") != "", "Reset refresh token when setting the token")
-	flag.StringVar(&opts.Users, "users", lookupEnv("USERS"), "add these initial users. E.g, -users tom@test.ch:pw123;test@test.ch:123pw")
-	flag.BoolVar(&opts.AdminEndpoints, "admin-endpoints", lookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.UserEndpoints, "user-endpoints", lookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.OauthEndpoints, "oauth-enpoints", lookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.DetailedError, "details", lookupEnv("DETAILS") != "", "Enable detailed errors")
-	flag.StringVar(&opts.Redirects, "redir", lookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
-	flag.BoolVar(&opts.PasswordFlow, "pwflow", lookupEnv("PWFLOW") != "", "enable password flow, default disabled")
-	flag.StringVar(&opts.Scope, "scope", lookupEnv("SCOPE"), "scope, default in dev is my-scope")
-	flag.StringVar(&opts.LogPath, "log", lookupEnv("LOG",
+	flag.StringVar(&opts.HS256, "hs256", env.LookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&opts.RS256, "rs256", env.LookupEnv("RS256"), "RS256 key")
+	flag.StringVar(&opts.EdDSA, "eddsa", env.LookupEnv("EDDSA"), "EdDSA key")
+	flag.StringVar(&opts.OAuthUser, "oauth-user", env.LookupEnv("OAUTH_USER"), "Basic auth username for the server meta data")
+	flag.StringVar(&opts.OAuthPass, "oauth-pass", env.LookupEnv("OAUTH_PASS"), "Basic auth password for the server meta data")
+	flag.BoolVar(&opts.ResetRefresh, "reset-refresh", env.LookupEnv("RESET_REFRESH") != "", "Reset refresh token when setting the token")
+	flag.StringVar(&opts.Users, "users", env.LookupEnv("USERS"), "add these initial users. E.g, -users tom@test.ch:pw123;test@test.ch:123pw")
+	flag.BoolVar(&opts.AdminEndpoints, "admin-endpoints", env.LookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&opts.UserEndpoints, "user-endpoints", env.LookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&opts.OauthEndpoints, "oauth-enpoints", env.LookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&opts.DetailedError, "details", env.LookupEnv("DETAILS") != "", "Enable detailed errors")
+	flag.StringVar(&opts.Redirects, "redir", env.LookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
+	flag.BoolVar(&opts.PasswordFlow, "pwflow", env.LookupEnv("PWFLOW") != "", "enable password flow, default disabled")
+	flag.StringVar(&opts.Scope, "scope", env.LookupEnv("SCOPE"), "scope, default in dev is my-scope")
+	flag.StringVar(&opts.LogPath, "log", env.LookupEnv("LOG",
 		os.TempDir()+"/ffs"), "Log directory, default is /tmp/ffs")
-	flag.StringVar(&opts.Admins, "admins", lookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&opts.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -352,35 +353,6 @@ func NewOpts() *Opts {
 	}
 
 	return opts
-}
-
-func lookupEnv(key string, defaultValues ...string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	for _, v := range defaultValues {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-func lookupEnvInt(key string, defaultValues ...int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			log.Printf("LookupEnvInt[%s]: %v", key, err)
-			return 0
-		}
-		return v
-	}
-	for _, v := range defaultValues {
-		if v != 0 {
-			return v
-		}
-	}
-	return 0
 }
 
 func checkEmailPassword(email string, password string) (*dbRes, string, error) {

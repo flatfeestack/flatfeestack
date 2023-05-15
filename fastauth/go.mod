@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/felixge/httpsnoop v1.0.3
-	github.com/flatfeestack/go-lib v0.0.1
+	github.com/flatfeestack/go-lib v0.0.2
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
