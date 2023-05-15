@@ -256,7 +256,7 @@ func addToMap(authorEmail string, authorName string, authorMap map[string]Contri
 
 // weightContributions calculates the scores of the contributors by weighting the collected metrics (repository)
 func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight, error) {
-	result := []FlatFeeWeight{}
+	var result []FlatFeeWeight
 	var totalAdd, totalDel float64
 	var totalMerge, totalCommit int
 

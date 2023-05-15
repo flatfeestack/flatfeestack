@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -83,6 +82,7 @@ func analyzeBackground(request AnalysisRequest) {
 
 // makeHttpStatusErr writes an http status error with a specific message
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
+	log.Error(errString)
 	w.WriteHeader(httpStatusError)
 }
 
@@ -117,16 +117,4 @@ func callbackToWebhook(body AnalysisCallback, url string) {
 
 	defer resp.Body.Close()
 	log.Debugf("return value: %v", resp.StatusCode)
-}
-
-func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
-	msg := fmt.Sprintf(format, a...)
-	log.Warnf(msg)
-	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Pragma", "no-cache")
-	w.WriteHeader(code)
-	if debug {
-		w.Write([]byte(`{"error":"` + msg + `"}`))
-	}
 }

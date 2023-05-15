@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	opts   *Opts
-	debug  bool
-	jwtKey []byte
+	opts  *Opts
+	debug bool
 )
 
 type Opts struct {
