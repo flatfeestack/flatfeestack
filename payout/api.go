@@ -153,14 +153,6 @@ func daoConfig(w http.ResponseWriter, _ *http.Request) {
 	writeJson(w, response)
 }
 
-//Generic helpers
-
-func bytes32(b []byte) [32]byte {
-	var ret [32]byte
-	copy(ret[:], b)
-	return ret
-}
-
 //Helpers to respond to the api calls
 
 func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {

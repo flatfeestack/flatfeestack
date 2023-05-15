@@ -34,13 +34,12 @@ var PayoutEthMetaData = &bind.MetaData{
 }
 
 type ClientETH struct {
-	c           *ethclient.Client
-	rpc         *rpc.Client
-	privateKey  *ecdsa.PrivateKey
-	publicKey   *ecdsa.PublicKey
-	fromAddress common.Address
-	chainId     *big.Int
-	contract    *bind.BoundContract
+	c          *ethclient.Client
+	rpc        *rpc.Client
+	privateKey *ecdsa.PrivateKey
+	publicKey  *ecdsa.PublicKey
+	chainId    *big.Int
+	contract   *bind.BoundContract
 }
 
 func getEthClient(ethUrl string, hexPrivateKey string, ethContract string) (*ClientETH, error) {
