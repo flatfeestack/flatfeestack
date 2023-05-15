@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -71,31 +72,31 @@ func NewOpts() *Opts {
 
 	o := &Opts{}
 
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT",
+	flag.StringVar(&o.Env, "env", env.LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&o.Port, "port", env.LookupEnvInt("PORT",
 		9084), "listening HTTP port")
-	flag.StringVar(&o.HS256, "hs256", lookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&o.HS256, "hs256", env.LookupEnv("HS256"), "HS256 key")
 
-	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", lookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
-	flag.StringVar(&o.Ethereum.Contract, "eth-contract", lookupEnv("ETH_CONTRACT"), "Ethereum contract address")
-	flag.StringVar(&o.Ethereum.Url, "eth-url", lookupEnv("ETH_URL"), "Ethereum URL")
+	flag.StringVar(&o.Ethereum.PrivateKey, "eth-private-key", env.LookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
+	flag.StringVar(&o.Ethereum.Contract, "eth-contract", env.LookupEnv("ETH_CONTRACT"), "Ethereum contract address")
+	flag.StringVar(&o.Ethereum.Url, "eth-url", env.LookupEnv("ETH_URL"), "Ethereum URL")
 
-	flag.StringVar(&o.Usdc.PrivateKey, "usdc-private-key", lookupEnv("USDC_PRIVATE_KEY"), "USDC private key")
-	flag.StringVar(&o.Usdc.Contract, "usdc-contract", lookupEnv("USDC_CONTRACT"), "USDC contract address")
-	flag.StringVar(&o.Usdc.Url, "usdc-url", lookupEnv("USDC_URL"), "USDC URL")
+	flag.StringVar(&o.Usdc.PrivateKey, "usdc-private-key", env.LookupEnv("USDC_PRIVATE_KEY"), "USDC private key")
+	flag.StringVar(&o.Usdc.Contract, "usdc-contract", env.LookupEnv("USDC_CONTRACT"), "USDC contract address")
+	flag.StringVar(&o.Usdc.Url, "usdc-url", env.LookupEnv("USDC_URL"), "USDC URL")
 
-	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", lookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
-	flag.StringVar(&o.NEO.Contract, "neo-contract", lookupEnv("NEO_CONTRACT"), "NEO contract address")
-	flag.StringVar(&o.NEO.Url, "neo-url", lookupEnv("NEO_URL"), "NEO URL")
+	flag.StringVar(&o.NEO.PrivateKey, "neo-private-key", env.LookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
+	flag.StringVar(&o.NEO.Contract, "neo-contract", env.LookupEnv("NEO_CONTRACT"), "NEO contract address")
+	flag.StringVar(&o.NEO.Url, "neo-url", env.LookupEnv("NEO_URL"), "NEO URL")
 
-	flag.StringVar(&o.Dao.Dao, "dao-dao-address", lookupEnv("DAO_DAO_CONTRACT"), "Address of the main DAO contract")
-	flag.StringVar(&o.Dao.Membership, "dao-membership-address", lookupEnv("DAO_MEMBERSHIP_CONTRACT"), "Address of the membership contract")
-	flag.StringVar(&o.Dao.Wallet, "dao-wallet-address", lookupEnv("DAO_WALLET_CONTRACT"), "Address of the Wallet contract")
+	flag.StringVar(&o.Dao.Dao, "dao-dao-address", env.LookupEnv("DAO_DAO_CONTRACT"), "Address of the main DAO contract")
+	flag.StringVar(&o.Dao.Membership, "dao-membership-address", env.LookupEnv("DAO_MEMBERSHIP_CONTRACT"), "Address of the membership contract")
+	flag.StringVar(&o.Dao.Wallet, "dao-wallet-address", env.LookupEnv("DAO_WALLET_CONTRACT"), "Address of the Wallet contract")
 
-	flag.StringVar(&o.PayoutUsername, "payout-username", lookupEnv("PAYOUT_USERNAME"), "Username to payout")
-	flag.StringVar(&o.PayoutPassword, "payout-password", lookupEnv("PAYOUT_PASSWORD"), "Password to payout")
+	flag.StringVar(&o.PayoutUsername, "payout-username", env.LookupEnv("PAYOUT_USERNAME"), "Username to payout")
+	flag.StringVar(&o.PayoutPassword, "payout-password", env.LookupEnv("PAYOUT_PASSWORD"), "Password to payout")
 
-	flag.StringVar(&o.Admins, "admins", lookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&o.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -127,35 +128,6 @@ func NewOpts() *Opts {
 	}
 
 	return o
-}
-
-func lookupEnv(key string, defaultValues ...string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	for _, v := range defaultValues {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-func lookupEnvInt(key string, defaultValues ...int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			log.Printf("LookupEnvInt[%s]: %v", key, err)
-			return 0
-		}
-		return v
-	}
-	for _, v := range defaultValues {
-		if v != 0 {
-			return v
-		}
-	}
-	return 0
 }
 
 func ethInit() *ClientETH {
