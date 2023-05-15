@@ -16,6 +16,8 @@ github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBd
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flatfeestack/go-lib v0.0.1 h1:Pz4bJHw34/vO6cYXpM2rgHYKFmER3Lt8gX7nY1cdQpk=
 github.com/flatfeestack/go-lib v0.0.1/go.mod h1:hmfGI3oEy06czmm4uoidyc5M4HKkm5Ky89pFOnVP6kc=
+github.com/flatfeestack/go-lib v0.0.2 h1:5q7Jl2m6NB/0N7VwFeR0JjWum1i/D5YAQEz5ZuQJY5U=
+github.com/flatfeestack/go-lib v0.0.2/go.mod h1:HsiPRp4MqAMKYt2bOGKd6ydWve4LCWdrGL4tknZ4aA4=
 github.com/go-jose/go-jose/v3 v3.0.0 h1:s6rrhirfEP/CGIoc6p+PZAeogN2SxKav6Wp7+dyMWVo=
 github.com/go-jose/go-jose/v3 v3.0.0/go.mod h1:RNkWWRld676jZEYoV3+XK8L2ZnNSvIsxFMht0mSX+u8=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
