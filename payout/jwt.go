@@ -7,11 +7,7 @@ import (
 	"strings"
 )
 
-type TokenClaims struct {
-	jwt.Claims
-}
-
-func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClaims)) func(http.ResponseWriter, *http.Request) {
+func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *jwt.Claims)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -31,7 +27,7 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 			return
 		}
 
-		claims := &TokenClaims{}
+		claims := &jwt.Claims{}
 
 		if tok.Headers[0].Algorithm == "HS256" {
 			err = tok.Claims(jwtKey, claims)
@@ -59,8 +55,8 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 	}
 }
 
-func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request, *TokenClaims) {
-	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
+func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request, *jwt.Claims) {
+	return func(w http.ResponseWriter, r *http.Request, claims *jwt.Claims) {
 		for _, email := range emails {
 			if claims.Subject == email {
 				log.Printf("Authenticated admin %s\n", email)
@@ -69,17 +65,5 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 			}
 		}
 		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
-	}
-}
-
-func jwtAuthServer(next func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request, *TokenClaims) {
-	return func(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-		if claims.Subject == "ffs-server" {
-			log.Printf("Authenticated server ffs-server")
-			next(w, r)
-			return
-		}
-
-		writeErr(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v", claims.Subject)
 	}
 }
