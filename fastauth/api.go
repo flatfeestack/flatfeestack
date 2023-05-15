@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -415,17 +414,17 @@ func login(w http.ResponseWriter, r *http.Request) {
 	var bodyCopy []byte
 	var err error
 	if r.Body != nil {
-		bodyCopy, err = ioutil.ReadAll(r.Body)
+		bodyCopy, err = io.ReadAll(r.Body)
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-login-01, cannot parse POST data %v", err)
 			return
 		}
 	}
 
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyCopy))
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyCopy))
 	err = json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyCopy))
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyCopy))
 		err = r.ParseForm()
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-login-01, cannot parse POST data %v", err)
@@ -815,7 +814,7 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-type")
 	var refreshToken string
 	var err error
-	if strings.Index(contentType, "application/json") >= 0 {
+	if strings.Contains(contentType, "application/json") {
 		refreshToken, err = paramJson("refresh_token", r)
 	} else {
 		refreshToken, err = param("refresh_token", r)

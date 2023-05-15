@@ -402,7 +402,7 @@ func checkEmailPassword(email string, password string) (*dbRes, string, error) {
 		return nil, "blocked", fmt.Errorf("ERR-checkEmail-04, key %v error: %v", email, err)
 	}
 
-	if bytes.Compare(calcPw, storedPw) != 0 {
+	if !bytes.Equal(calcPw, storedPw) {
 		err = incErrorCount(email)
 		if err != nil {
 			return nil, "blocked", fmt.Errorf("ERR-checkEmail-05, key %v error: %v", email, err)

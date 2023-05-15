@@ -1,10 +1,8 @@
 FROM golang:1.20-alpine AS base
 RUN apk update && apk add --update make gcc musl-dev
 WORKDIR /app
-COPY go.* cache ./
+COPY go.* ./
 RUN go mod download
-#here we build cache.go, as this takes ages to compile and does not change
-RUN go build && rm fastauth cache.go
 
 FROM base as builder
 COPY *.go *.sql login.html banner.txt ./

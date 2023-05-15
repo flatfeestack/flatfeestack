@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xlzd/gotp"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -59,7 +59,7 @@ func TestSignupWrongEmail(t *testing.T) {
 	resp := doSignup("tomtest.ch", "testtest")
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	bodyString := string(bodyBytes)
 	assert.True(t, strings.Index(bodyString, "ERR-signup-02") > 0)
 
@@ -85,7 +85,7 @@ func TestSignupTwiceNotWorking(t *testing.T) {
 	resp = doConfirm("tom@test.ch", token)
 	resp = doSignup("tom@test.ch", "testtest")
 
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	bodyString := string(bodyBytes)
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -134,12 +134,12 @@ func TestLoginFalse(t *testing.T) {
 	assert.Equal(t, http.StatusSeeOther, resp.StatusCode)
 
 	resp = doLogin("tom@test.ch", "testtest2", "", "0123456789012345678901234567890123456789012")
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.True(t, strings.Index(string(bodyBytes), "ERR-checkEmail-06, user tom@test.ch password mismatch") > 0)
 
 	resp = doLogin("tom@test.ch2", "testtest", "", "0123456789012345678901234567890123456789012")
-	bodyBytes, _ = ioutil.ReadAll(resp.Body)
+	bodyBytes, _ = io.ReadAll(resp.Body)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.True(t, strings.Index(string(bodyBytes), "ERR-checkEmail-01, DB select, tom@test.ch2 err sql: no rows in result set") > 0)
 
@@ -210,7 +210,7 @@ func TestTOTP(t *testing.T) {
 
 	resp = doTOTP(oauth.AccessToken)
 	p := ProvisioningUri{}
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(bodyBytes, &p)
 
 	u, err := url.Parse(p.Uri)
@@ -268,7 +268,7 @@ func doTOTPConfirm(conf string, token string) *http.Response {
 func doAllTOTP(token string) *gotp.TOTP {
 	resp := doTOTP(token)
 	p := ProvisioningUri{}
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(bodyBytes, &p)
 
 	u, err := url.Parse(p.Uri)
