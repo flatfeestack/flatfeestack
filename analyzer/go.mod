@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/dimiro1/banner v1.1.0
-	github.com/flatfeestack/go-lib v0.0.1
+	github.com/flatfeestack/go-lib v0.0.2
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1

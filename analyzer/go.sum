@@ -11,8 +11,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dimiro1/banner v1.1.0 h1:TSfy+FsPIIGLzaMPOt52KrEed/omwFO1P15VA8PMUh0=
 github.com/dimiro1/banner v1.1.0/go.mod h1:tbL318TJiUaHxOUNN+jnlvFSgsh/RX7iJaQrGgOiTco=
-github.com/flatfeestack/go-lib v0.0.1 h1:Pz4bJHw34/vO6cYXpM2rgHYKFmER3Lt8gX7nY1cdQpk=
-github.com/flatfeestack/go-lib v0.0.1/go.mod h1:hmfGI3oEy06czmm4uoidyc5M4HKkm5Ky89pFOnVP6kc=
+github.com/flatfeestack/go-lib v0.0.2 h1:5q7Jl2m6NB/0N7VwFeR0JjWum1i/D5YAQEz5ZuQJY5U=
+github.com/flatfeestack/go-lib v0.0.2/go.mod h1:HsiPRp4MqAMKYt2bOGKd6ydWve4LCWdrGL4tknZ4aA4=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.5/go.mod h1:6O5/vntMXwX2lRkT1hjjk0nAC1IDOTvTlVgjlRvqsdk=
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=

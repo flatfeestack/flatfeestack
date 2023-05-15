@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -45,16 +46,16 @@ func NewOpts() *Opts {
 
 	o := &Opts{}
 
-	flag.StringVar(&o.Env, "env", lookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", lookupEnvInt("PORT", 9083), "listening HTTP port")
-	flag.StringVar(&o.GitBasePath, "git-base", lookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
+	flag.StringVar(&o.Env, "env", env.LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&o.Port, "port", env.LookupEnvInt("PORT", 9083), "listening HTTP port")
+	flag.StringVar(&o.GitBasePath, "git-base", env.LookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
 
-	flag.StringVar(&o.AnalyzerUsername, "analyzer-username", lookupEnv("ANALYZER_USERNAME"), "Username for accessing API")
-	flag.StringVar(&o.AnalyzerPassword, "analyzer-password", lookupEnv("ANALYZER_PASSWORD"), "Password for accessing API")
+	flag.StringVar(&o.AnalyzerUsername, "analyzer-username", env.LookupEnv("ANALYZER_USERNAME"), "Username for accessing API")
+	flag.StringVar(&o.AnalyzerPassword, "analyzer-password", env.LookupEnv("ANALYZER_PASSWORD"), "Password for accessing API")
 
-	flag.StringVar(&o.BackendCallbackUrl, "callback", lookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
-	flag.StringVar(&o.BackendUsername, "backend-username", lookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
-	flag.StringVar(&o.BackendPassword, "backend-password", lookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+	flag.StringVar(&o.BackendCallbackUrl, "callback", env.LookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
+	flag.StringVar(&o.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&o.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -71,37 +72,6 @@ func NewOpts() *Opts {
 	}
 
 	return o
-}
-
-func lookupEnv(key string, defaultValues ...string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	for _, v := range defaultValues {
-		if v != "" {
-			os.Setenv(key, v)
-			return v
-		}
-	}
-	return ""
-}
-
-func lookupEnvInt(key string, defaultValues ...int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		v, err := strconv.Atoi(val)
-		if err != nil {
-			log.Printf("LookupEnvInt[%s]: %v", key, err)
-			return 0
-		}
-		return v
-	}
-	for _, v := range defaultValues {
-		if v != 0 {
-			os.Setenv(key, strconv.Itoa(v))
-			return v
-		}
-	}
-	return 0
 }
 
 func main() {
