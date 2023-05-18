@@ -14,7 +14,7 @@ COPY *.go banner.txt ./
 RUN ls -all
 RUN go build
 
-FROM alpine:3.17
+FROM alpine:3.18
 RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
 WORKDIR /app
 COPY --from=builder /app/forum /app/db/init.sql /app/banner.txt ./
