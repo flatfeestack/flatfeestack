@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"payout/metrics"
 	"strconv"
 	"strings"
 	"time"
@@ -132,10 +133,10 @@ func NewOpts() *Opts {
 
 func ethInit() *ClientETH {
 	now := time.Now()
-	ethClient, err := getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Contract)
+	ethClient, err := getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey)
 	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
 		time.Sleep(time.Second)
-		ethClient, err = getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey, opts.Ethereum.Contract)
+		ethClient, err = getEthClient(opts.Ethereum.Url, opts.Ethereum.PrivateKey)
 	}
 	if err != nil {
 		log.Fatal("Could not initialize ETH network", err)
@@ -183,6 +184,10 @@ func main() {
 
 	router.Use(prom.PrometheusMiddleware)
 	registry := prom.CreateRegistry()
+
+	metrics.InitMetricsGauges(registry)
+	metrics.InitMetricsCron(ethClient.c, opts.Usdc.Contract, opts.Ethereum.Contract)
+
 	router.Path("/metrics").Handler(promhttp.HandlerFor(
 		registry,
 		promhttp.HandlerOpts{

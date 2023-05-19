@@ -5,7 +5,11 @@ COPY go.* ./
 RUN go mod download
 
 FROM base as builder
+
+COPY contracts/ ./contracts/
+COPY metrics/ ./metrics/
 COPY *.go banner.txt PayoutNeo.nef PayoutNeo.manifest.json ./
+
 RUN go build
 
 FROM alpine:3.18
