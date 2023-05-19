@@ -2,6 +2,7 @@ export const PayoutEthABI = [
   "event Initialized(uint8 version)",
   "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)",
   "function getClaimableAmount(bytes32 userId, uint256 totalPayOut) view returns (uint256)",
+  "function getContractBalance() view returns (uint256)",
   "function getPayedOut(bytes32 userId) view returns (uint256)",
   "function initialize()",
   "function owner() view returns (address)",

@@ -20,6 +20,15 @@ describe("PayoutEth", () => {
     return { owner, payoutEth: payoutEth, developer };
   }
 
+  describe("getContractBalance", () => {
+    it("returns current contract balance", async () => {
+      const { payoutEth, owner } = await deployFixture();
+      expect(await payoutEth.connect(owner).getContractBalance()).to.eq(
+        ethers.utils.parseEther("1.0")
+      );
+    });
+  });
+
   describe("withdraw", () => {
     it("throws error when requesting 0 amount", async () => {
       const { payoutEth, developer } = await deployFixture();

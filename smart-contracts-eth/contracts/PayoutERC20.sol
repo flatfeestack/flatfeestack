@@ -15,7 +15,7 @@ contract PayoutERC20 is PayoutBase {
         payoutInit(_symbol);
     }
 
-    function getContractBalance() public view onlyOwner returns (uint) {
+    function getContractBalance() public view override returns (uint) {
         return token.balanceOf(address(this));
     }
 

@@ -10,6 +10,10 @@ contract PayoutEth is PayoutBase {
 
     receive() external payable {}
 
+    function getContractBalance() public view override returns (uint) {
+        return address(this).balance;
+    }
+
     /**
      * @dev Send back from contract in case something is wrong. This should rarely happen
      */

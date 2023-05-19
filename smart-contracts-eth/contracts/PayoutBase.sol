@@ -27,6 +27,8 @@ abstract contract PayoutBase is Initializable, OwnableUpgradeable {
         uint256 amount
     ) external virtual;
 
+    function getContractBalance() public view virtual returns (uint);
+
     /**
      * @dev Gets the tea for the provided address.
      */
