@@ -72,9 +72,11 @@ const authToken = ky.create({
     afterResponse: [
       async (request: Request, options: any, response: Response) => {
         refreshToken(request, options, response);
-        const body = await response.json();
-        if (body.error) {
-          throw new Error(body.error);
+        if (response.status !== 200) {
+          const body = await response.json();
+          if (body.error) {
+            throw new Error(body.error);
+          }
         }
       },
     ],
@@ -90,9 +92,11 @@ const backendToken = ky.create({
     afterResponse: [
       async (request: Request, options: any, response: Response) => {
         refreshToken(request, options, response);
-        const body = await response.json();
-        if (body.error) {
-          throw new Error(body.error);
+        if (response.status !== 200) {
+          const body = await response.json();
+          if (body.error) {
+            throw new Error(body.error);
+          }
         }
       },
     ],
@@ -175,7 +179,7 @@ export const API = {
     addEmail: (email: string) =>
       backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>
-      backendToken.delete(`users/me/git-email/${encodeURIComponent(email)}`),
+      backendToken.delete(`users/me/git-email/${email}`),
     updatePaymentMethod: (method: string) =>
       backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
