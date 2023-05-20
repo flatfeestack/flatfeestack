@@ -3,7 +3,6 @@ package main
 import (
 	"backend/api"
 	"backend/clients"
-	db2 "backend/db"
 	"backend/utils"
 	"crypto/sha256"
 	"encoding/base32"
@@ -16,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/dimiro1/banner"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
@@ -183,7 +183,7 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	err = db2.InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
+	err = dbLib.InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}

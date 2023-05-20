@@ -6,24 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
-	"io"
 	"math/big"
-	"os"
-	"regexp"
-	"strings"
 	"time"
 )
 
 const (
 	Active = iota + 1
 	Inactive
-)
-
-var (
-	db *sql.DB
 )
 
 type RepoBalance struct {
@@ -100,104 +91,8 @@ func handleErrMustInsertOne(res sql.Result) error {
 	return nil
 }
 
-func handleErr(res sql.Result) (int64, error) {
-	nr, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	return nr, nil
-}
-
-func Close() error {
-	return db.Close()
-}
-
-func Exec(query string, args ...any) (sql.Result, error) {
-	return db.Exec(query, args)
-}
-
-// stringPointer connection with postgres db
-func InitDb(dbDriver string, dbPath string, dbScripts string) error {
-	// Open the connection
-	var err error
-	db, err = sql.Open(dbDriver, dbPath)
-	if err != nil {
-		return err
-	}
-
-	//we wait for ten seconds to connect
-	err = db.Ping()
-	now := time.Now()
-	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
-		time.Sleep(time.Second)
-		err = db.Ping()
-	}
-	if err != nil {
-		return err
-	}
-
-	files := strings.Split(dbScripts, ":")
-	err = RunSQL(files...)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Successfully connected!")
-	return nil
-}
-
-func RunSQL(files ...string) error {
-	for _, file := range files {
-		if file == "" {
-			continue
-		}
-		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
-		if _, err := os.Stat(file); err == nil {
-			fileBytes, err := os.ReadFile(file)
-			if err != nil {
-				return err
-			}
-
-			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
-			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
-			newBytes := re.ReplaceAll(fileBytes, nil)
-
-			requests := strings.Split(string(newBytes), ";")
-			for _, request := range requests {
-				request = strings.TrimSpace(request)
-				if len(request) > 0 {
-					_, err := db.Exec(request)
-					if err != nil {
-						return fmt.Errorf("[%v] %v", request, err)
-					}
-				}
-			}
-		} else {
-			log.Printf("ignoring file %v (%v)", file, err)
-		}
-	}
-	return nil
-}
-
-func closeAndLog(c io.Closer) {
-	err := c.Close()
-	if err != nil {
-		log.Printf("could not close: %v", err)
-	}
-}
-
 func stringPointer(s string) *string {
 	return &s
-}
-
-func extractGitUrls(repos []Repo) []string {
-	gitUrls := []string{}
-	for _, v := range repos {
-		if v.GitUrl != nil {
-			gitUrls = append(gitUrls, *v.GitUrl)
-		}
-	}
-	return gitUrls
 }
 
 // https://stackoverflow.com/a/33072822

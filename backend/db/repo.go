@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"time"
 )
@@ -19,13 +20,13 @@ type Repo struct {
 }
 
 func InsertOrUpdateRepo(repo *Repo) error {
-	stmt, err := db.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
+	stmt, err := dbLib.DB.Prepare(`INSERT INTO repo (id, url, git_url, name, description, score, source, created_at) 
 								   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 								   ON CONFLICT(git_url) DO UPDATE SET git_url=$3 RETURNING id`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var lastInsertId uuid.UUID
 	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
@@ -38,7 +39,7 @@ func InsertOrUpdateRepo(repo *Repo) error {
 
 func FindRepoById(repoId uuid.UUID) (*Repo, error) {
 	var r Repo
-	err := db.
+	err := dbLib.DB.
 		QueryRow("SELECT id, url, git_url, name, description, source FROM repo WHERE id=$1", repoId).
 		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
 
@@ -53,11 +54,11 @@ func FindRepoById(repoId uuid.UUID) (*Repo, error) {
 }
 
 func FindReposByName(name string) ([]Repo, error) {
-	rows, err := db.Query("SELECT id, url, git_url, name, description, source FROM repo WHERE name=$1", name)
+	rows, err := dbLib.DB.Query("SELECT id, url, git_url, name, description, source FROM repo WHERE name=$1", name)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 	return scanRepo(rows)
 }
 

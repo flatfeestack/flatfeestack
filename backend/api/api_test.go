@@ -3,6 +3,7 @@ package api
 import (
 	"backend/db"
 	"backend/utils"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -21,14 +22,14 @@ func TestMain(m *testing.M) {
 		}
 	}(file.Name())
 
-	err = db.InitDb("sqlite3", file.Name(), "")
+	err = dbLib.InitDb("sqlite3", file.Name(), "")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	code := m.Run()
 
-	err = db.Close()
+	err = dbLib.DB.Close()
 	if err != nil {
 		log.Warnf("Could not start resource: %s", err)
 	}
@@ -41,13 +42,13 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	err := db.RunSQL("../db/init.sql")
+	err := dbLib.RunSQL("../db/init.sql")
 	if err != nil {
 		log.Fatalf("Could not run init.sql scripts: %s", err)
 	}
 }
 func teardown() {
-	err := db.RunSQL("../db/delAll_test.sql")
+	err := dbLib.RunSQL("../db/delAll_test.sql")
 	if err != nil {
 		log.Fatalf("Could not run delAll_test.sql: %s", err)
 	}

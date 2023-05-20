@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -44,13 +45,13 @@ type PayTransferEvent struct {
 }
 
 func InsertPayInEvent(payInEvent PayInEvent) error {
-	stmt, err := db.Prepare(`INSERT INTO payment_in_event(id, external_id, user_id, balance,  
+	stmt, err := dbLib.DB.Prepare(`INSERT INTO payment_in_event(id, external_id, user_id, balance,  
                                                                 currency, status, seats, freq, created_at) 
                                    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO payment_in_event for %v statement event: %v", payInEvent.UserId, err)
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var res sql.Result
 	b := payInEvent.Balance.String()
@@ -66,11 +67,11 @@ func FindPayInUser(userId uuid.UUID) ([]PayInEvent, error) {
 	s := `SELECT balance, currency, status, seats, freq, created_at 
           FROM payment_in_event 
           WHERE user_id = $1`
-	rows, err := db.Query(s, userId)
+	rows, err := dbLib.DB.Query(s, userId)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 
 	payInEvents := []PayInEvent{}
 	for rows.Next() {
@@ -91,7 +92,7 @@ func FindPayInUser(userId uuid.UUID) ([]PayInEvent, error) {
 func FindPayInExternal(externalId uuid.UUID, status string) (*PayInEvent, error) {
 	var payInEvent PayInEvent
 	var b string
-	err := db.
+	err := dbLib.DB.
 		QueryRow(`SELECT user_id, balance, currency, status, seats, freq, created_at 
           FROM payment_in_event 
           WHERE external_id = $1 and status = $2`, externalId, status).
@@ -117,7 +118,7 @@ func FindPayInExternal(externalId uuid.UUID, status string) (*PayInEvent, error)
 }
 
 func FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.Int, error) {
-	rows, err := db.
+	rows, err := dbLib.DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
                FROM payment_in_event 
                WHERE user_id = $1 AND status = $2
@@ -126,7 +127,7 @@ func FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -154,7 +155,7 @@ func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64,
 	var seats int64
 	var freq int64
 	var c time.Time
-	err := db.
+	err := dbLib.DB.
 		QueryRow(`SELECT balance, seats, freq, created_at
                FROM payment_in_event 
                WHERE user_id = $1 AND currency = $2 AND status = $3
@@ -209,7 +210,7 @@ func PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
 
 func sumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
 	var c string
-	err := db.
+	err := dbLib.DB.
 		QueryRow(`SELECT COALESCE(SUM(balance), 0) AS c FROM daily_contribution WHERE id = ANY($1)`, pq.Array(contributionIds)).
 		Scan(&c)
 	switch err {
