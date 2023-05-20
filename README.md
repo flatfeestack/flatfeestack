@@ -131,6 +131,24 @@ Also export the contract addresses to the payout service.
 npm run hardhat:script -- --network localhost scripts/exportContractAddressesToPayout.ts
 ```
 
+### Payout contracts and payout service
+
+The payout service retrieves the current balance from the payout contracts to expose it to Prometheus. In case you update the contracts, you need to regenerate the contract code in the project.
+
+You need a tool called `abigen` to generate Go code from Solidity ABIs. Make sure you have `solc` and `protoc` installed globally before building the tool:
+
+```shell
+git clone https://github.com/ethereum/go-ethereum.git
+cd go-ethereum
+make devtools
+```
+
+Next, you need the ABI for the `PayoutBase` contract. After compiling the contracts with `npm run hardhat:compile`, within `smart-contracts-eth/artifacts/contracts/PayoutEth.sol/PayoutEth.json`, there is a section with `abi`. Copy only this part to a separate file (the example below copies it into the same directory named `PayoutBase.abi`). Then navigate to the `payout` service directory and execute:
+
+```shell
+abigen --abi ../smart-contracts-eth/artifacts/contracts/PayoutBase.sol/PayoutBase.abi --pkg contracts --type PayoutBase --out contracts/PayoutBase.go
+```
+
 ## NEO smart contract
 
 There is a version of the payout contract for NEO. To start development, you need Java 8 and Docker to run the tests.

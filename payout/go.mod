@@ -1,4 +1,4 @@
-module github.com/flatfeestack/payout
+module payout
 
 go 1.20
 
@@ -6,6 +6,7 @@ require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/flatfeestack/go-lib v0.0.2
+	github.com/go-co-op/gocron v1.27.1
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
@@ -42,6 +43,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect

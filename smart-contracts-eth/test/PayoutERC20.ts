@@ -26,6 +26,15 @@ describe("PayoutERC20", () => {
     return { payoutOwner, usdcToken, payoutERC20, developer };
   }
 
+  describe("getContractBalance", () => {
+    it("returns current contract balance", async () => {
+      const { payoutERC20, payoutOwner } = await deployFixture();
+      expect(await payoutERC20.connect(payoutOwner).getContractBalance()).to.eq(
+        100
+      );
+    });
+  });
+
   describe("withdraw", () => {
     it("throws error when requesting 0 amount", async () => {
       const { payoutERC20, developer } = await deployFixture();
