@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
@@ -53,7 +54,8 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	id := uuid.New()
 	err = db.InsertGitEmail(id, user.Id, body.Email, &addGitEmailToken, utils.TimeNow())
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save email: %v", err)
+		log.Errorf("Could not save email: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save email: Git Email already in use")
 		return
 	}
 
@@ -66,7 +68,8 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail)
 
 	err := db.DeleteGitEmail(user.Id, email)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Invalid email: %v", err)
+		log.Errorf("Could not remove email, Invalid email: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Could not remove email")
 		return
 	}
 }
