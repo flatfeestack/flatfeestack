@@ -8,13 +8,13 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"database/sql"
 	"encoding/base32"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/go-jose/go-jose/v3"
@@ -47,7 +47,6 @@ var (
 	privRSAKid   string
 	privEdDSA    *ed25519.PrivateKey
 	privEdDSAKid string
-	db           *sql.DB
 	tokenExp     time.Duration
 	refreshExp   time.Duration
 	codeExp      time.Duration
@@ -656,12 +655,12 @@ func main() {
 	}
 
 	//db: init the database
-	db, err = initDB()
+	err = dbLib.InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
-	setupDB()
+	defer dbLib.DB.Close()
+	addInitialUsers()
 	serverRest, doneChannelRest, err := serverRest(true)
 	if err != nil {
 		log.Fatal(err)
