@@ -174,3 +174,20 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.WriteJson(w, user2D)
 }
+
+func GetUserByEmail(w http.ResponseWriter, r *http.Request) {
+	m := mux.Vars(r)
+	email := m["email"]
+	if email == "" {
+		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter email not set: %v", m)
+		return
+	}
+
+	user, err := db.FindUserByEmail(email)
+	if err != nil {
+		utils.WriteErrorf(w, http.StatusNoContent, "Could not find user: %v", err)
+		return
+	}
+
+	utils.WriteJson(w, user)
+}

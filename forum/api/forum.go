@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	database "forum/db"
+	"forum/types"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"sync"
@@ -268,7 +269,7 @@ func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, 
 }
 
 func getCurrentUserId(ctx context.Context) uuid.UUID {
-	user, ok := ctx.Value("currentUser").(*database.DbUser)
+	user, ok := ctx.Value("currentUser").(*types.User)
 	if !ok {
 		log.Error("value is not a *database.DbUser")
 		return uuid.Nil
@@ -277,7 +278,7 @@ func getCurrentUserId(ctx context.Context) uuid.UUID {
 }
 
 func isCurrentUserAdmin(ctx context.Context) bool {
-	user, ok := ctx.Value("currentUser").(*database.DbUser)
+	user, ok := ctx.Value("currentUser").(*types.User)
 	if !ok {
 		log.Error("value is not a *database.DbUser")
 		return false

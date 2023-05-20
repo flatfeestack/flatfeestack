@@ -42,6 +42,10 @@ func NewOpts() *types.Opts {
 	flag.StringVar(&o.DBScripts, "db-scripts", env.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
 	flag.StringVar(&o.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
 
+	flag.StringVar(&o.BackendUrl, "backend-url", env.LookupEnv("BACKEND_URL"), "Backend URL")
+	flag.StringVar(&o.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&o.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+
 	//set defaults, be explicit
 	if o.Env == "local" || o.Env == "dev" {
 		log.SetLevel(log.DebugLevel)

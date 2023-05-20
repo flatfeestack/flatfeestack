@@ -9,6 +9,7 @@ import (
 	"encoding/base32"
 	"flag"
 	"fmt"
+	"github.com/stripe/stripe-go/v74"
 	"net/http"
 	"os"
 	"strconv"
@@ -23,7 +24,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	"github.com/stripe/stripe-go/v74"
 )
 
 const (
@@ -229,6 +229,7 @@ func main() {
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodGet)
+	router.HandleFunc("/users/by/{email}", basicAuth(api.GetUserByEmail)).Methods(http.MethodGet)
 
 	//payment
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)

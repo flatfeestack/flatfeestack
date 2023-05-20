@@ -426,6 +426,33 @@ paths:
                   $ref: '#/components/schemas/PublicUser'
         '400':
           description: Bad Request
+  /users/by/{email}:
+    get:
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
   /repos/search:
     get:
       tags:

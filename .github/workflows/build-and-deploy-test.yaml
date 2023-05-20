@@ -404,6 +404,8 @@ jobs:
 
       - name: Edit forum .env file
         run: |
+          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' forum/.env
+          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' forum/.env
           sed -i 's#ENV=local#ENV=dev#g' forum/.env
 
       - name: Edit analyzer .env file
