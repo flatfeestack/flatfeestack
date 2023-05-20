@@ -408,7 +408,7 @@ paths:
         - Users
       parameters:
         - name: id
-          in: query
+          in: path
           required: true
           schema:
             type: string
@@ -880,16 +880,17 @@ components:
           nullable: true
         seats:
           type: integer
-          nullable: int64
+          format: int64
+          nullable: true
         freq:
           type: integer
-          nullable: int64
+          format: int64
+          nullable: true
         role:
           type: string
           nullable: true
       required:
         - id
-        - paymentCycleOutId
         - email
         - createdAt
     Claims:
@@ -966,40 +967,39 @@ components:
         - score
         - createdAt
     PaymentEvent:
-      labels:
-        type: array
-        items:
-          type: object
-          properties:
-            id:
-              type: string
-              format: uuid
-            externalId:
-              type: string
-              format: uuid
-            userId:
-              type: string
-              format: uuid
-            balance:
-              type: integer
-              format: bigint
-            currency:
-              type: string
-            status:
-              type: string
-            seats:
-              type: integer
-              format: int64
-            freq:
-              type: integer
-              format: int64
-            createdAt:
-              type: string
-              format: date-time
-      required:
-        - id
-        - seats
-        - freq
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          externalId:
+            type: string
+            format: uuid
+          userId:
+            type: string
+            format: uuid
+          balance:
+            type: integer
+            format: bigint
+          currency:
+            type: string
+          status:
+            type: string
+          seats:
+            type: integer
+            format: int64
+          freq:
+            type: integer
+            format: int64
+          createdAt:
+            type: string
+            format: date-time
+        required:
+          - id
+          - seats
+          - freq
     UserStatus:
       type: object
       properties:
@@ -1017,11 +1017,12 @@ components:
     UserBalance:
       type: array
       items:
-        currency:
-          type: string
-        balance:
-          type: integer
-          format: bigint
+        type: object
+        properties:
+          currency:
+            type: string
+          balance:
+            type: integer
     Contribution:
       type: object
       properties:
