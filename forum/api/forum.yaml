@@ -41,6 +41,12 @@ paths:
           $ref: "#/components/responses/InternalServerError"
     get:
       summary: Get all posts
+      parameters:
+        - in: query
+          name: open
+          schema:
+            type: boolean
+          description: Only retrieve open or closed discussions
       responses:
         '200':
           description: OK

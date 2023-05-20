@@ -26,7 +26,7 @@ func (s *StrictServerImpl) GetMetrics(ctx context.Context, request GetMetricsReq
 }
 
 func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequestObject) (GetPostsResponseObject, error) {
-	posts, err := database.GetAllPosts()
+	posts, err := database.GetAllPosts(request.Params.Open)
 	if err != nil {
 		log.Error(err)
 		return GetPosts500Response{}, nil
