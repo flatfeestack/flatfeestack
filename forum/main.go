@@ -5,6 +5,7 @@ import (
 	"encoding/base32"
 	"flag"
 	"forum/api"
+	"forum/dao"
 	"forum/globals"
 	"forum/jwt"
 	"forum/types"
@@ -45,6 +46,9 @@ func NewOpts() *types.Opts {
 	flag.StringVar(&o.BackendUrl, "backend-url", env.LookupEnv("BACKEND_URL"), "Backend URL")
 	flag.StringVar(&o.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
 	flag.StringVar(&o.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+
+	flag.StringVar(&o.EthWsUrl, "eth-ws-url", env.LookupEnv("ETH_WS_URL"), "Websocket URL for ETH connection")
+	flag.StringVar(&o.DaoContractAddress, "dao-contract-address", env.LookupEnv("DAO_CONTRACT_ADDRESS"), "DAO contract address")
 
 	//set defaults, be explicit
 	if o.Env == "local" || o.Env == "dev" {
@@ -89,6 +93,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	dao.RunEventListener()
 
 	swagger, err := api.GetSwagger()
 	if err != nil {

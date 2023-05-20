@@ -5,13 +5,14 @@ RUN go mod download
 
 FROM base as builder
 COPY /api/*.go ./api/
+COPY /dao/*.go ./dao/
 COPY /db/*.go /db/*.sql ./db/
 COPY /globals/*.go ./globals/
 COPY /jwt/*.go ./jwt/
 COPY /types/*.go ./types/
 COPY /utils/*.go ./utils/
 COPY *.go banner.txt ./
-RUN ls -all
+
 RUN go build
 
 FROM alpine:3.18
