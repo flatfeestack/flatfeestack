@@ -520,12 +520,13 @@ func writeErr(w http.ResponseWriter, code int, error string, detailError string,
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 	w.WriteHeader(code)
-	if opts.DetailedError {
-		msg = `,"error_message":"` + msg + `"`
-	} else {
-		msg = ""
+
+	msgEnc, err := json.Marshal(msg)
+	if err != nil {
+		log.Errorf("error while trying to encode msg:  %v, err: %v", msg, err)
+		return
 	}
-	w.Write([]byte(`{"error":"` + error + `","error_uri":"https://host:port/error-descriptions/authorization-request/` + error + `/` + detailError + `"` + msg + `}`))
+	w.Write([]byte(`{"error":` + string(msgEnc) + `,"generic_error":"` + error + `","error_uri":"https://host:port/error-descriptions/authorization-request/` + error + `/` + detailError + `"}`))
 }
 
 func sendSMS(url string) error {
