@@ -2,7 +2,8 @@ package main
 
 import (
 	"backend/clients"
-	db "backend/db"
+	"backend/db"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/go-jose/go-jose/v3/json"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -20,14 +21,14 @@ func TestMain(m *testing.M) {
 	defer os.Remove(file.Name())
 	opts.DBPath = file.Name()
 
-	err = db.InitDb("sqlite3", file.Name(), "db/init.sql")
+	err = dbLib.InitDb("sqlite3", file.Name(), "db/init.sql")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	code := m.Run()
 
-	err = db.Close()
+	err = dbLib.DB.Close()
 	if err != nil {
 		log.Warnf("Could not start resource: %s", err)
 	}
@@ -40,14 +41,14 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	err := db.RunSQL("db/init.sql")
+	err := dbLib.RunSQL("db/init.sql")
 	if err != nil {
 		log.Fatalf("Could not run init.sql scripts: %s", err)
 	}
 }
 
 func teardown() {
-	err := db.RunSQL("db/delAll_test.sql")
+	err := dbLib.RunSQL("db/delAll_test.sql")
 	if err != nil {
 		log.Fatalf("Could not run delAll_test.sql: %s", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"backend/utils"
 	"database/sql"
 	"fmt"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"time"
 )
@@ -70,11 +71,11 @@ func InsertOrUpdateSponsor(event *SponsorEvent) error {
 
 	if event.EventType == Active {
 		//insert
-		stmt, err := db.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, sponsor_at) VALUES ($1, $2, $3, $4)")
+		stmt, err := dbLib.DB.Prepare("INSERT INTO sponsor_event (id, user_id, repo_id, sponsor_at) VALUES ($1, $2, $3, $4)")
 		if err != nil {
 			return fmt.Errorf("prepare INSERT INTO sponsor_event for %v statement event: %v", event, err)
 		}
-		defer closeAndLog(stmt)
+		defer dbLib.CloseAndLog(stmt)
 
 		var res sql.Result
 		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.SponsorAt)
@@ -84,11 +85,11 @@ func InsertOrUpdateSponsor(event *SponsorEvent) error {
 		return handleErrMustInsertOne(res)
 	} else if event.EventType == Inactive {
 		//update
-		stmt, err := db.Prepare("UPDATE sponsor_event SET un_sponsor_at=$1 WHERE id=$2 AND un_sponsor_at IS NULL")
+		stmt, err := dbLib.DB.Prepare("UPDATE sponsor_event SET un_sponsor_at=$1 WHERE id=$2 AND un_sponsor_at IS NULL")
 		if err != nil {
 			return fmt.Errorf("prepare UPDATE sponsor_event for %v statement failed: %v", id, err)
 		}
-		defer closeAndLog(stmt)
+		defer dbLib.CloseAndLog(stmt)
 
 		var res sql.Result
 		res, err = stmt.Exec(event.UnSponsorAt, id)
@@ -105,7 +106,7 @@ func FindLastEventSponsoredRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time
 	var sponsorAt *time.Time
 	var unSponsorAt *time.Time
 	var id *uuid.UUID
-	err := db.
+	err := dbLib.DB.
 		QueryRow(`SELECT id, sponsor_at, un_sponsor_at
 			      		FROM sponsor_event 
 						WHERE user_id=$1 AND repo_id=$2 
@@ -127,11 +128,11 @@ func FindSponsoredReposByUserId(userId uuid.UUID) ([]Repo, error) {
             FROM sponsor_event s
             INNER JOIN repo r ON s.repo_id=r.id
 			WHERE s.user_id=$1 AND s.un_sponsor_at IS NULL`
-	rows, err := db.Query(s, userId)
+	rows, err := dbLib.DB.Query(s, userId)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 	return scanRepo(rows)
 }
 
@@ -141,7 +142,7 @@ type SponsorResult struct {
 }
 
 func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, error) {
-	rows, err := db.Query(`		
+	rows, err := dbLib.DB.Query(`		
 			SELECT user_id, repo_id
 			FROM sponsor_event
 			WHERE sponsor_at < $1 AND (un_sponsor_at IS NULL OR un_sponsor_at >= $2)
@@ -150,7 +151,7 @@ func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, erro
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 
 	sponsorResults := []SponsorResult{}
 	var userIdOld uuid.UUID
