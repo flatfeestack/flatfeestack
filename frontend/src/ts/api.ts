@@ -274,7 +274,15 @@ export const API = {
     payoutConfig: () => payout.get(`config/payout`).json<PayoutConfig>(),
   },
   forum: {
-    getAllPosts: () => forum.get(`posts`).json<Post[]>(),
+    getAllPosts: (open?: boolean) => {
+      let url = `posts`;
+
+      if (open) {
+        url = `${url}?open=${open}`;
+      }
+
+      return forum.get(url).json<Post[]>();
+    },
     createPost: (postInput: PostInput) =>
       forumToken.post(`posts`, { json: postInput }).json<Post>(),
     getPost: (postId: PostId) => forum.get(`posts/${postId}`).json<Post>(),

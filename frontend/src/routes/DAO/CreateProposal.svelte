@@ -22,6 +22,8 @@
     checkUndefinedProvider,
     ensureSameChainId,
   } from "../../utils/ethHelpers";
+  import type { Post } from "../../types/forum";
+  import { API } from "../../ts/api";
 
   checkUndefinedProvider();
 
@@ -60,8 +62,12 @@
 
   let calls: Call[] = [];
   let description = "";
+  let openDiscussions: Post[] = [];
+  let discussionId: string = "";
 
   onMount(async () => {
+    $isSubmitting = true;
+
     if ($signer === null || $membershipContract === null) {
       moveToVotesPage();
       return;
@@ -70,6 +76,9 @@
     if ($membershipStatusValue != 3) {
       moveToVotesPage();
     }
+
+    openDiscussions = await API.forum.getAllPosts(true);
+    $isSubmitting = false;
   });
 
   $: {
@@ -83,6 +92,10 @@
 
   async function createProposal() {
     $isSubmitting = true;
+
+    if (discussionId !== "") {
+      description += `\r\n\r\nOriginal discussion: ${window.location.origin}/dao/discussion/${discussionId}`;
+    }
 
     let targets = [];
     let values = [];
@@ -138,6 +151,23 @@
         </option>
       {/each}
     </select>
+
+    {#if openDiscussions.length > 0}
+      <label for="discussionId">Discussion</label>
+      <select bind:value={discussionId} name="discussionId">
+        <option value={""} />
+        {#each openDiscussions as openDiscussion}
+          <option value={openDiscussion.id}>
+            {openDiscussion.title}
+          </option>
+        {/each}
+      </select>
+
+      <p class="font-size-small invalid italic">
+        A discussion will be created automatically if you choose to leave this
+        field empty.
+      </p>
+    {/if}
 
     <svelte:component this={proposalTypes[selected].component} bind:calls />
   </div>
