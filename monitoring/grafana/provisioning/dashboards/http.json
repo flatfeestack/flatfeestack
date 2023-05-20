@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 4,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -88,7 +88,7 @@
           "refId": "A"
         }
       ],
-      "title": "Panel Title",
+      "title": "Used Endpoints",
       "type": "piechart"
     },
     {
@@ -166,7 +166,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "backend",
           "value": "backend"
         },
@@ -213,6 +213,6 @@
   "timezone": "",
   "title": "HTTP Dashboard",
   "uid": "n-8Wf2s4z",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
