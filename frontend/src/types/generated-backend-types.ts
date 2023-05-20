@@ -322,7 +322,7 @@ export interface paths {
   "/users/{id}": {
     get: {
       parameters: {
-        query: {
+        path: {
           id: string;
         };
       };
@@ -717,7 +717,9 @@ export interface components {
       image?: string | null;
       paymentMethod?: string | null;
       last4?: string | null;
+      /** Format: int64 */
       seats?: number | null;
+      /** Format: int64 */
       freq?: number | null;
       role?: string | null;
     };
@@ -753,7 +755,24 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
     };
-    PaymentEvent: unknown;
+    PaymentEvent: ({
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        externalId?: string;
+        /** Format: uuid */
+        userId?: string;
+        /** Format: bigint */
+        balance?: number;
+        currency?: string;
+        status?: string;
+        /** Format: int64 */
+        seats: number;
+        /** Format: int64 */
+        freq: number;
+        /** Format: date-time */
+        createdAt?: string;
+      })[];
     UserStatus: {
       /** Format: uuid */
       userId?: string;
@@ -762,7 +781,10 @@ export interface components {
       name?: string | null;
       daysLeft?: number;
     };
-    UserBalance: (unknown)[];
+    UserBalance: ({
+        currency?: string;
+        balance?: number;
+      })[];
     Contribution: {
       repoName: string;
       repoUrl: string;
