@@ -3,8 +3,8 @@ POST http://{{host}}:{{port-auth}}/login
 Content-Type: application/json
 
 {
-  "email": "test@test.ch",
-  "password": "12345678"
+  "email": "jonas@flatfeestack.io",
+  "password": "passwordForJonas"
 }
 > {%
     client.global.set("token", JSON.parse(response.body).access_token);
