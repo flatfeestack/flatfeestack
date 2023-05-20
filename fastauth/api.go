@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"html/template"
 	"io"
 	"math"
@@ -761,7 +762,7 @@ func confirmSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 }
 
 func readiness(w http.ResponseWriter, _ *http.Request) {
-	err := db.Ping()
+	err := dbLib.DB.Ping()
 	if err != nil {
 		log.Printf(fmt.Sprintf("not ready: %v", err))
 		w.WriteHeader(http.StatusBadRequest)

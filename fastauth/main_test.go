@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ import (
 const (
 	testDBPath    = "/tmp/fa.db"
 	testDBDriver  = "sqlite3"
-	testDBScripts = "rmdb.sql:init.sql"
+	testDBScripts = "rmdbLib.DB.sql:init.sql"
 	testDomain    = "localhost"
 	testPort      = 8082
 	testUrl       = "http://" + testDomain + ":8082"
@@ -394,7 +395,7 @@ func token(email string) string {
 
 func getEmailToken(email string) (string, error) {
 	var emailToken string
-	err := db.QueryRow("SELECT email_token from auth where email = $1", email).Scan(&emailToken)
+	err := dbLib.DB.QueryRow("SELECT email_token from auth where email = $1", email).Scan(&emailToken)
 	if err != nil {
 		return "", err
 	}
@@ -403,7 +404,7 @@ func getEmailToken(email string) (string, error) {
 
 func getForgotEmailToken(email string) (string, error) {
 	var forgetEmailToken string
-	err := db.QueryRow("SELECT forget_email_token from auth where email = $1", email).Scan(&forgetEmailToken)
+	err := dbLib.DB.QueryRow("SELECT forget_email_token from auth where email = $1", email).Scan(&forgetEmailToken)
 	if err != nil {
 		return "", err
 	}
@@ -423,11 +424,11 @@ func mainTest(args ...string) func() {
 
 	opts = NewOpts()
 	var err error
-	db, err = initDB()
+	err = dbLib.InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	setupDB()
+	addInitialUsers()
 	serverRest, doneChannelRest, err := serverRest(false)
 	if err != nil {
 		log.Fatal(err)
@@ -440,7 +441,7 @@ func mainTest(args ...string) func() {
 
 		serverRest.Shutdown(context.Background())
 
-		err := db.Close()
+		err := dbLib.DB.Close()
 		if err != nil {
 			log.Printf("could not close DB %v", err)
 		}
