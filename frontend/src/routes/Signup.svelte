@@ -21,7 +21,7 @@
       info =
         "Your email is on the way. To enable your account, click on the link in the email.";
     } catch (e) {
-      error = "Something went wrong. Please try again. (" + e + ")";
+      error = "Something went wrong. Please try again.";
     } finally {
       isSubmittingSignup = false;
     }

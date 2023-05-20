@@ -13,7 +13,7 @@
       await confirmEmail(email, token);
       navigate("/user/settings");
     } catch (e) {
-      error = e;
+      error = "Something went wrong. Please try again.";
     }
   });
 </script>

@@ -21,7 +21,7 @@
       password = "";
     } catch (e) {
       isSubmitting = false;
-      error = e;
+      error = "Something went wrong. Please try again.";
     }
   }
 </script>
