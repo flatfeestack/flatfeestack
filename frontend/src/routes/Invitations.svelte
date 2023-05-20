@@ -54,7 +54,7 @@
     $isSubmitting = true;
     try {
       const res1 = await API.invite.invites();
-      invites = res1 === null ? [] : res1;
+      invites = res1 || [];
     } catch (e) {
       $error = e;
     } finally {
@@ -66,8 +66,8 @@
     try {
       isAddInviteSubmitting = true;
 
-      const res1 = API.invite.inviteAuth(inviteEmail);
-      const res2 = API.invite.invite(inviteEmail);
+      await API.invite.inviteAuth(inviteEmail);
+      await API.invite.invite(inviteEmail);
       const inv: Invitation = {
         email: $user.email,
         inviteEmail,
@@ -75,8 +75,7 @@
         confirmedAt: null,
       };
       invites = [...invites, inv];
-      await res1;
-      await res2;
+      inviteEmail = "";
     } catch (e) {
       $error = e;
     } finally {
@@ -85,11 +84,9 @@
   }
 
   onMount(async () => {
-    const pr1 = refreshInvite();
-    const pr2 = API.user.statusSponsoredUsers();
-    const res2 = await pr2;
-    statusSponsoredUsers = res2 === null ? [] : res2;
-    await pr1;
+    await refreshInvite();
+    const res2 = await API.user.statusSponsoredUsers();
+    statusSponsoredUsers = res2 || [];
   });
 </script>
 
