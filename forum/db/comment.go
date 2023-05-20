@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"forum/globals"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -25,12 +25,12 @@ type DbComment struct {
 func GetAllComments(postId uuid.UUID) ([]DbComment, error) {
 
 	var comments []DbComment
-	rows, err := globals.DB.Query(`SELECT id, author, content, created_at, updated_at, post_id FROM comment WHERE post_id = $1`, postId)
+	rows, err := dbLib.DB.Query(`SELECT id, author, content, created_at, updated_at, post_id FROM comment WHERE post_id = $1`, postId)
 	if err != nil {
 		return nil, err
 	}
 
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 
 	for rows.Next() {
 		var comment DbComment
@@ -44,11 +44,11 @@ func GetAllComments(postId uuid.UUID) ([]DbComment, error) {
 }
 
 func InsertComment(postId uuid.UUID, author uuid.UUID, content string) (*DbComment, error) {
-	stmt, err := globals.DB.Prepare(`INSERT INTO comment (author, content, post_id) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at`)
+	stmt, err := dbLib.DB.Prepare(`INSERT INTO comment (author, content, post_id) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var comment DbComment
 	err = stmt.QueryRow(author, content, postId).Scan(&comment.ID, &comment.CreatedAt, &comment.UpdatedAt)
@@ -64,11 +64,11 @@ func InsertComment(postId uuid.UUID, author uuid.UUID, content string) (*DbComme
 }
 
 func DeleteComment(commentId uuid.UUID) error {
-	stmt, err := globals.DB.Prepare(`DELETE FROM comment WHERE id = $1`)
+	stmt, err := dbLib.DB.Prepare(`DELETE FROM comment WHERE id = $1`)
 	if err != nil {
 		return err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	res, err := stmt.Exec(commentId)
 	nr, err := res.RowsAffected()
@@ -82,11 +82,11 @@ func DeleteComment(commentId uuid.UUID) error {
 }
 
 func UpdateComment(commentId uuid.UUID, content string) (*DbComment, error) {
-	stmt, err := globals.DB.Prepare(`UPDATE comment SET content = $1, updated_at = $2 WHERE id = $3 RETURNING id, author, created_at, updated_at, post_id`)
+	stmt, err := dbLib.DB.Prepare(`UPDATE comment SET content = $1, updated_at = $2 WHERE id = $3 RETURNING id, author, created_at, updated_at, post_id`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var comment DbComment
 	err = stmt.QueryRow(content, time.Now(), commentId).Scan(&comment.ID, &comment.Author, &comment.CreatedAt, &comment.UpdatedAt, &comment.PostID)
@@ -101,7 +101,7 @@ func UpdateComment(commentId uuid.UUID, content string) (*DbComment, error) {
 
 func CheckIfCommentExists(commentId uuid.UUID) (bool, error) {
 	var exists bool
-	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM comment WHERE id = $1)`, commentId).Scan(&exists)
+	err := dbLib.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM comment WHERE id = $1)`, commentId).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -110,7 +110,7 @@ func CheckIfCommentExists(commentId uuid.UUID) (bool, error) {
 
 func GetCommentAuthor(commentId uuid.UUID) uuid.UUID {
 	var author uuid.UUID
-	err := globals.DB.QueryRow(`SELECT author FROM comment WHERE id = $1`, commentId).Scan(&author)
+	err := dbLib.DB.QueryRow(`SELECT author FROM comment WHERE id = $1`, commentId).Scan(&author)
 	if err != nil {
 		return uuid.Nil
 	}

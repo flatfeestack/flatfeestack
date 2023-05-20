@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dimiro1/banner v1.1.0
-	github.com/flatfeestack/go-lib v0.0.2
+	github.com/flatfeestack/go-lib v0.0.3
 	github.com/getkin/kin-openapi v0.117.0
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0

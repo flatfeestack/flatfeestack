@@ -3,8 +3,8 @@ package api_test
 import (
 	"context"
 	"forum/api"
-	"forum/globals"
 	"github.com/DATA-DOG/go-sqlmock"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"testing"
 	"time"
 )
@@ -16,7 +16,7 @@ func TestGetPosts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock DB: %v", err)
 	}
-	globals.DB = db
+	dbLib.DB = db
 	defer db.Close()
 
 	mock.ExpectQuery(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`).WillReturnRows(

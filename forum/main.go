@@ -5,13 +5,13 @@ import (
 	"encoding/base32"
 	"flag"
 	"forum/api"
-	database "forum/db"
 	"forum/globals"
 	"forum/jwt"
 	"forum/types"
 	"forum/utils"
 	middleware "github.com/deepmap/oapi-codegen/pkg/chi-middleware"
 	"github.com/dimiro1/banner"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
@@ -85,7 +85,7 @@ func main() {
 		log.Printf("could not display banner...")
 	}
 
-	globals.DB, err = database.InitDb()
+	err = dbLib.InitDb(globals.OPTS.DBDriver, globals.OPTS.DBPath, globals.OPTS.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}
