@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"forum/globals"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -32,15 +32,15 @@ func GetAllPosts(open *bool) ([]DbPost, error) {
 	query := `SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`
 
 	if open != nil {
-		rows, err = globals.DB.Query(query+" WHERE open = $1", open)
+		rows, err = dbLib.DB.Query(query+" WHERE open = $1", open)
 	} else {
-		rows, err = globals.DB.Query(query)
+		rows, err = dbLib.DB.Query(query)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	defer closeAndLog(rows)
+	defer dbLib.CloseAndLog(rows)
 
 	for rows.Next() {
 		var post DbPost
@@ -54,11 +54,11 @@ func GetAllPosts(open *bool) ([]DbPost, error) {
 }
 
 func InsertPost(author uuid.UUID, title string, content string) (*DbPost, error) {
-	stmt, err := globals.DB.Prepare(`INSERT INTO post (author, content, title) VALUES ($1, $2, $3) RETURNING id, created_at, "open" ,updated_at`)
+	stmt, err := dbLib.DB.Prepare(`INSERT INTO post (author, content, title) VALUES ($1, $2, $3) RETURNING id, created_at, "open" ,updated_at`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var post DbPost
 	err = stmt.QueryRow(author, content, title).Scan(&post.Id, &post.CreatedAt, &post.Open, &post.UpdatedAt)
@@ -74,11 +74,11 @@ func InsertPost(author uuid.UUID, title string, content string) (*DbPost, error)
 }
 
 func DeletePost(id uuid.UUID) error {
-	stmt, err := globals.DB.Prepare(`DELETE FROM post WHERE id = $1`)
+	stmt, err := dbLib.DB.Prepare(`DELETE FROM post WHERE id = $1`)
 	if err != nil {
 		return err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	res, err := stmt.Exec(id)
 	nr, err := res.RowsAffected()
@@ -92,11 +92,11 @@ func DeletePost(id uuid.UUID) error {
 }
 
 func ClosePost(postId uuid.UUID) error {
-	stmt, err := globals.DB.Prepare(`UPDATE post SET "open" = false WHERE id = $1`)
+	stmt, err := dbLib.DB.Prepare(`UPDATE post SET "open" = false WHERE id = $1`)
 	if err != nil {
 		return err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	_, err = stmt.Exec(postId)
 	if err != nil {
@@ -107,11 +107,11 @@ func ClosePost(postId uuid.UUID) error {
 
 func GetPostById(id uuid.UUID) (*DbPost, error) {
 	var post DbPost
-	stmt, err := globals.DB.Prepare(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`)
+	stmt, err := dbLib.DB.Prepare(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	err = stmt.QueryRow(id).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
 	if err != nil {
@@ -121,11 +121,11 @@ func GetPostById(id uuid.UUID) (*DbPost, error) {
 }
 
 func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost, error) {
-	stmt, err := globals.DB.Prepare(`UPDATE post SET title=$1, content = $2, updated_at = $3 WHERE id = $4 RETURNING id, author, content, created_at, "open" ,title, updated_at`)
+	stmt, err := dbLib.DB.Prepare(`UPDATE post SET title=$1, content = $2, updated_at = $3 WHERE id = $4 RETURNING id, author, content, created_at, "open" ,title, updated_at`)
 	if err != nil {
 		return nil, err
 	}
-	defer closeAndLog(stmt)
+	defer dbLib.CloseAndLog(stmt)
 
 	var post DbPost
 	err = stmt.QueryRow(title, content, time.Now(), postId).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
@@ -137,7 +137,7 @@ func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost
 
 func GetPostAuthorId(postId uuid.UUID) uuid.UUID {
 	var authorId = uuid.Nil
-	err := globals.DB.QueryRow(`SELECT author FROM post WHERE id = $1`, postId).Scan(&authorId)
+	err := dbLib.DB.QueryRow(`SELECT author FROM post WHERE id = $1`, postId).Scan(&authorId)
 	if err != nil {
 		return uuid.Nil
 	}
@@ -146,7 +146,7 @@ func GetPostAuthorId(postId uuid.UUID) uuid.UUID {
 
 func CheckIfPostExists(postId uuid.UUID) (bool, error) {
 	var exists bool
-	err := globals.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM post WHERE id = $1)`, postId).Scan(&exists)
+	err := dbLib.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM post WHERE id = $1)`, postId).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -155,7 +155,7 @@ func CheckIfPostExists(postId uuid.UUID) (bool, error) {
 
 func CheckIfPostIsClosed(postId uuid.UUID) (bool, error) {
 	var closed bool
-	err := globals.DB.QueryRow(`SELECT "open" FROM post WHERE id = $1`, postId).Scan(&closed)
+	err := dbLib.DB.QueryRow(`SELECT "open" FROM post WHERE id = $1`, postId).Scan(&closed)
 	if err != nil {
 		return false, err
 	}
