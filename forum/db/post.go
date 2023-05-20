@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"forum/globals"
 	"github.com/google/uuid"
@@ -23,9 +24,18 @@ type DbPost struct {
 	UpdatedAt *time.Time
 }
 
-func GetAllPosts() ([]DbPost, error) {
+func GetAllPosts(open *bool) ([]DbPost, error) {
 	var posts []DbPost
-	rows, err := globals.DB.Query(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`)
+	var rows *sql.Rows
+	var err error
+
+	query := `SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`
+
+	if open != nil {
+		rows, err = globals.DB.Query(query+" WHERE open = $1", open)
+	} else {
+		rows, err = globals.DB.Query(query)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -75,6 +75,12 @@ type Unauthorized struct {
 	Error string `json:"error"`
 }
 
+// GetPostsParams defines parameters for GetPosts.
+type GetPostsParams struct {
+	// Open Only retrieve open or closed discussions
+	Open *bool `form:"open,omitempty" json:"open,omitempty"`
+}
+
 // PostPostsJSONRequestBody defines body for PostPosts for application/json ContentType.
 type PostPostsJSONRequestBody = PostInput
 
