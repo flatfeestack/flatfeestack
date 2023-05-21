@@ -14,13 +14,15 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 	var data WebhookCallback
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Could not decode Webhook body: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	reqId, err := uuid.Parse(data.RequestId)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "cannot parse request id: %v", err)
+		log.Errorf("cannot parse request id: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -28,7 +30,8 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 	for _, v := range data.Result {
 		err = db.InsertAnalysisResponse(reqId, v.Email, v.Names, v.Weight, utils.TimeNow())
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusInternalServerError, "insert error: %v", err)
+			log.Errorf("insert error: %v", err)
+			utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 			return
 		}
 		rowsAffected++
