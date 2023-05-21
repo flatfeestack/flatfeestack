@@ -40,6 +40,12 @@ type TotalUserBalance struct {
 	Balance  *big.Int `json:"balance"`
 }
 
+const (
+	UserBalancesError = "Oops something went wrong with retrieving user balances. Please try again."
+	PaymentError      = "Oops something went wrong with the payment. Please try again."
+	PayoutError       = "Oops something went wrong with the payout. Please try again."
+)
+
 func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("fake payment")
 	m := mux.Vars(r)
@@ -48,13 +54,15 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 
 	u, err := db.FindUserByEmail(n)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while finding user by email: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while parsing int: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	e := uuid.New()
@@ -72,13 +80,15 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 
 	err = db.InsertPayInEvent(payInEvent)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error with inserting pay in event: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = db.PaymentSuccess(e, big.NewInt(1))
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error with payment success: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
@@ -123,7 +133,8 @@ func StrategyDeductMax(userId uuid.UUID, balances map[string]*big.Int, subs map[
 func CancelSub(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	err := db.UpdateSeatsFreq(user.Id, user.Seats, 0)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not cancel subscription: %v", err)
+		log.Errorf("Could not cancel subscription: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while canceling the subscription. Please try again.")
 		return
 	}
 }
@@ -131,13 +142,15 @@ func CancelSub(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 func StatusSponsoredUsers(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	userStatus, err := db.FindSponsoredUserBalances(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Error while finding sponsored user balances: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(userStatus)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Could not encode json: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -148,19 +161,22 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 
 	currencyMetadata, ok := utils.SupportedCurrencies[targetCurrency]
 	if !ok {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Unsupported currency requested")
+		log.Errorf("Unsupported currency requested")
+		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with the selected currency. Please try again.")
 		return
 	}
 
 	ownContributionIds, err := db.FindOwnContributionIds(user.Id, targetCurrency)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Unable to retrieve contributions: %v", err)
+		log.Errorf("Error while trying to retrieve own contribution ids: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
 
 	totalEarnedAmount, err := db.SumTotalEarnedAmountForContributionIds(ownContributionIds)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Unable to retrieve already earned amount in target currency: %v", err)
+		log.Errorf("Unable to retrieve already earned amount in target currency: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
 
@@ -177,13 +193,15 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 
 	signature, err := clients.RequestPayout(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Error when generating signature: %v", err)
+		log.Errorf("Error when generating signature: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
 
 	err = db.MarkContributionAsClaimed(ownContributionIds)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Error when marking contributions as claimed: %v", err)
+		log.Errorf("Error when marking contributions as claimed: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	} else {
 		utils.WriteJson(w, signature)
@@ -193,13 +211,15 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	payInEvents, err := db.FindPayInUser(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Error while finding pay in user: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(payInEvents)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Could not encode json: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -207,20 +227,23 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		log.Errorf("Error while finding sum payments by currency: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
 	//either the user spent it on a repo that does not have any devs who can claim
 	mFut, err := db.FindSumFutureSponsors(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		log.Errorf("Error while finding sum future sponsors: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 	//or the user spent it on for a repo with a dev who can claim
 	mSub, err := db.FindSumDailySponsors(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "UserBalance: %v", err)
+		log.Errorf("Error while finding sum daily sponsors: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
@@ -244,20 +267,23 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//now sanity check if all the deducted mSub/mFut are set to zero
 	for currency, balance := range mSub {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Something is off with: %v", currency)
+			log.Errorf("Something is off with: %v", currency)
+			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
 	for currency, balance := range mFut {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Something is off with: %v", currency)
+			log.Errorf("Something is off with: %v", currency)
+			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
 
 	err = json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Could not encode json: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 

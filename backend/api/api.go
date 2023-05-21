@@ -16,7 +16,8 @@ const (
 )
 
 const (
-	GenericErrorMessage = "Oops something went wrong. Please try again."
+	GenericErrorMessage            = "Oops something went wrong. Please try again."
+	RepositoryNotFoundErrorMessage = "Oops something went wrong with retrieving the repositories. Please try again."
 )
 
 var matcher = language.NewMatcher([]language.Tag{
@@ -140,7 +141,8 @@ func Config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(Plans)
 	supportedCurrencies, err := json.Marshal(utils.SupportedCurrencies)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
+		log.Errorf("Error while writing json: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -156,12 +158,14 @@ func TimeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		log.Errorf("Parameter hours not set: %v", m)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		log.Errorf("Error while parsing hours to int: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 

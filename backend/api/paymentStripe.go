@@ -41,13 +41,15 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 		params := &stripe.CustomerParams{}
 		c, err := customer.New(params)
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			log.Errorf("Error while creating new customer: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		user.StripeId = &c.ID
 		err = db.UpdateStripe(user)
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
+			log.Errorf("Error while updating stripe: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
@@ -59,7 +61,8 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	}
 	intent, err := setupintent.New(params)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		log.Errorf("Error while creating setup intent: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -67,14 +70,16 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Could not encode json: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
 
 func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	if user.PaymentMethod == nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "No payment method defined for user: %v", user.Id)
+		log.Errorf("No payment method defined for user: %v", user.Id)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong, no payment method set. Please try again.")
 		return
 	}
 
@@ -123,7 +128,8 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Error while creating new Payment intent: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -132,7 +138,8 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 	db.UpdateClientSecret(user.Id, intent.ClientSecret)
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not encode json: %v", err)
+		log.Errorf("Could not encode json: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }

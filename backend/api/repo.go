@@ -32,8 +32,7 @@ type Dataset struct {
 }
 
 const (
-	SearchErrorMessage             = "Empty search. Please enter a search term and try again."
-	RepositoryNotFoundErrorMessage = "Oops something went wrong with finding the repositories. Please try again."
+	SearchErrorMessage = "Empty search. Please enter a search term and try again."
 )
 
 func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {

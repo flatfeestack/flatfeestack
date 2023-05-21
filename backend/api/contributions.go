@@ -6,14 +6,20 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+)
+
+const (
+	ContributionsError = "Oops something went wrong with retrieving contributions. Please try again."
 )
 
 func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, false)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not find contributions: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
 	utils.WriteJson(w, cs)
@@ -22,7 +28,8 @@ func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDeta
 func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, true)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not find contributions: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
 	utils.WriteJson(w, cs)
@@ -32,19 +39,22 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	u := m["uuid"]
 	if u == "" {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		log.Errorf("UUID Parameter not set: %v", m)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Problem with parsing UUID: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	user, err := db.FindUserById(uu)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not find user: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with retrieving the user. Please try again.")
 		return
 	}
 
@@ -54,7 +64,8 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not find sponsored repos by user: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
 
@@ -62,7 +73,8 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 	for _, v := range repos {
 		repoBalances, err := db.FindSumFutureBalanceByRepoId(v.Id)
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+			log.Errorf("Could not find sum of future balance by repo id: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 			return
 		}
 		rbs = append(rbs, db.RepoBalance{
@@ -78,24 +90,28 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 	var repoMap FakeRepoMapping
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode fakeContribution body: %v", err)
+		log.Errorf("Error while decoding body: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	monthStart, err := time.Parse("2006-01-02 15:04", repoMap.StartData)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while parsing start date: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	monthStop, err := time.Parse("2006-01-02 15:04", repoMap.EndData)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while parsing end date: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	repoMap2, err := db.FindReposByName(repoMap.Name)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while retrieving repos by name: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
 
@@ -114,14 +130,16 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 
 	err = db.InsertAnalysisRequest(a, utils.TimeNow())
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+		log.Errorf("Error while inserting analysis request: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	for _, v := range repoMap.Weights {
 		err = db.InsertAnalysisResponse(a.Id, v.Email, v.Names, v.Weight, utils.TimeNow())
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode Webhook body: %v", err)
+			log.Errorf("Error while inserting analysis response: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
