@@ -15,6 +15,10 @@ const (
 	maxTopContributors = 20
 )
 
+const (
+	GenericErrorMessage = "Oops something went wrong. Please try again."
+)
+
 var matcher = language.NewMatcher([]language.Tag{
 	language.English,
 	language.German,

@@ -11,8 +11,6 @@ import (
 	"net/http"
 )
 
-const GenericErrorMessage = "Oops something went wrong. Please try again."
-
 func GetUserById(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userId := params["id"]
