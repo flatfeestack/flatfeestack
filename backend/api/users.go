@@ -11,21 +11,26 @@ import (
 	"net/http"
 )
 
+const GenericErrorMessage = "Oops something went wrong. Please try again."
+
 func GetUserById(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userId := params["id"]
 	convertedUserId, err := uuid.Parse(userId)
 
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Invalid user ID: %v", err)
+		log.Errorf("Invalid user ID: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	}
 
 	user, err := db.FindPublicUserById(convertedUserId)
 
 	if user == nil {
-		utils.WriteErrorf(w, http.StatusNotFound, "User not found")
+		log.Errorf("User not found %s", userId)
+		utils.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 	} else if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not fetch user: %v", err)
+		log.Errorf("Could not fetch user: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 	} else {
 		utils.WriteJson(w, user)
 	}
@@ -42,7 +47,8 @@ func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	user.Last4 = nil
 	err := db.UpdateStripe(user)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could update user: %v", err)
+		log.Errorf("Could not delete method: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -57,14 +63,16 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		nil,
 	)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could update method: %v", err)
+		log.Errorf("Could not update method: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
 	user.Last4 = &pm.Card.Last4
 	err = db.UpdateStripe(user)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could update user: %v", err)
+		log.Errorf("Could not update stripe method: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -76,7 +84,8 @@ func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	a := params["name"]
 	err := db.UpdateUserName(user.Id, a)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		log.Errorf("Could not save name: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save username. Please try again.")
 		return
 	}
 }
@@ -84,7 +93,8 @@ func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 func ClearName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err := db.ClearUserName(user.Id)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		log.Errorf("Could not clear username: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not clear username. Please try again.")
 		return
 	}
 }
@@ -93,13 +103,15 @@ func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	var img ImageRequest
 	err := json.NewDecoder(r.Body).Decode(&img)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not decode json: %v", err)
+		log.Errorf("Could not decode json: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = db.UpdateUserImage(user.Id, img.Image)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save name: %v", err)
+		log.Errorf("Could not update user image: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not update user image. Please try again")
 		return
 	}
 }
@@ -107,7 +119,8 @@ func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 func Users(w http.ResponseWriter, _ *http.Request, _ string) {
 	u, err := db.FindAllEmails()
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could fetch users: %v", err)
+		log.Errorf("Could not fetch users: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Could not fetch users. Please try again.")
 		return
 	}
 	utils.WriteJson(w, u)
@@ -131,14 +144,16 @@ func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
 
 	err := db.InsertUser(&ud)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
+		log.Errorf("Could insert fake user: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Could not insert user. Please try again.")
 		return
 	}
 
 	id := uuid.New()
 	err = db.InsertGitEmail(id, uid, n, nil, utils.TimeNow())
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could write json: %v", err)
+		log.Errorf("Could not insert git email: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "There is a problem with your git email. Please try again.")
 		return
 	}
 }
@@ -147,19 +162,22 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	u := m["uuid"]
 	if u == "" {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter hours not set: %v", m)
+		log.Errorf("Parameter hours not set: %v", m)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter not set. Please try again.")
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not parse UUID: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	user, err := db.FindUserById(uu)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could statusSponsoredUsers: %v", err)
+		log.Errorf("Could not find user by id: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
