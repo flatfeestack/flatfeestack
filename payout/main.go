@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	"github.com/flatfeestack/go-lib/auth"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
@@ -179,6 +180,11 @@ func main() {
 	ethClient = ethInit()
 	neoClient = neoInit()
 
+	credentials := auth.Credentials{
+		Username: opts.PayoutUsername,
+		Password: opts.PayoutPassword,
+	}
+
 	// only internal routes, not accessible through caddy server
 	router := mux.NewRouter()
 
@@ -198,9 +204,9 @@ func main() {
 	))
 
 	//this can only be called by an internal server
-	router.HandleFunc("/admin/sign/eth", basicAuth(signEth)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/sign/neo", basicAuth(signNeo)).Methods(http.MethodPost)
-	router.HandleFunc("/admin/sign/usdc", basicAuth(signUsdc)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/eth", auth.BasicAuth(credentials, signEth)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/neo", auth.BasicAuth(credentials, signNeo)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/sign/usdc", auth.BasicAuth(credentials, signUsdc)).Methods(http.MethodPost)
 
 	//this can be called from frontend, but only the admin
 	if debug {
