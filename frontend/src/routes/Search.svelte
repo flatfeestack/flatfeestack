@@ -19,6 +19,8 @@
   let searchRepos: Repo[] = [];
   let isSearchSubmitting = false;
 
+  $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
+
   const handleSearch = async () => {
     try {
       isSearchSubmitting = true;
@@ -81,7 +83,7 @@
     <div class="p-2 m-2">
       <form class="flex" on:submit|preventDefault={handleSearch}>
         <input type="text" bind:value={search} />
-        <button class="button1" type="submit" disabled={isSearchSubmitting}
+        <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
           >Search{#if isSearchSubmitting}<Dots />{/if}</button
         >
       </form>
