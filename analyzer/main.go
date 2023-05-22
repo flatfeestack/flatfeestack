@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	"github.com/flatfeestack/go-lib/auth"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
 	"github.com/gorilla/mux"
@@ -89,6 +90,10 @@ func main() {
 	} else {
 		log.Printf("could not display banner...")
 	}
+	credentials := auth.Credentials{
+		Username: opts.AnalyzerUsername,
+		Password: opts.AnalyzerPassword,
+	}
 
 	router := mux.NewRouter().StrictSlash(true)
 	registry := prom.CreateRegistry()
@@ -101,7 +106,7 @@ func main() {
 			EnableOpenMetrics: true,
 		},
 	))
-	router.HandleFunc("/analyze", basicAuth(analyze)).Methods("POST")
+	router.HandleFunc("/analyze", auth.BasicAuth(credentials, analyze)).Methods("POST")
 	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
 }
