@@ -6,11 +6,16 @@
 
   let email = "";
   let password = "";
+  let confirmPassword = "";
   let error = "";
   let info = "";
   let isSubmittingSignup = false;
 
   async function handleSubmit() {
+    if (password !== confirmPassword) {
+      error = "Password and confirmation password do not match.";
+      return;
+    }
     try {
       error = "";
       isSubmittingSignup = true;
@@ -18,6 +23,7 @@
       removeToken();
       email = "";
       password = "";
+      confirmPassword = "";
       info =
         "Your email is on the way. To enable your account, click on the link in the email.";
     } catch (e) {
@@ -79,6 +85,16 @@
           id="password"
           minlength="8"
           bind:value={password}
+        />
+        <label for="confirmPassword" class="flex py-1">Confirm Password</label>
+        <input
+          required
+          size="100"
+          maxlength="100"
+          type="password"
+          id="confirmPassword"
+          minlength="8"
+          bind:value={confirmPassword}
         />
         <button class="button1 my-4" disabled={isSubmittingSignup} type="submit"
           >Sign up
