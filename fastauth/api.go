@@ -71,6 +71,12 @@ const (
 	KeySignup    = "signup"
 )
 
+const (
+	GenericErrorMessage             = "Oops something went wrong. Please try again."
+	CannotVerifyRefreshTokenMessage = "Cannot verify refresh token"
+	BasicAuthFailedMessage          = "Basic auth failed"
+)
+
 // this is an essential cookie to set if the user has once successfully logged in
 // with this we can determine which page to show
 func setCookie() *http.Cookie {
@@ -96,13 +102,15 @@ func confirmEmail(w http.ResponseWriter, r *http.Request) {
 
 	err := updateEmailToken(email, token)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-email-01, update email token for %v failed, token %v: %v", email, token, err)
+		log.Errorf("ERR-confirm-email-01, update email token for %v failed, token %v: %v", email, token, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Update Email Token failed. Please try again.")
 		return
 	}
 
 	result, err := findAuthByEmail(email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -119,7 +127,8 @@ func confirmEmail(w http.ResponseWriter, r *http.Request) {
 func writeOAuth(w http.ResponseWriter, result *dbRes) {
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := encodeTokens(result)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "cannot encode tokens %v", err)
+		log.Errorf("cannot encode tokens %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -131,7 +140,8 @@ func writeOAuth(w http.ResponseWriter, result *dbRes) {
 	}
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-08, cannot verify refresh token %v", err)
+		log.Errorf("ERR-oauth-08, cannot verify refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 		return
 	}
 	w.Write(oauthEnc)
@@ -141,7 +151,8 @@ func confirmEmailPost(w http.ResponseWriter, r *http.Request) {
 	var et EmailToken
 	err := json.NewDecoder(r.Body).Decode(&et)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-01, cannot parse JSON credentials %v", err)
+		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -149,13 +160,15 @@ func confirmEmailPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//the token can be only updated once. Otherwise, anyone with the link can always login. Thus, if the email
 		//leaks, the account is compromised. Thus, disallow this.
-		writeErr(w, http.StatusForbidden, "invalid_request", "blocked", "ERR-confirm-email-01, update email token for %v failed, token %v: %v", et.Email, et.EmailToken, err)
+		log.Errorf("ERR-confirm-email-01, update email token for %v failed, token %v: %v", et.Email, et.EmailToken, err)
+		writeErr(w, http.StatusForbidden, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	result, err := findAuthByEmail(et.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", et.Email, err)
+		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", et.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -170,7 +183,8 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	if r.Body != nil && r.Body != http.NoBody {
 		err := json.NewDecoder(r.Body).Decode(&params)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "cannot decode invite %v", err)
+			log.Errorf("cannot decode invite %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 	}
@@ -178,14 +192,16 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	err := validateEmail(email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "email in invite is wrong %v", err)
+		log.Errorf("email in invite is wrong %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Invalid email. Please check and try again.")
 		return
 	}
 
 	u, err := findAuthByEmail(email)
 
 	if err != nil && err != sql.ErrNoRows {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "find email %v", err)
+		log.Errorf("find email %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -208,13 +224,15 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	emailToken, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "cannot generate rnd token for %v, err %v", email, err)
+		log.Errorf("cannot generate rnd token for %v, err %v", email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	refreshToken, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "cannot generate rnd refresh token for %v, err %v", email, err)
+		log.Errorf("cannot generate rnd refresh token for %v, err %v", email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -269,24 +287,28 @@ func confirmInvite(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-01, cannot parse JSON credentials %v", err)
+		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	newPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-05, key %v error: %v", cred.Email, err)
+		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	err = updatePasswordInvite(cred.Email, cred.EmailToken, newPw)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-reset-email-07, update user failed: %v", err)
+		log.Errorf("ERR-confirm-reset-email-07, update user failed: %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Update user failed.")
 		return
 	}
 
 	result, err := findAuthByEmail(cred.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -297,38 +319,44 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-01, cannot parse JSON credentials %v", err)
+		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	err = validateEmail(cred.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-02, email is wrong %v", err)
+		log.Errorf("ERR-signup-02, email is wrong %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	err = validatePassword(cred.Password)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-03, password is wrong %v", err)
+		log.Errorf("ERR-signup-03, password is wrong %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	emailToken, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-04, RND %v err %v", cred.Email, err)
+		log.Errorf("ERR-signup-04, RND %v err %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	//https://security.stackexchange.com/questions/11221/how-big-should-salt-be
 	calcPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-05, key %v error: %v", cred.Email, err)
+		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	refreshToken, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-06, key %v error: %v", cred.Email, err)
+		log.Errorf("ERR-signup-06, key %v error: %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -340,7 +368,8 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		if i < len(cred.RedirectUri) && i > 0 {
 			m, err := url.ParseQuery(cred.RedirectUri[strings.Index(cred.RedirectUri, "?")+1:])
 			if err != nil {
-				writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-07, insert user failed: %v", err)
+				log.Errorf("ERR-signup-07, insert user failed: %v", err)
+				writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 				return
 			}
 			if m.Get("code_challenge") != "" {
@@ -354,7 +383,8 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	err = insertUser(cred.Email, calcPw, emailToken, refreshToken, flowType, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-07, insert user failed: %v", err)
+		log.Errorf("ERR-signup-07, insert user failed: %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -417,7 +447,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		bodyCopy, err = io.ReadAll(r.Body)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-login-01, cannot parse POST data %v", err)
+			log.Errorf("ERR-login-01, cannot parse POST data %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 	}
@@ -428,19 +459,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyCopy))
 		err = r.ParseForm()
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-login-01, cannot parse POST data %v", err)
+			log.Errorf("ERR-login-01, cannot parse POST data %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		err = schema.NewDecoder().Decode(&cred, r.PostForm)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-login-02, cannot populate POST data %v", err)
+			log.Errorf("ERR-login-02, cannot populate POST data %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 	}
 
 	result, errString, err := checkEmailPassword(cred.Email, cred.Password)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_client", errString, "ERR-login-02 %v", err)
+		log.Errorf("ERR-login-02 %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_client", errString, GenericErrorMessage)
 		return
 	}
 
@@ -453,13 +487,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 			url = strings.Replace(url, "{token}", token, 1)
 			err = sendSMS(url)
 			if err != nil {
-				writeErr(w, http.StatusUnauthorized, "invalid_request", "blocked", "ERR-login-07, send sms failed %v error: %v", cred.Email, err)
+				log.Errorf("ERR-login-07, send sms failed %v error: %v", cred.Email, err)
+				writeErr(w, http.StatusUnauthorized, "invalid_request", "blocked", "Send SMS failed")
 				return
 			}
-			writeErr(w, http.StatusLocked, "invalid_client", "blocked", "ERR-login-08, waiting for sms verification: %v", cred.Email)
+			log.Errorf("ERR-login-08, waiting for sms verification: %v", cred.Email)
+			writeErr(w, http.StatusLocked, "invalid_client", "blocked", GenericErrorMessage)
 			return
 		} else if token != cred.TOTP {
-			writeErr(w, http.StatusForbidden, "invalid_request", "blocked", "ERR-login-09, sms wrong token, %v err %v", cred.Email, err)
+			log.Errorf("ERR-login-09, sms wrong token, %v err %v", cred.Email, err)
+			writeErr(w, http.StatusForbidden, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 	}
@@ -469,7 +506,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 		totp := newTOTP(*result.totp)
 		token := totp.Now()
 		if token != cred.TOTP {
-			writeErr(w, http.StatusForbidden, "invalid_request", "blocked", "ERR-login-10, totp wrong token, %v err %v", cred.Email, err)
+			log.Errorf("ERR-login-10, totp wrong token, %v err %v", cred.Email, err)
+			writeErr(w, http.StatusForbidden, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 	}
@@ -482,19 +520,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	refreshToken, err := resetRefreshToken(result.refreshToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-15, cannot reset refresh token %v", err)
+		log.Errorf("ERR-login-15, cannot reset refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "Cannot reset refresh token")
 		return
 	}
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(cred.Email, refreshToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-16, cannot verify refresh token %v", err)
+		log.Errorf("ERR-login-16, cannot verify refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 		return
 	}
 
 	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-login-17, cannot encode refresh token %v", err)
+		log.Errorf("ERR-login-17, cannot encode refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "Cannot encode refresh token")
 		return
 	}
 
@@ -509,7 +550,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 func handleCode(w http.ResponseWriter, email string, codeChallenge string, codeChallengeMethod string, redirectUri string, redirectAs201 bool) {
 	encoded, _, err := encodeCodeToken(email, codeChallenge, codeChallengeMethod)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "invalid_request", "blocked", "ERR-login-14, cannot set refresh token for %v, %v", email, err)
+		log.Errorf("ERR-login-14, cannot set refresh token for %v, %v", email, err)
+		writeErr(w, http.StatusInternalServerError, "invalid_request", "blocked", "Cannot set refresh token")
 		return
 	}
 	w.Header().Set("Location", redirectUri+"?code="+encoded)
@@ -557,19 +599,22 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
+		log.Errorf("ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	forgetEmailToken, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-reset-email-02, RND %v err %v", email, err)
+		log.Errorf("ERR-reset-email-02, RND %v err %v", email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	err = updateEmailForgotToken(email, forgetEmailToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-reset-email-03, update token for %v failed, token %v: %v", email, forgetEmailToken, err)
+		log.Errorf("ERR-reset-email-03, update token for %v failed, token %v: %v", email, forgetEmailToken, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -627,23 +672,27 @@ func confirmReset(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-01, cannot parse JSON credentials %v", err)
+		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	newPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-signup-05, key %v error: %v", cred.Email, err)
+		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	err = updatePasswordForgot(cred.Email, cred.EmailToken, newPw)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-reset-email-07, update user failed: %v", err)
+		log.Errorf("ERR-confirm-reset-email-07, update user failed: %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Update user failed.")
 		return
 	}
 
 	result, err := findAuthByEmail(cred.Email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -653,13 +702,15 @@ func confirmReset(w http.ResponseWriter, r *http.Request) {
 func setupTOTP(w http.ResponseWriter, _ *http.Request, claims *TokenClaims) {
 	secret, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-totp-01, RND %v err %v", claims.Subject, err)
+		log.Errorf("ERR-setup-totp-01, RND %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	err = updateTOTP(claims.Subject, secret)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-totp-02, update failed %v err %v", claims.Subject, err)
+		log.Errorf("ERR-setup-totp-02, update failed %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -675,24 +726,28 @@ func confirmTOTP(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	vars := mux.Vars(r)
 	token, err := url.QueryUnescape(vars["token"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-totp-01, query unescape token %v err: %v", vars["token"], err)
+		log.Errorf("ERR-confirm-totp-01, query unescape token %v err: %v", vars["token"], err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-totp-02, DB select, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-totp-02, DB select, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	totp := newTOTP(*result.totp)
 	if token != totp.Now() {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-totp-03, token different, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-totp-03, token different, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	err = updateTOTPVerified(claims.Subject, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-totp-04, DB select, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-totp-04, DB select, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -703,19 +758,22 @@ func setupSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	vars := mux.Vars(r)
 	sms, err := url.QueryUnescape(vars["sms"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-sms-01, query unescape sms %v err: %v", vars["sms"], err)
+		log.Errorf("ERR-setup-sms-01, query unescape sms %v err: %v", vars["sms"], err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	secret, err := genToken()
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-sms-02, RND %v err %v", claims.Subject, err)
+		log.Errorf("ERR-setup-sms-02, RND %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	err = updateSMS(claims.Subject, secret, sms)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-sms-03, updateSMS failed %v err %v", claims.Subject, err)
+		log.Errorf("ERR-setup-sms-03, updateSMS failed %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -726,7 +784,8 @@ func setupSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	err = sendSMS(url)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-setup-sms-04, send SMS failed %v err %v", claims.Subject, err)
+		log.Errorf("ERR-setup-sms-04, send SMS failed %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -737,24 +796,28 @@ func confirmSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	vars := mux.Vars(r)
 	token, err := url.QueryUnescape(vars["token"])
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-sms-01, query unescape token %v err: %v", vars["token"], err)
+		log.Errorf("ERR-confirm-sms-01, query unescape token %v err: %v", vars["token"], err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-sms-02, DB select, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-sms-02, DB select, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
 	totp := newTOTP(*result.totp)
 	if token != totp.Now() {
-		writeErr(w, http.StatusUnauthorized, "invalid_request", "blocked", "ERR-confirm-sms-03, token different, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-sms-03, token different, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusUnauthorized, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	err = updateSMSVerified(claims.Subject, timeNow())
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-confirm-sms-04, update sms failed, %v err %v", claims.Subject, err)
+		log.Errorf("ERR-confirm-sms-04, update sms failed, %v err %v", claims.Subject, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -781,13 +844,15 @@ func jwkFunc(w http.ResponseWriter, _ *http.Request) {
 		k := jose.JSONWebKey{Key: privRSA.Public()}
 		kid, err := k.Thumbprint(crypto.SHA256)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-jwk-1, %v", err)
+			log.Errorf("ERR-jwk-1, %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		k.KeyID = hex.EncodeToString(kid)
 		mj, err := k.MarshalJSON()
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-jwk-2, %v", err)
+			log.Errorf("ERR-jwk-2, %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		json = append(json, mj...)
@@ -796,7 +861,8 @@ func jwkFunc(w http.ResponseWriter, _ *http.Request) {
 		k := jose.JSONWebKey{Key: privEdDSA.Public()}
 		mj, err := k.MarshalJSON()
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-jwk-3, %v", err)
+			log.Errorf("ERR-jwk-3, %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		json = append(json, []byte(`,`)...)
@@ -821,30 +887,35 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 		refreshToken, err = param("refresh_token", r)
 	}
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, basic auth failed")
+		log.Errorf("ERR-oauth-01, basic auth failed")
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 		return
 	}
 	if refreshToken == "" {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-02, no refresh token")
+		log.Errorf("ERR-oauth-02, no refresh token")
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "No refresh token")
 		return
 	}
 
 	refreshClaims, err := checkRefreshToken(refreshToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-03, cannot verify refresh token %v", err)
+		log.Errorf("ERR-oauth-03, cannot verify refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 		return
 	}
 
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(refreshClaims.Subject, refreshClaims.Token)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-03, cannot verify refresh token %v", err)
+		log.Errorf("ERR-oauth-03, cannot verify refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 		return
 	}
 
 	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-04, cannot verify refresh token %v", err)
+		log.Errorf("ERR-oauth-04, cannot verify refresh token %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 		return
 	}
 	w.Write(oauthEnc)
@@ -853,7 +924,8 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 func oauth(w http.ResponseWriter, r *http.Request) {
 	grantType, err := param("grant_type", r)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, basic auth failed")
+		log.Errorf("ERR-oauth-01, basic auth failed")
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 		return
 	}
 
@@ -863,13 +935,15 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 	case "client_credentials":
 		user, err := basicAuth(r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Basic auth failed: %v", err)
+			log.Errorf("Basic auth failed: %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 			return
 		}
 
 		encodedAccessToken, err := encodeAccessToken(user, opts.Scope, opts.Audience, opts.Issuer, nil)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "Basic auth failed: %v", err)
+			log.Errorf("Basic auth failed: %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 			return
 		}
 
@@ -879,7 +953,8 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 		}
 		oauthEnc, err := json.Marshal(oauth)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", "ERR-oauth-08, cannot verify refresh token %v", err)
+			log.Errorf("ERR-oauth-08, cannot verify refresh token %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_grant", "blocked", CannotVerifyRefreshTokenMessage)
 			return
 		}
 		w.Write(oauthEnc)
@@ -887,81 +962,96 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 	case "authorization_code":
 		code, err := param("code", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, basic auth failed")
+			log.Errorf("ERR-oauth-01, basic auth failed")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 			return
 		}
 		codeVerifier, err := param("code_verifier", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, basic auth failed")
+			log.Errorf("ERR-oauth-01, basic auth failed")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", BasicAuthFailedMessage)
 			return
 		}
 		//https://tools.ietf.org/html/rfc7636#section-4.1 length must be <= 43 <= 128
 		if len(codeVerifier) < 43 {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, min 43 chars")
+			log.Errorf("ERR-oauth-01, min 43 chars")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		if len(codeVerifier) > 128 {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-01, max 128 chars")
+			log.Errorf("ERR-oauth-01, max 128 chars")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		cc, err := checkCodeToken(code)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-04, code check failed: %v", err)
+			log.Errorf("ERR-oauth-04, code check failed: %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		if cc.CodeCodeChallengeMethod == "S256" {
 			h := sha256.Sum256([]byte(codeVerifier))
 			s := base64.RawURLEncoding.EncodeToString(h[:])
 			if cc.CodeChallenge != s {
-				writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-04, auth challenge failed")
+				log.Errorf("ERR-oauth-04, auth challenge failed")
+				writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 				return
 			}
 		} else {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-04, only S256 supported")
+			log.Errorf("ERR-oauth-04, only S256 supported")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 
 		result, err := findAuthByEmail(cc.Subject)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", cc.Subject, err)
+			log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cc.Subject, err)
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 
 		writeOAuth(w, result)
 	case "password":
 		if !opts.PasswordFlow {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-05a, no username")
+			log.Errorf("ERR-oauth-05a, no username")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		email, err := param("username", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-05a, no username")
+			log.Errorf("ERR-oauth-05a, no username")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		password, err := param("password", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-05b, no password")
+			log.Errorf("ERR-oauth-05b, no password")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		scope, err := param("scope", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-05c, no scope")
+			log.Errorf("ERR-oauth-05c, no scope")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 		if email == "" || password == "" || scope == "" {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-oauth-05, username, password, or scope empty")
+			log.Errorf("ERR-oauth-05, username, password, or scope empty")
+			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 			return
 		}
 
 		result, errString, err := checkEmailPassword(email, password)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_grant", errString, "ERR-oauth-06 %v", err)
+			log.Errorf("ERR-oauth-06 %v", err)
+			writeErr(w, http.StatusBadRequest, "invalid_grant", errString, GenericErrorMessage)
 			return
 		}
 
 		writeOAuth(w, result)
 	default:
-		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", "ERR-oauth-09, unsupported grant type")
+		log.Errorf("ERR-oauth-09, unsupported grant type")
+		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", GenericErrorMessage)
 	}
 }
 
@@ -984,26 +1074,31 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 func revoke(w http.ResponseWriter, r *http.Request) {
 	tokenHint, err := param("token_type_hint", r)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", "ERR-oauth-07, unsupported grant type")
+		log.Errorf("ERR-oauth-07, unsupported grant type")
+		writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", GenericErrorMessage)
 		return
 	}
 	if tokenHint == "refresh_token" {
 		oldToken, err := param("token", r)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", "ERR-oauth-07, unsupported grant type")
+			log.Errorf("ERR-oauth-07, unsupported grant type")
+			writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", GenericErrorMessage)
 			return
 		}
 		if oldToken == "" {
-			writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", "ERR-oauth-07, unsupported grant type")
+			log.Errorf("ERR-oauth-07, unsupported grant type")
+			writeErr(w, http.StatusBadRequest, "unsupported_grant_type1", "blocked", GenericErrorMessage)
 			return
 		}
 		_, err = resetRefreshToken(oldToken)
 		if err != nil {
-			writeErr(w, http.StatusBadRequest, "unsupported_grant_type2", "blocked", "ERR-oauth-07, unsupported grant type")
+			log.Errorf("ERR-oauth-07, unsupported grant type")
+			writeErr(w, http.StatusBadRequest, "unsupported_grant_type2", "blocked", GenericErrorMessage)
 			return
 		}
 	} else {
-		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", "ERR-oauth-07, unsupported grant type")
+		log.Errorf("ERR-oauth-07, unsupported grant type")
+		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", GenericErrorMessage)
 		return
 	}
 }
@@ -1014,14 +1109,16 @@ func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "ERR-oauth-06 %v", err)
+		log.Errorf("ERR-oauth-06 %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", GenericErrorMessage)
 		return
 	}
 
 	refreshToken := result.refreshToken
 	_, err = resetRefreshToken(refreshToken)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", "ERR-oauth-07, unsupported grant type: %v", err)
+		log.Errorf("ERR-oauth-07, unsupported grant type: %v", err)
+		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", GenericErrorMessage)
 		return
 	}
 
@@ -1048,12 +1145,14 @@ func timeWarp(w http.ResponseWriter, r *http.Request, adminEmail string) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "ERR-timewarp-01 %v", m)
+		log.Errorf("ERR-timewarp-01 %v", m)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", GenericErrorMessage)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "ERR-timewarp-02 %v", err)
+		log.Errorf("ERR-timewarp-02 %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", GenericErrorMessage)
 		return
 	}
 
@@ -1064,7 +1163,8 @@ func timeWarp(w http.ResponseWriter, r *http.Request, adminEmail string) {
 	//since we warp, the token will be invalid
 	result, err := findAuthByEmail(adminEmail)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-timeWarp, findAuthByEmail for %v failed, %v", adminEmail, err)
+		log.Errorf("ERR-timeWarp, findAuthByEmail for %v failed, %v", adminEmail, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	writeOAuth(w, result)
@@ -1075,7 +1175,8 @@ func asUser(w http.ResponseWriter, r *http.Request, _ string) {
 	email := m["email"]
 	result, err := findAuthByEmail(email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", GenericErrorMessage)
 		return
 	}
 	writeOAuth(w, result)
@@ -1086,7 +1187,8 @@ func deleteUser(w http.ResponseWriter, r *http.Request, admin string) {
 	email := m["email"]
 	err := deleteDbUser(email)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "could not delete user %v, requested by %s", err, admin)
+		log.Errorf("could not delete user %v, requested by %s", err, admin)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "Could not delete user")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -1098,16 +1200,19 @@ func updateUser(w http.ResponseWriter, r *http.Request, admin string) {
 	email := m["email"]
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "could not update user %v, requested by %s", err, admin)
+		log.Errorf("could not update user %v, requested by %s", err, admin)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "Could not update user")
 		return
 	}
 	if !json.Valid(b) {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "invalid json [%s], requested by %s", string(b), admin)
+		log.Errorf("invalid json [%s], requested by %s", string(b), admin)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "Invalid JSON")
 		return
 	}
 	err = updateSystemMeta(email, string(b))
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "could not update system meta %v, requested by %s", err, admin)
+		log.Errorf("could not update system meta %v, requested by %s", err, admin)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", GenericErrorMessage)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1117,6 +1222,7 @@ func writeJsonStr(w http.ResponseWriter, obj string) {
 	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write([]byte(obj))
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", "Could write json: %v", err)
+		log.Errorf("Could write json: %v", err)
+		writeErr(w, http.StatusBadRequest, "invalid_grant", "not-found", GenericErrorMessage)
 	}
 }

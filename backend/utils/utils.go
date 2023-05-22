@@ -52,13 +52,12 @@ func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 	w.WriteHeader(code)
-	if debug {
-		msgEnc, err := json.Marshal(msg)
-		if err != nil {
-			log.Errorf("error while trying to encode msg:  %v", msg)
-		}
-		w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
+	msgEnc, err := json.Marshal(msg)
+	if err != nil {
+		log.Errorf("error while trying to encode msg:  %v, err: %v", msg, err)
+		return
 	}
+	w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
 }
 
 func WriteJson(w http.ResponseWriter, obj interface{}) {
