@@ -8,6 +8,7 @@ import (
 	"encoding/base32"
 	"flag"
 	"fmt"
+	"github.com/flatfeestack/go-lib/auth"
 	"github.com/stripe/stripe-go/v74"
 	"net/http"
 	"os"
@@ -190,6 +191,11 @@ func main() {
 
 	stripe.Key = opts.StripeAPISecretKey
 
+	credentials := auth.Credentials{
+		Username: opts.BackendUsername,
+		Password: opts.BackendPassword,
+	}
+
 	// Routes
 	router := mux.NewRouter()
 	router.Use(prom.PrometheusMiddleware)
@@ -229,7 +235,7 @@ func main() {
 	router.HandleFunc("/users/contrib-rcv", jwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/contributions-summary", jwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
 	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodGet)
-	router.HandleFunc("/users/by/{email}", basicAuth(api.GetUserByEmail)).Methods(http.MethodGet)
+	router.HandleFunc("/users/by/{email}", auth.BasicAuth(credentials, api.GetUserByEmail)).Methods(http.MethodGet)
 
 	//payment
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
@@ -260,7 +266,7 @@ func main() {
 	//hooks
 	router.HandleFunc("/hooks/stripe", maxBytes(api.StripeWebhook, 65536)).Methods(http.MethodPost)
 	router.HandleFunc("/hooks/nowpayments", api.NowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analyzer", basicAuth(api.AnalysisEngineHook)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analyzer", auth.BasicAuth(credentials, api.AnalysisEngineHook)).Methods(http.MethodPost)
 
 	//admin
 	router.HandleFunc("/admin/time", jwtAuthAdmin(api.ServerTime, admins)).Methods(http.MethodGet)
