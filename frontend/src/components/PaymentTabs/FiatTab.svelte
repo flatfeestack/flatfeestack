@@ -112,7 +112,7 @@
               />
             </div>
           </Elements>
-          <button class="button1" type="submit"
+          <button class="button1" type="submit" disabled={seats <= 0}
             >❤&nbsp;Support{#if isSubmitting}<Dots />{/if}</button
           >
           for ${total.toFixed(2)}
