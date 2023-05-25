@@ -18,10 +18,8 @@ github.com/deepmap/oapi-codegen v1.12.4 h1:pPmn6qI9MuOtCz82WY2Xaw46EQjgvxednXXrP
 github.com/deepmap/oapi-codegen v1.12.4/go.mod h1:3lgHGMu6myQ2vqbbTXH2H1o4eXFTGnFiDaOaKKl5yas=
 github.com/dimiro1/banner v1.1.0 h1:TSfy+FsPIIGLzaMPOt52KrEed/omwFO1P15VA8PMUh0=
 github.com/dimiro1/banner v1.1.0/go.mod h1:tbL318TJiUaHxOUNN+jnlvFSgsh/RX7iJaQrGgOiTco=
-github.com/flatfeestack/go-lib v0.0.2 h1:5q7Jl2m6NB/0N7VwFeR0JjWum1i/D5YAQEz5ZuQJY5U=
-github.com/flatfeestack/go-lib v0.0.2/go.mod h1:HsiPRp4MqAMKYt2bOGKd6ydWve4LCWdrGL4tknZ4aA4=
-github.com/flatfeestack/go-lib v0.0.3 h1:ZaKtIpug0CDw6MoOxRXXQXRPxE01tjYfInGFM0t4Jqg=
-github.com/flatfeestack/go-lib v0.0.3/go.mod h1:+9pZPi7Sfi0e+kTWNsnmCG7+nDaO7Ru7nz6rG+xluBI=
+github.com/flatfeestack/go-lib v0.0.4 h1:50+EhEWc6JSvMkOQoiE8kvtaRhdzr6MMA4W0N+5oM7k=
+github.com/flatfeestack/go-lib v0.0.4/go.mod h1:RyOTQpsNiVsoQam4VgJTQnNhTRbHNl8SBVe6cmwKN74=
 github.com/getkin/kin-openapi v0.117.0 h1:QT2DyGujAL09F4NrKDHJGsUoIprlIcFVHWDVDcUFE8A=
 github.com/getkin/kin-openapi v0.117.0/go.mod h1:l5e9PaFUo9fyLJCPGQeXI2ML8c3P8BHOEV2VaAVf/pc=
 github.com/go-chi/chi/v5 v5.0.7 h1:rDTPXLDHGATaeHvVlLcR4Qe0zftYethFucbjVQ1PxU8=
