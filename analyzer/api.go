@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -88,11 +87,11 @@ func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError 
 
 func callbackToWebhook(body AnalysisCallback, url string) {
 	if body.Error == "" {
-		log.Printf("About to returt the following data: %v", body.Result)
+		log.Printf("About to return the following data: %v", body.Result)
 	}
 
 	reqBody, _ := json.Marshal(body)
-	log.Printf("Call to %s with success %v", os.Getenv("WEBHOOK_CALLBACK_URL"), body.Error == "")
+	log.Printf("Call to %s with success %v", opts.BackendCallbackUrl, body.Error == "")
 
 	c := &http.Client{
 		Timeout: 15 * time.Second,
