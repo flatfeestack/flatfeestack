@@ -313,6 +313,9 @@ func cloneOrUpdate(gitUrl string) (*git.Repository, error) {
 
 	//directory already existing,
 	if err != nil {
+		// still log the error, could be the issue is something else than "directory does already exist"
+		log.Errorln(err)
+
 		repo, err = git.OpenRepository(p)
 		if err != nil {
 			return nil, err
