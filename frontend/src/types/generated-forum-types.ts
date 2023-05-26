@@ -5,9 +5,24 @@
 
 
 export interface paths {
+  "/metrics": {
+    /** Get metrics */
+    get: {
+      responses: {
+        /** @description ok */
+        200: never;
+      };
+    };
+  };
   "/posts": {
     /** Get all posts */
     get: {
+      parameters: {
+        query: {
+          /** @description Only retrieve open or closed discussions */
+          open?: boolean;
+        };
+      };
       responses: {
         /** @description OK */
         200: {
@@ -96,6 +111,24 @@ export interface paths {
         200: never;
         204: components["responses"]["NoContent"];
         401: components["responses"]["Unauthorized"];
+      };
+    };
+  };
+  "/posts/{postId}/close": {
+    /** Close a post for further edits and comments */
+    put: {
+      parameters: {
+        path: {
+          postId: components["parameters"]["PostId"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        401: components["responses"]["Unauthorized"];
+        403: components["responses"]["Forbidden"];
+        404: components["responses"]["NotFound"];
+        500: components["responses"]["InternalServerError"];
       };
     };
   };
@@ -207,6 +240,7 @@ export interface components {
       /** Format: date-time */
       updated_at?: string;
       open: boolean;
+      proposal_id?: number;
     };
     Comment: {
       /** Format: uuid */

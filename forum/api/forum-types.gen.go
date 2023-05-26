@@ -29,13 +29,14 @@ type CommentInput struct {
 
 // Post defines model for Post.
 type Post struct {
-	Author    openapi_types.UUID `json:"author"`
-	Content   string             `json:"content"`
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
-	Open      bool               `json:"open"`
-	Title     string             `json:"title"`
-	UpdatedAt *time.Time         `json:"updated_at,omitempty"`
+	Author     openapi_types.UUID `json:"author"`
+	Content    string             `json:"content"`
+	CreatedAt  time.Time          `json:"created_at"`
+	Id         openapi_types.UUID `json:"id"`
+	Open       bool               `json:"open"`
+	ProposalId *int64             `json:"proposal_id,omitempty"`
+	Title      string             `json:"title"`
+	UpdatedAt  *time.Time         `json:"updated_at,omitempty"`
 }
 
 // PostInput defines model for PostInput.

@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS post
     updated_at TIMESTAMPTZ
 );
 
+ALTER TABLE post ADD COLUMN IF NOT EXISTS proposal_id TEXT;
+
 CREATE TABLE IF NOT EXISTS comment
 (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -19,9 +19,9 @@ func TestGetPosts(t *testing.T) {
 	dbLib.DB = db
 	defer db.Close()
 
-	mock.ExpectQuery(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`).WillReturnRows(
-		sqlmock.NewRows([]string{"id", "author", "content", "created_at", "open", "title", "updated_at"}).
-			AddRow("8bef1c41-7625-482e-8589-25cfb31b14a4", "0798e80e-8be1-4ac5-887c-1395ed841ebe", "Test content", time.Now(), true, "Test title", nil),
+	mock.ExpectQuery(`SELECT id, author, content, created_at, open, title, updated_at, proposal_id`).WillReturnRows(
+		sqlmock.NewRows([]string{"id", "author", "content", "created_at", "open", "title", "updated_at", "proposal_id"}).
+			AddRow("8bef1c41-7625-482e-8589-25cfb31b14a4", "0798e80e-8be1-4ac5-887c-1395ed841ebe", "Test content", time.Now(), true, "Test title", nil, nil),
 	)
 
 	request := api.GetPostsRequestObject{}

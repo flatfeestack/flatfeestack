@@ -288,14 +288,21 @@ func isCurrentUserAdmin(ctx context.Context) bool {
 
 // Function to map DbPost to Post
 func mapDbPostToPost(dbPost database.DbPost) Post {
+	var convertedProposalId int64
+
+	if dbPost.ProposalId != nil {
+		convertedProposalId = dbPost.ProposalId.Int64()
+	}
+
 	return Post{
-		Author:    dbPost.Author,
-		Content:   dbPost.Content,
-		CreatedAt: dbPost.CreatedAt,
-		Id:        dbPost.Id,
-		Open:      dbPost.Open,
-		Title:     dbPost.Title,
-		UpdatedAt: dbPost.UpdatedAt,
+		Author:     dbPost.Author,
+		Content:    dbPost.Content,
+		CreatedAt:  dbPost.CreatedAt,
+		Id:         dbPost.Id,
+		Open:       dbPost.Open,
+		Title:      dbPost.Title,
+		UpdatedAt:  dbPost.UpdatedAt,
+		ProposalId: &convertedProposalId,
 	}
 }
 

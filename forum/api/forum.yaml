@@ -264,6 +264,9 @@ components:
           format: date-time
         open:
           type: boolean
+        proposal_id:
+          type: integer
+          format: int64
       required:
         - id
         - title
