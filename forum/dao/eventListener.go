@@ -54,7 +54,6 @@ func loop(subscription event.Subscription, outputChannel chan *ContractDAOPropos
 }
 
 func LinkOrCreateDiscussion(event ContractDAOProposalCreated) {
-	var post *database.DbPost
 	var err error
 
 	// if the user selects a discussion in our "Create proposal" mask in the frontend
@@ -63,40 +62,51 @@ func LinkOrCreateDiscussion(event ContractDAOProposalCreated) {
 	matches := linkPattern.FindStringSubmatch(event.Description)
 
 	if len(matches) == 0 {
-		post, err = createPostForProposal(event)
+		_, err = createPostForProposal(event)
 		if err != nil {
 			log.Errorf("Unabe to create post for proposal: %s", err)
 		}
 	} else {
 		// discussion is linked, check if reference is valid.
-		postUuid, err := uuid.Parse(matches[1])
-		if err != nil {
-			log.Errorf("Unable to parse UUID from event: %s", err)
-		}
+		updateExistingDiscussion(event, matches)
+	}
+}
 
-		exists, err := database.CheckIfPostExists(postUuid)
-		if err != nil {
-			log.Errorf("Unable to check if post exists: %s", err)
-		}
-
-		log.Println(exists)
-
-		if exists {
-			post, err = database.GetPostById(postUuid)
-			if err != nil {
-				log.Errorf("Unable to get post from database: %s", err)
-			}
-		} else {
-			post, err = createPostForProposal(event)
-			if err != nil {
-				log.Errorf("Unabe to create post for proposal: %s", err)
-			}
-		}
+func updateExistingDiscussion(event ContractDAOProposalCreated, matches []string) {
+	postUuid, err := uuid.Parse(matches[1])
+	if err != nil {
+		log.Errorf("Unable to parse UUID from event: %s", err)
 	}
 
-	post, err = database.AddProposalIdToPost(post.Id, event.ProposalId)
+	exists, err := database.CheckIfPostExists(postUuid)
 	if err != nil {
-		log.Errorf("Unable to add proposal id to post: %s", err)
+		log.Errorf("Unable to check if post exists: %s", err)
+	}
+
+	log.Println(exists)
+
+	if exists {
+		post, err := database.GetPostById(postUuid)
+		if err != nil {
+			log.Errorf("Unable to get post from database: %s", err)
+		}
+
+		post, err = database.AddProposalIdToPost(post.Id, event.ProposalId)
+		if err != nil {
+			log.Errorf("Unable to add proposal id to post: %s", err)
+		}
+
+		comment := "This discussion has been linked to proposal " + event.ProposalId.String()
+		_, err = database.InsertComment(post.Id, uuid.Nil, comment)
+		if err != nil {
+			log.Errorf("Unable to add a new comment to existing discussion: %s", err)
+		}
+
+	} else {
+		_, err = createPostForProposal(event)
+		if err != nil {
+			log.Errorf("Unabe to create post for proposal: %s", err)
+		}
 	}
 }
 
@@ -116,5 +126,11 @@ Proposal description: %s`, event.Proposer, event.Description)
 		log.Println(err)
 		return nil, err
 	}
+
+	post, err = database.AddProposalIdToPost(post.Id, event.ProposalId)
+	if err != nil {
+		log.Errorf("Unable to add proposal id to post: %s", err)
+	}
+
 	return post, nil
 }

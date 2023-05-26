@@ -109,6 +109,13 @@ Proposal description: %s`, proposer, "some text and "+description)
 				AddRow(uuid.New(), "some content", time.Now(), true, "test title", nil),
 		)
 
+		comment := "This discussion has been linked to proposal " + proposalId.String()
+		mock.ExpectPrepare("INSERT INTO comment")
+		mock.ExpectQuery("INSERT INTO comment").WithArgs(uuid.Nil, comment, discussionId).WillReturnRows(
+			sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
+				AddRow(uuid.New(), time.Now(), nil),
+		)
+
 		event := ContractDAOProposalCreated{
 			ProposalId:  proposalId,
 			Proposer:    common.HexToAddress(proposer),
