@@ -19,7 +19,8 @@ import (
 func RunEventListener() {
 	dialContext, err := rpc.DialContext(context.Background(), globals.OPTS.EthWsUrl)
 	if err != nil {
-		log.Fatalf("Unable to initialise dial context: %s", err)
+		log.Errorf("Unable to initialise dial context: %s", err)
+		return
 	}
 	ethClient := ethclient.NewClient(dialContext)
 	daoContractAddress := common.HexToAddress(globals.OPTS.DaoContractAddress)
