@@ -2,9 +2,9 @@ package dao
 
 import (
 	"fmt"
-	"forum/globals"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ethereum/go-ethereum/common"
+	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"math/big"
@@ -16,7 +16,7 @@ func TestLinkOrCreateDiscussion(t *testing.T) {
 	t.Run("creates new discussion if original link is missing in description", func(t *testing.T) {
 		db, mock, err := sqlmock.New()
 		require.Nil(t, err)
-		globals.DB = db
+		dbLib.DB = db
 		defer db.Close()
 
 		require.Nil(t, err)
@@ -51,7 +51,7 @@ Proposal description: %s`, proposer, description)
 	t.Run("creates new discussion if link is found, but discussion is missing", func(t *testing.T) {
 		db, mock, err := sqlmock.New()
 		require.Nil(t, err)
-		globals.DB = db
+		dbLib.DB = db
 		defer db.Close()
 
 		require.Nil(t, err)
@@ -89,7 +89,7 @@ Proposal description: %s`, proposer, "some text and "+description)
 	t.Run("adds proposal id to existing discussion", func(t *testing.T) {
 		db, mock, err := sqlmock.New()
 		require.Nil(t, err)
-		globals.DB = db
+		dbLib.DB = db
 		defer db.Close()
 
 		require.Nil(t, err)
