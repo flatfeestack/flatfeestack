@@ -54,27 +54,67 @@ func loop(subscription event.Subscription, outputChannel chan *ContractDAOPropos
 }
 
 func LinkOrCreateDiscussion(event ContractDAOProposalCreated) {
+	var post *database.DbPost
+	var err error
+
 	// if the user selects a discussion in our "Create proposal" mask in the frontend
 	// a line like "Original discussion: http://localhost:8080/dao/discussion/21a3c381-4bcf-4f4b-a341-a28365518af1" is added to the discussion
 	linkPattern := regexp.MustCompile(`Original discussion\: [a-zA-Z\:\/\.\d]+\/dao\/discussion\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$`)
 	matches := linkPattern.FindStringSubmatch(event.Description)
 
 	if len(matches) == 0 {
-		description := fmt.Sprintf(
-			`A new proposal has been created without any linked discussion.
+		post, err = createPostForProposal(event)
+		if err != nil {
+			log.Errorf("Unabe to create post for proposal: %s", err)
+		}
+	} else {
+		// discussion is linked, check if reference is valid.
+		postUuid, err := uuid.Parse(matches[1])
+		if err != nil {
+			log.Errorf("Unable to parse UUID from event: %s", err)
+		}
+
+		exists, err := database.CheckIfPostExists(postUuid)
+		if err != nil {
+			log.Errorf("Unable to check if post exists: %s", err)
+		}
+
+		log.Println(exists)
+
+		if exists {
+			post, err = database.GetPostById(postUuid)
+			if err != nil {
+				log.Errorf("Unable to get post from database: %s", err)
+			}
+		} else {
+			post, err = createPostForProposal(event)
+			if err != nil {
+				log.Errorf("Unabe to create post for proposal: %s", err)
+			}
+		}
+	}
+
+	post, err = database.AddProposalIdToPost(post.Id, event.ProposalId)
+	if err != nil {
+		log.Errorf("Unable to add proposal id to post: %s", err)
+	}
+}
+
+func createPostForProposal(event ContractDAOProposalCreated) (*database.DbPost, error) {
+	description := fmt.Sprintf(
+		`A new proposal has been created without any linked discussion.
 
 Proposer creator: %s
 Proposal description: %s`, event.Proposer, event.Description)
 
-		_, err := database.InsertPost(
-			uuid.Nil,
-			fmt.Sprintf("Discussion for proposal %s", event.ProposalId),
-			description,
-		)
-		if err != nil {
-			log.Errorf("Unable to insert new post: %s", err)
-		}
-	} else {
-		// link to existing discussion
+	post, err := database.InsertPost(
+		uuid.Nil,
+		fmt.Sprintf("Discussion for proposal %s", event.ProposalId),
+		description,
+	)
+	if err != nil {
+		log.Println(err)
+		return nil, err
 	}
+	return post, nil
 }
