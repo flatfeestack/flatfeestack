@@ -406,7 +406,9 @@ jobs:
         run: |
           sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' forum/.env
           sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' forum/.env
+          sed -i 's#DAO_CONTRACT_ADDRESS=0x87E3D01B36b07794AB2c2B72C6FD958Fc98cCab3#DAO_CONTRACT_ADDRESS=0x82293E85698C606E2fF88904873fD11a30263355#g' forum/.env
           sed -i 's#ENV=local#ENV=dev#g' forum/.env
+          sed -i 's#ETH_WS_URL=ws://ganache:8545#ETH_WS_URL=wss://goerli.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' forum/.env
 
       - name: Edit analyzer .env file
         run: |
