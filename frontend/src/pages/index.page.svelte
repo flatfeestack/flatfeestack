@@ -24,6 +24,7 @@
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
   import DifferentChainId from "../routes/DifferentChainId.svelte";
+  import PrivateRoute from "../routes/PrivateRoute.svelte";
 
   import DAOHome from "../routes/DAO/Home.svelte";
   import DAOVotes from "../routes/DAO/Votes.svelte";
@@ -54,21 +55,8 @@
   export let showEmptyUser: boolean;
 
   let loading = true;
-  let auth = false;
-
-  $: {
-    if ($token) {
-      auth = true;
-    }
-  }
 
   onMount(async () => {
-    const authCookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth="));
-    if (authCookie || $token || hasAccessToken()) {
-      auth = true;
-    }
     try {
       loading = true;
       $user = await API.user.get();
@@ -110,17 +98,27 @@
           path="/confirm/invite/:email/:emailToken/:inviteByEmail"
           component={ConfirmInvite}
         />
-
-        <Route path="/user/search" component={auth ? Search : Landing} />
-        <Route path="/user/payments" component={auth ? Payments : Landing} />
-        <Route path="/user/settings" component={auth ? Settings : Landing} />
-        <Route path="/user/income" component={auth ? Income : Landing} />
-        <Route path="/user/badges" component={auth ? Badges : Landing} />
-        <Route path="/user/admin" component={auth ? Admin : Landing} />
-        <Route
-          path="/user/invitations"
-          component={auth ? Invitations : Landing}
-        />
+        <PrivateRoute path="/user/search">
+          <Search />
+        </PrivateRoute>
+        <PrivateRoute path="/user/payments">
+          <Payments />
+        </PrivateRoute>
+        <PrivateRoute path="/user/settings">
+          <Settings />
+        </PrivateRoute>
+        <PrivateRoute path="/user/income">
+          <Income />
+        </PrivateRoute>
+        <PrivateRoute path="/user/badges">
+          <Badges />
+        </PrivateRoute>
+        <PrivateRoute path="/user/invitations">
+          <Invitations />
+        </PrivateRoute>
+        <PrivateRoute path="/user/admin">
+          <Admin />
+        </PrivateRoute>
 
         <Route path="/dao/home" component={DAOHome} />
         <Route path="/dao/votes" component={DAOVotes} />
