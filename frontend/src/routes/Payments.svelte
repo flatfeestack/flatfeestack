@@ -3,13 +3,12 @@
   import { error } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount, onDestroy } from "svelte";
-  import type { Repo, UserBalance } from "../types/backend";
-  import { formatDate, formatBalance } from "../ts/services";
+  import type { UserBalance } from "../types/backend";
+  import { formatBalance } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
-  let sponsoredRepos: Repo[] = [];
   let userBalances: UserBalance[] = [];
-  let intervalId;
+  let intervalId: number;
 
   const fetchData = async () => {
     userBalances = await API.user.userBalance();
@@ -18,11 +17,7 @@
   onMount(async () => {
     try {
       // Fetch data immediately on component mount
-      const pr1 = fetchData();
-      const pr2 = API.user.getSponsored();
-      const res2 = await pr2;
-      sponsoredRepos = res2 || [];
-      await pr1;
+      await fetchData();
       intervalId = setInterval(fetchData, 5000); // Poll every 5 seconds
     } catch (e) {
       $error = e;
@@ -35,16 +30,6 @@
 </script>
 
 <Navigation>
-  <h2 class="p-2 m-2">Sponsor Summary</h2>
-
-  <div class="grid-2">
-    <p class="nobreak">
-      Selected Projects: <span class="bold m-4"
-        >{sponsoredRepos.length} projects</span
-      >
-    </p>
-  </div>
-
   <PaymentSelection />
 
   {#if userBalances}
