@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/felixge/httpsnoop v1.0.3
-	github.com/flatfeestack/go-lib v0.0.4
+	github.com/flatfeestack/go-lib v0.0.6
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
@@ -13,7 +13,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sendgrid/sendgrid-go v3.12.0+incompatible
 	github.com/sirupsen/logrus v1.9.2
 	github.com/stretchr/testify v1.8.3
 	github.com/xlzd/gotp v0.1.0
@@ -35,6 +34,7 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/sendgrid/sendgrid-go v3.12.0+incompatible // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
