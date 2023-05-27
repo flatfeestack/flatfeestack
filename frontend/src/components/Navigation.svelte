@@ -28,8 +28,7 @@
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
   }
-  nav :global(a),
-  nav .inactive {
+  nav :global(a) {
     display: block;
     color: var(--secondary-700);
     padding: 1em;
@@ -37,12 +36,7 @@
     transition: color 0.3s linear, background-color 0.3s linear;
   }
 
-  nav .inactive {
-    color: var(--secondary-300);
-  }
-
-  nav :global(a:hover),
-  nav .selected {
+  nav :global(a:hover) {
     background-color: var(--primary-300);
     color: var(--primary-900);
   }

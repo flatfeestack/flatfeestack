@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { Router, Route, navigate, link } from "svelte-routing";
-  import { user, route, loginFailed, error, token } from "../ts/mainStore";
-  import { hasAccessToken, removeSession } from "../ts/services";
+  import { Router, Route } from "svelte-routing";
+  import { user, route, loginFailed, token } from "../ts/mainStore";
+  import { hasAccessToken } from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
-  import { faHome } from "@fortawesome/free-solid-svg-icons";
-  import Fa from "svelte-fa";
   import Modal from "svelte-simple-modal";
 
   import Landing from "../routes/Landing.svelte";
@@ -52,16 +50,11 @@
     $route = history.location;
   });
 
-  export let urlOriginal;
-  export let showEmptyUser;
+  export let urlOriginal: string;
+  export let showEmptyUser: boolean;
 
   let loading = true;
   let auth = false;
-
-  function logout() {
-    removeSession();
-    navigate("/login");
-  }
 
   $: {
     if ($token) {
@@ -94,69 +87,10 @@
     min-height: 100vh;
   }
 
-  header {
-    padding: 1em;
-    background-color: #fff;
-    border-bottom: 1px #000 solid;
-    justify-content: space-between;
-    flex: 0 0 auto;
-  }
-
   main {
     flex: 1 0 auto;
     display: flex;
     height: 100%;
-  }
-
-  footer {
-    background-color: #000;
-    color: white;
-    flex: 0 0 auto;
-    font-size: 1rem;
-    padding: 0.5rem;
-  }
-
-  header,
-  nav {
-    display: flex;
-    align-items: center;
-    font-size: 1.1rem;
-  }
-
-  footer > :global(a) {
-    color: white;
-    font-size: 1rem;
-  }
-
-  header :global(a),
-  header :global(a:visited),
-  header :global(a:active) {
-    text-decoration: none;
-    color: #000;
-  }
-
-  .close {
-    cursor: pointer;
-    text-align: right;
-  }
-
-  .err-container {
-    position: fixed;
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-  }
-  .err-container button {
-    margin-right: 30px;
-  }
-
-  .imgSmallLogo {
-    padding-right: 0.25em;
-    width: 3rem;
-  }
-  .imgNormalLogo {
-    padding-right: 0.25em;
-    width: 10rem;
   }
 </style>
 
