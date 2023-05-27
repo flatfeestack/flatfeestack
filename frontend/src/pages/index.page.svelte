@@ -1,9 +1,6 @@
 <script lang="ts">
   import { Router, Route } from "svelte-routing";
-  import { user, route, loginFailed, token } from "../ts/mainStore";
-  import { hasAccessToken } from "../ts/services";
-  import { onMount } from "svelte";
-  import { API } from "../ts/api";
+  import { route } from "../ts/mainStore";
   import Modal from "svelte-simple-modal";
 
   import Landing from "../routes/Landing.svelte";
@@ -53,19 +50,6 @@
 
   export let urlOriginal: string;
   export let showEmptyUser: boolean;
-
-  let loading = true;
-
-  onMount(async () => {
-    try {
-      loading = true;
-      $user = await API.user.get();
-    } catch (e) {
-      $loginFailed = true;
-    } finally {
-      loading = false;
-    }
-  });
 </script>
 
 <style>

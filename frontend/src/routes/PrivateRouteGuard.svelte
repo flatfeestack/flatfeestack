@@ -7,7 +7,7 @@
 
   let userFromStoreOrAPI = {};
   onMount(async () => {
-    // have to do this to prevent wrong behaviour from loading it via store...
+    // have to do this to prevent wrong behaviour from loading it solely via store...
     try {
       userFromStoreOrAPI =
         typeof $user.id == "undefined" ? await API.user.get() : $user;

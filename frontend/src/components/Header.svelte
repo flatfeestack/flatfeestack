@@ -1,33 +1,20 @@
 <script lang="ts">
   import { navigate, link } from "svelte-routing";
-  import { user, loginFailed, error, token } from "../ts/mainStore";
-  import { hasAccessToken, removeSession } from "../ts/services";
+  import { user, loginFailed, error } from "../ts/mainStore";
+  import { removeSession } from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
 
   let loading = true;
-  let auth = false;
 
   function logout() {
     removeSession();
     navigate("/login");
   }
 
-  $: {
-    if ($token) {
-      auth = true;
-    }
-  }
-
   onMount(async () => {
-    const authCookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth="));
-    if (authCookie || $token || hasAccessToken()) {
-      auth = true;
-    }
     try {
       loading = true;
       $user = await API.user.get();
