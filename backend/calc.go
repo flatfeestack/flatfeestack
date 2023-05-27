@@ -67,7 +67,7 @@ func dailyRunner(now time.Time) error {
 		}
 		repoNames := []string{}
 		//TODO: fetch repo names
-		clients.SendMarketingEmail(v.Email, v.Balances, repoNames)
+		err = clients.SendMarketingEmail(v.Email, v.Balances, repoNames)
 	}
 
 	return nil
