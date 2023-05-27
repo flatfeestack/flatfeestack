@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	dbLib "github.com/flatfeestack/go-lib/database"
-	"html/template"
+	mail "github.com/flatfeestack/go-lib/email"
 	"io"
 	"math"
 	"net/http"
@@ -28,13 +28,6 @@ import (
 
 type Timewarp struct {
 	Offset int `json:"offset"`
-}
-
-type EmailRequest struct {
-	MailTo      string `json:"mail_to,omitempty"`
-	Subject     string `json:"subject"`
-	TextMessage string `json:"text_message"`
-	HtmlMessage string `json:"html_message"`
 }
 
 type EmailToken struct {
@@ -179,7 +172,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	vars := mux.Vars(r)
 	email := vars["email"]
 
-	params := map[string]interface{}{}
+	params := map[string]string{}
 	if r.Body != nil && r.Body != http.NoBody {
 		err := json.NewDecoder(r.Body).Decode(&params)
 		if err != nil {
@@ -208,12 +201,19 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	if u != nil {
 		//user already exists, send email to direct him to the invitations
 		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
-		e := prepareEmail(email, params,
+		sendgridRequest := mail.PrepareEmail(email, params,
 			KeyInviteOld, "You have been invited by "+claims.Subject,
-			"Click on this link to see your invitation: "+params["url"].(string),
-			params["lang"].(string))
+			"Click on this link to see your invitation: "+params["url"],
+			params["lang"])
 		go func() {
-			err = sendEmail(opts.EmailUrl, e)
+			request := mail.SendEmailRequest{
+				SendgridRequest: sendgridRequest,
+				Url:             opts.EmailUrl,
+				EmailFromName:   opts.EmailFromName,
+				EmailFrom:       opts.EmailFrom,
+				EmailToken:      opts.EmailToken,
+			}
+			err = mail.SendEmail(request)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
@@ -245,13 +245,20 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		log.Printf("could not insert user %v", err)
 		params["url"] = opts.EmailLinkPrefix + "/login"
 
-		e := prepareEmail(email, params,
+		sendgridRequest := mail.PrepareEmail(email, params,
 			KeyLogin, "You have been invited again by "+claims.Subject,
-			"Click on this link to login: "+params["url"].(string),
-			params["lang"].(string))
+			"Click on this link to login: "+params["url"],
+			params["lang"])
 
 		go func() {
-			err = sendEmail(opts.EmailUrl, e)
+			request := mail.SendEmailRequest{
+				SendgridRequest: sendgridRequest,
+				Url:             opts.EmailUrl,
+				EmailFromName:   opts.EmailFromName,
+				EmailFrom:       opts.EmailFrom,
+				EmailToken:      opts.EmailToken,
+			}
+			err = mail.SendEmail(request)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
@@ -263,20 +270,27 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	} else {
 		params["url"] = opts.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
 
-		e := prepareEmail(email, params,
+		sendgridRequest := mail.PrepareEmail(email, params,
 			KeyInvite, "You have been invited by "+claims.Subject,
-			"Click on this link to create your account: "+params["url"].(string),
-			params["lang"].(string))
+			"Click on this link to create your account: "+params["url"],
+			params["lang"])
 
 		go func() {
-			err = sendEmail(opts.EmailUrl, e)
+			request := mail.SendEmailRequest{
+				SendgridRequest: sendgridRequest,
+				Url:             opts.EmailUrl,
+				EmailFromName:   opts.EmailFromName,
+				EmailFrom:       opts.EmailFrom,
+				EmailToken:      opts.EmailToken,
+			}
+			err = mail.SendEmail(request)
 			if err != nil {
 				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 			}
 		}()
 
 		if opts.Env == "dev" || opts.Env == "local" {
-			w.Write([]byte(`{"url":"` + params["url"].(string) + `"}`))
+			w.Write([]byte(`{"url":"` + params["url"] + `"}`))
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
@@ -388,19 +402,26 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := map[string]interface{}{}
+	params := map[string]string{}
 	params["token"] = emailToken
 	params["email"] = cred.Email
 	params["url"] = opts.EmailLinkPrefix + "/confirm/signup/" + url.QueryEscape(cred.Email) + "/" + emailToken + urlParams
 	params["lang"] = lang(r)
 
-	e := prepareEmail(cred.Email, params,
+	sendgridRequest := mail.PrepareEmail(cred.Email, params,
 		KeySignup, "Validate your email",
-		"Click on this link: "+params["url"].(string),
-		params["lang"].(string))
+		"Click on this link: "+params["url"],
+		params["lang"])
 
 	go func() {
-		err = sendEmail(opts.EmailUrl, e)
+		request := mail.SendEmailRequest{
+			SendgridRequest: sendgridRequest,
+			Url:             opts.EmailUrl,
+			EmailFromName:   opts.EmailFromName,
+			EmailFrom:       opts.EmailFrom,
+			EmailToken:      opts.EmailToken,
+		}
+		err = mail.SendEmail(request)
 		if err != nil {
 			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
 		}
@@ -408,7 +429,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	if opts.Env == "dev" || opts.Env == "local" {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"url":"` + params["url"].(string) + `"}`))
+		w.Write([]byte(`{"url":"` + params["url"] + `"}`))
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -419,23 +440,6 @@ func lang(r *http.Request) string {
 	tag, _ := language.MatchStrings(matcher, accept)
 	b, _ := tag.Base()
 	return b.String()
-}
-
-func parseTemplate(filename string, other map[string]interface{}) string {
-	textMessage := ""
-	tmplPlain, err := template.ParseFiles("mail-templates/" + filename)
-	if err == nil {
-		var buf bytes.Buffer
-		err = tmplPlain.Execute(&buf, other)
-		if err == nil {
-			textMessage = buf.String()
-		} else {
-			log.Printf("cannot execute template file [%v], err: %v", filename, err)
-		}
-	} else {
-		log.Printf("cannot prepare file template file [%v], err: %v", filename, err)
-	}
-	return textMessage
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -618,7 +622,7 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := map[string]interface{}{}
+	params := map[string]string{}
 	err = json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
 		log.Printf("No or wrong json, ignoring [%v]", err)
@@ -628,13 +632,20 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 	params["url"] = opts.EmailLinkPrefix + "/confirm/reset/" + email + "/" + forgetEmailToken
 	params["lang"] = lang(r)
 
-	e := prepareEmail(email, params,
+	sendgridRequest := mail.PrepareEmail(email, params,
 		KeyReset, "Reset your email",
-		"Click on this link: "+params["url"].(string),
-		params["lang"].(string))
+		"Click on this link: "+params["url"],
+		params["lang"])
 
 	go func() {
-		err = sendEmail(opts.EmailUrl, e)
+		request := mail.SendEmailRequest{
+			SendgridRequest: sendgridRequest,
+			Url:             opts.EmailUrl,
+			EmailFromName:   opts.EmailFromName,
+			EmailFrom:       opts.EmailFrom,
+			EmailToken:      opts.EmailToken,
+		}
+		err = mail.SendEmail(request)
 		if err != nil {
 			log.Printf("ERR-reset-email-04, send email failed: %v", opts.EmailUrl)
 		}
