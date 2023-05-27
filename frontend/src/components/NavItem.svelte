@@ -8,6 +8,13 @@
   export let label: string;
 </script>
 
+<style>
+  .selected {
+    background-color: var(--primary-300);
+    color: var(--primary-900);
+  }
+</style>
+
 <a {href} class={$route.pathname === href ? `selected` : ``}>
   <Fa {icon} size="sm" class="icon" />
   <span class="hide-sx">{label}</span>

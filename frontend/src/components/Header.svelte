@@ -1,55 +1,12 @@
 <script lang="ts">
-  import { Router, Route, navigate, link } from "svelte-routing";
-  import { user, route, loginFailed, error, token } from "../ts/mainStore";
+  import { navigate, link } from "svelte-routing";
+  import { user, loginFailed, error, token } from "../ts/mainStore";
   import { hasAccessToken, removeSession } from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
   import { faHome } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import Modal from "svelte-simple-modal";
 
-  import Landing from "../routes/Landing.svelte";
-  import Badges from "../routes/Badges.svelte";
-  import PublicBadges from "../routes/PublicBadges.svelte";
-  import Login from "../routes/Login.svelte";
-  import Signup from "../routes/Signup.svelte";
-  import Forgot from "../routes/Forgot.svelte";
-  import ConfirmForgot from "../routes/ConfirmForgot.svelte";
-  import ConfirmSignup from "../routes/ConfirmSignup.svelte";
-  import Search from "../routes/Search.svelte";
-  import CatchAll from "../routes/CatchAllRoute.svelte";
-  import Income from "../routes/Income.svelte";
-  import Payments from "../routes/Payments.svelte";
-  import Admin from "../routes/Admin.svelte";
-  import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
-  import Settings from "../routes/Settings.svelte";
-  import ConfirmInvite from "../routes/ConfirmInvite.svelte";
-  import Invitations from "../routes/Invitations.svelte";
-  import DifferentChainId from "../routes/DifferentChainId.svelte";
-
-  import DAOHome from "../routes/DAO/Home.svelte";
-  import DAOVotes from "../routes/DAO/Votes.svelte";
-  import DAOMembership from "../routes/DAO/Membership.svelte";
-  import DAOMetamaskRequired from "../routes/DAO/MetaMaskRequired.svelte";
-  import DAOCreateProposal from "../routes/DAO/CreateProposal.svelte";
-  import DAOCastVotes from "../routes/DAO/CastVotes.svelte";
-  import DAOExecuteProposals from "../routes/DAO/ExecuteProposals.svelte";
-  import DAOCouncil from "../routes/DAO/Council.svelte";
-  import DAOTreasury from "../routes/DAO/Treasury.svelte";
-  import DAODiscussions from "../routes/DAO/Discussions.svelte";
-  import DAOCreateDiscussion from "../routes/DAO/CreateDiscussion.svelte";
-  import DAOShowDiscussion from "../routes/DAO/ShowDiscussion.svelte";
-  import DAOEditDiscussion from "../routes/DAO/EditDiscussion.svelte";
-
-  //https://github.com/EmilTholin/svelte-routing/issues/41
-  import { globalHistory } from "svelte-routing/src/history";
-
-  $route = globalHistory.location;
-  globalHistory.listen((history) => {
-    $route = history.location;
-  });
-
-  export let urlOriginal;
   let loading = true;
   let auth = false;
 
@@ -83,24 +40,12 @@
 </script>
 
 <style>
-  .all {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
   header {
     padding: 1em;
     background-color: #fff;
     border-bottom: 1px #000 solid;
     justify-content: space-between;
     flex: 0 0 auto;
-  }
-
-  main {
-    flex: 1 0 auto;
-    display: flex;
-    height: 100%;
   }
 
   header,
@@ -182,7 +127,8 @@
   </nav>
 </header>
 
-{#if $error}<div class="bg-red p-2 parent err-container">
+{#if $error}
+  <div class="bg-red p-2 parent err-container">
     <div class="w-100">{@html $error}</div>
     <div>
       <button
@@ -194,4 +140,5 @@
         ✕
       </button>
     </div>
-  </div>{/if}
+  </div>
+{/if}
