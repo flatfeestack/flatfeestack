@@ -49,21 +49,19 @@ func loop(subscription event.Subscription, outputChannel chan *ContractDAOPropos
 		case err := <-subscription.Err():
 			log.Fatal(err)
 		case proposalCreatedEvent := <-outputChannel:
-			fmt.Println(proposalCreatedEvent) // pointer to proposalCreatedEvent log
+			LinkOrCreateDiscussion(*proposalCreatedEvent)
 		}
 	}
 }
 
 func LinkOrCreateDiscussion(event ContractDAOProposalCreated) {
-	var err error
-
 	// if the user selects a discussion in our "Create proposal" mask in the frontend
 	// a line like "Original discussion: http://localhost:8080/dao/discussion/21a3c381-4bcf-4f4b-a341-a28365518af1" is added to the discussion
 	linkPattern := regexp.MustCompile(`Original discussion\: [a-zA-Z\:\/\.\d]+\/dao\/discussion\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$`)
 	matches := linkPattern.FindStringSubmatch(event.Description)
 
 	if len(matches) == 0 {
-		_, err = createPostForProposal(event)
+		_, err := createPostForProposal(event)
 		if err != nil {
 			log.Errorf("Unabe to create post for proposal: %s", err)
 		}
@@ -115,12 +113,13 @@ func createPostForProposal(event ContractDAOProposalCreated) (*database.DbPost, 
 	description := fmt.Sprintf(
 		`A new proposal has been created without any linked discussion.
 
+Proposal id: %s
 Proposer creator: %s
-Proposal description: %s`, event.Proposer, event.Description)
+Proposal description: %s`, event.ProposalId, event.Proposer, event.Description)
 
 	post, err := database.InsertPost(
 		uuid.Nil,
-		fmt.Sprintf("Discussion for proposal %s", event.ProposalId),
+		fmt.Sprintf("Discussion for proposal by %s", event.Proposer),
 		description,
 	)
 	if err != nil {

@@ -28,7 +28,7 @@
 
     <p>
       If you have ideas for improvements or new features regarding the
-      FlateFeeStack DAO or the platform but still need refinement to create a
+      FlatFeeStack DAO or the platform but still need refinement to create a
       proposal, feel free to create a discussion thread.
     </p>
 

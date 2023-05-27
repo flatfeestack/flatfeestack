@@ -26,11 +26,12 @@ func TestLinkOrCreateDiscussion(t *testing.T) {
 		postDescription := fmt.Sprintf(
 			`A new proposal has been created without any linked discussion.
 
+Proposal id: %s
 Proposer creator: %s
-Proposal description: %s`, proposer, description)
+Proposal description: %s`, proposalId, proposer, description)
 
 		mock.ExpectPrepare("INSERT INTO post")
-		mock.ExpectQuery("INSERT INTO post").WithArgs(uuid.Nil, postDescription, fmt.Sprintf("Discussion for proposal %s", proposalId)).WillReturnRows(
+		mock.ExpectQuery("INSERT INTO post").WithArgs(uuid.Nil, postDescription, "Discussion for proposal by 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").WillReturnRows(
 			sqlmock.NewRows([]string{"id", "created_at", "open", "updated_at"}).
 				AddRow("8bef1c41-7625-482e-8589-25cfb31b14a4", time.Now(), true, nil),
 		)
@@ -63,12 +64,13 @@ Proposal description: %s`, proposer, description)
 		postDescription := fmt.Sprintf(
 			`A new proposal has been created without any linked discussion.
 
+Proposal id: %s
 Proposer creator: %s
-Proposal description: %s`, proposer, "some text and "+description)
+Proposal description: %s`, proposalId, proposer, "some text and "+description)
 
 		mock.ExpectQuery("SELECT EXISTS").WithArgs(discussionId).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow("false"))
 		mock.ExpectPrepare("INSERT INTO post")
-		mock.ExpectQuery("INSERT INTO post").WithArgs(uuid.Nil, postDescription, fmt.Sprintf("Discussion for proposal %s", proposalId)).WillReturnRows(
+		mock.ExpectQuery("INSERT INTO post").WithArgs(uuid.Nil, postDescription, "Discussion for proposal by 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").WillReturnRows(
 			sqlmock.NewRows([]string{"id", "created_at", "open", "updated_at"}).
 				AddRow("8bef1c41-7625-482e-8589-25cfb31b14a4", time.Now(), true, nil),
 		)

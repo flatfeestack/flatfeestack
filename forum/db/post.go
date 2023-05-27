@@ -48,7 +48,7 @@ func GetAllPosts(open *bool) ([]DbPost, error) {
 		var post DbPost
 		var proposalId sql.NullString
 
-		err = rows.Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, &post.ProposalId)
+		err = rows.Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, &proposalId)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +179,7 @@ func CheckIfPostIsClosed(postId uuid.UUID) (bool, error) {
 }
 
 func AddProposalIdToPost(postId uuid.UUID, proposalId *big.Int) (*DbPost, error) {
-	stmt, err := dbLib.DB.Prepare(`UPDATE post SET proposal_id=$1 WHERE id = $2 RETURNING id, author, content, created_at, open, title, updated_at, proposal_id`)
+	stmt, err := dbLib.DB.Prepare(`UPDATE post SET proposal_id=$1 WHERE id = $2 RETURNING author, content, created_at, open, title, updated_at`)
 	if err != nil {
 		return nil, err
 	}
