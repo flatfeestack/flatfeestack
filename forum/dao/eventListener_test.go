@@ -101,14 +101,14 @@ Proposal description: %s`, proposalId, proposer, "some text and "+description)
 		description := "Original discussion: http://localhost/dao/discussion/" + discussionId.String()
 
 		mock.ExpectQuery("SELECT EXISTS").WithArgs(discussionId).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow("true"))
-		mock.ExpectPrepare("SELECT id, author, content, created_at, open, title, updated_at, proposal_id")
-		mock.ExpectQuery("SELECT id, author, content, created_at, open, title, updated_at, proposal_id").WithArgs(discussionId).WillReturnRows(
-			sqlmock.NewRows([]string{"id", "author", "content", "created_at", "open", "title", "updated_at", "proposal_id"}).AddRow(
-				discussionId.String(), uuid.New(), "some content", time.Now(), true, "test title", nil, nil))
+		mock.ExpectPrepare("SELECT id, author, content, created_at, open, title, updated_at, proposal_ids")
+		mock.ExpectQuery("SELECT id, author, content, created_at, open, title, updated_at, proposal_ids").WithArgs(discussionId).WillReturnRows(
+			sqlmock.NewRows([]string{"id", "author", "content", "created_at", "open", "title", "updated_at", "proposal_ids"}).AddRow(
+				discussionId.String(), uuid.New(), "some content", time.Now(), true, "test title", nil, "{}"))
 		mock.ExpectPrepare("UPDATE post")
 		mock.ExpectQuery("UPDATE post").WithArgs(proposalId.String(), discussionId).WillReturnRows(
-			sqlmock.NewRows([]string{"author", "content", "created_at", "open", "title", "updated_at"}).
-				AddRow(uuid.New(), "some content", time.Now(), true, "test title", nil),
+			sqlmock.NewRows([]string{"author", "content", "created_at", "open", "title", "updated_at", "proposal_ids"}).
+				AddRow(uuid.New(), "some content", time.Now(), true, "test title", nil, "{"+proposalId.String()+"}"),
 		)
 
 		comment := "This discussion has been linked to proposal " + proposalId.String()

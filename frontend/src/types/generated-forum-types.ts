@@ -240,7 +240,7 @@ export interface components {
       /** Format: date-time */
       updated_at?: string;
       open: boolean;
-      proposal_id?: number;
+      proposal_ids: (string)[];
     };
     Comment: {
       /** Format: uuid */
