@@ -9,8 +9,7 @@
   onMount(async () => {
     // have to do this to prevent wrong behaviour from loading it solely via store...
     try {
-      userFromStoreOrAPI =
-        $user.id == undefined ? await API.user.get() : $user;
+      userFromStoreOrAPI = $user.id == undefined ? await API.user.get() : $user;
       if (!userFromStoreOrAPI.id) {
         navigate("/login");
       }

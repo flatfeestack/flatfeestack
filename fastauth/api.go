@@ -12,7 +12,6 @@ import (
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"html/template"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -76,24 +75,6 @@ const (
 	CannotVerifyRefreshTokenMessage = "Cannot verify refresh token"
 	BasicAuthFailedMessage          = "Basic auth failed"
 )
-
-// this is an essential cookie to set if the user has once successfully logged in
-// with this we can determine which page to show
-func setCookie() *http.Cookie {
-	return &http.Cookie{
-		Name:     "auth",
-		Value:    "true",
-		Path:     "/",
-		MaxAge:   math.MaxInt32,
-		SameSite: http.SameSiteStrictMode,
-	}
-}
-
-func removeCookie() *http.Cookie {
-	cookie := setCookie()
-	cookie.MaxAge = -1 //delete cookie
-	return cookie
-}
 
 func confirmEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -539,11 +520,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//set cookie if not set yet
-	_, err = r.Cookie(setCookie().Name)
-	if err != nil {
-		http.SetCookie(w, setCookie())
-	}
 	w.Write(oauthEnc)
 }
 
@@ -1120,12 +1096,6 @@ func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		log.Errorf("ERR-oauth-07, unsupported grant type: %v", err)
 		writeErr(w, http.StatusBadRequest, "unsupported_grant_type", "blocked", GenericErrorMessage)
 		return
-	}
-
-	//remove that we are logged in, only when present
-	cookie, err := r.Cookie(setCookie().Name)
-	if err == nil && cookie.MaxAge > 0 {
-		http.SetCookie(w, removeCookie())
 	}
 
 	if redirectUri != "" {

@@ -41,7 +41,6 @@
   import { globalHistory } from "svelte-routing/src/history";
   import Header from "../components/Header.svelte";
   import Footer from "../components/Footer.svelte";
-  import EmptyUser from "../routes/EmptyUser.svelte";
 
   $route = globalHistory.location;
   globalHistory.listen((history) => {
@@ -49,7 +48,6 @@
   });
 
   export let urlOriginal: string;
-  export let showEmptyUser: boolean;
 </script>
 
 <style>
@@ -129,11 +127,7 @@
         <Route path="/forgot" component={Forgot} />
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
-        {#if showEmptyUser}
-          <Route path="/" component={EmptyUser} />
-        {:else}
-          <Route path="/" component={Landing} />
-        {/if}
+        <Route path="/" component={Landing} />
         <Route path="*" component={CatchAll} />
       </Router>
     </Modal>
