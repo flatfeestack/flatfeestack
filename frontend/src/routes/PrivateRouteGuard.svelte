@@ -10,7 +10,7 @@
     // have to do this to prevent wrong behaviour from loading it solely via store...
     try {
       userFromStoreOrAPI =
-        typeof $user.id == "undefined" ? await API.user.get() : $user;
+        $user.id == undefined ? await API.user.get() : $user;
       if (!userFromStoreOrAPI.id) {
         navigate("/login");
       }
