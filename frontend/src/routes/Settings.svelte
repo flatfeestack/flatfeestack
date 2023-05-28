@@ -11,6 +11,7 @@
   import { error, user } from "../ts/mainStore";
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
+  import { emailValidationPattern } from "../ts/utils";
 
   let fileInput;
   let username: undefined | string;
@@ -195,6 +196,7 @@
                   id="email-input"
                   name="email"
                   type="email"
+                  pattern={emailValidationPattern}
                   required
                   bind:value={newEmail}
                   placeholder="Email"

@@ -2,7 +2,7 @@
   import { link } from "svelte-routing";
   import { API } from "./../ts/api";
   import Dots from "../components/Dots.svelte";
-
+  import { emailValidationPattern } from "../ts/utils";
   let email = "";
   let error = "";
   let isSubmitting = false;
@@ -70,6 +70,7 @@
           size="100"
           maxlength="100"
           type="email"
+          pattern={emailValidationPattern}
           id="email"
           name="email"
           bind:value={email}

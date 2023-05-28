@@ -2,7 +2,7 @@
   import Dots from "../components/Dots.svelte";
   import { confirmInvite } from "../ts/services";
   import { navigate, link } from "svelte-routing";
-
+  import { emailValidationPattern } from "../ts/utils";
   export let email: string;
   export let emailToken: string;
   export let inviteByEmail: string;
@@ -72,6 +72,7 @@
         maxlength="100"
         type="email"
         id="email"
+        pattern={emailValidationPattern}
         name="email"
         bind:value={email}
         class="rounded py-2 border-primary-900"

@@ -13,6 +13,7 @@
   } from "@fortawesome/free-solid-svg-icons";
   import { formatDate, timeSince } from "../ts/services";
   import Dots from "../components/Dots.svelte";
+  import { emailValidationPattern } from "../ts/utils";
 
   let invites: Invitation[] = [];
   let inviteEmail: string;
@@ -147,6 +148,7 @@
                 size="24"
                 maxlength="50"
                 type="email"
+                pattern={emailValidationPattern}
                 required
                 bind:value={inviteEmail}
               />&nbsp;
