@@ -1,7 +1,8 @@
 FROM golang:1.20-bullseye AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/libgit2/lib/pkgconfig"
+    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/libgit2/lib/pkgconfig" \
+    LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/libgit2/lib"
 
 RUN apt update && \
     apt install -y --no-install-recommends ca-certificates cmake gcc git g++ libssh2-1-dev libssl-dev make pkg-config && \
