@@ -15,8 +15,6 @@ export const ensureSameChainId = (requiredChainId: number | undefined) => {
   }
 
   chainId.subscribe((chainIdValue) => {
-    console.log(chainIdValue);
-
     if (chainIdValue !== null && chainIdValue !== requiredChainId) {
       navigate(
         `/differentChainId?required=${requiredChainId}&actual=${chainIdValue}`

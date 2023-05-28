@@ -6,16 +6,18 @@ import (
 )
 
 type Opts struct {
-	Port            int
-	HS256           string
-	Env             string
-	DBPath          string
-	DBDriver        string
-	DBScripts       string
-	Admins          string
-	BackendUrl      string
-	BackendUsername string
-	BackendPassword string
+	Port               int
+	HS256              string
+	Env                string
+	DBPath             string
+	DBDriver           string
+	DBScripts          string
+	Admins             string
+	BackendUrl         string
+	BackendUsername    string
+	BackendPassword    string
+	DaoContractAddress string
+	EthWsUrl           string
 }
 
 type User struct {

@@ -264,6 +264,10 @@ components:
           format: date-time
         open:
           type: boolean
+        proposal_ids:
+          type: array
+          items:
+            type: string
       required:
         - id
         - title
@@ -271,6 +275,7 @@ components:
         - author
         - created_at
         - open
+        - proposal_ids
     Comment:
       type: object
       properties:

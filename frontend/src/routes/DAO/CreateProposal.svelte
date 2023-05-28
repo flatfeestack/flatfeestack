@@ -24,6 +24,7 @@
   } from "../../utils/ethHelpers";
   import type { Post } from "../../types/forum";
   import { API } from "../../ts/api";
+  import truncateString from "../../utils/truncateString";
 
   checkUndefinedProvider();
 
@@ -158,7 +159,7 @@
         <option value={""} />
         {#each openDiscussions as openDiscussion}
           <option value={openDiscussion.id}>
-            {openDiscussion.title}
+            {truncateString(openDiscussion.title, 60)}
           </option>
         {/each}
       </select>

@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS post
     updated_at TIMESTAMPTZ
 );
 
+ALTER TABLE post ADD COLUMN IF NOT EXISTS proposal_ids TEXT[] NOT NULL DEFAULT array[]::text[];
+
 CREATE TABLE IF NOT EXISTS comment
 (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

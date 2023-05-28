@@ -2,7 +2,13 @@ import { get, writable } from "svelte/store";
 import type { PublicUser } from "../types/backend";
 import { API } from "./api";
 
-const usersStore = writable<PublicUser[]>([]);
+const usersStore = writable<PublicUser[]>([
+  {
+    id: "00000000-0000-0000-0000-000000000000",
+    image: null,
+    name: "System",
+  },
+]);
 
 export const users = {
   subscribe: usersStore.subscribe,

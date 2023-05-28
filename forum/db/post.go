@@ -5,7 +5,9 @@ import (
 	"fmt"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"time"
 )
 
@@ -15,13 +17,14 @@ func init() {
 }
 
 type DbPost struct {
-	Id        uuid.UUID
-	Author    uuid.UUID
-	Content   string
-	CreatedAt time.Time
-	Open      bool
-	Title     string
-	UpdatedAt *time.Time
+	Id          uuid.UUID
+	Author      uuid.UUID
+	Content     string
+	CreatedAt   time.Time
+	Open        bool
+	Title       string
+	UpdatedAt   *time.Time
+	ProposalIds []string
 }
 
 func GetAllPosts(open *bool) ([]DbPost, error) {
@@ -29,7 +32,7 @@ func GetAllPosts(open *bool) ([]DbPost, error) {
 	var rows *sql.Rows
 	var err error
 
-	query := `SELECT id, author, content, created_at, "open" ,title, updated_at FROM post`
+	query := `SELECT id, author, content, created_at, open, title, updated_at, proposal_ids FROM post`
 
 	if open != nil {
 		rows, err = dbLib.DB.Query(query+" WHERE open = $1", open)
@@ -44,17 +47,19 @@ func GetAllPosts(open *bool) ([]DbPost, error) {
 
 	for rows.Next() {
 		var post DbPost
-		err = rows.Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
+
+		err = rows.Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, pq.Array(&post.ProposalIds))
 		if err != nil {
 			return nil, err
 		}
+
 		posts = append(posts, post)
 	}
 	return posts, nil
 }
 
 func InsertPost(author uuid.UUID, title string, content string) (*DbPost, error) {
-	stmt, err := dbLib.DB.Prepare(`INSERT INTO post (author, content, title) VALUES ($1, $2, $3) RETURNING id, created_at, "open" ,updated_at`)
+	stmt, err := dbLib.DB.Prepare(`INSERT INTO post (author, content, title) VALUES ($1, $2, $3) RETURNING id, created_at, "open", updated_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -107,16 +112,18 @@ func ClosePost(postId uuid.UUID) error {
 
 func GetPostById(id uuid.UUID) (*DbPost, error) {
 	var post DbPost
-	stmt, err := dbLib.DB.Prepare(`SELECT id, author, content, created_at, "open" ,title, updated_at FROM post where id = $1`)
+
+	stmt, err := dbLib.DB.Prepare(`SELECT id, author, content, created_at, open, title, updated_at, proposal_ids FROM post where id = $1`)
 	if err != nil {
 		return nil, err
 	}
 	defer dbLib.CloseAndLog(stmt)
 
-	err = stmt.QueryRow(id).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt)
+	err = stmt.QueryRow(id).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, pq.Array(&post.ProposalIds))
 	if err != nil {
 		return nil, err
 	}
+
 	return &post, nil
 }
 
@@ -160,4 +167,23 @@ func CheckIfPostIsClosed(postId uuid.UUID) (bool, error) {
 		return false, err
 	}
 	return !closed, nil
+}
+
+func AddProposalIdToPost(postId uuid.UUID, proposalId *big.Int) (*DbPost, error) {
+	stmt, err := dbLib.DB.Prepare(`UPDATE post SET proposal_ids = ARRAY_APPEND(proposal_ids, $1)  WHERE id = $2 RETURNING author, content, created_at, open, title, updated_at, proposal_ids`)
+	if err != nil {
+		return nil, err
+	}
+	defer dbLib.CloseAndLog(stmt)
+
+	var post DbPost
+
+	err = stmt.QueryRow(proposalId.String(), postId).Scan(&post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, pq.Array(&post.ProposalIds))
+	if err != nil {
+		return nil, err
+	}
+
+	post.Id = postId
+
+	return &post, nil
 }
