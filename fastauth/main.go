@@ -513,7 +513,7 @@ func genToken() (string, error) {
 	return base32.StdEncoding.EncodeToString(rnd), nil
 }
 
-func writeErr(w http.ResponseWriter, code int, format string, a ...interface{}) {
+func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	log.Errorf(msg)
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
