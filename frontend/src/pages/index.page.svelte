@@ -1,9 +1,6 @@
 <script lang="ts">
   import { Router, Route } from "svelte-routing";
-  import { user, route, loginFailed, token } from "../ts/mainStore";
-  import { hasAccessToken } from "../ts/services";
-  import { onMount } from "svelte";
-  import { API } from "../ts/api";
+  import { route } from "../ts/mainStore";
   import Modal from "svelte-simple-modal";
 
   import Landing from "../routes/Landing.svelte";
@@ -24,6 +21,7 @@
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
   import DifferentChainId from "../routes/DifferentChainId.svelte";
+  import PrivateRoute from "../routes/PrivateRoute.svelte";
 
   import DAOHome from "../routes/DAO/Home.svelte";
   import DAOVotes from "../routes/DAO/Votes.svelte";
@@ -43,7 +41,6 @@
   import { globalHistory } from "svelte-routing/src/history";
   import Header from "../components/Header.svelte";
   import Footer from "../components/Footer.svelte";
-  import EmptyUser from "../routes/EmptyUser.svelte";
 
   $route = globalHistory.location;
   globalHistory.listen((history) => {
@@ -51,33 +48,6 @@
   });
 
   export let urlOriginal: string;
-  export let showEmptyUser: boolean;
-
-  let loading = true;
-  let auth = false;
-
-  $: {
-    if ($token) {
-      auth = true;
-    }
-  }
-
-  onMount(async () => {
-    const authCookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth="));
-    if (authCookie || $token || hasAccessToken()) {
-      auth = true;
-    }
-    try {
-      loading = true;
-      $user = await API.user.get();
-    } catch (e) {
-      $loginFailed = true;
-    } finally {
-      loading = false;
-    }
-  });
 </script>
 
 <style>
@@ -110,17 +80,27 @@
           path="/confirm/invite/:email/:emailToken/:inviteByEmail"
           component={ConfirmInvite}
         />
-
-        <Route path="/user/search" component={auth ? Search : Landing} />
-        <Route path="/user/payments" component={auth ? Payments : Landing} />
-        <Route path="/user/settings" component={auth ? Settings : Landing} />
-        <Route path="/user/income" component={auth ? Income : Landing} />
-        <Route path="/user/badges" component={auth ? Badges : Landing} />
-        <Route path="/user/admin" component={auth ? Admin : Landing} />
-        <Route
-          path="/user/invitations"
-          component={auth ? Invitations : Landing}
-        />
+        <PrivateRoute path="/user/search">
+          <Search />
+        </PrivateRoute>
+        <PrivateRoute path="/user/payments">
+          <Payments />
+        </PrivateRoute>
+        <PrivateRoute path="/user/settings">
+          <Settings />
+        </PrivateRoute>
+        <PrivateRoute path="/user/income">
+          <Income />
+        </PrivateRoute>
+        <PrivateRoute path="/user/badges">
+          <Badges />
+        </PrivateRoute>
+        <PrivateRoute path="/user/invitations">
+          <Invitations />
+        </PrivateRoute>
+        <PrivateRoute path="/user/admin">
+          <Admin />
+        </PrivateRoute>
 
         <Route path="/dao/home" component={DAOHome} />
         <Route path="/dao/votes" component={DAOVotes} />
@@ -147,11 +127,7 @@
         <Route path="/forgot" component={Forgot} />
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
-        {#if showEmptyUser}
-          <Route path="/" component={EmptyUser} />
-        {:else}
-          <Route path="/" component={Landing} />
-        {/if}
+        <Route path="/" component={Landing} />
         <Route path="*" component={CatchAll} />
       </Router>
     </Modal>

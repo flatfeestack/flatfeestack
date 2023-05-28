@@ -13,16 +13,5 @@
 :9085
 
 root * /var/www/html
-
-@auth {
-    header Cookie *auth=true*
-}
-
-handle @auth {
-   try_files {path} users/index.html
-   file_server
-}
-handle {
-   try_files {path} index.html
-   file_server
-}
+try_files {path} /
+file_server
