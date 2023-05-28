@@ -359,15 +359,20 @@ jobs:
           key: ${{ secrets.DEPLOY_MACMINI_PRIVATE_KEY }}
           known_hosts: ${{ secrets.DEPLOY_MACMINI_KNOWN_HOST }}
 
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Login to DigitalOcean container registry
+        run: doctl registry login --expiry-seconds 10000
+
       - name: Deploy - TEST
         run: |
-          scp -P 3000 deploy/docker-compose.yml sibex@axelra.net:/Users/sibex/flatfeestack
-          rsync -avzm -e 'ssh -p 3000' --include='*/' --include='.env' --exclude='*' . sibex@axelra.net:/Users/sibex/flatfeestack
-          ssh -p 3000 axelra.net -l sibex "doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose up --pull always -d --no-build"
-          ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
-          ssh -p 3000 axelra.net -l sibex "docker system prune -af"
+          docker context create test --docker "host=ssh://sibex@axelra.net:3000"
+          docker --context test compose -p "flatfeestack" -f deploy/docker-compose.yml up -d --remove-orphans --pull always
+          docker --context test system prune -af
+          docker --context test ps
         env:
           TEST_ADMINS: "tom.test@bocek.ch;tom.t1@bocek.ch;tom.t2@bocek.ch;guil@axlabs.com;gsm@machados.org"
           TEST_ANALYZER_PASSWORD: ${{ secrets.TEST_ANALYZER_PASSWORD }}

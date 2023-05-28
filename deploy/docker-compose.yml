@@ -9,7 +9,7 @@ services:
       DB_DRIVER: postgres
       DB_PATH: postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
       DB_SCRIPTS: init.sql
-      DETAILS: "true"
+      DETAILS: 'true'
       DEV: staging
       EMAIL_FROM: info@flatfeestack.io
       EMAIL_FROM_NAME: Flatfeestack
@@ -19,8 +19,8 @@ services:
       ENV: local
       HS256: test-seed
       PORT: 9081
-      PWFLOW: "true"
-      USER_ENDPOINTS: "true"
+      PWFLOW: 'true'
+      USER_ENDPOINTS: 'true'
     depends_on:
       db:
         condition: service_healthy
@@ -90,7 +90,7 @@ services:
       BACKEND_USERNAME: ${TEST_BACKEND_USERNAME}
       ENV: staging
       PORT: 9083
-    volumes: ['${BASE_PATH:-.}/.repos:/tmp/repos']
+    volumes: [/Users/sibex/flatfeestack/.repos:/tmp/repos]
   payout:
     image: registry.digitalocean.com/flatfeestack/payout:${TAG_IMAGE:-latest}
     restart: always
@@ -116,7 +116,7 @@ services:
     image: registry.digitalocean.com/flatfeestack/frontend:${TAG_IMAGE:-latest}
   db:
     image: postgres:15-alpine
-    volumes: ['${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z']
+    volumes: [/Users/sibex/flatfeestack/.db:/var/lib/postgresql/data:z]
     environment:
       POSTGRES_DB: flatfeestack
       POSTGRES_PASSWORD: password
