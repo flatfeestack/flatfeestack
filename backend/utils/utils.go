@@ -57,7 +57,11 @@ func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{
 		log.Errorf("error while trying to encode msg:  %v, err: %v", msg, err)
 		return
 	}
-	w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
+	_, err = w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
+	if err != nil {
+		log.Errorf("Something went wrong while writing error message: %v", err)
+		return
+	}
 }
 
 func WriteJson(w http.ResponseWriter, obj interface{}) {

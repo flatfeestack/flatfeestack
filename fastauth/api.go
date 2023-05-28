@@ -1146,7 +1146,7 @@ func asUser(w http.ResponseWriter, r *http.Request, _ string) {
 	result, err := findAuthByEmail(email)
 	if err != nil {
 		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
-		writeErr(w, http.StatusBadRequest, GenericErrorMessage)
+		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	writeOAuth(w, result)
@@ -1158,7 +1158,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request, admin string) {
 	err := deleteDbUser(email)
 	if err != nil {
 		log.Errorf("could not delete user %v, requested by %s", err, admin)
-		writeErr(w, http.StatusBadRequest, "Could not delete user")
+		WriteErrorf(w, http.StatusBadRequest, "Could not delete user")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -1171,18 +1171,18 @@ func updateUser(w http.ResponseWriter, r *http.Request, admin string) {
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Errorf("could not update user %v, requested by %s", err, admin)
-		writeErr(w, http.StatusBadRequest, "Could not update user")
+		WriteErrorf(w, http.StatusBadRequest, "Could not update user")
 		return
 	}
 	if !json.Valid(b) {
 		log.Errorf("invalid json [%s], requested by %s", string(b), admin)
-		writeErr(w, http.StatusBadRequest, "Invalid JSON")
+		WriteErrorf(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 	err = updateSystemMeta(email, string(b))
 	if err != nil {
 		log.Errorf("could not update system meta %v, requested by %s", err, admin)
-		writeErr(w, http.StatusBadRequest, GenericErrorMessage)
+		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1193,6 +1193,6 @@ func writeJsonStr(w http.ResponseWriter, obj string) {
 	_, err := w.Write([]byte(obj))
 	if err != nil {
 		log.Errorf("Could write json: %v", err)
-		writeErr(w, http.StatusBadRequest, GenericErrorMessage)
+		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	}
 }
