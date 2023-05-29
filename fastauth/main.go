@@ -513,7 +513,7 @@ func genToken() (string, error) {
 	return base32.StdEncoding.EncodeToString(rnd), nil
 }
 
-func writeErr(w http.ResponseWriter, code int, error string, detailError string, format string, a ...interface{}) {
+func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	log.Errorf(msg)
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
@@ -526,7 +526,11 @@ func writeErr(w http.ResponseWriter, code int, error string, detailError string,
 		log.Errorf("error while trying to encode msg:  %v, err: %v", msg, err)
 		return
 	}
-	w.Write([]byte(`{"error":` + string(msgEnc) + `,"generic_error":"` + error + `","error_uri":"https://host:port/error-descriptions/authorization-request/` + error + `/` + detailError + `"}`))
+	_, err = w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
+	if err != nil {
+		log.Errorf("Something went wrong while writing error message: %v", err)
+		return
+	}
 }
 
 func sendSMS(url string) error {

@@ -15,10 +15,10 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth0(r)
 		if claims != nil && err != nil {
-			writeErr(w, http.StatusUnauthorized, "invalid_client", "refused", "Token expired: %v, available: %v", claims.Subject, emails)
+			WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
 			return
 		} else if claims == nil && err != nil {
-			writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "jwtAuthAdmin error: %v", err)
+			WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 			return
 		}
 		for _, email := range emails {
@@ -28,7 +28,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 				return
 			}
 		}
-		writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		WriteErrorf(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
 	}
 }
 
@@ -45,7 +45,7 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					writeErr(w, http.StatusUnauthorized, "invalid_client", "refused", "Token expired: %v", claims.Subject)
+					WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
 				}
 			} else if claims == nil {
 				if ru != "" {
@@ -53,7 +53,7 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					writeErr(w, http.StatusBadRequest, "invalid_request", "blocked", "jwtAuthAdmin error: %v", err)
+					WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
 				}
 			}
 			return
