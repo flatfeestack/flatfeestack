@@ -2,6 +2,7 @@
   import { login } from "../ts/services";
   import Dots from "../components/Dots.svelte";
   import { navigate, link } from "svelte-routing";
+  import { emailValidationPattern } from "../ts/utils";
 
   let email = "";
   let password = "";
@@ -70,6 +71,7 @@
         maxlength="100"
         type="email"
         id="email"
+        pattern={emailValidationPattern}
         name="email"
         bind:value={email}
       />
