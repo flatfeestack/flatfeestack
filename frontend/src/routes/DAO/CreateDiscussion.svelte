@@ -5,7 +5,7 @@
   import PostForm from "../../components/DAO/discussions/PostForm.svelte";
   import Spinner from "../../components/Spinner.svelte";
   import { API } from "../../ts/api";
-  import { user } from "../../ts/mainStore";
+  import { error, user } from "../../ts/mainStore";
   import { postSchema } from "../../ts/validationSchemas";
   import { getAllFormErrors } from "../../utils/validationHelpers";
 
@@ -39,9 +39,13 @@
       return;
     }
 
-    const post = await API.forum.createPost(formValues);
+    try {
+      const post = await API.forum.createPost(formValues);
+      navigate(`/dao/discussion/${post.id}`);
+    } catch (e) {
+      $error = e.message;
+    }
     isSubmitting = false;
-    navigate(`/dao/discussion/${post.id}`);
   }
 </script>
 

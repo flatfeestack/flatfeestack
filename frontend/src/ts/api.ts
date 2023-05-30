@@ -137,6 +137,23 @@ const forumToken = ky.create({
       async (request: Request, options: any, response: Response) =>
         refreshToken(request, options, response),
     ],
+    beforeError: [
+      async (error) => {
+        const { response } = error;
+        if (response) {
+          try {
+            const r = await response.json();
+            if (r.error) {
+              error.message = r.error;
+            }
+          } catch (e) {
+            // Handle any errors that occur during the response parsing
+            console.error("Error parsing response:", e);
+          }
+        }
+        return error;
+      },
+    ],
   },
 });
 

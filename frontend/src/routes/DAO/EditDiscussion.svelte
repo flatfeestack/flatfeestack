@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { user } from "../../ts/mainStore";
+  import { error, user } from "../../ts/mainStore";
   import { navigate } from "svelte-routing";
   import { API } from "../../ts/api";
   import { getAllFormErrors } from "../../utils/validationHelpers";
@@ -28,9 +28,14 @@
       navigate("/login");
     }
 
-    const post = await API.forum.getPost(postId);
-    formValues.content = post.content;
-    formValues.title = post.title;
+    try {
+      const post = await API.forum.getPost(postId);
+      formValues.content = post.content;
+      formValues.title = post.title;
+    } catch (e) {
+      $error = e.message;
+    }
+
     isSubmitting = false;
   });
 
@@ -46,9 +51,13 @@
       return;
     }
 
-    const post = await API.forum.updatePost(postId, formValues);
+    try {
+      const post = await API.forum.updatePost(postId, formValues);
+      navigate(`/dao/discussion/${post.id}`);
+    } catch (e) {
+      $error = e.message;
+    }
     isSubmitting = false;
-    navigate(`/dao/discussion/${post.id}`);
   }
 </script>
 

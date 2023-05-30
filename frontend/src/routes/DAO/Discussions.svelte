@@ -6,12 +6,17 @@
   import Spinner from "../../components/Spinner.svelte";
   import { navigate } from "svelte-routing";
   import DiscussionListItem from "../../components/DAO/DiscussionListItem.svelte";
+  import { error } from "../../ts/mainStore";
 
   let isLoading = true;
   let posts: Post[] = [];
 
   onMount(async () => {
-    posts = await API.forum.getAllPosts();
+    try {
+      posts = await API.forum.getAllPosts();
+    } catch (e) {
+      $error = e.message;
+    }
     isLoading = false;
   });
 
@@ -34,8 +39,8 @@
 
     <div class="container-col2 items-start mt-2 mb-20">
       <button class="button1" on:click={navigateToCreateDiscussion}
-        >Start a new discussion</button
-      >
+        >Start a new discussion
+      </button>
     </div>
 
     {#if posts.length > 0}
