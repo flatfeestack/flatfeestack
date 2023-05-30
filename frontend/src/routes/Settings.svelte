@@ -85,7 +85,7 @@
   const deleteImage = async () => {
     try {
       await API.user.deleteImage();
-      $user.image = "";
+      $user.image = null;
     } catch (e) {
       $error = e.message;
     }
