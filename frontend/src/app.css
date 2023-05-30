@@ -536,3 +536,7 @@ tbody tr:last-of-type {
 .whitespace-pre-wrap {
   white-space: pre-wrap;
 }
+
+.break-all {
+  word-break: break-all;
+}

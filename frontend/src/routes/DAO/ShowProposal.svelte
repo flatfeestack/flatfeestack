@@ -137,5 +137,15 @@
     {:else}
       <Link to={`/dao/discussion/${discussion.id}`}>{discussion.title}</Link>
     {/if}
+
+    <p class="bold mb-2">Calls</p>
+    {#each proposal.targets as target, index}
+      <p class="mt-2 mb-2">Call {index + 1}:</p>
+      <ul class="mt-2 mb-2">
+        <li class="break-all">Target: {target}</li>
+        <li>Value: {proposal.values[index]}</li>
+        <li class="break-all">Calldata: {proposal.calldatas[index]}</li>
+      </ul>
+    {/each}
   {/if}
 </Navigation>
