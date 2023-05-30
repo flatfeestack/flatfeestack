@@ -13,11 +13,16 @@
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import { Link } from "svelte-routing";
   import humanizeDuration from "humanize-duration";
+  import type { Post } from "../../types/forum";
+  import { API } from "../../ts/api";
+  import { error } from "../../ts/mainStore";
+  import { HTTPError } from "ky";
 
   export let proposalId: string;
 
-  let proposal: ProposalCreatedEvent;
+  let discussion: Post | null = undefined;
   let isLoading = true;
+  let proposal: ProposalCreatedEvent;
   let proposalEta = 0;
   let proposalState = 0;
 
@@ -30,16 +35,36 @@
   }
 
   async function prepareView() {
-    [proposal, proposalState] = await Promise.all([
-      proposalCreatedEvents.get(proposalId, $daoContract),
-      $daoContract.state(proposalId),
-    ]);
-
-    if (proposalState === 5) {
-      proposalEta = await $daoContract.proposalEta(proposalId);
-    }
+    await Promise.all([getDiscussion(), getProposal()]);
 
     isLoading = false;
+  }
+
+  async function getDiscussion(): Promise<void> {
+    try {
+      discussion = await API.forum.getPostByProposalId(proposalId);
+    } catch (e) {
+      if (e instanceof HTTPError && e.response.status === 404) {
+        discussion = null;
+      } else {
+        $error = e.message;
+      }
+    }
+  }
+
+  async function getProposal(): Promise<void> {
+    try {
+      [proposal, proposalState] = await Promise.all([
+        proposalCreatedEvents.get(proposalId, $daoContract),
+        $daoContract.state(proposalId),
+      ]);
+
+      if (proposalState === 5) {
+        proposalEta = await $daoContract.proposalEta(proposalId);
+      }
+    } catch (e) {
+      $error = e.message;
+    }
   }
 </script>
 
@@ -53,7 +78,7 @@
     <p>{proposal.event.args[1]}</p>
 
     <p class="bold">Description</p>
-    <p>{proposal.event.args[8]}</p>
+    <p class="whitespace-pre-wrap">{proposal.event.args[8]}</p>
 
     <p class="bold">State</p>
     {#if proposalState === 0}
@@ -104,6 +129,13 @@
       <p>The time to execute the proposal has expired.</p>
     {:else if proposalState === 7}
       <p>The proposal has been executed.</p>
+    {/if}
+
+    <p class="bold">Discussion</p>
+    {#if discussion === null}
+      <p>No active discussion is known for this proposal.</p>
+    {:else}
+      <Link to={`/dao/discussion/${discussion.id}`}>{discussion.title}</Link>
     {/if}
   {/if}
 </Navigation>

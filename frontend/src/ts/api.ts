@@ -303,6 +303,8 @@ export const API = {
     createPost: (postInput: PostInput) =>
       forumToken.post(`posts`, { json: postInput }).json<Post>(),
     getPost: (postId: PostId) => forum.get(`posts/${postId}`).json<Post>(),
+    getPostByProposalId: (proposalId: string) =>
+      forum.get(`posts/byProposalId/${proposalId}`).json<Post>(),
     deletePost: (postId: PostId) => forumToken.delete(`posts/${postId}`),
     updatePost: (postId: PostId, postInput: PostInput) =>
       forumToken.put(`posts/${postId}`, { json: postInput }).json<Post>(),
