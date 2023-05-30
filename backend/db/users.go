@@ -174,7 +174,7 @@ func UpdateUserImage(uid uuid.UUID, data string) error {
 }
 
 func DeleteUserImage(uid uuid.UUID) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET image='' WHERE id=$1")
+	stmt, err := dbLib.DB.Prepare("UPDATE users SET image=NULL WHERE id=$1")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
