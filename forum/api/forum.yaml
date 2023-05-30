@@ -140,6 +140,28 @@ paths:
         '500':
           $ref: "#/components/responses/InternalServerError"
 
+  /posts/byProposalId/{proposalId}:
+    get:
+      summary: Get a specific post by proposal id
+      parameters:
+        - name: proposalId
+          in: path
+          description: ID of the proposal
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '500':
+          $ref: "#/components/responses/InternalServerError"
+
   /posts/{postId}/comments:
     get:
       summary: Get all comments

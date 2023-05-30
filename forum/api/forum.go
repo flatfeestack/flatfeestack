@@ -56,13 +56,14 @@ func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsReque
 		return PostPosts500Response{}, nil
 	}
 	return PostPosts201JSONResponse{
-		Author:    newPost.Author,
-		Content:   newPost.Content,
-		CreatedAt: newPost.CreatedAt,
-		Id:        newPost.Id,
-		Open:      newPost.Open,
-		Title:     newPost.Title,
-		UpdatedAt: newPost.UpdatedAt,
+		Author:      newPost.Author,
+		Content:     newPost.Content,
+		CreatedAt:   newPost.CreatedAt,
+		Id:          newPost.Id,
+		Open:        newPost.Open,
+		Title:       newPost.Title,
+		UpdatedAt:   newPost.UpdatedAt,
+		ProposalIds: newPost.ProposalIds,
 	}, nil
 }
 
@@ -88,13 +89,14 @@ func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsP
 		return GetPostsPostId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
 	}
 	return GetPostsPostId200JSONResponse{
-		Author:    dbPost.Author,
-		Content:   dbPost.Content,
-		CreatedAt: dbPost.CreatedAt,
-		Id:        dbPost.Id,
-		Open:      dbPost.Open,
-		Title:     dbPost.Title,
-		UpdatedAt: dbPost.UpdatedAt,
+		Author:      dbPost.Author,
+		Content:     dbPost.Content,
+		CreatedAt:   dbPost.CreatedAt,
+		Id:          dbPost.Id,
+		Open:        dbPost.Open,
+		Title:       dbPost.Title,
+		UpdatedAt:   dbPost.UpdatedAt,
+		ProposalIds: dbPost.ProposalIds,
 	}, nil
 }
 
@@ -132,13 +134,14 @@ func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsP
 		return PutPostsPostId500Response{}, nil
 	}
 	return PutPostsPostId200JSONResponse{
-		Id:        updatedPost.Id,
-		Author:    updatedPost.Author,
-		Title:     updatedPost.Title,
-		Content:   updatedPost.Content,
-		CreatedAt: updatedPost.CreatedAt,
-		UpdatedAt: updatedPost.UpdatedAt,
-		Open:      updatedPost.Open,
+		Id:          updatedPost.Id,
+		Author:      updatedPost.Author,
+		Title:       updatedPost.Title,
+		Content:     updatedPost.Content,
+		CreatedAt:   updatedPost.CreatedAt,
+		UpdatedAt:   updatedPost.UpdatedAt,
+		Open:        updatedPost.Open,
+		ProposalIds: updatedPost.ProposalIds,
 	}, nil
 }
 
@@ -280,6 +283,27 @@ func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, 
 		Content:   comment.Content,
 		CreatedAt: comment.CreatedAt,
 		UpdatedAt: comment.UpdatedAt,
+	}, nil
+}
+
+func (s *StrictServerImpl) GetPostsByProposalIdProposalId(ctx context.Context, request GetPostsByProposalIdProposalIdRequestObject) (GetPostsByProposalIdProposalIdResponseObject, error) {
+	dbPost, err := database.GetPostByProposalId(request.ProposalId)
+	if err != nil {
+		log.Error(err)
+		return GetPostsPostId500Response{}, nil
+	}
+	if dbPost == nil {
+		return GetPostsByProposalIdProposalId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with discussion %v does not exist", request.ProposalId)}}, nil
+	}
+	return GetPostsByProposalIdProposalId200JSONResponse{
+		Author:      dbPost.Author,
+		Content:     dbPost.Content,
+		CreatedAt:   dbPost.CreatedAt,
+		Id:          dbPost.Id,
+		Open:        dbPost.Open,
+		Title:       dbPost.Title,
+		UpdatedAt:   dbPost.UpdatedAt,
+		ProposalIds: dbPost.ProposalIds,
 	}, nil
 }
 

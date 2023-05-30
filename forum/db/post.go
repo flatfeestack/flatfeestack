@@ -120,11 +120,34 @@ func GetPostById(id uuid.UUID) (*DbPost, error) {
 	defer dbLib.CloseAndLog(stmt)
 
 	err = stmt.QueryRow(id).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, pq.Array(&post.ProposalIds))
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &post, nil
+	default:
+		return nil, err
+	}
+}
+
+func GetPostByProposalId(proposalId string) (*DbPost, error) {
+	var post DbPost
+
+	stmt, err := dbLib.DB.Prepare(`SELECT id, author, content, created_at, open, title, updated_at, proposal_ids FROM post where $1=ANY(proposal_ids)`)
 	if err != nil {
 		return nil, err
 	}
+	defer dbLib.CloseAndLog(stmt)
 
-	return &post, nil
+	err = stmt.QueryRow(proposalId).Scan(&post.Id, &post.Author, &post.Content, &post.CreatedAt, &post.Open, &post.Title, &post.UpdatedAt, pq.Array(&post.ProposalIds))
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &post, nil
+	default:
+		return nil, err
+	}
 }
 
 func UpdatePostByPostID(postId uuid.UUID, title string, content string) (*DbPost, error) {
