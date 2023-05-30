@@ -9,8 +9,9 @@
   import StatusSpan from "../../components/DAO/discussions/StatusSpan.svelte";
   import Spinner from "../../components/Spinner.svelte";
   import { API } from "../../ts/api";
-  import { user } from "../../ts/mainStore";
+  import { error, user } from "../../ts/mainStore";
   import type { Comment, Post } from "../../types/forum";
+  import { navigate } from "svelte-routing";
 
   export let postId: string;
 
@@ -28,8 +29,12 @@
   });
 
   async function closeDiscussion() {
-    await API.forum.closePost(postId);
-    post.open = false;
+    try {
+      await API.forum.closePost(postId);
+      post.open = false;
+    } catch (e) {
+      $error = e.message;
+    }
   }
 </script>
 

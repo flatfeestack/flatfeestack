@@ -4,6 +4,7 @@
   import type { Comment } from "../../../types/forum";
   import { getAllFormErrors } from "../../../utils/validationHelpers";
   import DiscussionThreadItem from "./DiscussionThreadItem.svelte";
+  import { error } from "../../../ts/mainStore";
 
   export let comments: Comment[];
   export let discussionOpen: boolean;
@@ -51,15 +52,23 @@
       return;
     }
 
-    item = await API.forum.updateComment(postId, item.id, formValues);
+    try {
+      item = await API.forum.updateComment(postId, item.id, formValues);
+    } catch (e) {
+      $error = e.message;
+    }
 
     editMode = false;
     isSubmitting = false;
   }
 
   async function deleteComment() {
-    await API.forum.deleteComment(postId, item.id);
-    comments = comments.filter((comment) => comment.id !== item.id);
+    try {
+      await API.forum.deleteComment(postId, item.id);
+      comments = comments.filter((comment) => comment.id !== item.id);
+    } catch (e) {
+      $error = e.message;
+    }
   }
 </script>
 

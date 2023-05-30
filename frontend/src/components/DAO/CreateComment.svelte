@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Link } from "svelte-routing";
   import { API } from "../../ts/api";
-  import { user } from "../../ts/mainStore";
+  import { error, user } from "../../ts/mainStore";
   import type { Comment } from "../../types/forum";
   import { getAllFormErrors } from "../../utils/validationHelpers";
   import yup from "../../utils/yup";
@@ -47,11 +47,15 @@
       return;
     }
 
-    const comment = await API.forum.createComment(postId, formValues);
-    comments = [...comments, comment];
-    formValues = {
-      content: "",
-    };
+    try {
+      const comment = await API.forum.createComment(postId, formValues);
+      comments = [...comments, comment];
+      formValues = {
+        content: "",
+      };
+    } catch (e) {
+      $error = e.message;
+    }
     isSubmitting = false;
   }
 

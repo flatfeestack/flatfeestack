@@ -5,8 +5,10 @@ import (
 	"fmt"
 	database "forum/db"
 	"forum/types"
+	goaway "github.com/TwiN/go-away"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"regexp"
 	"sync"
 )
 
@@ -43,6 +45,10 @@ func (s *StrictServerImpl) GetPosts(ctx context.Context, request GetPostsRequest
 }
 
 func (s *StrictServerImpl) PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error) {
+	if isTextInappropriate(request.Body.Title) || isTextInappropriate(request.Body.Content) {
+		return PostPosts400JSONResponse{BadRequestJSONResponse{"Please use appropriate language!"}}, nil
+	}
+
 	id := getCurrentUserId(ctx)
 	newPost, err := database.InsertPost(id, request.Body.Title, request.Body.Content)
 	if err != nil {
@@ -95,6 +101,9 @@ func (s *StrictServerImpl) GetPostsPostId(ctx context.Context, request GetPostsP
 func (s *StrictServerImpl) PutPostsPostId(ctx context.Context, request PutPostsPostIdRequestObject) (PutPostsPostIdResponseObject, error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
+	if isTextInappropriate(request.Body.Title) || isTextInappropriate(request.Body.Content) {
+		return PutPostsPostId400JSONResponse{BadRequestJSONResponse{"Please use appropriate language!"}}, nil
+	}
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
 		log.Error(err)
@@ -187,6 +196,9 @@ func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request G
 }
 
 func (s *StrictServerImpl) PostPostsPostIdComments(ctx context.Context, request PostPostsPostIdCommentsRequestObject) (PostPostsPostIdCommentsResponseObject, error) {
+	if isTextInappropriate(request.Body.Content) {
+		return PostPostsPostIdComments400JSONResponse{BadRequestJSONResponse{"Please use appropriate language!"}}, nil
+	}
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
 		log.Error(err)
@@ -225,6 +237,9 @@ func (s *StrictServerImpl) DeletePostsPostIdCommentsCommentId(ctx context.Contex
 func (s *StrictServerImpl) PutPostsPostIdCommentsCommentId(ctx context.Context, request PutPostsPostIdCommentsCommentIdRequestObject) (PutPostsPostIdCommentsCommentIdResponseObject, error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
+	if isTextInappropriate(request.Body.Content) {
+		return PutPostsPostIdCommentsCommentId400JSONResponse{BadRequestJSONResponse{"Please use appropriate language!"}}, nil
+	}
 	postExists, err := database.CheckIfPostExists(request.PostId)
 	if !postExists {
 		return PutPostsPostIdCommentsCommentId404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
@@ -309,4 +324,14 @@ func mapDbCommentToApiComment(dbComment database.DbComment) Comment {
 		UpdatedAt: dbComment.UpdatedAt,
 	}
 	return comment
+}
+
+func isTextInappropriate(text string) bool {
+	filteredText := filterNonASCII(text)
+	return goaway.IsProfane(filteredText)
+}
+
+func filterNonASCII(str string) string {
+	regex := regexp.MustCompile("[^\\x00-\\x7F]")
+	return regex.ReplaceAllString(str, "")
 }

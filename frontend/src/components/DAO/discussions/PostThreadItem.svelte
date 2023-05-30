@@ -3,6 +3,7 @@
   import { API } from "../../../ts/api";
   import type { Post } from "../../../types/forum";
   import DiscussionThreadItem from "./DiscussionThreadItem.svelte";
+  import { error } from "../../../ts/mainStore";
 
   export let item: Post;
 
@@ -11,8 +12,12 @@
   }
 
   async function deleteDiscussion() {
-    await API.forum.deletePost(item.id);
-    navigate("/dao/discussions");
+    try {
+      await API.forum.deletePost(item.id);
+      navigate("/dao/discussions");
+    } catch (e) {
+      $error = e.message;
+    }
   }
 </script>
 

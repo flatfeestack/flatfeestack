@@ -78,7 +78,11 @@
       moveToVotesPage();
     }
 
-    openDiscussions = await API.forum.getAllPosts(true);
+    try {
+      openDiscussions = await API.forum.getAllPosts(true);
+    } catch (e) {
+      $error = e.message;
+    }
     $isSubmitting = false;
   });
 
