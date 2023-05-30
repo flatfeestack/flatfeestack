@@ -29,12 +29,15 @@ ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/libgit2/lib"
 WORKDIR /app
 
 RUN apt update && \
-    apt install -y --no-install-recommends ca-certificates && \
+    apt install -y --no-install-recommends ca-certificates curl && \
     apt clean
 
 COPY banner.txt .
 
 COPY --from=builder /opt/libgit2 /opt/libgit2/
 COPY --from=builder /app/analyzer .
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:${PORT}/metrics || exit 1
 
 ENTRYPOINT ["/app/analyzer"]

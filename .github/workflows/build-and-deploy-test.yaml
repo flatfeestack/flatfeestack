@@ -353,83 +353,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create .env files
-        run: |
-          cp analyzer/.example.env analyzer/.env
-          cp backend/.example.env backend/.env
-          cp forum/.example.env forum/.env
-          cp fastauth/.example.env fastauth/.env
-          cp payout/.example.env payout/.env
-          cp db/.example.env db/.env
-
-      - name: Edit backend .env file
-        run: |
-          sed -i 's#%%EMAIL_TOKEN%%#${{ secrets.TEST_EMAIL_TOKEN }}#g' backend/.env
-          sed -i 's#EMAIL_PREFIX=http://localhost:8080#EMAIL_PREFIX=https://test.flatfeestack.io#g' backend/.env
-          sed -i 's#%%STRIPE_SECRET_API%%#${{ secrets.TEST_STRIPE_SECRET_API }}#g' backend/.env
-          sed -i 's#%%STRIPE_PUBLIC_API%%#${{ secrets.TEST_STRIPE_PUBLIC_API }}#g' backend/.env
-          sed -i 's#%%STRIPE_SECRET_WEBHOOK%%#${{ secrets.TEST_STRIPE_SECRET_WEBHOOK }}#g' backend/.env
-          sed -i 's#%%NOWPAYMENTS_TOKEN%%#${{ secrets.TEST_NOWPAYMENTS_TOKEN }}#g' backend/.env
-          sed -i 's#%%NOWPAYMENTS_IPN_KEY%%#${{ secrets.TEST_NOWPAYMENTS_IPN_KEY }}#g' backend/.env
-          sed -i 's#ENV=local#ENV=dev#g' backend/.env
-          sed -i 's#ADMINS=jonas@flatfeestack.io#ADMINS=tom.test@bocek.ch;tom.t1@bocek.ch;tom.t2@bocek.ch;guil@axlabs.com;gsm@machados.org#g' backend/.env
-          sed -i 's#ANALYZER_USERNAME=flatfeestack#ANALYZER_USERNAME=${{ secrets.TEST_ANALYZER_USERNAME }}#g' backend/.env
-          sed -i 's#ANALYZER_PASSWORD=analyzer#ANALYZER_PASSWORD=${{ secrets.TEST_ANALYZER_PASSWORD }}#g' backend/.env
-          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' backend/.env
-          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' backend/.env
-          sed -i 's#PAYOUT_USERNAME=flatfeestack#PAYOUT_USERNAME=${{ secrets.TEST_PAYOUT_USERNAME }}#g' backend/.env
-          sed -i 's#PAYOUT_PASSWORD=payout#PAYOUT_PASSWORD=${{ secrets.TEST_PAYOUT_PASSWORD }}#g' backend/.env
-
-      - name: Edit fastauth .env file
-        run: |
-          sed -i 's#%%EMAIL_TOKEN%%#${{ secrets.TEST_EMAIL_TOKEN }}#g' fastauth/.env
-          sed -i 's#EMAIL_PREFIX=http://localhost:8080#EMAIL_PREFIX=https://test.flatfeestack.io#g' fastauth/.env
-          sed -i 's#ENV=local#ENV=dev#g' fastauth/.env
-
-      - name: Edit payout .env file
-        run: |
-          sed -i 's#ETH_URL=http://ganache:8545#ETH_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
-          sed -i 's#ETH_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80#ETH_PRIVATE_KEY=${{ secrets.TEST_ETH_PRIVATE_KEY }}#g' payout/.env
-          sed -i 's#ETH_CONTRACT=0x95401dc811bb5740090279Ba06cfA8fcF6113778#ETH_CONTRACT=0x194bbC28bA0C0105149ddEEE0800d81Cac307612#g' payout/.env
-          sed -i 's#NEO_URL=http://host.docker.internal:50012#NEO_URL=http://seed1t4.neo.org:20332#g' payout/.env
-          sed -i 's#USDC_URL=http://ganache:8545#USDC_URL=https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' payout/.env
-          sed -i 's#USDC_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80#USDC_PRIVATE_KEY=${{ secrets.TEST_USDC_PRIVATE_KEY }}#g' payout/.env
-          sed -i 's#USDC_CONTRACT=0x95401dc811bb5740090279Ba06cfA8fcF6113778#USDC_CONTRACT=0xf25f565A8c03d9401BEc46B61EACf89ce8F524D5#g' payout/.env
-          sed -i 's#DAO_WALLET_CONTRACT=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0#DAO_WALLET_CONTRACT=0xa10825Dc5C0A6bF05EbDB586cAf52BdB777BAe5a#g' payout/.env
-          sed -i 's#DAO_MEMBERSHIP_CONTRACT=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9#DAO_MEMBERSHIP_CONTRACT=0xA1c3770345287aF14f63098a3Fb044860474A2F3#g' payout/.env
-          sed -i 's#DAO_DAO_CONTRACT=0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e#DAO_DAO_CONTRACT=0x82293E85698C606E2fF88904873fD11a30263355#g' payout/.env
-          sed -i 's#ENV=local#ENV=dev#g' payout/.env
-          sed -i 's#PAYOUT_USERNAME=flatfeestack#PAYOUT_USERNAME=${{ secrets.TEST_PAYOUT_USERNAME }}#g' payout/.env
-          sed -i 's#PAYOUT_PASSWORD=payout#PAYOUT_PASSWORD=${{ secrets.TEST_PAYOUT_PASSWORD }}#g' payout/.env
-
-      - name: Edit forum .env file
-        run: |
-          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' forum/.env
-          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' forum/.env
-          sed -i 's#DAO_CONTRACT_ADDRESS=0x87E3D01B36b07794AB2c2B72C6FD958Fc98cCab3#DAO_CONTRACT_ADDRESS=0x82293E85698C606E2fF88904873fD11a30263355#g' forum/.env
-          sed -i 's#ENV=local#ENV=dev#g' forum/.env
-          sed -i 's#ETH_WS_URL=ws://ganache:8545#ETH_WS_URL=wss://goerli.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161#g' forum/.env
-
-      - name: Edit analyzer .env file
-        run: |
-          sed -i 's#ANALYZER_USERNAME=flatfeestack#ANALYZER_USERNAME=${{ secrets.TEST_ANALYZER_USERNAME }}#g' analyzer/.env
-          sed -i 's#ANALYZER_PASSWORD=analyzer#ANALYZER_PASSWORD=${{ secrets.TEST_ANALYZER_PASSWORD }}#g' analyzer/.env
-          sed -i 's#BACKEND_USERNAME=flatfeestack#BACKEND_USERNAME=${{ secrets.TEST_BACKEND_USERNAME }}#g' analyzer/.env
-          sed -i 's#BACKEND_PASSWORD=backend#BACKEND_PASSWORD=${{ secrets.TEST_BACKEND_PASSWORD }}#g' analyzer/.env
-          sed -i 's#ENV=local#ENV=dev#g' analyzer/.env
-
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.DEPLOY_MACMINI_PRIVATE_KEY }}
           known_hosts: ${{ secrets.DEPLOY_MACMINI_KNOWN_HOST }}
 
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Login to DigitalOcean container registry
+        run: doctl registry login --expiry-seconds 10000
+
       - name: Deploy - TEST
         run: |
-          scp -P 3000 deploy/docker-compose.yml sibex@axelra.net:/Users/sibex/flatfeestack
-          rsync -avzm -e 'ssh -p 3000' --include='*/' --include='.env' --exclude='*' . sibex@axelra.net:/Users/sibex/flatfeestack
-          ssh -p 3000 axelra.net -l sibex "doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "doctl registry login --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-          ssh -p 3000 axelra.net -l sibex "cd flatfeestack && TAG_IMAGE=$TAG_IMAGE BASE_PATH=/Users/sibex/flatfeestack docker compose up --pull always -d --no-build"
-          ssh -p 3000 axelra.net -l sibex "rm -r /Users/sibex/flatfeestack/*"
-          ssh -p 3000 axelra.net -l sibex "docker system prune -af"
+          docker context create test --docker "host=ssh://sibex@axelra.net:3000"
+          docker --context test compose -p "flatfeestack" -f deploy/docker-compose.yml up -d --remove-orphans --pull always --wait
+          docker --context test system prune -af
+          docker --context test ps
+        env:
+          TEST_ADMINS: "tom.test@bocek.ch;tom.t1@bocek.ch;tom.t2@bocek.ch;guil@axlabs.com;gsm@machados.org"
+          TEST_ANALYZER_PASSWORD: ${{ secrets.TEST_ANALYZER_PASSWORD }}
+          TEST_ANALYZER_USERNAME: ${{ secrets.TEST_ANALYZER_USERNAME }}
+          TEST_BACKEND_PASSWORD: ${{ secrets.TEST_BACKEND_PASSWORD }}
+          TEST_BACKEND_USERNAME: ${{ secrets.TEST_BACKEND_USERNAME }}
+          TEST_DAO_CONTRACT_ADDRESS: "0x82293E85698C606E2fF88904873fD11a30263355"
+          TEST_EMAIL_TOKEN: ${{ secrets.TEST_EMAIL_TOKEN }}
+          TEST_ETH_PRIVATE_KEY: ${{ secrets.TEST_ETH_PRIVATE_KEY }}
+          TEST_ETH_URL: ${{ secrets.TEST_ETH_URL }}
+          TEST_ETH_WS_URL: ${{ secrets.TEST_ETH_WS_URL }}
+          TEST_PAYOUT_PASSWORD: ${{ secrets.TEST_PAYOUT_PASSWORD }}
+          TEST_PAYOUT_USERNAME: ${{ secrets.TEST_PAYOUT_USERNAME }}
+          TEST_STRIPE_PUBLIC_API: ${{ secrets.TEST_STRIPE_PUBLIC_API }}
+          TEST_STRIPE_SECRET_API: ${{ secrets.TEST_STRIPE_SECRET_API }}
+          TEST_STRIPE_SECRET_WEBHOOK: ${{ secrets.TEST_STRIPE_SECRET_WEBHOOK }}
+          TEST_USDC_PRIVATE_KEY: ${{ secrets.TEST_USDC_PRIVATE_KEY }}

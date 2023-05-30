@@ -16,8 +16,17 @@ COPY *.go banner.txt ./
 RUN go build
 
 FROM alpine:3.18
-RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
+
 WORKDIR /app
+
+RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
+RUN apk add --update --no-cache curl
+
 COPY --from=builder /app/forum /app/db/init.sql /app/banner.txt ./
+
 USER nonroot
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:${PORT}/metrics || exit 1
+
 ENTRYPOINT ["/app/forum"]

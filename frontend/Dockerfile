@@ -10,5 +10,11 @@ COPY ./src ./src
 RUN pnpm prod
 
 FROM caddy:2-alpine
+
+RUN apk add --update --no-cache curl
+
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=base /app/dist/client /var/www/html
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:9085 || exit 1

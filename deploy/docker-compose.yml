@@ -1,67 +1,133 @@
-version: "3.9"
-
+---
+version: '3.9'
 services:
   auth:
     image: registry.digitalocean.com/flatfeestack/fastauth:${TAG_IMAGE:-latest}
     restart: always
-    env_file:
-      - ${BASE_PATH:-.}/fastauth/.env
+    environment:
+      ADMINS: ${TEST_ADMINS}
+      DB_DRIVER: postgres
+      DB_PATH: postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
+      DB_SCRIPTS: init.sql
+      DETAILS: 'true'
+      DEV: staging
+      EMAIL_FROM: info@flatfeestack.io
+      EMAIL_FROM_NAME: Flatfeestack
+      EMAIL_PREFIX: https://test.flatfeestack.io
+      EMAIL_TOKEN: ${TEST_EMAIL_TOKEN}
+      EMAIL_URL: https://api.sendgrid.com/v3/mail/send
+      ENV: local
+      HS256: test-seed
+      PORT: 9081
+      PWFLOW: 'true'
+      USER_ENDPOINTS: 'true'
     depends_on:
       db:
         condition: service_healthy
-
   backend:
     image: registry.digitalocean.com/flatfeestack/backend:${TAG_IMAGE:-latest}
     restart: always
-    env_file:
-      - ${BASE_PATH:-.}/backend/.env
+    environment:
+      ADMINS: ${TEST_ADMINS}
+      ANALYZER_PASSWORD: ${TEST_ANALYZER_PASSWORD}
+      ANALYZER_URL: http://analyzer:9083
+      ANALYZER_USERNAME: ${TEST_ANALYZER_USERNAME}
+      BACKEND_PASSWORD: ${TEST_BACKEND_PASSWORD}
+      BACKEND_USERNAME: ${TEST_BACKEND_USERNAME}
+      DB_DRIVER: postgres
+      DB_PATH: postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
+      DB_SCRIPTS: init.sql
+      EMAIL_FROM: info@flatfeestack.io
+      EMAIL_FROM_NAME: Flatfeestack
+      EMAIL_PREFIX: https://test.flatfeestack.io
+      EMAIL_TOKEN: ${TEST_EMAIL_TOKEN}
+      EMAIL_URL: https://api.sendgrid.com/v3/mail/send
+      ENV: staging
+      HS256: test-seed
+      NOWPAYMENTS_API_URL: https://api.nowpayments.io/v1/
+      NOWPAYMENTS_IPN_CALLBACK_URL: https://test.flatfeestack.io/hooks/nowpayments
+      NOWPAYMENTS_IPN_KEY: '%%NOWPAYMENTS_IPN_KEY%%'
+      NOWPAYMENTS_TOKEN: '%%NOWPAYMENTS_TOKEN%%'
+      PAYOUT_PASSWORD: ${TEST_PAYOUT_PASSWORD}
+      PAYOUT_URL: http://payout:9084
+      PAYOUT_USERNAME: ${TEST_PAYOUT_USERNAME}
+      PORT: 9082
+      STRIPE_PUBLIC_API: ${TEST_STRIPE_PUBLIC_API}
+      STRIPE_SECRET_API: ${TEST_STRIPE_SECRET_API}
+      STRIPE_SECRET_WEBHOOK: ${TEST_STRIPE_SECRET_WEBHOOK}
     depends_on:
       db:
         condition: service_healthy
-
   forum:
     image: registry.digitalocean.com/flatfeestack/forum:${TAG_IMAGE:-latest}
     restart: always
-    env_file:
-      - ${BASE_PATH:-.}/forum/.env
+    environment:
+      ADMINS: ${TEST_ADMINS}
+      BACKEND_PASSWORD: backend
+      BACKEND_URL: http://backend:9082/
+      BACKEND_USERNAME: flatfeestack
+      DAO_CONTRACT_ADDRESS: ${TEST_DAO_CONTRACT_ADDRESS}
+      DB_DRIVER: postgres
+      DB_PATH: postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable
+      DB_SCRIPTS: init.sql
+      ENV: staging
+      ETH_WS_URL: ${TEST_ETH_WS_URL}
+      HS256: test-seed
+      PORT: 9086
     depends_on:
       db:
         condition: service_healthy
       backend:
         condition: service_started
-
   analyzer:
     image: registry.digitalocean.com/flatfeestack/analyzer:${TAG_IMAGE:-latest}
     restart: always
-    env_file:
-      - ${BASE_PATH:-.}/analyzer/.env
-    volumes:
-      - ${BASE_PATH:-.}/.repos:/tmp/repos
-
+    environment:
+      ANALYZER_PASSWORD: ${TEST_ANALYZER_PASSWORD}
+      ANALYZER_USERNAME: ${TEST_ANALYZER_USERNAME}
+      BACKEND_CALLBACK_URL: http://backend:9082/hooks/analyzer
+      BACKEND_PASSWORD: ${TEST_BACKEND_PASSWORD}
+      BACKEND_USERNAME: ${TEST_BACKEND_USERNAME}
+      ENV: staging
+      PORT: 9083
+    volumes: [/Users/sibex/flatfeestack/.repos:/tmp/repos]
   payout:
     image: registry.digitalocean.com/flatfeestack/payout:${TAG_IMAGE:-latest}
     restart: always
-    env_file:
-      - ${BASE_PATH:-.}/payout/.env
-
+    environment:
+      DAO_DAO_CONTRACT: ${TEST_DAO_CONTRACT_ADDRESS}
+      DAO_MEMBERSHIP_CONTRACT: 0xA1C3770345287AF14F63098A3FB044860474A2F3
+      DAO_WALLET_CONTRACT: 0xa10825dc5c0a6bf05ebdb586caf52bdb777bae5a
+      ENV: staging
+      ETH_CONTRACT: 0x194bbc28ba0c0105149ddeee0800d81cac307612
+      ETH_PRIVATE_KEY: ${TEST_ETH_PRIVATE_KEY}
+      ETH_URL: ${TEST_ETH_URL}
+      HS256: test-seed
+      NEO_CONTRACT: Kyw24tcti1qxpVSJfbKwZFFcokWUbBUWZMmtQWRddy1AgtULuTND
+      NEO_PRIVATE_KEY: KzrHihgvHGpF9urkSbrbRcgrxSuVhpDWkSfWvSg97pJ5YgbdHKCQ
+      NEO_URL: http://seed1t4.neo.org:20332
+      PAYOUT_PASSWORD: ${TEST_PAYOUT_PASSWORD}
+      PAYOUT_USERNAME: ${TEST_PAYOUT_USERNAME}
+      USDC_CONTRACT: 0xf25f565a8c03d9401bec46b61eacf89ce8f524d5
+      USDC_PRIVATE_KEY: ${TEST_USDC_PRIVATE_KEY}
+      USDC_URL: ${TEST_ETH_URL}
+      PORT: 9084
   frontend:
     image: registry.digitalocean.com/flatfeestack/frontend:${TAG_IMAGE:-latest}
-
   db:
     image: postgres:15-alpine
-    volumes:
-      - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z
-    env_file:
-      - ${BASE_PATH:-.}/db/.env
+    volumes: [/Users/sibex/flatfeestack/.db:/var/lib/postgresql/data:z]
+    environment:
+      POSTGRES_DB: flatfeestack
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
     restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready" ]
+      test: [CMD-SHELL, pg_isready]
       interval: 3s
       timeout: 5s
       retries: 30
-
   caddy:
     image: registry.digitalocean.com/flatfeestack/caddy:${TAG_IMAGE:-latest}
     restart: always
-    ports:
-      - "8080:8080"
+    ports: [8080:8080]
