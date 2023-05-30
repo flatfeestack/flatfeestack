@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/api"
 	"backend/db"
 	"backend/utils"
 	"github.com/flatfeestack/go-lib/auth"
@@ -12,10 +13,12 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := auth.ValidateJwtInRequest(r, jwtKey)
 		if claims != nil && err != nil {
-			utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
+			log.Errorf("Token expired: %v, available: %v", claims.Subject, emails)
+			utils.WriteErrorf(w, http.StatusUnauthorized, api.GenericErrorMessage)
 			return
 		} else if claims == nil && err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+			log.Errorf("jwtAuthAdmin error: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, api.NotAllowedToViewMessage)
 			return
 		}
 		for _, email := range emails {
@@ -25,7 +28,8 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 				return
 			}
 		}
-		utils.WriteErrorf(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		log.Errorf("ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		utils.WriteErrorf(w, http.StatusBadRequest, api.NotAllowedToViewMessage)
 	}
 }
 
@@ -33,24 +37,28 @@ func jwtAuthUser(next func(w http.ResponseWriter, r *http.Request, user *db.User
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := auth.ValidateJwtInRequest(r, jwtKey)
 		if claims != nil && err != nil {
-			utils.WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
+			log.Errorf("Token expired: %v", claims.Subject)
+			utils.WriteErrorf(w, http.StatusUnauthorized, api.GenericErrorMessage)
 			return
 		} else if claims == nil && err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+			log.Errorf("jwtAuthAdmin error: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, api.NotAllowedToViewMessage)
 			return
 		}
 
 		// Fetch user from DB
 		user, err := db.FindUserByEmail(claims.Subject)
 		if err != nil {
-			utils.WriteErrorf(w, http.StatusBadRequest, "ERR-08, user find error: %v", err)
+			log.Errorf("ERR-08, user find error: %v", err)
+			utils.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
 			return
 		}
 
 		if user == nil {
 			user, err = db.CreateUser(claims.Subject, utils.TimeNow())
 			if err != nil {
-				utils.WriteErrorf(w, http.StatusBadRequest, "ERR-09, user update error: %v", err)
+				log.Errorf("ERR-09, user update error: %v", err)
+				utils.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
 				return
 			}
 		}

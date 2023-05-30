@@ -67,6 +67,7 @@ const (
 	GenericErrorMessage             = "Oops something went wrong. Please try again."
 	CannotVerifyRefreshTokenMessage = "Cannot verify refresh token"
 	BasicAuthFailedMessage          = "Basic auth failed"
+	NotAllowedToViewMessage         = "Oops you are not allowed to view this resource."
 )
 
 func confirmEmail(w http.ResponseWriter, r *http.Request) {

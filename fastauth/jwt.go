@@ -15,10 +15,12 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth0(r)
 		if claims != nil && err != nil {
-			WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v, available: %v", claims.Subject, emails)
+			log.Errorf("Token expired: %v, available: %v", claims.Subject, emails)
+			WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
 			return
 		} else if claims == nil && err != nil {
-			WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+			log.Errorf("jwtAuthAdmin error: %v", err)
+			WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 			return
 		}
 		for _, email := range emails {
@@ -28,7 +30,8 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 				return
 			}
 		}
-		WriteErrorf(w, http.StatusBadRequest, "ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		log.Errorf("ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 	}
 }
 
@@ -45,7 +48,8 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					WriteErrorf(w, http.StatusUnauthorized, "Token expired: %v", claims.Subject)
+					log.Errorf("Token expired: %v", claims.Subject)
+					WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
 				}
 			} else if claims == nil {
 				if ru != "" {
@@ -53,7 +57,8 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					WriteErrorf(w, http.StatusBadRequest, "jwtAuthAdmin error: %v", err)
+					log.Errorf("jwtAuthAdmin error: %v", err)
+					WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 				}
 			}
 			return
