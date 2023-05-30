@@ -9,7 +9,7 @@
     daoContract,
   } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import { proposalStore, votingSlots } from "../../ts/proposalStore";
   import {
     checkUndefinedProvider,
     ensureSameChainId,
@@ -28,7 +28,7 @@
     ensureSameChainId($daoConfig?.chainId);
 
     if (
-      $proposalCreatedEvents === null ||
+      $proposalStore === null ||
       $votingSlots === null ||
       $currentBlockTimestamp === null
     ) {
@@ -58,19 +58,17 @@
             $daoContract.proposalEta(proposalId),
           ]);
 
-          const event = (
-            await proposalCreatedEvents.get(proposalId, $daoContract)
-          ).event;
+          const proposal = await proposalStore.get(proposalId, $daoContract);
 
           return {
-            calldatas: event.args[5],
-            description: event.args[8],
+            calldatas: proposal.calldatas,
+            description: proposal.description,
             eta: proposalEta < $currentBlockTimestamp ? 0 : proposalEta,
             id: proposalId.toString(),
-            proposer: event.args[1],
+            proposer: proposal.proposer,
             state: proposalState,
-            targets: event.args[2],
-            values: event.args[3],
+            targets: proposal.targets,
+            values: proposal.values,
           };
         }
       )

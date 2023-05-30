@@ -12,7 +12,7 @@
   } from "../../ts/daoStore";
   import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import { proposalStore, votingSlots } from "../../ts/proposalStore";
   import {
     checkUndefinedProvider,
     ensureSameChainId,
@@ -154,8 +154,8 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = await proposalCreatedEvents.get(proposalId, $daoContract);
-    return event.event.args[8];
+    const event = await proposalStore.get(proposalId, $daoContract);
+    return event.description;
   }
 
   async function getVotingSlotState(

@@ -1,10 +1,7 @@
 <script lang="ts">
   import Spinner from "../../components/Spinner.svelte";
   import Navigation from "../../components/DAO/Navigation.svelte";
-  import {
-    proposalCreatedEvents,
-    type ProposalCreatedEvent,
-  } from "../../ts/proposalStore";
+  import { proposalStore, type Proposal } from "../../ts/proposalStore";
   import {
     currentBlockTimestamp,
     daoContract,
@@ -22,12 +19,12 @@
 
   let discussion: Post | null = undefined;
   let isLoading = true;
-  let proposal: ProposalCreatedEvent;
+  let proposal: Proposal;
   let proposalEta = 0;
   let proposalState = 0;
 
   $: {
-    if ($daoContract === null) {
+    if ($currentBlockTimestamp === null || $daoContract === null) {
       isLoading = true;
     } else {
       prepareView();
@@ -55,17 +52,21 @@
   async function getProposal(): Promise<void> {
     try {
       [proposal, proposalState] = await Promise.all([
-        proposalCreatedEvents.get(proposalId, $daoContract),
+        proposalStore.get(proposalId, $daoContract),
         $daoContract.state(proposalId),
       ]);
 
       if (proposalState === 5) {
         proposalEta = await $daoContract.proposalEta(proposalId);
+        proposalEta = proposalEta < $currentBlockTimestamp ? 0 : proposalEta;
       }
     } catch (e) {
       $error = e.message;
     }
   }
+
+  const isDaoMember = () =>
+    $membershipStatusValue !== null && $membershipStatusValue.toNumber() === 3;
 </script>
 
 <Navigation>
@@ -75,26 +76,25 @@
     <h2>Details about proposal</h2>
 
     <p class="bold">Proposer</p>
-    <p>{proposal.event.args[1]}</p>
+    <p>{proposal.proposer}</p>
 
     <p class="bold">Description</p>
-    <p class="whitespace-pre-wrap">{proposal.event.args[8]}</p>
+    <p class="whitespace-pre-wrap">{proposal.description}</p>
 
     <p class="bold">State</p>
     {#if proposalState === 0}
       <p>
-        Vote of proposal is scheduled for #{proposal.event.args[6]}
-        {#await futureBlockDate(proposal.event.args[6])}(approx ...){:then date}(approx
+        Vote of proposal is scheduled for #{proposal.startBlock}
+        {#await futureBlockDate(proposal.startBlock)}(approx ...){:then date}(approx
           {date}){/await}
       </p>
     {:else if proposalState === 1}
       <p>
-        Vote for proposal is open until #{proposal.event.args[7]}
-        {#await futureBlockDate(proposal.event.args[7])}(approx ...){:then date}(approx
+        Vote for proposal is open until #{proposal.endBlock}
+        {#await futureBlockDate(proposal.endBlock)}(approx ...){:then date}(approx
           {date}){/await}.
-        {#if $membershipStatusValue === 3}
-          <Link to={`/dao/castVotes/${proposal.event.args[6]}`}>Cast vote!</Link
-          >
+        {#if isDaoMember()}
+          <Link to={`/dao/castVotes/${proposal.startBlock}`}>Cast vote!</Link>
         {/if}
       </p>
     {:else if proposalState === 2}
@@ -104,8 +104,8 @@
     {:else if proposalState === 4}
       <p>
         The vote for the proposal was successful.
-        {#if $membershipStatusValue === 3}
-          <Link to={`/dao/executeProposals/${proposal.event.args[6]}`}
+        {#if isDaoMember()}
+          <Link to={`/dao/executeProposals/${proposal.startBlock}`}
             >Enqueue proposal</Link
           >
         {/if}
@@ -114,8 +114,8 @@
       {#if proposalEta === 0}
         <p>
           The proposal is ready for execution.
-          {#if $membershipStatusValue === 3}
-            <Link to={`/dao/executeProposals/${proposal.event.args[6]}`}
+          {#if isDaoMember()}
+            <Link to={`/dao/executeProposals/${proposal.startBlock}`}
               >Execute proposal</Link
             >
           {/if}
