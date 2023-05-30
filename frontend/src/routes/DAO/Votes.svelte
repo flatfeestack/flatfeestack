@@ -19,6 +19,7 @@
   } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
+  import truncateString from "../../utils/truncateString";
 
   let viewVotingSlots: VotingSlot[] = [];
   let slotCloseTime: number = 0;
@@ -248,7 +249,10 @@
             {#each slotInfo.proposalInfos as proposalInfo, i}
               <li>
                 <Link to="/dao/proposals/{proposalInfo.proposalId}"
-                  >Proposal {i + 1}</Link
+                  >Proposal {i + 1}: {truncateString(
+                    proposalInfo.proposalDescription,
+                    30
+                  )}</Link
                 >
               </li>
             {/each}
