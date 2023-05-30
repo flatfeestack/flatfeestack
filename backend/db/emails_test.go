@@ -22,6 +22,34 @@ func TestGitEmailInsert(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestCountExistingOrConfirmedGitEmail(t *testing.T) {
+	setup()
+	defer teardown()
+
+	uid := insertTestUser(t, "foo@bar.ch").Id
+	uid2 := insertTestUser(t, "bar@foo.ch").Id
+	uid3 := insertTestUser(t, "meh@foo.ch").Id
+
+	c, err := CountExistingOrConfirmedGitEmail(uid, "foo@bar.ch")
+	assert.Equal(t, 0, c)
+	err = InsertGitEmail(uuid.New(), uid, "foo@bar.ch", stringPointer("A"), time.Now())
+	assert.Nil(t, err)
+
+	c, err = CountExistingOrConfirmedGitEmail(uid2, "foo@bar.ch")
+	assert.Equal(t, 0, c)
+	err = InsertGitEmail(uuid.New(), uid2, "foo@bar.ch", stringPointer("B"), time.Now())
+	assert.Nil(t, err)
+
+	c, err = CountExistingOrConfirmedGitEmail(uid, "foo@bar.ch")
+	assert.Equal(t, 1, c)
+
+	err = ConfirmGitEmail("foo@bar.ch", "A", time.Time{})
+	assert.Nil(t, err)
+
+	c, err = CountExistingOrConfirmedGitEmail(uid3, "foo@bar.ch")
+	assert.Equal(t, 1, c)
+}
+
 func TestGitEmailFind(t *testing.T) {
 	setup()
 	defer teardown()
