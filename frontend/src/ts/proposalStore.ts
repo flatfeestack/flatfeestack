@@ -3,7 +3,7 @@ import { derived, get, writable, type Readable } from "svelte/store";
 import { daoContract } from "./daoStore";
 import { userEthereumAddress } from "./ethStore";
 
-interface ProposalCreatedEvent {
+export interface ProposalCreatedEvent {
   proposalId: string;
   event: Event;
 }

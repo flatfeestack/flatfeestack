@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { navigate } from "svelte-routing";
+  import { Link, navigate } from "svelte-routing";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
   import {
@@ -246,7 +246,11 @@
         {#if slotInfo.proposalInfos.length > 0}
           <ul>
             {#each slotInfo.proposalInfos as proposalInfo, i}
-              <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
+              <li>
+                <Link to="/dao/proposals/{proposalInfo.proposalId}"
+                  >Proposal {i + 1}</Link
+                >
+              </li>
             {/each}
           </ul>
         {:else}

@@ -36,6 +36,7 @@
   import DAOCreateDiscussion from "../routes/DAO/CreateDiscussion.svelte";
   import DAOShowDiscussion from "../routes/DAO/ShowDiscussion.svelte";
   import DAOEditDiscussion from "../routes/DAO/EditDiscussion.svelte";
+  import DAOShowProposal from "../routes/DAO/ShowProposal.svelte";
 
   //https://github.com/EmilTholin/svelte-routing/issues/41
   import { globalHistory } from "svelte-routing/src/history";
@@ -107,6 +108,7 @@
         <Route path="/dao/membership" component={DAOMembership} />
         <Route path="/dao/metamask" component={DAOMetamaskRequired} />
         <Route path="/dao/createProposal" component={DAOCreateProposal} />
+        <Route path="/dao/proposals/:proposalId" component={DAOShowProposal} />
         <Route path="/dao/castVotes/:blockNumber" component={DAOCastVotes} />
         <Route
           path="/dao/executeProposals/:blockNumber"
