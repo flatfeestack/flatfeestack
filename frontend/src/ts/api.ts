@@ -205,6 +205,7 @@ export const API = {
     clearName: () => backendToken.put(`users/me/clear/name`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
+    deleteImage: () => backendToken.delete(`users/me/image`),
     setupStripe: () =>
       backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) =>

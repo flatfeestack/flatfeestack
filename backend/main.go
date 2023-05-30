@@ -224,6 +224,7 @@ func main() {
 	router.HandleFunc("/users/me/name/{name}", jwtAuthUser(api.UpdateName)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/clear/name", jwtAuthUser(api.ClearName)).Methods(http.MethodPut)
 	router.HandleFunc("/users/me/image", maxBytes(jwtAuthUser(api.UpdateImage), 200*1024)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/image", jwtAuthUser(api.DeleteImage)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
 	router.HandleFunc("/users/me/stripe", jwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
 	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
