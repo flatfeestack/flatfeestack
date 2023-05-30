@@ -9,7 +9,14 @@ import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorVotesQ
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "contracts/SBT2.sol";
 
-contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettingsUpgradeable, GovernorCountingSimpleUpgradeable, GovernorVotesUpgradeable, GovernorVotesQuorumFractionUpgradeable {
+contract FlatFeeStackDAO is
+    Initializable,
+    GovernorUpgradeable,
+    GovernorSettingsUpgradeable,
+    GovernorCountingSimpleUpgradeable,
+    GovernorVotesUpgradeable,
+    GovernorVotesQuorumFractionUpgradeable
+{
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -19,9 +26,7 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
     event BylawsChanged(string indexed oldHash, string indexed newHash);
     mapping(uint256 => bool) councilAction;
 
-    function initialize(IVotesUpgradeable _token)
-    initializer public
-    {
+    function initialize(IVotesUpgradeable _token) public initializer {
         __Governor_init("FlatFeeStackDAO");
         __GovernorSettings_init(2 days, 1 days, 1);
         __GovernorCountingSimple_init();
@@ -30,43 +35,45 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
     }
 
     function votingDelay()
-    public
-    view
-    override(IGovernorUpgradeable, GovernorSettingsUpgradeable)
-    returns (uint256)
+        public
+        view
+        override(IGovernorUpgradeable, GovernorSettingsUpgradeable)
+        returns (uint256)
     {
         //slot is each 14 days, and you need to submit votingDelay() in advance.
         uint256 nextSlot = ((block.timestamp + super.votingDelay()) /
-        60 /
-        60 /
-        24 /
+            60 /
+            60 /
+            24 /
             14) + 1;
         return nextSlot * 60 * 60 * 24 * 14;
     }
 
     function votingPeriod()
-    public
-    view
-    override(IGovernorUpgradeable, GovernorSettingsUpgradeable)
-    returns (uint256)
+        public
+        view
+        override(IGovernorUpgradeable, GovernorSettingsUpgradeable)
+        returns (uint256)
     {
         return super.votingPeriod();
     }
 
-    function quorum(uint256 blockNumber)
-    public
-    view
-    override(IGovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
-    returns (uint256)
+    function quorum(
+        uint256 blockNumber
+    )
+        public
+        view
+        override(IGovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
+        returns (uint256)
     {
         return super.quorum(blockNumber);
     }
 
     function proposalThreshold()
-    public
-    view
-    override(GovernorUpgradeable, GovernorSettingsUpgradeable)
-    returns (uint256)
+        public
+        view
+        override(GovernorUpgradeable, GovernorSettingsUpgradeable)
+        returns (uint256)
     {
         return super.proposalThreshold();
     }
@@ -86,12 +93,13 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
         //timelock is votingDelay, so we have before voting the same delay as the timelock
         require(
             proposalDeadline(proposalId0) + super.votingDelay() <
-            block.timestamp, "Governor: timelock not expired yet"
+                block.timestamp,
+            "Governor: timelock not expired yet"
         );
         return super.execute(targets, values, calldatas, descriptionHash);
     }
 
-    function councilExecute (
+    function councilExecute(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
@@ -117,8 +125,8 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
 
         require(
             FlatFeeStackDAOSBT(address(token)).isCouncil(msg.sender) &&
-            FlatFeeStackDAOSBT(address(token)).isCouncil(council2) &&
-            msg.sender != council2,
+                FlatFeeStackDAOSBT(address(token)).isCouncil(council2) &&
+                msg.sender != council2,
             "Signature not from council member"
         );
 
@@ -154,15 +162,21 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
 
         require(
             FlatFeeStackDAOSBT(address(token)).isCouncil(msg.sender) &&
-            FlatFeeStackDAOSBT(address(token)).isCouncil(council2) &&
-            msg.sender != council2,
+                FlatFeeStackDAOSBT(address(token)).isCouncil(council2) &&
+                msg.sender != council2,
             "Signature not from council member"
         );
 
         return _cancel(targets, values, calldatas, descriptionHash);
     }
 
-    function clock() public view virtual override(IGovernorUpgradeable, GovernorVotesUpgradeable) returns (uint48) {
+    function clock()
+        public
+        view
+        virtual
+        override(IGovernorUpgradeable, GovernorVotesUpgradeable)
+        returns (uint48)
+    {
         return SafeCastUpgradeable.toUint48(block.timestamp);
     }
 
@@ -170,7 +184,13 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
      * @dev Machine-readable description of the clock as specified in EIP-6372.
      */
     // solhint-disable-next-line func-name-mixedcase
-    function CLOCK_MODE() public view virtual override(IGovernorUpgradeable, GovernorVotesUpgradeable) returns (string memory) {
+    function CLOCK_MODE()
+        public
+        view
+        virtual
+        override(IGovernorUpgradeable, GovernorVotesUpgradeable)
+        returns (string memory)
+    {
         // Check that the clock was not modified
         // https://eips.ethereum.org/EIPS/eip-6372
         require(clock() == block.timestamp);
@@ -182,5 +202,4 @@ contract FlatFeeStackDAO is Initializable, GovernorUpgradeable, GovernorSettings
         bylawsHash = newHash;
         emit BylawsChanged(oldHash, bylawsHash);
     }
-
 }

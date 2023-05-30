@@ -10,8 +10,15 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/draft-ERC721
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
-
-contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, EIP712Upgradeable, ERC721VotesUpgradeable {
+contract FlatFeeStackDAOSBT is
+    Initializable,
+    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
+    PausableUpgradeable,
+    AccessControlUpgradeable,
+    EIP712Upgradeable,
+    ERC721VotesUpgradeable
+{
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
@@ -25,7 +32,7 @@ contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721Enumerabl
         _disableInitializers();
     }
 
-    function initialize() initializer public {
+    function initialize() public initializer {
         __ERC721_init("FlatFeeStack DAO SBT", "FFSDS");
         __ERC721Enumerable_init();
         __Pausable_init();
@@ -69,7 +76,9 @@ contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721Enumerabl
         );
 
         require(msg.value >= membershipFee);
-        membershipPayed[msg.sender] = SafeCastUpgradeable.toUint48(block.timestamp) + membershipPeriod;
+        membershipPayed[msg.sender] =
+            SafeCastUpgradeable.toUint48(block.timestamp) +
+            membershipPeriod;
 
         //member will have an id of 100 and more, the council will have id 1-99
         uint256 nextTokenId = _tokenIdCounter.current() + 100;
@@ -99,9 +108,9 @@ contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721Enumerabl
     function burn(uint256 tokenId) external {
         require(
             ownerOf(tokenId) == msg.sender ||
-            (isMember(ownerOf(tokenId)) &&
-                membershipPayed[ownerOf(tokenId)] < block.timestamp) ||
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+                (isMember(ownerOf(tokenId)) &&
+                    membershipPayed[ownerOf(tokenId)] < block.timestamp) ||
+                hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
             "Only tokenowner or unpayed membership"
         );
         _burn(tokenId);
@@ -120,18 +129,24 @@ contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721Enumerabl
     }
 
     function isCouncil(address owner) public view returns (bool) {
-        return tokenOfOwnerByIndex(owner, 0) > 0 && tokenOfOwnerByIndex(owner, 0) < 100;
+        return
+            tokenOfOwnerByIndex(owner, 0) > 0 &&
+            tokenOfOwnerByIndex(owner, 0) < 100;
     }
 
     function isMember(address owner) public view returns (bool) {
         return tokenOfOwnerByIndex(owner, 0) >= 100;
     }
 
-
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
-    internal
-    whenNotPaused
-    override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    )
+        internal
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        whenNotPaused
     {
         require(
             from == address(0) || to == address(0),
@@ -142,19 +157,31 @@ contract FlatFeeStackDAOSBT is Initializable, ERC721Upgradeable, ERC721Enumerabl
 
     // The following functions are overrides required by Solidity.
 
-    function _afterTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) internal
-    override(ERC721Upgradeable, ERC721VotesUpgradeable)
-    {
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal override(ERC721Upgradeable, ERC721VotesUpgradeable) {
         super._afterTokenTransfer(from, to, tokenId, batchSize);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view
-    override(ERC721Upgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable) returns (bool)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        override(
+            ERC721Upgradeable,
+            ERC721EnumerableUpgradeable,
+            AccessControlUpgradeable
+        )
+        returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
 
-    function clock() public view virtual override returns (uint48)  {
+    function clock() public view virtual override returns (uint48) {
         return SafeCastUpgradeable.toUint48(block.timestamp);
     }
 
