@@ -370,7 +370,7 @@ jobs:
       - name: Deploy - TEST
         run: |
           docker context create test --docker "host=ssh://sibex@axelra.net:3000"
-          docker --context test compose -p "flatfeestack" -f deploy/docker-compose.yml up -d --remove-orphans --pull always
+          docker --context test compose -p "flatfeestack" -f deploy/docker-compose.yml up -d --remove-orphans --pull always --wait
           docker --context test system prune -af
           docker --context test ps
         env:
