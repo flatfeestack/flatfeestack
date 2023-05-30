@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS git_email (
 );
 CREATE INDEX IF NOT EXISTS git_email_user_id_idx ON git_email(user_id);
 
+ALTER TABLE git_email DROP CONSTRAINT IF EXISTS git_email_email_key; /* don't make unique to prevent users blocking emails */
+
 CREATE TABLE IF NOT EXISTS sponsor_event (
     id            UUID PRIMARY KEY,
     repo_id       UUID CONSTRAINT sponsor_event_repo_id_fk REFERENCES repo(id),

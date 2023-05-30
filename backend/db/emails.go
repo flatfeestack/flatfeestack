@@ -34,6 +34,21 @@ func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	return gitEmails, nil
 }
 
+func CountExistingOrConfirmedGitEmail(uid uuid.UUID, email string) (int, error) {
+	var c int
+	err := dbLib.DB.
+		QueryRow(`SELECT count(*) AS c FROM git_email WHERE (user_id=$1 or confirmed_at is not null) and email=$2`, uid, email).
+		Scan(&c)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return c, nil
+	default:
+		return c, err
+	}
+}
+
 func InsertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token *string, now time.Time) error {
 	stmt, err := dbLib.DB.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
 	if err != nil {

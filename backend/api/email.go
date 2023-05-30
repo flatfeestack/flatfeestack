@@ -57,6 +57,19 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
 	id := uuid.New()
+
+	c, err := db.CountExistingOrConfirmedGitEmail(user.Id, body.Email)
+	if err != nil {
+		log.Errorf("Could not save email: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops could not save email: Git Email already in use")
+		return
+	}
+	if c > 0 {
+		log.Errorf("Could not save email, either user has entered already or is confirmed, count: %v", c)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops could not save email: Git Email already in use")
+		return
+	}
+
 	err = db.InsertGitEmail(id, user.Id, body.Email, &addGitEmailToken, utils.TimeNow())
 	if err != nil {
 		log.Errorf("Could not save email: %v", err)
