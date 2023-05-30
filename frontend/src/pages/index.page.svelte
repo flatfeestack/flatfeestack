@@ -98,7 +98,7 @@
         <PrivateRoute path="/user/invitations">
           <Invitations />
         </PrivateRoute>
-        <PrivateRoute path="/user/admin">
+        <PrivateRoute path="/user/admin" admin={true}>
           <Admin />
         </PrivateRoute>
 
