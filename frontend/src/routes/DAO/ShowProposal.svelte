@@ -1,24 +1,29 @@
 <script lang="ts">
-  import Spinner from "../../components/Spinner.svelte";
+  import humanizeDuration from "humanize-duration";
+  import { HTTPError } from "ky";
+  import { onDestroy } from "svelte";
+  import { Link } from "svelte-routing";
+  import type { Unsubscriber } from "svelte/store";
+  import Call from "../../components/DAO/Call.svelte";
   import Navigation from "../../components/DAO/Navigation.svelte";
-  import { proposalStore, type Proposal } from "../../ts/proposalStore";
+  import Spinner from "../../components/Spinner.svelte";
+  import { API } from "../../ts/api";
   import {
     currentBlockTimestamp,
     daoContract,
     membershipStatusValue,
   } from "../../ts/daoStore";
-  import { futureBlockDate } from "../../utils/futureBlockDate";
-  import { Link } from "svelte-routing";
-  import humanizeDuration from "humanize-duration";
-  import type { Post } from "../../types/forum";
-  import { API } from "../../ts/api";
   import { error } from "../../ts/mainStore";
-  import { HTTPError } from "ky";
+  import { proposalStore, type Proposal } from "../../ts/proposalStore";
+  import type { Post } from "../../types/forum";
+  import { futureBlockDate } from "../../utils/futureBlockDate";
 
   export let proposalId: string;
 
   let discussion: Post | null = undefined;
   let isLoading = true;
+  let membershipStatusNumber: number;
+  let membershipStatusUnsubscriber: Unsubscriber;
   let proposal: Proposal;
   let proposalEta = 0;
   let proposalState = 0;
@@ -65,8 +70,21 @@
     }
   }
 
-  const isDaoMember = () =>
-    $membershipStatusValue !== null && $membershipStatusValue.toNumber() === 3;
+  membershipStatusUnsubscriber = membershipStatusValue.subscribe((value) => {
+    if (value === null) {
+      membershipStatusNumber = 0;
+    } else {
+      membershipStatusNumber = value.toNumber();
+    }
+  });
+
+  onDestroy(() => {
+    if (membershipStatusUnsubscriber !== undefined) {
+      membershipStatusUnsubscriber();
+    }
+  });
+
+  const isDaoMember = () => membershipStatusNumber === 3;
 </script>
 
 <Navigation>
@@ -140,12 +158,12 @@
 
     <p class="bold mb-2">Calls</p>
     {#each proposal.targets as target, index}
-      <p class="mt-2 mb-2">Call {index + 1}:</p>
-      <ul class="mt-2 mb-2">
-        <li class="break-all">Target: {target}</li>
-        <li>Value: {proposal.values[index]}</li>
-        <li class="break-all">Calldata: {proposal.calldatas[index]}</li>
-      </ul>
+      <Call
+        calldata={String(proposal.calldatas[index])}
+        {index}
+        {target}
+        value={Number(proposal.values[index])}
+      />
     {/each}
   {/if}
 </Navigation>
