@@ -85,6 +85,24 @@ func TestGitEmailDelete(t *testing.T) {
 	assert.Equal(t, 0, len(emails))
 }
 
+func TestGitEmailFromUserEmailsSentDelete(t *testing.T) {
+	setup()
+	defer teardown()
+
+	uid := insertTestUser(t, "foo@bar.ch").Id
+
+	err := InsertEmailSent(uuid.New(), &uid, "foo@bar.ch", "add-gitfoo@bar.ch", time.Now())
+	err = InsertEmailSent(uuid.New(), &uid, "bar@foo.ch", "add-gitbar@foo.ch", time.Now())
+	err = DeleteGitEmailFromUserEmailsSent(uid, "bar@foo.ch")
+	assert.Nil(t, err)
+	c, err := CountEmailSentById(uid, "add-gitfoo@bar.ch")
+	assert.Nil(t, err)
+	assert.Equal(t, 1, c)
+	c, err = CountEmailSentById(uid, "add-gitbar@foo.ch")
+	assert.Nil(t, err)
+	assert.Equal(t, 0, c)
+}
+
 func TestGitEmailConfirm(t *testing.T) {
 	setup()
 	defer teardown()
