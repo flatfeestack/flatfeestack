@@ -95,6 +95,22 @@ func DeleteGitEmail(uid uuid.UUID, email string) error {
 	return handleErrMustInsertOne(res)
 }
 
+func DeleteGitEmailFromUserEmailsSent(uid uuid.UUID, email string) error {
+	//TODO: find a better solution in future that allows multiple mails be sent to same mail address but still has spam protection
+	stmt, err := dbLib.DB.Prepare("DELETE FROM user_emails_sent WHERE email=$1 AND user_id=$2 and email_type=$3")
+	if err != nil {
+		return fmt.Errorf("prepare DELETE FROM user_emails_sent for %v and user_id %v statement event: %v", email, uid, err)
+	}
+	defer dbLib.CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(email, uid, "add-git"+email)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
 func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	var uid uuid.UUID
 	err := dbLib.DB.
