@@ -31,6 +31,9 @@ type ServerInterface interface {
 	// Create a new post
 	// (POST /posts)
 	PostPosts(w http.ResponseWriter, r *http.Request)
+	// Get a specific post by proposal id
+	// (GET /posts/byProposalId/{proposalId})
+	GetPostsByProposalIdProposalId(w http.ResponseWriter, r *http.Request, proposalId string)
 	// Delete a Post
 	// (DELETE /posts/{postId})
 	DeletePostsPostId(w http.ResponseWriter, r *http.Request, postId PostId)
@@ -117,6 +120,32 @@ func (siw *ServerInterfaceWrapper) PostPosts(w http.ResponseWriter, r *http.Requ
 
 	var handler = func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostPosts(w, r)
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler(w, r.WithContext(ctx))
+}
+
+// GetPostsByProposalIdProposalId operation middleware
+func (siw *ServerInterfaceWrapper) GetPostsByProposalIdProposalId(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "proposalId" -------------
+	var proposalId string
+
+	err = runtime.BindStyledParameter("simple", false, "proposalId", mux.Vars(r)["proposalId"], &proposalId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "proposalId", Err: err})
+		return
+	}
+
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPostsByProposalIdProposalId(w, r, proposalId)
 	}
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -483,6 +512,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/posts", wrapper.PostPosts).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/posts/byProposalId/{proposalId}", wrapper.GetPostsByProposalIdProposalId).Methods("GET")
+
 	r.HandleFunc(options.BaseURL+"/posts/{postId}", wrapper.DeletePostsPostId).Methods("DELETE")
 
 	r.HandleFunc(options.BaseURL+"/posts/{postId}", wrapper.GetPostsPostId).Methods("GET")
@@ -611,6 +642,39 @@ func (response PostPosts401JSONResponse) VisitPostPostsResponse(w http.ResponseW
 type PostPosts500Response = InternalServerErrorResponse
 
 func (response PostPosts500Response) VisitPostPostsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(500)
+	return nil
+}
+
+type GetPostsByProposalIdProposalIdRequestObject struct {
+	ProposalId string `json:"proposalId"`
+}
+
+type GetPostsByProposalIdProposalIdResponseObject interface {
+	VisitGetPostsByProposalIdProposalIdResponse(w http.ResponseWriter) error
+}
+
+type GetPostsByProposalIdProposalId200JSONResponse Post
+
+func (response GetPostsByProposalIdProposalId200JSONResponse) VisitGetPostsByProposalIdProposalIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsByProposalIdProposalId404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPostsByProposalIdProposalId404JSONResponse) VisitGetPostsByProposalIdProposalIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostsByProposalIdProposalId500Response = InternalServerErrorResponse
+
+func (response GetPostsByProposalIdProposalId500Response) VisitGetPostsByProposalIdProposalIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(500)
 	return nil
 }
@@ -995,6 +1059,9 @@ type StrictServerInterface interface {
 	// Create a new post
 	// (POST /posts)
 	PostPosts(ctx context.Context, request PostPostsRequestObject) (PostPostsResponseObject, error)
+	// Get a specific post by proposal id
+	// (GET /posts/byProposalId/{proposalId})
+	GetPostsByProposalIdProposalId(ctx context.Context, request GetPostsByProposalIdProposalIdRequestObject) (GetPostsByProposalIdProposalIdResponseObject, error)
 	// Delete a Post
 	// (DELETE /posts/{postId})
 	DeletePostsPostId(ctx context.Context, request DeletePostsPostIdRequestObject) (DeletePostsPostIdResponseObject, error)
@@ -1125,6 +1192,32 @@ func (sh *strictHandler) PostPosts(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostPostsResponseObject); ok {
 		if err := validResponse.VisitPostPostsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// GetPostsByProposalIdProposalId operation middleware
+func (sh *strictHandler) GetPostsByProposalIdProposalId(w http.ResponseWriter, r *http.Request, proposalId string) {
+	var request GetPostsByProposalIdProposalIdRequestObject
+
+	request.ProposalId = proposalId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostsByProposalIdProposalId(ctx, request.(GetPostsByProposalIdProposalIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostsByProposalIdProposalId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostsByProposalIdProposalIdResponseObject); ok {
+		if err := validResponse.VisitGetPostsByProposalIdProposalIdResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1366,26 +1459,27 @@ func (sh *strictHandler) PutPostsPostIdCommentsCommentId(w http.ResponseWriter, 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

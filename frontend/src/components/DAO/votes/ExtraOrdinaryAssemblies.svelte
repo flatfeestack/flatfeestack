@@ -6,8 +6,9 @@
   import { isSubmitting } from "../../../ts/mainStore";
   import {
     extraOrdinaryAssemblyRequestProposalIds,
-    proposalCreatedEvents,
+    proposalStore,
     votesCasted,
+    type Proposal,
   } from "../../../ts/proposalStore";
   import { futureBlockDate } from "../../../utils/futureBlockDate";
   import {
@@ -39,23 +40,21 @@
       return;
     }
 
-    const events = await Promise.all(
+    const proposals: Proposal[] = await Promise.all(
       $extraOrdinaryAssemblyRequestProposalIds.map(
         async (proposalId) =>
-          await proposalCreatedEvents.get(proposalId.toString(), $daoContract)
+          await proposalStore.get(proposalId.toString(), $daoContract)
       )
     );
 
     // ignore all proposals that are not pending, succeeded or queued
     const extraOrdinaryAssemblyRequestStates = await Promise.all(
-      events.map(async (proposalCreatedEvent) => {
-        const proposalId = proposalCreatedEvent.event.args[0];
-        const proposalState = await $daoContract.state(proposalId);
+      proposals.map(async (proposal) => {
+        const proposalState = await $daoContract.state(proposal.id);
 
         return {
-          event: proposalCreatedEvent.event,
-          proposalId,
-          proposalState,
+          ...proposal,
+          state: proposalState,
         };
       })
     );
@@ -64,11 +63,11 @@
       extraOrdinaryAssemblyRequestStates
         // ignore all proposals that are not pending, succeeded or queued
         .filter((intermediateObject) =>
-          [1, 4, 5].includes(intermediateObject.proposalState)
+          [1, 4, 5].includes(intermediateObject.state)
         )
         .map(async (intermediateObject) => {
           const proposalEta = await $daoContract.proposalEta(
-            intermediateObject.proposalId
+            intermediateObject.id
           );
           const event: Event | undefined =
             $votesCasted === null
@@ -76,20 +75,20 @@
               : $votesCasted.find(
                   (event) =>
                     event.args[1].toString() ===
-                    intermediateObject.proposalId.toString()
+                    intermediateObject.id.toString()
                 );
 
           return {
-            calldatas: intermediateObject.event.args[5],
+            calldatas: intermediateObject.calldatas,
             canVote: $userEthereumAddress !== null && event === undefined,
-            deadline: intermediateObject.event.args[7],
-            description: intermediateObject.event.args[8],
+            deadline: intermediateObject.endBlock,
+            description: intermediateObject.description,
             eta: proposalEta < currentBlockTimestamp ? 0 : proposalEta,
-            id: intermediateObject.proposalId,
-            proposer: intermediateObject.event.args[1],
-            state: intermediateObject.proposalState,
-            targets: intermediateObject.event.args[2],
-            values: intermediateObject.event.args[3],
+            id: intermediateObject.id,
+            proposer: intermediateObject.proposer,
+            state: intermediateObject.state,
+            targets: intermediateObject.targets,
+            values: intermediateObject.values,
             voteValue: event === undefined ? null : event.args[2],
           };
         })

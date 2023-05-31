@@ -12,7 +12,7 @@
   import { daoConfig, daoContract } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import { proposalStore, votingSlots } from "../../ts/proposalStore";
   import {
     checkUndefinedProvider,
     ensureSameChainId,
@@ -82,15 +82,12 @@
             await $daoContract.votingSlots(blockNumber, index)
           ).toString();
 
-          const event = await proposalCreatedEvents.get(
-            proposalId,
-            $daoContract
-          );
+          const proposal = await proposalStore.get(proposalId, $daoContract);
 
           return {
-            description: event.event.args[8],
-            id: event.proposalId,
-            proposer: event.event.args[1],
+            description: proposal.description,
+            id: proposal.id,
+            proposer: proposal.proposer,
           };
         }
       )

@@ -1,29 +1,42 @@
-import type { BigNumber, Contract, Event } from "ethers";
+import type { BigNumber, Bytes, Contract, Event } from "ethers";
 import { derived, get, writable, type Readable } from "svelte/store";
 import { daoContract } from "./daoStore";
 import { userEthereumAddress } from "./ethStore";
 
-interface ProposalCreatedEvent {
+export interface ProposalCreatedEvent {
   proposalId: string;
   event: Event;
 }
 
-const proposalEvents = writable<[] | ProposalCreatedEvent[]>([]);
+export interface Proposal {
+  calldatas: Bytes[];
+  description: string;
+  endBlock: number;
+  id: string;
+  proposer: string;
+  signatures: string[];
+  startBlock: number;
+  targets: string[];
+  values: string[];
+}
 
-export const proposalCreatedEvents = {
+const proposals = writable<Proposal[]>([]);
+
+export const proposalStore = {
   // subscribe to the cart store
-  subscribe: proposalEvents.subscribe,
+  subscribe: proposals.subscribe,
   // custom logic
-  async get(id: string, $daoContract): Promise<ProposalCreatedEvent> {
-    let values = get(proposalEvents);
-    const result = values.find(({ proposalId }) => proposalId === id);
+  async get(proposalId: string, $daoContract): Promise<Proposal> {
+    let values = get(proposals);
+    const result = values.find(({ id }) => proposalId === id);
+
     if (result) {
       return result;
     } else {
       return await Promise.resolve(
         $daoContract.queryFilter(
           $daoContract.filters.DAOProposalCreated(
-            id,
+            proposalId,
             null,
             null,
             null,
@@ -36,14 +49,21 @@ export const proposalCreatedEvents = {
           )
         )
       ).then((events: Event[]) => {
-        let newItem: ProposalCreatedEvent = {
-          proposalId: events[0].args[0].toString(),
-          event: events[0],
+        let newProposal: Proposal = {
+          calldatas: events[0].args[5],
+          description: events[0].args[8],
+          endBlock: events[0].args[7].toNumber(),
+          id: proposalId,
+          proposer: events[0].args[1],
+          signatures: events[0].args[4],
+          startBlock: events[0].args[6].toNumber(),
+          targets: events[0].args[2],
+          values: events[0].args[3],
         };
-        proposalEvents.update((items) => {
-          return [...items, newItem];
+        proposals.update((items) => {
+          return [...items, newProposal];
         });
-        return newItem;
+        return newProposal;
       });
     }
   },
