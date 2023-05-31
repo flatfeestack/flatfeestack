@@ -166,6 +166,14 @@ paths:
               properties:
                 image:
                   type: string
+    delete:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
   /users/me/stripe:
     post:
       tags:
