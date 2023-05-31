@@ -540,3 +540,7 @@ tbody tr:last-of-type {
 .break-all {
   word-break: break-all;
 }
+
+.inline {
+  display: inline;
+}
