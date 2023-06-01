@@ -28,7 +28,7 @@ contract FlatFeeStackDAO is
 
     function initialize(IVotesUpgradeable _token) public initializer {
         __Governor_init("FlatFeeStackDAO");
-        __GovernorSettings_init(2 days, 1 days, 1);
+        __GovernorSettings_init(14 days, 1 days, 1);
         __GovernorCountingSimple_init();
         __GovernorVotes_init(_token);
         __GovernorVotesQuorumFraction_init(5);
@@ -40,13 +40,9 @@ contract FlatFeeStackDAO is
         override(IGovernorUpgradeable, GovernorSettingsUpgradeable)
         returns (uint256)
     {
-        //slot is each 14 days, and you need to submit votingDelay() in advance.
-        uint256 nextSlot = ((block.timestamp + super.votingDelay()) /
-            60 /
-            60 /
-            24 /
-            14) + 1;
-        return nextSlot * 60 * 60 * 24 * 14;
+        //slot is each 14 days, and you need to submit votingDelay() up until (2 * votingDelay() - 1)  in advance.
+        uint256 nextSlot = ((block.timestamp + super.votingDelay()) / super.votingDelay()) + 1;
+        return nextSlot * super.votingDelay();
     }
 
     function votingPeriod()

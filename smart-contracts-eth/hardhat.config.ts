@@ -20,14 +20,14 @@ subtask(
         solidityFilePath
       );
 
-      return relativePath !== "DAO2.sol" && relativePath !== "SBT.sol";
+      return relativePath !== "DAO.sol" && relativePath !== "DAO2.sol" && relativePath !== "SBT.sol";
     });
   }
 );
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.17",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,

@@ -1,56 +1,52 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers, upgrades } from "hardhat";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
-export async function deployWalletContract(owner: SignerWithAddress) {
-  const Wallet = await ethers.getContractFactory("Wallet", { signer: owner });
-  const wallet = await upgrades.deployProxy(Wallet, []);
-  await wallet.deployed();
+export async function deployMembershipContract(){
 
-  return wallet;
-}
+  const [owner, firstCouncilMember, secondCouncilMember,regularMember, nonMember ] = await ethers.getSigners();
 
-export async function deployMembershipContract(
-  firstCouncilMember: SignerWithAddress,
-  secondCouncilMember: SignerWithAddress,
-  regularMember: SignerWithAddress
-) {
-  const wallet = await deployWalletContract(firstCouncilMember);
-  const Membership = await ethers.getContractFactory("Membership", {
-    signer: firstCouncilMember,
-  });
-  const membership = await upgrades.deployProxy(Membership, [
-    firstCouncilMember.address,
-    secondCouncilMember.address,
-    wallet.address,
-  ]);
+  const SBT = await ethers.getContractFactory("FlatFeeStackDAOSBT", {signer: owner});
+  const sbt = await upgrades.deployProxy(SBT);
+  await sbt.deployed();
 
-  await membership.deployed();
-  await wallet.addKnownSender(membership.address);
+  await sbt.connect(owner).safeMintCouncil(firstCouncilMember.address, 1);
+  await sbt.connect(owner).safeMintCouncil(regularMember.address, 2);
+  //here we test a replacement
+  await sbt.connect(owner).safeMintCouncil(secondCouncilMember.address, 2);
 
-  // approve new member
-  await membership.connect(regularMember).requestMembership();
-  await membership
-    .connect(firstCouncilMember)
-    .approveMembership(regularMember.address);
-  await membership
-    .connect(secondCouncilMember)
-    .approveMembership(regularMember.address);
+  const DAO = await ethers.getContractFactory("FlatFeeStackDAO", {signer: owner});
+  const dao = await upgrades.deployProxy(DAO, [sbt.address]);
+  await dao.deployed();
 
-  // pay membership fees
-  const toBePaid = ethers.utils.parseUnits("3", 4); // exactly 30k wei
+  await sbt.connect(owner).grantRole(ethers.utils.formatBytes32String("0x00"),dao.address);
+  await sbt.connect(owner).revokeRole(ethers.utils.formatBytes32String("0x00"),owner.address);
 
-  await membership.connect(firstCouncilMember).payMembershipFee({
-    value: toBePaid,
-  });
-  await membership.connect(secondCouncilMember).payMembershipFee({
-    value: toBePaid,
-  });
-  await membership.connect(regularMember).payMembershipFee({
-    value: toBePaid,
-  });
+  //add the regular member now
+  const message=ethers.utils.solidityPack(['address', 'string', 'address', 'uint256'],[sbt.address, 'safeMint', regularMember.address, 100])
+  const hash = ethers.utils.solidityKeccak256(["bytes"], [message]);
+
+  const signedMessage1 = await firstCouncilMember.signMessage(ethers.utils.arrayify(hash));
+  const signedMessage2 = await secondCouncilMember.signMessage(ethers.utils.arrayify(hash));
+
+  await sbt.connect(regularMember).safeMint(
+      regularMember.address,
+      100,
+      signedMessage1,
+      signedMessage2,
+      { value: ethers.utils.parseEther('1') });
 
   await mine(2);
 
-  return { membership: membership, wallet: wallet };
+  return {
+    contracts: {
+      dao,
+      sbt
+    }, entities: {
+      owner,
+      firstCouncilMember,
+      secondCouncilMember,
+      regularMember,
+      nonMember
+    }
+  }
 }

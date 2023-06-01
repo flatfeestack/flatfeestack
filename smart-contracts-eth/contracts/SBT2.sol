@@ -9,6 +9,8 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgra
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/draft-ERC721VotesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract FlatFeeStackDAOSBT is
     Initializable,
@@ -17,14 +19,16 @@ contract FlatFeeStackDAOSBT is
     PausableUpgradeable,
     AccessControlUpgradeable,
     EIP712Upgradeable,
-    ERC721VotesUpgradeable
+    ERC721VotesUpgradeable,
+    UUPSUpgradeable
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
+    bytes private prefix;
     CountersUpgradeable.Counter private _tokenIdCounter;
 
-    uint256 public membershipFee = 1 ether;
-    uint48 public membershipPeriod = 10 * 365 * 24 * 60 * 60; // 10 year
+    uint256 public membershipFee;
+    uint48 public membershipPeriod; // 10 year
     mapping(address => uint48) public membershipPayed;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -41,6 +45,9 @@ contract FlatFeeStackDAOSBT is
         __ERC721Votes_init();
         //the DAO contract need to become the default admin, for start its the contract creator
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        membershipFee = 1 ether;
+        membershipPeriod = 10 * 365 * 24 * 60 * 60;
+        prefix = "\x19Ethereum Signed Message:\n";
     }
 
     function _baseURI() internal pure override returns (string memory) {
@@ -50,32 +57,21 @@ contract FlatFeeStackDAOSBT is
     function safeMint(
         address to,
         uint256 tokenId,
-        uint8 v1,
-        bytes32 r1,
-        bytes32 s1,
-        uint8 v2,
-        bytes32 r2,
-        bytes32 s2
+        bytes calldata signature1,
+        bytes calldata signature2
     ) public payable {
         require(balanceOf(to) == 0, "1 address cannot have 2 NFTs");
-        address council1 = ecrecover(
-            keccak256(abi.encodePacked("safeMint", to, "#", tokenId)),
-            v1,
-            r1,
-            s1
-        );
-        address council2 = ecrecover(
-            keccak256(abi.encodePacked("safeMint", to, "#", tokenId)),
-            v2,
-            r2,
-            s2
-        );
+        bytes32 hash = keccak256(abi.encodePacked(address(this), "safeMint", to, tokenId));
+        bytes32 hashMsg = ECDSAUpgradeable.toEthSignedMessageHash(hash);
+        address council1 = ECDSAUpgradeable.recover(hashMsg, signature1);
+        address council2 = ECDSAUpgradeable.recover(hashMsg, signature2);
+
         require(
             isCouncil(council1) && isCouncil(council2) && council1 != council2,
             "Signature not from council member"
         );
 
-        require(msg.value >= membershipFee);
+        require(msg.value >= membershipFee, "no fee payed");
         membershipPayed[msg.sender] =
             SafeCastUpgradeable.toUint48(block.timestamp) +
             membershipPeriod;
@@ -130,12 +126,12 @@ contract FlatFeeStackDAOSBT is
 
     function isCouncil(address owner) public view returns (bool) {
         return
-            tokenOfOwnerByIndex(owner, 0) > 0 &&
-            tokenOfOwnerByIndex(owner, 0) < 100;
+            balanceOf(owner) == 1 && tokenOfOwnerByIndex(owner, 0) > 0 &&
+            balanceOf(owner) == 1 && tokenOfOwnerByIndex(owner, 0) < 100;
     }
 
     function isMember(address owner) public view returns (bool) {
-        return tokenOfOwnerByIndex(owner, 0) >= 100;
+        return balanceOf(owner) == 1 && tokenOfOwnerByIndex(owner, 0) >= 100;
     }
 
     function _beforeTokenTransfer(
@@ -202,5 +198,9 @@ contract FlatFeeStackDAOSBT is
 
     function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal onlyRole(DEFAULT_ADMIN_ROLE) override {
+
     }
 }
