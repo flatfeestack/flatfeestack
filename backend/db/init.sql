@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS repo_name_idx ON repo(name);
 CREATE TABLE IF NOT EXISTS git_email (
     id           UUID PRIMARY KEY,
     user_id      UUID CONSTRAINT git_email_user_id_fk REFERENCES users(id),
-    email        VARCHAR(255) UNIQUE NOT NULL,
+    email        VARCHAR(255) NOT NULL,
     token        VARCHAR(32),
     confirmed_at TIMESTAMP,
     created_at   TIMESTAMP NOT NULL,

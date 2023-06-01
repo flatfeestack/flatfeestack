@@ -176,7 +176,9 @@
   <p class="p-2 m-2">
     If you have multiple git email addresses, you can connect these addresses to
     your FlatFeeStack account. You must verify your git email address. Once
-    validated, the confirmed date will show the validation date.
+    validated, the confirmed date will show the validation date. In case you
+    didn't receive a confirmation email, please remove and re-add your git email
+    address.
   </p>
 
   <div class="min-w20 container">

@@ -57,6 +57,19 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 	addGitEmailToken := base32.StdEncoding.EncodeToString(rnd)
 	id := uuid.New()
+
+	c, err := db.CountExistingOrConfirmedGitEmail(user.Id, body.Email)
+	if err != nil {
+		log.Errorf("Could not save email: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops could not save email: Git Email already in use")
+		return
+	}
+	if c > 0 {
+		log.Errorf("Could not save email, either user has entered already or is confirmed, count: %v", c)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops could not save email: Git Email already in use")
+		return
+	}
+
 	err = db.InsertGitEmail(id, user.Id, body.Email, &addGitEmailToken, utils.TimeNow())
 	if err != nil {
 		log.Errorf("Could not save email: %v", err)
@@ -64,7 +77,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		return
 	}
 
-	err = clnt.SendAddGit(body.Email, addGitEmailToken, lang(r))
+	err = clnt.SendAddGit(user.Id, body.Email, addGitEmailToken, lang(r))
 	if err != nil {
 		log.Errorf("Could not send add git email: %v", err)
 		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with sending the email. Please try again.")
@@ -78,6 +91,12 @@ func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail)
 	err := db.DeleteGitEmail(user.Id, email)
 	if err != nil {
 		log.Errorf("Could not remove email, Invalid email: %v", err)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Oops could not remove email. Please try again.")
+		return
+	}
+	err = db.DeleteGitEmailFromUserEmailsSent(user.Id, email)
+	if err != nil {
+		log.Errorf("Could not remove user emails sent entry: %v", err)
 		utils.WriteErrorf(w, http.StatusBadRequest, "Oops could not remove email. Please try again.")
 		return
 	}

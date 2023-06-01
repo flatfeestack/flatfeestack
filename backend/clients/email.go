@@ -286,7 +286,7 @@ func SendTopUpOther(u db.UserDetail) error {
 
 }
 
-func SendAddGit(email string, addGitEmailToken string, lang string) error {
+func SendAddGit(userId uuid.UUID, email string, addGitEmailToken string, lang string) error {
 	var params = map[string]string{}
 	params["token"] = addGitEmailToken
 	params["mailTo"] = email
@@ -296,7 +296,7 @@ func SendAddGit(email string, addGitEmailToken string, lang string) error {
 	params["key"] = KeyAddGit + email
 
 	return prepareSendEmail(
-		nil,
+		&userId,
 		params,
 		KeyAddGit,
 		"Validate your git email",
