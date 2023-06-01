@@ -158,7 +158,6 @@ func getEthSignature(data PayoutRequest, symbol string) (PayoutResponse, error) 
 }
 
 func privateKeyFromOpts(symbol string) (string, error) {
-	log.Printf(symbol)
 	switch symbol {
 	case "ETH":
 		return opts.Ethereum.PrivateKey, nil
