@@ -165,18 +165,23 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 				return err
 			}
 		} else {
-			for contributorUserId, w := range uidInMap {
-				//we can distribute more, as we may have future balances
-				if deductFutureContribution != nil {
-					err = db.InsertFutureContribution(uid, rid, deductFutureContribution, currency, yesterdayStart, utils.TimeNow())
-					if err != nil {
-						return err
-					}
+			var distributable *big.Int
+
+			if deductFutureContribution != nil {
+				err = db.InsertFutureContribution(uid, rid, deductFutureContribution, currency, yesterdayStart, utils.TimeNow())
+				if err != nil {
+					return err
 				}
 
-				amount := calcSharePerUser(distributeAdd, w, total)
+				distributable = new(big.Int).Add(distributeAdd, distributeDeduct)
+			} else {
+				distributable = distributeAdd
+			}
+
+			for contributorUserId, w := range uidInMap {
+				amount := calcSharePerUser(distributable, w, total)
 				log.Printf("user %v for repo %v, from the amount %v, the user has a weight of %v from total %v, so he gets %v",
-					contributorUserId, rid, distributeAdd, w, total, amount)
+					contributorUserId, rid, distributable, w, total, amount)
 				err = db.InsertContribution(uid, contributorUserId, rid, amount, currency, yesterdayStart, utils.TimeNow())
 				if err != nil {
 					return err
@@ -225,12 +230,12 @@ func calcShare(userId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.I
 	distributeFutureAdd := distributeDeduct
 	var deductFutureContribution *big.Int
 	if mFut[currency] != nil {
-		distributeFutureAdd = new(big.Int).Add(distributeDeduct, mFut[currency])
+		distributeFutureAdd = new(big.Int).Div(mFut[currency], big.NewInt(repoLen))
 		//if we distribute more, we need to deduct this from the future balances
-		deductFutureContribution = new(big.Int).Neg(mFut[currency])
+		deductFutureContribution = new(big.Int).Neg(distributeFutureAdd)
 	}
-	log.Printf("for the currency %v, we have %v days left, we deduct %v, potentiall add to "+
-		"future contrib %v, or pontentiall deduct from future contrib %v",
+	log.Printf("for the currency %v, we have %v days left, we deduct %v, potentially add to "+
+		"future contrib %v, or potentially deduct from future contrib %v per repository",
 		currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution)
 	return currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution, nil
 }
