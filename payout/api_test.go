@@ -44,7 +44,7 @@ func TestPostSignEth(t *testing.T) {
 // the resulting signature (r, s, v) are the same as in the generateSignature function in the test helpers
 func TestPostSignUsdc(t *testing.T) {
 	opts = &Opts{}
-	opts.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	opts.Usdc.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	t.Run("should generate a signature for USDC", func(t *testing.T) {
 		userId, _ := uuid.Parse("4fed2b83-f968-45cc-8869-a36f844cefdb")
