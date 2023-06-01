@@ -34,6 +34,21 @@ func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	return gitEmails, nil
 }
 
+func CountExistingOrConfirmedGitEmail(uid uuid.UUID, email string) (int, error) {
+	var c int
+	err := dbLib.DB.
+		QueryRow(`SELECT count(*) AS c FROM git_email WHERE (user_id=$1 or confirmed_at is not null) and email=$2`, uid, email).
+		Scan(&c)
+	switch err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return c, nil
+	default:
+		return c, err
+	}
+}
+
 func InsertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token *string, now time.Time) error {
 	stmt, err := dbLib.DB.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
 	if err != nil {
@@ -74,6 +89,22 @@ func DeleteGitEmail(uid uuid.UUID, email string) error {
 
 	var res sql.Result
 	res, err = stmt.Exec(email, uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func DeleteGitEmailFromUserEmailsSent(uid uuid.UUID, email string) error {
+	//TODO: find a better solution in future that allows multiple mails be sent to same mail address but still has spam protection
+	stmt, err := dbLib.DB.Prepare("DELETE FROM user_emails_sent WHERE email=$1 AND user_id=$2 and email_type=$3")
+	if err != nil {
+		return fmt.Errorf("prepare DELETE FROM user_emails_sent for %v and user_id %v statement event: %v", email, uid, err)
+	}
+	defer dbLib.CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(email, uid, "add-git"+email)
 	if err != nil {
 		return err
 	}

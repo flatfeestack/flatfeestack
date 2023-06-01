@@ -3,6 +3,7 @@
     faClock,
     faTrash,
     faUpload,
+    faTrashCan,
   } from "@fortawesome/free-solid-svg-icons";
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
@@ -81,6 +82,15 @@
     }
   }
 
+  const deleteImage = async () => {
+    try {
+      await API.user.deleteImage();
+      $user.image = null;
+    } catch (e) {
+      $error = e.message;
+    }
+  };
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
@@ -98,9 +108,15 @@
     cursor: pointer;
     align-items: center;
   }
+
   .user-hint {
     grid-column: 2/2;
     font-size: 16px;
+  }
+
+  .image-container {
+    display: flex;
+    align-items: center;
   }
 </style>
 
@@ -128,25 +144,31 @@
       >Profile picture:</label
     >
     <div>
-      <button
-        id="profile-picture-upload"
-        class="upload accessible-btn"
-        on:click={() => {
-          fileInput.click();
-        }}
-      >
-        <Fa icon={faUpload} size="lg" class="icon, px-2" />
-        <input
-          style="display:none"
-          type="file"
-          accept=".jpg, .jpeg, .png"
-          on:change={(e) => onFileSelected(e)}
-          bind:this={fileInput}
-        />
-        {#if $user.image}
+      {#if $user.image}
+        <div class="image-container">
+          <button class="upload accessible-btn" on:click={deleteImage}>
+            <Fa icon={faTrashCan} size="lg" class="icon, px-2" />
+          </button>
           <img class="image-org" src={$user.image} alt="profile img" />
-        {/if}
-      </button>
+        </div>
+      {:else}
+        <button
+          id="profile-picture-upload"
+          class="upload accessible-btn"
+          on:click={() => {
+            fileInput.click();
+          }}
+        >
+          <Fa icon={faUpload} size="lg" class="icon, px-2" />
+          <input
+            style="display:none"
+            type="file"
+            accept=".jpg, .jpeg, .png"
+            on:change={(e) => onFileSelected(e)}
+            bind:this={fileInput}
+          />
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -154,7 +176,9 @@
   <p class="p-2 m-2">
     If you have multiple git email addresses, you can connect these addresses to
     your FlatFeeStack account. You must verify your git email address. Once
-    validated, the confirmed date will show the validation date.
+    validated, the confirmed date will show the validation date. In case you
+    didn't receive a confirmation email, please remove and re-add your git email
+    address.
   </p>
 
   <div class="min-w20 container">
@@ -176,7 +200,9 @@
                 {timeSince(new Date(email.confirmedAt), new Date())} ago
               </td>
             {:else}
-              <td><Fa icon={faClock} size="md" /></td>
+              <td>
+                <Fa icon={faClock} size="md" />
+              </td>
             {/if}
             <td>
               <button
@@ -202,8 +228,8 @@
                   placeholder="Email"
                 />
                 <button class="ml-5 p-2 button1" type="submit"
-                  >Add Git Email</button
-                >
+                  >Add Git Email
+                </button>
               </form>
             </div>
           </td>

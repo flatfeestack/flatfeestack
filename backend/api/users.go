@@ -114,6 +114,15 @@ func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
+func DeleteImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	err := db.DeleteUserImage(user.Id)
+	if err != nil {
+		log.Errorf("Could not delete user image: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not delete user image. Please try again")
+		return
+	}
+}
+
 func Users(w http.ResponseWriter, _ *http.Request, _ string) {
 	u, err := db.FindAllEmails()
 	if err != nil {

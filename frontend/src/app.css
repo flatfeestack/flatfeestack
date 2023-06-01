@@ -532,3 +532,15 @@ tbody tr:last-of-type {
   background-color: unset;
   border: unset;
 }
+
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+.break-all {
+  word-break: break-all;
+}
+
+.inline {
+  display: inline;
+}

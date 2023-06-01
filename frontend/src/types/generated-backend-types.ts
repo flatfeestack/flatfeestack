@@ -122,6 +122,12 @@ export interface paths {
         200: never;
       };
     };
+    delete: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
   };
   "/users/me/stripe": {
     put: {
@@ -333,6 +339,29 @@ export interface paths {
             "application/json": (components["schemas"]["PublicUser"])[];
           };
         };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/users/by/{email}": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              user?: components["schemas"]["User"];
+            };
+          };
+        };
+        /** @description No Content */
+        204: never;
         /** @description Bad Request */
         400: never;
       };

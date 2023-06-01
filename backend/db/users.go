@@ -173,6 +173,21 @@ func UpdateUserImage(uid uuid.UUID, data string) error {
 	return handleErrMustInsertOne(res)
 }
 
+func DeleteUserImage(uid uuid.UUID) error {
+	stmt, err := dbLib.DB.Prepare("UPDATE users SET image=NULL WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer dbLib.CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
 func UpdateSeatsFreq(userId uuid.UUID, seats int, freq int) error {
 	stmt, err := dbLib.DB.Prepare("UPDATE users SET seats=$1, freq=$2 WHERE id=$3")
 	if err != nil {

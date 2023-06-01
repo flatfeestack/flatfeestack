@@ -11,7 +11,8 @@
   import { API } from "../../ts/api";
   import { error, user } from "../../ts/mainStore";
   import type { Comment, Post } from "../../types/forum";
-  import { navigate } from "svelte-routing";
+  import { Link } from "svelte-routing";
+  import truncateString from "../../utils/truncateString";
 
   export let postId: string;
 
@@ -66,6 +67,21 @@
         {/if}
       </div>
     </div>
+
+    {#if post.proposal_ids?.length > 0}
+      <p class="mt-2 mb-2 text-secondary-900">
+        Linked to the following proposals:
+      </p>
+      <ul class="mt-2 mb-20">
+        {#each post.proposal_ids as proposalId}
+          <li>
+            <Link to="/dao/proposals/{proposalId}"
+              >{truncateString(proposalId, 40)}</Link
+            >
+          </li>
+        {/each}
+      </ul>
+    {/if}
 
     <PostThreadItem item={post} />
 

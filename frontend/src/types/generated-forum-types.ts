@@ -132,6 +132,27 @@ export interface paths {
       };
     };
   };
+  "/posts/byProposalId/{proposalId}": {
+    /** Get a specific post by proposal id */
+    get: {
+      parameters: {
+        path: {
+          /** @description ID of the proposal */
+          proposalId: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Post"];
+          };
+        };
+        404: components["responses"]["NotFound"];
+        500: components["responses"]["InternalServerError"];
+      };
+    };
+  };
   "/posts/{postId}/comments": {
     /** Get all comments */
     get: {

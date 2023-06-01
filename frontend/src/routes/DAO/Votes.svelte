@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { navigate } from "svelte-routing";
+  import { Link, navigate } from "svelte-routing";
   import Navigation from "../../components/DAO/Navigation.svelte";
   import ExtraOrdinaryAssemblies from "../../components/DAO/votes/ExtraOrdinaryAssemblies.svelte";
   import {
@@ -12,13 +12,14 @@
   } from "../../ts/daoStore";
   import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
-  import { proposalCreatedEvents, votingSlots } from "../../ts/proposalStore";
+  import { proposalStore, votingSlots } from "../../ts/proposalStore";
   import {
     checkUndefinedProvider,
     ensureSameChainId,
   } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
+  import truncateString from "../../utils/truncateString";
 
   let viewVotingSlots: VotingSlot[] = [];
   let slotCloseTime: number = 0;
@@ -153,8 +154,8 @@
   }
 
   async function loadProposalDescription(proposalId: string): Promise<string> {
-    const event = await proposalCreatedEvents.get(proposalId, $daoContract);
-    return event.event.args[8];
+    const event = await proposalStore.get(proposalId, $daoContract);
+    return event.description;
   }
 
   async function getVotingSlotState(
@@ -246,7 +247,14 @@
         {#if slotInfo.proposalInfos.length > 0}
           <ul>
             {#each slotInfo.proposalInfos as proposalInfo, i}
-              <li>Proposal {i + 1}: {proposalInfo.proposalDescription}</li>
+              <li>
+                <Link to="/dao/proposals/{proposalInfo.proposalId}"
+                  >Proposal {i + 1}: {truncateString(
+                    proposalInfo.proposalDescription,
+                    30
+                  )}</Link
+                >
+              </li>
             {/each}
           </ul>
         {:else}

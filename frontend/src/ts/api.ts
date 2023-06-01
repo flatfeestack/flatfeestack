@@ -205,6 +205,7 @@ export const API = {
     clearName: () => backendToken.put(`users/me/clear/name`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
+    deleteImage: () => backendToken.delete(`users/me/image`),
     setupStripe: () =>
       backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) =>
@@ -303,6 +304,8 @@ export const API = {
     createPost: (postInput: PostInput) =>
       forumToken.post(`posts`, { json: postInput }).json<Post>(),
     getPost: (postId: PostId) => forum.get(`posts/${postId}`).json<Post>(),
+    getPostByProposalId: (proposalId: string) =>
+      forum.get(`posts/byProposalId/${proposalId}`).json<Post>(),
     deletePost: (postId: PostId) => forumToken.delete(`posts/${postId}`),
     updatePost: (postId: PostId, postInput: PostInput) =>
       forumToken.put(`posts/${postId}`, { json: postInput }).json<Post>(),

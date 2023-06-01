@@ -68,20 +68,24 @@ export const daoContract = derived(
 export const membershipContract = derived(
   [daoConfig, provider, signer],
   ([$daoConfig, $provider, $signer]) => {
-    if (
-      $daoConfig === null ||
-      $provider === null ||
-      $provider === undefined ||
-      $signer === null
-    ) {
+    if ($provider === null || $provider === undefined || $daoConfig === null) {
       return null;
+    } else if ($signer === null) {
+      return new ethers.Contract(
+        $daoConfig.membership,
+        MembershipABI,
+        $provider
+      );
     } else {
       return new ethers.Contract($daoConfig.membership, MembershipABI, $signer);
     }
   }
 );
 
-export const membershipStatusValue = derived(
+export const membershipStatusValue = derived<
+  [Readable<string | null>, Readable<Contract | null>],
+  BigNumber | null
+>(
   [userEthereumAddress, membershipContract],
   ([$userEthereumAddress, $membershipContract], set) => {
     if ($userEthereumAddress === null || $membershipContract === null) {
@@ -123,13 +127,10 @@ export const councilMembers = derived<
 export const walletContract = derived(
   [daoConfig, provider, signer],
   ([$daoConfig, $provider, $signer]) => {
-    if (
-      $provider === null ||
-      $provider === undefined ||
-      $signer === null ||
-      $daoConfig === null
-    ) {
+    if ($provider === null || $provider === undefined || $daoConfig === null) {
       return null;
+    } else if ($signer === null) {
+      return new ethers.Contract($daoConfig.wallet, WalletABI, $provider);
     } else {
       return new ethers.Contract($daoConfig.wallet, WalletABI, $signer);
     }
