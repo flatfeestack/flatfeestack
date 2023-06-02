@@ -195,3 +195,17 @@ func FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 	}
 	return cs, nil
 }
+
+func FindRepoContributors(repoId uuid.UUID) (int, error) {
+	var c int
+	err := dbLib.DB.QueryRow(`SELECT count(distinct git_email) as c
+                        FROM analysis_request areq
+                        INNER JOIN analysis_response ares on areq.id = ares.analysis_request_id
+                        WHERE areq.repo_id=$1 AND areq.error IS NULL`, repoId).Scan(&c)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return c, nil
+}

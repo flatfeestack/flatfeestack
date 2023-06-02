@@ -89,6 +89,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 		return
 	}
 	contributions, err := db.FindRepoContribution(repoId)
+	contributors, err := db.FindRepoContributors(repoId)
 
 	offsetString := params["offset"]
 	offset, err := strconv.Atoi(offsetString)
@@ -99,7 +100,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	}
 
 	data := Data{}
-	data.Total = len(contributions)
+	data.Total = contributors
 
 	perDay := make(map[string]*Dataset)
 	previousDay := time.Time{}
