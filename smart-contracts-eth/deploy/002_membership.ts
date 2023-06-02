@@ -3,6 +3,11 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { ethers } from "hardhat";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  if (hre.network.name == "main") {
+    console.log("Membership wont be deployed for now on main net.");
+    return;
+  }
+
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 

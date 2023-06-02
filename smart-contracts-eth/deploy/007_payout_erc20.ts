@@ -22,6 +22,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const symbol = await tokenDeployed.symbol();
 
+  if (symbol === "") {
+    return;
+  } else {
+    console.log(`determined symbol from ERC20 contract: ${symbol}`);
+  }
+
   const { payoutUsdcDeployer } = await getNamedAccounts();
 
   const deploymentResult = await deploy("PayoutERC20", {
