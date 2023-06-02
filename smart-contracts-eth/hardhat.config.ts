@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
     },
     payoutUsdcDeployer: {
       goerli: "0x77a60DBD8605381b725b41993CE15e21AFA96b2a",
-      main: null,
+      main: "0x3AfDb92ec96b2F8a689B1b4B49F1d2a6AB16d4Dd",
       1337: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
     },
     firstCouncilMember: {
