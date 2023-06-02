@@ -66,9 +66,11 @@
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-
-      await API.invite.inviteAuth(inviteEmail);
+      if (inviteEmail === $user.email) {
+        throw "Oops something went wrong. You aren't able to invite yourself.";
+      }
       await API.invite.invite(inviteEmail);
+      await API.invite.inviteAuth(inviteEmail);
       const inv: Invitation = {
         email: $user.email,
         inviteEmail,
