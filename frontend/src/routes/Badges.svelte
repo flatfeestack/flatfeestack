@@ -24,6 +24,15 @@
 
   //https://www.chartjs.org/docs/latest/configuration/tooltip.html
   let dataOptions = {
+    scales: {
+      y: {
+        ticks: {
+          callback: function (value: number) {
+            return value * 100 + "%";
+          },
+        },
+      },
+    },
     plugins: {
       tooltip: {
         boxPadding: 6,
