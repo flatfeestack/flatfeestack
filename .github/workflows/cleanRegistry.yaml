@@ -1,0 +1,22 @@
+name: Clean Digital Ocean Registry
+on:
+  schedule:
+    - cron: "0 0 * * 0" # Run once a week on Sundays at midnight
+  workflow_dispatch: {} # Allow manual triggering
+
+jobs:
+  clean_registry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up jq
+        run: sudo apt-get install -y jq
+
+      - name: Clean Digital Ocean Registry
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: |
+          chmod +x cleanupRegistry.sh
+          ./cleanupRegistry.sh
