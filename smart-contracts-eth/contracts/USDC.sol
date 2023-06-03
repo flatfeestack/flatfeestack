@@ -8,4 +8,8 @@ contract USDC is ERC20Upgradeable {
         __ERC20_init("USDC", "USDC");
         _mint(msg.sender, 1000 * 10 ** decimals());
     }
+
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
 }
