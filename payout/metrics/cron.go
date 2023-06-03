@@ -74,7 +74,7 @@ func retrieveBalanceFromContract(contractAddress common.Address) (float64, error
 	}
 
 	balanceBigFloat := new(big.Float).SetInt(balanceInt)
-	usdcDecimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	usdcDecimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(6), nil)
 	balanceBigFloat.Quo(balanceBigFloat, new(big.Float).SetInt(usdcDecimals))
 	balanceFloat64, _ := balanceBigFloat.Float64()
 

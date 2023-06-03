@@ -173,22 +173,14 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 		return
 	}
 
+	// notabene: For USDC, 10^6 units are one dollar
+	// See explorer https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+	// FlatFeeStack already calculates in micro dollars
 	totalEarnedAmount, err := db.SumTotalEarnedAmountForContributionIds(ownContributionIds)
 	if err != nil {
 		log.Errorf("Unable to retrieve already earned amount in target currency: %v", err)
 		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
-	}
-
-	if targetCurrency == "USD" {
-		// For USDC, 10^18 units are one dollar
-		// See explorer https://explorer.bitquery.io/bsc/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
-		// And https://docs.openzeppelin.com/contracts/4.x/erc20#a-note-on-decimals
-		// FlatFeeStack already calculates in micro dollars, so we need to blow up the value a bit
-		usdcDecimals := new(big.Int).Exp(big.NewInt(10), big.NewInt(18-currencyMetadata.FactorPow), nil)
-
-		// Divide the float by the power of 10
-		totalEarnedAmount.Mul(totalEarnedAmount, usdcDecimals)
 	}
 
 	signature, err := clients.RequestPayout(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
