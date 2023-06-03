@@ -20,15 +20,16 @@ type Contributions struct {
 }
 
 type Contribution struct {
-	RepoName         string    `json:"repoName"`
-	RepoUrl          string    `json:"repoUrl"`
-	SponsorName      *string   `json:"sponsorName,omitempty"`
-	SponsorEmail     string    `json:"sponsorEmail"`
-	ContributorName  *string   `json:"contributorName,omitempty"`
-	ContributorEmail string    `json:"contributorEmail"`
-	Balance          *big.Int  `json:"balance"`
-	Currency         string    `json:"currency"`
-	Day              time.Time `json:"day"`
+	RepoName         string       `json:"repoName"`
+	RepoUrl          string       `json:"repoUrl"`
+	SponsorName      *string      `json:"sponsorName,omitempty"`
+	SponsorEmail     string       `json:"sponsorEmail"`
+	ContributorName  *string      `json:"contributorName,omitempty"`
+	ContributorEmail string       `json:"contributorEmail"`
+	Balance          *big.Int     `json:"balance"`
+	Currency         string       `json:"currency"`
+	Day              time.Time    `json:"day"`
+	ClaimedAt        JsonNullTime `json:"claimedAt,omitempty"`
 }
 
 func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
@@ -55,7 +56,7 @@ func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, re
 func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
-                 d.balance, d.currency, d.day
+                 d.balance, d.currency, d.day, d.claimed_at
             FROM daily_contribution d
                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
                 INNER JOIN users co ON d.user_contributor_id = co.id
@@ -63,7 +64,7 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
             ORDER by d.day`
 	if myContribution {
 		s = `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
-                 d.balance, d.currency, d.day
+                 d.balance, d.currency, d.day, d.claimed_at
             FROM daily_contribution d
                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
                 INNER JOIN users co ON d.user_contributor_id = co.id
@@ -82,7 +83,7 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 		var b string
 		err = rows.Scan(
 			&c.RepoName, &c.RepoUrl, &c.SponsorName, &c.SponsorEmail, &c.ContributorName,
-			&c.ContributorEmail, &b, &c.Currency, &c.Day)
+			&c.ContributorEmail, &b, &c.Currency, &c.Day, &c.ClaimedAt)
 
 		if err != nil {
 			return nil, err

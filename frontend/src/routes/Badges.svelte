@@ -215,7 +215,6 @@
           <tr>
             <th>Repository</th>
             <th>Contributor Email</th>
-            <th>Contribution</th>
             <th>Realized</th>
             <th>Balance USD</th>
             <th>Date</th>
@@ -227,9 +226,8 @@
               <td>{contribution.repoName}</td>
               {#if contribution.contributorEmail}
                 <td>{contribution.contributorEmail}</td>
-                <td>{(contribution.contributorWeight || 1) * 100}%</td>
                 <td>
-                  {#if contribution.contributorUserId}
+                  {#if contribution.claimedAt}
                     Realized
                   {:else}
                     Unclaimed
@@ -242,7 +240,7 @@
                   )}</td
                 >
               {:else}
-                <td colspan="4"
+                <td colspan="3"
                   >Unprocessed: {formatBalance(
                     contribution.balance,
                     contribution.currency
