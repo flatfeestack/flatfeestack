@@ -49,7 +49,7 @@
       y: {
         ticks: {
           callback: function (value: number) {
-            return value * 100 + "%";
+            return (value * 100).toFixed(2) + "%";
           },
         },
       },
