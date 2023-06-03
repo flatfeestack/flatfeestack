@@ -35,7 +35,7 @@
   .parallax {
     text-align: center;
     justify-content: center;
-    background-image: url(/images/code-dark2.jpg);
+    background-image: url(/images/code-dark2.webp);
     color: #fff;
     background-attachment: fixed;
     background-position: center;
