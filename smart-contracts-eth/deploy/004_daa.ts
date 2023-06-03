@@ -4,6 +4,11 @@ import { ethers } from "hardhat";
 import type { Contract } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  if (hre.network.name == "main") {
+    console.log("DAO wont be deployed for now on main net.");
+    return;
+  }
+
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
 
