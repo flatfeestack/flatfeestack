@@ -5,7 +5,18 @@
   import { error, user } from "../ts/mainStore";
   import type { Contribution, ContributionSummary } from "../types/backend";
   import { formatDay, formatBalance } from "../ts/services";
-  import { Chart, registerables } from "chart.js";
+  import {
+    Chart,
+    LineController,
+    LineElement,
+    PointElement,
+    BarController,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    Legend,
+    Tooltip,
+  } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
   import Fa from "svelte-fa";
   import {
@@ -20,7 +31,17 @@
   let showGraph: string | undefined;
   let offset = 0;
 
-  Chart.register(...registerables);
+  Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    BarController,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    Legend,
+    Tooltip
+  );
 
   //https://www.chartjs.org/docs/latest/configuration/tooltip.html
   let dataOptions = {
