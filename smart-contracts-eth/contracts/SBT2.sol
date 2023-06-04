@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/draft-ERC721
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract FlatFeeStackDAOSBT is
     Initializable,
@@ -19,12 +18,10 @@ contract FlatFeeStackDAOSBT is
     PausableUpgradeable,
     AccessControlUpgradeable,
     EIP712Upgradeable,
-    ERC721VotesUpgradeable,
-    UUPSUpgradeable
+    ERC721VotesUpgradeable
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    bytes private prefix;
     CountersUpgradeable.Counter private _tokenIdCounter;
 
     uint256 public membershipFee;
@@ -47,7 +44,6 @@ contract FlatFeeStackDAOSBT is
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         membershipFee = 1 ether;
         membershipPeriod = 10 * 365 * 24 * 60 * 60;
-        prefix = "\x19Ethereum Signed Message:\n";
     }
 
     function _baseURI() internal pure override returns (string memory) {
@@ -198,9 +194,5 @@ contract FlatFeeStackDAOSBT is
 
     function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal onlyRole(DEFAULT_ADMIN_ROLE) override {
-
     }
 }

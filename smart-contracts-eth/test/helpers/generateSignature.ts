@@ -1,5 +1,4 @@
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import type { Signature } from "@ethersproject/bytes";
 import { ethers } from "hardhat";
 
 async function generateSignature(

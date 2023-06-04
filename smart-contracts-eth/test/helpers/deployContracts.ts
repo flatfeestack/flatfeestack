@@ -35,6 +35,11 @@ export async function deployMembershipContract(){
       signedMessage2,
       { value: ethers.utils.parseEther('1') });
 
+  //see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/utils/Votes.sol
+  await sbt.connect(regularMember).delegate(regularMember.address);
+  await sbt.connect(firstCouncilMember).delegate(firstCouncilMember.address);
+  await sbt.connect(secondCouncilMember).delegate(secondCouncilMember.address);
+
   await mine(2);
 
   return {
