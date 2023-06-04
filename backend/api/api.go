@@ -113,14 +113,6 @@ var Plans = []Plan{
 		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	},
-	{
-		Title:       "Test",
-		Price:       0.66,
-		PriceBase:   660000,
-		Freq:        2,
-		Description: "Testing: <b>" + big.NewFloat(0.66).String() + " USD</b>",
-		Disclaimer:  "",
-	},
 }
 
 var (

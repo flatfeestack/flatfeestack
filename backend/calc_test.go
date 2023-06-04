@@ -163,7 +163,7 @@ func TestDailyRunner(t *testing.T) {
 		assert.Equal(t, 2, clients.EmailNotifications) //we send out unclaimed marketing and low funds email
 	})
 
-	t.Run("one future", func(t *testing.T) {
+	t.Run("multiple futures", func(t *testing.T) {
 		setup()
 		defer teardown()
 
@@ -171,20 +171,41 @@ func TestDailyRunner(t *testing.T) {
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
 
 		repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+		contributors := setupUsers(t, "hello@example.com c1", "hello2@example.com c1")
 		setupContributor(t, *repos[0], day1, day1, []string{"hello@example.com"}, []float64{1.0})
 
 		err := setupSponsor(t, sponsors[0], repos[0], day1)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		err = dailyRunner(day3)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
-		//now check the daily_contribution
 		m1, err := db.FindSumFutureSponsors(*sponsors[0])
+		require.Nil(t, err)
+		assert.Equal(t, "330003", m1["USD"].String())
+
+		// set up contributors for day 3
+		// they should receive the amount of yesterday (33 cents plus everything of today, also 33 cents)
+		setupContributor(t, *repos[0], day3, day3, []string{"hello@example.com"}, []float64{1.0})
+		setupGitEmail(t, *contributors[0], "hello@example.com")
+
+		setupContributor(t, *repos[1], day3, day3, []string{"hello2@example.com"}, []float64{1.0})
+		setupGitEmail(t, *contributors[1], "hello2@example.com")
+		err = setupSponsor(t, sponsors[0], repos[1], day2)
+		require.Nil(t, err)
+
+		// calculate for day 4
+		err = dailyRunner(day4)
+		require.Nil(t, err)
+
+		m1, err = db.FindSumFutureSponsors(*sponsors[0])
+		require.Nil(t, err)
+		// 330003 divided by two repositories gives 165001 (rounding error with integers)
+		assert.Equal(t, "1", m1["USD"].String())
+
+		m1, err = db.FindSumDailySponsors(*sponsors[0])
 		assert.Nil(t, err)
-		if assert.NotEmpty(t, m1) {
-			assert.Equal(t, "330003", m1["USD"].String())
-		}
+		assert.Equal(t, "660004", m1["USD"].String())
 	})
 
 	t.Run("three contributors", func(t *testing.T) {

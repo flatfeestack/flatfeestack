@@ -21,10 +21,14 @@
   let payoutSignature: PayoutResponse;
 
   async function requestPayout(selectedCurrency: "ETH" | "GAS" | "USD") {
-    payoutSignature = await API.user.requestPayout(selectedCurrency);
+    try {
+      payoutSignature = await API.user.requestPayout(selectedCurrency);
 
-    if (selectedCurrency !== "GAS") {
-      ethSignature = splitSignature(payoutSignature.signature);
+      if (selectedCurrency !== "GAS") {
+        ethSignature = splitSignature(payoutSignature.signature);
+      }
+    } catch (e) {
+      $error = e.message;
     }
   }
 

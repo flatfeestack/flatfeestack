@@ -126,7 +126,12 @@ func getEthSignature(data PayoutRequest, symbol string) (PayoutResponse, error) 
 		Type: abi.Type{T: abi.StringTy},
 	})
 
-	privateKey, err := crypto.HexToECDSA(opts.Ethereum.PrivateKey)
+	correspondingPrivateKey, err := privateKeyFromOpts(symbol)
+	if err != nil {
+		return PayoutResponse{}, err
+	}
+
+	privateKey, err := crypto.HexToECDSA(correspondingPrivateKey)
 	if err != nil {
 		return PayoutResponse{}, err
 	}
@@ -150,4 +155,15 @@ func getEthSignature(data PayoutRequest, symbol string) (PayoutResponse, error) 
 		EncodedUserId: hexutil.Encode(encodedUserId[:]),
 		Signature:     hexutil.Encode(signature),
 	}, nil
+}
+
+func privateKeyFromOpts(symbol string) (string, error) {
+	switch symbol {
+	case "ETH":
+		return opts.Ethereum.PrivateKey, nil
+	case "USDC":
+		return opts.Usdc.PrivateKey, nil
+	default:
+		return "", errors.New("unknown currency")
+	}
 }

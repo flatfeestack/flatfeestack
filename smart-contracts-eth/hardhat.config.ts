@@ -46,6 +46,7 @@ const config: HardhatUserConfig = {
     },
     payoutUsdcDeployer: {
       goerli: "0x77a60DBD8605381b725b41993CE15e21AFA96b2a",
+      main: "0x3AfDb92ec96b2F8a689B1b4B49F1d2a6AB16d4Dd",
       1337: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
     },
     firstCouncilMember: {
@@ -61,25 +62,33 @@ const config: HardhatUserConfig = {
     },
     usdcTokenAddress: {
       goerli: "0x07865c6E87B9F70255377e024ace6630C1Eaa37F",
+      main: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       1337: null,
     },
   },
   networks: {
     goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_GOERLI_API_KEY}`,
       accounts: [
         process.env.GOERLI_DAO_DEPLOYER_KEY ||
-          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+          "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e",
         process.env.GOERLI_PAYOUT_ETH_DEPLOYER_KEY ||
-          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+          "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e",
         process.env.GOERLI_PAYOUT_USDC_DEPLOYER_KEY ||
-          "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+          "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e",
       ],
     },
     localhost: {
       live: false,
       saveDeployments: true,
       tags: ["local"],
+    },
+    main: {
+      url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_MAIN_API_KEY}`,
+      accounts: [
+        process.env.MAIN_PAYOUT_USDC_DEPLOYER_KEY ||
+          "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e",
+      ],
     },
   },
 };

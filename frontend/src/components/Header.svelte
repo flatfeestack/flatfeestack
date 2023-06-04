@@ -1,6 +1,6 @@
 <script lang="ts">
   import { navigate, link } from "svelte-routing";
-  import { user, loginFailed, error } from "../ts/mainStore";
+  import { user, loginFailed, error, config } from "../ts/mainStore";
   import { removeSession } from "../ts/services";
   import { onMount } from "svelte";
   import { API } from "../ts/api";
@@ -108,9 +108,11 @@
         <button class="button1 center mx-2" type="submit">Sign Up</button>
       </form>
     {/if}
-    <button class="button4 center mx-2" on:click={() => navigate("/dao/home")}
-      >DAO</button
-    >
+    {#if $config.env == "local" || $config.env == "staging"}
+      <button class="button4 center mx-2" on:click={() => navigate("/dao/home")}
+        >DAO</button
+      >
+    {/if}
   </nav>
 </header>
 

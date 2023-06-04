@@ -103,6 +103,12 @@ func InviteOther(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	m := mux.Vars(r)
 	email := m["email"]
 
+	if email == user.Email {
+		log.Errorf("User %v tried to invite themselves, not possible.", user.Email)
+		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong. You aren't able to invite yourself.")
+		return
+	}
+
 	err := validateEmail(email)
 	if err != nil {
 		log.Errorf("email address not valid %v", err)

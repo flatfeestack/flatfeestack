@@ -5,7 +5,18 @@
   import { error, user } from "../ts/mainStore";
   import type { Contribution, ContributionSummary } from "../types/backend";
   import { formatDay, formatBalance } from "../ts/services";
-  import { Chart, registerables } from "chart.js";
+  import {
+    Chart,
+    LineController,
+    LineElement,
+    PointElement,
+    BarController,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    Legend,
+    Tooltip,
+  } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";
   import Fa from "svelte-fa";
   import {
@@ -20,10 +31,29 @@
   let showGraph: string | undefined;
   let offset = 0;
 
-  Chart.register(...registerables);
+  Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    BarController,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    Legend,
+    Tooltip
+  );
 
   //https://www.chartjs.org/docs/latest/configuration/tooltip.html
   let dataOptions = {
+    scales: {
+      y: {
+        ticks: {
+          callback: function (value: number) {
+            return (value * 100).toFixed(2) + "%";
+          },
+        },
+      },
+    },
     plugins: {
       tooltip: {
         boxPadding: 6,
@@ -185,7 +215,6 @@
           <tr>
             <th>Repository</th>
             <th>Contributor Email</th>
-            <th>Contribution</th>
             <th>Realized</th>
             <th>Balance USD</th>
             <th>Date</th>
@@ -197,9 +226,8 @@
               <td>{contribution.repoName}</td>
               {#if contribution.contributorEmail}
                 <td>{contribution.contributorEmail}</td>
-                <td>{(contribution.contributorWeight || 1) * 100}%</td>
                 <td>
-                  {#if contribution.contributorUserId}
+                  {#if contribution.claimedAt}
                     Realized
                   {:else}
                     Unclaimed
@@ -212,7 +240,7 @@
                   )}</td
                 >
               {:else}
-                <td colspan="4"
+                <td colspan="3"
                   >Unprocessed: {formatBalance(
                     contribution.balance,
                     contribution.currency
