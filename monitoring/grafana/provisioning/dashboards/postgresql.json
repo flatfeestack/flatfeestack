@@ -31,685 +31,6 @@
   "liveNow": false,
   "panels": [
     {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 72,
-      "title": "Stats",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 0,
-        "y": 1
-      },
-      "id": 74,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.4.7",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "builder",
-          "format": "table",
-          "rawSql": "SELECT COUNT(*) FROM users LIMIT 50 ",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "name": "COUNT",
-                "parameters": [
-                  {
-                    "name": "*",
-                    "type": "functionParameter"
-                  }
-                ],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "table": "users"
-        }
-      ],
-      "title": "Total Users",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 4,
-        "y": 1
-      },
-      "id": 76,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.4.7",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) FROM users WHERE created_at::date = CURRENT_DATE;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "name": "SUM",
-                "parameters": [
-                  {
-                    "name": "created_at",
-                    "type": "functionParameter"
-                  }
-                ],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "table": "auth"
-        }
-      ],
-      "title": "New Users Today",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 1
-      },
-      "id": 78,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.4.7",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COUNT(DISTINCT repo_id) FROM sponsor_event WHERE un_sponsor_at IS NULL;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Sponsored Repositories",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 1
-      },
-      "id": 80,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.4.7",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COUNT(DISTINCT repo_id) FROM sponsor_event WHERE un_sponsor_at IS NULL AND sponsor_at::date = CURRENT_DATE;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "New Sponsored Repositories",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "id": 82,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right",
-          "showLegend": true
-        },
-        "orientation": "auto",
-        "showValue": "never",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT r.name, se.count\nFROM (SELECT repo_id, COUNT(*) AS count\n      FROM sponsor_event\n      WHERE un_sponsor_at IS NULL\n      GROUP BY repo_id) AS se\n         INNER JOIN repo AS r ON se.repo_id = r.id\nORDER BY se.count DESC\nLIMIT 10;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "10 most starred repositories",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 84,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right",
-          "showLegend": true
-        },
-        "orientation": "auto",
-        "showValue": "never",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT\n    SUM(balance/1000000) AS SUM,\n    currency\nFROM\n    payment_in_event\nWHERE created_at::date = CURRENT_DATE\nGROUP BY\n    currency;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Total Payments Today",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "0YSE7REVz"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
-      },
-      "id": 86,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right",
-          "showLegend": true
-        },
-        "orientation": "auto",
-        "showValue": "never",
-        "stacking": "none",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "0YSE7REVz"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT TO_CHAR(DATE_TRUNC('day', time), 'YYYY-MM-DD'),\n       SUM(users) OVER (ORDER BY time) AS active_users\nFROM (SELECT DATE_TRUNC('day', created_at) AS time,\n             COUNT(*)                      AS users\n      FROM users\n      GROUP BY 1) AS user_counts\nORDER BY time ASC\nLIMIT 10",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Active Users",
-      "type": "barchart"
-    },
-    {
       "collapsed": false,
       "datasource": {
         "type": "datasource",
@@ -719,7 +40,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 0
       },
       "id": 34,
       "panels": [],
@@ -777,7 +98,7 @@
         "h": 2,
         "w": 4,
         "x": 0,
-        "y": 23
+        "y": 1
       },
       "id": 36,
       "links": [],
@@ -796,7 +117,7 @@
         },
         "textMode": "name"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -857,7 +178,7 @@
         "h": 2,
         "w": 4,
         "x": 4,
-        "y": 23
+        "y": 1
       },
       "id": 28,
       "links": [],
@@ -876,7 +197,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -935,7 +256,7 @@
         "h": 2,
         "w": 4,
         "x": 8,
-        "y": 23
+        "y": 1
       },
       "id": 10,
       "links": [],
@@ -954,7 +275,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1013,7 +334,7 @@
         "h": 2,
         "w": 4,
         "x": 12,
-        "y": 23
+        "y": 1
       },
       "id": 11,
       "links": [],
@@ -1032,7 +353,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1091,7 +412,7 @@
         "h": 2,
         "w": 4,
         "x": 16,
-        "y": 23
+        "y": 1
       },
       "id": 12,
       "links": [],
@@ -1110,7 +431,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1169,7 +490,7 @@
         "h": 2,
         "w": 4,
         "x": 20,
-        "y": 23
+        "y": 1
       },
       "id": 38,
       "links": [],
@@ -1188,7 +509,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1226,7 +547,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 3
       },
       "hiddenSeries": false,
       "id": 22,
@@ -1248,7 +569,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1321,7 +642,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 25
+        "y": 3
       },
       "hiddenSeries": false,
       "id": 24,
@@ -1343,7 +664,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1427,7 +748,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 25
+        "y": 3
       },
       "hiddenSeries": false,
       "id": 26,
@@ -1449,7 +770,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1510,7 +831,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 10
       },
       "id": 32,
       "panels": [],
@@ -1551,7 +872,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1567,7 +889,7 @@
         "h": 3,
         "w": 3,
         "x": 0,
-        "y": 33
+        "y": 11
       },
       "id": 40,
       "links": [],
@@ -1586,7 +908,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1627,7 +949,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1643,7 +966,7 @@
         "h": 3,
         "w": 3,
         "x": 3,
-        "y": 33
+        "y": 11
       },
       "id": 42,
       "links": [],
@@ -1662,7 +985,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1703,7 +1026,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1719,7 +1043,7 @@
         "h": 3,
         "w": 3,
         "x": 6,
-        "y": 33
+        "y": 11
       },
       "id": 44,
       "links": [],
@@ -1738,7 +1062,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1779,7 +1103,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1795,7 +1120,7 @@
         "h": 3,
         "w": 3,
         "x": 9,
-        "y": 33
+        "y": 11
       },
       "id": 46,
       "links": [],
@@ -1814,7 +1139,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1857,7 +1182,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1873,7 +1199,7 @@
         "h": 3,
         "w": 3,
         "x": 12,
-        "y": 33
+        "y": 11
       },
       "id": 48,
       "links": [],
@@ -1892,7 +1218,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -1933,7 +1259,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1949,7 +1276,7 @@
         "h": 3,
         "w": 3,
         "x": 15,
-        "y": 33
+        "y": 11
       },
       "id": 50,
       "links": [],
@@ -1968,7 +1295,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -2009,7 +1336,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2025,7 +1353,7 @@
         "h": 3,
         "w": 2,
         "x": 18,
-        "y": 33
+        "y": 11
       },
       "id": 52,
       "links": [],
@@ -2044,7 +1372,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -2085,7 +1413,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2101,7 +1430,7 @@
         "h": 3,
         "w": 2,
         "x": 20,
-        "y": 33
+        "y": 11
       },
       "id": 54,
       "links": [],
@@ -2120,7 +1449,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -2161,7 +1490,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2177,7 +1507,7 @@
         "h": 3,
         "w": 2,
         "x": 22,
-        "y": 33
+        "y": 11
       },
       "id": 56,
       "links": [],
@@ -2196,7 +1526,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -2222,7 +1552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 14
       },
       "id": 30,
       "panels": [],
@@ -2259,7 +1589,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 1,
@@ -2284,7 +1614,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 3,
       "points": true,
       "renderer": "flot",
@@ -2359,7 +1689,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 37
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 60,
@@ -2382,7 +1712,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2465,7 +1795,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 8,
@@ -2490,7 +1820,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2563,7 +1893,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 5,
@@ -2588,7 +1918,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2661,7 +1991,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 44
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 6,
@@ -2686,7 +2016,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2760,7 +2090,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 44
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 3,
@@ -2786,7 +2116,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.4.7",
+      "pluginVersion": "9.5.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2861,7 +2191,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 51
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 14,
@@ -2959,7 +2289,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 51
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 4,
@@ -3058,7 +2388,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 51
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 7,
@@ -3151,7 +2481,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 58
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 62,
@@ -3242,7 +2572,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 58
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 64,
@@ -3376,7 +2706,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 58
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 66,
@@ -3478,7 +2808,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 65
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 68,
@@ -3568,7 +2898,7 @@
         "h": 7,
         "w": 16,
         "x": 8,
-        "y": 65
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 70,
