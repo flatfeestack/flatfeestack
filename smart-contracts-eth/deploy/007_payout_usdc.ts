@@ -30,7 +30,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { payoutUsdcDeployer } = await getNamedAccounts();
 
-  const deploymentResult = await deploy("PayoutERC20", {
+  const deploymentResult = await deploy("PayoutUsdc", {
+    contract: "PayoutERC20",
     from: payoutUsdcDeployer,
     log: true,
     proxy: {
@@ -74,4 +75,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["PayoutERC20"];
+func.tags = ["PayoutUsdc"];
