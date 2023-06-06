@@ -67,8 +67,12 @@
         ethSignature.s
       );
     } catch (exception) {
-      console.error(exception);
-      $error = exception.data.data.reason;
+      if (exception.data?.data === undefined) {
+        // we deal with a regular error, not one a "revert" from the blockchain
+        $error = exception.message;
+      } else {
+        $error = exception.data.data.reason;
+      }
       resetViewAfterPayout();
     }
 
