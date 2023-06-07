@@ -38,7 +38,7 @@ jobs:
 
       - name: Install Docker
         run: |
-          ansible-galaxy install geerlingguy.docker
+          ansible-galaxy install -r requirements.yml
           ansible-playbook -i ${{ secrets.DROPLET_IP }}, ansible-docker.yaml
 
       - name: Create .env files
