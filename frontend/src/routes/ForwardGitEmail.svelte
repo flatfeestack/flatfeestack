@@ -13,6 +13,7 @@
       navigate("/user/settings");
     } catch (e) {
       $error = e;
+      navigate("/user/search");
     }
   });
 </script>
