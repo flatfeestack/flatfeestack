@@ -72,6 +72,9 @@
     padding-right: 0.25em;
     width: 10rem;
   }
+  nav p {
+    margin: 0;
+  }
 </style>
 
 <header>
@@ -95,8 +98,7 @@
       {#if $user.image}
         <img class="image-org-sx" src={$user.image} alt="user profile img" />
       {/if}
-
-      {$user.email}
+      <p class="hide-sx">{$user.email}</p>
       <form on:submit|preventDefault={logout}>
         <button class="button3 center mx-2" type="submit">Sign out</button>
       </form>

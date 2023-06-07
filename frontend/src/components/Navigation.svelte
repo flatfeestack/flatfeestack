@@ -49,15 +49,15 @@
     nav {
       display: flex;
       flex-direction: row;
-      justify-content: space-between;
-      width: 99.9%;
+      justify-content: space-around;
+      width: 100%;
       border-bottom: solid 1px var(--primary-500);
       padding: 0;
     }
     nav :global(a) {
       text-align: center;
       width: 100%;
-      float: left;
+      padding: 0.5em;
     }
   }
 </style>
