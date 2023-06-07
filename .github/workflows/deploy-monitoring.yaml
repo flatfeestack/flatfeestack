@@ -30,46 +30,28 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-          cache: 'pip' # caching pip dependencies
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
 
       - name: Install Ansible
         run: pip install -r requirements.txt
 
-      - name: Install Docker
-        run: |
-          ansible-galaxy install -r requirements.yml
-          ansible-playbook -i ${{ secrets.DROPLET_IP }}, ansible-docker.yaml
-
-      - name: Create .env files
-        run: |
-          cp grafana/.example.env grafana/.env
-          cp postgres-exporter/.example.env postgres-exporter/.env
-
-      - name: Edit grafana .env file
-        run: |
-          sed -i 's#%%ADMIN_USER%%#${{ secrets.GRAFANA_ADMIN_USER }}#g' grafana/.env
-          sed -i 's#%%ADMIN_PASSWORD%%#${{ secrets.GRAFANA_ADMIN_PW }}#g' grafana/.env
-
-      - name: Edit postgres-exporter .env file
-        run: |
-          sed -i 's#DATA_SOURCE_NAME=postgresql://postgres:password@host.docker.internal:5432/flatfeestack?sslmode=disable#DATA_SOURCE_NAME=${{ secrets.GRAFANA_POSTGRES_DATASOURCE }}#g' postgres-exporter/.env
-          cat postgres-exporter/.env
-
-      - name: Copy Files to Droplet
-        run: |
-          rsync -av -e "ssh" --rsync-path="sudo rsync" --relative grafana/ prometheus/ postgres-exporter/ caddy/ docker-compose.yml root@${{ secrets.DROPLET_IP }}:/root/flatfeestack/
-
-      - name: Adjust Ansible Vars
-        run: |
-          sed -i "s#'password'#'${{ secrets.POSTGRES_USER_GRAFANAREADER_PW }}'#g" ansible-grafana.yaml
-          sed -i "s#'url'#'${{ secrets.GRAFANA_POSTGRES_DB_HOST }}'#g" ansible-grafana.yaml
-          cat ansible-grafana.yaml
-
       - name: Provision Grafana
         run: |
-          ansible-playbook -i ${{ secrets.DROPLET_IP }}, ansible-grafana.yaml
+          ansible-galaxy install -r requirements.yml
+          ansible-playbook -i ${{ secrets.DROPLET_IP }}, playbook.yaml
+        env:
+          GRAFANA_POSTGRES_USER_PASSWORD: ${{ secrets.POSTGRES_USER_GRAFANAREADER_PW }}
+          GRAFANA_POSTGRES_DB_HOST: ${{ secrets.GRAFANA_POSTGRES_DB_HOST }}
 
       - name: Deploy monitoring
         run: |
-          ssh root@${{ secrets.DROPLET_IP }} "cd /root/flatfeestack && docker compose up --pull always -d --build --force-recreate"
+          docker context create monitoring --docker "host=ssh://root@${{ secrets.DROPLET_IP }}"
+          docker --context monitoring compose -p "monitoring" up -d --remove-orphans --pull always --wait
+          docker --context monitoring system prune -af
+          docker --context monitoring ps
+        env:
+          BASE_PATH: "/root/flatfeestack"
+          GRAFANA_ADMIN_PASSWORD: "${{ secrets.GRAFANA_ADMIN_USER }}"
+          GRAFANA_ADMIN_USER: "${{ secrets.GRAFANA_ADMIN_PW }}"
+          GRAFANA_POSTGRES_DATASOURCE: "${{ secrets.GRAFANA_POSTGRES_DATASOURCE }}"
