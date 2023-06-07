@@ -25,6 +25,7 @@
       isSubmitting = false;
       email = "";
       password = "";
+      confirmPassword = "";
     } catch (e) {
       isSubmitting = false;
       error = "Something went wrong. Please try again.";

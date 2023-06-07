@@ -23,6 +23,7 @@
       await confirmInvite(email, password, emailToken, inviteByEmail);
       email = "";
       password = "";
+      confirmPassword = "";
       isSubmitting = false;
       navigate("/user/invitations");
     } catch (e) {
