@@ -85,6 +85,7 @@
           maxlength="100"
           type="password"
           id="password"
+          name="password"
           minlength="8"
           bind:value={password}
         />
@@ -95,6 +96,7 @@
           maxlength="100"
           type="password"
           id="confirmPassword"
+          name="confirmPassword"
           minlength="8"
           bind:value={confirmPassword}
         />

@@ -8,10 +8,15 @@
   export let inviteByEmail: string;
 
   let password = "";
+  let confirmPassword = "";
   let error = "";
   let isSubmitting = false;
 
   async function handleSubmit() {
+    if (password !== confirmPassword) {
+      error = "Password and confirmation password do not match.";
+      return;
+    }
     try {
       error = "";
       isSubmitting = true;
@@ -84,9 +89,21 @@
         maxlength="100"
         type="password"
         id="password"
+        name="password"
         minlength="8"
         bind:value={password}
         class="rounded py-2 border-primary-900"
+      />
+      <label for="confirmPassword" class="flex py-1">Confirm Password</label>
+      <input
+        required
+        size="100"
+        maxlength="100"
+        type="password"
+        id="confirmPassword"
+        name="confirmPassword"
+        minlength="8"
+        bind:value={confirmPassword}
       />
       <button class="button1 my-4" disabled={isSubmitting} type="submit"
         >Sign up
