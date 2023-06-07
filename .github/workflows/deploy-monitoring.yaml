@@ -16,6 +16,7 @@ jobs:
       run:
         shell: bash
         working-directory: monitoring
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,10 +27,14 @@ jobs:
           key: ${{ secrets.DEPLOY_DROPLET_PRIVATE_KEY }}
           known_hosts: ${{ secrets.DEPLOY_DROPLET_KNOWN_HOST }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip' # caching pip dependencies
+
       - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+        run: pip install -r requirements.txt
 
       - name: Install Docker
         run: |
