@@ -6,14 +6,14 @@ require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/flatfeestack/go-lib v0.0.6
-	github.com/go-co-op/gocron v1.28.1
+	github.com/go-co-op/gocron v1.28.2
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nspcc-dev/neo-go v0.101.1
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 )
 
