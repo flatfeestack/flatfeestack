@@ -5,20 +5,10 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": [
-        "@openzeppelin/contracts",
-        "@openzeppelin/contracts-upgradeable"
+      "matchManagers": [
+        "npm"
       ],
-      "allowedVersions": "<=4.8"
-    },
-    {
-      "matchPackageNames": [
-        "ch.qos.logback:logback-classic"
-      ],
-      "matchPaths": [
-        "smart-contracts-neo/"
-      ],
-      "allowedVersions": "<=1.3"
+      "rangeStrategy": "bump"
     },
     {
       "groupName": "Github Actions - all non-major dependencies",
@@ -111,10 +101,20 @@
       ]
     },
     {
-      "matchManagers": [
-        "npm"
+      "matchPackageNames": [
+        "@openzeppelin/contracts",
+        "@openzeppelin/contracts-upgradeable"
       ],
-      "rangeStrategy": "bump"
+      "allowedVersions": "<=4.8"
+    },
+    {
+      "matchPackageNames": [
+        "ch.qos.logback:logback-classic"
+      ],
+      "matchPaths": [
+        "smart-contracts-neo/"
+      ],
+      "allowedVersions": "<=1.3"
     }
   ],
   "postUpdateOptions": [
