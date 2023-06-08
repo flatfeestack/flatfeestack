@@ -61,6 +61,15 @@
   .color :global(a:hover) {
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
+
+  @media screen and (max-width: 600px) {
+    .child {
+      max-width: unset;
+      min-width: unset;
+      width: 100%;
+      margin: 0.5em 0;
+    }
+  }
 </style>
 
 <div class="child rounded">
