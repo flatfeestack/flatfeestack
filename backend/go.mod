@@ -14,10 +14,10 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.4
-	github.com/stripe/stripe-go/v74 v74.20.0
+	github.com/stripe/stripe-go/v74 v74.21.0
 	golang.org/x/text v0.9.0
 )
 
