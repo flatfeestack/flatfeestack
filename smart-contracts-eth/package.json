@@ -3,7 +3,7 @@
   "description": "Code for the FlatFeeStack DAO",
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@openzeppelin/contracts": "4.8.3",
     "@openzeppelin/contracts-upgradeable": "4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.27.0",
