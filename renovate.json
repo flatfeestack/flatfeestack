@@ -109,6 +109,12 @@
         "minor",
         "patch"
       ]
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "rangeStrategy": "bump"
     }
   ],
   "postUpdateOptions": [
