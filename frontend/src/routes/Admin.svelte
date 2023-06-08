@@ -274,7 +274,7 @@
   </div>
 
   <h2 class="p-2 m-2">Payout Action</h2>
-  <div class="container  m-2 p-2">
+  <div class="container m-2 p-2">
     <form class="flex form-single" on:submit|preventDefault={payout}>
       <label class="mr-2" for="fake-payout">Exchange Rate USD to ETH: </label>
       <input
