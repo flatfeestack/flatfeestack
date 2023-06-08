@@ -88,6 +88,12 @@
     .stripe .container {
       margin: 0;
     }
+    .stripe .container button {
+      margin: 0.5rem;
+    }
+    :global(.w20) {
+      width: 100%;
+    }
   }
 </style>
 

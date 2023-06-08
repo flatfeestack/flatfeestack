@@ -45,6 +45,12 @@
     background-color: #fff;
     border-color: #dee2e6 #dee2e6 #fff;
   }
+
+  @media screen and (max-width: 600px) {
+    ul {
+      flex-wrap: unset;
+    }
+  }
 </style>
 
 <ul>

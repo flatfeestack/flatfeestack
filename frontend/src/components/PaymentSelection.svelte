@@ -67,6 +67,10 @@
     .container-stretch {
       flex-direction: column;
     }
+    .container.page {
+      flex-direction: column;
+      text-align: left;
+    }
   }
 </style>
 
