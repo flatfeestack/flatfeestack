@@ -93,6 +93,55 @@
   });
 </script>
 
+<style>
+  @media screen and (max-width: 600px) {
+    table {
+      width: 100%;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    table tr {
+      border-bottom: 3px solid #fff;
+      display: block;
+    }
+
+    table td {
+      border-bottom: 1px solid #fff;
+      display: block;
+      font-size: 0.8em;
+      text-align: right;
+    }
+
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    table td:last-child {
+      border-bottom: 0;
+    }
+    table form {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+    }
+    table form button {
+      margin: 0.5rem 0;
+    }
+  }
+</style>
+
 <Navigation>
   <h2 class="p-2 m-2">Invite Users</h2>
   <p class="p-2 m-2">
@@ -119,18 +168,18 @@
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
           {#if inv.email === $user.email}
             <tr>
-              <td>{inv.inviteEmail}</td>
-              <td class="text-center">
+              <td data-label="Invited">{inv.inviteEmail}</td>
+              <td data-label="Status" class="text-center">
                 {#if inv.confirmedAt}
                   <Fa icon={faCheck} size="md" />
                 {:else}
                   <Fa icon={faClock} size="md" />
                 {/if}
               </td>
-              <td title={formatDate(new Date(inv.createdAt))}>
+              <td data-label="Date" title={formatDate(new Date(inv.createdAt))}>
                 {timeSince(new Date(inv.createdAt), new Date())} ago
               </td>
-              <td class="text-center" colspan="2">
+              <td data-label="Remove" class="text-center" colspan="2">
                 <button
                   class="accessible-btn"
                   on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
@@ -141,8 +190,8 @@
           {/if}
         {/each}
         <tr>
-          <td colspan="7">
-            <form on:submit|preventDefault={addInvite} class="container-small">
+          <td colspan="5">
+            <form on:submit|preventDefault={addInvite}>
               <label for="invite-mail-input" class="p-2">Invite by email:</label
               >
               <input
@@ -153,7 +202,7 @@
                 pattern={emailValidationPattern}
                 required
                 bind:value={inviteEmail}
-              />&nbsp;
+              />
               <button
                 class="ml-5 p-2 button1"
                 type="submit"
@@ -192,18 +241,18 @@
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
           {#if inv.inviteEmail === $user.email}
             <tr>
-              <td>{inv.email}</td>
-              <td class="text-center">
+              <td data-label="Invited By">{inv.email}</td>
+              <td data-label="Status" class="text-center">
                 {#if inv.confirmedAt}
                   <Fa icon={faCheck} size="md" />
                 {:else}
                   <Fa icon={faClock} size="md" />
                 {/if}
               </td>
-              <td title={formatDate(new Date(inv.createdAt))}>
+              <td data-label="Date" title={formatDate(new Date(inv.createdAt))}>
                 {timeSince(new Date(inv.createdAt), new Date())} ago
               </td>
-              <td class="text-center" colspan="2">
+              <td data-label="Action" class="text-center" colspan="2">
                 <button
                   class="accessible-btn"
                   on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
