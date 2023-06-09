@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/paymentmethod"
 	"net/http"
 )
@@ -52,6 +53,12 @@ func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 }
 
 func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	if user.StripeId == nil {
+		log.Errorf("Stripe ID is missing on user with email %v, something went wrong in the setup workflow", user.Email)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		return
+	}
+
 	params := mux.Vars(r)
 	a := params["method"]
 
@@ -61,7 +68,16 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		nil,
 	)
 	if err != nil {
-		log.Errorf("Could not update method: %v", err)
+		log.Errorf("Could not update retrieve payment method: %v", err)
+		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		return
+	}
+
+	_, err = paymentmethod.Attach(*user.PaymentMethod, &stripe.PaymentMethodAttachParams{
+		Customer: user.StripeId,
+	})
+	if err != nil {
+		log.Errorf("Could not attach payment method to Stripe user: %v", err)
 		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
