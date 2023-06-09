@@ -45,6 +45,16 @@
   .title {
     font-weight: bold;
   }
+  @media screen and (max-width: 600px) {
+    .container {
+      margin: 1rem 0.5rem;
+    }
+    .title,
+    .desc,
+    .url {
+      word-break: break-word;
+    }
+  }
 </style>
 
 <div
@@ -86,7 +96,7 @@
   </div>
   <div>
     <div class="title">{repo.name}</div>
-    <div>{repo.description}</div>
+    <div class="desc">{repo.description}</div>
     <div class="url"><a href={repo.url}>{repo.url}</a></div>
   </div>
 </div>

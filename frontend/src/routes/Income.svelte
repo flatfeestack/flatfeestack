@@ -90,6 +90,47 @@
   });
 </script>
 
+<style>
+  @media screen and (max-width: 600px) {
+    table {
+      width: 100%;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    table tr {
+      border-bottom: 3px solid #fff;
+      display: block;
+    }
+
+    table td {
+      border-bottom: 1px solid #fff;
+      display: block;
+      font-size: 0.8em;
+      text-align: right;
+    }
+
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    table td:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>
+
 <Navigation>
   <h2 class="p-2 m-2">Income</h2>
   <p class="p-2 m-2 bold">
@@ -189,30 +230,33 @@
           <tbody>
             {#each contributions as contribution}
               <tr>
-                <td
+                <td data-label="Repository"
                   ><a href={contribution.repoUrl}>{contribution.repoName}</a
                   ></td
                 >
-                <td
+                <td data-label="From"
                   >{contribution.sponsorName
                     ? contribution.sponsorName
                     : "[no name]"}</td
                 >
-                <td
+                <td data-label="Balance"
                   >{formatBalance(
                     BigInt(contribution.balance),
                     contribution.currency
                   )}</td
                 >
-                <td>{contribution.currency}</td>
-                <td>
+                <td data-label="Currency">{contribution.currency}</td>
+                <td data-label="Realized">
                   {#if contribution.claimedAt === null}
                     Unclaimed
                   {:else}
                     Realized
                   {/if}
                 </td>
-                <td title={formatDate(new Date(contribution.day))}>
+                <td
+                  data-label="Date"
+                  title={formatDate(new Date(contribution.day))}
+                >
                   {timeSince(new Date(contribution.day), new Date())} ago
                 </td>
               </tr>

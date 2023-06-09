@@ -115,6 +115,51 @@
   });
 </script>
 
+<style>
+  @media screen and (max-width: 600px) {
+    table {
+      width: 100%;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    table tr {
+      border-bottom: 3px solid #fff;
+      display: block;
+    }
+
+    table td {
+      border-bottom: 1px solid #fff;
+      display: block;
+      font-size: 0.8em;
+      text-align: right;
+    }
+
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    td.no-desc {
+      display: inline-block;
+    }
+
+    table td:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>
+
 <Navigation>
   {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="p-2 m-2">Supported Repositories</h2>
@@ -131,15 +176,20 @@
         <tbody>
           {#each contributionSummaries as cs}
             <tr>
-              <td><a href={cs.repo.url}>{cs.repo.name}</a></td>
-              <td>{cs.repo.description}</td>
+              <td data-label="Name"><a href={cs.repo.url}>{cs.repo.name}</a></td
+              >
               <td
+                data-label="Description"
+                class={cs.repo.description ? "" : "no-desc"}
+                >{cs.repo.description}</td
+              >
+              <td data-label="Unclaimed"
                 >{#each Object.entries(cs.currencyBalance) as [key, value]}{formatBalance(
                     value,
                     key
                   )}{/each}</td
               >
-              <td>
+              <td data-label="Graph">
                 <div>
                   <button
                     class="accessible-btn"
@@ -223,17 +273,17 @@
         <tbody>
           {#each contributions as contribution}
             <tr>
-              <td>{contribution.repoName}</td>
+              <td data-label="Respository">{contribution.repoName}</td>
               {#if contribution.contributorEmail}
-                <td>{contribution.contributorEmail}</td>
-                <td>
+                <td data-label="Email">{contribution.contributorEmail}</td>
+                <td data-label="Realized">
                   {#if contribution.claimedAt}
                     Realized
                   {:else}
                     Unclaimed
                   {/if}
                 </td>
-                <td
+                <td data-label="Balance"
                   >{formatBalance(
                     contribution.balance,
                     contribution.currency
@@ -247,7 +297,7 @@
                   )} (analysis pending)</td
                 >
               {/if}
-              <td>{formatDay(new Date(contribution.day))}</td>
+              <td data-label="Date">{formatDay(new Date(contribution.day))}</td>
             </tr>
           {:else}
             <tr>

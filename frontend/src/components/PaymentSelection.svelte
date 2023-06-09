@@ -62,6 +62,16 @@
     flex-direction: column;
     justify-content: space-between;
   }
+
+  @media screen and (max-width: 600px) {
+    .container-stretch {
+      flex-direction: column;
+    }
+    .container.page {
+      flex-direction: column;
+      text-align: left;
+    }
+  }
 </style>
 
 <h2 class="p-2 m-2">Payment</h2>
