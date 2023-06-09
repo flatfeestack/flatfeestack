@@ -82,8 +82,6 @@ func updateExistingDiscussion(event ContractDAOProposalCreated, matches []string
 		log.Errorf("Unable to check if post exists: %s", err)
 	}
 
-	log.Println(exists)
-
 	if exists {
 		post, err := database.GetPostById(postUuid)
 		if err != nil {
