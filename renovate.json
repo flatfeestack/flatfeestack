@@ -71,6 +71,16 @@
       ]
     },
     {
+      "groupName": "monitoring - all non-major dependencies",
+      "matchPaths": [
+        "monitoring/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
       "groupName": "payout - all non-major dependencies",
       "matchPaths": [
         "payout/"

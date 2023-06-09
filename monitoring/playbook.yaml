@@ -1,0 +1,81 @@
+---
+- hosts: all
+  remote_user: root
+  become: yes
+
+  vars:
+    prometheus_targets:
+      - name: "backend"
+        targets:
+          - "jellyfish-app-jirmg.ondigitalocean.app"
+        metrics_path: "/backend/metrics"
+        labels:
+          hostname: "go-backend-server"
+          service: "backend"
+      - name: "analyzer"
+        targets:
+          - "jellyfish-app-jirmg.ondigitalocean.app"
+        metrics_path: "/analyzer/metrics"
+        labels:
+          hostname: "go-analyzer-server"
+          service: "analyzer"
+      - name: "auth"
+        targets:
+          - "jellyfish-app-jirmg.ondigitalocean.app"
+        metrics_path: "/auth/metrics"
+        labels:
+          hostname: "go-auth-server"
+          service: "auth"
+      - name: "forum"
+        targets:
+          - "jellyfish-app-jirmg.ondigitalocean.app"
+        metrics_path: "/forum/metrics"
+        labels:
+          hostname: "go-forum-server"
+          service: "forum"
+      - name: "payout"
+        targets:
+          - "jellyfish-app-jirmg.ondigitalocean.app"
+        metrics_path: "/payout/metrics"
+        labels:
+          hostname: "go-payout-server"
+          service: "payout"
+    database:
+      url: "{{ lookup('ansible.builtin.env', 'GRAFANA_POSTGRES_DB_HOST') }}"
+      user: "grafanareader"
+      password: "{{ lookup('ansible.builtin.env', 'GRAFANA_POSTGRES_USER_PASSWORD') }}"
+
+  roles:
+    - geerlingguy.docker
+
+  tasks:
+    - name: Copy static files
+      copy:
+        src: "./{{ item }}"
+        dest: "/root/flatfeestack"
+        mode: "0777"
+      become: yes
+      loop:
+        - "caddy"
+        - "grafana"
+
+    - name: Create data directories
+      file:
+        path: "/root/flatfeestack/{{ item }}"
+        state: directory
+        mode: "0777"
+      loop:
+        - ".caddy_data"
+        - ".grafana_data"
+        - ".prometheus_data"
+        - "prometheus"
+
+    - name: Create Prometheus configuration file
+      template:
+        src: prometheus.yml.j2
+        dest: /root/flatfeestack/prometheus/prometheus.yml
+
+    - name: Create Postgres Configuration file
+      template:
+        src: postgres.yml.j2
+        dest: /root/flatfeestack/grafana/provisioning/datasources/postgres.yaml
