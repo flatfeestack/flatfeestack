@@ -69,15 +69,16 @@ Make sure you have Node v16 up and running, best with NVM.
 
 ```shell
 brew install nvm
-nvm install 16
+nvm install 18
 nvm use
 ```
 
 Then, install the dependencies and check if the tests run.
 
 ```shell
-npm i
-npm run hardhat:test
+npm i -g pnpm
+pnpm i
+pnpm run hardhat:test
 ```
 
 If you start the docker compose file with the `smart-contracts-eth` profile, a local Ganache chain gets started with the following properties.
@@ -93,7 +94,7 @@ If you start the docker compose file with the `smart-contracts-eth` profile, a l
 Deploy the smart contracts:
 
 ```shell
-npm run hardhat:deploy -- --network localhost
+pnpm run hardhat:deploy -- --network localhost
 ```
 
 Deployment is necessary each time the contracts change.
@@ -101,25 +102,25 @@ Deployment is necessary each time the contracts change.
 Additionally, if you run this setup the first time, you need to run a script that confirms the reserved member address:
 
 ```shell
-npm run hardhat:script -- --network localhost scripts/addMember.ts
+pnpm run hardhat:script -- --network localhost scripts/addMember.ts
 ```
 
 Then you can run this script to add voting slots and proposals to the chain
 
 ```shell
-npm run hardhat:script -- --network localhost scripts/addSlots.ts
+pnpm run hardhat:script -- --network localhost scripts/addSlots.ts
 ```
 
 If you want to fast-forward your chain can run this script.
 
 ```shell
-npm run hardhat:script -- --network localhost scripts/mineBlocks.ts
+pnpm run hardhat:script -- --network localhost scripts/mineBlocks.ts
 ```
 
 Now, you can export the ABIs of the smart contracts to the frontend:
 
 ```shell
-npm run hardhat:script -- --network localhost scripts/exportAbisToFrontend.ts
+pnpm run hardhat:script -- --network localhost scripts/exportAbisToFrontend.ts
 ```
 
 - The contracts' ABI will be written to `src/contracts`.
@@ -128,7 +129,7 @@ npm run hardhat:script -- --network localhost scripts/exportAbisToFrontend.ts
 Also export the contract addresses to the payout service.
 
 ```shell
-npm run hardhat:script -- --network localhost scripts/exportContractAddressesToPayout.ts
+pnpm run hardhat:script -- --network localhost scripts/exportContractAddressesToPayout.ts
 ```
 
 ### Payout contracts and payout service
@@ -143,7 +144,7 @@ cd go-ethereum
 make devtools
 ```
 
-Next, you need the ABI for the `PayoutBase` contract. After compiling the contracts with `npm run hardhat:compile`, within `smart-contracts-eth/artifacts/contracts/PayoutEth.sol/PayoutEth.json`, there is a section with `abi`. Copy only this part to a separate file (the example below copies it into the same directory named `PayoutBase.abi`). Then navigate to the `payout` service directory and execute:
+Next, you need the ABI for the `PayoutBase` contract. After compiling the contracts with `pnpm run hardhat:compile`, within `smart-contracts-eth/artifacts/contracts/PayoutEth.sol/PayoutEth.json`, there is a section with `abi`. Copy only this part to a separate file (the example below copies it into the same directory named `PayoutBase.abi`). Then navigate to the `payout` service directory and execute:
 
 ```shell
 abigen --abi ../smart-contracts-eth/artifacts/contracts/PayoutBase.sol/PayoutBase.abi --pkg contracts --type PayoutBase --out contracts/PayoutBase.go
