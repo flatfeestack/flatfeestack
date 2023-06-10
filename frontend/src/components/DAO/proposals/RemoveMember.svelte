@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { membershipContract } from "../../../ts/daoStore";
+  import { daoConfig, membershipContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
@@ -23,14 +23,13 @@
   }
 
   async function prepareView() {
-    const amountOfMembers = await $membershipContract.getMembersLength();
+    const amountOfMembers =
+      (await $membershipContract.getMembersLength()) as bigint;
 
     members = await Promise.all(
-      [...Array(amountOfMembers.toNumber()).keys()].map(
-        async (index: Number) => {
-          return await $membershipContract.members(index);
-        }
-      )
+      [...Array(Number(amountOfMembers)).keys()].map(async (index: Number) => {
+        return await $membershipContract.members(index);
+      })
     );
 
     isLoading = false;
@@ -52,7 +51,7 @@
   function updateCalldata() {
     calls = [
       {
-        target: $membershipContract?.address,
+        target: $daoConfig.membership,
         transferCallData: $membershipContract?.interface.encodeFunctionData(
           "removeMember",
           [formValues.memberToBeRemoved]

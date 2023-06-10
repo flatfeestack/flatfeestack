@@ -26,8 +26,8 @@
     try {
       await commentSchema.validateAt(property, formValues);
       formErrors[property] = null;
-    } catch (error) {
-      formErrors[property] = error.errors[0];
+    } catch (exception) {
+      formErrors[property] = exception.errors[0];
     }
   }
 

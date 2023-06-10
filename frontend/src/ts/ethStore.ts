@@ -1,17 +1,13 @@
-import type {
-  JsonRpcSigner,
-  Network,
-  Web3Provider,
-} from "@ethersproject/providers";
+import type { BrowserProvider, JsonRpcSigner, Network } from "ethers";
 import { derived, writable, type Readable } from "svelte/store";
 
 // provider is null when it's not initialized
 // undefined when we did not detect any provider
 // this case should be handled by the components themselves
-export const provider = writable<Web3Provider | null | undefined>(null);
+export const provider = writable<BrowserProvider | null | undefined>(null);
 export const signer = writable<JsonRpcSigner | null>(null);
 
-export const chainId = derived<Readable<Web3Provider | null>, number | null>(
+export const chainId = derived<Readable<BrowserProvider | null>, number | null>(
   provider,
   ($provider, set) => {
     if ($provider === null) {
@@ -19,7 +15,7 @@ export const chainId = derived<Readable<Web3Provider | null>, number | null>(
     } else {
       set(null);
       Promise.resolve($provider.getNetwork()).then((network: Network) => {
-        set(network.chainId);
+        set(Number(network.chainId));
       });
     }
   }

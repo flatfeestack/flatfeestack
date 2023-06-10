@@ -1,13 +1,13 @@
-import { Web3Provider } from "@ethersproject/providers";
 import detectEthereumProvider from "@metamask/detect-provider";
 import { signer } from "../ts/ethStore";
 import showMetaMaskRequired from "./showMetaMaskRequired";
+import { BrowserProvider } from "ethers";
 
-async function setSigner(providerValue: Web3Provider | null) {
+async function setSigner(providerValue: BrowserProvider | null) {
   if (providerValue === null || providerValue === undefined) {
     try {
       const ethProv = await detectEthereumProvider();
-      providerValue = new Web3Provider(<any>ethProv);
+      providerValue = new BrowserProvider(<any>ethProv);
     } catch (error) {
       console.error(error);
       providerValue = undefined;
@@ -18,7 +18,7 @@ async function setSigner(providerValue: Web3Provider | null) {
     showMetaMaskRequired();
   } else {
     await providerValue.send("eth_requestAccounts", []);
-    signer.set(providerValue.getSigner());
+    signer.set(await providerValue.getSigner());
   }
 }
 

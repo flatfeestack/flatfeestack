@@ -57,7 +57,7 @@
 {#if paymentResponse}
   <div class="p-2">
     Pay in {formatBalance(
-      paymentResponse.payAmount,
+      BigInt(paymentResponse.payAmount),
       paymentResponse.payCurrency
     )}
     {paymentResponse.payCurrency}

@@ -35,7 +35,7 @@
   <Spinner />
 {:else}
   <p>
-    The current block number is {currentBlockNumber}, voting slots need to be
+    The current block number is {$currentBlockNumber}, voting slots need to be
     announced one month in advance, so the minimum value is {minValue} (approx. {futureBlockDate(
       minValue
     )}).
@@ -60,8 +60,7 @@
   {#if plannedBlockNumber !== 0}
     <p>
       The voting for this block would start approx. at {futureBlockDate(
-        plannedBlockNumber,
-        currentBlockNumber
+        plannedBlockNumber
       )}
     </p>
   {/if}

@@ -74,7 +74,7 @@
       return;
     }
 
-    if ($membershipStatusValue != 3) {
+    if ($membershipStatusValue != 3n) {
       moveToVotesPage();
     }
 
