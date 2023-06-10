@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stripe/stripe-go/v74"
 	"net/http"
@@ -26,6 +27,18 @@ func TestPostHookStripe(t *testing.T) {
 		setup()
 		defer teardown()
 
+		paymentMethodCard := stripe.PaymentMethodCard{
+			Last4: "1234",
+		}
+
+		paymentMethod := stripe.PaymentMethod{
+			Card: &paymentMethodCard,
+			ID:   "someId",
+		}
+
+		mockPaymentMethodGetter := new(MockPaymentMethodGetter)
+		mockPaymentMethodGetter.On("Get", "someId", mock.AnythingOfType("*stripe.PaymentMethodParams")).Return(&paymentMethod, nil)
+
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
 		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.succeeded")
@@ -41,7 +54,7 @@ func TestPostHookStripe(t *testing.T) {
 		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
-		StripeWebhook(response, request)
+		StripeWebhookWithMethod(response, request, mockPaymentMethodGetter.Get)
 
 		assert.Equal(t, 200, response.Code)
 
@@ -57,6 +70,10 @@ func TestPostHookStripe(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, feePayIn)
 		assert.Equal(t, int64(5018801), feePayIn.Balance.Int64())
+
+		userInDb, err := db.FindUserById(userDetail.Id)
+		assert.Nil(t, err)
+		assert.Equal(t, "1234", *userInDb.Last4)
 	})
 
 	t.Run("stripe requires action to continue payment", func(t *testing.T) {
@@ -166,9 +183,14 @@ func generateWebhookPayload(userId string, externalId string, eventType string) 
 	metadata["seats"] = strconv.Itoa(1)
 	metadata["fee"] = strconv.FormatInt(40, 10)
 
+	paymentMethod := stripe.PaymentMethod{
+		ID: "someId",
+	}
+
 	paymentIntent := stripe.PaymentIntent{
-		Amount:   utils.UsdBaseToCent(Plans[0].PriceBase),
-		Metadata: metadata,
+		Amount:        utils.UsdBaseToCent(Plans[0].PriceBase),
+		Metadata:      metadata,
+		PaymentMethod: &paymentMethod,
 	}
 
 	jsonBytes, err := json.Marshal(paymentIntent)
@@ -184,4 +206,13 @@ func generateWebhookPayload(userId string, externalId string, eventType string) 
 		Data:       &eventData,
 		Type:       eventType,
 	}, nil
+}
+
+type MockPaymentMethodGetter struct {
+	mock.Mock
+}
+
+func (m *MockPaymentMethodGetter) Get(paymentMethodID string, params *stripe.PaymentMethodParams) (*stripe.PaymentMethod, error) {
+	args := m.Called(paymentMethodID, params)
+	return args.Get(0).(*stripe.PaymentMethod), args.Error(1)
 }

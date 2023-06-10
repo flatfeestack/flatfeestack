@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error } from "../ts/mainStore";
+  import { error, user } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount, onDestroy } from "svelte";
   import type { UserBalance } from "../types/backend";
@@ -11,7 +11,17 @@
   let intervalId: number;
 
   const fetchData = async () => {
-    userBalances = await API.user.userBalance();
+    const newUserBalance = await API.user.userBalance();
+
+    // there is an edge case with this implementation, see https://masteringjs.io/tutorials/fundamentals/compare-arrays
+    // however, this should not really affect us
+    if (JSON.stringify(newUserBalance) !== JSON.stringify(userBalances)) {
+      // when the balance changed, most likely the "Last4" property of the user has been updated as well
+      // this is normally a concern of the FiatTab component, but to avoid spamming our backend with yet another polling
+      // this is reflected here
+      $user = await API.user.get();
+      userBalances = newUserBalance;
+    }
   };
 
   onMount(async () => {

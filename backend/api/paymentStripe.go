@@ -11,6 +11,7 @@ import (
 	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/customer"
 	"github.com/stripe/stripe-go/v74/paymentintent"
+	"github.com/stripe/stripe-go/v74/paymentmethod"
 	"github.com/stripe/stripe-go/v74/setupintent"
 	"github.com/stripe/stripe-go/v74/webhook"
 	"io"
@@ -196,6 +197,10 @@ func StripePaymentRecurring(user db.UserDetail) error {
 }
 
 func StripeWebhook(w http.ResponseWriter, req *http.Request) {
+	StripeWebhookWithMethod(w, req, nil)
+}
+
+func StripeWebhookWithMethod(w http.ResponseWriter, req *http.Request, getPaymentMethod func(string, *stripe.PaymentMethodParams) (*stripe.PaymentMethod, error)) {
 	// https://stripe.com/docs/testing#cards
 	// regular card for testing: 4242 4242 4242 4242
 	// 3d secure with auth required: 4000 0027 6000 3184
@@ -218,9 +223,16 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
-		externalId, feePrm, err := parseStripeData(event.Data.Raw)
+		paymentIntent, err := parseStripePaymentIntent(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			log.Printf("Parser error from stripe: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		externalId, feePrm, err := parseStripeData(paymentIntent)
+		if err != nil {
+			log.Printf("Unable to extract payment data from Stripe webhook: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -244,13 +256,51 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		// add "last4" information to user
+		// it is not delivered with the webhook, so manual fetch is required
+		user, err := db.FindUserById(payInEvent.UserId)
+		if err != nil {
+			log.Errorf("Unable to retrieve user from database: %v", err)
+			utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+			return
+		}
+
+		if getPaymentMethod == nil {
+			getPaymentMethod = paymentmethod.Get
+		}
+
+		paymentMethod, err := getPaymentMethod(
+			paymentIntent.PaymentMethod.ID,
+			nil,
+		)
+		if err != nil {
+			log.Errorf("Could not update retrieve payment method: %v", err)
+			utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+			return
+		}
+
+		user.Last4 = &paymentMethod.Card.Last4
+		err = db.UpdateStripe(user)
+		if err != nil {
+			log.Errorf("Could not update stripe method: %v", err)
+			utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+			return
+		}
+
 		clnt.SendStripeSuccess(payInEvent.UserId, externalId)
 	// ... handle other event types
 	case "payment_intent.requires_action":
 		//again
-		externalId, _, err := parseStripeData(event.Data.Raw)
+		paymentIntent, err := parseStripePaymentIntent(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			log.Printf("Parser error from stripe: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		externalId, _, err := parseStripeData(paymentIntent)
+		if err != nil {
+			log.Printf("Unable to extract payment data from Stripe webhook: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -282,9 +332,17 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		externalId, _, err := parseStripeData(event.Data.Raw)
+
+		paymentIntent, err := parseStripePaymentIntent(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			log.Printf("Parser error from stripe: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		externalId, _, err := parseStripeData(paymentIntent)
+		if err != nil {
+			log.Printf("Unable to extract payment data from Stripe webhook: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -313,12 +371,17 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseStripeData(data json.RawMessage) (uuid.UUID, int64, error) {
+func parseStripePaymentIntent(data json.RawMessage) (stripe.PaymentIntent, error) {
 	var pi stripe.PaymentIntent
 	err := json.Unmarshal(data, &pi)
 	if err != nil {
-		return uuid.Nil, 0, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+		return stripe.PaymentIntent{}, fmt.Errorf("Error parsing webhook JSON: %v\n", err)
+	} else {
+		return pi, nil
 	}
+}
+
+func parseStripeData(pi stripe.PaymentIntent) (uuid.UUID, int64, error) {
 	uidRaw := pi.Metadata["userId"]
 	uid, err := uuid.Parse(uidRaw)
 	if err != nil {

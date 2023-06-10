@@ -98,7 +98,7 @@
   }
 </style>
 
-{#if $user.paymentMethod}
+{#if $user.paymentMethod && $user.last4 !== null}
   <div class="container">
     <p class="nobreak">Credit card:</p>
     <div class="container">

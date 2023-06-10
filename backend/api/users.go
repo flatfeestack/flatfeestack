@@ -63,17 +63,8 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	a := params["method"]
 
 	user.PaymentMethod = &a
-	pm, err := paymentmethod.Get(
-		*user.PaymentMethod,
-		nil,
-	)
-	if err != nil {
-		log.Errorf("Could not update retrieve payment method: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
-		return
-	}
 
-	_, err = paymentmethod.Attach(*user.PaymentMethod, &stripe.PaymentMethodAttachParams{
+	_, err := paymentmethod.Attach(*user.PaymentMethod, &stripe.PaymentMethodAttachParams{
 		Customer: user.StripeId,
 	})
 	if err != nil {
@@ -82,7 +73,6 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		return
 	}
 
-	user.Last4 = &pm.Card.Last4
 	err = db.UpdateStripe(user)
 	if err != nil {
 		log.Errorf("Could not update stripe method: %v", err)
