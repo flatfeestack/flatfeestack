@@ -11,12 +11,13 @@
     PaymentElement,
   } from "svelte-stripe";
   import { API } from "../../ts/api";
+  import type { Stripe } from "@stripe/stripe-js";
 
   export let total: number;
   export let seats: number;
   export let freq: number;
 
-  let stripe = null;
+  let stripe: Stripe | null = null;
 
   let isSubmitting = false;
   let cardElement;
