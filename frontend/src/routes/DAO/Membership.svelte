@@ -35,7 +35,7 @@
   const { open } = getContext("simple-modal");
 
   async function prepareView() {
-    if ($membershipStatusValue == 3) {
+    if ($membershipStatusValue == 3n) {
       nextMembershipFeePayment =
         await $membershipContract.nextMembershipFeePayment(
           $userEthereumAddress
@@ -175,7 +175,7 @@
       </ul>
 
       <div class="py-2">
-        {#if $membershipStatusValue == 0}
+        {#if $membershipStatusValue == 0n}
           <p>You seem not to be a member of the FlatFeeStack Association.</p>
           <p>If you want to shape the future of this product, join us!</p>
           <button on:click={requestMembership} class="button4"
@@ -185,7 +185,7 @@
       </div>
 
       <div class="py-2">
-        {#if $membershipStatusValue == 3 && !membershipFeePaid}
+        {#if $membershipStatusValue == 3n && !membershipFeePaid}
           <button on:click={payMembershipFees} class="button4"
             >Pay membership fees</button
           >

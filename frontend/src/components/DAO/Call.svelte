@@ -1,14 +1,13 @@
 <script lang="ts">
-  import type { Bytes, Contract } from "ethers";
+  import type { Contract, TransactionDescription } from "ethers";
+  import { onDestroy, onMount } from "svelte";
+  import type { Readable, Unsubscriber } from "svelte/store";
   import {
     daoConfig,
     daoContract,
     membershipContract,
     walletContract,
   } from "../../ts/daoStore";
-  import { onDestroy, onMount } from "svelte";
-  import type { Readable, Unsubscriber } from "svelte/store";
-  import type { TransactionDescription } from "ethers/lib/utils";
 
   export let calldata: string;
   export let target: string;

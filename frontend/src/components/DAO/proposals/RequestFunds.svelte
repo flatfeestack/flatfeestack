@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ethers } from "ethers";
-  import { walletContract } from "../../../ts/daoStore";
+  import { parseUnits } from "ethers";
+  import { daoConfig, walletContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
@@ -33,12 +33,12 @@
   function updateCalldata() {
     calls = [
       {
-        target: $walletContract?.address,
+        target: $daoConfig.wallet,
         transferCallData: $walletContract?.interface.encodeFunctionData(
           "increaseAllowance",
           [
             formValues.targetWalletAddress,
-            ethers.utils.parseUnits(
+            parseUnits(
               String(formValues.amount),
               currencies[formValues.selectedCurrency] === "ETH" ? 18 : 1
             ),

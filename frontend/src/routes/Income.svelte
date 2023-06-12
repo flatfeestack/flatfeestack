@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { BigNumber, ethers, type Contract, type Signature } from "ethers";
-  import { splitSignature } from "ethers/lib/utils";
+  import { Contract, Signature } from "ethers";
   import { onMount } from "svelte";
   import Navigation from "../components/Navigation.svelte";
   import Spinner from "../components/Spinner.svelte";
@@ -25,7 +24,7 @@
       payoutSignature = await API.user.requestPayout(selectedCurrency);
 
       if (selectedCurrency !== "GAS") {
-        ethSignature = splitSignature(payoutSignature.signature);
+        ethSignature = Signature.from(payoutSignature.signature);
       }
     } catch (e) {
       $error = e.message;
@@ -44,13 +43,13 @@
     let contract: Contract;
 
     if (payoutSignature.currency === "ETH") {
-      contract = new ethers.Contract(
+      contract = new Contract(
         payoutConfig.payoutContractAddresses.eth,
         PayoutEthABI,
         $signer
       );
     } else {
-      contract = new ethers.Contract(
+      contract = new Contract(
         payoutConfig.payoutContractAddresses.usdc,
         PayoutERC20ABI,
         $signer
@@ -61,7 +60,7 @@
       await contract.withdraw(
         await $signer.getAddress(),
         payoutSignature.encodedUserId,
-        BigNumber.from(String(payoutSignature.amount)),
+        BigInt(payoutSignature.amount),
         ethSignature.v,
         ethSignature.r,
         ethSignature.s
