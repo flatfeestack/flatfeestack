@@ -3,7 +3,6 @@ module forum
 go 1.20
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/TwiN/go-away v1.6.10
 	github.com/deepmap/oapi-codegen v1.13.0
 	github.com/dimiro1/banner v1.1.0
