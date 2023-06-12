@@ -176,7 +176,7 @@ func (s *StrictServerImpl) GetPostsPostIdComments(ctx context.Context, request G
 	exists, err := database.CheckIfPostExists(request.PostId)
 	if err != nil {
 		log.Error(err)
-		return GetPosts500Response{}, nil
+		return GetPostsPostId500Response{}, nil
 	}
 	if !exists {
 		return GetPostsPostIdComments404JSONResponse{NotFoundJSONResponse{Error: fmt.Sprintf("post with id %v does not exist", request.PostId)}}, nil
