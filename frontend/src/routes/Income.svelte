@@ -7,7 +7,7 @@
   import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   import { PayoutEthABI } from "../contracts/PayoutEth";
   import { API } from "../ts/api";
-  import { getChainId, provider, signer } from "../ts/ethStore";
+  import { getChainId, lastEthRoute, provider, signer } from "../ts/ethStore";
   import { error } from "../ts/mainStore";
   import { formatBalance, formatDate, timeSince } from "../ts/services";
   import type { PayoutResponse } from "../types/backend";
@@ -44,6 +44,7 @@
     if (currentChainId === undefined) {
       showMetaMaskRequired();
     } else if (currentChainId !== payoutConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
       navigate(
         `/differentChainId?required=${payoutConfig.chainId}&actual=${currentChainId}`
       );

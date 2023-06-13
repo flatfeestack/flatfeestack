@@ -20,6 +20,7 @@
   } from "../../ts/daoStore";
   import {
     getChainId,
+    lastEthRoute,
     provider,
     signer,
     userEthereumAddress,
@@ -92,6 +93,7 @@
     if (currentChainId === undefined) {
       showMetaMaskRequired();
     } else if (currentChainId !== $daoConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
       navigate(
         `/differentChainId?required=${$daoConfig.chainId}&actual=${currentChainId}`
       );

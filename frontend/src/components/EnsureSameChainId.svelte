@@ -1,6 +1,6 @@
 <script lang="ts">
   import { navigate } from "svelte-routing";
-  import { chainId } from "../ts/ethStore";
+  import { chainId, lastEthRoute } from "../ts/ethStore";
 
   export let requiredChainId: number | undefined;
 
@@ -10,6 +10,7 @@
       $chainId !== null &&
       $chainId !== requiredChainId
     ) {
+      $lastEthRoute = window.location.pathname;
       navigate(
         `/differentChainId?required=${requiredChainId}&actual=${$chainId}`
       );
