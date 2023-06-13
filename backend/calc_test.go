@@ -84,7 +84,7 @@ func TestDailyRunner(t *testing.T) {
 
 		//we have 5 sponsors, but only the first sponsor added funds
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 
 		//we have 4 contributors, 1 has added a git email
 		contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
@@ -133,7 +133,7 @@ func TestDailyRunner(t *testing.T) {
 
 		//we have 5 sponsors, but only the first sponsor added funds
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 1, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 1, api.Plans[1].PriceBase, day1)
 
 		// we have 4 contributors
 		setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
@@ -168,7 +168,7 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 
 		repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 		contributors := setupUsers(t, "hello@example.com c1", "hello2@example.com c1")
@@ -213,9 +213,9 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[1], "USD", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[2], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[1], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[2], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 
 		contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 		setupGitEmail(t, *contributors[0], "ste@ste.ste")
@@ -296,9 +296,9 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[1], "USD", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[2], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[1], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[2], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 
 		contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
 		setupGitEmail(t, *contributors[0], "ste@ste.ste")
@@ -373,7 +373,7 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 		repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 		setupContributor(t, *repos[0], day1, day1, []string{"hello@example.com"}, []float64{1.0})
 
@@ -418,9 +418,9 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[0], "GAS", 1, 365, api.Plans[0].PriceBase, day1)
-		setupFunds(t, *sponsors[1], "GAS", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "GAS", 1, 365, api.Plans[1].PriceBase, day1)
+		setupFunds(t, *sponsors[1], "GAS", 1, 365, api.Plans[1].PriceBase, day1)
 		repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
 
 		contributors := setupUsers(t, "ste@ste.ste c1")
@@ -475,7 +475,7 @@ func TestDailyRunner(t *testing.T) {
 		defer teardown()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
-		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[0].PriceBase, day1)
+		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
 		setupSponsorUser(t, *sponsors[0], *sponsors[1])
 
 		contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
