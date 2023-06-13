@@ -70,7 +70,7 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 		Id:         uuid.New(),
 		ExternalId: e,
 		UserId:     u.Id,
-		Balance:    big.NewInt(Plans[0].PriceBase),
+		Balance:    big.NewInt(Plans[1].PriceBase),
 		Currency:   "USD",
 		Status:     db.PayInRequest,
 		Seats:      seats,
