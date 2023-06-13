@@ -343,10 +343,10 @@
         <img class="iconSupport" src="/images/coinblesk.svg" alt="Coinblesk" />
       </a>
       <a href="https://www.csg.uzh.ch">
-        <img class="iconSupport" src="/images/csg.svg" alt="Coinblesk" />
+        <img class="iconSupport" src="/images/csg.svg" alt="CSG" />
       </a>
-      <a href="https://dsl.rj.ost.ch">
-        <img class="iconSupport" src="/images/dsl.svg" alt="Coinblesk" />
+      <a href="https://dsl.i.ost.ch/">
+        <img class="iconSupport" src="/images/dsl.svg" alt="DSL" />
       </a>
     </div>
   </div>
