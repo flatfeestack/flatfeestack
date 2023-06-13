@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Contract, Signature } from "ethers";
+  import { BrowserProvider, Contract, Signature } from "ethers";
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import Navigation from "../components/Navigation.svelte";
@@ -14,6 +14,7 @@
   import type { PayoutConfig } from "../types/payout";
   import setSigner from "../utils/setSigner";
   import showMetaMaskRequired from "../utils/showMetaMaskRequired";
+  import detectEthereumProvider from "@metamask/detect-provider";
 
   let ethSignature: Signature;
   let isLoading = false;
@@ -34,6 +35,13 @@
 
   async function doEthPayout() {
     isLoading = true;
+
+    try {
+      const ethProv = await detectEthereumProvider();
+      $provider = new BrowserProvider(<any>ethProv);
+    } catch (exception) {
+      $provider = undefined;
+    }
 
     if ($signer === null) {
       await setSigner($provider);
