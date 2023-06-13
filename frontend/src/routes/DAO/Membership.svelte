@@ -15,10 +15,7 @@
   } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error } from "../../ts/mainStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
 
   let membershipFeePaid = false;
   let walletConnected: boolean;
@@ -46,8 +43,6 @@
   }
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if (
       $membershipStatusValue !== null &&
       $membershipContract !== null &&
@@ -134,7 +129,7 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   {#if !walletConnected}
     <div class="centerContainer">
       <p>Please connect your wallet.</p>

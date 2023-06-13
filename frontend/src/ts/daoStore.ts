@@ -43,9 +43,11 @@ export const currentBlockTimestamp = derived<
     ) {
       set(null);
     } else {
-      $provider.getBlock($currentBlockNumber).then((currentBlock) => {
-        set(currentBlock.timestamp);
-      });
+      Promise.resolve($provider.getBlock($currentBlockNumber)).then(
+        (currentBlock) => {
+          set(currentBlock.timestamp);
+        }
+      );
     }
   },
   null
