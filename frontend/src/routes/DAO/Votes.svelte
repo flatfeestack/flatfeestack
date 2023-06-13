@@ -13,10 +13,7 @@
   import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import truncateString from "../../utils/truncateString";
@@ -57,8 +54,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if (
       $currentBlockNumber === null ||
       $currentBlockTimestamp === null ||
@@ -194,7 +189,7 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <p>Last updated (block): #{$currentBlockNumber}</p>
   <p>
     Last updated (time): {currentTime}

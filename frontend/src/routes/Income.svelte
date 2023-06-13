@@ -1,18 +1,20 @@
 <script lang="ts">
-  import { Contract, Signature } from "ethers";
+  import { BrowserProvider, Contract, Signature } from "ethers";
   import { onMount } from "svelte";
+  import { navigate } from "svelte-routing";
   import Navigation from "../components/Navigation.svelte";
   import Spinner from "../components/Spinner.svelte";
   import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   import { PayoutEthABI } from "../contracts/PayoutEth";
   import { API } from "../ts/api";
-  import { provider, signer } from "../ts/ethStore";
+  import { getChainId, lastEthRoute, provider, signer } from "../ts/ethStore";
   import { error } from "../ts/mainStore";
   import { formatBalance, formatDate, timeSince } from "../ts/services";
   import type { PayoutResponse } from "../types/backend";
   import type { PayoutConfig } from "../types/payout";
   import setSigner from "../utils/setSigner";
-  import { ensureSameChainId } from "../utils/ethHelpers";
+  import showMetaMaskRequired from "../utils/showMetaMaskRequired";
+  import detectEthereumProvider from "@metamask/detect-provider";
 
   let ethSignature: Signature;
   let isLoading = false;
@@ -34,48 +36,63 @@
   async function doEthPayout() {
     isLoading = true;
 
+    try {
+      const ethProv = await detectEthereumProvider();
+      $provider = new BrowserProvider(<any>ethProv);
+    } catch (exception) {
+      $provider = undefined;
+    }
+
     if ($signer === null) {
       await setSigner($provider);
     }
 
-    ensureSameChainId(payoutConfig.chainId);
+    const currentChainId = await getChainId();
 
-    let contract: Contract;
-
-    if (payoutSignature.currency === "ETH") {
-      contract = new Contract(
-        payoutConfig.payoutContractAddresses.eth,
-        PayoutEthABI,
-        $signer
+    if (currentChainId === undefined) {
+      showMetaMaskRequired();
+    } else if (currentChainId !== payoutConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
+      navigate(
+        `/differentChainId?required=${payoutConfig.chainId}&actual=${currentChainId}`
       );
     } else {
-      contract = new Contract(
-        payoutConfig.payoutContractAddresses.usdc,
-        PayoutERC20ABI,
-        $signer
-      );
-    }
+      let contract: Contract;
 
-    try {
-      await contract.withdraw(
-        await $signer.getAddress(),
-        payoutSignature.encodedUserId,
-        BigInt(payoutSignature.amount),
-        ethSignature.v,
-        ethSignature.r,
-        ethSignature.s
-      );
-    } catch (exception) {
-      if (exception.data?.data === undefined) {
-        // we deal with a regular error, not one a "revert" from the blockchain
-        $error = exception.message;
+      if (payoutSignature.currency === "ETH") {
+        contract = new Contract(
+          payoutConfig.payoutContractAddresses.eth,
+          PayoutEthABI,
+          $signer
+        );
       } else {
-        $error = exception.data.data.reason;
+        contract = new Contract(
+          payoutConfig.payoutContractAddresses.usdc,
+          PayoutERC20ABI,
+          $signer
+        );
       }
-      resetViewAfterPayout();
-    }
 
-    resetViewAfterPayout();
+      try {
+        await contract.withdraw(
+          await $signer.getAddress(),
+          payoutSignature.encodedUserId,
+          BigInt(payoutSignature.amount),
+          ethSignature.v,
+          ethSignature.r,
+          ethSignature.s
+        );
+      } catch (exception) {
+        if (exception.data?.data === undefined) {
+          // we deal with a regular error, not one a "revert" from the blockchain
+          $error = exception.message;
+        } else {
+          $error = exception.data.data.reason;
+        }
+      } finally {
+        resetViewAfterPayout();
+      }
+    }
   }
 
   function resetViewAfterPayout() {

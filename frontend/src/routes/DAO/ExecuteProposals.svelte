@@ -10,10 +10,7 @@
   } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import {
     executeProposal,
     queueProposal,
@@ -25,8 +22,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if (
       $proposalStore === null ||
       $votingSlots === null ||
@@ -84,7 +79,7 @@
   });
 </script>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Execute proposals</h1>
 
   {#each proposals as proposal, i}

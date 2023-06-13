@@ -1,5 +1,7 @@
 <script lang="ts">
   import queryString from "query-string";
+  import { Link } from "svelte-routing";
+  import { lastEthRoute } from "../ts/ethStore";
 
   export let location;
 
@@ -14,8 +16,7 @@
       Your MetaMask browser plugin is currently connected to the network with ID {queryParams.actual}.
       However, FlatFeeStack requires to use {queryParams.required}. Please
       change your network in MetaMask and
-      <a href="javascript:history.back()">click here</a> to return to the previous
-      page.
+      <Link to={$lastEthRoute}>click here</Link> to return to the previous page.
     </p>
   </div>
 </div>

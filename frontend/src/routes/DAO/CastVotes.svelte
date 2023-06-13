@@ -4,6 +4,7 @@
     faQuestion,
     faXmark,
   } from "@fortawesome/free-solid-svg-icons";
+  import type { EventLog } from "ethers";
   import { onDestroy, onMount } from "svelte";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
@@ -16,11 +17,7 @@
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
-  import type { EventLog } from "ethers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
 
   interface VoteValues {
     canVote: boolean;
@@ -51,8 +48,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if ($votingSlots === null) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
@@ -71,7 +66,6 @@
       $userEthereumAddress,
       blockNumber
     )) as bigint;
-    console.log(votingPower);
     if (votingPower < 1n) {
       $error = "You are not allowed to vote in this cycle.";
       navigate("/dao/votes");
@@ -191,7 +185,7 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig.chainId}>
   <h1 class="text-secondary-900">Cast votes</h1>
 
   {#each proposals as proposal, i}

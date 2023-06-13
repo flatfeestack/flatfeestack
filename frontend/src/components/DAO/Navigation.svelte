@@ -12,20 +12,27 @@
   import { BrowserProvider } from "ethers";
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
-  import { links } from "svelte-routing";
+  import { links, navigate } from "svelte-routing";
   import {
     councilMembers,
     daoConfig,
     membershipStatusValue,
   } from "../../ts/daoStore";
-  import { provider, signer, userEthereumAddress } from "../../ts/ethStore";
+  import {
+    getChainId,
+    lastEthRoute,
+    provider,
+    signer,
+    userEthereumAddress,
+  } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
-  import { ensureSameChainId } from "../../utils/ethHelpers";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import setSigner from "../../utils/setSigner";
+  import showMetaMaskRequired from "../../utils/showMetaMaskRequired";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
+  import EnsureSameChainId from "../EnsureSameChainId.svelte";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -33,6 +40,8 @@
   }
 
   let membershipStatus: string;
+
+  export let requiresChainId: number | undefined = undefined;
 
   onMount(async () => {
     await setProvider();
@@ -79,8 +88,18 @@
   }
 
   async function triggerSetSigner() {
-    ensureSameChainId($daoConfig.chainId);
-    await setSigner($provider);
+    const currentChainId = await getChainId();
+
+    if (currentChainId === undefined) {
+      showMetaMaskRequired();
+    } else if (currentChainId !== $daoConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
+      navigate(
+        `/differentChainId?required=${$daoConfig.chainId}&actual=${currentChainId}`
+      );
+    } else {
+      await setSigner($provider);
+    }
   }
 </script>
 
@@ -183,6 +202,10 @@
     </nav>
   </div>
   <div class="content">
+    {#if requiresChainId}
+      <EnsureSameChainId requiredChainId={requiresChainId} />
+    {/if}
+
     {#if $isSubmitting}
       <Spinner />
     {:else}

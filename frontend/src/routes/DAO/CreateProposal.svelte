@@ -9,6 +9,7 @@
   import RemoveCouncilMember from "../../components/DAO/proposals/RemoveCouncilMember.svelte";
   import RemoveMember from "../../components/DAO/proposals/RemoveMember.svelte";
   import RequestFunds from "../../components/DAO/proposals/RequestFunds.svelte";
+  import { API } from "../../ts/api";
   import {
     daoConfig,
     daoContract,
@@ -18,12 +19,8 @@
   import { signer } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import type { Call, ProposalType } from "../../types/dao";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
   import type { Post } from "../../types/forum";
-  import { API } from "../../ts/api";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import truncateString from "../../utils/truncateString";
 
   checkUndefinedProvider();
@@ -86,10 +83,6 @@
     $isSubmitting = false;
   });
 
-  $: {
-    ensureSameChainId($daoConfig?.chainId);
-  }
-
   function moveToVotesPage() {
     $error = "You are not allowed to view this page.";
     navigate("/dao/home");
@@ -144,7 +137,7 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig.chainId}>
   <h1 class="text-secondary-900">Create a proposal</h1>
 
   <div class="wrapper">

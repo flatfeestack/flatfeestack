@@ -1,5 +1,5 @@
 import type { BrowserProvider, JsonRpcSigner, Network } from "ethers";
-import { derived, writable, type Readable } from "svelte/store";
+import { derived, writable, type Readable, get } from "svelte/store";
 
 // provider is null when it's not initialized
 // undefined when we did not detect any provider
@@ -20,6 +20,31 @@ export const chainId = derived<Readable<BrowserProvider | null>, number | null>(
     }
   }
 );
+export const lastEthRoute = writable<string>("/");
+
+// usually, we have the EnsureChainId component that listens and redirects if the chain ids do not match
+// however, in certain cases, we want to have a blocking function
+// like in the Income component, where we want to make sure that the chain id is the same before preparing the transaction to withdraw funds
+export function getChainId(): Promise<number | undefined> {
+  const timeoutPromise = new Promise<undefined>((resolve) =>
+    setTimeout(() => resolve(undefined), 5000)
+  );
+  const functionPromise = new Promise<number>((resolve) => {
+    const currentStoreValue = get(chainId);
+    if (currentStoreValue !== null) {
+      resolve(currentStoreValue);
+      return;
+    }
+
+    chainId.subscribe((chainIdValue) => {
+      if (chainIdValue !== null) {
+        resolve(chainIdValue);
+      }
+    });
+  });
+
+  return Promise.race([functionPromise, timeoutPromise]);
+}
 
 export const userEthereumAddress = derived<
   Readable<JsonRpcSigner | null>,

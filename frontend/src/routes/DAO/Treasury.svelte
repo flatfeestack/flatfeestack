@@ -11,10 +11,7 @@
   } from "../../ts/daoStore";
   import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
@@ -65,10 +62,6 @@
 
     $isSubmitting = true;
   });
-
-  $: {
-    ensureSameChainId($daoConfig?.chainId);
-  }
 
   async function prepareView() {
     if (
@@ -149,7 +142,7 @@
   });
 </script>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Treasury</h1>
 
   <ul>
