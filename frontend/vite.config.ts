@@ -14,11 +14,9 @@ export default defineConfig({
 
     compress({
       algorithm: "brotliCompress",
-      disable: mode === "dev",
     }),
     compress({
       algorithm: "gzip",
-      disable: mode === "dev",
     }),
     visualizer({
       emitFile: true,
@@ -27,12 +25,12 @@ export default defineConfig({
     }),
   ],
   server: {
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     port: 9085,
   },
-  mode: mode === "dev" ? "development" : "production",
+  mode: "production",
   build: {
-    minify: mode !== "dev",
+    minify: true,
     emptyOutDir: true,
   },
 });
