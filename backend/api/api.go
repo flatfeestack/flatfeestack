@@ -110,7 +110,7 @@ var Plans = []Plan{
 		PriceBase:   624090000, //624093265
 		Freq:        1825,
 		FeePrm:      35,
-		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
+		Description: "You want to support open-source software for 5 years with a flat fee of <b>624.09 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	},
 }
