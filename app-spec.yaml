@@ -2,15 +2,16 @@ alerts:
   - rule: DEPLOYMENT_FAILED
   - rule: DOMAIN_FAILED
 databases:
-  - cluster_name: app-39560780-4a70-444b-a848-2e5c6c3b5f6e
-    db_name: db
-    db_user: db
+  - cluster_name: db-postgresql-flatfeestack
+    db_name: flatfeestack
+    db_user: flatfeestack
     engine: PG
-    name: db
-    num_nodes: 1
+    name: db-postgresql-flatfeestack
     production: true
-    size: basic-xxs
-    version: "12"
+    version: "15"
+domains:
+  - domain: flatfeestack.io
+    type: PRIMARY
 ingress:
   rules:
     - component:
@@ -24,15 +25,15 @@ ingress:
         path:
           prefix: /auth
     - component:
-        name: payout
-      match:
-        path:
-          prefix: /payout
-    - component:
         name: frontend
       match:
         path:
           prefix: /
+    - component:
+        name: forum
+      match:
+        path:
+          prefix: /forum
     - component:
         name: backend
       match:
@@ -40,14 +41,15 @@ ingress:
           prefix: /backend
     - component:
         name: backend
+        preserve_path_prefix: true
       match:
         path:
           prefix: /hooks
     - component:
-        name: backend
+        name: payout
       match:
         path:
-          prefix: /ws
+          prefix: /payout
 name: flatfeestack
 region: fra
 services:
@@ -56,6 +58,25 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
         value: EV[1:nwFG+VO3e71TQ9wEzyxWA4Nssv3RbqYZ:OUtu/k+foj3PrukfWqFEXuCvbyj2tEh/Lg==]
+      - key: ANALYZER_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:hJFWF7Il4P7qJ7sNUm7/YUiotkfewhol:glwRRI5AaV0FUe/Nn0bZalhCbsXRnUI0]
+      - key: ANALYZER_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:DN8YHAGUORosejIwy4iOezMK3059i7HC:LYEJGmtn3j0xKbJWSF1rC8O/RBl9q7Olq1Ve3ylnjNBorfE/nGfHkQ==]
+      - key: BACKEND_CALLBACK_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://flatfeestack.io/hooks/analyzer
+      - key: BACKEND_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:kcrngmykVV9E9W+08HueMn0d43s9POBW:BUzYxUt8xsgnoQY1AdPh/hlp4jYNzfE=]
+      - key: BACKEND_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:zjhEt/O4CiDB6f8mJrQT2ZyHY+Q5zpUI:dGA9ThANeLT3FnIlDPOfM5uVXaHFLpIe+gBH20sTN6n8isz4CvGT/g==]
     http_port: 8080
     image:
       deploy_on_push: {}
@@ -81,14 +102,7 @@ services:
         value: FlatFeeStack
       - key: EMAIL_PREFIX
         scope: RUN_AND_BUILD_TIME
-        value: https://jellyfish-app-jirmg.ondigitalocean.app
-      - key: WS_BASE_URL
-        scope: RUN_AND_BUILD_TIME
-        value: https://jellyfish-app-jirmg.ondigitalocean.app
-      - key: DB_PATH
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:OYK8gUNlsO/NMUDOKGxrFrVXQTHEcJW7:Bm6eszdJvGSHoZO7/rhG09HPT7Q17wCYXK0c0tACEncOx9I3q1qGeYlvd1SRyOEt1Oq10T4X7GuigBsKjPNx7jNUQo/ukvttDUREHcU0kNCVqQiH0FDN3xsYm4CDDjVKWFkiWatpURldFLdrpNLzkskrk34t6vBnb6agAfkJeCwwrj5MP374XdxdIkEZJrx55nWvaWWKQxfWUM7if3+YdXhlVP/p]
+        value: https://flatfeestack.io
       - key: DB_SCRIPTS
         scope: RUN_AND_BUILD_TIME
         value: init.sql
@@ -99,6 +113,52 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
         value: EV[1:9EVsdscOblFVg5QpcOWVlM2mGXe1Iwxq:rxcwsZ5SCL40rzfQX/xdMVl2JTx3ob6JSLLzVpy+M/pMFykrukMGsgmUpZIF2OzN60iS5ETfONlvYesHP5DliORPQEG9roR+MkVY9lRTlEpAcntD6A==]
+      - key: DB_PATH
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:w03LKcPFRNqeVh6xr5K65thTZPZTJ2kz:+R/XB+kXuE1OTlCWDf6C2Dl9/YKB6n/Jeni2n1AGoWg4LU3ApTv1hFaIJtiUyeX8O6ic/L98e85B0Gwm9picnbRw0CiYK+Xt25PgTz7JLELQDRuE5YBonZKbjHXFeyuxWGwNytEhKkttCRvbumuBA6h2VNVy1H4NzpIY7GnIqSguNIq2V8xJ/+Q1sGuEZ0cTb7J2Ozeyfbd97rRb/qfRbN+Apjp0NEaC4lHn]
+      - key: ANALYZER_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://flatfeestack.io/analyzer
+      - key: PAYOUT_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://flatfeestack.io/payout
+      - key: BACKEND_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:C/rvdZSGgrYFTVgKDl9B6ph7PovKZHKp:6KQlRIA1B5NX/mmGnXZpx9/8rkAe3lU=]
+      - key: BACKEND_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:2fzy7N/uYQ0dcjXObHq/63iACCUinNni:gPBTen7+7sLWOKc7BJw2DF1QM7rAMWZLGzjyWm4k/lHgOn1Iw1VKog==]
+      - key: ANALYZER_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:qiVXn+sEhlBTMZIT+k5PGW4/zCzo9Ay6:h5efn9WsTPpXRA8Yu0/jXTKeW+oX2UVD]
+      - key: ANALYZER_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:3Od4GO6BBei1yNykHUE95rzvbbHV1I1g:G27t5g9r+T3WDJizal6wrg/259w+zLlTfFopiFDKXvn2cANexwLExw==]
+      - key: PAYOUT_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:Am2WRubl8YoF60HjD7sSP7MT2o+bT0P7:b23zu9BWre+A+qoeeJi5IOZt/f6GyA==]
+      - key: PAYOUT_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:Ldql2PIc7/P4wo/e0QcXwUsQuPl/1HoW:hDZjChhPVvTzxMizczCjGhKkGm19LdbtXOJuY/KgrIFHr5S2MWnJ3g==]
+      - key: STRIPE_SECRET_WEBHOOK
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:vDO3NNwM9Mu2pX+ng9rXV4FC0fch3OCN:9r2dFACWvPA05keHNUTe92gCmDCskpW1NoqToe+eBcVf0nZPOTW9jv0VyFXnbuJmJA0N1BCj]
+      - key: STRIPE_PUBLIC_API
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:vYp0FCvBNiYWnyG4D3+gvVGmYR3L4Da8:D0FUtP+fUkgdfTpmXKFeutBor0Nxny3I/NIIkkitGwPwRFmrDesMF5BfZpaSg75bHzXetEuIHUI4hpbKg3/BIZqWExLjmtWSdBhRlt4wAHlWvz8B0rPBVRgUfA2IV7i0ma7ZDQJB6t8J1XWUlYFEk/fsQ8+2kquVMW1l]
+      - key: STRIPE_SECRET_API
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:eW+/G8Rcr8IxdHT7Me5zCbEcUP2kNLTK:dLijN4C77p9upn9HyH/Kagat40fIgH6JAdW0jtAkzEh3UDsR163fIQaDJ146s1pvFgqqaRAWlwCcHMc2h6df2UxIgcvNAJP+Dcaf0pvft5jnyw1NZefGl136La8yLYmhXorTRmRUc7ZEvDGpRlD0zIaWkSevhoNinTLJ]
     http_port: 8080
     image:
       deploy_on_push: {}
@@ -124,7 +184,7 @@ services:
         value: FlatFeeStack
       - key: EMAIL_PREFIX
         scope: RUN_AND_BUILD_TIME
-        value: https://jellyfish-app-jirmg.ondigitalocean.app
+        value: https://flatfeestack.io
       - key: PWFLOW
         scope: RUN_AND_BUILD_TIME
         value: "true"
@@ -134,10 +194,6 @@ services:
       - key: USER_ENDPOINTS
         scope: RUN_AND_BUILD_TIME
         value: "true"
-      - key: DB_PATH
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:9BqsUJ4KlLXT9cVAOxDRbesu5WjcZh8m:ioaNHV1KqTSMmjjnDCaKyy4IaqpY4t5SdwfH3lX5vPtWbj2kBUOcylPLbO+7B2b30k3IniRcglZGO5HIPTpTsu+BoNhsjD+NKx1No2rqQrEKonD5N+P1Oz2LaoGylCB2NX2TnYqparrCp0QbmTIGGaQk1OoKrNkCVEAiQ3pbKD4i6dhGTsVEUdX4D29iAnfdi2A+EYz8OiQ14Vx+M6hMGaAZS0nb]
       - key: DB_DRIVER
         scope: RUN_AND_BUILD_TIME
         value: postgres
@@ -151,6 +207,10 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
         value: EV[1:rJxuxPgmoenEp43JtX41Mmmvb5EzMbWm:rTxxKsU102hA+XfN+qZO9zsxD9u3Wt0mQG++4FJdywEjbgNjPl86NDo10mV3s10oYR6iAZpDp4FgTzbuEHWHCNmVM28TyoC0ggALJDxnKDwGP0QkLA==]
+      - key: DB_PATH
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:4CZJhSFk6jNdi3HGRMnCLM5WFH+Q7c+h:y6MSBd6NwitwQsmuXYhHewhSD9RbC08AJohrxt1IUleof0NWLAZRAnwXKi5kC5b3ARsgYOfwwCyqSkqXicenHxjyoO9JA+CVREorQZ5YdkmYWH0UVKlopYT3pJugOPj4M7hswrW8c2rmVmQlUgZblv/MdbnZudbildewjLKCMxibv20/SxnutNQptXHWiN3H05WXRbC0nu4JgWCJUvBu+b7h5nK4mw28gy3m]
     http_port: 8080
     image:
       deploy_on_push: {}
@@ -160,39 +220,6 @@ services:
     instance_count: 1
     instance_size_slug: basic-xxs
     name: fastauth
-  - envs:
-      - key: ENV
-        scope: RUN_AND_BUILD_TIME
-        value: production
-      - key: HS256
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:PA/Blxuh4UlkrTbASdElxzYBvmgnys9Y:uaP5BG89MU0N5jbeFq5RxxgmHSMW8nLpOoE1IASiq3xaiVlWTwTiHw==]
-      - key: ETH_URL
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:akgXFiUOpxr48axMAyUd0NFZj/5utV7z:k8QP7kDMz7aicghqX6xWbjv0GlFiIKXsTV6LAtoz18tPFjQshRspxYG98hkn1aLHdrD10CvN0JFKrrWctCVXi9i5uScDqtGORhc8n/0=]
-      - key: NEO_URL
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:H1gx3K9axnvyfDXY1QfrYdZjmy9xwDPz:uL/K+b/teDnrQBM1P9mk29jsiYLBZxZxQvb/T+P9WtZBS52hYKqIWp00]
-      - key: ETH_PRIVATE_KEY
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:gXLq6H31Z48AhFg25tIUAnOr4vV7Up/3:aVACHMJA5lPdOC/PcckWHl/8FcLkqOZGbrjf5eNuaqznCyHLhdd/n2DQ/+jHR8PSR5msbkuiD3pkB5m2lQ7syx4LoJKlXRiNzK6cQwNPdKmoig==]
-      - key: NEO_PRIVATE_KEY
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-        value: EV[1:beG7ASZOLRFfwQmhEGo6GL2cE6QK9DU1:f2IkI52RsxPr5x8i6JHsBmGYxcOqSO4SmEbOcrnQEpIg87tNu7CrvJ7z8jEjNEisAJcROvsQQOMSijVsEwmHUKYPquw=]
-    http_port: 8080
-    image:
-      deploy_on_push: {}
-      registry_type: DOCR
-      repository: payout
-      tag: main
-    instance_count: 1
-    instance_size_slug: basic-xxs
-    name: payout
   - http_port: 9085
     image:
       deploy_on_push: {}
@@ -202,3 +229,97 @@ services:
     instance_count: 1
     instance_size_slug: basic-xxs
     name: frontend
+  - envs:
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:EuFepNARlEGzVf5xm4A5ya2xqCfmhLIw:j3laFT5krvVY1rqPZ+ciwkmcLjpnLQqd3JufCV96QFh4ed2hzEzc5A==]
+      - key: ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+      - key: DB_DRIVER
+        scope: RUN_AND_BUILD_TIME
+        value: postgres
+      - key: DB_SCRIPTS
+        scope: RUN_AND_BUILD_TIME
+        value: init.sql
+      - key: DB_PATH
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:V8Twqxiul9FqjA/NIQv3O9aeGRZ02DtQ:VrbsNey6OkYzgQ5ry7pV8sN7cPa0YhxJT8KH+FClbZtI4rE8vElIkkKP9caIoIn/6r4NUm3gXrx8PW+cPhQ0PVyD5CDwVphFOTSXdJhyIc/4hsrL/MtALud6pWERcL504L1FPelkilNGFE52DuenaNoJ7p2LmoC3k5zt5ALuQHXmrbJ7OjPLQYtjE1crT4X/iFsQIP6/P7tq2vDPmrVifeHhL8MpU6CGXtKW]
+      - key: BACKEND_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://flatfeestack.io/backend/
+      - key: BACKEND_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:63lRDv7OxQlT9g1zcCw512OUJ7K0Sj1e:X+RBRld0CP6CLD67vc6bD9NGJ19vIW4=]
+      - key: BACKEND_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:GlS7Fx37gcSYLFkWk33HElWediaaE9+M:gww0mozIUqSXBy+fgaQZLk3molA9Y5jfcXw3Nx77+4EwiZLLMTecVQ==]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: forum
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: forum
+  - envs:
+      - key: ENV
+        scope: RUN_AND_BUILD_TIME
+        value: production
+      - key: HS256
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:ZZPmUFYCUTprESVTAe6MsvuTaizqC0VL:Eswg0Gbes7HruCFT5x0TYjRs5suPX4JGAePMEbvcYo2v2TRWD+Y/Jw==]
+      - key: ETH_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:ppbYG2IpuUxnDmEmHOKtgN5DTW5L2cB4:XKzmyslOTifUIEsF+0Woh6hbPewrQbmunEhpyn4FZ25knJouYHkVEtcfckRQxwe52CEZY/mc4tWLraJ/zL43+Qm+D6o8Rr3wW9j17gg=]
+      - key: ETH_PRIVATE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:rJQ9Z+OrNcyDCgzJa8P+gzDBzUi3osV1:Lt7PlHUDTRe3KBsOpdB39TEsPt2N5Ui/i1ol8rmYdr9KhjDjcjfSg3QWh3/Ebpsjrxt9xmevKUGgISyolGk4TQatAPnty2s7U8MWL0QarYg=]
+      - key: ETH_CONTRACT
+        scope: RUN_AND_BUILD_TIME
+        value: 0x479c41FfcfeBb76ad54c90d492B354977011eD65
+      - key: NEO_URL
+        scope: RUN_AND_BUILD_TIME
+        value: http://host.docker.internal:50012
+      - key: NEO_PRIVATE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:B8an8R1EF2hVeE0GaUbU0cPehEjMGiVN:jsQYi6T9uS+L4Y5PwaC/BYgKUjuWIA16NwhH/fymMKunfWO9aEBGmdMQGkD0O9z0oy0+hkqV+BU3A2OyQjx39/NG2FM=]
+      - key: NEO_CONTRACT
+        scope: RUN_AND_BUILD_TIME
+        value: Kyw24tcti1qxpVSJfbKwZFFcokWUbBUWZMmtQWRddy1AgtULuTND
+      - key: USDC_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:1bd4gxzGF6q6Nb7G4CkXTYHME5EhYtlI:CU5S/mBUm34v0h57kN44BBYPLU9Z3hw/Mx0dhE/sGF++yQp0N3JsNnDOqswHpwXqSkictyEitfYRS3nvfwmdpd3DdDkKjFTf/UHqdZY=]
+      - key: USDC_PRIVATE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:FIgb+R33bU80KpStuCcVKilU/+t8Lchl:/O3ShVR/9Zv125ocx30am52kgAdM7wQlHe7HUv93GVlvs0AaNGAKVHh7MQuJa0QSolPERSHkbkCnsWbtbW0Qwm7ypzsi29SgB4S2vegs38w=]
+      - key: USDC_CONTRACT
+        scope: RUN_AND_BUILD_TIME
+        value: 0x479c41FfcfeBb76ad54c90d492B354977011eD65
+      - key: PAYOUT_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        value: payout
+      - key: PAYOUT_PASSWORD
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: EV[1:DUtwEG0eF54jW/WYuOxfNSzS9WjW946C:Rjt98HGtq9FC9dBZqhewmShkqx7/6l6eXaZJGdYQVgquY22a]
+    http_port: 8080
+    image:
+      deploy_on_push: {}
+      registry_type: DOCR
+      repository: payout
+      tag: main
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    name: payout

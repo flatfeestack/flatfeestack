@@ -200,3 +200,8 @@ docker compose -f monitoring/docker-compose.yml up -d
 On the productive environment, the monitoring stack is deployed on a DigitalOcean droplet.
 See `.github/workflows/deploy-monitoring.yml` for the deployment script.
 
+# PROD deployment
+PROD deployment can be made with the `deploy-to-production.yaml`.
+Deployment is made to the DigitalOcean App Platform.
+The app spec for this is in the `app-spec.yaml`
+
