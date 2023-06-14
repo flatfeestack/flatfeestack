@@ -185,7 +185,7 @@
   }
 </style>
 
-<Navigation requiresChainId={$daoConfig.chainId}>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Cast votes</h1>
 
   {#each proposals as proposal, i}

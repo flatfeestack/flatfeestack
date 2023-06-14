@@ -30,7 +30,7 @@
   });
 </script>
 
-<Navigation requiresChainId={$daoConfig.chainId}>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Council Member functions</h1>
 
   <AddVotingSlot />
