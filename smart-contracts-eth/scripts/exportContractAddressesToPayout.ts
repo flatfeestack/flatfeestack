@@ -30,10 +30,7 @@ async function main() {
 
   // export the payout contracts
   parseDotEnvFile[`ETH_CONTRACT`] = getProxyContractAddress(hre, "PayoutEth");
-  parseDotEnvFile[`USDC_CONTRACT`] = getProxyContractAddress(
-    hre,
-    "PayoutERC20"
-  );
+  parseDotEnvFile[`USDC_CONTRACT`] = getProxyContractAddress(hre, "PayoutUsdc");
 
   writeFileSync(dotEnvFilePath, stringify(parseDotEnvFile));
 }
