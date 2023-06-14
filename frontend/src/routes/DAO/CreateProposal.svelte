@@ -137,7 +137,7 @@
   }
 </style>
 
-<Navigation requiresChainId={$daoConfig.chainId}>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Create a proposal</h1>
 
   <div class="wrapper">

@@ -39,7 +39,7 @@
             href={$bylawsUrl}
             target="_blank"
             rel="noreferrer">bylaws</a
-          >{/if}
+          >{/if}.
       </label>
     </div>
   </div>
