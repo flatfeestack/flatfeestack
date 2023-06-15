@@ -113,13 +113,12 @@
     padding-top: 2rem;
     display: flex;
     flex-flow: column;
-    min-width: 14rem;
     background-color: var(--tertiary-300);
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
   }
-  .navigation :global(a),
-  .navigation .inactive {
+
+  nav :global(a) {
     display: block;
     color: var(--secondary-700);
     padding: 1em;
@@ -127,12 +126,7 @@
     transition: color 0.3s linear, background-color 0.3s linear;
   }
 
-  .navigation .inactive {
-    color: var(--secondary-300);
-  }
-
-  .navigation :global(a:hover),
-  .navigation .selected {
+  nav :global(a:hover) {
     background-color: var(--tertiary-900);
     color: var(--tertiary-700);
   }
@@ -148,27 +142,27 @@
 
   @media (max-width: 36rem) {
     .page {
-      flex-direction: column;
-      display: flex;
+      display: block;
     }
+
     .navigation {
       display: flex;
+      flex-direction: column;
+    }
+
+    nav {
+      display: flex;
       flex-direction: row;
-      justify-content: space-between;
-      width: 99.9%;
+      width: 100%;
       border-bottom: solid 1px var(--primary-500);
       padding: 0;
     }
-    .navigation :global(a) {
-      text-align: center;
-      width: 100%;
-      float: left;
-    }
-  }
 
-  .content {
-    padding: 1rem;
-    width: 100%;
+    nav :global(a) {
+      text-align: center;
+      padding: 0.5em;
+      flex: 1 0 auto;
+    }
   }
 </style>
 
@@ -179,8 +173,8 @@
 
       {#if $userEthereumAddress === null}
         <button class="button4" on:click={() => triggerSetSigner()}
-          >Connect wallet</button
-        >
+          >Connect wallet
+        </button>
       {:else}
         <p>
           Hello {truncateEthAddress($userEthereumAddress)}! <br />
@@ -201,7 +195,7 @@
       <NavItem href="/dao/membership" icon={faPerson} label="Membership" />
     </nav>
   </div>
-  <div class="content">
+  <div class="p-2">
     {#if requiresChainId}
       <EnsureSameChainId requiredChainId={requiresChainId} />
     {/if}
