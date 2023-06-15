@@ -26,10 +26,10 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3',
             'io.neow3j:compiler:3.20.1',
             'io.neow3j:devpack-test:3.20.1',
-            'ch.qos.logback:logback-classic:1.3.7'
+            'ch.qos.logback:logback-classic:1.3.8'
 
     deployImplementation 'io.neow3j:compiler:3.20.1',
-            'ch.qos.logback:logback-classic:1.3.7'
+            'ch.qos.logback:logback-classic:1.3.8'
 }
 
 tasks.withType(Test) {
