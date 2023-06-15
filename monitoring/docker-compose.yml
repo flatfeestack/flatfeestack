@@ -40,7 +40,7 @@ services:
       - "3001:3000"
 
   postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.12.0
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.12.1
     restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: ${GRAFANA_POSTGRES_DATASOURCE:-postgresql://postgres:password@host.docker.internal:5432/flatfeestack?sslmode=disable}
