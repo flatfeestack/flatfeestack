@@ -13,12 +13,12 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.17
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.4
-	github.com/stripe/stripe-go/v74 v74.21.0
-	golang.org/x/text v0.9.0
+	github.com/stripe/stripe-go/v74 v74.25.0
+	golang.org/x/text v0.11.0
 )
 
 require (
@@ -33,7 +33,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/sendgrid/sendgrid-go v3.12.0+incompatible // indirect
 	golang.org/x/crypto v0.9.0 // indirect
