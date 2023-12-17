@@ -10,7 +10,7 @@
     "dotenv": "^16.2.0",
     "envfile": "^6.18.0",
     "hardhat": "^2.15.0",
-    "hardhat-deploy": "^0.11.30",
+    "hardhat-deploy": "^0.11.45",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "prettier": "^2.8.8",
     "prettier-plugin-solidity": "^1.1.3",
