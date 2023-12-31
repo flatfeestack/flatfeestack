@@ -22,8 +22,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "hardhat/console.sol";
-
 contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pausable, Ownable, ERC721Burnable, EIP712, ERC721Votes {
 
     uint48 constant public MAX_UINT48 = 281474976710655;
@@ -146,7 +144,7 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
         emit CouncilSet(tokenId, status);
     }
 
-    function setMembershipSettings(uint256 _membershipFee, uint48 _membershipPeriod) public onlyOwner {
+    function setMembershipSettings(uint256 _membershipFee, uint48 _membershipPeriod) external onlyOwner {
         if (_membershipFee > 0) {
             membershipFee = _membershipFee;
         }
@@ -252,18 +250,9 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         return super.proposalThreshold();
     }
 
-    function executionDeadline(uint256 proposalId) public view returns (uint256) {
-        return proposalDeadline(proposalId) + super.votingDelay();
-    }
-
-    function execute(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    ) public payable override returns (uint256 proposalId) {
-        proposalId = super.execute(targets, values, calldatas, descriptionHash);
-        require(executionDeadline(proposalId) < block.timestamp);
+    function _queueOperations(uint256, address[] memory, uint256[] memory, bytes[] memory, bytes32) 
+        internal view override returns (uint48) {
+        return SafeCast.toUint48(super.votingDelay());
     }
 
     function requireTwoCouncil(
@@ -296,7 +285,6 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
 
         return proposalId;
     }
-
 
     function councilExecute(
         address[] calldata targets,

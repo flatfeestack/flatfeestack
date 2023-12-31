@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { Contract, ContractTransactionResponse, EventLog } from "ethers";
+import { Contract, ContractTransactionResponse, TransactionResponse, EventLog, FormatType, FunctionFragment, AbiCoder } from "ethers";
+import { Func } from "mocha";
 
 let council1: HardhatEthersSigner, council2: HardhatEthersSigner, user1: HardhatEthersSigner, user2: HardhatEthersSigner;
-let addressNFT:string, addressDAO:string, addressUSDC:string, addressPayoutEth:string, addressPayoutUSDC:string;
 let contractNFT: Contract, contractDAO: Contract, contractUSDC: Contract, contractPayoutEth:Contract, contractPayoutUSDC:Contract;
  
 async function sign(signer:HardhatEthersSigner, userId:string, payOut:bigint, contract:Contract) : Promise<string> {
@@ -40,7 +40,7 @@ async function fundingEth(to: Contract, eth:number): Promise<bigint> {
 
 async function fundingUSDC(to: Contract, usdc:number): Promise<bigint> {
   const totalFundingUSDC = BigInt("1000000") * BigInt(usdc);
-  await contractUSDC.transfer(to.target as string, totalFundingUSDC, {signer: council1});
+  await contractUSDC.transfer(to.target as string, totalFundingUSDC);
   return totalFundingUSDC;
 }
 
@@ -56,34 +56,50 @@ async function timeTravel(seconds:number) {
   await ethers.provider.send("evm_mine");
 }
 
+async function eventLogs(tx: TransactionResponse, contract: Contract, eventName:string): Promise<EventLog[]> {
+  const eventSig = contract.interface.getEvent(eventName)?.format();
+  if(!eventSig) {
+    throw "cannot find event " + eventName + " in contract";
+  }
+  const receipt = await tx.wait();
+  const eventTopic = ethers.id(eventSig);
+  return receipt?.logs.filter(log => log.topics[0] === eventTopic) as EventLog[];
+}
+
+async function eventLogsRaw(tx: TransactionResponse, eventSig:string): Promise<EventLog[]> {
+  const receipt = await tx.wait();
+  const eventTopic = ethers.id(eventSig);
+  return receipt?.logs.filter(log => log.topics[0] === eventTopic) as EventLog[];
+}
+
 function connect(input:Contract, signer:HardhatEthersSigner):Contract {
   return input.connect(signer) as Contract;
 }
 
 beforeEach("Deploy All Contracts", async function() {
   [council1, council2, user1, user2] = await ethers.getSigners();
-  const FlatFeeStackDAO = ethers.getContractFactory("FlatFeeStackDAO");
+  const FlatFeeStackDAO = await ethers.getContractFactory("FlatFeeStackDAO");
   
-  const tx = (await FlatFeeStackDAO).getDeployTransaction(council1, council2);
-  const sentTx = await council1.sendTransaction(await tx);
-  const receipt = await sentTx.wait();
+  const deployTx = await FlatFeeStackDAO.getDeployTransaction(council1, council2);
+  const tx = await council1.sendTransaction(deployTx);
+  const receipt = await tx.wait();
 
-  const eventName = "FlatFeeStackNFTCreated(address,address)";
-  const eventTopic = ethers.id(eventName);
+  //we need to use eventLogsRaw, as we don't have the NFT contract yet
+  const filteredLogs = await eventLogsRaw(tx, "FlatFeeStackNFTCreated(address,address)");
+  const addressNFTStr = filteredLogs[0].topics[1];
+  const addressNFT = ethers.getAddress(addressNFTStr.replace("000000000000000000000000", ""));
+  const addressDAO = receipt?.contractAddress as string;
 
-  const filteredLogs = receipt?.logs.filter(log => log.topics[0] === eventTopic);
-  const addressNFTStr = filteredLogs ? filteredLogs[0].topics[1] : "0x0";
-  addressNFT = ethers.getAddress(addressNFTStr.replace("000000000000000000000000", ""));
-  addressDAO = receipt?.contractAddress as string;
-
-  contractUSDC = await ethers.deployContract("USDC", {signer: council1});
-  addressUSDC = contractUSDC.target as string;
+  contractUSDC = await ethers.deployContract("USDC");
+  const addressUSDC = contractUSDC.target as string;
 
   contractNFT = await ethers.getContractAt("FlatFeeStackNFT", addressNFT);
   contractDAO = await ethers.getContractAt("FlatFeeStackDAO", addressDAO);
   
-  contractPayoutEth = await ethers.deployContract("PayoutEth", {signer: council1});
-  contractPayoutUSDC = await ethers.deployContract("PayoutERC20", [addressUSDC], {signer: council1});
+  contractPayoutEth = await ethers.deployContract("PayoutEth");
+  contractPayoutUSDC = await ethers.deployContract("PayoutERC20", [addressUSDC]);
+
+  //console.log("addressUSDC", addressUSDC);
 })
 
 describe("Withdraw Functionality", function () {
@@ -151,7 +167,7 @@ describe("Balance and Recovery Functionality", function () {
     const user2Balance = await contractPayoutEth.getBalance(user2.address);
 
     const totalFundingEth = await fundingEth(contractPayoutEth, 9);
-    await contractPayoutEth.sendRecover(user2.address, recoveryAmountEth, {signer: council1});
+    await contractPayoutEth.sendRecover(user2.address, recoveryAmountEth);
 
     expect(await contractPayoutEth.getBalance(user2.address)).to.equal(user2Balance + recoveryAmountEth);
     expect(await contractPayoutEth.getBalance(contractPayoutEth.target)).to.equal(totalFundingEth - recoveryAmountEth);
@@ -162,7 +178,7 @@ describe("Balance and Recovery Functionality", function () {
     const user2Balance = await contractPayoutUSDC.getBalance(user2.address);
 
     const totalFundingUSDC = await fundingUSDC(contractPayoutUSDC, 9);
-    await contractPayoutUSDC.sendRecover(user2.address, recoveryAmountUSDC, {signer: council1});
+    await contractPayoutUSDC.sendRecover(user2.address, recoveryAmountUSDC);
 
     expect(await contractPayoutUSDC.getBalance(user2.address)).to.equal(user2Balance + recoveryAmountUSDC);
     expect(await contractPayoutUSDC.getBalance(contractPayoutUSDC.target)).to.equal(totalFundingUSDC - recoveryAmountUSDC);
@@ -188,7 +204,7 @@ describe("DAO Testing", function () {
   it("Add user1 to DAO", async function () {
     const signature1 = signDAO(council1, contractNFT, user1, BigInt("3"));
     const signature2 = signDAO(council2, contractNFT, user1, BigInt("3"));
-    await contractNFT.safeMint(user1.address, 0, signature1, 0, signature2, {signer: user1, value: ethers.parseEther("1")})
+    await connect(contractNFT, user1).safeMint(user1.address, 0, signature1, 0, signature2, {value: ethers.parseEther("1")})
 
     expect(await contractNFT.balanceOf(council1.address)).to.equal(BigInt("1"));
     expect(await contractNFT.balanceOf(council2.address)).to.equal(BigInt("1"));
@@ -207,7 +223,7 @@ describe("DAO Testing", function () {
   it("Initiate Vote Failed", async function () {
     const signature1 = signDAO(council1, contractNFT, user1, BigInt("3"));
     const signature2 = signDAO(council2, contractNFT, user1, BigInt("3"));
-    await contractNFT.safeMint(user1.address, 0, signature1, 0, signature2, {signer: user1, value: ethers.parseEther("1")})
+    await connect(contractNFT, user1).safeMint(user1.address, 0, signature1, 0, signature2, {value: ethers.parseEther("1")})
 
     //send 1 USDC to the contract
     await fundingUSDC(contractDAO, 1);
@@ -233,30 +249,23 @@ describe("DAO Testing", function () {
   it("Initiate Vote Success", async function () {
     const signature1 = signDAO(council1, contractNFT, user1, BigInt("3"));
     const signature2 = signDAO(council2, contractNFT, user1, BigInt("3"));
-    await contractNFT.safeMint(user1.address, 0, signature1, 0, signature2, {signer: user1, value: ethers.parseEther("1")})
+    await connect(contractNFT, user1).safeMint(user1.address, 0, signature1, 0, signature2, {value: ethers.parseEther("1")})
 
     //send 1 USDC to the contract
     await fundingUSDC(contractDAO, 1);
 
-    //contractDAO.castVote(,{signer: user1});
-    //await timeTravel(2);
     //propose to send 1 USDC to user2 from user1
-    const tx = await (connect(contractDAO, user1)).propose(
+    const txPropose = await (connect(contractDAO, user1)).propose(
       [contractUSDC.target],
       [BigInt(0)],
-      [ethers.solidityPacked(
-        ["string","address","uint256"],
-        ["transfer",user2.address, BigInt(1000000)])],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, BigInt(1000000)])],
       "Test Vote") as ContractTransactionResponse;
+    
+    const logProposalCreated = await eventLogs(txPropose, contractDAO, "ProposalCreated");
+    const proposalId = logProposalCreated[0].args[0];
 
-    const receipt = await tx.wait();
-    const eventName = "ProposalCreated(uint256,address,address[],uint256[],string[],bytes[],uint256,uint256,string)";
-    const eventTopic = ethers.id(eventName);
-    const filteredLogs = receipt?.logs.filter(log => log.topics[0] === eventTopic) as EventLog[];
-    const proposalId = filteredLogs[0].args[0];
-
-    const now = await contractDAO.clock();
     const votingDelay = await contractDAO.votingDelay() as bigint;
+    const votingPeriod = await contractDAO.votingPeriod() as bigint;
     console.log("votingDelay in days:", Number(votingDelay) / (24 * 60 * 60));
 
     //too early TODO: testing
@@ -266,11 +275,39 @@ describe("DAO Testing", function () {
 
     await connect(contractDAO, user1).castVote(proposalId, 1);
     await connect(contractDAO, council1).castVote(proposalId, 0);
-    await connect(contractDAO, council2).castVote(proposalId, 0);
+    await connect(contractDAO, council2).castVote(proposalId, 1);
 
     //too late TODO: testing
     //await timeTravel(Number(votingDelay) * 50);
+
+    await timeTravel(Number(votingPeriod));
+
+    const descriptionHash =  ethers.keccak256(ethers.toUtf8Bytes("Test Vote"));
     
+    const txQueue = await contractDAO.queue(
+      [contractUSDC.target],
+      [BigInt(0)],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, BigInt(1000000)])],
+      descriptionHash);
+
+    const logProposalQueued = await eventLogs(txQueue, contractDAO, "ProposalQueued");
+    const testProposalId1 = logProposalQueued[0].args[0];
+    expect(testProposalId1).to.equal(proposalId);
+
+    await timeTravel(Number(votingPeriod));    
+
+    const txExecute = await contractDAO.execute(
+      [contractUSDC.target],
+      [BigInt(0)],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, BigInt(1000000)])],
+      descriptionHash);
+
+    const logProposalExecuted = await eventLogs(txExecute, contractDAO, "ProposalExecuted");
+    const testProposalId2 = logProposalExecuted[0].args[0];
+    expect(testProposalId2).to.equal(proposalId);
+
+    //check the USDC amount
+    expect(await contractUSDC.balanceOf(user2.address)).to.equal(BigInt(1000000));
 
   });
 });
