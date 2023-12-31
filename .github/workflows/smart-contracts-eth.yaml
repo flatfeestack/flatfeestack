@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: lts/iron
           cache: "pnpm"
-          cache-dependency-path: smart-contracts-eth/pnpm-lock.json
+          cache-dependency-path: smart-contracts-eth/pnpm-lock.yaml
       - run: pnpm install
       - run: npx hardhat test
       - run: npx hardhat coverage
