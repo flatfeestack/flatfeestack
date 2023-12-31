@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { Contract, ContractTransactionResponse, TransactionResponse, EventLog } from "ethers";
 
-let council1: HardhatEthersSigner, council2: HardhatEthersSigner, user1: HardhatEthersSigner, user2: HardhatEthersSigner;
+let council1: HardhatEthersSigner, council2: HardhatEthersSigner, user1: HardhatEthersSigner, user2: HardhatEthersSigner, user3: HardhatEthersSigner, user4: HardhatEthersSigner;
 let contractNFT: Contract, contractDAO: Contract, contractUSDC: Contract, contractPayoutEth:Contract, contractPayoutUSDC:Contract;
  
 async function sign(signer:HardhatEthersSigner, userId:string, payOut:bigint, contract:Contract) : Promise<string> {
@@ -80,7 +80,7 @@ function dollar(nr:number) {
 }
 
 beforeEach("Deploy All Contracts", async function() {
-  [council1, council2, user1, user2] = await ethers.getSigners();
+  [council1, council2, user1, user2, user3, user4] = await ethers.getSigners();
   const FlatFeeStackDAO = await ethers.getContractFactory("FlatFeeStackDAO");
   
   const deployTx = await FlatFeeStackDAO.getDeployTransaction(council1, council2);
@@ -602,5 +602,100 @@ describe("DAO Testing", function () {
 
     //check the USDC amount
     expect(await contractUSDC.balanceOf(user2.address)).to.equal(dollar(1));
+  });
+
+  it("Initiate Vote Failed - no quorum", async function () {
+    const signature1 = signDAO(council1, contractNFT, user1, BigInt("3"));
+    const signature2 = signDAO(council2, contractNFT, user1, BigInt("3"));
+
+    const signature3 = signDAO(council1, contractNFT, user2, BigInt("4"));
+    const signature4 = signDAO(council2, contractNFT, user2, BigInt("4"));
+
+    const signature5 = signDAO(council1, contractNFT, user3, BigInt("5"));
+    const signature6 = signDAO(council2, contractNFT, user3, BigInt("5"));
+
+    const signature7 = signDAO(council1, contractNFT, user4, BigInt("6"));
+    const signature8 = signDAO(council2, contractNFT, user4, BigInt("6"));
+
+    await connect(contractNFT, user1).safeMint(user1.address, 0, signature1, 0, signature2, {value: ethers.parseEther("1")})
+    await connect(contractNFT, user2).safeMint(user2.address, 0, signature3, 0, signature4, {value: ethers.parseEther("1")})
+    await connect(contractNFT, user3).safeMint(user3.address, 0, signature5, 0, signature6, {value: ethers.parseEther("1")})
+    await connect(contractNFT, user4).safeMint(user4.address, 0, signature7, 0, signature8, {value: ethers.parseEther("1")})
+
+    //send 1 USDC to the contract
+    await fundingUSDC(contractDAO, 1);
+
+    //propose to send 1 USDC to user2 from user1
+    const txPropose = await (connect(contractDAO, user1)).propose(
+      [contractUSDC.target],
+      [BigInt(0)],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, dollar(1)])],
+      "Test Vote") as ContractTransactionResponse;
+    
+    const logProposalCreated = await eventLogs(txPropose, contractDAO, "ProposalCreated");
+    const proposalId = logProposalCreated[0].args[0];
+    const votingDelay = await contractDAO.votingDelay() as bigint;
+    
+    await timeTravel(Number(votingDelay));
+    await connect(contractDAO, user1).castVote(proposalId, 1);
+
+    const votingPeriod = await contractDAO.votingPeriod() as bigint;
+    await timeTravel(Number(votingPeriod));
+    await timeTravel(Number(votingPeriod));
+    const descriptionHash =  ethers.keccak256(ethers.toUtf8Bytes("Test Vote"));
+
+    try {
+      const txExecute = await contractDAO.execute(
+        [contractUSDC.target],
+        [BigInt(0)],
+        [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, dollar(1)])],
+        descriptionHash);
+    } catch (error:any) {
+      expect(error.message).to.include("GovernorUnexpectedProposalState");
+    }
+  });
+
+  it("Initiate Vote Success - only one vote with 2 councils", async function () {
+
+    try {
+    await connect(contractNFT, council2).burn(2);
+    } catch(error:any) {
+      expect(error.message).to.include("Is council");
+    }
+
+    //send 1 USDC to the contract
+    await fundingUSDC(contractDAO, 1);
+
+    //propose to send 1 USDC to user2 from user1
+    const txPropose = await (connect(contractDAO, council1)).propose(
+      [contractUSDC.target],
+      [BigInt(0)],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, dollar(1)])],
+      "Test Vote") as ContractTransactionResponse;
+    
+    const logProposalCreated = await eventLogs(txPropose, contractDAO, "ProposalCreated");
+    const proposalId = logProposalCreated[0].args[0];
+    const votingDelay = await contractDAO.votingDelay() as bigint;
+    
+    await timeTravel(Number(votingDelay));
+
+    //user1 can vote, but weigth will be 0
+    await connect(contractDAO, user1).castVote(proposalId, 1);
+    await connect(contractDAO, council1).castVote(proposalId, 1);
+
+    const now = await contractDAO.clock();
+
+    const votingPeriod = await contractDAO.votingPeriod() as bigint;
+    await timeTravel(Number(votingPeriod));
+    await timeTravel(Number(votingPeriod));
+    const descriptionHash =  ethers.keccak256(ethers.toUtf8Bytes("Test Vote"));
+
+    const q = await contractDAO.quorum(now - BigInt(1));
+    
+    const txExecute = await contractDAO.execute(
+      [contractUSDC.target],
+      [BigInt(0)],
+      [contractUSDC.interface.encodeFunctionData("transfer", [user2.address, dollar(1)])],
+      descriptionHash);
   });
 });

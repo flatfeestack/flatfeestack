@@ -1,6 +1,6 @@
 # FlatFeeStack DAO and Payout Smart Contracts
 
-This repository contains the following Ethereum smart contracts: ```FlatFeeStackNFT`````` (Non-Fungible Token) and ```FlatFeeStackDAO``` (Decentralized Autonomous Organization), written in Solidity.
+This repository contains the following Ethereum smart contracts: ```FlatFeeStackNFT``` (Non-Fungible Token) and ```FlatFeeStackDAO``` (Decentralized Autonomous Organization), written in Solidity.
 
 ## FlatFeeStackNFT
 

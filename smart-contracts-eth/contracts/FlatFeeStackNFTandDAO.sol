@@ -29,6 +29,7 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
     uint48 public membershipPeriod = 1 * 365 * 24 * 60 * 60; // 1 year
     mapping(uint256 => uint48) public membershipPayed;
     uint256 public currentTokenId;
+    uint256 public councilCount;
 
     event FlatFeeStackNFTCreated(address indexed addr, address indexed creator);
     event MembershipPayed(address indexed addr, uint256 indexed tokenId, uint256 indexed val);
@@ -106,12 +107,13 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
     }
 
     function burn(uint256 tokenId) public virtual override {
+        require(!isCouncil(tokenId), "Is council");
         require(
             ownerOf(tokenId) == msg.sender ||
-            (membershipPayed[tokenId] < block.timestamp && !isCouncil(tokenId)) ||
+            membershipPayed[tokenId] < block.timestamp ||
             msg.sender == owner(),
             "Not tokenowner, payed membership, not contactowner");
-            
+        
         _burn(tokenId);
     }
 
@@ -140,6 +142,12 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
     }
 
     function setCouncil(uint256 tokenId, bool status) public onlyOwner {
+        if(status) {
+            councilCount++;
+        } else {
+            require(councilCount > 3, "Two councils req");
+            councilCount--;
+        }
         membershipPayed[tokenId] = status ? MAX_UINT48 : SafeCast.toUint48(block.timestamp) + membershipPeriod;
         emit CouncilSet(tokenId, status);
     }
@@ -240,9 +248,34 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         return super.votingPeriod();
     }
 
-    function quorum(uint256 blockNumber) public view
+    
+
+    function quorum(uint256 timepoint) public view
         override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
-        return super.quorum(blockNumber);
+
+        // quorum with 20% for number of yes+abstain (ya) and total voters
+        // total = 2 -> q:0/1 (50%) -> 0 is same as 1, as 0 votes does not get a proposal pass, 1 does.
+        // total = 3 -> q:2 (67%)
+        // total = 4 -> q:2 (50%)
+        // total = 5 -> q:2 (40%)
+        // total = 6 -> q:2 (33%)
+        // total = 7 -> q:2 (28%)
+        // total = 8 -> q:2 (25%)
+        // total = 9 -> q:2 (22%)
+        // total = 10-> q:2 (20%)
+        // total = 11-> q:2 (18%)
+        // total = 12-> q:2 (17%)
+        // total = 13-> q:2 (15%)
+        // total = 14-> q:2 (14%)
+        // total = 15-> q:3 (20%)
+        // total = 16-> q:3 (19%)
+        uint256 q = super.quorum(timepoint);
+        //corner case: if we have a quorum of 0 or 1, but we have 3+ voters
+        //make quorum of 2 mandatory
+        if(q < 2 && token().getPastTotalSupply(timepoint) >= 3) {
+            return 2;
+        }
+        return q;
     }
 
     function proposalThreshold() public view 
