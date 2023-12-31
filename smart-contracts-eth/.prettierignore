@@ -1,6 +1,0 @@
-artifacts
-cache
-deployments/localhost
-node_modules
-typechain-types
-coverage
