@@ -26,6 +26,7 @@ For running the contracts, install bun (at least: 1.0.20)
 pnpm install
 npx hardhat compile
 npx hardhat test
+npx hardhat coverage
 ```
 ## Deploy Contracts
 
