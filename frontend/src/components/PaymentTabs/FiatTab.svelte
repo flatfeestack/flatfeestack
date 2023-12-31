@@ -11,12 +11,13 @@
     PaymentElement,
   } from "svelte-stripe";
   import { API } from "../../ts/api";
+  import type { Stripe } from "@stripe/stripe-js";
 
   export let total: number;
   export let seats: number;
   export let freq: number;
 
-  let stripe = null;
+  let stripe: Stripe | null = null;
 
   let isSubmitting = false;
   let cardElement;
@@ -74,6 +75,27 @@
   :global(.w4) {
     width: 4rem;
   }
+
+  .stripe p {
+    padding: 0.5rem;
+    margin: 0;
+  }
+  @media screen and (max-width: 600px) {
+    form .container {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .stripe,
+    .stripe .container {
+      margin: 0;
+    }
+    .stripe .container button {
+      margin: 0.5rem;
+    }
+    :global(.w20) {
+      width: 100%;
+    }
+  }
 </style>
 
 {#if $user.paymentMethod}
@@ -93,29 +115,27 @@
   </div>
 {/if}
 
-<div class="container">
+<div class="stripe container">
   <div class="p-2">
     {#if stripe}
       <form on:submit|preventDefault={handleSubmit}>
         <div class="container">
           <Elements {stripe}>
-            <div class="container">
-              <CardNumber
-                classes={{ base: "w20 p-2 m-2 rounded border-primary-700" }}
-                bind:element={cardElement}
-              />
-              <CardExpiry
-                classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
-              />
-              <CardCvc
-                classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
-              />
-            </div>
+            <CardNumber
+              classes={{ base: "w20 p-2 m-2 rounded border-primary-700" }}
+              bind:element={cardElement}
+            />
+            <CardExpiry
+              classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
+            />
+            <CardCvc
+              classes={{ base: "w4 p-2 m-2 rounded border-primary-700" }}
+            />
           </Elements>
           <button class="button1" type="submit" disabled={seats <= 0}
             >❤&nbsp;Support{#if isSubmitting}<Dots />{/if}</button
           >
-          for ${total.toFixed(2)}
+          <p>for ${total.toFixed(2)}</p>
         </div>
       </form>
     {/if}

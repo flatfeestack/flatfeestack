@@ -1,6 +1,10 @@
 <script lang="ts">
   import humanizeDuration from "humanize-duration";
-  import { currentBlockNumber, daoContract } from "../../../ts/daoStore";
+  import {
+    currentBlockNumber,
+    daoConfig,
+    daoContract,
+  } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import {
     futureBlockDate,
@@ -65,15 +69,15 @@
       extraAssemblyVotingPeriod,
       votingSlotAnnouncementPeriod,
     ] = await Promise.all([
-      $daoContract.getMinDelay(),
-      $daoContract.extraOrdinaryAssemblyVotingPeriod(),
-      $daoContract.votingSlotAnnouncementPeriod(),
+      $daoContract.getMinDelay() as Promise<bigint>,
+      $daoContract.extraOrdinaryAssemblyVotingPeriod() as Promise<bigint>,
+      $daoContract.votingSlotAnnouncementPeriod() as Promise<bigint>,
     ]);
 
     extraOrdinaryAssemblyParameters = {
-      timelockMinimumDelay: timelockMinimumDelay.toNumber(),
-      votingPeriod: extraAssemblyVotingPeriod.toNumber(),
-      votingSlotAnnouncementPeriod: votingSlotAnnouncementPeriod.toNumber(),
+      timelockMinimumDelay: Number(timelockMinimumDelay),
+      votingPeriod: Number(extraAssemblyVotingPeriod),
+      votingSlotAnnouncementPeriod: Number(votingSlotAnnouncementPeriod),
     };
 
     minimumBlockNumber =
@@ -86,7 +90,7 @@
   function updateCalldata() {
     calls = [
       {
-        target: $daoContract?.address,
+        target: $daoConfig.dao,
         transferCallData: $daoContract?.interface.encodeFunctionData(
           "setVotingSlot",
           [formValues.proposedBlockNumber]
@@ -129,7 +133,7 @@
       </li>
       <li>
         The proposal needs to be queued for {humanizeDuration(
-          extraOrdinaryAssemblyParameters.timelockMinimumDelay * 1000
+          Number(extraOrdinaryAssemblyParameters.timelockMinimumDelay) * 1000
         )}.
       </li>
       <li>

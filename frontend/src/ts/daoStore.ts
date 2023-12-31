@@ -1,5 +1,4 @@
-import type { Web3Provider } from "@ethersproject/providers";
-import { BigNumber, Contract, ethers } from "ethers";
+import { BrowserProvider, Contract, JsonRpcSigner } from "ethers";
 import { derived, readable, type Readable } from "svelte/store";
 import { DAOABI } from "../contracts/DAO";
 import { MembershipABI } from "../contracts/Membership";
@@ -15,7 +14,7 @@ export const daoConfig = readable<DaoConfig | null>(null, (set) => {
 });
 
 export const currentBlockNumber = derived<
-  Readable<null | Web3Provider>,
+  Readable<null | BrowserProvider>,
   number | null
 >(
   provider,
@@ -32,7 +31,7 @@ export const currentBlockNumber = derived<
 );
 
 export const currentBlockTimestamp = derived<
-  [Readable<null | Web3Provider>, Readable<number | null>],
+  [Readable<null | BrowserProvider>, Readable<number | null>],
   number | null
 >(
   [provider, currentBlockNumber],
@@ -44,47 +43,53 @@ export const currentBlockTimestamp = derived<
     ) {
       set(null);
     } else {
-      $provider.getBlock($currentBlockNumber).then((currentBlock) => {
-        set(currentBlock.timestamp);
-      });
+      Promise.resolve($provider.getBlock($currentBlockNumber)).then(
+        (currentBlock) => {
+          set(currentBlock.timestamp);
+        }
+      );
     }
   },
   null
 );
 
-export const daoContract = derived(
-  [daoConfig, provider, signer],
-  ([$daoConfig, $provider, $signer]) => {
-    if ($provider === null || $provider === undefined || $daoConfig === null) {
-      return null;
-    } else if ($signer === null) {
-      return new ethers.Contract($daoConfig.dao, DAOABI, $provider);
-    } else {
-      return new ethers.Contract($daoConfig.dao, DAOABI, $signer);
-    }
+export const daoContract = derived<
+  [
+    Readable<DaoConfig | null>,
+    Readable<BrowserProvider | null>,
+    Readable<JsonRpcSigner | null>
+  ],
+  Contract | null
+>([daoConfig, provider, signer], ([$daoConfig, $provider, $signer]) => {
+  if ($provider === null || $provider === undefined || $daoConfig === null) {
+    return null;
+  } else if ($signer === null) {
+    return new Contract($daoConfig.dao, DAOABI, $provider);
+  } else {
+    return new Contract($daoConfig.dao, DAOABI, $signer);
   }
-);
+});
 
-export const membershipContract = derived(
-  [daoConfig, provider, signer],
-  ([$daoConfig, $provider, $signer]) => {
-    if ($provider === null || $provider === undefined || $daoConfig === null) {
-      return null;
-    } else if ($signer === null) {
-      return new ethers.Contract(
-        $daoConfig.membership,
-        MembershipABI,
-        $provider
-      );
-    } else {
-      return new ethers.Contract($daoConfig.membership, MembershipABI, $signer);
-    }
+export const membershipContract = derived<
+  [
+    Readable<DaoConfig | null>,
+    Readable<BrowserProvider | null>,
+    Readable<JsonRpcSigner | null>
+  ],
+  Contract | null
+>([daoConfig, provider, signer], ([$daoConfig, $provider, $signer]) => {
+  if ($provider === null || $provider === undefined || $daoConfig === null) {
+    return null;
+  } else if ($signer === null) {
+    return new Contract($daoConfig.membership, MembershipABI, $provider);
+  } else {
+    return new Contract($daoConfig.membership, MembershipABI, $signer);
   }
-);
+});
 
 export const membershipStatusValue = derived<
   [Readable<string | null>, Readable<Contract | null>],
-  BigNumber | null
+  bigint | null
 >(
   [userEthereumAddress, membershipContract],
   ([$userEthereumAddress, $membershipContract], set) => {
@@ -109,9 +114,9 @@ export const councilMembers = derived<
     set(null);
   } else {
     Promise.resolve($membershipContract.getCouncilMembersLength()).then(
-      (councilLength: BigNumber) => {
+      (councilLength: bigint) => {
         Promise.all(
-          [...Array(councilLength.toNumber()).keys()].map(
+          [...Array(Number(councilLength)).keys()].map(
             async (index: Number) => {
               return await $membershipContract.councilMembers(index);
             }
@@ -124,18 +129,22 @@ export const councilMembers = derived<
   }
 });
 
-export const walletContract = derived(
-  [daoConfig, provider, signer],
-  ([$daoConfig, $provider, $signer]) => {
-    if ($provider === null || $provider === undefined || $daoConfig === null) {
-      return null;
-    } else if ($signer === null) {
-      return new ethers.Contract($daoConfig.wallet, WalletABI, $provider);
-    } else {
-      return new ethers.Contract($daoConfig.wallet, WalletABI, $signer);
-    }
+export const walletContract = derived<
+  [
+    Readable<DaoConfig | null>,
+    Readable<BrowserProvider | null>,
+    Readable<JsonRpcSigner | null>
+  ],
+  Contract | null
+>([daoConfig, provider, signer], ([$daoConfig, $provider, $signer]) => {
+  if ($provider === null || $provider === undefined || $daoConfig === null) {
+    return null;
+  } else if ($signer === null) {
+    return new Contract($daoConfig.wallet, WalletABI, $provider);
+  } else {
+    return new Contract($daoConfig.wallet, WalletABI, $signer);
   }
-);
+});
 
 export const bylawsUrl = derived<Readable<Contract | null>, string | null>(
   daoContract,

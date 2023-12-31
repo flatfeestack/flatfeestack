@@ -168,8 +168,8 @@
         alt="FlatFeeStack Logo"
       />
       <h1>
-        A flat-fee sponsoring platform for <br />
-        open source projects based on git metrics
+        A flat fee sponsoring platform for <br />
+        open-source projects based on git metrics
       </h1>
     </div>
   </div>
@@ -190,7 +190,7 @@
       </div>
       <h2>On the Shoulders of Giants</h2>
       <div class="max-w20">
-        Without open source software, your software project would not exist
+        Without open-source software, your software project would not exist
       </div>
     </div>
     <div class="card">
@@ -204,7 +204,7 @@
       </div>
       <h2>Our Mission</h2>
       <div class="max-w20">
-        &#171;Open source contributors should be able to make a living with open
+        &#171;Open-Source contributors should be able to make a living with open
         source software&#187;
       </div>
     </div>
@@ -214,7 +214,7 @@
     <div class="flex-row py-300 parallax">
       <div class="p-300 max-w20 rightBorder">
         <h3>
-          For a flat fee of $125/year, sponsor any open source projects. Show
+          For a flat fee of $125/year, sponsor any open-source projects. Show
           your supported projects badge.
         </h3>
         <form on:submit|preventDefault={() => navigate("/signup")}>
@@ -223,7 +223,7 @@
       </div>
       <div class="p-300 max-w20">
         <h3>
-          Earn money if your open source project is sponsored. All you need is a
+          Earn money if your open-source project is sponsored. All you need is a
           public git repository.
         </h3>
         <form on:submit|preventDefault={() => navigate("/signup")}>
@@ -343,10 +343,10 @@
         <img class="iconSupport" src="/images/coinblesk.svg" alt="Coinblesk" />
       </a>
       <a href="https://www.csg.uzh.ch">
-        <img class="iconSupport" src="/images/csg.svg" alt="Coinblesk" />
+        <img class="iconSupport" src="/images/csg.svg" alt="CSG" />
       </a>
-      <a href="https://dsl.rj.ost.ch">
-        <img class="iconSupport" src="/images/dsl.svg" alt="Coinblesk" />
+      <a href="https://dsl.i.ost.ch/">
+        <img class="iconSupport" src="/images/dsl.svg" alt="DSL" />
       </a>
     </div>
   </div>

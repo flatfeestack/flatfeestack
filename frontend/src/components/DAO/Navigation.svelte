@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Web3Provider } from "@ethersproject/providers";
   import {
     faComment,
     faHippo,
@@ -10,22 +9,30 @@
     faUserAstronaut,
   } from "@fortawesome/free-solid-svg-icons";
   import detectEthereumProvider from "@metamask/detect-provider";
+  import { BrowserProvider } from "ethers";
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
-  import { links } from "svelte-routing";
+  import { links, navigate } from "svelte-routing";
   import {
     councilMembers,
     daoConfig,
     membershipStatusValue,
   } from "../../ts/daoStore";
-  import { provider, signer, userEthereumAddress } from "../../ts/ethStore";
+  import {
+    getChainId,
+    lastEthRoute,
+    provider,
+    signer,
+    userEthereumAddress,
+  } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import membershipStatusMapping from "../../utils/membershipStatusMapping";
   import setSigner from "../../utils/setSigner";
+  import showMetaMaskRequired from "../../utils/showMetaMaskRequired";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
   import NavItem from "../NavItem.svelte";
   import Spinner from "../Spinner.svelte";
-  import { ensureSameChainId } from "../../utils/ethHelpers";
+  import EnsureSameChainId from "../EnsureSameChainId.svelte";
 
   let pathname = "/";
   if (typeof window !== "undefined") {
@@ -33,6 +40,8 @@
   }
 
   let membershipStatus: string;
+
+  export let requiresChainId: number | undefined = undefined;
 
   onMount(async () => {
     await setProvider();
@@ -60,27 +69,37 @@
 
   function resolveMembershipStatus(): string {
     if (
-      $membershipStatusValue == 3 &&
+      $membershipStatusValue == 3n &&
       $councilMembers?.includes($userEthereumAddress)
     ) {
       return "Council Member";
     }
 
-    return membershipStatusMapping[$membershipStatusValue];
+    return membershipStatusMapping[Number($membershipStatusValue)];
   }
 
   async function setProvider() {
     try {
       const ethProv = await detectEthereumProvider();
-      $provider = new Web3Provider(<any>ethProv);
+      $provider = new BrowserProvider(<any>ethProv);
     } catch (error) {
       $provider = undefined;
     }
   }
 
   async function triggerSetSigner() {
-    ensureSameChainId($daoConfig.chainId);
-    await setSigner($provider);
+    const currentChainId = await getChainId();
+
+    if (currentChainId === undefined) {
+      showMetaMaskRequired();
+    } else if (currentChainId !== $daoConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
+      navigate(
+        `/differentChainId?required=${$daoConfig.chainId}&actual=${currentChainId}`
+      );
+    } else {
+      await setSigner($provider);
+    }
   }
 </script>
 
@@ -173,16 +192,20 @@
       <NavItem href="/dao/home" icon={faHome} label="DAO Home" />
       <NavItem href="/dao/discussions" icon={faComment} label="Discussions" />
       <NavItem href="/dao/votes" icon={faList} label="Votes" />
-      {#if $membershipStatusValue == 3}
+      {#if $membershipStatusValue == 3n}
         <NavItem href="/dao/treasury" icon={faMoneyBill} label="Treasury" />
       {/if}
-      {#if $membershipStatusValue == 3 && $councilMembers?.includes($userEthereumAddress)}
+      {#if $membershipStatusValue == 3n && $councilMembers?.includes($userEthereumAddress)}
         <NavItem href="/dao/council" icon={faHippo} label="Council functions" />
       {/if}
       <NavItem href="/dao/membership" icon={faPerson} label="Membership" />
     </nav>
   </div>
   <div class="content">
+    {#if requiresChainId}
+      <EnsureSameChainId requiredChainId={requiresChainId} />
+    {/if}
+
     {#if $isSubmitting}
       <Spinner />
     {:else}

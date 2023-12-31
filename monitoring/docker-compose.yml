@@ -1,21 +1,21 @@
 version: "3.9"
 
 services:
-
   caddy:
     build: ./caddy
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    restart: unless-stopped
+    volumes:
+      - ${BASE_PATH:-.}/caddy/.data:/data
     ports:
-      - "8080:8080"
+      - "80:80"
       - "443:443"
       - "443:443/udp"
 
   prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+    image: prom/prometheus:v2.44.0
+    restart: unless-stopped
     volumes:
-      - ./prometheus/:/etc/prometheus/
+      - ${BASE_PATH:-.}/prometheus/:/etc/prometheus/
       - ${BASE_PATH:-.}/.prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -26,22 +26,23 @@ services:
       - "9090:9090"
 
   grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
+    image: grafana/grafana:9.5.3
+    restart: unless-stopped
     volumes:
       - ${BASE_PATH:-.}/.grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    env_file:
-      - ./grafana/.env
+      - ${BASE_PATH:-.}/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_USERS_DISABLE_INITIAL_ADMIN_CREATION: true
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
   postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:latest
-    restart: always
-    env_file:
-      - ./postgres-exporter/.env
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.12.1
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: ${GRAFANA_POSTGRES_DATASOURCE:-postgresql://postgres:password@host.docker.internal:5432/flatfeestack?sslmode=disable}
     ports:
       - "9187:9187"
-
-

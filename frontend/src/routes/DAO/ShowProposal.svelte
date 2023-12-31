@@ -62,7 +62,9 @@
       ]);
 
       if (proposalState === 5) {
-        proposalEta = await $daoContract.proposalEta(proposalId);
+        proposalEta = Number(
+          (await $daoContract.proposalEta(proposalId)) as bigint
+        );
         proposalEta = proposalEta < $currentBlockTimestamp ? 0 : proposalEta;
       }
     } catch (e) {
@@ -70,13 +72,15 @@
     }
   }
 
-  membershipStatusUnsubscriber = membershipStatusValue.subscribe((value) => {
-    if (value === null) {
-      membershipStatusNumber = 0;
-    } else {
-      membershipStatusNumber = value.toNumber();
+  membershipStatusUnsubscriber = membershipStatusValue.subscribe(
+    (value: bigint | null) => {
+      if (value === null) {
+        membershipStatusNumber = 0;
+      } else {
+        membershipStatusNumber = Number(value);
+      }
     }
-  });
+  );
 
   onDestroy(() => {
     if (membershipStatusUnsubscriber !== undefined) {

@@ -96,9 +96,18 @@ type NameWeight struct {
 
 var Plans = []Plan{
 	{
+		Title:       "Monthly",
+		Price:       10.31, // 30 * 0.33 = 9.9, 9.9 = 10.31 - 0.04(10.31)
+		PriceBase:   10310000,
+		Freq:        30,
+		FeePrm:      40,
+		Description: "You can help your sponsored projects on a monthly basis with a flat fee of <b>10.31 USD</b>",
+		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 4%",
+	},
+	{
 		Title:       "Yearly",
-		Price:       125.47,    //365 * 330000 / 1-(0.04)
-		PriceBase:   125470000, //125468750
+		Price:       125.47, // 365 * 0.33 = 120.45, 120.45 = 125.47 - 0.04(125.47)
+		PriceBase:   125470000,
 		Freq:        365,
 		FeePrm:      40,
 		Description: "You can help your sponsored projects on a yearly basis with a flat fee of <b>125.47 USD</b>",
@@ -106,11 +115,11 @@ var Plans = []Plan{
 	},
 	{
 		Title:       "5 Years",
-		Price:       624.09,    //1825 * 330000 / 1-(0.035)
-		PriceBase:   624090000, //624093265
+		Price:       624.09, // 1825 * 0.33 = 602.25, 602.25 = 624.09 - 0.035(624.09)
+		PriceBase:   624090000,
 		Freq:        1825,
 		FeePrm:      35,
-		Description: "You want to support Open Source software for 5 years with a flat fee of <b>624.09 USD</b>",
+		Description: "You want to support open-source software for 5 years with a flat fee of <b>624.09 USD</b>",
 		Disclaimer:  "Stripe charges 2.9% + 0.3 USD per transaction, with the bank transaction fee, we deduct in total 3.5%",
 	},
 }

@@ -1,19 +1,20 @@
 <script lang="ts">
-  import { BigNumber, ethers, type Contract, type Signature } from "ethers";
-  import { splitSignature } from "ethers/lib/utils";
+  import { BrowserProvider, Contract, Signature } from "ethers";
   import { onMount } from "svelte";
+  import { navigate } from "svelte-routing";
   import Navigation from "../components/Navigation.svelte";
   import Spinner from "../components/Spinner.svelte";
   import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   import { PayoutEthABI } from "../contracts/PayoutEth";
   import { API } from "../ts/api";
-  import { provider, signer } from "../ts/ethStore";
+  import { getChainId, lastEthRoute, provider, signer } from "../ts/ethStore";
   import { error } from "../ts/mainStore";
   import { formatBalance, formatDate, timeSince } from "../ts/services";
   import type { PayoutResponse } from "../types/backend";
   import type { PayoutConfig } from "../types/payout";
   import setSigner from "../utils/setSigner";
-  import { ensureSameChainId } from "../utils/ethHelpers";
+  import showMetaMaskRequired from "../utils/showMetaMaskRequired";
+  import detectEthereumProvider from "@metamask/detect-provider";
 
   let ethSignature: Signature;
   let isLoading = false;
@@ -25,7 +26,7 @@
       payoutSignature = await API.user.requestPayout(selectedCurrency);
 
       if (selectedCurrency !== "GAS") {
-        ethSignature = splitSignature(payoutSignature.signature);
+        ethSignature = Signature.from(payoutSignature.signature);
       }
     } catch (e) {
       $error = e.message;
@@ -35,44 +36,63 @@
   async function doEthPayout() {
     isLoading = true;
 
+    try {
+      const ethProv = await detectEthereumProvider();
+      $provider = new BrowserProvider(<any>ethProv);
+    } catch (exception) {
+      $provider = undefined;
+    }
+
     if ($signer === null) {
       await setSigner($provider);
     }
 
-    ensureSameChainId(payoutConfig.chainId);
+    const currentChainId = await getChainId();
 
-    let contract: Contract;
-
-    if (payoutSignature.currency === "ETH") {
-      contract = new ethers.Contract(
-        payoutConfig.payoutContractAddresses.eth,
-        PayoutEthABI,
-        $signer
+    if (currentChainId === undefined) {
+      showMetaMaskRequired();
+    } else if (currentChainId !== payoutConfig.chainId) {
+      $lastEthRoute = window.location.pathname;
+      navigate(
+        `/differentChainId?required=${payoutConfig.chainId}&actual=${currentChainId}`
       );
     } else {
-      contract = new ethers.Contract(
-        payoutConfig.payoutContractAddresses.usdc,
-        PayoutERC20ABI,
-        $signer
-      );
-    }
+      let contract: Contract;
 
-    try {
-      await contract.withdraw(
-        await $signer.getAddress(),
-        payoutSignature.encodedUserId,
-        BigNumber.from(String(payoutSignature.amount)),
-        ethSignature.v,
-        ethSignature.r,
-        ethSignature.s
-      );
-    } catch (exception) {
-      console.error(exception);
-      $error = exception.data.data.reason;
-      resetViewAfterPayout();
-    }
+      if (payoutSignature.currency === "ETH") {
+        contract = new Contract(
+          payoutConfig.payoutContractAddresses.eth,
+          PayoutEthABI,
+          $signer
+        );
+      } else {
+        contract = new Contract(
+          payoutConfig.payoutContractAddresses.usdc,
+          PayoutERC20ABI,
+          $signer
+        );
+      }
 
-    resetViewAfterPayout();
+      try {
+        await contract.withdraw(
+          await $signer.getAddress(),
+          payoutSignature.encodedUserId,
+          BigInt(payoutSignature.amount),
+          ethSignature.v,
+          ethSignature.r,
+          ethSignature.s
+        );
+      } catch (exception) {
+        if (exception.data?.data === undefined) {
+          // we deal with a regular error, not one a "revert" from the blockchain
+          $error = exception.message;
+        } else {
+          $error = exception.data.data.reason;
+        }
+      } finally {
+        resetViewAfterPayout();
+      }
+    }
   }
 
   function resetViewAfterPayout() {
@@ -85,6 +105,47 @@
     payoutConfig = await API.payout.payoutConfig();
   });
 </script>
+
+<style>
+  @media screen and (max-width: 600px) {
+    table {
+      width: 100%;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    table tr {
+      border-bottom: 3px solid #fff;
+      display: block;
+    }
+
+    table td {
+      border-bottom: 1px solid #fff;
+      display: block;
+      font-size: 0.8em;
+      text-align: right;
+    }
+
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    table td:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>
 
 <Navigation>
   <h2 class="p-2 m-2">Income</h2>
@@ -185,30 +246,33 @@
           <tbody>
             {#each contributions as contribution}
               <tr>
-                <td
+                <td data-label="Repository"
                   ><a href={contribution.repoUrl}>{contribution.repoName}</a
                   ></td
                 >
-                <td
+                <td data-label="From"
                   >{contribution.sponsorName
                     ? contribution.sponsorName
                     : "[no name]"}</td
                 >
-                <td
+                <td data-label="Balance"
                   >{formatBalance(
                     BigInt(contribution.balance),
                     contribution.currency
                   )}</td
                 >
-                <td>{contribution.currency}</td>
-                <td>
+                <td data-label="Currency">{contribution.currency}</td>
+                <td data-label="Realized">
                   {#if contribution.claimedAt === null}
                     Unclaimed
                   {:else}
                     Realized
                   {/if}
                 </td>
-                <td title={formatDate(new Date(contribution.day))}>
+                <td
+                  data-label="Date"
+                  title={formatDate(new Date(contribution.day))}
+                >
                   {timeSince(new Date(contribution.day), new Date())} ago
                 </td>
               </tr>

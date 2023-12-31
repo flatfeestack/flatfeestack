@@ -325,7 +325,7 @@ textarea {
 
 /* media screen sizings */
 /* Small only */
-@media screen and (max-width: 39.9375em) {
+@media screen and (max-width: 40em) {
   .hide-sx {
     display: none;
   }
@@ -521,8 +521,7 @@ tbody tr:last-of-type {
   max-height: 2rem;
   max-width: 2rem;
   width: auto;
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin: 0 0.5rem;
   border: 2px solid var(--primary-100);
 }
 

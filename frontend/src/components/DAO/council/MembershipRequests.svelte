@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { EventLog } from "ethers";
   import { membershipContract } from "../../../ts/daoStore";
   import { provider, userEthereumAddress } from "../../../ts/ethStore";
   import { error } from "../../../ts/mainStore";
@@ -26,10 +27,10 @@
     const [requestingMembers, confirmedMembers] = await Promise.all([
       $membershipContract.queryFilter(
         $membershipContract.filters.ChangeInMembershipStatus(null, [1, 2])
-      ),
+      ) as Promise<EventLog[]>,
       $membershipContract.queryFilter(
         $membershipContract.filters.ChangeInMembershipStatus(null, 3)
-      ),
+      ) as Promise<EventLog[]>,
     ]);
 
     // immense sorting function, but in a nutshell
@@ -46,7 +47,7 @@
                 confirmedEvent.args[0] === requestEvent.args[0]
             )
         )
-        .sort((requestEvent) => requestEvent.args[1])
+        .sort((requestEvent) => Number(requestEvent.args[1]))
         .reverse()
         .filter(
           (element, index, array) =>

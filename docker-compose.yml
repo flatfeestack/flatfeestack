@@ -58,7 +58,11 @@ services:
       - "host.docker.internal:host-gateway"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ${BASE_PATH:-.}/frontend:/app
     ports:
       - "9085:9085"
 

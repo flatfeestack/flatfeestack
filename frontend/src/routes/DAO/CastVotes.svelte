@@ -4,30 +4,31 @@
     faQuestion,
     faXmark,
   } from "@fortawesome/free-solid-svg-icons";
-  import type { Event } from "ethers";
-  import { onDestroy } from "svelte";
+  import type { EventLog } from "ethers";
+  import { onDestroy, onMount } from "svelte";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
   import Navigation from "../../components/DAO/Navigation.svelte";
-  import { daoConfig, daoContract } from "../../ts/daoStore";
+  import {
+    daoConfig,
+    daoContract,
+    membershipStatusValue,
+  } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
 
   interface VoteValues {
     canVote: boolean;
     reason: string;
-    value: number;
+    value: bigint;
   }
 
   interface Votes {
-    abstainVotes: number;
-    againstVotes: number;
-    forVotes: number;
+    abstainVotes: bigint;
+    againstVotes: bigint;
+    forVotes: bigint;
   }
 
   interface VoteValuesContainer {
@@ -47,8 +48,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if ($votingSlots === null) {
       $isSubmitting = true;
     } else if (proposals.length === 0) {
@@ -63,20 +62,22 @@
       navigate("/dao/votes");
     }
 
-    const votingPower = await $daoContract.getVotes(
+    const votingPower = (await $daoContract.getVotes(
       $userEthereumAddress,
       blockNumber
-    );
-    if (votingPower.toNumber() < 1) {
+    )) as bigint;
+    if (votingPower < 1n) {
       $error = "You are not allowed to vote in this cycle.";
       navigate("/dao/votes");
     }
 
     const amountOfProposals =
-      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber);
+      (await $daoContract.getNumberOfProposalsInVotingSlot(
+        blockNumber
+      )) as bigint;
 
     proposals = await Promise.all(
-      [...Array(amountOfProposals.toNumber()).keys()].map(
+      [...Array(Number(amountOfProposals)).keys()].map(
         async (index: Number) => {
           const proposalId = (
             await $daoContract.votingSlots(blockNumber, index)
@@ -93,7 +94,7 @@
       )
     );
 
-    const votesCasted = await $daoContract.queryFilter(
+    const votesCasted = (await $daoContract.queryFilter(
       $daoContract.filters.VoteCast(
         $userEthereumAddress,
         null,
@@ -101,7 +102,7 @@
         null,
         null
       )
-    );
+    )) as EventLog[];
 
     for (const proposal of proposals) {
       const { againstVotes, forVotes, abstainVotes } =
@@ -117,7 +118,7 @@
     }
 
     proposals.forEach((proposal) => {
-      const event: Event | undefined = votesCasted.find(
+      const event: EventLog | undefined = votesCasted.find(
         (event) => event.args[1].toString() === proposal.id
       );
 
@@ -142,13 +143,13 @@
     $isSubmitting = false;
   }
 
-  function handleVoteValue(proposalId: string, voteValue: number) {
+  function handleVoteValue(proposalId: string, voteValue: bigint) {
     voteValues[proposalId].value = voteValue;
   }
 
   async function castVotes() {
     for (const [key, value] of Object.entries(voteValues)) {
-      if (!value.canVote || value.value === -1) {
+      if (!value.canVote || value.value === -1n) {
         continue;
       }
 
@@ -159,6 +160,13 @@
       }
     }
   }
+
+  onMount(async () => {
+    if ($membershipStatusValue !== 3n) {
+      $error = "You are not allowed to view this page.";
+      navigate("/dao/home");
+    }
+  });
 
   onDestroy(() => {
     $isSubmitting = false;
@@ -177,7 +185,7 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Cast votes</h1>
 
   {#each proposals as proposal, i}
@@ -201,24 +209,24 @@
       <div>
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 0 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 0)}
+          class={voteValues[proposal.id].value === 0n ? "button4" : "button3"}
+          on:click={() => handleVoteValue(proposal.id, 0n)}
         >
           <Fa icon={faXmark} size="sm" class="icon px-2" />
         </button>
 
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 1 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 1)}
+          class={voteValues[proposal.id].value === 1n ? "button4" : "button3"}
+          on:click={() => handleVoteValue(proposal.id, 1n)}
         >
           <Fa icon={faCheck} size="sm" class="icon px-2" />
         </button>
 
         <button
           disabled={!voteValues[proposal.id].canVote}
-          class={voteValues[proposal.id].value === 2 ? "button4" : "button3"}
-          on:click={() => handleVoteValue(proposal.id, 2)}
+          class={voteValues[proposal.id].value === 2n ? "button4" : "button3"}
+          on:click={() => handleVoteValue(proposal.id, 2n)}
         >
           <Fa icon={faQuestion} size="sm" class="icon px-2" />
         </button>

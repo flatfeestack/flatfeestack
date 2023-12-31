@@ -8,10 +8,15 @@
   import type { Plan } from "../types/backend";
 
   // List of tab items with labels, values and assigned components
-  let items = [
-    { label: "Credit Card", value: 1, component: FiatTab },
-    { label: "Crypto Currencies", value: 2, component: CryptoTab },
-  ];
+  let items = [{ label: "Credit Card", value: 1, component: FiatTab }];
+
+  if ($config.env == "local" || $config.env == "staging") {
+    items.push({
+      label: "Crypto Currencies",
+      value: 2,
+      component: CryptoTab,
+    });
+  }
 
   let currentFreq: number = 365;
   let currentSeats = 1;
@@ -56,6 +61,16 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+  }
+
+  @media screen and (max-width: 600px) {
+    .container-stretch {
+      flex-direction: column;
+    }
+    .container.page {
+      flex-direction: column;
+      text-align: left;
+    }
   }
 </style>
 

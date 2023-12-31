@@ -17,34 +17,6 @@ echo "POSTGRES_USER=postgres" >> db/.env
 echo "POSTGRES_DB=flatfeestack" >> db/.env
 ```
 
-### Local development - Frontend with Hot Module Reload (HMR)
-Especially while working on the frontend, HMR in local development enables you to instantly see your changes without having to rebuild the project or wait ages.
-
-First a change in the caddy file (`caddy/Caddyfile`) is required.
-
-```yaml
-# change
-reverse_proxy frontend:9085
-# to
-reverse_proxy host.docker.internal:9085
-```
-
-Afterwards docker can be started up again
-```shell
-docker compose up --build
-
-# Switch to a different tab / terminal and shut down the frontend
-docker compose stop frontend
-```
-
-Move to your frontend folder (assuming you are in the root flatfeestack dir) and execute the new pnpm script
-```shell
-cd frontend
-pnpm run hmr
-```
-
-Afterwards you can visit the same URL and use the frontend but this time with HMR.
-
 ## Register a user for the platform
 
 To register a user:
@@ -227,4 +199,9 @@ docker compose -f monitoring/docker-compose.yml up -d
 ## Prod
 On the productive environment, the monitoring stack is deployed on a DigitalOcean droplet.
 See `.github/workflows/deploy-monitoring.yml` for the deployment script.
+
+# PROD deployment
+PROD deployment can be made with the `deploy-to-production.yaml`.
+Deployment is made to the DigitalOcean App Platform.
+The app spec for this is in the `app-spec.yaml`
 

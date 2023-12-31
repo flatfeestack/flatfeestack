@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BigNumber, ethers } from "ethers";
+  import { EventLog, formatEther } from "ethers";
   import { onDestroy, onMount } from "svelte";
   import { navigate } from "svelte-routing";
   import Navigation from "../../components/DAO/Navigation.svelte";
@@ -11,10 +11,7 @@
   } from "../../ts/daoStore";
   import { provider, userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { secondsPerBlock } from "../../utils/futureBlockDate";
   import truncateEthAddress from "../../utils/truncateEthereumAddress";
@@ -26,17 +23,17 @@
   }
 
   interface TransactionEvent {
-    amount: BigNumber;
+    amount: bigint;
     blockDate: string;
     blockNumber: number;
     source: string; // wallet
     type: TransactionEventType;
   }
 
-  let availableFunds: BigNumber = BigNumber.from("0");
+  let availableFunds: bigint = 0n;
   let transactions: TransactionEvent[] | null = null;
-  let totalBalance: BigNumber = BigNumber.from("0");
-  let totalAllowance: BigNumber = BigNumber.from("0");
+  let totalBalance: bigint = 0n;
+  let totalAllowance: bigint = 0n;
 
   checkUndefinedProvider();
 
@@ -57,7 +54,7 @@
   });
 
   onMount(() => {
-    if ($membershipStatusValue != 3) {
+    if ($membershipStatusValue != 3n) {
       $error = "You are not allowed to view this page.";
       navigate("/dao/home");
       return;
@@ -65,10 +62,6 @@
 
     $isSubmitting = true;
   });
-
-  $: {
-    ensureSameChainId($daoConfig?.chainId);
-  }
 
   async function prepareView() {
     if (
@@ -104,12 +97,12 @@
 
     transactions = (
       await Promise.all(
-        transactionsEvents.flat().map(async (event) => {
+        transactionsEvents.flat().map(async (event: EventLog) => {
           let eventType;
 
-          if (event.event === "IncreaseAllowance") {
+          if (event.eventName === "IncreaseAllowance") {
             eventType = TransactionEventType.IncreaseAllowance;
-          } else if (event.event === "AcceptPayment") {
+          } else if (event.eventName === "AcceptPayment") {
             eventType = TransactionEventType.AcceptPayment;
           } else {
             eventType = TransactionEventType.WithdrawFunds;
@@ -149,25 +142,23 @@
   });
 </script>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Treasury</h1>
 
   <ul>
-    <li>Total balance: {ethers.utils.formatEther(totalBalance)} ETH</li>
+    <li>Total balance: {formatEther(totalBalance)} ETH</li>
     <li>
-      Total funds to be claimed: {ethers.utils.formatEther(totalAllowance)} ETH
+      Total funds to be claimed: {formatEther(totalAllowance)} ETH
     </li>
     <li>
-      Available funds: {ethers.utils.formatEther(
-        totalBalance.sub(totalAllowance)
-      )} ETH
+      Available funds: {formatEther(totalBalance - totalAllowance)} ETH
     </li>
   </ul>
 
   <h2>Withdraw funds</h2>
-  {#if availableFunds.gt(BigNumber.from("0"))}
+  {#if availableFunds > 0n}
     <p>
-      You have {ethers.utils.formatEther(availableFunds)} ETH available to be withdrawn.
+      You have {formatEther(availableFunds)} ETH available to be withdrawn.
     </p>
 
     <button on:click={() => withdrawFunds()} class="button4">Withdraw</button>
@@ -203,7 +194,7 @@
               {/if}</td
             >
             <td>{truncateEthAddress(transaction.source)}</td>
-            <td>{ethers.utils.formatEther(transaction.amount)} ETH</td>
+            <td>{formatEther(transaction.amount)} ETH</td>
           </tr>
         {/each}
       </tbody>

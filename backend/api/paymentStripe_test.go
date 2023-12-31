@@ -27,7 +27,7 @@ func TestPostHookStripe(t *testing.T) {
 		defer teardown()
 
 		userDetail := insertTestUser(t, "hello@world.com")
-		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
 		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.succeeded")
 		require.Nil(t, err)
 
@@ -64,7 +64,7 @@ func TestPostHookStripe(t *testing.T) {
 		defer teardown()
 
 		userDetail := insertTestUser(t, "hello@world.com")
-		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
 		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.requires_action")
 		require.Nil(t, err)
 
@@ -86,7 +86,7 @@ func TestPostHookStripe(t *testing.T) {
 		actionPayIn, err := db.FindPayInExternal(payInEvent.ExternalId, db.PayInAction)
 		assert.Nil(t, err)
 		assert.NotNil(t, actionPayIn)
-		assert.Equal(t, Plans[0].PriceBase, actionPayIn.Balance.Int64())
+		assert.Equal(t, Plans[1].PriceBase, actionPayIn.Balance.Int64())
 	})
 
 	t.Run("stripe misses payment method", func(t *testing.T) {
@@ -94,7 +94,7 @@ func TestPostHookStripe(t *testing.T) {
 		defer teardown()
 
 		userDetail := insertTestUser(t, "hello@world.com")
-		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
 		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.payment_failed")
 		require.Nil(t, err)
 
@@ -121,7 +121,7 @@ func TestPostHookStripe(t *testing.T) {
 		defer teardown()
 
 		userDetail := insertTestUser(t, "hello@world.com")
-		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[0].PriceBase, 1, Plans[0].Freq)
+		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
 		event, err := generateWebhookPayload(userDetail.Id.String(), payInEvent.ExternalId.String(), "payment_intent.payment_failed")
 		require.Nil(t, err)
 
@@ -143,7 +143,7 @@ func TestPostHookStripe(t *testing.T) {
 		actionPayIn, err := db.FindPayInExternal(payInEvent.ExternalId, db.PayInMethod)
 		assert.Nil(t, err)
 		assert.NotNil(t, actionPayIn)
-		assert.Equal(t, Plans[0].PriceBase, actionPayIn.Balance.Int64())
+		assert.Equal(t, Plans[1].PriceBase, actionPayIn.Balance.Int64())
 	})
 }
 
@@ -167,7 +167,7 @@ func generateWebhookPayload(userId string, externalId string, eventType string) 
 	metadata["fee"] = strconv.FormatInt(40, 10)
 
 	paymentIntent := stripe.PaymentIntent{
-		Amount:   utils.UsdBaseToCent(Plans[0].PriceBase),
+		Amount:   utils.UsdBaseToCent(Plans[1].PriceBase),
 		Metadata: metadata,
 	}
 

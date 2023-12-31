@@ -8,16 +8,11 @@
   import { councilMembers, daoConfig } from "../../ts/daoStore";
   import { userEthereumAddress } from "../../ts/ethStore";
   import { error, isSubmitting } from "../../ts/mainStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
 
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if ($councilMembers === null || $userEthereumAddress === null) {
       $isSubmitting = true;
     } else if (
@@ -35,7 +30,7 @@
   });
 </script>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Council Member functions</h1>
 
   <AddVotingSlot />

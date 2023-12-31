@@ -10,10 +10,7 @@
   } from "../../ts/daoStore";
   import { error, isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import {
     executeProposal,
     queueProposal,
@@ -25,8 +22,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if (
       $proposalStore === null ||
       $votingSlots === null ||
@@ -46,10 +41,12 @@
     }
 
     const amountOfProposals =
-      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber);
+      (await $daoContract.getNumberOfProposalsInVotingSlot(
+        blockNumber
+      )) as bigint;
 
     proposals = await Promise.all(
-      [...Array(amountOfProposals.toNumber()).keys()].map(
+      [...Array(Number(amountOfProposals)).keys()].map(
         async (index: Number) => {
           const proposalId = await $daoContract.votingSlots(blockNumber, index);
 
@@ -82,7 +79,7 @@
   });
 </script>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <h1 class="text-secondary-900">Execute proposals</h1>
 
   {#each proposals as proposal, i}
@@ -119,7 +116,7 @@
       {:else}
         <p class="italic">
           The proposal can be executed in {humanizeDuration(
-            (proposal.eta - $currentBlockTimestamp) * 1000
+            (Number(proposal.eta) - $currentBlockTimestamp) * 1000
           )}.
         </p>
         <button class="button4" disabled>Execute proposal</button>

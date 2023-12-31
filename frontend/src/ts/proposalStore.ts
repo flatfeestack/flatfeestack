@@ -1,4 +1,4 @@
-import type { BigNumber, Bytes, Contract, Event } from "ethers";
+import type { BytesLike, Contract, EventLog, Log } from "ethers";
 import { derived, get, writable, type Readable } from "svelte/store";
 import { daoContract } from "./daoStore";
 import { userEthereumAddress } from "./ethStore";
@@ -9,7 +9,7 @@ export interface ProposalCreatedEvent {
 }
 
 export interface Proposal {
-  calldatas: Bytes[];
+  calldatas: BytesLike[];
   description: string;
   endBlock: number;
   id: string;
@@ -26,7 +26,7 @@ export const proposalStore = {
   // subscribe to the cart store
   subscribe: proposals.subscribe,
   // custom logic
-  async get(proposalId: string, $daoContract): Promise<Proposal> {
+  async get(proposalId: string, daoContract: Contract): Promise<Proposal> {
     let values = get(proposals);
     const result = values.find(({ id }) => proposalId === id);
 
@@ -34,8 +34,8 @@ export const proposalStore = {
       return result;
     } else {
       return await Promise.resolve(
-        $daoContract.queryFilter(
-          $daoContract.filters.DAOProposalCreated(
+        daoContract.queryFilter(
+          daoContract.filters.DAOProposalCreated(
             proposalId,
             null,
             null,
@@ -48,15 +48,15 @@ export const proposalStore = {
             null
           )
         )
-      ).then((events: Event[]) => {
+      ).then((events: Array<EventLog>) => {
         let newProposal: Proposal = {
           calldatas: events[0].args[5],
           description: events[0].args[8],
-          endBlock: events[0].args[7].toNumber(),
+          endBlock: Number(events[0].args[7]),
           id: proposalId,
           proposer: events[0].args[1],
           signatures: events[0].args[4],
-          startBlock: events[0].args[6].toNumber(),
+          startBlock: Number(events[0].args[6]),
           targets: events[0].args[2],
           values: events[0].args[3],
         };
@@ -76,16 +76,16 @@ export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
       set(null);
     } else {
       Promise.resolve($daoContract.getSlotsLength())
-        .then((votingSlotsLength: BigNumber) => {
+        .then((votingSlotsLength: bigint) => {
           Promise.resolve(
             Promise.all(
-              [...Array(votingSlotsLength.toNumber()).keys()].map((index) =>
+              [...Array(Number(votingSlotsLength)).keys()].map((index) =>
                 $daoContract.slots(index)
               )
             )
-          ).then((slots: BigNumber[]) => {
+          ).then((slots: bigint[]) => {
             const sortedSlots = slots
-              .map((slot) => slot.toNumber())
+              .map((slot) => Number(slot))
               .sort((slot1, slot2) => slot2 - slot1); // sort descending, slot with latest start to appear first
 
             set(sortedSlots);
@@ -102,7 +102,7 @@ export const votingSlots = derived<Readable<null | Contract>, null | number[]>(
 
 export const extraOrdinaryAssemblyRequestProposalIds = derived<
   Readable<null | Contract>,
-  null | BigNumber[]
+  null | bigint[]
 >(
   daoContract,
   ($daoContract, set) => {
@@ -110,14 +110,14 @@ export const extraOrdinaryAssemblyRequestProposalIds = derived<
       set(null);
     } else {
       Promise.resolve($daoContract.getExtraOrdinaryProposalsLength())
-        .then((extraOrdinaryProposalsLength: BigNumber) => {
+        .then((extraOrdinaryProposalsLength: bigint) => {
           Promise.resolve(
             Promise.all(
-              [...Array(extraOrdinaryProposalsLength.toNumber()).keys()].map(
+              [...Array(Number(extraOrdinaryProposalsLength)).keys()].map(
                 (index) => $daoContract.extraOrdinaryAssemblyProposals(index)
               )
             )
-          ).then((extraOrdinaryAssemblyRequestProposalIds: BigNumber[]) => {
+          ).then((extraOrdinaryAssemblyRequestProposalIds: bigint[]) => {
             set(extraOrdinaryAssemblyRequestProposalIds);
           });
         })
@@ -132,7 +132,7 @@ export const extraOrdinaryAssemblyRequestProposalIds = derived<
 
 export const votesCasted = derived<
   [Readable<Contract | null>, Readable<string | null>],
-  Event[] | null
+  EventLog[] | null
 >(
   [daoContract, userEthereumAddress],
   ([$daoContract, $userEthereumAddress], set) => {
@@ -149,7 +149,7 @@ export const votesCasted = derived<
             null
           )
         )
-      ).then((events: Event[]) => {
+      ).then((events: EventLog[]) => {
         set(events);
       });
     }

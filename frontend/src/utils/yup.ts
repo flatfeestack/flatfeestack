@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { isAddress } from "ethers";
 import * as yup from "yup";
 import type { AnyObject, Maybe } from "yup/lib/types";
 
@@ -8,7 +8,7 @@ yup.addMethod<yup.StringSchema>(yup.string, "isEthereumAddress", () =>
     .test(
       "isEthereumAddress",
       "Must be a valid Ethereum address!",
-      (value: string) => ethers.utils.isAddress(value)
+      (value: string) => isAddress(value)
     )
 );
 

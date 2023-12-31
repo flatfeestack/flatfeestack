@@ -3,8 +3,9 @@ import { API } from "./api";
 import type { User } from "../types/backend";
 import type { Token } from "../types/auth";
 import { get } from "svelte/store";
-import { formatUnits } from "ethers/lib/utils";
-import { BigNumber } from "ethers";
+import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
+import type { ClientSecret } from "../types/backend";
+import { formatUnits } from "ethers";
 
 export const confirmReset = async (
   email: string,
@@ -207,7 +208,7 @@ export const formatBalance = (n: bigint, c: string): string => {
       console.debug("Unknown currency: " + c);
       return n.toString(10);
     }
-    return formatUnits(BigNumber.from(n.toString()), currency.factorPow);
+    return formatUnits(n, currency.factorPow);
   }
 };
 
@@ -238,8 +239,11 @@ export const timeSince = (d: Date, now: Date): string => {
   return Math.floor(seconds) + " seconds";
 };
 
-export const stripePaymentMethod = async (stripe, cardElement) => {
-  const cs = await API.user.setupStripe();
+export const stripePaymentMethod = async (
+  stripe: Stripe,
+  cardElement: StripeCardElement
+) => {
+  const cs: ClientSecret = await API.user.setupStripe();
   const result = await stripe.confirmCardSetup(
     cs.clientSecret,
     { payment_method: { card: cardElement } },

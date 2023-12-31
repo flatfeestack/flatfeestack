@@ -5,13 +5,10 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": [
-        "ch.qos.logback:logback-classic"
+      "matchManagers": [
+        "npm"
       ],
-      "matchPaths": [
-        "smart-contracts-neo/"
-      ],
-      "allowedVersions": "<=1.3"
+      "rangeStrategy": "bump"
     },
     {
       "groupName": "Github Actions - all non-major dependencies",
@@ -74,6 +71,16 @@
       ]
     },
     {
+      "groupName": "monitoring - all non-major dependencies",
+      "matchPaths": [
+        "monitoring/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    },
+    {
       "groupName": "payout - all non-major dependencies",
       "matchPaths": [
         "payout/"
@@ -102,10 +109,28 @@
         "minor",
         "patch"
       ]
+    },
+    {
+      "matchPackageNames": [
+        "@openzeppelin/contracts",
+        "@openzeppelin/contracts-upgradeable"
+      ],
+      "allowedVersions": "<=4.8"
+    },
+    {
+      "matchPackageNames": [
+        "ch.qos.logback:logback-classic"
+      ],
+      "matchPaths": [
+        "smart-contracts-neo/"
+      ],
+      "allowedVersions": "<=1.3"
     }
   ],
   "postUpdateOptions": [
-    "gomodTidy", "npmDedupe", "pnpmDedupe"
+    "gomodTidy",
+    "npmDedupe",
+    "pnpmDedupe"
   ],
   "schedule": [
     "before 12pm every thursday"

@@ -29,8 +29,8 @@
     try {
       await schema.validateAt(property, formValues);
       formErrors[property] = null;
-    } catch (error) {
-      formErrors[property] = error.errors[0];
+    } catch (exception) {
+      formErrors[property] = exception.errors[0];
     }
   }
 
@@ -96,6 +96,6 @@
       </div>
     {/if}
   {:else}
-    You need to <Link href="/login">sign in</Link> to post a comment.
+    You need to <Link to="/login">sign in</Link> to post a comment.
   {/if}
 </ThreadItemBox>

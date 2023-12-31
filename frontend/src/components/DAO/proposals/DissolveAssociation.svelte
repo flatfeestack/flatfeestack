@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    daoConfig,
     daoContract,
     membershipContract,
     walletContract,
@@ -27,14 +28,13 @@
   }
 
   async function prepareView() {
-    const amountOfMembers = await $membershipContract.getMembersLength();
+    const amountOfMembers =
+      (await $membershipContract.getMembersLength()) as bigint;
 
     members = await Promise.all(
-      [...Array(amountOfMembers.toNumber()).keys()].map(
-        async (index: Number) => {
-          return await $membershipContract.members(index);
-        }
-      )
+      [...Array(Number(amountOfMembers)).keys()].map(async (index: Number) => {
+        return await $membershipContract.members(index);
+      })
     );
 
     isLoading = false;
@@ -56,7 +56,7 @@
   function updateCalldata() {
     calls = [
       {
-        target: $walletContract?.address,
+        target: $daoConfig.wallet,
         transferCallData: $walletContract?.interface.encodeFunctionData(
           "liquidate",
           [formValues.liquidator]
@@ -64,13 +64,13 @@
         value: 0,
       },
       {
-        target: $membershipContract?.address,
+        target: $daoConfig.membership,
         transferCallData:
           $membershipContract?.interface.encodeFunctionData("lockMembership"),
         value: 0,
       },
       {
-        target: $daoContract?.address,
+        target: $daoConfig.dao,
         transferCallData:
           $daoContract.interface.encodeFunctionData("dissolveDAO"),
         value: 0,

@@ -13,10 +13,7 @@
   import { provider } from "../../ts/ethStore";
   import { isSubmitting } from "../../ts/mainStore";
   import { proposalStore, votingSlots } from "../../ts/proposalStore";
-  import {
-    checkUndefinedProvider,
-    ensureSameChainId,
-  } from "../../utils/ethHelpers";
+  import { checkUndefinedProvider } from "../../utils/ethHelpers";
   import formatDateTime from "../../utils/formatDateTime";
   import { futureBlockDate } from "../../utils/futureBlockDate";
   import truncateString from "../../utils/truncateString";
@@ -57,8 +54,6 @@
   checkUndefinedProvider();
 
   $: {
-    ensureSameChainId($daoConfig?.chainId);
-
     if (
       $currentBlockNumber === null ||
       $currentBlockTimestamp === null ||
@@ -73,9 +68,9 @@
   }
 
   async function prepareView() {
-    slotCloseTime = (await $daoContract.slotCloseTime()).toNumber();
+    slotCloseTime = Number((await $daoContract.slotCloseTime()) as bigint);
     currentTime = formatDateTime(new Date($currentBlockTimestamp * 1000));
-    votingPeriod = (await $daoContract.votingPeriod()).toNumber();
+    votingPeriod = Number((await $daoContract.votingPeriod()) as bigint);
 
     await createVotingSlots();
 
@@ -136,11 +131,11 @@
   async function createProposalInfo(
     blockNumber: number
   ): Promise<ProposalInfo[]> {
-    const number = (
-      await $daoContract.getNumberOfProposalsInVotingSlot(blockNumber)
-    ).toNumber();
+    const number = (await $daoContract.getNumberOfProposalsInVotingSlot(
+      blockNumber
+    )) as bigint;
     let proposalInfos: ProposalInfo[] = [];
-    for (let i = 0; i < number; i++) {
+    for (let i = 0n; i < number; i++) {
       const proposalId = (
         await $daoContract.votingSlots(blockNumber, i)
       ).toString();
@@ -194,10 +189,10 @@
   }
 </style>
 
-<Navigation>
+<Navigation requiresChainId={$daoConfig?.chainId}>
   <p>Last updated (block): #{$currentBlockNumber}</p>
   <p>
-    Last updated (time): Current-Time: {currentTime}
+    Last updated (time): {currentTime}
 
     <ExtraOrdinaryAssemblies currentBlockTimestamp={$currentBlockTimestamp} />
 
@@ -261,7 +256,7 @@
           <p class="italic">No proposals submitted.</p>
         {/if}
 
-        {#if $membershipStatusValue == 3}
+        {#if $membershipStatusValue === 3n}
           {#if slotInfo.votingSlotState == VotingSlotState.ProposalsOpen}
             <button
               on:click={() => navigate("/dao/createProposal")}

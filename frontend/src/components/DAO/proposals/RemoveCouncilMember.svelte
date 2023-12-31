@@ -1,6 +1,9 @@
 <script lang="ts">
-  import type { BigNumber } from "ethers";
-  import { councilMembers, membershipContract } from "../../../ts/daoStore";
+  import {
+    councilMembers,
+    daoConfig,
+    membershipContract,
+  } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import truncateEthAddress from "../../../utils/truncateEthereumAddress";
   import yup from "../../../utils/yup";
@@ -40,14 +43,14 @@
   }
 
   async function setMinimumCouncilMembers() {
-    const result: BigNumber = await $membershipContract.minimumCouncilMembers();
-    minimumCouncilMembers = result.toNumber();
+    const result: bigint = await $membershipContract.minimumCouncilMembers();
+    minimumCouncilMembers = Number(result);
   }
 
   function updateCalldata() {
     calls = [
       {
-        target: $membershipContract?.address,
+        target: $daoConfig.membership,
         transferCallData: $membershipContract?.interface.encodeFunctionData(
           "removeCouncilMember",
           [formValues.councilMemberToBeRemoved]

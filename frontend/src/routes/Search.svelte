@@ -52,35 +52,47 @@
     display: flex;
     flex-wrap: wrap;
   }
+  @media screen and (max-width: 600px) {
+    form {
+      flex-direction: column;
+    }
+    form button {
+      margin: 0.5rem 0;
+    }
+    h2,
+    p {
+      word-break: break-word;
+    }
+  }
 </style>
 
 <Navigation>
   <div class="p-2">
     {#if $sponsoredRepos.length > 0}
-      <div class="wrap">
+      <div class="m-2 wrap">
         {#each $sponsoredRepos as repo, key (repo.uuid)}
           <RepoCard {repo} />
         {/each}
       </div>
     {/if}
 
-    <h2 class="p-2 m-2">Find your favorite open-source projects</h2>
-    <p class="p-2 m-2">
+    <h2 class="m-2">Find your favorite open-source projects</h2>
+    <p class="m-2">
       Search for repositories you want to support. Only the GitHub search is
       supported now, but you can enter a full URL (like
       https://gitlab.com/fdroid/fdroiddata) into the field to find a repository
       hosted elsewhere.
     </p>
 
-    <p class="p-2 m-2">You can tag as many repositories as you want.</p>
+    <p class="m-2">You can tag as many repositories as you want.</p>
 
-    <p class="p-2 m-2">
+    <p class="m-2">
       Please note that you need <Link to="/user/payments">credit</Link> on your account
       to support projects. You can still tag them even without any balance, but the
       project will not receive any contributions.
     </p>
 
-    <div class="p-2 m-2">
+    <div class="m-2">
       <form class="flex" on:submit|preventDefault={handleSearch}>
         <input type="text" bind:value={search} />
         <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
@@ -90,7 +102,7 @@
     </div>
 
     {#if searchRepos?.length > 0}
-      <h2 class="m-2 p-2">Results</h2>
+      <h2 class="m-2">Results</h2>
       <div>
         {#each searchRepos as repo, key (repo.uuid)}
           <SearchResult {repo} />

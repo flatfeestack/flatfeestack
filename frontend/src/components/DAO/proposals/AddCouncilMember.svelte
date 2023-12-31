@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { membershipContract } from "../../../ts/daoStore";
+  import { daoConfig, membershipContract } from "../../../ts/daoStore";
   import type { ProposalFormProps } from "../../../types/dao";
   import yup from "../../../utils/yup";
 
@@ -26,7 +26,7 @@
   function updateCalldata() {
     calls = [
       {
-        target: $membershipContract?.address,
+        target: $daoConfig.membership,
         transferCallData: $membershipContract?.interface.encodeFunctionData(
           "addCouncilMember",
           [formValues.proposedCouncilMember]

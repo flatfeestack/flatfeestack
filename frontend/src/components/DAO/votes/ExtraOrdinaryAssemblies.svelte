@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Event } from "ethers";
   import humanizeDuration from "humanize-duration";
   import { daoContract } from "../../../ts/daoStore";
   import { userEthereumAddress } from "../../../ts/ethStore";
@@ -16,6 +15,7 @@
     queueProposal,
   } from "../../../utils/proposalFunctions";
   import VoteButtonGroup from "./VoteButtonGroup.svelte";
+  import type { EventLog } from "ethers";
 
   let extraOrdinaryAssemblyRequests = [];
   export let currentBlockTimestamp: number | null = null;
@@ -66,10 +66,10 @@
           [1, 4, 5].includes(intermediateObject.state)
         )
         .map(async (intermediateObject) => {
-          const proposalEta = await $daoContract.proposalEta(
-            intermediateObject.id
+          const proposalEta = Number(
+            (await $daoContract.proposalEta(intermediateObject.id)) as bigint
           );
-          const event: Event | undefined =
+          const event: EventLog | undefined =
             $votesCasted === null
               ? undefined
               : $votesCasted.find(

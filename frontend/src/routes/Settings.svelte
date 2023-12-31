@@ -118,12 +118,84 @@
     display: flex;
     align-items: center;
   }
+
+  @media screen and (max-width: 600px) {
+    .grid-2 {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .grid-2 p,
+    .grid-2 span,
+    .grid-2 label,
+    .grid-2 input {
+      padding: 0;
+      margin: 0;
+    }
+
+    .grid-2 input {
+      width: 100%;
+      padding: 0.25em;
+    }
+
+    .grid-2 span {
+      margin: 10px 0;
+    }
+
+    .grid-2 label {
+      margin: 15px 0;
+    }
+    table {
+      width: 100%;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    table tr {
+      border-bottom: 3px solid #fff;
+      display: block;
+    }
+
+    table td {
+      border-bottom: 1px solid #fff;
+      display: block;
+      font-size: 0.8em;
+      text-align: right;
+    }
+
+    table td::before {
+      content: attr(data-label);
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    table td:last-child {
+      border-bottom: 0;
+    }
+    table form {
+      display: flex;
+      flex-direction: column;
+    }
+    table form button {
+      margin-top: 15px;
+      margin-left: 0;
+    }
+  }
 </style>
 
 <Navigation>
   <h2 class="p-2 m-2">Account Settings</h2>
   <div class="grid-2">
-    <p class="p-2 m-2 nobreak">Email:&nbsp;</p>
+    <p class="p-2 m-2 nobreak">Email:</p>
     <span class="p-2 m-2">{$user.email}</span>
     <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
     <input
@@ -193,18 +265,21 @@
       <tbody>
         {#each gitEmails as email, key (email.email)}
           <tr>
-            <td>{email.email}</td>
+            <td data-label="Email">{email.email}</td>
 
             {#if email.confirmedAt}
-              <td title={formatDate(new Date(email.confirmedAt))}>
+              <td
+                data-label="Confirmation"
+                title={formatDate(new Date(email.confirmedAt))}
+              >
                 {timeSince(new Date(email.confirmedAt), new Date())} ago
               </td>
             {:else}
-              <td>
+              <td data-label="Confirmation">
                 <Fa icon={faClock} size="md" />
               </td>
             {/if}
-            <td>
+            <td data-label="Delete">
               <button
                 class="accessible-btn"
                 on:click={() => removeEmail(email.email)}
@@ -216,22 +291,20 @@
         {/each}
         <tr>
           <td colspan="3">
-            <div class="container-small">
-              <form class="p-2" on:submit|preventDefault={handleAddEmail}>
-                <input
-                  id="email-input"
-                  name="email"
-                  type="email"
-                  pattern={emailValidationPattern}
-                  required
-                  bind:value={newEmail}
-                  placeholder="Email"
-                />
-                <button class="ml-5 p-2 button1" type="submit"
-                  >Add Git Email
-                </button>
-              </form>
-            </div>
+            <form class="p-2" on:submit|preventDefault={handleAddEmail}>
+              <input
+                id="email-input"
+                name="email"
+                type="email"
+                pattern={emailValidationPattern}
+                required
+                bind:value={newEmail}
+                placeholder="Email"
+              />
+              <button class="ml-5 p-2 button1" type="submit"
+                >Add Git Email
+              </button>
+            </form>
           </td>
         </tr>
       </tbody>

@@ -22,6 +22,17 @@
   }
 </script>
 
+<style>
+  @media screen and (max-width: 600px) {
+    form {
+      margin: 0;
+    }
+    form .container {
+      flex-direction: column;
+    }
+  }
+</style>
+
 <form on:submit|preventDefault={handleSubmit}>
   <div class="container">
     <div class="p-2">
@@ -46,7 +57,7 @@
 {#if paymentResponse}
   <div class="p-2">
     Pay in {formatBalance(
-      paymentResponse.payAmount,
+      BigInt(paymentResponse.payAmount),
       paymentResponse.payCurrency
     )}
     {paymentResponse.payCurrency}

@@ -29,6 +29,14 @@
   });
 </script>
 
+<style>
+  @media screen and (max-width: 600px) {
+    table {
+      width: 100%;
+    }
+  }
+</style>
+
 <Navigation>
   <PaymentSelection />
 
