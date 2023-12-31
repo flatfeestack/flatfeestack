@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.23;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract USDC is ERC20Upgradeable {
-    function initialize() public initializer {
-        __ERC20_init("USDC", "USDC");
-        _mint(msg.sender, 1000 * 10 ** decimals());
+/*
+ * Used for testing only
+ */
+contract USDC is ERC20 {
+    constructor() ERC20("USDC", "USDC") {
+        _mint(msg.sender, 100000 * (10 ** decimals()));
     }
-
     function decimals() public pure override returns (uint8) {
         return 6;
     }
