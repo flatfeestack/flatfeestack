@@ -56,7 +56,19 @@ abstract contract Base is Ownable {
         return totalPayOut - old;
     }
 
-    function sendRecover(address receiver, uint256 amount) external virtual;
+    /**
+     * @dev Send back from contract in case something is wrong. This should rarely happen
+     */
+    function sendRecover(address to, uint256 amount) external onlyOwner {
+        payable(to).transfer(amount);
+    }
+
+    /**
+     * @dev Send back from contract in case something is wrong. This should rarely happen
+     */
+    function sendRecoverToken(address token, address to, uint256 amount) external onlyOwner {
+        SafeERC20.safeTransfer(IERC20(token), to, amount);
+    }
 
     function getBalance(address dev) external view virtual returns (uint256);
 
@@ -74,13 +86,6 @@ contract PayoutEth is Base {
     }
 
     /**
-     * @dev Send back from contract in case something is wrong. This should rarely happen
-     */
-    function sendRecover(address receiver, uint256 amount) external override onlyOwner {
-        payable(receiver).transfer(amount);
-    }
-
-    /**
      * @dev Withdraw the earned amount. The signature has to be created by the contract owner and the signed message
      * is the hash of the concatenation of the account and tea.
      *
@@ -92,7 +97,8 @@ contract PayoutEth is Base {
     function withdraw(address dev, uint256 userId, uint256 totalPayOut, bytes calldata signature
     ) external override {
         uint256 toBePaid = calculateWithdraw(userId, totalPayOut, signature);
-        payable(dev).transfer(toBePaid);
+        (bool success, ) = payable(dev).call{value: toBePaid}("");
+        require(success, "ETH Insufficient Balance");
     }
 }
 
@@ -109,13 +115,6 @@ contract PayoutERC20 is Base {
     }
 
     /**
-     * @dev Send back from contract in case something is wrong. This should rarely happen
-     */
-    function sendRecover(address receiver, uint256 amount) external override onlyOwner {
-        SafeERC20.safeTransfer(token, receiver, amount);
-    }
-
-    /**
      * @dev Withdraw the earned amount. The signature has to be created by the contract owner and the signed message
      * is the hash of the concatenation of the account and tea.
      *
@@ -129,5 +128,3 @@ contract PayoutERC20 is Base {
         SafeERC20.safeTransfer(token, dev, toBePaid);
     }
 }
-
-

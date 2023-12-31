@@ -83,7 +83,7 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
             isCouncilIndex(council1, index1) && 
             isCouncilIndex(council2, index2) && 
             (council1 != council2) || (index1 != index2),
-            "Signature not council or same");
+            "Signature err");
         
         _safeMint(addr, tokenId);
         _delegate(addr, addr);
