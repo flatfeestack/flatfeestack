@@ -26,11 +26,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build HTML
-        run: |
-          docker build . -t bylaws
-          docker run --rm --entrypoint cat bylaws bylaws.html > bylaws.html
-          hash=$(sha256sum bylaws.html | awk '{print $1}')
-          mv bylaws.html bylaws-$(date -r bylaws.md +'%Y-%m-%d')_${hash}.html
+        run: bash build.sh
 
       - name: Commit report
         run: |
