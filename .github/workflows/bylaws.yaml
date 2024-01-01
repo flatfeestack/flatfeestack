@@ -14,6 +14,10 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        #we need to run this in the following directory:
+        working-directory: bylaws
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,10 +27,11 @@ jobs:
 
       - name: Build HTML
         run: |
+          docker build . -t bylaws
           docker run --rm --entrypoint cat bylaws bylaws.html > bylaws.html
           hash=$(sha256sum bylaws.html | awk '{print $1}')
           mv bylaws.html bylaws-$(date -r bylaws.md +'%Y-%m-%d')_${hash}.html
-          
+
       - name: Commit report
         run: |
           git config --global user.name 'Github Runner'
