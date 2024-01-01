@@ -1,0 +1,35 @@
+name: Build bylaws
+
+on:
+  push:
+    paths:
+      - ".github/workflows/bylaws.yaml"
+      - "bylaws/bylaws.md"
+  pull_request:
+    paths:
+      - ".github/workflows/bylaws.yaml"
+      - "bylaws/bylaws.md"
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build HTML
+        run: |
+          docker run --rm --entrypoint cat bylaws bylaws.html > bylaws.html
+          hash=$(sha256sum bylaws.html | awk '{print $1}')
+          mv bylaws.html bylaws-$(date -r bylaws.md +'%Y-%m-%d')_${hash}.html
+          
+      - name: Commit report
+        run: |
+          git config --global user.name 'Github Runner'
+          git config --global user.email 'github-runner@users.noreply.github.com'
+          git commit -am "Automated Bylaws Generator"
+          git push
