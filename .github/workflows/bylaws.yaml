@@ -5,10 +5,14 @@ on:
     paths:
       - ".github/workflows/bylaws.yaml"
       - "bylaws/bylaws.md"
+      - "bylaws/build.sh"
+      - "bylaws/Dockerfile"
   pull_request:
     paths:
       - ".github/workflows/bylaws.yaml"
       - "bylaws/bylaws.md"
+      - "bylaws/build.sh"
+      - "bylaws/Dockerfile"
   workflow_dispatch:
 
 jobs:
