@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
-    "@sveltejs/vite-plugin-svelte": "^2.4.1",
+    "@sveltejs/vite-plugin-svelte": "^2.5.3",
     "@tsconfig/svelte": "^3.0.0",
     "openapi-typescript": "^6.2.7",
     "prettier": "^2.8.8",
