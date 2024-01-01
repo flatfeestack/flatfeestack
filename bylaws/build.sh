@@ -14,5 +14,5 @@ cleanup() {
 
 docker build . -t bylaws:latest
 docker run --rm --entrypoint cat bylaws bylaws.html > bylaws.html
-hash=$(sha256sum bylaws.html | awk '{print $1}')
+hash=$(sha256sum bylaws.md | awk '{print $1}')
 mv bylaws.html bylaws-$(date -r bylaws.md +'%Y-%m-%d')_${hash}.html
