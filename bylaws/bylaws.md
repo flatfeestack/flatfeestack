@@ -1,6 +1,6 @@
 # FlatFeeStack Association Bylaws
 The bylaws as required by the Swiss law for the FlatFeeStack DAO.
-
+ 
 ## Name, Domicil, and Purpose
 
 ### Art. 1 Name
