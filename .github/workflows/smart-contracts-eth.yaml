@@ -5,10 +5,6 @@ on:
     paths:
       - ".github/workflows/smart-contracts-eth.yaml"
       - "smart-contracts-eth/**"
-  pull_request:
-    paths:
-      - ".github/workflows/smart-contracts-eth.yaml"
-      - "smart-contracts-eth/**"
   workflow_dispatch:
 
 jobs:
