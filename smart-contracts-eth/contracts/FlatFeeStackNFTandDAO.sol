@@ -226,7 +226,7 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         /* 
         The width of a slot is 7 days, so if a proposer proposes a vote in the middle of slot 1, 
         the delay will be set that this vote starts at end of slot 2 and beginning of slot 3. This
-        gives a buffer of min 7 days, max ~14 days.
+        gives a buffer of min 7 days, max. 14 days - 1s.
 
         | Slot 1 | Slot 2 | Slot 3 | Slot 4|
 
