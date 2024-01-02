@@ -1,0 +1,41 @@
+name: Build bylaws
+
+on:
+  push:
+    paths:
+      - ".github/workflows/bylaws.yaml"
+      - "bylaws/bylaws.md"
+      - "bylaws/build.sh"
+      - "bylaws/Dockerfile"
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        #we need to run this in the following directory:
+        working-directory: bylaws
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build HTML
+        run: bash build.sh
+
+      - name: Commit report
+        run: |
+          git config --global user.name 'Github Runner'
+          git config --global user.email 'github-runner@users.noreply.github.com'
+          git add -f bylaws*.html
+          if [ -z "$(git status --porcelain)" ]; then 
+            # Working directory clean
+            echo "no changes"
+          else
+            # Uncommitted changes
+            git commit -am "Automated Bylaws Generator"
+            git push
+          fi

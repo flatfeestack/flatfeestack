@@ -1,30 +1,19 @@
 {
-  "name": "dao",
-  "description": "Code for the FlatFeeStack DAO",
   "devDependencies": {
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
-    "@openzeppelin/contracts": "4.8.3",
-    "@openzeppelin/contracts-upgradeable": "4.8.3",
-    "@openzeppelin/hardhat-upgrades": "^1.28.0",
-    "dotenv": "^16.2.0",
-    "envfile": "^6.18.0",
-    "hardhat": "^2.15.0",
-    "hardhat-deploy": "^0.11.30",
-    "hardhat-deploy-ethers": "^0.3.0-beta.13",
-    "prettier": "^2.8.8",
-    "prettier-plugin-solidity": "^1.1.3",
-    "solhint": "^3.4.1",
-    "solidity-coverage": "^0.8.2"
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "chai": "^4.3.10",
+    "hardhat": "^2.19.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "ethers": "^6.9.1",
+    "solidity-coverage": "^0.8.5"
   },
   "scripts": {
     "hardhat:test": "hardhat test",
-    "hardhat:compile": "hardhat compile",
-    "hardhat:coverage": "hardhat coverage",
-    "hardhat:deploy": "hardhat deploy",
-    "hardhat:script": "hardhat run",
-    "lint": "solhint 'contracts/**/*.sol'",
-    "prettify": "prettier --write .",
-    "prettify:check": "prettier --check ."
+    "hardhat:compile": "hardhat compile"
   }
 }
