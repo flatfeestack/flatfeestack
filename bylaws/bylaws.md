@@ -138,4 +138,4 @@ The dissolution of FlatFeeStack DAO can be adopted with a proposal (`propose`, `
 ## Final Provisions
 ### Art. 22 Entry into Force
 
-These Articles are based on the initial contract creation of DD.MM.YYYY. They enter into force immediately.
+These Articles are based on the initial contract creation of DD.MM.2024. They enter into force immediately.
