@@ -4,9 +4,8 @@ on:
   push:
     paths:
       - ".github/workflows/bylaws.yaml"
-      - "bylaws/bylaws.md"
-      - "bylaws/build.sh"
-      - "bylaws/Dockerfile"
+      - "bylaws/**"
+      - "!bylaws/bylaws*.html"
   workflow_dispatch:
 
 jobs:
