@@ -2,7 +2,7 @@ package api
 
 import (
 	db "backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -24,14 +24,14 @@ func Invitations(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	invites, err := db.FindInvitationsByAnyEmail(user.Email)
 	if err != nil {
 		log.Errorf("ERR-invite-06, failed to find invitations by email: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops there was a problem with retrieving the invitations. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops there was a problem with retrieving the invitations. Please try again.")
 		return
 	}
 
 	oauthEnc, err := json.Marshal(invites)
 	if err != nil {
 		log.Errorf("ERR-oauth-08, cannot verify refresh token %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	w.Write(oauthEnc)
@@ -43,13 +43,13 @@ func InviteByDelete(w http.ResponseWriter, r *http.Request, user *db.UserDetail)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
 		log.Errorf("ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
-		utils.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
+		util.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
 		return
 	}
 	err = db.DeleteInvite(email, user.Email)
 	if err != nil {
 		log.Errorf("ERR-invite-06, failed to delete invitation: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, InviteDeleteError)
+		util.WriteErrorf(w, http.StatusBadRequest, InviteDeleteError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -60,13 +60,13 @@ func InviteMyDelete(w http.ResponseWriter, r *http.Request, user *db.UserDetail)
 	email, err := url.QueryUnescape(vars["email"])
 	if err != nil {
 		log.Errorf("ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
-		utils.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
+		util.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
 		return
 	}
 	err = db.DeleteInvite(user.Email, email)
 	if err != nil {
 		log.Errorf("ERR-invite-06, insert user failed: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, InviteDeleteError)
+		util.WriteErrorf(w, http.StatusBadRequest, InviteDeleteError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -76,10 +76,10 @@ func ConfirmInvite(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 	m := mux.Vars(r)
 	email := m["email"]
 
-	err := db.UpdateConfirmInviteAt(email, user.Email, utils.TimeNow())
+	err := db.UpdateConfirmInviteAt(email, user.Email, util.TimeNow())
 	if err != nil {
 		log.Errorf("cannot confirm invite: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
+		util.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
 		return
 	}
 
@@ -87,14 +87,14 @@ func ConfirmInvite(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 	sponsor, err := db.FindUserByEmail(email)
 	if err != nil {
 		log.Errorf("cannot find user by email: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
+		util.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
 		return
 	}
 
 	err = db.UpdateUserInviteId(user.Id, sponsor.Id)
 	if err != nil {
 		log.Errorf("cannot update user invite: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
+		util.WriteErrorf(w, http.StatusBadRequest, InviteConfirmError)
 		return
 	}
 }
@@ -105,21 +105,21 @@ func InviteOther(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	if email == user.Email {
 		log.Errorf("User %v tried to invite themselves, not possible.", user.Email)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong. You aren't able to invite yourself.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong. You aren't able to invite yourself.")
 		return
 	}
 
 	err := validateEmail(email)
 	if err != nil {
 		log.Errorf("email address not valid %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong. Please check the entered email address and try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong. Please check the entered email address and try again.")
 		return
 	}
 	inviteId := uuid.New()
-	err = db.InsertInvite(inviteId, user.Email, email, utils.TimeNow())
+	err = db.InsertInvite(inviteId, user.Email, email, util.TimeNow())
 	if err != nil {
 		log.Errorf("ERR-invite-06, insert invite failed: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while creating the invitation. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while creating the invitation. Please try again.")
 		return
 	}
 }

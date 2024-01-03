@@ -2,7 +2,7 @@ package api
 
 import (
 	"backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -61,7 +61,7 @@ func insertTestUser(t *testing.T, email string) *db.UserDetail {
 	}
 	ud := db.UserDetail{
 		User:     u,
-		StripeId: utils.StringPointer("strip-id"),
+		StripeId: util.StringPointer("strip-id"),
 	}
 
 	err := db.InsertUser(&ud)

@@ -1,5 +1,0 @@
-{{ .Title "Payout" "big" 0 }}
-GoVersion: {{ .GoVersion }}, GOOS: {{ .GOOS }}, GOARCH: {{ .GOARCH }}, NumCPU: {{ .NumCPU }}
-GOROOT: {{ .GOROOT }}, PORT: {{ .Env "PORT" }}, ENV: {{ .Env "ENV" }}
-Compiler: {{ .Compiler }}, Start time: {{ .Now "2006/01/02 15:04:05" }}
-===============================================

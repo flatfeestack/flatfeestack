@@ -2,7 +2,7 @@ package api
 
 import (
 	"backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -19,26 +19,26 @@ func GetUserById(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Errorf("Invalid user ID: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	}
 
 	user, err := db.FindPublicUserById(convertedUserId)
 
 	if user == nil {
 		log.Errorf("User not found %s", userId)
-		utils.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 	} else if err != nil {
 		log.Errorf("Could not fetch user: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 	} else {
-		utils.WriteJson(w, user)
+		util.WriteJson(w, user)
 	}
 
 	return
 }
 
 func GetMyUser(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
-	utils.WriteJson(w, user)
+	util.WriteJson(w, user)
 }
 
 func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
@@ -47,7 +47,7 @@ func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	err := db.UpdateStripe(user)
 	if err != nil {
 		log.Errorf("Could not delete method: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -55,7 +55,7 @@ func DeleteMethod(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	if user.StripeId == nil {
 		log.Errorf("Stripe ID is missing on user with email %v, something went wrong in the setup workflow", user.Email)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -69,7 +69,7 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	)
 	if err != nil {
 		log.Errorf("Could not update retrieve payment method: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -78,7 +78,7 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	})
 	if err != nil {
 		log.Errorf("Could not attach payment method to Stripe user: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -86,11 +86,11 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err = db.UpdateStripe(user)
 	if err != nil {
 		log.Errorf("Could not update stripe method: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
-	utils.WriteJson(w, user)
+	util.WriteJson(w, user)
 }
 
 func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
@@ -99,7 +99,7 @@ func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err := db.UpdateUserName(user.Id, a)
 	if err != nil {
 		log.Errorf("Could not save name: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not save username. Please try again.")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not save username. Please try again.")
 		return
 	}
 }
@@ -108,7 +108,7 @@ func ClearName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err := db.ClearUserName(user.Id)
 	if err != nil {
 		log.Errorf("Could not clear username: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not clear username. Please try again.")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not clear username. Please try again.")
 		return
 	}
 }
@@ -118,14 +118,14 @@ func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err := json.NewDecoder(r.Body).Decode(&img)
 	if err != nil {
 		log.Errorf("Could not decode json: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = db.UpdateUserImage(user.Id, img.Image)
 	if err != nil {
 		log.Errorf("Could not update user image: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not update user image. Please try again")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not update user image. Please try again")
 		return
 	}
 }
@@ -134,7 +134,7 @@ func DeleteImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err := db.DeleteUserImage(user.Id)
 	if err != nil {
 		log.Errorf("Could not delete user image: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Could not delete user image. Please try again")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not delete user image. Please try again")
 		return
 	}
 }
@@ -143,10 +143,10 @@ func Users(w http.ResponseWriter, _ *http.Request, _ string) {
 	u, err := db.FindAllEmails()
 	if err != nil {
 		log.Errorf("Could not fetch users: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not fetch users. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Could not fetch users. Please try again.")
 		return
 	}
-	utils.WriteJson(w, u)
+	util.WriteJson(w, u)
 }
 
 func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
@@ -159,7 +159,7 @@ func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
 	u := db.User{
 		Email:     n,
 		Id:        uid,
-		CreatedAt: utils.TimeNow(),
+		CreatedAt: util.TimeNow(),
 	}
 	ud := db.UserDetail{
 		User: u,
@@ -168,15 +168,15 @@ func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
 	err := db.InsertUser(&ud)
 	if err != nil {
 		log.Errorf("Could insert fake user: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Could not insert user. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Could not insert user. Please try again.")
 		return
 	}
 
 	id := uuid.New()
-	err = db.InsertGitEmail(id, uid, n, nil, utils.TimeNow())
+	err = db.InsertGitEmail(id, uid, n, nil, util.TimeNow())
 	if err != nil {
 		log.Errorf("Could not insert git email: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "There is a problem with your git email. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "There is a problem with your git email. Please try again.")
 		return
 	}
 }
@@ -186,21 +186,21 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 	u := m["uuid"]
 	if u == "" {
 		log.Errorf("Parameter hours not set: %v", m)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter not set. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Parameter not set. Please try again.")
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
 		log.Errorf("Could not parse UUID: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	user, err := db.FindUserById(uu)
 	if err != nil {
 		log.Errorf("Could not find user by id: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -213,22 +213,22 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 		User:  user2,
 		Image: user.Image,
 	}
-	utils.WriteJson(w, user2D)
+	util.WriteJson(w, user2D)
 }
 
 func GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	email := m["email"]
 	if email == "" {
-		utils.WriteErrorf(w, http.StatusBadRequest, "Parameter email not set: %v", m)
+		util.WriteErrorf(w, http.StatusBadRequest, "Parameter email not set: %v", m)
 		return
 	}
 
 	user, err := db.FindUserByEmail(email)
 	if err != nil {
-		utils.WriteErrorf(w, http.StatusNoContent, "Could not find user: %v", err)
+		util.WriteErrorf(w, http.StatusNoContent, "Could not find user: %v", err)
 		return
 	}
 
-	utils.WriteJson(w, user)
+	util.WriteJson(w, user)
 }

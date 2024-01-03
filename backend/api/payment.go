@@ -1,12 +1,17 @@
 package api
 
 import (
-	"backend/clients"
 	"backend/db"
-	"backend/utils"
+	"backend/pkg/config"
+	"backend/pkg/util"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	log "github.com/sirupsen/logrus"
 	"math/big"
 	"net/http"
@@ -46,6 +51,14 @@ const (
 	PayoutError       = "Oops something went wrong with the payout. Please try again."
 )
 
+type ResourceHandler struct {
+	Config *config.Config
+}
+
+func NewResourceHandler(cfg *config.Config) *ResourceHandler {
+	return &ResourceHandler{Config: cfg}
+}
+
 func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 	log.Printf("fake payment")
 	m := mux.Vars(r)
@@ -55,14 +68,14 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 	u, err := db.FindUserByEmail(n)
 	if err != nil {
 		log.Errorf("Error while finding user by email: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
+		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		log.Errorf("Error while parsing int: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	e := uuid.New()
@@ -81,14 +94,14 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
 	err = db.InsertPayInEvent(payInEvent)
 	if err != nil {
 		log.Errorf("Error with inserting pay in event: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
+		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = db.PaymentSuccess(e, big.NewInt(1))
 	if err != nil {
 		log.Errorf("Error with payment success: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
+		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
@@ -134,7 +147,7 @@ func CancelSub(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	err := db.UpdateSeatsFreq(user.Id, user.Seats, 0)
 	if err != nil {
 		log.Errorf("Could not cancel subscription: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while canceling the subscription. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while canceling the subscription. Please try again.")
 		return
 	}
 }
@@ -143,33 +156,26 @@ func StatusSponsoredUsers(w http.ResponseWriter, _ *http.Request, user *db.UserD
 	userStatus, err := db.FindSponsoredUserBalances(user.Id)
 	if err != nil {
 		log.Errorf("Error while finding sponsored user balances: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(userStatus)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
 
-func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func (h *ResourceHandler) RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	m := mux.Vars(r)
 	targetCurrency := m["targetCurrency"]
-
-	currencyMetadata, ok := utils.SupportedCurrencies[targetCurrency]
-	if !ok {
-		log.Errorf("Unsupported currency requested")
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with the selected currency. Please try again.")
-		return
-	}
 
 	ownContributionIds, err := db.FindOwnContributionIds(user.Id, targetCurrency)
 	if err != nil {
 		log.Errorf("Error while trying to retrieve own contribution ids: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
+		util.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
 
@@ -179,39 +185,26 @@ func RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) 
 	totalEarnedAmount, err := db.SumTotalEarnedAmountForContributionIds(ownContributionIds)
 	if err != nil {
 		log.Errorf("Unable to retrieve already earned amount in target currency: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
+		util.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
 
-	signature, err := clients.RequestPayout(user.Id, totalEarnedAmount, currencyMetadata.PayoutName)
-	if err != nil {
-		log.Errorf("Error when generating signature: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
-		return
-	}
-
-	err = db.MarkContributionAsClaimed(ownContributionIds)
-	if err != nil {
-		log.Errorf("Error when marking contributions as claimed: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PayoutError)
-		return
-	} else {
-		utils.WriteJson(w, signature)
-	}
+	signature, err := SignETH(h.Config.ETHPrivateKey, h.Config.ETHContractAddress, user.Id, totalEarnedAmount)
+	util.WriteJson(w, signature)
 }
 
 func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	payInEvents, err := db.FindPayInUser(user.Id)
 	if err != nil {
 		log.Errorf("Error while finding pay in user: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, PaymentError)
+		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(payInEvents)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -220,7 +213,7 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
 	if err != nil {
 		log.Errorf("Error while finding sum payments by currency: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
@@ -228,14 +221,14 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	mFut, err := db.FindSumFutureSponsors(user.Id)
 	if err != nil {
 		log.Errorf("Error while finding sum future sponsors: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 	//or the user spent it on for a repo with a dev who can claim
 	mSub, err := db.FindSumDailySponsors(user.Id)
 	if err != nil {
 		log.Errorf("Error while finding sum daily sponsors: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
@@ -260,14 +253,14 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	for currency, balance := range mSub {
 		if balance.Cmp(big.NewInt(0)) != 0 {
 			log.Errorf("Something is off with: %v", currency)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
 	for currency, balance := range mFut {
 		if balance.Cmp(big.NewInt(0)) != 0 {
 			log.Errorf("Something is off with: %v", currency)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
@@ -275,8 +268,65 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err = json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
+}
+
+func SignNeo(privateKeyHex string, userId uuid.UUID, amount *big.Int) (string, error) {
+	privateKey, err := keys.NewPrivateKeyFromWIF(privateKeyHex)
+	if err != nil {
+		return "", err
+	}
+
+	ownerIdBytes, _ := userId.MarshalBinary()
+	teaArray := amount.Bytes()
+	for i := 0; i < len(teaArray)/2; i++ {
+		opp := len(teaArray) - 1 - i
+		teaArray[i], teaArray[opp] = teaArray[opp], teaArray[i]
+	}
+	message := append(ownerIdBytes, teaArray...)
+	signature := privateKey.Sign(message)
+
+	return hex.EncodeToString(signature), nil
+}
+
+func SignETH(privateKeyHex string, contractAddress string, userId uuid.UUID, amount *big.Int) (string, error) {
+	var arguments abi.Arguments
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.AddressTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.UintTy, Size: 256},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.StringTy},
+	})
+	arguments = append(arguments, abi.Argument{
+		Type: abi.Type{T: abi.UintTy, Size: 256},
+	})
+
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", err
+	}
+
+	encodedUserId := [32]byte(crypto.Keccak256([]byte(userId.String())))
+	packed, err := arguments.Pack(contractAddress, "calculateWithdraw", encodedUserId, "#", amount)
+	hashRaw := crypto.Keccak256(packed)
+
+	// Add Ethereum Signed Message prefix to hash
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	prefixedHash := crypto.Keccak256(append(prefix, hashRaw[:]...))
+
+	signature, err := crypto.Sign(prefixedHash[:], privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(signature), nil
 }

@@ -3,7 +3,7 @@ package api
 import (
 	clnt "backend/clients"
 	db "backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -40,22 +40,22 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	id, err := uuid.Parse(params["id"])
 	if err != nil {
 		log.Errorf("Not a valid id %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	repo, err := db.FindRepoById(id)
 	if repo == nil {
 		log.Errorf("Could not find repo with id %v", id)
-		utils.WriteErrorf(w, http.StatusNotFound, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusNotFound, RepositoryNotFoundErrorMessage)
 		return
 	}
 	if err != nil {
 		log.Errorf("Could not fetch DB %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
-	utils.WriteJson(w, repo)
+	util.WriteJson(w, repo)
 }
 
 func TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
@@ -63,7 +63,7 @@ func TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		log.Errorf("Not a valid id %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	tagRepo0(w, user, repoId, db.Active)
@@ -74,7 +74,7 @@ func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		log.Errorf("Not a valid id %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	tagRepo0(w, user, repoId, db.Inactive)
@@ -85,7 +85,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
 		log.Errorf("Not a valid id %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	contributions, err := db.FindRepoContribution(repoId)
@@ -95,7 +95,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	offset, err := strconv.Atoi(offsetString)
 	if err != nil {
 		log.Errorf("Not a valid id %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -128,8 +128,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 				continue
 			}
 			d.Label = v.GitEmail + ";" + string(names)
-			d.BackgroundColor = utils.GetColor1(v.GitEmail)
-			d.BorderColor = utils.GetColor1(v.GitEmail)
+			d.BackgroundColor = util.GetColor1(v.GitEmail)
+			d.BorderColor = util.GetColor1(v.GitEmail)
 			d.PointBorderWidth = 3
 			perDay[v.GitEmail] = d
 		}
@@ -143,18 +143,18 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	data.Days = days
 	data.Datasets = m
 
-	utils.WriteJson(w, data)
+	util.WriteJson(w, data)
 }
 
 func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
 	repo, err := db.FindRepoById(repoId)
 	if err != nil {
 		log.Errorf("Could not find repo: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
 
-	now := utils.TimeNow()
+	now := util.TimeNow()
 	event := db.SponsorEvent{
 		Id:          uuid.New(),
 		Uid:         user.Id,
@@ -173,7 +173,7 @@ func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newE
 	err = db.InsertOrUpdateSponsor(&event)
 	if err != nil {
 		log.Errorf("Could not save to DB: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -197,18 +197,18 @@ func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newE
 		//check if others are using it, otherwise disable fetching the metrics
 	}
 
-	utils.WriteJson(w, repo)
+	util.WriteJson(w, repo)
 }
 
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
 		log.Errorf("Could not get repos: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
 
-	utils.WriteJson(w, repos)
+	util.WriteJson(w, repos)
 }
 
 func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
@@ -216,16 +216,16 @@ func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	log.Infof("query %v", q)
 	if q == "" {
 		log.Errorf("Empty search")
-		utils.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
 		return
 	}
 	repos, err := db.FindReposByName(q)
 	if err != nil {
 		log.Errorf("Could not fetch repos: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
-	utils.WriteJson(w, repos)
+	util.WriteJson(w, repos)
 }
 
 func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
@@ -233,30 +233,30 @@ func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	log.Infof("query %v", q)
 	if q == "" {
 		log.Errorf("Empty search")
-		utils.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
 		return
 	}
 
 	var repos []db.Repo
 
-	name := utils.IsValidUrl(q)
+	name := util.IsValidUrl(q)
 
 	if name != nil {
 		repoId := uuid.New()
 		repo := &db.Repo{
 			Id:          repoId,
-			Url:         utils.StringPointer(q),
-			GitUrl:      utils.StringPointer(q),
+			Url:         util.StringPointer(q),
+			GitUrl:      util.StringPointer(q),
 			Name:        name,
-			Description: utils.StringPointer("n/a"),
+			Description: util.StringPointer("n/a"),
 			Score:       0,
-			Source:      utils.StringPointer("user-url"),
-			CreatedAt:   utils.TimeNow(),
+			Source:      util.StringPointer("user-url"),
+			CreatedAt:   util.TimeNow(),
 		}
 		err := db.InsertOrUpdateRepo(repo)
 		if err != nil {
 			log.Errorf("Error while insert/update repo: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		repos = append(repos, *repo)
@@ -265,7 +265,7 @@ func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	ghRepos, err := clnt.FetchGithubRepoSearch(q)
 	if err != nil {
 		log.Errorf("Could not fetch repos: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
 
@@ -275,27 +275,27 @@ func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 		nr, err := v.Score.Float64()
 		if err != nil {
 			log.Errorf("Could not create score: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		repo := &db.Repo{
 			Id:          repoId,
-			Url:         utils.StringPointer(v.Url),
-			GitUrl:      utils.StringPointer(v.GitUrl),
-			Name:        utils.StringPointer(v.Name),
-			Description: utils.StringPointer(v.Description),
+			Url:         util.StringPointer(v.Url),
+			GitUrl:      util.StringPointer(v.GitUrl),
+			Name:        util.StringPointer(v.Name),
+			Description: util.StringPointer(v.Description),
 			Score:       uint32(nr),
-			Source:      utils.StringPointer("github"),
-			CreatedAt:   utils.TimeNow(),
+			Source:      util.StringPointer("github"),
+			CreatedAt:   util.TimeNow(),
 		}
 		err = db.InsertOrUpdateRepo(repo)
 		if err != nil {
 			log.Errorf("Error while insert/update repo: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		repos = append(repos, *repo)
 	}
 
-	utils.WriteJson(w, repos)
+	util.WriteJson(w, repos)
 }

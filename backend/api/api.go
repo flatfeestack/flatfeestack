@@ -1,7 +1,7 @@
 package api
 
 import (
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -135,20 +135,20 @@ func InitApi(stripeAPIPublicKey0 string, env0 string) {
 }
 
 func ServerTime(w http.ResponseWriter, _ *http.Request, _ string) {
-	currentTime := utils.TimeNow()
-	utils.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(utils.SecondsAdd)+`}`)
+	currentTime := util.TimeNow()
+	util.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(util.SecondsAdd)+`}`)
 }
 
 func Config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(Plans)
-	supportedCurrencies, err := json.Marshal(utils.SupportedCurrencies)
+	supportedCurrencies, err := json.Marshal(util.SupportedCurrencies)
 	if err != nil {
 		log.Errorf("Error while writing json: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
-	utils.WriteJsonStr(w, `{
+	util.WriteJsonStr(w, `{
 			"stripePublicApi":"`+stripeAPIPublicKey+`",
             "plans": `+string(b)+`,
 			"env":"`+env+`",
@@ -161,19 +161,19 @@ func TimeWarp(w http.ResponseWriter, r *http.Request, _ string) {
 	h := m["hours"]
 	if h == "" {
 		log.Errorf("Parameter hours not set: %v", m)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
 		log.Errorf("Error while parsing hours to int: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	seconds := hours * 60 * 60
-	utils.SecondsAdd += seconds
-	log.Printf("time warp: %v", utils.TimeNow())
+	util.SecondsAdd += seconds
+	log.Printf("time warp: %v", util.TimeNow())
 }
 
 func lang(r *http.Request) string {

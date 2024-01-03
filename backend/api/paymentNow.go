@@ -3,7 +3,7 @@ package api
 import (
 	clnt "backend/clients"
 	db "backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha512"
@@ -71,7 +71,7 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
 		log.Errorf("Cannot get payment information for now payments: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with retrieving the payment information. Please try again.")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with retrieving the payment information. Please try again.")
 		return
 	}
 
@@ -88,7 +88,7 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		Status:     db.PayInRequest,
 		Seats:      seats,
 		Freq:       freq,
-		CreatedAt:  utils.TimeNow(),
+		CreatedAt:  util.TimeNow(),
 	}
 
 	err = db.InsertPayInEvent(payInEvent)
@@ -105,7 +105,7 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	if err != nil {
 		log.Errorf("could not create payment: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with creating the payment. Please try again.")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with creating the payment. Please try again.")
 		return
 	}
 
@@ -121,7 +121,7 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	err = json.NewEncoder(w).Encode(paymentResponse2)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -191,7 +191,7 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Errorf("Could not read body: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -200,7 +200,7 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 	err = verifyNowWebhook(body, nowSignature)
 	if err != nil {
 		log.Errorf("Wrong signature: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -208,13 +208,13 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Errorf("Could not parse webhook data: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
 	if data.OrderId == nil {
 		log.Errorf("No orderId set for WebhookResponse")
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -223,7 +223,7 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Errorf("Error while finding pay in external: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -232,32 +232,32 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 		err = db.PaymentSuccess(externalId, big.NewInt(0))
 		if err != nil {
 			log.Errorf("Could not process now payment success: %v", err)
-			utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 			return
 		}
 		clnt.SendPaymentNowFinished(payInEvent.UserId, data)
 	case "partially_paid":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInPartially
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowPartially(payInEvent.UserId, data)
 	case "expired":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInExpired
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowRefunded(payInEvent.UserId, "expired", externalId)
 	case "failed":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInFailed
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowRefunded(payInEvent.UserId, "failed", externalId)
 	case "refunded":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInRefunded
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
 		clnt.SendPaymentNowRefunded(payInEvent.UserId, "refunded", externalId)
 	default:
@@ -267,7 +267,7 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func minCrypto(currency string, balance float64) (*big.Int, error) {
-	i, err := utils.GetFactor(currency)
+	i, err := util.GetFactor(currency)
 	if err != nil {
 		return nil, err
 	}

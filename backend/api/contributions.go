@@ -2,7 +2,7 @@ package api
 
 import (
 	db "backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -19,20 +19,20 @@ func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDeta
 	cs, err := db.FindContributions(user.Id, false)
 	if err != nil {
 		log.Errorf("Could not find contributions: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
+		util.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
-	utils.WriteJson(w, cs)
+	util.WriteJson(w, cs)
 }
 
 func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, true)
 	if err != nil {
 		log.Errorf("Could not find contributions: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
+		util.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
-	utils.WriteJson(w, cs)
+	util.WriteJson(w, cs)
 }
 
 func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
@@ -40,21 +40,21 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 	u := m["uuid"]
 	if u == "" {
 		log.Errorf("UUID Parameter not set: %v", m)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
 		log.Errorf("Problem with parsing UUID: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	user, err := db.FindUserById(uu)
 	if err != nil {
 		log.Errorf("Could not find user: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with retrieving the user. Please try again.")
+		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with retrieving the user. Please try again.")
 		return
 	}
 
@@ -65,7 +65,7 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
 		log.Errorf("Could not find sponsored repos by user: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
 
@@ -74,7 +74,7 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 		repoBalances, err := db.FindSumFutureBalanceByRepoId(v.Id)
 		if err != nil {
 			log.Errorf("Could not find sum of future balance by repo id: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 			return
 		}
 		rbs = append(rbs, db.RepoBalance{
@@ -83,7 +83,7 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 		})
 	}
 
-	utils.WriteJson(w, rbs)
+	util.WriteJson(w, rbs)
 }
 
 func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
@@ -91,27 +91,27 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
 		log.Errorf("Error while decoding body: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	monthStart, err := time.Parse("2006-01-02 15:04", repoMap.StartData)
 	if err != nil {
 		log.Errorf("Error while parsing start date: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	monthStop, err := time.Parse("2006-01-02 15:04", repoMap.EndData)
 	if err != nil {
 		log.Errorf("Error while parsing end date: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	repoMap2, err := db.FindReposByName(repoMap.Name)
 	if err != nil {
 		log.Errorf("Error while retrieving repos by name: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
 
@@ -128,18 +128,18 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
 		GitUrl:   "test",
 	}
 
-	err = db.InsertAnalysisRequest(a, utils.TimeNow())
+	err = db.InsertAnalysisRequest(a, util.TimeNow())
 	if err != nil {
 		log.Errorf("Error while inserting analysis request: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	for _, v := range repoMap.Weights {
-		err = db.InsertAnalysisResponse(a.Id, v.Email, v.Names, v.Weight, utils.TimeNow())
+		err = db.InsertAnalysisResponse(a.Id, v.Email, v.Names, v.Weight, util.TimeNow())
 		if err != nil {
 			log.Errorf("Error while inserting analysis response: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}

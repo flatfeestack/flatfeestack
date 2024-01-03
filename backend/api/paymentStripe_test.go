@@ -2,7 +2,7 @@ package api
 
 import (
 	"backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -167,7 +167,7 @@ func generateWebhookPayload(userId string, externalId string, eventType string) 
 	metadata["fee"] = strconv.FormatInt(40, 10)
 
 	paymentIntent := stripe.PaymentIntent{
-		Amount:   utils.UsdBaseToCent(Plans[1].PriceBase),
+		Amount:   util.UsdBaseToCent(Plans[1].PriceBase),
 		Metadata: metadata,
 	}
 

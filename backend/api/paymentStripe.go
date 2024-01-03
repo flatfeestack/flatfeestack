@@ -3,7 +3,7 @@ package api
 import (
 	clnt "backend/clients"
 	db "backend/db"
-	"backend/utils"
+	"backend/pkg/util"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -42,14 +42,14 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 		c, err := customer.New(params)
 		if err != nil {
 			log.Errorf("Error while creating new customer: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		user.StripeId = &c.ID
 		err = db.UpdateStripe(user)
 		if err != nil {
 			log.Errorf("Error while updating stripe: %v", err)
-			utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
@@ -62,7 +62,7 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	intent, err := setupintent.New(params)
 	if err != nil {
 		log.Errorf("Error while creating setup intent: %v", err)
-		utils.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
@@ -71,7 +71,7 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -79,7 +79,7 @@ func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	if user.PaymentMethod == nil {
 		log.Errorf("No payment method defined for user: %v", user.Id)
-		utils.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong, no payment method set. Please try again.")
+		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong, no payment method set. Please try again.")
 		return
 	}
 
@@ -90,7 +90,7 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 		return
 	}
 
-	cents := utils.UsdBaseToCent(plan.PriceBase) * seats
+	cents := util.UsdBaseToCent(plan.PriceBase) * seats
 
 	params := &stripe.PaymentIntentParams{
 		Amount:           stripe.Int64(int64(cents)),
@@ -110,7 +110,7 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 		Status:     db.PayInRequest,
 		Seats:      seats,
 		Freq:       freq,
-		CreatedAt:  utils.TimeNow(),
+		CreatedAt:  util.TimeNow(),
 	}
 
 	err = db.InsertPayInEvent(payInEvent)
@@ -129,7 +129,7 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 	intent, err := paymentintent.New(params)
 	if err != nil {
 		log.Errorf("Error while creating new Payment intent: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
@@ -139,7 +139,7 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
 		log.Errorf("Could not encode json: %v", err)
-		utils.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 }
@@ -152,7 +152,7 @@ func StripePaymentRecurring(user db.UserDetail) error {
 	}
 
 	plan := findPlan(freq)
-	cents := utils.UsdBaseToCent(plan.PriceBase) * seats
+	cents := util.UsdBaseToCent(plan.PriceBase) * seats
 
 	params := &stripe.PaymentIntentParams{
 		Amount:        stripe.Int64(cents),
@@ -172,7 +172,7 @@ func StripePaymentRecurring(user db.UserDetail) error {
 		Status:     db.PayInRequest,
 		Seats:      seats,
 		Freq:       freq,
-		CreatedAt:  utils.TimeNow(),
+		CreatedAt:  util.TimeNow(),
 	}
 
 	err = db.InsertPayInEvent(payInEvent)
@@ -264,7 +264,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInAction
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)
 		if err != nil {
 			log.Printf("insert payin does not exist: %v, %v\n", externalId, err)
@@ -298,7 +298,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInMethod
-		payInEvent.CreatedAt = utils.TimeNow()
+		payInEvent.CreatedAt = util.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)
 		if err != nil {
 			log.Printf("insert payin does not exist: %v, %v\n", externalId, err)
@@ -362,7 +362,7 @@ func parseStripeData(data json.RawMessage) (uuid.UUID, int64, error) {
 		return uuid.Nil, 0, fmt.Errorf("userId do not match: %v != %v", uid, payInEvent.UserId)
 	}
 
-	balance := big.NewInt(utils.UsdCentToBase(pi.Amount))
+	balance := big.NewInt(util.UsdCentToBase(pi.Amount))
 	if payInEvent.Balance.Cmp(balance) != 0 {
 		return uuid.Nil, 0, fmt.Errorf("balance do not match: %v != %v", balance, payInEvent.Balance)
 	}
