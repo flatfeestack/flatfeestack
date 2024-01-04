@@ -9,8 +9,8 @@ dependencies:
     specifier: ^2.0.0
     version: 2.0.0
   '@stripe/stripe-js':
-    specifier: ^1.54.0
-    version: 1.54.0
+    specifier: ^1.54.2
+    version: 1.54.2
   chart.js:
     specifier: ^4.3.0
     version: 4.3.0
@@ -393,8 +393,8 @@ packages:
     resolution: {integrity: sha512-a5Sab1C4/icpTZVzZc5Ghpz88yQtGOyNqYXcZgOssB2uuAr+wF/MvN6bgtW32q7HHrvBki+BsZ0OuNv6EV3K9g==}
     dev: true
 
-  /@stripe/stripe-js@1.54.0:
-    resolution: {integrity: sha512-nElTXkS+nMfDNMkWfLmyeqHQfMGJ1JjrjAVMibV61Oc/rYdUv0cKRYCi1l4ivZ5SySB3vQLcLolxbKBkbNznZA==}
+  /@stripe/stripe-js@1.54.2:
+    resolution: {integrity: sha512-R1PwtDvUfs99cAjfuQ/WpwJ3c92+DAMy9xGApjqlWQMj0FKQabUAys2swfTRNzuYAYJh7NqK2dzcYVNkKLEKUg==}
     dev: false
 
   /@sveltejs/vite-plugin-svelte-inspector@1.0.2(@sveltejs/vite-plugin-svelte@2.4.1)(svelte@3.59.1)(vite@4.3.9):
@@ -1309,7 +1309,7 @@ packages:
   /svelte-stripe@0.0.22:
     resolution: {integrity: sha512-ZLt55XNWrytsMfaMUUxEknLjphYWqhRkRNcHmmkp7gbENKSB8rp6o6hZP5zWEoUGwYNiPGqpM/DgbXy27BdVIQ==}
     dependencies:
-      '@stripe/stripe-js': 1.54.0
+      '@stripe/stripe-js': 1.54.2
     dev: false
 
   /svelte2tsx@0.1.193(svelte@3.59.1)(typescript@5.1.3):
