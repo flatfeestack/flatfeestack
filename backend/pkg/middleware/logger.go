@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"bytes"
@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-//https://husobee.github.io/golang/ip-address/2015/12/17/remote-ip-go.html
-//ipRange - a structure that holds the start and end of a range of ip addresses
+// https://husobee.github.io/golang/ip-address/2015/12/17/remote-ip-go.html
+// ipRange - a structure that holds the start and end of a range of ip addresses
 type ipRange struct {
 	start net.IP
 	end   net.IP
@@ -58,8 +58,8 @@ type HTTPReqInfo struct {
 	userAgent string
 }
 
-//https://presstige.io/p/Logging-HTTP-requests-in-Go-233de7fe59a747078b35b82a1b035d36
-func logRequestHandler(h http.Handler) http.Handler {
+// https://presstige.io/p/Logging-HTTP-requests-in-Go-233de7fe59a747078b35b82a1b035d36
+func LogRequestHandler(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		ri := &HTTPReqInfo{
 			method:    r.Method,

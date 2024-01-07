@@ -1,7 +1,7 @@
 package client
 
 import (
-	"backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"bytes"
 	"encoding/base64"
@@ -27,19 +27,24 @@ type AnalysisResponse2 struct {
 	RequestId uuid.UUID `json:"request_id"`
 }
 
-var (
+type AnalysisClient struct {
+	HTTPClient       *http.Client
 	analysisUrl      string
 	analysisPassword string
 	analysisUsername string
-)
-
-func InitAnalyzer(analysisUrl0 string, analysisPassword0 string, analysisUsername0 string) {
-	analysisUrl = analysisUrl0
-	analysisPassword = analysisPassword0
-	analysisUsername = analysisUsername0
 }
 
-func RequestAnalysis(repoId uuid.UUID, repoUrl string) error {
+func NewAnalysisClient(analysisUrl string, analysisPassword string, analysisUsername string) *AnalysisClient {
+	return &AnalysisClient{
+		HTTPClient: &http.Client{
+			Timeout: time.Second * 30,
+		}, analysisUrl: analysisUrl,
+		analysisPassword: analysisPassword,
+		analysisUsername: analysisUsername,
+	}
+}
+
+func (a *AnalysisClient) RequestAnalysis(repoId uuid.UUID, repoUrl string) error {
 	//https://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
 	client := http.Client{
 		Timeout: 10 * time.Second,
@@ -63,8 +68,8 @@ func RequestAnalysis(repoId uuid.UUID, repoUrl string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, analysisUrl+"/analyze", bytes.NewBuffer(body))
-	auth := analysisUsername + ":" + analysisPassword
+	req, err := http.NewRequest(http.MethodPost, a.analysisUrl+"/analyze", bytes.NewBuffer(body))
+	auth := a.analysisUsername + ":" + a.analysisPassword
 	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)

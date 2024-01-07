@@ -1,9 +1,9 @@
 package app
 
 import (
-	"backend/api"
-	"backend/clients"
-	"backend/db"
+	api2 "backend/internal/api"
+	"backend/internal/client"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"fmt"
 	"github.com/google/uuid"
@@ -12,7 +12,16 @@ import (
 	"time"
 )
 
-func hourlyRunner(now time.Time) error {
+type CalcHandler struct {
+	ac *client.AnalysisClient
+	ec *client.EmailClient
+}
+
+func NewCalcHandler(ac *client.AnalysisClient, ec *client.EmailClient) *CalcHandler {
+	return &CalcHandler{ac, ec}
+}
+
+func (c *CalcHandler) HourlyRunner(now time.Time) error {
 	//find repos that have an analysis older than 2 days
 	a, err := db.FindAllLatestAnalysisRequest(now.AddDate(0, 0, -1))
 	if err != nil {
@@ -23,7 +32,7 @@ func hourlyRunner(now time.Time) error {
 	nr := 0
 	for _, v := range a {
 		//check if we need analysis request
-		err := clients.RequestAnalysis(v.RepoId, v.GitUrl)
+		err := c.ac.RequestAnalysis(v.RepoId, v.GitUrl)
 		if err != nil {
 			log.Warnf("analysis request failed %v", err)
 		} else {
@@ -35,7 +44,7 @@ func hourlyRunner(now time.Time) error {
 	return nil
 }
 
-func dailyRunner(now time.Time) error {
+func (c *CalcHandler) DailyRunner(now time.Time) error {
 	yesterdayStop := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
@@ -49,7 +58,7 @@ func dailyRunner(now time.Time) error {
 	nr := 0
 	for key, _ := range sponsorResults {
 		if len(sponsorResults[key].RepoIds) > 0 {
-			err = calcContribution(sponsorResults[key].UserId, sponsorResults[key].RepoIds, yesterdayStart)
+			err = c.calcContribution(sponsorResults[key].UserId, sponsorResults[key].RepoIds, yesterdayStart)
 			nr++
 			if err != nil {
 				return err
@@ -67,13 +76,13 @@ func dailyRunner(now time.Time) error {
 		}
 		repoNames := []string{}
 		//TODO: fetch repo names
-		err = clients.SendMarketingEmail(v.Email, v.Balances, repoNames)
+		err = c.ec.SendMarketingEmail(v.Email, v.Balances, repoNames)
 	}
 
 	return nil
 }
 
-func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
+func (c *CalcHandler) calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
 	u, err := db.FindUserById(uid)
 	if err != nil {
 		return fmt.Errorf("cannot find user %v", err)
@@ -85,14 +94,14 @@ func calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time)
 			return fmt.Errorf("cannot find invited user %v", err)
 		}
 		log.Printf("the user %v, which is sponsored by %v supports %v repos", u.Email, u1.Email, len(rids))
-		return calcAndDeduct(u1, rids, yesterdayStart, u)
+		return c.calcAndDeduct(u1, rids, yesterdayStart, u)
 	}
 	//TODO: also notify the not only the parent of insufficient funds
 	log.Printf("the user %v supports %v repos", u.Email, len(rids))
-	return calcAndDeduct(u, rids, yesterdayStart, nil)
+	return c.calcAndDeduct(u, rids, yesterdayStart, nil)
 }
 
-func calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterdayStart time.Time, uOrig *db.UserDetail) error {
+func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterdayStart time.Time, uOrig *db.UserDetail) error {
 	currency, freq, distributeDeduct, distributeAdd, deductFutureContribution, err := calcShare(u.Id, int64(len(rids)))
 	if err != nil {
 		return fmt.Errorf("cannot calc share %v", err)
@@ -100,7 +109,7 @@ func calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterdayStart time.Time,
 
 	if freq <= 1 {
 		log.Printf("the user %v (id=%v) has 1 day or less left, top up!", u.Email, u.Id)
-		reminderTopUp(*u, uOrig)
+		c.reminderTopUp(*u, uOrig)
 	}
 
 	if freq > 0 {
@@ -152,7 +161,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			id := uuid.New()
 			err = db.InsertUnclaimed(id, email, rid, amount, currency, yesterdayStart, util.TimeNow())
 			if err != nil {
-				log.Errorf("insertUnclaimed failed: %v, %v\n", opts.EmailUrl, err)
+				log.Errorf("insertUnclaimed failed: %v, %v\n", email, err)
 			}
 		}
 
@@ -220,7 +229,7 @@ func calcShare(userId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.I
 		return "", 0, nil, nil, nil, fmt.Errorf("cannot find sum daily balance %v", err)
 	}
 
-	currency, freq, s, err := api.StrategyDeductMax(userId, mAdd, mSub, mFut)
+	currency, freq, s, err := api2.StrategyDeductMax(userId, mAdd, mSub, mFut)
 
 	if s == nil {
 		return currency, freq, nil, nil, nil, nil
@@ -240,16 +249,16 @@ func calcShare(userId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.I
 	return currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution, nil
 }
 
-func reminderTopUp(u db.UserDetail, uOrig *db.UserDetail) error {
+func (c *CalcHandler) reminderTopUp(u db.UserDetail, uOrig *db.UserDetail) error {
 
 	//check if user has stripe
 	if u.StripeId != nil && u.PaymentMethod != nil {
-		err := api.StripePaymentRecurring(u)
+		err := api2.StripePaymentRecurring(u)
 		if err != nil {
 			return err
 		}
 
-		err = clients.SendStripeTopUp(u)
+		err = c.ec.SendStripeTopUp(u)
 		if err != nil {
 			return err
 		}
@@ -257,18 +266,18 @@ func reminderTopUp(u db.UserDetail, uOrig *db.UserDetail) error {
 		//No stripe, just send email
 		isSponsor := uOrig != nil
 		if isSponsor {
-			err := clients.SendTopUpSponsor(u)
+			err := c.ec.SendTopUpSponsor(u)
 			if err != nil {
 				return err
 			}
 		} else {
 			if u.InvitedId != nil {
-				err := clients.SendTopUpInvited(u)
+				err := c.ec.SendTopUpInvited(u)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := clients.SendTopUpOther(u)
+				err := c.ec.SendTopUpOther(u)
 				if err != nil {
 					return err
 				}

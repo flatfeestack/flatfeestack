@@ -1,8 +1,8 @@
 package main
 
 import (
-	"backend/clients"
-	"backend/db"
+	"backend/internal/db"
+	"backend/pkg/config"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/go-jose/go-jose/v3/json"
 	log "github.com/sirupsen/logrus"
@@ -14,12 +14,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	opts = &Opts{}
-	opts.Env = "test"
-	opts.DBDriver = "sqlite3"
+	cfg = &config.Config{}
+	cfg.Env = "test"
+	cfg.DBDriver = "sqlite3"
 	file, err := os.CreateTemp("", "sqlite")
 	defer os.Remove(file.Name())
-	opts.DBPath = file.Name()
+	cfg.DBPath = file.Name()
 
 	err = dbLib.InitDb("sqlite3", file.Name(), "db/init.sql")
 	if err != nil {
@@ -56,7 +56,7 @@ func teardown() {
 	clients.EmailNoNotifications = 0
 }
 
-func setupAnalysisTestServer(t *testing.T) *httptest.Server {
+func SetupAnalysisTestServer(t *testing.T) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/analyze":
@@ -72,25 +72,6 @@ func setupAnalysisTestServer(t *testing.T) *httptest.Server {
 	}))
 
 	clients.InitAnalyzer(server.URL, "test", "test")
-
-	return server
-}
-
-func setupPayoutTestServer(t *testing.T) *httptest.Server {
-	usdcData, err := os.ReadFile("./fixtures/payout_response_usdc.json")
-	require.Nil(t, err)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/admin/sign/usdc":
-			w.WriteHeader(200)
-			w.Write(usdcData)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-
-	opts.Payout.Url = server.URL
 
 	return server
 }

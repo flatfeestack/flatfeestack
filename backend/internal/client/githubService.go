@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type RepoSearchResponse struct {
@@ -22,9 +23,21 @@ type RepoSearch struct {
 	Score       json.Number `json:"score,omitempty"`
 }
 
-func FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
+type GithubClient struct {
+	HTTPClient *http.Client
+}
+
+func NewGithubClient() *GithubClient {
+	return &GithubClient{
+		HTTPClient: &http.Client{
+			Timeout: time.Second * 30,
+		},
+	}
+}
+
+func (gc *GithubClient) FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
 	log.Print("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
-	res, err := http.Get("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
+	res, err := gc.HTTPClient.Get("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
 	if err != nil {
 		log.Printf("Could not search for repos %v", err)
 		return nil, err
@@ -41,8 +54,8 @@ func FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
 	return []RepoSearch{}, nil
 }
 
-func fetchGithubRepoById(id uint32) (*RepoSearch, error) {
-	res, err := http.Get("http://api.github.com/repositories/" + strconv.Itoa(int(id)))
+func (gc *GithubClient) fetchGithubRepoById(id uint32) (*RepoSearch, error) {
+	res, err := gc.HTTPClient.Get("http://api.github.com/repositories/" + strconv.Itoa(int(id)))
 	if err != nil {
 		log.Printf("Could not fetch for repo details %v", err)
 		return nil, err

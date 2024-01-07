@@ -1,14 +1,13 @@
 package api
 
 import (
-	clnt "backend/clients"
-	db "backend/db"
+	"backend/internal/client"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/customer"
 	"github.com/stripe/stripe-go/v74/paymentintent"
 	"github.com/stripe/stripe-go/v74/setupintent"
@@ -23,21 +22,21 @@ type ClientSecretBody struct {
 	ClientSecret string `json:"clientSecret"`
 }
 
-var (
+type PaymentStripeHandler struct {
+	e                      *client.EmailClient
 	stripeAPISecretKey     string
 	stripeWebhookSecretKey string
-)
-
-func InitStripe(stripeAPISecretKey0 string, stripeWebhookSecretKey0 string) {
-	stripeAPISecretKey = stripeAPISecretKey0
-	stripeWebhookSecretKey = stripeWebhookSecretKey0
 }
 
-func SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
+func NewPaymentHandler(e *client.EmailClient, stripeAPISecretKey0 string, stripeWebhookSecretKey string) *PaymentStripeHandler {
+	return &PaymentStripeHandler{e, stripeAPISecretKey0, stripeWebhookSecretKey}
+}
+
+func (p *PaymentStripeHandler) SetupStripe(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	// https://stripe.com/docs/payments/save-and-reuse
 	//create a user at stripe if the user does not exist yet
-	if user.StripeId == nil || stripeAPISecretKey != "" {
-		stripe.Key = stripeAPISecretKey
+	if user.StripeId == nil || p.stripeAPISecretKey != "" {
+		stripe.Key = p.stripeAPISecretKey
 		params := &stripe.CustomerParams{}
 		c, err := customer.New(params)
 		if err != nil {
@@ -195,7 +194,7 @@ func StripePaymentRecurring(user db.UserDetail) error {
 	return nil
 }
 
-func StripeWebhook(w http.ResponseWriter, req *http.Request) {
+func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	// https://stripe.com/docs/testing#cards
 	// regular card for testing: 4242 4242 4242 4242
 	// 3d secure with auth required: 4000 0027 6000 3184
@@ -209,7 +208,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), stripeWebhookSecretKey)
+	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), p.stripeWebhookSecretKey)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 		log.Printf("Error evaluating signed webhook request: %v", err)
@@ -244,7 +243,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		clnt.SendStripeSuccess(payInEvent.UserId, externalId)
+		p.e.SendStripeSuccess(payInEvent.UserId, externalId)
 	// ... handle other event types
 	case "payment_intent.requires_action":
 		//again
@@ -272,7 +271,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		clnt.SendStripeAction(payInEvent.UserId, externalId)
+		p.e.SendStripeAction(payInEvent.UserId, externalId)
 	//case "payment_intent.requires_action":
 	//3d secure - this is handled by strip, we just get notified
 	case "payment_intent.payment_failed":
@@ -306,7 +305,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		clnt.SendStripeFailed(payInEvent.UserId, externalId)
+		p.e.SendStripeFailed(payInEvent.UserId, externalId)
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 		w.WriteHeader(http.StatusOK)

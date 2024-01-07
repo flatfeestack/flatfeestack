@@ -1,7 +1,7 @@
 package api
 
 import (
-	db "backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -86,7 +86,7 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 	util.WriteJson(w, rbs)
 }
 
-func FakeContribution(w http.ResponseWriter, r *http.Request, email string) {
+func FakeContribution(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	var repoMap FakeRepoMapping
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {

@@ -1,15 +1,17 @@
 package main
 
 import (
-	"backend/api"
+	api2 "backend/internal/api"
+	"backend/internal/app"
+	"backend/internal/client"
 	"backend/internal/cron"
+	util2 "backend/pkg/middleware"
 	"backend/pkg/util"
 	"crypto/sha256"
 	"encoding/base32"
 	"flag"
 	"fmt"
 	"github.com/flatfeestack/go-lib/auth"
-	"github.com/stripe/stripe-go/v74"
 	"net/http"
 	"os"
 	"strconv"
@@ -39,12 +41,6 @@ var (
 	debug  bool
 	admins []string
 )
-
-type Subsystem struct {
-	Url      string
-	Username string
-	Password string
-}
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -122,7 +118,7 @@ func parseFlags() {
 		log.Fatalf("HS256 seed is required, non was provided")
 	}
 
-	admins = strings.Split(cfg.Admins, ";")
+	cfg.AdminsParsed = strings.Split(cfg.Admins, ";")
 
 	if cfg.EmailFrom == "" {
 		cfg.EmailFrom = "info@flatfeestack.io"
@@ -142,11 +138,16 @@ func main() {
 	//this will set the default ENVs
 	parseFlags()
 
-	clients.InitAnalyzer(cfg.AnalyzerUrl, cfg.AnalyzerPassword, cfg.AnalyzerUsername)
-	clients.InitEmail(cfg.EmailUrl, cfg.EmailFromName, cfg.EmailFrom, cfg.EmailToken, cfg.Env, cfg.EmailMarketing, cfg.EmailLinkPrefix)
-	api.InitStripe(cfg.StripeAPISecretKey, cfg.StripeWebhookSecretKey)
-	api.InitNow(cfg.NowpaymentsApiUrl, cfg.NowpaymentsToken, cfg.NowpaymentsIpnCallbackUrl, cfg.NowpaymentsIpnKey)
-	api.InitApi(cfg.StripeAPIPublicKey, cfg.Env)
+	ac := client.NewAnalysisClient(cfg.AnalyzerUrl, cfg.AnalyzerPassword, cfg.AnalyzerUsername)
+	gc := client.NewGithubClient()
+	ec := client.NewEmailClient(cfg.EmailUrl, cfg.EmailFromName, cfg.EmailFrom, cfg.EmailToken, cfg.Env, cfg.EmailMarketing, cfg.EmailLinkPrefix)
+
+	ah := api2.NewApiHandler(cfg.StripeAPIPublicKey, cfg.Env)
+	nh := api2.NewPaymentNowHandler(ec, cfg.NowpaymentsApiUrl, cfg.NowpaymentsToken, cfg.NowpaymentsIpnCallbackUrl, cfg.NowpaymentsIpnKey)
+	sh := api2.NewPaymentHandler(ec, cfg.StripeAPISecretKey, cfg.StripeWebhookSecretKey)
+	rh := api2.NewRepoHandler(ac, gc)
+	eh := api2.NewEmailHandler(ec)
+	rr := api2.NewResourceHandler(cfg)
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -171,7 +172,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(prom.PrometheusMiddleware)
 	router.Use(func(next http.Handler) http.Handler {
-		return logRequestHandler(next)
+		return util2.LogRequestHandler(next)
 	})
 	//apiRouter := router.PathPrefix("/backend").Subrouter()
 	registry := prom.CreateRegistry()
@@ -184,93 +185,95 @@ func main() {
 		},
 	))
 
-	jwt := util.NewJwtHandler(cfg)
+	jwt := util2.NewJwtHandler(cfg)
+	jwtUser := util2.NewJwtUserHandler(cfg)
 
-	router.HandleFunc("/users/me", jwt.JwtAuthUser(api.GetMyUser)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwt.JwtAuthUser(api.GetMyConnectedEmails)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwt.JwtAuthUser(api.AddGitEmail)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/git-email/confirm", jwt.JwtAuthUser(api.ConfirmConnectedEmails)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/git-email/{email}", jwt.JwtAuthUser(api.RemoveGitEmail)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/method/{method}", jwt.JwtAuthUser(api.UpdateMethod)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/method", jwt.JwtAuthUser(api.DeleteMethod)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/sponsored", jwt.JwtAuthUser(api.GetSponsoredRepos)).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/name/{name}", jwt.JwtAuthUser(api.UpdateName)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/clear/name", jwt.JwtAuthUser(api.ClearName)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/image", util.MaxBytes(jwt.JwtAuthUser(api.UpdateImage), 200*1024)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/image", jwt.JwtAuthUser(api.DeleteImage)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/request-payout/{targetCurrency}", jwt.JwtAuthUser(api.RequestPayout)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/balance", jwt.JwtAuthUser(api.UserBalance)).Methods(http.MethodGet)
-	router.HandleFunc("/users/contrib-snd", jwt.JwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
-	router.HandleFunc("/users/summary/{uuid}", api.UserSummary2).Methods(http.MethodGet)
-	router.HandleFunc("/users/by/{email}", auth.BasicAuth(credentials, api.GetUserByEmail)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me", jwt.JwtAuth(jwtUser.JwtUser(api2.GetMyUser))).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/git-email", jwt.JwtAuth(jwtUser.JwtUser(api2.GetMyConnectedEmails))).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/git-email", jwt.JwtAuth(jwtUser.JwtUser(eh.AddGitEmail))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/git-email/confirm", jwt.JwtAuth(jwtUser.JwtUser(api2.ConfirmConnectedEmails))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/git-email/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.RemoveGitEmail))).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/method/{method}", jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateMethod))).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/method", jwt.JwtAuth(jwtUser.JwtUser(api2.DeleteMethod))).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/sponsored", jwt.JwtAuth(jwtUser.JwtUser(api2.GetSponsoredRepos))).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/name/{name}", jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateName))).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/clear/name", jwt.JwtAuth(jwtUser.JwtUser(api2.ClearName))).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/image", util2.MaxBytes(jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateImage)), 200*1024)).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/image", jwt.JwtAuth(jwtUser.JwtUser(api2.DeleteImage))).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(sh.SetupStripe))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(api2.CancelSub))).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.StripePaymentInitial))).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.NowPayment))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuth(jwtUser.JwtUser(api2.StatusSponsoredUsers))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/request-payout/{targetCurrency}", jwt.JwtAuth(jwtUser.JwtUser(rr.RequestPayout))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/balance", jwt.JwtAuth(jwtUser.JwtUser(api2.UserBalance))).Methods(http.MethodGet)
+	router.HandleFunc("/users/contrib-snd", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSend))).Methods(http.MethodPost)
+	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsRcv))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSum))).Methods(http.MethodPost)
+	router.HandleFunc("/users/summary/{uuid}", api2.UserSummary2).Methods(http.MethodGet)
+	router.HandleFunc("/users/by/{email}", auth.BasicAuth(credentials, api2.GetUserByEmail)).Methods(http.MethodGet)
 
 	//payment
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuthUser(api.SetupStripe)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuthUser(api.CancelSub)).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuthUser(api.StripePaymentInitial)).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuthUser(api.NowPayment)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuthUser(api.StatusSponsoredUsers)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/payment", jwt.JwtAuthUser(api.PaymentEvent)).Methods(http.MethodGet)
+	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(sh.SetupStripe))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(api2.CancelSub))).Methods(http.MethodDelete)
+	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.StripePaymentInitial))).Methods(http.MethodPut)
+	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.NowPayment))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuth(jwtUser.JwtUser(api2.StatusSponsoredUsers))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/payment", jwt.JwtAuth(jwtUser.JwtUser(api2.PaymentEvent))).Methods(http.MethodGet)
 
 	// get public user
-	router.HandleFunc("/users/{id}", api.GetUserById).Methods(http.MethodGet)
+	router.HandleFunc("/users/{id}", api2.GetUserById).Methods(http.MethodGet)
 
 	//contributions
-	router.HandleFunc("/users/contrib-snd", jwt.JwtAuthUser(api.ContributionsSend)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuthUser(api.ContributionsRcv)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuthUser(api.ContributionsSum)).Methods(http.MethodPost)
-	router.HandleFunc("/users/contributions-summary/{uuid}", api.ContributionsSum2).Methods(http.MethodGet)
+	router.HandleFunc("/users/contrib-snd", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSend))).Methods(http.MethodPost)
+	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsRcv))).Methods(http.MethodPost)
+	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSum))).Methods(http.MethodPost)
+	router.HandleFunc("/users/contributions-summary/{uuid}", api2.ContributionsSum2).Methods(http.MethodGet)
 
 	//github
-	router.HandleFunc("/repos/search", jwt.JwtAuthUser(api.SearchRepoGitHub)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/search", jwt.JwtAuth(jwtUser.JwtUser(rh.SearchRepoGitHub))).Methods(http.MethodGet)
 	//repo
-	router.HandleFunc("/repos/{id}", jwt.JwtAuthUser(api.GetRepoByID)).Methods(http.MethodGet)
-	router.HandleFunc("/repos/{id}/tag", jwt.JwtAuthUser(api.TagRepo)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/untag", jwt.JwtAuthUser(api.UnTagRepo)).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/{offset}/graph", jwt.JwtAuthUser(api.Graph)).Methods(http.MethodGet)
+	router.HandleFunc("/repos/{id}", jwt.JwtAuth(jwtUser.JwtUser(api2.GetRepoByID))).Methods(http.MethodGet)
+	router.HandleFunc("/repos/{id}/tag", jwt.JwtAuth(jwtUser.JwtUser(rh.TagRepo))).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/untag", jwt.JwtAuth(jwtUser.JwtUser(rh.UnTagRepo))).Methods(http.MethodPost)
+	router.HandleFunc("/repos/{id}/{offset}/graph", jwt.JwtAuth(jwtUser.JwtUser(api2.Graph))).Methods(http.MethodGet)
 	//payment
 
 	//hooks
-	router.HandleFunc("/hooks/stripe", util.MaxBytes(api.StripeWebhook, 65536)).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/nowpayments", api.NowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analyzer", auth.BasicAuth(credentials, api.AnalysisEngineHook)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 65536)).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/nowpayments", nh.NowWebhook).Methods(http.MethodPost)
+	router.HandleFunc("/hooks/analyzer", auth.BasicAuth(credentials, api2.AnalysisEngineHook)).Methods(http.MethodPost)
 
 	//admin
-	router.HandleFunc("/admin/time", jwt.JwtAuthAdmin(api.ServerTime, admins)).Methods(http.MethodGet)
-	router.HandleFunc("/admin/users", jwt.JwtAuthAdmin(api.Users, admins)).Methods(http.MethodPost)
+	router.HandleFunc("/admin/time", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.ServerTime)))).Methods(http.MethodGet)
+	router.HandleFunc("/admin/users", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.Users)))).Methods(http.MethodPost)
 
-	router.HandleFunc("/config", api.Config).Methods(http.MethodGet)
+	router.HandleFunc("/config", ah.Config).Methods(http.MethodGet)
 
 	//dev settings
 	if debug {
-		router.HandleFunc("/admin/fake/user/{email}", jwt.JwtAuthAdmin(api.FakeUser, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwt.JwtAuthAdmin(api.FakePayment, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/contribution", jwt.JwtAuthAdmin(api.FakeContribution, admins)).Methods(http.MethodPost)
-		router.HandleFunc("/admin/timewarp/{hours}", jwt.JwtAuthAdmin(api.TimeWarp, admins)).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/user/{email}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakeUser)))).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakePayment)))).Methods(http.MethodPost)
+		router.HandleFunc("/admin/fake/contribution", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakeContribution)))).Methods(http.MethodPost)
+		router.HandleFunc("/admin/timewarp/{hours}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.TimeWarp)))).Methods(http.MethodPost)
 	}
 
 	//invite
-	router.HandleFunc("/confirm/invite/{email}", jwt.JwtAuthUser(api.ConfirmInvite)).Methods(http.MethodPost)
-	router.HandleFunc("/invite", jwt.JwtAuthUser(api.Invitations)).Methods(http.MethodGet)
-	router.HandleFunc("/invite/by/{email}", jwt.JwtAuthUser(api.InviteByDelete)).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/my/{email}", jwt.JwtAuthUser(api.InviteMyDelete)).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/{email}", jwt.JwtAuthUser(api.InviteOther)).Methods(http.MethodPost)
+	router.HandleFunc("/confirm/invite/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.ConfirmInvite))).Methods(http.MethodPost)
+	router.HandleFunc("/invite", jwt.JwtAuth(jwtUser.JwtUser(api2.Invitations))).Methods(http.MethodGet)
+	router.HandleFunc("/invite/by/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteByDelete))).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/my/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteMyDelete))).Methods(http.MethodDelete)
+	router.HandleFunc("/invite/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteOther))).Methods(http.MethodPost)
 
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[404] no route matched for: %s, %s", r.URL, r.Method)
 		w.WriteHeader(http.StatusNotFound)
 	})
 
+	c := app.NewCalcHandler(ac, ec)
 	//scheduler
-	cron.CronJobDay(dailyRunner, util.TimeNow())
-	cron.CronJobHour(hourlyRunner, util.TimeNow())
+	cron.CronJobDay(c.DailyRunner, util.TimeNow())
+	cron.CronJobHour(c.HourlyRunner, util.TimeNow())
 
 	log.Println("Starting backend on port " + strconv.Itoa(cfg.Port))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router))

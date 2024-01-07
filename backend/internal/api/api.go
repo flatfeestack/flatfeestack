@@ -1,6 +1,7 @@
 package api
 
 import (
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -124,22 +125,21 @@ var Plans = []Plan{
 	},
 }
 
-var (
+type ApiHandler struct {
 	stripeAPIPublicKey string
 	env                string
-)
-
-func InitApi(stripeAPIPublicKey0 string, env0 string) {
-	stripeAPIPublicKey = stripeAPIPublicKey0
-	env = env0
 }
 
-func ServerTime(w http.ResponseWriter, _ *http.Request, _ string) {
+func NewApiHandler(stripeAPIPublicKey string, env string) *ApiHandler {
+	return &ApiHandler{stripeAPIPublicKey, env}
+}
+
+func ServerTime(w http.ResponseWriter, _ *http.Request, u *db.UserDetail) {
 	currentTime := util.TimeNow()
 	util.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(util.SecondsAdd)+`}`)
 }
 
-func Config(w http.ResponseWriter, _ *http.Request) {
+func (h *ApiHandler) Config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(Plans)
 	supportedCurrencies, err := json.Marshal(util.SupportedCurrencies)
 	if err != nil {
@@ -149,14 +149,14 @@ func Config(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	util.WriteJsonStr(w, `{
-			"stripePublicApi":"`+stripeAPIPublicKey+`",
+			"stripePublicApi":"`+h.stripeAPIPublicKey+`",
             "plans": `+string(b)+`,
-			"env":"`+env+`",
+			"env":"`+h.env+`",
 			"supportedCurrencies":`+string(supportedCurrencies)+`
 			}`)
 }
 
-func TimeWarp(w http.ResponseWriter, r *http.Request, _ string) {
+func TimeWarp(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {

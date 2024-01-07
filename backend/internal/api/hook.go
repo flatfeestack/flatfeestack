@@ -1,7 +1,7 @@
 package api
 
 import (
-	db "backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"

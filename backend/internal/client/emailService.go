@@ -1,14 +1,16 @@
 package client
 
 import (
-	"backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"fmt"
 	mail "github.com/flatfeestack/go-lib/email"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"math/big"
+	"net/http"
 	"strconv"
+	"time"
 )
 
 const (
@@ -34,7 +36,8 @@ var (
 	lastMailTo           = ""
 )
 
-var (
+type EmailClient struct {
+	HTTPClient      *http.Client
 	emailUrl        string
 	emailFromName   string
 	emailFrom       string
@@ -42,16 +45,20 @@ var (
 	env             string
 	emailMarketing  string
 	emailLinkPrefix string
-)
+}
 
-func InitEmail(emailUrl0 string, emailFromName0 string, emailFrom0 string, emailToken0 string, env0 string, emailMarketing0 string, emailLinkPrefix0 string) {
-	emailUrl = emailUrl0
-	emailFromName = emailFromName0
-	emailFrom = emailFrom0
-	emailToken = emailToken0
-	env = env0
-	emailMarketing = emailMarketing0
-	emailLinkPrefix = emailLinkPrefix0
+func NewEmailClient(emailUrl string, emailFromName string, emailFrom string, emailToken string, env string, emailMarketing string, emailLinkPrefix string) *EmailClient {
+	return &EmailClient{
+		HTTPClient: &http.Client{
+			Timeout: time.Second * 30,
+		}, emailUrl: emailUrl,
+		emailFromName:   emailFromName,
+		emailFrom:       emailFrom,
+		emailToken:      emailToken,
+		env:             env,
+		emailMarketing:  emailMarketing,
+		emailLinkPrefix: emailLinkPrefix,
+	}
 }
 
 type WebhookResponse struct {
@@ -118,7 +125,7 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 	return true, nil
 }
 
-func prepareSendEmail(
+func (e *EmailClient) prepareSendEmail(
 	uid *uuid.UUID,
 	data map[string]string,
 	templateKey string,
@@ -136,13 +143,13 @@ func prepareSendEmail(
 	if shouldSend {
 		log.Debugf("sending %v email to %v/%v", data["key"], data["email"], data["mailTo"])
 		lastMailTo = sendgridRequest.MailTo
-		if env != "local" {
+		if e.env != "local" {
 			request := mail.SendEmailRequest{
 				SendgridRequest: sendgridRequest,
-				Url:             emailUrl,
-				EmailFromName:   emailFromName,
-				EmailFrom:       emailFrom,
-				EmailToken:      emailToken,
+				Url:             e.emailUrl,
+				EmailFromName:   e.emailFromName,
+				EmailFrom:       e.emailFrom,
+				EmailToken:      e.emailToken,
 			}
 			sendEmail(&request)
 		}
@@ -155,20 +162,20 @@ func prepareSendEmail(
 
 //******************** These are called by the application
 
-func SendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames []string) error {
+func (e *EmailClient) SendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames []string) error {
 	params := map[string]string{}
 	params["email"] = email
-	//dont spam in testing...
-	if emailMarketing != "live" {
-		email = emailMarketing
+	//don't spam in testing...
+	if e.emailMarketing != "live" {
+		email = e.emailMarketing
 	}
 	params["mailTo"] = email
-	params["url"] = emailLinkPrefix
+	params["url"] = e.emailLinkPrefix
 	params["lang"] = "en"
 	weekly := int(util.TimeNow().Unix() / WaitToSendEmail)
 	params["key"] = KeyMarketing + params["email"] + strconv.Itoa(weekly)
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		nil,
 		params,
 		KeyMarketing,
@@ -178,12 +185,12 @@ func SendMarketingEmail(email string, balanceMap map[string]*big.Int, repoNames 
 		params["lang"])
 }
 
-func SendStripeTopUp(u db.UserDetail) error {
+func (e *EmailClient) SendStripeTopUp(u db.UserDetail) error {
 	email := u.Email
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 
 	key := KeyTopUpStripe
@@ -196,7 +203,7 @@ func SendStripeTopUp(u db.UserDetail) error {
 	}
 	params["key"] = key
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&u.Id,
 		params,
 		KeyTopUpStripe,
@@ -205,12 +212,12 @@ func SendStripeTopUp(u db.UserDetail) error {
 		params["lang"])
 }
 
-func SendTopUpSponsor(u db.UserDetail) error {
+func (e *EmailClient) SendTopUpSponsor(u db.UserDetail) error {
 	email := u.Email
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 
 	//we are sponsor, and the user beneficiaryEmail could not donate
@@ -223,7 +230,7 @@ func SendTopUpSponsor(u db.UserDetail) error {
 	}
 	params["key"] = c.String() + KeyTopUpOther
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&u.Id,
 		params,
 		KeyTopUpOther,
@@ -232,12 +239,12 @@ func SendTopUpSponsor(u db.UserDetail) error {
 		params["lang"])
 }
 
-func SendTopUpInvited(u db.UserDetail) error {
+func (e *EmailClient) SendTopUpInvited(u db.UserDetail) error {
 	email := u.Email
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 
 	_, _, _, c, err := db.FindLatestDailyPayment(u.Id, "USD")
@@ -249,7 +256,7 @@ func SendTopUpInvited(u db.UserDetail) error {
 	}
 	params["key"] = c.String() + KeyTopUpUser1
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&u.Id,
 		params,
 		KeyTopUpUser1,
@@ -258,12 +265,12 @@ func SendTopUpInvited(u db.UserDetail) error {
 		params["lang"])
 }
 
-func SendTopUpOther(u db.UserDetail) error {
+func (e *EmailClient) SendTopUpOther(u db.UserDetail) error {
 	email := u.Email
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 
 	key := KeyTopUpUser2
@@ -276,7 +283,7 @@ func SendTopUpOther(u db.UserDetail) error {
 	}
 	params["key"] = key
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&u.Id,
 		params,
 		KeyTopUpUser2,
@@ -286,16 +293,16 @@ func SendTopUpOther(u db.UserDetail) error {
 
 }
 
-func SendAddGit(userId uuid.UUID, email string, addGitEmailToken string, lang string) error {
+func (e *EmailClient) SendAddGit(userId uuid.UUID, email string, addGitEmailToken string, lang string) error {
 	var params = map[string]string{}
 	params["token"] = addGitEmailToken
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
+	params["url"] = e.emailLinkPrefix + "/confirm/git-email/" + email + "/" + addGitEmailToken
 	params["lang"] = lang
 	params["key"] = KeyAddGit + email
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&userId,
 		params,
 		KeyAddGit,
@@ -304,7 +311,7 @@ func SendAddGit(userId uuid.UUID, email string, addGitEmailToken string, lang st
 		params["lang"])
 }
 
-func SendPaymentNowFinished(userId uuid.UUID, data WebhookResponse) error {
+func (e *EmailClient) SendPaymentNowFinished(userId uuid.UUID, data WebhookResponse) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -313,11 +320,11 @@ func SendPaymentNowFinished(userId uuid.UUID, data WebhookResponse) error {
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyPaymentNowFinished + data.OrderId.String()
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&user.Id,
 		params,
 		KeyPaymentNowFinished,
@@ -326,7 +333,7 @@ func SendPaymentNowFinished(userId uuid.UUID, data WebhookResponse) error {
 		params["lang"])
 }
 
-func SendPaymentNowPartially(userId uuid.UUID, data WebhookResponse) error {
+func (e *EmailClient) SendPaymentNowPartially(userId uuid.UUID, data WebhookResponse) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -335,12 +342,12 @@ func SendPaymentNowPartially(userId uuid.UUID, data WebhookResponse) error {
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyPaymentNowPartially + data.OrderId.String()
 
 	defaultMessage := fmt.Sprintf("Only partial payment received (%v) of (%v), please send the rest (%v) to: ", data.ActuallyPaid, data.PayAmount, data.PayAmount-data.ActuallyPaid)
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&user.Id,
 		params,
 		KeyPaymentNowPartially,
@@ -349,7 +356,7 @@ func SendPaymentNowPartially(userId uuid.UUID, data WebhookResponse) error {
 		params["lang"])
 }
 
-func SendPaymentNowRefunded(userId uuid.UUID, status string, externalId uuid.UUID) error {
+func (e *EmailClient) SendPaymentNowRefunded(userId uuid.UUID, status string, externalId uuid.UUID) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -358,12 +365,12 @@ func SendPaymentNowRefunded(userId uuid.UUID, status string, externalId uuid.UUI
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyPaymentNowRefunded + status + "-" + externalId.String()
 
 	defaultMessage := fmt.Sprintf("Payment %v, please check payment: %s", status, params["url"])
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&user.Id,
 		params,
 		KeyPaymentNowRefunded,
@@ -372,7 +379,7 @@ func SendPaymentNowRefunded(userId uuid.UUID, status string, externalId uuid.UUI
 		params["lang"])
 }
 
-func SendStripeSuccess(userId uuid.UUID, externalId uuid.UUID) error {
+func (e *EmailClient) SendStripeSuccess(userId uuid.UUID, externalId uuid.UUID) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -381,11 +388,11 @@ func SendStripeSuccess(userId uuid.UUID, externalId uuid.UUID) error {
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyStripeSuccess + externalId.String()
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&userId,
 		params,
 		KeyStripeSuccess,
@@ -394,7 +401,7 @@ func SendStripeSuccess(userId uuid.UUID, externalId uuid.UUID) error {
 		params["lang"])
 }
 
-func SendStripeAction(userId uuid.UUID, externalId uuid.UUID) error {
+func (e *EmailClient) SendStripeAction(userId uuid.UUID, externalId uuid.UUID) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -403,11 +410,11 @@ func SendStripeAction(userId uuid.UUID, externalId uuid.UUID) error {
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyStripeAction + externalId.String()
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&user.Id,
 		params,
 		KeyStripeAction,
@@ -416,7 +423,7 @@ func SendStripeAction(userId uuid.UUID, externalId uuid.UUID) error {
 		params["lang"])
 }
 
-func SendStripeFailed(userId uuid.UUID, externalId uuid.UUID) error {
+func (e *EmailClient) SendStripeFailed(userId uuid.UUID, externalId uuid.UUID) error {
 	user, err := db.FindUserById(userId)
 	if err != nil {
 		return err
@@ -425,11 +432,11 @@ func SendStripeFailed(userId uuid.UUID, externalId uuid.UUID) error {
 	var params = map[string]string{}
 	params["mailTo"] = email
 	params["email"] = email
-	params["url"] = emailLinkPrefix + "/user/payments"
+	params["url"] = e.emailLinkPrefix + "/user/payments"
 	params["lang"] = "en"
 	params["key"] = KeyStripeFailed + externalId.String()
 
-	return prepareSendEmail(
+	return e.prepareSendEmail(
 		&user.Id,
 		params,
 		KeyStripeFailed,

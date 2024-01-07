@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/internal/handler"
 	"database/sql"
 	"fmt"
 	dbLib "github.com/flatfeestack/go-lib/database"
@@ -27,13 +28,7 @@ type UserDetail struct {
 	Seats              int     `json:"seats"`
 	Freq               int     `json:"freq"`
 	Claims             *jwt.Claims
-	Role               *string `json:"role,omitempty"`
-}
-
-type PublicUser struct {
-	Id    uuid.UUID `json:"id"`
-	Name  *string   `json:"name,omitempty"`
-	Image *string   `json:"image"`
+	Role               string `json:"role,omitempty"`
 }
 
 func FindAllEmails() ([]string, error) {
@@ -94,8 +89,8 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	}
 }
 
-func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
-	var u PublicUser
+func FindPublicUserById(uid uuid.UUID) (*handler.PublicUser, error) {
+	var u handler.PublicUser
 	err := dbLib.DB.
 		QueryRow(`SELECT id, name, image                       
                         FROM users 

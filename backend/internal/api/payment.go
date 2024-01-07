@@ -1,7 +1,7 @@
 package api
 
 import (
-	"backend/db"
+	"backend/internal/db"
 	"backend/pkg/config"
 	"backend/pkg/util"
 	"encoding/hex"
@@ -59,7 +59,7 @@ func NewResourceHandler(cfg *config.Config) *ResourceHandler {
 	return &ResourceHandler{Config: cfg}
 }
 
-func FakePayment(w http.ResponseWriter, r *http.Request, _ string) {
+func FakePayment(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	log.Printf("fake payment")
 	m := mux.Vars(r)
 	n := m["email"]

@@ -1,8 +1,8 @@
 package api
 
 import (
-	clnt "backend/clients"
-	db "backend/db"
+	"backend/internal/client"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -12,6 +12,15 @@ import (
 	"strconv"
 	"time"
 )
+
+type RepoHandler struct {
+	c *client.AnalysisClient
+	g *client.GithubClient
+}
+
+func NewRepoHandler(c *client.AnalysisClient, g *client.GithubClient) *RepoHandler {
+	return &RepoHandler{c, g}
+}
 
 // Data wraps the "data" JSON
 type Data struct {
@@ -58,7 +67,7 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	util.WriteJson(w, repo)
 }
 
-func TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func (rs *RepoHandler) TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -66,10 +75,10 @@ func TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	tagRepo0(w, user, repoId, db.Active)
+	rs.tagRepo0(w, user, repoId, db.Active)
 }
 
-func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func (rs *RepoHandler) UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
@@ -77,7 +86,7 @@ func UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	tagRepo0(w, user, repoId, db.Inactive)
+	rs.tagRepo0(w, user, repoId, db.Inactive)
 }
 
 func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
@@ -146,7 +155,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	util.WriteJson(w, data)
 }
 
-func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
+func (rs *RepoHandler) tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
 	repo, err := db.FindRepoById(repoId)
 	if err != nil {
 		log.Errorf("Could not find repo: %v", err)
@@ -186,7 +195,7 @@ func tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newE
 			log.Warningf("could not find latest analysis request: %v", err)
 		}
 		if ar == nil {
-			err = clnt.RequestAnalysis(repo.Id, *repo.GitUrl)
+			err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
 			if err != nil {
 				log.Warningf("Could not submit analysis request %v\n", err)
 			}
@@ -228,7 +237,7 @@ func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	util.WriteJson(w, repos)
 }
 
-func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	q := r.URL.Query().Get("q")
 	log.Infof("query %v", q)
 	if q == "" {
@@ -262,7 +271,7 @@ func SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 		repos = append(repos, *repo)
 	}
 
-	ghRepos, err := clnt.FetchGithubRepoSearch(q)
+	ghRepos, err := rh.g.FetchGithubRepoSearch(q)
 	if err != nil {
 		log.Errorf("Could not fetch repos: %v", err)
 		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)

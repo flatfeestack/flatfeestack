@@ -1,8 +1,8 @@
 package api
 
 import (
-	clnt "backend/clients"
-	db "backend/db"
+	"backend/internal/client"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/base32"
 	"encoding/json"
@@ -12,6 +12,14 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
+
+type EmailHandler struct {
+	e *client.EmailClient
+}
+
+func NewEmailHandler(e *client.EmailClient) *EmailHandler {
+	return &EmailHandler{e}
+}
 
 func GetMyConnectedEmails(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	emails, err := db.FindGitEmailsByUserId(user.Id)
@@ -40,7 +48,7 @@ func ConfirmConnectedEmails(w http.ResponseWriter, r *http.Request, _ *db.UserDe
 	}
 }
 
-func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func (e *EmailHandler) AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	var body GitEmailRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -77,7 +85,7 @@ func AddGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		return
 	}
 
-	err = clnt.SendAddGit(user.Id, body.Email, addGitEmailToken, lang(r))
+	err = e.e.SendAddGit(user.Id, body.Email, addGitEmailToken, lang(r))
 	if err != nil {
 		log.Errorf("Could not send add git email: %v", err)
 		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with sending the email. Please try again.")

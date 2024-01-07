@@ -12,6 +12,7 @@ type Config struct {
 	DBDriver                  string
 	DBScripts                 string
 	Admins                    string
+	AdminsParsed              []string
 	EmailLinkPrefix           string
 	EmailFrom                 string
 	EmailFromName             string

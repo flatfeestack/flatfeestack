@@ -1,8 +1,8 @@
 package api
 
 import (
-	clnt "backend/clients"
-	db "backend/db"
+	"backend/internal/client"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"bytes"
 	"crypto/hmac"
@@ -60,11 +60,21 @@ var (
 	nowpaymentsIpnKey         string
 )
 
-func InitNow(nowpaymentsApiUrl0 string, nowpaymentsToken0 string, nowpaymentsIpnCallbackUrl0 string, nowpaymentsIpnKey0 string) {
-	nowpaymentsApiUrl = nowpaymentsApiUrl0
-	nowpaymentsToken = nowpaymentsToken0
-	nowpaymentsIpnCallbackUrl = nowpaymentsIpnCallbackUrl0
-	nowpaymentsIpnKey = nowpaymentsIpnKey0
+type PaymentNowHandler struct {
+	e                         *client.EmailClient
+	nowpaymentsApiUrl         string
+	nowpaymentsToken          string
+	nowpaymentsIpnCallbackUrl string
+	nowpaymentsIpnKey         string
+}
+
+func NewPaymentNowHandler(e *client.EmailClient, nowpaymentsApiUrl0 string, nowpaymentsToken0 string, nowpaymentsIpnCallbackUrl0 string, nowpaymentsIpnKey0 string) *PaymentNowHandler {
+	return &PaymentNowHandler{
+		e,
+		nowpaymentsApiUrl0,
+		nowpaymentsToken0,
+		nowpaymentsIpnCallbackUrl0,
+		nowpaymentsIpnKey0}
 }
 
 func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
@@ -187,7 +197,7 @@ func createNowPayment(price float64, payCurrency string, externId *uuid.UUID, ui
 	return data, nil
 }
 
-func NowWebhook(w http.ResponseWriter, r *http.Request) {
+func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Errorf("Could not read body: %v", err)
@@ -204,7 +214,7 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data clnt.WebhookResponse
+	var data client.WebhookResponse
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Errorf("Could not parse webhook data: %v", err)
@@ -235,31 +245,31 @@ func NowWebhook(w http.ResponseWriter, r *http.Request) {
 			util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 			return
 		}
-		clnt.SendPaymentNowFinished(payInEvent.UserId, data)
+		p.e.SendPaymentNowFinished(payInEvent.UserId, data)
 	case "partially_paid":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInPartially
 		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
-		clnt.SendPaymentNowPartially(payInEvent.UserId, data)
+		p.e.SendPaymentNowPartially(payInEvent.UserId, data)
 	case "expired":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInExpired
 		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
-		clnt.SendPaymentNowRefunded(payInEvent.UserId, "expired", externalId)
+		p.e.SendPaymentNowRefunded(payInEvent.UserId, "expired", externalId)
 	case "failed":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInFailed
 		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
-		clnt.SendPaymentNowRefunded(payInEvent.UserId, "failed", externalId)
+		p.e.SendPaymentNowRefunded(payInEvent.UserId, "failed", externalId)
 	case "refunded":
 		payInEvent.Id = uuid.New()
 		payInEvent.Status = db.PayInRefunded
 		payInEvent.CreatedAt = util.TimeNow()
 		db.InsertPayInEvent(*payInEvent)
-		clnt.SendPaymentNowRefunded(payInEvent.UserId, "refunded", externalId)
+		p.e.SendPaymentNowRefunded(payInEvent.UserId, "refunded", externalId)
 	default:
 		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
 		w.WriteHeader(http.StatusOK)

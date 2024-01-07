@@ -1,13 +1,12 @@
 package api
 
 import (
-	"backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/paymentmethod"
 	"net/http"
 )
@@ -139,17 +138,17 @@ func DeleteImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
-func Users(w http.ResponseWriter, _ *http.Request, _ string) {
-	u, err := db.FindAllEmails()
+func Users(w http.ResponseWriter, _ *http.Request, u *db.UserDetail) {
+	users, err := db.FindAllEmails()
 	if err != nil {
 		log.Errorf("Could not fetch users: %v", err)
 		util.WriteErrorf(w, http.StatusBadRequest, "Could not fetch users. Please try again.")
 		return
 	}
-	util.WriteJson(w, u)
+	util.WriteJson(w, users)
 }
 
-func FakeUser(w http.ResponseWriter, r *http.Request, _ string) {
+func FakeUser(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	log.Printf("fake user")
 	m := mux.Vars(r)
 	n := m["email"]

@@ -1,10 +1,8 @@
 package app
 
 import (
-	"backend"
-	"backend/api"
-	"backend/clients"
-	"backend/db"
+	"backend/internal/api"
+	"backend/internal/db"
 	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +25,7 @@ func TestHourlyRunner(t *testing.T) {
 	t.Run("should request new analysis if older than two days", func(t *testing.T) {
 		now := time.Now().UTC()
 		threeMonthsAgo := now.AddDate(0, -3, 0)
-		main.setupAnalysisTestServer(t)
+		main.SetupAnalysisTestServer(t)
 
 		a := db.AnalysisRequest{
 			Id:       uuid.New(),
