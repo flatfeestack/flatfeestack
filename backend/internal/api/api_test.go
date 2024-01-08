@@ -1,7 +1,7 @@
 package api
 
 import (
-	"backend/db"
+	"backend/internal/db"
 	"backend/pkg/util"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"

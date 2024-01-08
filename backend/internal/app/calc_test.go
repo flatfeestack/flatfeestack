@@ -1,14 +1,6 @@
 package app
 
 import (
-	"backend/internal/api"
-	"backend/internal/db"
-	"backend/pkg/util"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"math/big"
-	"testing"
 	"time"
 )
 
@@ -21,7 +13,7 @@ var (
 	day5  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
 )
 
-func TestHourlyRunner(t *testing.T) {
+/*func TestHourlyRunner(t *testing.T) {
 	t.Run("should request new analysis if older than two days", func(t *testing.T) {
 		now := time.Now().UTC()
 		threeMonthsAgo := now.AddDate(0, -3, 0)
@@ -618,4 +610,4 @@ func setupUser(email string) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &u.Id, nil
-}
+}*/

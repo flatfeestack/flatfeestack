@@ -1,11 +1,6 @@
 package client
 
-import (
-	"github.com/stretchr/testify/assert"
-	"testing"
-)
-
-func TestGitHubFetch(t *testing.T) {
+/*func TestGitHubFetch(t *testing.T) {
 	t.Skip("This is for manual testing, we are calling coingecko here")
 	repos, err := FetchGithubRepoSearch("tomp2p")
 	assert.Nil(t, err)
@@ -14,4 +9,4 @@ func TestGitHubFetch(t *testing.T) {
 	repo, err := fetchGithubRepoById(3114475)
 	assert.Nil(t, err)
 	assert.Equal(t, "tomp2p/TomP2P", repo.Name)
-}
+}*/

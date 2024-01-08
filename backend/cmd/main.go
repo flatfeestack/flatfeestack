@@ -149,7 +149,7 @@ func main() {
 	eh := api2.NewEmailHandler(ec)
 	rr := api2.NewResourceHandler(cfg)
 
-	f, err := os.Open("banner.txt")
+	f, err := os.Open("cmd/banner.txt")
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
 	} else {
@@ -161,7 +161,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	stripe.Key = cfg.StripeAPISecretKey
+	//stripe.Key = cfg.StripeAPISecretKey
 
 	credentials := auth.Credentials{
 		Username: cfg.BackendUsername,

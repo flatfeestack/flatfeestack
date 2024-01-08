@@ -1,7 +1,6 @@
 package db
 
 import (
-	"backend/internal/handler"
 	"database/sql"
 	"fmt"
 	dbLib "github.com/flatfeestack/go-lib/database"
@@ -9,6 +8,12 @@ import (
 	"github.com/google/uuid"
 	"time"
 )
+
+type PublicUser struct {
+	Id    uuid.UUID `json:"id"`
+	Name  *string   `json:"name,omitempty"`
+	Image *string   `json:"image"`
+}
 
 type User struct {
 	Id        uuid.UUID `json:"id"`
@@ -89,8 +94,8 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	}
 }
 
-func FindPublicUserById(uid uuid.UUID) (*handler.PublicUser, error) {
-	var u handler.PublicUser
+func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
+	var u PublicUser
 	err := dbLib.DB.
 		QueryRow(`SELECT id, name, image                       
                         FROM users 

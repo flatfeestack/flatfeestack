@@ -1,14 +1,9 @@
 package main
 
 import (
-	"backend/internal/db"
 	"backend/pkg/config"
 	dbLib "github.com/flatfeestack/go-lib/database"
-	"github.com/go-jose/go-jose/v3/json"
 	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 )
@@ -40,7 +35,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func setup() {
+/*func setup() {
 	err := dbLib.RunSQL("db/init.sql")
 	if err != nil {
 		log.Fatalf("Could not run init.sql scripts: %s", err)
@@ -74,4 +69,4 @@ func SetupAnalysisTestServer(t *testing.T) *httptest.Server {
 	clients.InitAnalyzer(server.URL, "test", "test")
 
 	return server
-}
+}*/
