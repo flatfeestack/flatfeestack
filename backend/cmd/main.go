@@ -5,20 +5,15 @@ import (
 	"backend/internal/app"
 	"backend/internal/client"
 	"backend/internal/cron"
+	"backend/pkg/config"
 	util2 "backend/pkg/middleware"
 	"backend/pkg/util"
 	"crypto/sha256"
 	"encoding/base32"
 	"flag"
 	"fmt"
-	"github.com/flatfeestack/go-lib/auth"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-
-	"backend/pkg/config"
 	"github.com/dimiro1/banner"
+	"github.com/flatfeestack/go-lib/auth"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
 	prom "github.com/flatfeestack/go-lib/prometheus"
@@ -27,7 +22,11 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -41,11 +40,6 @@ var (
 	debug  bool
 	admins []string
 )
-
-func init() {
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
-}
 
 func parseFlags() {
 	cfg = &config.Config{}
@@ -99,10 +93,10 @@ func parseFlags() {
 	if cfg.Env == "local" || cfg.Env == "dev" {
 		debug = true
 		util.SetDebug(true)
-		log.SetLevel(log.DebugLevel)
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 	} else {
 		util.SetDebug(false)
-		log.SetLevel(log.InfoLevel)
+		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
 
 	if cfg.HS256 != "" {
@@ -112,10 +106,10 @@ func parseFlags() {
 			h := sha256.New()
 			h.Write([]byte(cfg.HS256))
 			cfg.JwtKey = h.Sum(nil)
-			log.Debugf("jwtKey: %v", jwtKey)
+			slog.Debug("jwtKey: %v", jwtKey)
 		}
 	} else {
-		log.Fatalf("HS256 seed is required, non was provided")
+		slog.Error("HS256 seed is required, non was provided")
 	}
 
 	cfg.AdminsParsed = strings.Split(cfg.Admins, ";")
@@ -133,7 +127,7 @@ func main() {
 	//the .env should be loaded before showing the banner, as the banner shows also the ENVs
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("Could not find env file [%v], using defaults", err)
+		slog.Info("Could not find .env file, using defaults")
 	}
 	//this will set the default ENVs
 	parseFlags()
@@ -153,12 +147,14 @@ func main() {
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
 	} else {
-		log.Printf("could not display banner...")
+		slog.Info("could not display banner...")
 	}
 
 	err = dbLib.InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("DB not initialized",
+			slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	//stripe.Key = cfg.StripeAPISecretKey
@@ -266,7 +262,7 @@ func main() {
 	router.HandleFunc("/invite/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteOther))).Methods(http.MethodPost)
 
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[404] no route matched for: %s, %s", r.URL, r.Method)
+		slog.Info("[404] no route matched for", "url", r.URL, "method", r.Method)
 		w.WriteHeader(http.StatusNotFound)
 	})
 
@@ -275,7 +271,11 @@ func main() {
 	cron.CronJobDay(c.DailyRunner, util.TimeNow())
 	cron.CronJobHour(c.HourlyRunner, util.TimeNow())
 
-	log.Println("Starting backend on port " + strconv.Itoa(cfg.Port))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router))
+	slog.Info("Starting FlatFeeStack backend", "port", cfg.Port)
+	err = http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router)
+	if err != nil {
+		slog.Error("Server stopped",
+			slog.Any("error", err))
+	}
 	cron.CronStop()
 }

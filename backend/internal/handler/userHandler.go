@@ -5,7 +5,7 @@ import (
 	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 )
 
@@ -35,17 +35,20 @@ func GetUserById(w http.ResponseWriter, r *http.Request) {
 	convertedUserId, err := uuid.Parse(userId)
 
 	if err != nil {
-		log.Errorf("Invalid user ID: %v", err)
+		slog.Error("Invalid user ID",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	}
 
 	user, err := db.FindPublicUserById(convertedUserId)
 
 	if user == nil {
-		log.Errorf("User not found %s", userId)
+		slog.Error("User not found",
+			slog.String("userId", userId))
 		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 	} else if err != nil {
-		log.Errorf("Could not fetch user: %v", err)
+		slog.Error("Could not fetch user",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 	} else {
 		util.WriteJson(w, user)

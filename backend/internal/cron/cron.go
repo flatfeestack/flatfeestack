@@ -9,7 +9,7 @@ package cron
 import (
 	"backend/pkg/util"
 	"context"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"time"
 )
 
@@ -36,10 +36,13 @@ func init() {
 					again = false
 					for k, job := range jobs {
 						if job.nextExecAt.Before(util.TimeNow()) {
-							log.Printf("About to execute job [daily] at %v", job.nextExecAt)
+							slog.Info("About to execute job",
+								slog.Any("time", job.nextExecAt))
 							err := job.job(job.nextExecAt)
 							if err != nil {
-								log.Printf("Error in job [daily] run at %v: %v", job.nextExecAt, err)
+								slog.Error("Error in job run",
+									slog.Any("time", job.nextExecAt),
+									slog.Any("error", err))
 							}
 							nextExecAt := job.nextExecFunc(job.nextExecAt)
 							jobs[k].nextExecAt = nextExecAt

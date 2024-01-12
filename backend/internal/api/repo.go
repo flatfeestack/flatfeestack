@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -48,19 +48,22 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	params := mux.Vars(r)
 	id, err := uuid.Parse(params["id"])
 	if err != nil {
-		log.Errorf("Not a valid id %v", err)
+		slog.Error("Not a valid id ",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	repo, err := db.FindRepoById(id)
 	if repo == nil {
-		log.Errorf("Could not find repo with id %v", id)
+		slog.Error("Could not find repo with id",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusNotFound, RepositoryNotFoundErrorMessage)
 		return
 	}
 	if err != nil {
-		log.Errorf("Could not fetch DB %v", err)
+		slog.Error("Could not fetch DB",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -71,7 +74,8 @@ func (rs *RepoHandler) TagRepo(w http.ResponseWriter, r *http.Request, user *db.
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
-		log.Errorf("Not a valid id %v", err)
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -82,7 +86,8 @@ func (rs *RepoHandler) UnTagRepo(w http.ResponseWriter, r *http.Request, user *d
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
-		log.Errorf("Not a valid id %v", err)
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -93,7 +98,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	params := mux.Vars(r)
 	repoId, err := uuid.Parse(params["id"])
 	if err != nil {
-		log.Errorf("Not a valid id %v", err)
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -103,7 +109,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	offsetString := params["offset"]
 	offset, err := strconv.Atoi(offsetString)
 	if err != nil {
-		log.Errorf("Not a valid id %v", err)
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -158,7 +165,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 func (rs *RepoHandler) tagRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
 	repo, err := db.FindRepoById(repoId)
 	if err != nil {
-		log.Errorf("Could not find repo: %v", err)
+		slog.Error("Could not find repo",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -181,23 +189,24 @@ func (rs *RepoHandler) tagRepo0(w http.ResponseWriter, user *db.UserDetail, repo
 
 	err = db.InsertOrUpdateSponsor(&event)
 	if err != nil {
-		log.Errorf("Could not save to DB: %v", err)
+		slog.Error("Could not save to DB",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
 	//no need for transaction here, repoId is very static
-	log.Printf("repoId %v", repo.Id)
-
 	if newEventType == db.Active {
 		ar, err := db.FindLatestAnalysisRequest(repo.Id)
 		if err != nil {
-			log.Warningf("could not find latest analysis request: %v", err)
+			slog.Warn("could not find latest analysis request",
+				slog.Any("error", err))
 		}
 		if ar == nil {
 			err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
 			if err != nil {
-				log.Warningf("Could not submit analysis request %v\n", err)
+				slog.Warn("Could not submit analysis request",
+					slog.Any("error", err))
 			}
 		}
 	}
@@ -212,7 +221,8 @@ func (rs *RepoHandler) tagRepo0(w http.ResponseWriter, user *db.UserDetail, repo
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
-		log.Errorf("Could not get repos: %v", err)
+		slog.Error("Could not get repos",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -222,15 +232,14 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDeta
 
 func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	q := r.URL.Query().Get("q")
-	log.Infof("query %v", q)
 	if q == "" {
-		log.Errorf("Empty search")
 		util.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
 		return
 	}
 	repos, err := db.FindReposByName(q)
 	if err != nil {
-		log.Errorf("Could not fetch repos: %v", err)
+		slog.Error("Could not fetch repos",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -239,9 +248,7 @@ func SearchRepoNames(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 
 func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	q := r.URL.Query().Get("q")
-	log.Infof("query %v", q)
 	if q == "" {
-		log.Errorf("Empty search")
 		util.WriteErrorf(w, http.StatusBadRequest, SearchErrorMessage)
 		return
 	}
@@ -264,7 +271,8 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 		}
 		err := db.InsertOrUpdateRepo(repo)
 		if err != nil {
-			log.Errorf("Error while insert/update repo: %v", err)
+			slog.Error("Error while insert/update repo",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -273,7 +281,8 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 
 	ghRepos, err := rh.g.FetchGithubRepoSearch(q)
 	if err != nil {
-		log.Errorf("Could not fetch repos: %v", err)
+		slog.Error("Could not fetch repos",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -283,7 +292,8 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 		repoId := uuid.New()
 		nr, err := v.Score.Float64()
 		if err != nil {
-			log.Errorf("Could not create score: %v", err)
+			slog.Error("Could not create score",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -299,7 +309,8 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 		}
 		err = db.InsertOrUpdateRepo(repo)
 		if err != nil {
-			log.Errorf("Error while insert/update repo: %v", err)
+			slog.Error("Error while insert/update repo",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}

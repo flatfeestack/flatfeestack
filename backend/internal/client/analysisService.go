@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/go-jose/go-jose/v3/json"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -78,7 +78,8 @@ func (a *AnalysisClient) RequestAnalysis(repoId uuid.UUID, repoUrl string) error
 		e := err.Error()
 		errA := db.UpdateAnalysisRequest(ar.Id, now, &e)
 		if errA != nil {
-			log.Warnf("cannot send to analyze engine %v", errA)
+			slog.Warn("cannot send to analyze engine",
+				slog.Any("error", err))
 		}
 		return err
 	}
@@ -95,7 +96,8 @@ func (a *AnalysisClient) RequestAnalysis(repoId uuid.UUID, repoUrl string) error
 		e := err.Error()
 		errA := db.UpdateAnalysisRequest(ar.Id, util.TimeNow(), &e)
 		if errA != nil {
-			log.Warnf("cannot send to analyze engine %v", errA)
+			slog.Warn("cannot send to analyze engine",
+				slog.Any("error", err))
 		}
 		return err
 	}

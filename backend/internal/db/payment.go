@@ -6,7 +6,7 @@ import (
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"math/big"
 	"time"
 )
@@ -166,15 +166,19 @@ func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64,
 	var db *big.Int
 	if d != "" {
 		d1, ok := new(big.Int).SetString(d, 10)
-		log.Printf("last payed in balance is %v for currency %v", d1, currency)
+		slog.Debug("Last payed in balance is %v for currency %v",
+			slog.String("balance", d1.String()),
+			slog.String("currency", currency))
 		if !ok {
 			return nil, 0, 0, nil, fmt.Errorf("not a big.int %v", d1)
 		}
 		db = new(big.Int).Div(d1, big.NewInt(seats))
 		db = new(big.Int).Div(db, big.NewInt(freq))
-		log.Printf("daily spending balance is %v", db)
+		slog.Debug("Daily spending balance",
+			slog.String("balance", db.String()))
 	} else {
-		log.Printf("nothing found for userId %v", userId)
+		slog.Debug("Nothing found for userId",
+			slog.String("userId", userId.String()))
 		db = big.NewInt(0)
 	}
 

@@ -6,7 +6,7 @@ import (
 	"backend/pkg/config"
 	"backend/pkg/util"
 	"github.com/go-jose/go-jose/v3/jwt"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 )
 
@@ -23,7 +23,8 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 		// Fetch user from DB
 		user, err := db.FindUserByEmail(claims.Subject)
 		if err != nil {
-			log.Errorf("ERR-08, user find error: %v", err)
+			slog.Error("User find error",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
 			return
 		}
@@ -31,7 +32,8 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 		if user == nil {
 			user, err = db.CreateUser(claims.Subject, util.TimeNow())
 			if err != nil {
-				log.Errorf("ERR-09, user update error: %v", err)
+				slog.Error("User update error",
+					slog.Any("error", err))
 				util.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
 				return
 			}
@@ -41,7 +43,8 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 		role := "user"
 		for _, email := range j.AdminsParsed {
 			if claims.Subject == email {
-				log.Printf("Authenticated admin %s\n", email)
+				slog.Info("Authenticated admin",
+					slog.String("email", email))
 				role = "admin"
 			}
 		}
@@ -53,7 +56,8 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 func JwtAdmin(next func(w http.ResponseWriter, r *http.Request, u *db.UserDetail)) func(http.ResponseWriter, *http.Request, *db.UserDetail) {
 	return func(w http.ResponseWriter, r *http.Request, u *db.UserDetail) {
 		if u.Role != "admin" {
-			log.Errorf("not admin : %v", u.Email)
+			slog.Error("not admin",
+				slog.String("email", u.Email))
 			util.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
 			return
 		}

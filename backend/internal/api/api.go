@@ -5,8 +5,8 @@ import (
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/language"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -143,7 +143,8 @@ func (h *ApiHandler) Config(w http.ResponseWriter, _ *http.Request) {
 	b, err := json.Marshal(Plans)
 	supportedCurrencies, err := json.Marshal(util.SupportedCurrencies)
 	if err != nil {
-		log.Errorf("Error while writing json: %v", err)
+		slog.Error("Error while writing json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -160,20 +161,23 @@ func TimeWarp(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	m := mux.Vars(r)
 	h := m["hours"]
 	if h == "" {
-		log.Errorf("Parameter hours not set: %v", m)
+		slog.Error("Parameter hours not set",
+			slog.Any("params", m))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		log.Errorf("Error while parsing hours to int: %v", err)
+		slog.Error("Error while parsing hours to int",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	seconds := hours * 60 * 60
 	util.SecondsAdd += seconds
-	log.Printf("time warp: %v", util.TimeNow())
+	slog.Info("Time warp",
+		slog.Any("time", util.TimeNow()))
 }
 
 func lang(r *http.Request) string {

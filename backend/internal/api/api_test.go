@@ -5,8 +5,8 @@ import (
 	"backend/pkg/util"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"log/slog"
 	"math/big"
 	"os"
 	"testing"
@@ -18,24 +18,28 @@ func TestMain(m *testing.M) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-			log.Errorf("cannot remove file: %v", err)
+			slog.Error("Cannot remove file",
+				slog.Any("error", err))
 		}
 	}(file.Name())
 
 	err = dbLib.InitDb("sqlite3", file.Name(), "")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("DB error",
+			slog.Any("error", err))
 	}
 
 	code := m.Run()
 
 	err = dbLib.DB.Close()
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource",
+			slog.Any("error", err))
 	}
 
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource",
+			slog.Any("error", err))
 	}
 
 	os.Exit(code)
@@ -44,13 +48,15 @@ func TestMain(m *testing.M) {
 func setup() {
 	err := dbLib.RunSQL("../db/init.sql")
 	if err != nil {
-		log.Fatalf("Could not run init.sql scripts: %s", err)
+		slog.Error("Could not run init.sql scripts",
+			slog.Any("error", err))
 	}
 }
 func teardown() {
 	err := dbLib.RunSQL("../db/delAll_test.sql")
 	if err != nil {
-		log.Fatalf("Could not run delAll_test.sql: %s", err)
+		slog.Error("Could not run delAll_test.sql",
+			slog.Any("error", err))
 	}
 }
 

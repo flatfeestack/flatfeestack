@@ -3,7 +3,7 @@ package main
 import (
 	"backend/pkg/config"
 	dbLib "github.com/flatfeestack/go-lib/database"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"os"
 	"testing"
 )
@@ -18,18 +18,18 @@ func TestMain(m *testing.M) {
 
 	err = dbLib.InitDb("sqlite3", file.Name(), "db/init.sql")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("DB error", slog.Any("error", err))
 	}
 
 	code := m.Run()
 
 	err = dbLib.DB.Close()
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource", slog.Any("error", err))
 	}
 
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource:", slog.Any("error", err))
 	}
 
 	os.Exit(code)

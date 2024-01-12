@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"math/big"
 	"time"
 )
@@ -74,7 +74,8 @@ func CreateUser(email string, now time.Time) (*UserDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("user %v created", user)
+	slog.Info("user %v created",
+		slog.Any("user", user))
 	return &userDetail, nil
 }
 

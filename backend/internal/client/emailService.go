@@ -6,7 +6,7 @@ import (
 	"fmt"
 	mail "github.com/flatfeestack/go-lib/email"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -86,7 +86,8 @@ func init() {
 			case e := <-queue:
 				err := mail.SendEmail(*e)
 				if err != nil {
-					log.Errorf("cannot send email %v", err)
+					slog.Error("cannot send email",
+						slog.Any("error", err))
 				}
 			}
 		}
@@ -111,7 +112,8 @@ func shouldSendEmail(uId *uuid.UUID, email string, key string) (bool, error) {
 	}
 
 	if c > 0 {
-		log.Printf("we already sent a notification %v", email)
+		slog.Info("we already sent a notification",
+			slog.String("email", email))
 		EmailNoNotifications++
 		return false, nil
 	}
@@ -141,7 +143,10 @@ func (e *EmailClient) prepareSendEmail(
 	}
 
 	if shouldSend {
-		log.Debugf("sending %v email to %v/%v", data["key"], data["email"], data["mailTo"])
+		slog.Debug("Sending",
+			slog.String("key", data["key"]),
+			slog.String("email", data["email"]),
+			slog.String("mailTo", data["mailTo"]))
 		lastMailTo = sendgridRequest.MailTo
 		if e.env != "local" {
 			request := mail.SendEmailRequest{
@@ -154,7 +159,10 @@ func (e *EmailClient) prepareSendEmail(
 			sendEmail(&request)
 		}
 	} else {
-		log.Debugf("not sending %v email to %v/%v", data["key"], data["email"], data["mailTo"])
+		slog.Debug("Not sending",
+			slog.String("key", data["key"]),
+			slog.String("email", data["email"]),
+			slog.String("mailTo", data["mailTo"]))
 	}
 
 	return nil

@@ -2,7 +2,7 @@ package db
 
 import (
 	dbLib "github.com/flatfeestack/go-lib/database"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -23,18 +23,21 @@ func TestMain(m *testing.M) {
 
 	err = dbLib.InitDb("sqlite3", file.Name(), "")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("DB error",
+			slog.Any("error", err))
 	}
 
 	code := m.Run()
 
 	err = dbLib.DB.Close()
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource",
+			slog.Any("error", err))
 	}
 
 	if err != nil {
-		log.Warnf("Could not start resource: %s", err)
+		slog.Warn("Could not start resource",
+			slog.Any("error", err))
 	}
 
 	os.Exit(code)
@@ -43,12 +46,14 @@ func TestMain(m *testing.M) {
 func setup() {
 	err := dbLib.RunSQL("init.sql")
 	if err != nil {
-		log.Fatalf("Could not run init.sql scripts: %s", err)
+		slog.Error("Could not run init.sql scripts",
+			slog.Any("error", err))
 	}
 }
 func teardown() {
 	err := dbLib.RunSQL("delAll_test.sql")
 	if err != nil {
-		log.Fatalf("Could not run delAll_test.sql: %s", err)
+		slog.Error("Could not run delAll_test.sql",
+			slog.Any("error", err))
 	}
 }

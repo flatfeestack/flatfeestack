@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -18,7 +18,8 @@ const (
 func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, false)
 	if err != nil {
-		log.Errorf("Could not find contributions: %v", err)
+		slog.Error("Could not find contributions",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
@@ -28,7 +29,8 @@ func ContributionsSend(w http.ResponseWriter, _ *http.Request, user *db.UserDeta
 func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	cs, err := db.FindContributions(user.Id, true)
 	if err != nil {
-		log.Errorf("Could not find contributions: %v", err)
+		slog.Error("Could not find contributions",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, ContributionsError)
 		return
 	}
@@ -39,21 +41,24 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 	m := mux.Vars(r)
 	u := m["uuid"]
 	if u == "" {
-		log.Errorf("UUID Parameter not set: %v", m)
+		slog.Error("UUID Parameter not set",
+			slog.Any("params", m))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	uu, err := uuid.Parse(u)
 	if err != nil {
-		log.Errorf("Problem with parsing UUID: %v", err)
+		slog.Error("Problem with parsing UUID",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	user, err := db.FindUserById(uu)
 	if err != nil {
-		log.Errorf("Could not find user: %v", err)
+		slog.Error("Could not find user",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong with retrieving the user. Please try again.")
 		return
 	}
@@ -64,7 +69,8 @@ func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
 func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
 	if err != nil {
-		log.Errorf("Could not find sponsored repos by user: %v", err)
+		slog.Error("Could not find sponsored repos by user",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -73,7 +79,8 @@ func ContributionsSum(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 	for _, v := range repos {
 		repoBalances, err := db.FindSumFutureBalanceByRepoId(v.Id)
 		if err != nil {
-			log.Errorf("Could not find sum of future balance by repo id: %v", err)
+			slog.Error("Could not find sum of future balance by repo id",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 			return
 		}
@@ -90,27 +97,31 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	var repoMap FakeRepoMapping
 	err := json.NewDecoder(r.Body).Decode(&repoMap)
 	if err != nil {
-		log.Errorf("Error while decoding body: %v", err)
+		slog.Error("Error while decoding body",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	monthStart, err := time.Parse("2006-01-02 15:04", repoMap.StartData)
 	if err != nil {
-		log.Errorf("Error while parsing start date: %v", err)
+		slog.Error("Error while parsing start date",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	monthStop, err := time.Parse("2006-01-02 15:04", repoMap.EndData)
 	if err != nil {
-		log.Errorf("Error while parsing end date: %v", err)
+		slog.Error("Error while parsing end date",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	repoMap2, err := db.FindReposByName(repoMap.Name)
 	if err != nil {
-		log.Errorf("Error while retrieving repos by name: %v", err)
+		slog.Error("Error while retrieving repos by name",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, RepositoryNotFoundErrorMessage)
 		return
 	}
@@ -130,7 +141,8 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 
 	err = db.InsertAnalysisRequest(a, util.TimeNow())
 	if err != nil {
-		log.Errorf("Error while inserting analysis request: %v", err)
+		slog.Error("Error while inserting analysis request",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -138,7 +150,8 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	for _, v := range repoMap.Weights {
 		err = db.InsertAnalysisResponse(a.Id, v.Email, v.Names, v.Weight, util.TimeNow())
 		if err != nil {
-			log.Errorf("Error while inserting analysis response: %v", err)
+			slog.Error("Error while inserting analysis response",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}

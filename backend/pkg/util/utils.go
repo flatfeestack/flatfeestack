@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/alecthomas/template"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -47,19 +47,22 @@ func StringPointer(s string) *string {
 
 func WriteErrorf(w http.ResponseWriter, code int, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.Error(msg)
+	slog.Error(msg)
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 	w.WriteHeader(code)
 	msgEnc, err := json.Marshal(msg)
 	if err != nil {
-		log.Errorf("error while trying to encode msg:  %v, err: %v", msg, err)
+		slog.Error("error while trying to encode msg",
+			slog.String("msg", msg),
+			slog.Any("error", err))
 		return
 	}
 	_, err = w.Write([]byte(`{"error":` + string(msgEnc) + `}`))
 	if err != nil {
-		log.Errorf("Something went wrong while writing error message: %v", err)
+		slog.Error("Something went wrong while writing error message",
+			slog.Any("error", err))
 		return
 	}
 }
@@ -183,10 +186,14 @@ func ParseTemplate(filename string, other map[string]string) string {
 		if err == nil {
 			textMessage = buf.String()
 		} else {
-			log.Printf("cannot execute template file [%v], err: %v", filename, err)
+			slog.Info("Cannot execute template file",
+				slog.String("filename", filename),
+				slog.Any("error", err))
 		}
 	} else {
-		log.Printf("cannot prepare file template file [%v], err: %v", filename, err)
+		slog.Info("Cannot prepare file template file",
+			slog.String("filename", filename),
+			slog.Any("error", err))
 	}
 	return textMessage
 }

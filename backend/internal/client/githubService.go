@@ -2,7 +2,7 @@ package client
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,10 +36,12 @@ func NewGithubClient() *GithubClient {
 }
 
 func (gc *GithubClient) FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
-	log.Print("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
-	res, err := gc.HTTPClient.Get("https://api.github.com/search/repositories?q=" + url.QueryEscape(q))
+	urlEsc := "https://api.github.com/search/repositories?q=" + url.QueryEscape(q)
+	slog.Info(urlEsc)
+	res, err := gc.HTTPClient.Get(urlEsc)
 	if err != nil {
-		log.Printf("Could not search for repos %v", err)
+		slog.Error("Could not search for repos",
+			slog.Any("error", err))
 		return nil, err
 	}
 	var result RepoSearchResponse
@@ -55,16 +57,19 @@ func (gc *GithubClient) FetchGithubRepoSearch(q string) ([]RepoSearch, error) {
 }
 
 func (gc *GithubClient) fetchGithubRepoById(id uint32) (*RepoSearch, error) {
-	res, err := gc.HTTPClient.Get("http://api.github.com/repositories/" + strconv.Itoa(int(id)))
+	urlEsc := "http://api.github.com/repositories/" + strconv.Itoa(int(id))
+	res, err := gc.HTTPClient.Get(urlEsc)
 	if err != nil {
-		log.Printf("Could not fetch for repo details %v", err)
+		slog.Error("Could not fetch for repo details",
+			slog.Any("error", err))
 		return nil, err
 	}
 
 	var result RepoSearch
 	err = json.NewDecoder(res.Body).Decode(&result)
 	if err != nil {
-		log.Printf("cant decode json %v", err)
+		slog.Error("cant decode json",
+			slog.Any("error", err))
 		return nil, err
 	}
 	return &result, nil

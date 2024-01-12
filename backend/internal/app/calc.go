@@ -7,7 +7,7 @@ import (
 	"backend/pkg/util"
 	"fmt"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"math/big"
 	"time"
 )
@@ -27,20 +27,23 @@ func (c *CalcHandler) HourlyRunner(now time.Time) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Start hourly analysis check with %v entries", len(a))
+	slog.Info("Start hourly analysis check",
+		slog.Int("len", len(a)))
 
 	nr := 0
 	for _, v := range a {
 		//check if we need analysis request
 		err := c.ac.RequestAnalysis(v.RepoId, v.GitUrl)
 		if err != nil {
-			log.Warnf("analysis request failed %v", err)
+			slog.Warn("analysis request failed",
+				slog.Any("error", err))
 		} else {
 			nr++
 		}
 	}
 
-	log.Printf("Hourly runner processed %v entries", nr)
+	slog.Info("Hourly runner processed",
+		slog.Int("nr", nr))
 	return nil
 }
 
@@ -48,7 +51,9 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 	yesterdayStop := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-	log.Printf("Start daily runner from %v to %v", yesterdayStart, yesterdayStop)
+	slog.Info("Start daily runner",
+		slog.Any("time-start", yesterdayStart),
+		slog.Any("time-stop", yesterdayStop))
 
 	sponsorResults, err := db.FindSponsorsBetween(yesterdayStart, yesterdayStop)
 	if err != nil {
@@ -66,7 +71,8 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 		}
 	}
 
-	log.Printf("Daily runner inserted %v entries", nr)
+	slog.Info("Daily runner inserted",
+		slog.Int("nr", nr))
 
 	//aggregate marketing emails
 	ms, err := db.FindMarketingEmails()
@@ -93,11 +99,16 @@ func (c *CalcHandler) calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterda
 		if err != nil {
 			return fmt.Errorf("cannot find invited user %v", err)
 		}
-		log.Printf("the user %v, which is sponsored by %v supports %v repos", u.Email, u1.Email, len(rids))
+		slog.Info("User sponsored by supports",
+			slog.String("email", u.Email),
+			slog.String("email", u1.Email),
+			slog.Int("len(rids)", len(rids)))
 		return c.calcAndDeduct(u1, rids, yesterdayStart, u)
 	}
 	//TODO: also notify the not only the parent of insufficient funds
-	log.Printf("the user %v supports %v repos", u.Email, len(rids))
+	slog.Debug("User supports repos",
+		slog.String("email", u.Email),
+		slog.Int("len(rids)", len(rids)))
 	return c.calcAndDeduct(u, rids, yesterdayStart, nil)
 }
 
@@ -108,16 +119,22 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 	}
 
 	if freq <= 1 {
-		log.Printf("the user %v (id=%v) has 1 day or less left, top up!", u.Email, u.Id)
+		slog.Info("1 day or less left, top up!",
+			slog.String("email", u.Email),
+			slog.String("userId", u.Id.String()))
 		c.reminderTopUp(*u, uOrig)
 	}
 
 	if freq > 0 {
-		log.Printf("the user %v (id=%v) will support these repos: %v", u.Email, u.Id, rids)
+		slog.Info("User will support these repos",
+			slog.String("email", u.Email),
+			slog.String("userId", u.Id.String()),
+			slog.Any("rids", rids))
 		err = doDeduct(u.Id, rids, yesterdayStart, currency, distributeDeduct, distributeAdd, deductFutureContribution)
 		return err
 	} else {
-		log.Debugf("the user %v is out of funds", u.Id)
+		slog.Debug("User is out of funds",
+			slog.String("userId", u.Id.String()))
 	}
 	return nil
 }
@@ -157,18 +174,28 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			//to show him what his/her share would be
 			newTotal := total + w
 			amount := calcSharePerUser(distributeAdd, w, newTotal)
-			log.Printf("unclaimed: for the user %v, from the amount for this repo %v, the user has a weight of %v from total %v, so he gets %v", uid, distributeAdd, w, newTotal, amount)
+			slog.Info("Unclaimed / not in map",
+				slog.String("userId", uid.String()),
+				slog.String("add", distributeAdd.String()),
+				slog.Float64("weight", w),
+				slog.Float64("total", newTotal),
+				slog.String("amount", amount.String()))
 			id := uuid.New()
 			err = db.InsertUnclaimed(id, email, rid, amount, currency, yesterdayStart, util.TimeNow())
 			if err != nil {
-				log.Errorf("insertUnclaimed failed: %v, %v\n", email, err)
+				slog.Error("insertUnclaimed failed: %v, %v\n",
+					slog.String("email", email),
+					slog.Any("error", err))
 			}
 		}
 
 		if len(uidInMap) == 0 {
 			//no contribution park the sponsoring separately
-			log.Printf("unclaimed for repo %v, from the amount %v, from total %v, so this will be deducted %v",
-				rid, distributeAdd, total, distributeDeduct)
+			slog.Info("Unclaimed / deducted",
+				slog.String("rid", rid.String()),
+				slog.String("add", distributeAdd.String()),
+				slog.Float64("total", total),
+				slog.String("deduct", distributeDeduct.String()))
 			err = db.InsertFutureContribution(uid, rid, distributeDeduct, currency, yesterdayStart, util.TimeNow())
 			if err != nil {
 				return err
@@ -189,8 +216,13 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 
 			for contributorUserId, w := range uidInMap {
 				amount := calcSharePerUser(distributable, w, total)
-				log.Printf("user %v for repo %v, from the amount %v, the user has a weight of %v from total %v, so he gets %v",
-					contributorUserId, rid, distributable, w, total, amount)
+				slog.Info("Claim",
+					slog.String("userId", contributorUserId.String()),
+					slog.String("rid", rid.String()),
+					slog.String("add", distributable.String()),
+					slog.Float64("weight", w),
+					slog.Float64("total", total),
+					slog.String("amount", amount.String()))
 				err = db.InsertContribution(uid, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow())
 				if err != nil {
 					return err
@@ -243,9 +275,12 @@ func calcShare(userId uuid.UUID, repoLen int64) (string, int64, *big.Int, *big.I
 		//if we distribute more, we need to deduct this from the future balances
 		deductFutureContribution = new(big.Int).Neg(distributeFutureAdd)
 	}
-	log.Printf("for the currency %v, we have %v days left, we deduct %v, potentially add to "+
-		"future contrib %v, or potentially deduct from future contrib %v per repository",
-		currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution)
+	slog.Info("Calculation",
+		slog.String("currency", currency),
+		slog.Int64("frey", freq),
+		slog.String("deduct", distributeDeduct.String()),
+		slog.String("add", distributeFutureAdd.String()),
+		slog.String("deduct-future", deductFutureContribution.String()))
 	return currency, freq, distributeDeduct, distributeFutureAdd, deductFutureContribution, nil
 }
 
@@ -285,6 +320,7 @@ func (c *CalcHandler) reminderTopUp(u db.UserDetail, uOrig *db.UserDetail) error
 		}
 	}
 
-	log.Printf("TOPUP, you are running out of credit %v", u)
+	slog.Info("TOPUP, you are running out of credit",
+		slog.Any("user", u))
 	return nil
 }

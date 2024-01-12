@@ -3,7 +3,7 @@ package util
 import (
 	"bytes"
 	"github.com/felixge/httpsnoop"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -144,8 +144,8 @@ func logHTTPReq(ri *HTTPReqInfo, h http.Header) {
 	}
 
 	if ri.code >= 400 {
-		log.Error(msg)
+		slog.Error(msg)
 	} else {
-		log.Print(msg)
+		slog.Info(msg)
 	}
 }

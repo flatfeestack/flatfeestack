@@ -1,6 +1,6 @@
 module backend
 
-go 1.22
+go 1.22rc1
 
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
@@ -16,7 +16,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/nspcc-dev/neo-go v0.105.0
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sirupsen/logrus v1.9.3
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.4
 	github.com/stripe/stripe-go/v76 v76.11.0
@@ -43,6 +42,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/sendgrid/sendgrid-go v3.12.0+incompatible // indirect
+	github.com/sirupsen/logrus v1.9.2 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

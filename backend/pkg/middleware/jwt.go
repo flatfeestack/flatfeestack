@@ -6,7 +6,7 @@ import (
 	"backend/pkg/util"
 	"github.com/flatfeestack/go-lib/auth"
 	"github.com/go-jose/go-jose/v3/jwt"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 )
 
@@ -22,18 +22,20 @@ func (j *JwtHandler) JwtAuth(next func(w http.ResponseWriter, r *http.Request, j
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := auth.ValidateJwtInRequest(r, j.JwtKey)
 		if claims != nil && err != nil {
-			log.Errorf("Token expired: %v", claims.Subject)
+			slog.Error("Token expired", slog.String("subject", claims.Subject))
 			util.WriteErrorf(w, http.StatusUnauthorized, api.GenericErrorMessage)
 			return
 		} else if claims == nil && err != nil {
-			log.Errorf("jwtAuthAdmin error: %v", err)
+			slog.Error("JwtAuthAdmin error", err)
 			util.WriteErrorf(w, http.StatusBadRequest, api.NotAllowedToViewMessage)
 			return
 		}
 
-		log.Printf("User [%s] request [%s]:%s\n", claims.Subject, r.URL, r.Method)
+		slog.Info("User request",
+			slog.String("subject", claims.Subject),
+			slog.Any("url", r.URL),
+			slog.String("method", r.Method))
 		next(w, r, claims)
-
 	}
 }
 

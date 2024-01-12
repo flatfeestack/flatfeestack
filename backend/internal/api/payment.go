@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -60,21 +60,23 @@ func NewResourceHandler(cfg *config.Config) *ResourceHandler {
 }
 
 func FakePayment(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
-	log.Printf("fake payment")
+	slog.Info("fake payment")
 	m := mux.Vars(r)
 	n := m["email"]
 	s := m["seats"]
 
 	u, err := db.FindUserByEmail(n)
 	if err != nil {
-		log.Errorf("Error while finding user by email: %v", err)
+		slog.Error("Error while finding user by email",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	seats, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		log.Errorf("Error while parsing int: %v", err)
+		slog.Error("Error while parsing int",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -93,14 +95,16 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 
 	err = db.InsertPayInEvent(payInEvent)
 	if err != nil {
-		log.Errorf("Error with inserting pay in event: %v", err)
+		slog.Error("Error with inserting pay in event",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = db.PaymentSuccess(e, big.NewInt(1))
 	if err != nil {
-		log.Errorf("Error with payment success: %v", err)
+		slog.Error("Error with payment success",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
@@ -126,7 +130,6 @@ func StrategyDeductMax(userId uuid.UUID, balances map[string]*big.Int, subs map[
 		if err != nil {
 			return "N/A", 0, nil, err
 		}
-		log.Printf("newB %v / ds %v", newBalance, ds)
 		freq := new(big.Int).Div(newBalance, ds).Int64()
 		if freq > 0 {
 			if freq > maxFreq {
@@ -146,7 +149,8 @@ func StrategyDeductMax(userId uuid.UUID, balances map[string]*big.Int, subs map[
 func CancelSub(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	err := db.UpdateSeatsFreq(user.Id, user.Seats, 0)
 	if err != nil {
-		log.Errorf("Could not cancel subscription: %v", err)
+		slog.Error("Could not cancel subscription",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, "Oops something went wrong while canceling the subscription. Please try again.")
 		return
 	}
@@ -155,14 +159,16 @@ func CancelSub(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 func StatusSponsoredUsers(w http.ResponseWriter, _ *http.Request, user *db.UserDetail) {
 	userStatus, err := db.FindSponsoredUserBalances(user.Id)
 	if err != nil {
-		log.Errorf("Error while finding sponsored user balances: %v", err)
+		slog.Error("Error while finding sponsored user balances",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(userStatus)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -174,7 +180,8 @@ func (h *ResourceHandler) RequestPayout(w http.ResponseWriter, r *http.Request, 
 
 	ownContributionIds, err := db.FindOwnContributionIds(user.Id, targetCurrency)
 	if err != nil {
-		log.Errorf("Error while trying to retrieve own contribution ids: %v", err)
+		slog.Error("Error while trying to retrieve own contribution ids",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
@@ -184,7 +191,8 @@ func (h *ResourceHandler) RequestPayout(w http.ResponseWriter, r *http.Request, 
 	// FlatFeeStack already calculates in micro dollars
 	totalEarnedAmount, err := db.SumTotalEarnedAmountForContributionIds(ownContributionIds)
 	if err != nil {
-		log.Errorf("Unable to retrieve already earned amount in target currency: %v", err)
+		slog.Error("Unable to retrieve already earned amount in target currency",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PayoutError)
 		return
 	}
@@ -196,14 +204,16 @@ func (h *ResourceHandler) RequestPayout(w http.ResponseWriter, r *http.Request, 
 func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	payInEvents, err := db.FindPayInUser(user.Id)
 	if err != nil {
-		log.Errorf("Error while finding pay in user: %v", err)
+		slog.Error("Error while finding pay in user",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, PaymentError)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(payInEvents)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -212,7 +222,8 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
 	if err != nil {
-		log.Errorf("Error while finding sum payments by currency: %v", err)
+		slog.Error("Error while finding sum payments by currency",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
@@ -220,14 +231,16 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//either the user spent it on a repo that does not have any devs who can claim
 	mFut, err := db.FindSumFutureSponsors(user.Id)
 	if err != nil {
-		log.Errorf("Error while finding sum future sponsors: %v", err)
+		slog.Error("Error while finding sum future sponsors",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 	//or the user spent it on for a repo with a dev who can claim
 	mSub, err := db.FindSumDailySponsors(user.Id)
 	if err != nil {
-		log.Errorf("Error while finding sum daily sponsors: %v", err)
+		slog.Error("Error while finding sum daily sponsors",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
@@ -252,14 +265,16 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//now sanity check if all the deducted mSub/mFut are set to zero
 	for currency, balance := range mSub {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			log.Errorf("Something is off with: %v", currency)
+			slog.Error("Something is off with",
+				slog.String("currency", currency))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	}
 	for currency, balance := range mFut {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			log.Errorf("Something is off with: %v", currency)
+			slog.Error("Something is off with",
+				slog.String("currency", currency))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -267,7 +282,8 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	err = json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}

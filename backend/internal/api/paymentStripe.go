@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/customer"
 	"github.com/stripe/stripe-go/v76/paymentintent"
 	"github.com/stripe/stripe-go/v76/setupintent"
 	"github.com/stripe/stripe-go/v76/webhook"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -41,14 +41,16 @@ func (p *PaymentStripeHandler) SetupStripe(w http.ResponseWriter, _ *http.Reques
 		params := &stripe.CustomerParams{}
 		c, err := customer.New(params)
 		if err != nil {
-			log.Errorf("Error while creating new customer: %v", err)
+			slog.Error("Error while creating new customer",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		user.StripeId = &c.ID
 		err = db.UpdateStripe(user)
 		if err != nil {
-			log.Errorf("Error while updating stripe: %v", err)
+			slog.Error("Error while updating stripe",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -61,7 +63,8 @@ func (p *PaymentStripeHandler) SetupStripe(w http.ResponseWriter, _ *http.Reques
 	}
 	intent, err := setupintent.New(params)
 	if err != nil {
-		log.Errorf("Error while creating setup intent: %v", err)
+		slog.Error("Error while creating setup intent",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -70,7 +73,8 @@ func (p *PaymentStripeHandler) SetupStripe(w http.ResponseWriter, _ *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -78,14 +82,16 @@ func (p *PaymentStripeHandler) SetupStripe(w http.ResponseWriter, _ *http.Reques
 
 func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	if user.PaymentMethod == nil {
-		log.Errorf("No payment method defined for user: %v", user.Id)
+		slog.Error("No payment method defined for user",
+			slog.String("user", user.Id.String()))
 		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong, no payment method set. Please try again.")
 		return
 	}
 
 	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
-		log.Printf("Cannot get payment informations for stripe payments: %v", err)
+		slog.Error("Cannot get payment informations for stripe payments",
+			slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -115,7 +121,9 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 
 	err = db.InsertPayInEvent(payInEvent)
 	if err != nil {
-		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
+		slog.Error("Cannot insert payment",
+			slog.String("userId", user.Id.String()),
+			slog.Any("error", err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -128,7 +136,8 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 
 	intent, err := paymentintent.New(params)
 	if err != nil {
-		log.Errorf("Error while creating new Payment intent: %v", err)
+		slog.Error("Error while creating new Payment intent",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -138,7 +147,8 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 	db.UpdateClientSecret(user.Id, intent.ClientSecret)
 	err = json.NewEncoder(w).Encode(cs)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -204,7 +214,8 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 	// insufficient funds: 4000 0000 0000 9995 (checked)
 	payload, err := io.ReadAll(req.Body)
 	if err != nil {
-		log.Printf("Error reading request body: %v\n", err)
+		slog.Error("Error reading request body",
+			slog.Any("error", err))
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
@@ -212,7 +223,8 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), p.stripeWebhookSecretKey)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
-		log.Printf("Error evaluating signed webhook request: %v", err)
+		slog.Error("Error evaluating signed webhook request",
+			slog.Any("error", err))
 		return
 	}
 	// Unmarshal the event data into an appropriate struct depending on its Type
@@ -220,14 +232,16 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 	case "payment_intent.succeeded":
 		externalId, feePrm, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			slog.Error("Parser err from stripe",
+				slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		payInEvent, err := db.FindPayInExternal(externalId, db.PayInRequest)
 		if err != nil {
-			log.Printf("payin does not exist: %v, %v\n", externalId, err)
+			slog.Error("Payin does not exist",
+				slog.String("externalId", externalId.String()), slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -239,7 +253,8 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 
 		err = db.PaymentSuccess(externalId, fee)
 		if err != nil {
-			log.Printf("User sum balance cann run for %v: %v\n", externalId, err)
+			slog.Error("User sum balance cannot run",
+				slog.String("externalId", externalId.String()), slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -250,14 +265,16 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 		//again
 		externalId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			slog.Error("Parser err from stripe",
+				slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		payInEvent, err := db.FindPayInExternal(externalId, db.PayInRequest)
 		if err != nil {
-			log.Printf("payin does not exist: %v, %v\n", externalId, err)
+			slog.Error("payin does not exist",
+				slog.String("externalId", externalId.String()), slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -267,7 +284,8 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 		payInEvent.CreatedAt = util.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)
 		if err != nil {
-			log.Printf("insert payin does not exist: %v, %v\n", externalId, err)
+			slog.Error("Insert payin does not exist",
+				slog.String("externalId", externalId.String()), slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -278,20 +296,24 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 	case "payment_intent.payment_failed":
 		//requires_payment_method is when action is required but fails, dont report it twice
 		if event.Data.Object["status"] == "requires_payment_method" {
-			log.Infof("Payment failed due to requires_payment_method: %v\n", event.Data.Object)
+			slog.Info("Payment failed due to requires_payment_method",
+				slog.Any("data", event.Data.Object))
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 		externalId, _, err := parseStripeData(event.Data.Raw)
 		if err != nil {
-			log.Printf("Parser err from stripe: %v\n", err)
+			slog.Error("Parser err from stripe",
+				slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		payInEvent, err := db.FindPayInExternal(externalId, db.PayInRequest)
 		if err != nil {
-			log.Printf("payin does not exist: %v, %v\n", externalId, err)
+			slog.Error("Payin does not exist",
+				slog.String("externalId", externalId.String()),
+				slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -301,14 +323,17 @@ func (p *PaymentStripeHandler) StripeWebhook(w http.ResponseWriter, req *http.Re
 		payInEvent.CreatedAt = util.TimeNow()
 		err = db.InsertPayInEvent(*payInEvent)
 		if err != nil {
-			log.Printf("insert payin does not exist: %v, %v\n", externalId, err)
+			slog.Error("Insert payin does not exist",
+				slog.String("externalId", externalId.String()),
+				slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		p.e.SendStripeFailed(payInEvent.UserId, externalId)
 	default:
-		log.Printf("Unhandled event type: %s\n", event.Type)
+		slog.Error("Unhandled event type",
+			slog.String("type", string(event.Type)))
 		w.WriteHeader(http.StatusOK)
 	}
 }

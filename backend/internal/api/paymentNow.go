@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -80,7 +80,8 @@ func NewPaymentNowHandler(e *client.EmailClient, nowpaymentsApiUrl0 string, nowp
 func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	freq, seats, plan, err := paymentInformation(r)
 	if err != nil {
-		log.Errorf("Cannot get payment information for now payments: %v", err)
+		slog.Error("Cannot get payment information for now payments",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with retrieving the payment information. Please try again.")
 		return
 	}
@@ -103,7 +104,9 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	err = db.InsertPayInEvent(payInEvent)
 	if err != nil {
-		log.Printf("Cannot insert payment for %v: %v\n", user.Id, err)
+		slog.Error("Cannot insert payment",
+			slog.String("userId", user.Id.String()),
+			slog.Any("error", err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -114,7 +117,8 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	paymentResponse, err := createNowPayment(price, payCurrency, &e, &user.Id)
 
 	if err != nil {
-		log.Errorf("could not create payment: %v", err)
+		slog.Error("could not create payment",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, "Oops something went wrong with creating the payment. Please try again.")
 		return
 	}
@@ -130,7 +134,8 @@ func NowPayment(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(paymentResponse2)
 	if err != nil {
-		log.Errorf("Could not encode json: %v", err)
+		slog.Error("Could not encode json",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -181,7 +186,8 @@ func createNowPayment(price float64, payCurrency string, externId *uuid.UUID, ui
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			log.Printf("Body ReadCloser: %v", err)
+			slog.Error("Body ReadCloser",
+				slog.Any("error", err))
 		}
 	}(response.Body)
 
@@ -200,7 +206,8 @@ func createNowPayment(price float64, payCurrency string, externId *uuid.UUID, ui
 func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Errorf("Could not read body: %v", err)
+		slog.Error("Could not read body",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -209,7 +216,8 @@ func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	nowSignature := r.Header.Get("x-nowpayments-sig")
 	err = verifyNowWebhook(body, nowSignature)
 	if err != nil {
-		log.Errorf("Wrong signature: %v", err)
+		slog.Error("Wrong signature",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -217,13 +225,14 @@ func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	var data client.WebhookResponse
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		log.Errorf("Could not parse webhook data: %v", err)
+		slog.Error("Could not parse webhook data",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
 	if data.OrderId == nil {
-		log.Errorf("No orderId set for WebhookResponse")
+		slog.Error("No orderId set for WebhookResponse")
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -232,7 +241,8 @@ func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	payInEvent, err := db.FindPayInExternal(externalId, db.PayInRequest)
 
 	if err != nil {
-		log.Errorf("Error while finding pay in external: %v", err)
+		slog.Error("Error while finding pay in external",
+			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
@@ -241,7 +251,8 @@ func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 	case "finished":
 		err = db.PaymentSuccess(externalId, big.NewInt(0))
 		if err != nil {
-			log.Errorf("Could not process now payment success: %v", err)
+			slog.Error("Could not process now payment success",
+				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 			return
 		}
@@ -271,7 +282,8 @@ func (p *PaymentNowHandler) NowWebhook(w http.ResponseWriter, r *http.Request) {
 		db.InsertPayInEvent(*payInEvent)
 		p.e.SendPaymentNowRefunded(payInEvent.UserId, "refunded", externalId)
 	default:
-		log.Printf("Unhandled event type: %s\n", data.PaymentStatus)
+		slog.Error("Unhandled event type",
+			slog.String("status", data.PaymentStatus))
 		w.WriteHeader(http.StatusOK)
 	}
 }
