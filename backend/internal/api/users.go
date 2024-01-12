@@ -5,7 +5,6 @@ import (
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/paymentmethod"
 	"log/slog"
@@ -13,8 +12,7 @@ import (
 )
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	userId := params["id"]
+	userId := r.PathValue("id")
 	convertedUserId, err := uuid.Parse(userId)
 
 	if err != nil {
@@ -64,8 +62,7 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		return
 	}
 
-	params := mux.Vars(r)
-	a := params["method"]
+	a := r.PathValue("method")
 
 	user.PaymentMethod = &a
 	pm, err := paymentmethod.Get(
@@ -102,8 +99,7 @@ func UpdateMethod(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 }
 
 func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	params := mux.Vars(r)
-	a := params["name"]
+	a := r.PathValue("name")
 	err := db.UpdateUserName(user.Id, a)
 	if err != nil {
 		slog.Error("Could not save name",
@@ -165,8 +161,7 @@ func Users(w http.ResponseWriter, _ *http.Request, u *db.UserDetail) {
 
 func FakeUser(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	slog.Info("fake user")
-	m := mux.Vars(r)
-	n := m["email"]
+	n := r.PathValue("email")
 
 	uid := uuid.New()
 
@@ -198,11 +193,9 @@ func FakeUser(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 }
 
 func UserSummary2(w http.ResponseWriter, r *http.Request) {
-	m := mux.Vars(r)
-	u := m["uuid"]
+	u := r.PathValue("uuid")
 	if u == "" {
-		slog.Error("Parameter hours not set",
-			slog.Any("params", m))
+		slog.Error("Parameter hours not set")
 		util.WriteErrorf(w, http.StatusBadRequest, "Parameter not set. Please try again.")
 		return
 	}
@@ -236,10 +229,9 @@ func UserSummary2(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserByEmail(w http.ResponseWriter, r *http.Request) {
-	m := mux.Vars(r)
-	email := m["email"]
+	email := r.PathValue("email")
 	if email == "" {
-		util.WriteErrorf(w, http.StatusBadRequest, "Parameter email not set: %v", m)
+		util.WriteErrorf(w, http.StatusBadRequest, "Parameter email not set")
 		return
 	}
 

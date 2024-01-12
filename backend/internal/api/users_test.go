@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -18,10 +17,10 @@ func TestGetUserById(t *testing.T) {
 		userDetail := insertTestUser(t, "hello@world.com")
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+userDetail.Id.String(), nil)
 		response := httptest.NewRecorder()
-		vars := map[string]string{
-			"id": userDetail.Id.String(),
-		}
-		request = mux.SetURLVars(request, vars)
+		//vars := map[string]string{
+		//	"id": userDetail.Id.String(),
+		//}
+		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
 
@@ -36,10 +35,10 @@ func TestGetUserById(t *testing.T) {
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/hello", nil)
 		response := httptest.NewRecorder()
-		vars := map[string]string{
-			"id": "hello",
-		}
-		request = mux.SetURLVars(request, vars)
+		//vars := map[string]string{
+		//	"id": "hello",
+		//}
+		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
 
@@ -54,10 +53,10 @@ func TestGetUserById(t *testing.T) {
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+uuid.String(), nil)
 		response := httptest.NewRecorder()
-		vars := map[string]string{
-			"id": uuid.String(),
-		}
-		request = mux.SetURLVars(request, vars)
+		//vars := map[string]string{
+		//	"id": uuid.String(),
+		//}
+		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
 

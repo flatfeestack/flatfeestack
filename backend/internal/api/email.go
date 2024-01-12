@@ -7,7 +7,6 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"log/slog"
 	"net/http"
 )
@@ -101,8 +100,7 @@ func (e *EmailHandler) AddGitEmail(w http.ResponseWriter, r *http.Request, user 
 }
 
 func RemoveGitEmail(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	params := mux.Vars(r)
-	email := params["email"]
+	email := r.PathValue("email")
 
 	err := db.DeleteGitEmail(user.Id, email)
 	if err != nil {

@@ -12,11 +12,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -303,10 +303,28 @@ func minCrypto(currency string, balance float64) (*big.Int, error) {
 
 // Helper
 func paymentInformation(r *http.Request) (int64, int64, *Plan, error) {
-	p := mux.Vars(r)
-	f := p["freq"]
-	s := p["seats"]
-	seats, err := strconv.ParseInt(s, 10, 64)
+
+	freqEsc := r.PathValue("freq")
+	freqStr, err := url.QueryUnescape(freqEsc)
+
+	if err != nil {
+		slog.Error("Query unescape payment freq",
+			slog.String("freq", freqEsc),
+			slog.Any("error", err))
+		return 0, 0, nil, err
+	}
+
+	seatsEsc := r.PathValue("seats")
+	seatsStr, err := url.QueryUnescape(seatsEsc)
+
+	if err != nil {
+		slog.Error("Query unescape payment seats",
+			slog.String("seats", seatsStr),
+			slog.Any("error", err))
+		return 0, 0, nil, err
+	}
+
+	seats, err := strconv.ParseInt(seatsStr, 10, 64)
 	if err != nil {
 		return 0, 0, nil, errors.New(fmt.Sprintf("Cannot convert number seats: %v", +seats))
 	}
@@ -314,7 +332,7 @@ func paymentInformation(r *http.Request) (int64, int64, *Plan, error) {
 		return 0, 0, nil, errors.New(fmt.Sprintf("Cannot have more than 1m seats: %v", +seats))
 	}
 
-	freq, err := strconv.ParseInt(f, 10, 64)
+	freq, err := strconv.ParseInt(freqStr, 10, 64)
 	if err != nil {
 		return 0, 0, nil, errors.New(fmt.Sprintf("Cannot convert number freq: %v", freq))
 	}

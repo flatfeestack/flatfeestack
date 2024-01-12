@@ -4,7 +4,6 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
 	"log/slog"
 	"math/big"
@@ -158,11 +157,9 @@ func (h *ApiHandler) Config(w http.ResponseWriter, _ *http.Request) {
 }
 
 func TimeWarp(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
-	m := mux.Vars(r)
-	h := m["hours"]
+	h := r.PathValue("hours")
 	if h == "" {
-		slog.Error("Parameter hours not set",
-			slog.Any("params", m))
+		slog.Error("Parameter hours not set")
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}

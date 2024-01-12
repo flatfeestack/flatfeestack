@@ -5,7 +5,6 @@ import (
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"log/slog"
 	"net/http"
 	"time"
@@ -38,11 +37,9 @@ func ContributionsRcv(w http.ResponseWriter, _ *http.Request, user *db.UserDetai
 }
 
 func ContributionsSum2(w http.ResponseWriter, r *http.Request) {
-	m := mux.Vars(r)
-	u := m["uuid"]
+	u := r.PathValue("uuid")
 	if u == "" {
-		slog.Error("UUID Parameter not set",
-			slog.Any("params", m))
+		slog.Error("UUID Parameter not set")
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}

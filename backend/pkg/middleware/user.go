@@ -53,14 +53,3 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 		next(w, r, user)
 	}
 }
-func JwtAdmin(next func(w http.ResponseWriter, r *http.Request, u *db.UserDetail)) func(http.ResponseWriter, *http.Request, *db.UserDetail) {
-	return func(w http.ResponseWriter, r *http.Request, u *db.UserDetail) {
-		if u.Role != "admin" {
-			slog.Error("not admin",
-				slog.String("email", u.Email))
-			util.WriteErrorf(w, http.StatusBadRequest, api.GenericErrorMessage)
-			return
-		}
-		next(w, r, u)
-	}
-}

@@ -5,6 +5,7 @@ import (
 	"backend/internal/app"
 	"backend/internal/client"
 	"backend/internal/cron"
+	"backend/internal/db"
 	"backend/pkg/config"
 	util2 "backend/pkg/middleware"
 	"backend/pkg/util"
@@ -16,12 +17,9 @@ import (
 	"github.com/flatfeestack/go-lib/auth"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
-	prom "github.com/flatfeestack/go-lib/prometheus"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
 	"net/http"
 	"os"
@@ -119,6 +117,32 @@ func parseFlags() {
 	}
 }
 
+func middlewareJwtAuthUserLog(handlerFunc func(http.ResponseWriter, *http.Request, *db.UserDetail)) func(w http.ResponseWriter, r *http.Request) {
+	jwt := util2.NewJwtHandler(cfg)
+	jwtUser := util2.NewJwtUserHandler(cfg)
+
+	// Apply the jwtUser and jwtAuth middleware
+	jwtHandler := jwt.JwtAuth(jwtUser.JwtUser(handlerFunc))
+
+	// Apply the LogRequestHandler middleware
+	loggedHandler := util2.LogRequestHandler(http.HandlerFunc(jwtHandler))
+
+	return loggedHandler
+}
+
+func middlewareJwtAuthAdminLog(handlerFunc func(http.ResponseWriter, *http.Request, *db.UserDetail)) func(w http.ResponseWriter, r *http.Request) {
+	fn := func(w http.ResponseWriter, r *http.Request, u *db.UserDetail) {
+		if u.Role != "admin" {
+			slog.Error("not admin",
+				slog.String("email", u.Email))
+			util.WriteErrorf(w, http.StatusBadRequest, api2.GenericErrorMessage)
+			return
+		}
+		handlerFunc(w, r, u)
+	}
+	return middlewareJwtAuthUserLog(fn)
+}
+
 // @title To run locally, set these ENV vars=LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1;FAKETIME_NO_CACHE=1
 // @version 0.0.1
 // @host localhost:8080
@@ -165,103 +189,87 @@ func main() {
 	}
 
 	// Routes
-	router := mux.NewRouter()
-	router.Use(prom.PrometheusMiddleware)
-	router.Use(func(next http.Handler) http.Handler {
-		return util2.LogRequestHandler(next)
-	})
-	//apiRouter := router.PathPrefix("/backend").Subrouter()
-	registry := prom.CreateRegistry()
-	router.Path("/metrics").Handler(promhttp.HandlerFor(
-		registry,
-		promhttp.HandlerOpts{
-			Registry: registry,
-			// Opt into OpenMetrics to support exemplars.
-			EnableOpenMetrics: true,
-		},
-	))
+	router := http.NewServeMux()
+	//router := mux.NewRouter()
 
-	jwt := util2.NewJwtHandler(cfg)
-	jwtUser := util2.NewJwtUserHandler(cfg)
-
-	router.HandleFunc("/users/me", jwt.JwtAuth(jwtUser.JwtUser(api2.GetMyUser))).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwt.JwtAuth(jwtUser.JwtUser(api2.GetMyConnectedEmails))).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/git-email", jwt.JwtAuth(jwtUser.JwtUser(eh.AddGitEmail))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/git-email/confirm", jwt.JwtAuth(jwtUser.JwtUser(api2.ConfirmConnectedEmails))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/git-email/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.RemoveGitEmail))).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/method/{method}", jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateMethod))).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/method", jwt.JwtAuth(jwtUser.JwtUser(api2.DeleteMethod))).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/sponsored", jwt.JwtAuth(jwtUser.JwtUser(api2.GetSponsoredRepos))).Methods(http.MethodGet)
-	router.HandleFunc("/users/me/name/{name}", jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateName))).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/clear/name", jwt.JwtAuth(jwtUser.JwtUser(api2.ClearName))).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/image", util2.MaxBytes(jwt.JwtAuth(jwtUser.JwtUser(api2.UpdateImage)), 200*1024)).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/image", jwt.JwtAuth(jwtUser.JwtUser(api2.DeleteImage))).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(sh.SetupStripe))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(api2.CancelSub))).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.StripePaymentInitial))).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.NowPayment))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuth(jwtUser.JwtUser(api2.StatusSponsoredUsers))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/request-payout/{targetCurrency}", jwt.JwtAuth(jwtUser.JwtUser(rr.RequestPayout))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/balance", jwt.JwtAuth(jwtUser.JwtUser(api2.UserBalance))).Methods(http.MethodGet)
-	router.HandleFunc("/users/contrib-snd", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSend))).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsRcv))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSum))).Methods(http.MethodPost)
-	router.HandleFunc("/users/summary/{uuid}", api2.UserSummary2).Methods(http.MethodGet)
-	router.HandleFunc("/users/by/{email}", auth.BasicAuth(credentials, api2.GetUserByEmail)).Methods(http.MethodGet)
+	router.HandleFunc("GET /users/me", middlewareJwtAuthUserLog(api2.GetMyUser))
+	router.HandleFunc("GET /users/me/git-email", middlewareJwtAuthUserLog(api2.GetMyConnectedEmails))
+	router.HandleFunc("POST /users/me/git-email", middlewareJwtAuthUserLog(eh.AddGitEmail))
+	router.HandleFunc("POST /users/me/git-email/confirm", middlewareJwtAuthUserLog(api2.ConfirmConnectedEmails))
+	router.HandleFunc("DELETE /users/me/git-email/{email}", middlewareJwtAuthUserLog(api2.RemoveGitEmail))
+	router.HandleFunc("PUT /users/me/method/{method}", middlewareJwtAuthUserLog(api2.UpdateMethod))
+	router.HandleFunc("DELETE /users/me/method", middlewareJwtAuthUserLog(api2.DeleteMethod))
+	router.HandleFunc("GET /users/me/sponsored", middlewareJwtAuthUserLog(api2.GetSponsoredRepos))
+	router.HandleFunc("PUT /users/me/name/{name}", middlewareJwtAuthUserLog(api2.UpdateName))
+	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
+	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 200*1024))
+	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
+	router.HandleFunc("POST /users/me/stripe", middlewareJwtAuthUserLog(sh.SetupStripe))
+	router.HandleFunc("DELETE /users/me/stripe", middlewareJwtAuthUserLog(api2.CancelSub))
+	router.HandleFunc("PUT /users/me/stripe/{freq}/{seats}", middlewareJwtAuthUserLog(api2.StripePaymentInitial))
+	router.HandleFunc("POST /users/me/nowPayment/{freq}/{seats}", middlewareJwtAuthUserLog(api2.NowPayment))
+	router.HandleFunc("POST /users/me/sponsored-users", middlewareJwtAuthUserLog(api2.StatusSponsoredUsers))
+	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
+	router.HandleFunc("GET /users/me/balance", middlewareJwtAuthUserLog(api2.UserBalance))
+	router.HandleFunc("POST /users/contrib-snd", middlewareJwtAuthUserLog(api2.ContributionsSend))
+	router.HandleFunc("POST /users/contrib-rcv", middlewareJwtAuthUserLog(api2.ContributionsRcv))
+	router.HandleFunc("POST /users/me/contributions-summary", middlewareJwtAuthUserLog(api2.ContributionsSum))
+	router.HandleFunc("GET /users/summary/{uuid}", api2.UserSummary2)
+	router.HandleFunc("GET /users/by/{email}", auth.BasicAuth(credentials, api2.GetUserByEmail))
 
 	//payment
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(sh.SetupStripe))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/stripe", jwt.JwtAuth(jwtUser.JwtUser(api2.CancelSub))).Methods(http.MethodDelete)
-	router.HandleFunc("/users/me/stripe/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.StripePaymentInitial))).Methods(http.MethodPut)
-	router.HandleFunc("/users/me/nowPayment/{freq}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(api2.NowPayment))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/sponsored-users", jwt.JwtAuth(jwtUser.JwtUser(api2.StatusSponsoredUsers))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/payment", jwt.JwtAuth(jwtUser.JwtUser(api2.PaymentEvent))).Methods(http.MethodGet)
+	router.HandleFunc("POST /users/me/stripe", middlewareJwtAuthUserLog(sh.SetupStripe))
+	router.HandleFunc("DELETE /users/me/stripe", middlewareJwtAuthUserLog(api2.CancelSub))
+	router.HandleFunc("PUT /user s/me/stripe/{freq}/{seats}", middlewareJwtAuthUserLog(api2.StripePaymentInitial))
+	router.HandleFunc("POST /users/me/nowPayment/{freq}/{seats}", middlewareJwtAuthUserLog(api2.NowPayment))
+	router.HandleFunc("POST /users/me/sponsored-users", middlewareJwtAuthUserLog(api2.StatusSponsoredUsers))
+	router.HandleFunc("GET /users/me/payment", middlewareJwtAuthUserLog(api2.PaymentEvent))
 
 	// get public user
-	router.HandleFunc("/users/{id}", api2.GetUserById).Methods(http.MethodGet)
+	router.HandleFunc("GET /users/{id}", api2.GetUserById)
 
 	//contributions
-	router.HandleFunc("/users/contrib-snd", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSend))).Methods(http.MethodPost)
-	router.HandleFunc("/users/contrib-rcv", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsRcv))).Methods(http.MethodPost)
-	router.HandleFunc("/users/me/contributions-summary", jwt.JwtAuth(jwtUser.JwtUser(api2.ContributionsSum))).Methods(http.MethodPost)
-	router.HandleFunc("/users/contributions-summary/{uuid}", api2.ContributionsSum2).Methods(http.MethodGet)
+	router.HandleFunc("POST /users/contrib-snd", middlewareJwtAuthUserLog(api2.ContributionsSend))
+	router.HandleFunc("POST /users/contrib-rcv", middlewareJwtAuthUserLog(api2.ContributionsRcv))
+	router.HandleFunc("POST /users/me/contributions-summary", middlewareJwtAuthUserLog(api2.ContributionsSum))
+	router.HandleFunc("GET /users/contributions-summary/{uuid}", api2.ContributionsSum2)
 
 	//github
-	router.HandleFunc("/repos/search", jwt.JwtAuth(jwtUser.JwtUser(rh.SearchRepoGitHub))).Methods(http.MethodGet)
+	router.HandleFunc("GET /repos/search", middlewareJwtAuthUserLog(rh.SearchRepoGitHub))
 	//repo
-	router.HandleFunc("/repos/{id}", jwt.JwtAuth(jwtUser.JwtUser(api2.GetRepoByID))).Methods(http.MethodGet)
-	router.HandleFunc("/repos/{id}/tag", jwt.JwtAuth(jwtUser.JwtUser(rh.TagRepo))).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/untag", jwt.JwtAuth(jwtUser.JwtUser(rh.UnTagRepo))).Methods(http.MethodPost)
-	router.HandleFunc("/repos/{id}/{offset}/graph", jwt.JwtAuth(jwtUser.JwtUser(api2.Graph))).Methods(http.MethodGet)
+	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
+	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
+	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
+	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	//payment
 
 	//hooks
-	router.HandleFunc("/hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 65536)).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/nowpayments", nh.NowWebhook).Methods(http.MethodPost)
-	router.HandleFunc("/hooks/analyzer", auth.BasicAuth(credentials, api2.AnalysisEngineHook)).Methods(http.MethodPost)
+	router.HandleFunc("POST /hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 65536))
+	router.HandleFunc("POST /hooks/nowpayments", nh.NowWebhook)
+	router.HandleFunc("POST /hooks/analyzer", auth.BasicAuth(credentials, api2.AnalysisEngineHook))
 
 	//admin
-	router.HandleFunc("/admin/time", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.ServerTime)))).Methods(http.MethodGet)
-	router.HandleFunc("/admin/users", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.Users)))).Methods(http.MethodPost)
+	router.HandleFunc("GET /admin/time", middlewareJwtAuthAdminLog(api2.ServerTime))
+	router.HandleFunc("POST /admin/users", middlewareJwtAuthAdminLog(api2.Users))
 
-	router.HandleFunc("/config", ah.Config).Methods(http.MethodGet)
+	router.HandleFunc("GET /config", ah.Config)
 
 	//dev settings
 	if debug {
-		router.HandleFunc("/admin/fake/user/{email}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakeUser)))).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/payment/{email}/{seats}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakePayment)))).Methods(http.MethodPost)
-		router.HandleFunc("/admin/fake/contribution", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.FakeContribution)))).Methods(http.MethodPost)
-		router.HandleFunc("/admin/timewarp/{hours}", jwt.JwtAuth(jwtUser.JwtUser(util2.JwtAdmin(api2.TimeWarp)))).Methods(http.MethodPost)
+		router.HandleFunc("POST /admin/fake/user/{email}", middlewareJwtAuthAdminLog(api2.FakeUser))
+		router.HandleFunc("POST /admin/fake/payment/{email}/{seats}", middlewareJwtAuthAdminLog(api2.FakePayment))
+		router.HandleFunc("POST /admin/fake/contribution", middlewareJwtAuthAdminLog(api2.FakeContribution))
+		router.HandleFunc("POST /admin/timewarp/{hours}", middlewareJwtAuthAdminLog(api2.TimeWarp))
 	}
 
 	//invite
-	router.HandleFunc("/confirm/invite/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.ConfirmInvite))).Methods(http.MethodPost)
-	router.HandleFunc("/invite", jwt.JwtAuth(jwtUser.JwtUser(api2.Invitations))).Methods(http.MethodGet)
-	router.HandleFunc("/invite/by/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteByDelete))).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/my/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteMyDelete))).Methods(http.MethodDelete)
-	router.HandleFunc("/invite/{email}", jwt.JwtAuth(jwtUser.JwtUser(api2.InviteOther))).Methods(http.MethodPost)
+	router.HandleFunc("POST /confirm/invite/{email}", middlewareJwtAuthUserLog(api2.ConfirmInvite))
+	router.HandleFunc("GET /invite", middlewareJwtAuthUserLog(api2.Invitations))
+	router.HandleFunc("DELETE /invite/by/{email}", middlewareJwtAuthUserLog(api2.InviteByDelete))
+	router.HandleFunc("DELETE /invite/my/{email}", middlewareJwtAuthUserLog(api2.InviteMyDelete))
+	router.HandleFunc("POST /invite/{email}", middlewareJwtAuthUserLog(api2.InviteOther))
 
-	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("[404] no route matched for", "url", r.URL, "method", r.Method)
 		w.WriteHeader(http.StatusNotFound)
 	})

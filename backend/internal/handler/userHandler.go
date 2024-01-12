@@ -4,7 +4,6 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"log/slog"
 	"net/http"
 )
@@ -30,8 +29,7 @@ func RegisterUserHandler(mux *http.ServeMux) *UserHandler {
 }
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	userId := params["id"]
+	userId := r.PathValue("id")
 	convertedUserId, err := uuid.Parse(userId)
 
 	if err != nil {

@@ -59,8 +59,8 @@ type HTTPReqInfo struct {
 }
 
 // https://presstige.io/p/Logging-HTTP-requests-in-Go-233de7fe59a747078b35b82a1b035d36
-func LogRequestHandler(h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func LogRequestHandler(h http.Handler) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ri := &HTTPReqInfo{
 			method:    r.Method,
 			uri:       r.URL.String(),
@@ -79,7 +79,6 @@ func LogRequestHandler(h http.Handler) http.Handler {
 		ri.duration = m.Duration
 		logHTTPReq(ri, w.Header())
 	}
-	return http.HandlerFunc(fn)
 }
 
 func getIPAdress(r *http.Request) string {

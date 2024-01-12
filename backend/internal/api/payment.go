@@ -10,11 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"log/slog"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -61,11 +61,30 @@ func NewResourceHandler(cfg *config.Config) *ResourceHandler {
 
 func FakePayment(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	slog.Info("fake payment")
-	m := mux.Vars(r)
-	n := m["email"]
-	s := m["seats"]
 
-	u, err := db.FindUserByEmail(n)
+	emailEsc := r.PathValue("email")
+	email, err := url.QueryUnescape(emailEsc)
+
+	if err != nil {
+		slog.Error("Query unescape fake payment email",
+			slog.String("email", emailEsc),
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
+		return
+	}
+
+	seatsEsc := r.PathValue("seats")
+	seatsStr, err := url.QueryUnescape(seatsEsc)
+
+	if err != nil {
+		slog.Error("Query unescape fake payment seats",
+			slog.String("seats", seatsStr),
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
+		return
+	}
+
+	u, err := db.FindUserByEmail(email)
 	if err != nil {
 		slog.Error("Error while finding user by email",
 			slog.Any("error", err))
@@ -73,7 +92,7 @@ func FakePayment(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 		return
 	}
 
-	seats, err := strconv.ParseInt(s, 10, 64)
+	seats, err := strconv.ParseInt(seatsStr, 10, 64)
 	if err != nil {
 		slog.Error("Error while parsing int",
 			slog.Any("error", err))
@@ -175,8 +194,15 @@ func StatusSponsoredUsers(w http.ResponseWriter, _ *http.Request, user *db.UserD
 }
 
 func (h *ResourceHandler) RequestPayout(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	m := mux.Vars(r)
-	targetCurrency := m["targetCurrency"]
+	targetCurrencyEsc := r.PathValue("targetCurrency")
+	targetCurrency, err := url.QueryUnescape(targetCurrencyEsc)
+	if err != nil {
+		slog.Error("Query unescape invite-by email",
+			slog.String("email", targetCurrencyEsc),
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, EmailEscapeError)
+		return
+	}
 
 	ownContributionIds, err := db.FindOwnContributionIds(user.Id, targetCurrency)
 	if err != nil {

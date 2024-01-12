@@ -6,7 +6,6 @@ import (
 	"backend/pkg/util"
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -45,8 +44,8 @@ const (
 )
 
 func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
-	params := mux.Vars(r)
-	id, err := uuid.Parse(params["id"])
+	idStr := r.PathValue("id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Not a valid id ",
 			slog.Any("error", err))
@@ -71,8 +70,8 @@ func GetRepoByID(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 }
 
 func (rs *RepoHandler) TagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	params := mux.Vars(r)
-	repoId, err := uuid.Parse(params["id"])
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Not a valid id",
 			slog.Any("error", err))
@@ -83,8 +82,8 @@ func (rs *RepoHandler) TagRepo(w http.ResponseWriter, r *http.Request, user *db.
 }
 
 func (rs *RepoHandler) UnTagRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	params := mux.Vars(r)
-	repoId, err := uuid.Parse(params["id"])
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Not a valid id",
 			slog.Any("error", err))
@@ -95,8 +94,8 @@ func (rs *RepoHandler) UnTagRepo(w http.ResponseWriter, r *http.Request, user *d
 }
 
 func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
-	params := mux.Vars(r)
-	repoId, err := uuid.Parse(params["id"])
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Not a valid id",
 			slog.Any("error", err))
@@ -106,7 +105,7 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	contributions, err := db.FindRepoContribution(repoId)
 	contributors, err := db.FindRepoContributors(repoId)
 
-	offsetString := params["offset"]
+	offsetString := r.PathValue("offset")
 	offset, err := strconv.Atoi(offsetString)
 	if err != nil {
 		slog.Error("Not a valid id",
