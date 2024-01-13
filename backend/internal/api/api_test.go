@@ -17,9 +17,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	util.SetupTestDb()
+	testDb := util.NewTestDb()
 	code := m.Run()
-	util.CloseTestDb()
+	testDb.CloseTestDb()
 	os.Exit(code)
 }
 

@@ -17,14 +17,11 @@ func TestGetUserById(t *testing.T) {
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+userDetail.Id.String(), nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("id", userDetail.Id.String())
 		response := httptest.NewRecorder()
-		//vars := map[string]string{
-		//	"id": userDetail.Id.String(),
-		//}
-		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
-
 		assert.Equal(t, 200, response.Code)
 		body, _ := io.ReadAll(response.Body)
 		assert.Containsf(t, string(body), "\"image\":null}\n", "error message %s")
@@ -35,14 +32,11 @@ func TestGetUserById(t *testing.T) {
 		defer util.TeardownTestData()
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/hello", nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("id", "hello")
 		response := httptest.NewRecorder()
-		//vars := map[string]string{
-		//	"id": "hello",
-		//}
-		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
-
 		assert.Equal(t, 400, response.Code)
 	})
 
@@ -51,16 +45,12 @@ func TestGetUserById(t *testing.T) {
 		defer util.TeardownTestData()
 
 		uuid := uuid.New()
-
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+uuid.String(), nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("id", uuid.String())
 		response := httptest.NewRecorder()
-		//vars := map[string]string{
-		//	"id": uuid.String(),
-		//}
-		//request = mux.SetURLVars(request, vars)
 
 		GetUserById(response, request)
-
 		assert.Equal(t, 404, response.Code)
 	})
 }

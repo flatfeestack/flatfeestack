@@ -29,16 +29,10 @@ import (
 	"strings"
 )
 
-const (
-	Active = iota + 1
-	Inactive
-)
-
 var (
 	cfg    *config.Config
 	jwtKey []byte
 	debug  bool
-	admins []string
 )
 
 func parseFlags() {

@@ -6,18 +6,23 @@ import (
 	"os"
 )
 
-func SetupTestDb() {
-	file, err := os.CreateTemp("", "sqlite")
-	defer os.Remove(file.Name())
+type TestDb struct {
+	file *os.File
+}
+
+func NewTestDb() *TestDb {
+	file, err := os.CreateTemp("", "test-db-ffs-*.sqlite")
 
 	err = dbLib.InitDb("sqlite3", file.Name(), "")
 	if err != nil {
 		slog.Error("DB error",
 			slog.Any("error", err))
 	}
+	return &TestDb{file}
 }
 
-func CloseTestDb() {
+func (t *TestDb) CloseTestDb() {
+	defer os.Remove(t.file.Name())
 	err := dbLib.DB.Close()
 	if err != nil {
 		slog.Warn("Could not start resource",
@@ -31,14 +36,14 @@ func CloseTestDb() {
 }
 
 func SetupTestData() {
-	err := dbLib.RunSQL("init.sql")
+	err := dbLib.RunSQL("../../migrations/init.sql")
 	if err != nil {
 		slog.Error("Could not run init.sql scripts",
 			slog.Any("error", err))
 	}
 }
 func TeardownTestData() {
-	err := dbLib.RunSQL("delAll_test.sql")
+	err := dbLib.RunSQL("../../migrations/delAll_test.sql")
 	if err != nil {
 		slog.Error("Could not run delAll_test.sql",
 			slog.Any("error", err))
