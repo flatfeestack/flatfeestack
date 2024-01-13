@@ -2,6 +2,7 @@ package api
 
 import (
 	"backend/internal/db"
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +16,8 @@ import (
 
 func TestGetUserBalance(t *testing.T) {
 	t.Run("user made no payments", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@flatfeestack.io")
 		request, _ := http.NewRequest(http.MethodPost, "/users/me/balance", nil)
@@ -31,8 +32,8 @@ func TestGetUserBalance(t *testing.T) {
 	})
 
 	t.Run("user made a pay-in but did not distribute anything", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@flatfeestack.io")
 		insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInSuccess, "USD", 12, 2, 2)
@@ -49,8 +50,8 @@ func TestGetUserBalance(t *testing.T) {
 	})
 
 	t.Run("user made a pay-in and some got distributed to contributors", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@flatfeestack.io")
 		insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInSuccess, "USD", 12, 2, 2)
@@ -72,8 +73,8 @@ func TestGetUserBalance(t *testing.T) {
 	})
 
 	t.Run("user made a pay-in and has future contribution", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@flatfeestack.io")
 		insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInSuccess, "USD", 12, 2, 2)
@@ -95,8 +96,8 @@ func TestGetUserBalance(t *testing.T) {
 	})
 
 	t.Run("user made a pay-in, has future contribution and distributed funds", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@flatfeestack.io")
 		insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInSuccess, "USD", 400, 2, 2)

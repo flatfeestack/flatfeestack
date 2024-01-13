@@ -11,9 +11,11 @@ import (
 	"backend/pkg/util"
 	"crypto/sha256"
 	"encoding/base32"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/dimiro1/banner"
+	"github.com/dusted-go/logging/prettylog"
 	"github.com/flatfeestack/go-lib/auth"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	env "github.com/flatfeestack/go-lib/environment"
@@ -91,10 +93,14 @@ func parseFlags() {
 	if cfg.Env == "local" || cfg.Env == "dev" {
 		debug = true
 		util.SetDebug(true)
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+		prettyHandler := prettylog.NewHandler(&slog.HandlerOptions{
+			Level:       slog.LevelDebug,
+			AddSource:   false,
+			ReplaceAttr: nil,
+		})
+		slog.SetDefault(slog.New(prettyHandler))
 	} else {
 		util.SetDebug(false)
-		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
 
 	if cfg.HS256 != "" {
@@ -104,7 +110,7 @@ func parseFlags() {
 			h := sha256.New()
 			h.Write([]byte(cfg.HS256))
 			cfg.JwtKey = h.Sum(nil)
-			slog.Debug("jwtKey: %v", jwtKey)
+			slog.Debug("jwtKey", slog.String("key", hex.EncodeToString(jwtKey)))
 		}
 	} else {
 		slog.Error("HS256 seed is required, non was provided")

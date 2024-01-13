@@ -1,6 +1,7 @@
 package api
 
 import (
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -11,8 +12,8 @@ import (
 
 func TestGetUserById(t *testing.T) {
 	t.Run("should return user", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+userDetail.Id.String(), nil)
@@ -30,8 +31,8 @@ func TestGetUserById(t *testing.T) {
 	})
 
 	t.Run("returns 400 if id format is faulty", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/hello", nil)
 		response := httptest.NewRecorder()
@@ -46,8 +47,8 @@ func TestGetUserById(t *testing.T) {
 	})
 
 	t.Run("returns 404 if user does not exist", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		uuid := uuid.New()
 

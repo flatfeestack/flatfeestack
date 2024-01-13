@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -28,8 +29,8 @@ func insertTestRepoGitUrl(t *testing.T, gitUrl string) *Repo {
 }
 
 func TestRepoNotFound(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	insertTestRepo(t)
 
 	r2, err := FindRepoById(uuid.New())
@@ -38,8 +39,8 @@ func TestRepoNotFound(t *testing.T) {
 }
 
 func TestRepoFound(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	r := insertTestRepo(t)
 
 	r2, err := FindRepoById(r.Id)

@@ -1,6 +1,18 @@
 package app
 
 import (
+	"backend/internal/api"
+	"backend/internal/client"
+	"backend/internal/db"
+	"backend/pkg/util"
+	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 	"time"
 )
 
@@ -11,13 +23,31 @@ var (
 	day3  = time.Time{}.Add(time.Duration(2*24) * time.Hour)
 	day4  = time.Time{}.Add(time.Duration(3*24) * time.Hour)
 	day5  = time.Time{}.Add(time.Duration(4*24) * time.Hour)
+	c     = NewCalcHandler(nil, nil)
 )
 
-/*func TestHourlyRunner(t *testing.T) {
+func SetupAnalysisTestServer(t *testing.T) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/analyze":
+			var request db.AnalysisRequest
+			err := json.NewDecoder(r.Body).Decode(&request)
+			require.Nil(t, err)
+
+			err = json.NewEncoder(w).Encode(client.AnalysisResponse2{RequestId: request.Id})
+			require.Nil(t, err)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	return server
+}
+
+func TestHourlyRunner(t *testing.T) {
 	t.Run("should request new analysis if older than two days", func(t *testing.T) {
 		now := time.Now().UTC()
 		threeMonthsAgo := now.AddDate(0, -3, 0)
-		main.SetupAnalysisTestServer(t)
+		SetupAnalysisTestServer(t)
 
 		a := db.AnalysisRequest{
 			Id:       uuid.New(),
@@ -34,7 +64,7 @@ var (
 		assert.Equal(t, 1, len(as))
 		assert.Equal(t, a.Id, as[0].Id)
 
-		err = hourlyRunner(now)
+		err = c.HourlyRunner(now)
 		require.Nil(t, err)
 
 		as, err = db.FindAllLatestAnalysisRequest(now.AddDate(0, 0, 2))
@@ -58,7 +88,7 @@ var (
 		err := db.InsertAnalysisRequest(a, now)
 		require.Nil(t, err)
 
-		err = hourlyRunner(now)
+		err = c.HourlyRunner(now)
 		require.Nil(t, err)
 
 		as, err := db.FindAllLatestAnalysisRequest(now)
@@ -70,8 +100,8 @@ var (
 
 func TestDailyRunner(t *testing.T) {
 	t.Run("one contributor", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		//we have 5 sponsors, but only the first sponsor added funds
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
@@ -99,7 +129,7 @@ func TestDailyRunner(t *testing.T) {
 		assert.Nil(t, err)
 
 		//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
 		//now check the daily_contribution
@@ -119,8 +149,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("one contributor, low funds", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		//we have 5 sponsors, but only the first sponsor added funds
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
@@ -148,15 +178,15 @@ func TestDailyRunner(t *testing.T) {
 		assert.Nil(t, err)
 
 		//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 		//check send
-		assert.Equal(t, 2, clients.EmailNotifications) //we send out unclaimed marketing and low funds email
+		assert.Equal(t, 2, client.EmailNotifications) //we send out unclaimed marketing and low funds email
 	})
 
 	t.Run("multiple futures", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -168,7 +198,7 @@ func TestDailyRunner(t *testing.T) {
 		err := setupSponsor(t, sponsors[0], repos[0], day1)
 		require.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		require.Nil(t, err)
 
 		m1, err := db.FindSumFutureSponsors(*sponsors[0])
@@ -186,7 +216,7 @@ func TestDailyRunner(t *testing.T) {
 		require.Nil(t, err)
 
 		// calculate for day 4
-		err = dailyRunner(day4)
+		err = c.DailyRunner(day4)
 		require.Nil(t, err)
 
 		m1, err = db.FindSumFutureSponsors(*sponsors[0])
@@ -200,8 +230,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("three contributors", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -236,7 +266,7 @@ func TestDailyRunner(t *testing.T) {
 		err = setupSponsor(t, sponsors[2], repos[1], day1)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
 		//the distribution needs to be as follows:
@@ -283,8 +313,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("three contributors, twice", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -319,13 +349,13 @@ func TestDailyRunner(t *testing.T) {
 		err = setupSponsor(t, sponsors[2], repos[1], day1)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day4)
+		err = c.DailyRunner(day4)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day5)
+		err = c.DailyRunner(day5)
 		assert.Nil(t, err)
 
 		//now check the daily_contribution
@@ -360,8 +390,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("future contribution", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -371,7 +401,7 @@ func TestDailyRunner(t *testing.T) {
 		err := setupSponsor(t, sponsors[0], repos[0], day1)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
 		m2, err := db.FindSumFutureSponsors(*sponsors[0])
@@ -385,10 +415,10 @@ func TestDailyRunner(t *testing.T) {
 		setupContributor(t, *repos[0], day1, day4, []string{"ste@ste.ste"}, []float64{0.4})
 
 		//this needs to fail, as we already processed this
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.NotNil(t, err)
 
-		err = dailyRunner(day4)
+		err = c.DailyRunner(day4)
 		assert.Nil(t, err)
 
 		m3, err := db.FindSumDailySponsors(*sponsors[0])
@@ -405,8 +435,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("USD and NEO", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -424,7 +454,7 @@ func TestDailyRunner(t *testing.T) {
 		err = setupSponsor(t, sponsors[1], repos[0], day1)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
 		m2, err := db.FindSumDailySponsors(*sponsors[1])
@@ -437,7 +467,7 @@ func TestDailyRunner(t *testing.T) {
 			assert.Equal(t, m3["GAS"].String(), "330002")
 		}
 
-		err = dailyRunner(day4)
+		err = c.DailyRunner(day4)
 		assert.Nil(t, err)
 
 		m4, err := db.FindSumDailySponsors(*sponsors[0])
@@ -462,8 +492,8 @@ func TestDailyRunner(t *testing.T) {
 	})
 
 	t.Run("sponsor", func(t *testing.T) {
-		main.setup()
-		defer main.teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 		setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -481,7 +511,7 @@ func TestDailyRunner(t *testing.T) {
 		err = setupSponsor(t, sponsors[1], repos[1], day1)
 		assert.Nil(t, err)
 
-		err = dailyRunner(day3)
+		err = c.DailyRunner(day3)
 		assert.Nil(t, err)
 
 		//now check the daily_contribution
@@ -610,4 +640,4 @@ func setupUser(email string) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &u.Id, nil
-}*/
+}

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -9,8 +10,8 @@ import (
 )
 
 func TestAnalysisRequest(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	r := Repo{
 		Id:          uuid.New(),
@@ -44,8 +45,8 @@ func TestAnalysisRequest(t *testing.T) {
 }
 
 func TestAnalysisRequest2(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	r1 := Repo{
 		Id:          uuid.New(),
@@ -149,8 +150,8 @@ func TestAnalysisRequest2(t *testing.T) {
 }
 
 func TestAnalysisResponse(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	r := Repo{
 		Id:          uuid.New(),
@@ -196,8 +197,8 @@ func TestAnalysisResponse(t *testing.T) {
 }
 
 func TestFindRepoContribution(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	r := insertTestRepo(t)
 
 	a := AnalysisRequest{

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -8,8 +9,8 @@ import (
 )
 
 func TestContributionInsert(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	userSponsor := insertTestUser(t, "sponsor")
 	userContrib := insertTestUser(t, "contrib")
@@ -20,8 +21,8 @@ func TestContributionInsert(t *testing.T) {
 }
 
 func TestMultiContributionInsert(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	userSponsor := insertTestUser(t, "sponsor")
 	userContrib := insertTestUser(t, "contrib")

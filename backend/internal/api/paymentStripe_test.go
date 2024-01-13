@@ -1,11 +1,30 @@
 package api
 
-/*func TestPostHookStripe(t *testing.T) {
-	stripeWebhookSecretKey = "webhooksecret"
+import (
+	"backend/internal/db"
+	"backend/pkg/util"
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stripe/stripe-go/v76"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"testing"
+	"time"
+)
+
+func TestPostHookStripe(t *testing.T) {
+	p := NewPaymentHandler(nil, "webhooksecret", "webhooksecret")
 
 	t.Run("stripe confirms successful payment", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -22,7 +41,7 @@ package api
 		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
-		StripeWebhook(response, request)
+		p.StripeWebhook(response, request)
 
 		assert.Equal(t, 200, response.Code)
 
@@ -41,8 +60,8 @@ package api
 	})
 
 	t.Run("stripe requires action to continue payment", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -59,7 +78,7 @@ package api
 		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
-		StripeWebhook(response, request)
+		p.StripeWebhook(response, request)
 
 		assert.Equal(t, 200, response.Code)
 
@@ -71,8 +90,8 @@ package api
 	})
 
 	t.Run("stripe misses payment method", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -92,14 +111,14 @@ package api
 		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
-		StripeWebhook(response, request)
+		p.StripeWebhook(response, request)
 
 		assert.Equal(t, 200, response.Code)
 	})
 
 	t.Run("stripe has an actual issue with the provided payment method", func(t *testing.T) {
-		setup()
-		defer teardown()
+		util.SetupTestData()
+		defer util.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -116,7 +135,7 @@ package api
 		request.Header.Set("Stripe-Signature", getStripeSignatureHeaderContent(&timestamp, &hmacString))
 		response := httptest.NewRecorder()
 
-		StripeWebhook(response, request)
+		p.StripeWebhook(response, request)
 
 		assert.Equal(t, 200, response.Code)
 
@@ -139,7 +158,7 @@ func getStripeSignatureHeaderContent(timestamp *string, hmacString *string) stri
 	return "t=" + *timestamp + ",v1=" + *hmacString
 }
 
-func generateWebhookPayload(userId string, externalId string, eventType string) (stripe.Event, error) {
+func generateWebhookPayload(userId string, externalId string, eventType stripe.EventType) (stripe.Event, error) {
 	metadata := make(map[string]string)
 	metadata["userId"] = userId
 	metadata["externalId"] = externalId
@@ -165,4 +184,4 @@ func generateWebhookPayload(userId string, externalId string, eventType string) 
 		Data:       &eventData,
 		Type:       eventType,
 	}, nil
-}*/
+}

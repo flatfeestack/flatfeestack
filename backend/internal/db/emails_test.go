@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -9,8 +10,8 @@ import (
 )
 
 func TestGitEmailInsert(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "email1").Id
 
@@ -23,8 +24,8 @@ func TestGitEmailInsert(t *testing.T) {
 }
 
 func TestCountExistingOrConfirmedGitEmail(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "foo@bar.ch").Id
 	uid2 := insertTestUser(t, "bar@foo.ch").Id
@@ -51,8 +52,8 @@ func TestCountExistingOrConfirmedGitEmail(t *testing.T) {
 }
 
 func TestGitEmailFind(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "email1").Id
 
@@ -66,8 +67,8 @@ func TestGitEmailFind(t *testing.T) {
 }
 
 func TestGitEmailDelete(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "email1").Id
 
@@ -86,8 +87,8 @@ func TestGitEmailDelete(t *testing.T) {
 }
 
 func TestGitEmailFromUserEmailsSentDelete(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "foo@bar.ch").Id
 
@@ -104,8 +105,8 @@ func TestGitEmailFromUserEmailsSentDelete(t *testing.T) {
 }
 
 func TestGitEmailConfirm(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	uid := insertTestUser(t, "email1").Id
 
@@ -119,8 +120,8 @@ func TestGitEmailConfirm(t *testing.T) {
 }
 
 func TestInsertUnclaimed(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	r := insertTestRepo(t)
 

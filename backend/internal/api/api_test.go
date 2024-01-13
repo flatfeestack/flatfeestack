@@ -1,65 +1,44 @@
 package api
 
 import (
+	"backend/internal/client"
 	"backend/internal/db"
 	"backend/pkg/util"
-	dbLib "github.com/flatfeestack/go-lib/database"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"log/slog"
+	"github.com/stretchr/testify/require"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 )
 
 func TestMain(m *testing.M) {
-	file, err := os.CreateTemp("", "sqlite")
-	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			slog.Error("Cannot remove file",
-				slog.Any("error", err))
-		}
-	}(file.Name())
-
-	err = dbLib.InitDb("sqlite3", file.Name(), "")
-	if err != nil {
-		slog.Error("DB error",
-			slog.Any("error", err))
-	}
-
+	util.SetupTestDb()
 	code := m.Run()
-
-	err = dbLib.DB.Close()
-	if err != nil {
-		slog.Warn("Could not start resource",
-			slog.Any("error", err))
-	}
-
-	if err != nil {
-		slog.Warn("Could not start resource",
-			slog.Any("error", err))
-	}
-
+	util.CloseTestDb()
 	os.Exit(code)
 }
 
-func setup() {
-	err := dbLib.RunSQL("../db/init.sql")
-	if err != nil {
-		slog.Error("Could not run init.sql scripts",
-			slog.Any("error", err))
-	}
-}
-func teardown() {
-	err := dbLib.RunSQL("../db/delAll_test.sql")
-	if err != nil {
-		slog.Error("Could not run delAll_test.sql",
-			slog.Any("error", err))
-	}
-}
+func SetupAnalysisTestServer(t *testing.T) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/analyze":
+			var request db.AnalysisRequest
+			err := json.NewDecoder(r.Body).Decode(&request)
+			require.Nil(t, err)
 
+			err = json.NewEncoder(w).Encode(client.AnalysisResponse2{RequestId: request.Id})
+			require.Nil(t, err)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	return server
+}
 func insertTestUser(t *testing.T, email string) *db.UserDetail {
 	u := db.User{
 		Id:    uuid.New(),
@@ -95,8 +74,8 @@ func insertPayInEvent(t *testing.T, externalId uuid.UUID, userId uuid.UUID, stat
 }
 
 func TestStrategyDeductMax(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 
 	u := insertTestUser(t, "test@test.test")
 	e1 := uuid.New()

@@ -5,11 +5,12 @@ go 1.22rc1
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/dimiro1/banner v1.1.0
+	github.com/dusted-go/logging v1.1.3
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/flatfeestack/go-lib v0.0.6
 	github.com/go-jose/go-jose/v3 v3.0.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.17

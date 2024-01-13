@@ -2,6 +2,7 @@ package db
 
 //https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/
 import (
+	"backend/pkg/util"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -107,4 +108,21 @@ func (v JsonNullTime) MarshalJSON() ([]byte, error) {
 	} else {
 		return json.Marshal(nil)
 	}
+}
+
+func SetupRepo(url string) (*uuid.UUID, error) {
+	r := Repo{
+		Id:          uuid.New(),
+		Url:         util.StringPointer(url),
+		GitUrl:      util.StringPointer(url),
+		Source:      util.StringPointer("github"),
+		Name:        util.StringPointer("name"),
+		Description: util.StringPointer("desc"),
+		CreatedAt:   time.Time{},
+	}
+	err := InsertOrUpdateRepo(&r)
+	if err != nil {
+		return nil, err
+	}
+	return &r.Id, nil
 }

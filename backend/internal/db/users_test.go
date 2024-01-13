@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -24,8 +25,8 @@ func insertTestUser(t *testing.T, email string) *UserDetail {
 }
 
 func TestUserNotFound(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	insertTestUser(t, "email")
 
 	u2, err := FindUserByEmail("email2")
@@ -34,8 +35,8 @@ func TestUserNotFound(t *testing.T) {
 }
 
 func TestUserFound(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	insertTestUser(t, "email")
 
 	u3, err := FindUserByEmail("email")
@@ -44,8 +45,8 @@ func TestUserFound(t *testing.T) {
 }
 
 func TestUserUpdate(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 
 	u.Email = "email2"
@@ -65,8 +66,8 @@ func TestUserUpdate(t *testing.T) {
 }
 
 func TestUserUpdateSeat(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	UpdateSeatsFreq(u.Id, 12, 13)
 	u2, err := FindUserById(u.Id)
@@ -75,8 +76,8 @@ func TestUserUpdateSeat(t *testing.T) {
 }
 
 func TestUserUpdateInvite(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	i := uuid.New()
 	UpdateUserInviteId(u.Id, i)

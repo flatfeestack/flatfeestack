@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -15,8 +16,8 @@ var (
 )
 
 func TestSponsorTwice(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
@@ -47,8 +48,8 @@ func TestSponsorTwice(t *testing.T) {
 }
 
 func TestUnSponsorTwice(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
@@ -87,8 +88,8 @@ func TestUnSponsorTwice(t *testing.T) {
 }
 
 func TestUnSponsorWrong(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
@@ -106,8 +107,8 @@ func TestUnSponsorWrong(t *testing.T) {
 }
 
 func TestSponsorWrongOrder(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
@@ -136,8 +137,8 @@ func TestSponsorWrongOrder(t *testing.T) {
 }
 
 func TestSponsorWrongOrderActive(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
@@ -176,8 +177,8 @@ func TestSponsorWrongOrderActive(t *testing.T) {
 }
 
 func TestSponsorCorrect(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -234,8 +235,8 @@ func TestSponsorCorrect(t *testing.T) {
 }
 
 func TestTwoRepos(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -267,8 +268,8 @@ func TestTwoRepos(t *testing.T) {
 }
 
 func TestSponsorsBetween(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -300,8 +301,8 @@ func TestSponsorsBetween(t *testing.T) {
 }
 
 func TestSponsorsBetween2(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -333,8 +334,8 @@ func TestSponsorsBetween2(t *testing.T) {
 }
 
 func TestSponsorsBetween3(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -376,8 +377,8 @@ func TestSponsorsBetween3(t *testing.T) {
 }
 
 func TestSponsorsBetween4(t *testing.T) {
-	setup()
-	defer teardown()
+	util.SetupTestData()
+	defer util.TeardownTestData()
 	u := insertTestUser(t, "email")
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
