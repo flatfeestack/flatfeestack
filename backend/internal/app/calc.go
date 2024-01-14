@@ -32,7 +32,6 @@ func (c *CalcHandler) HourlyRunner(now time.Time) error {
 
 	nr := 0
 	for _, v := range a {
-		//check if we need analysis request
 		err := c.ac.RequestAnalysis(v.RepoId, v.GitUrl)
 		if err != nil {
 			slog.Warn("analysis request failed",

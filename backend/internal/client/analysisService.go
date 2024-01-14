@@ -80,10 +80,18 @@ func (a *AnalysisClient) RequestAnalysis(repoId uuid.UUID, repoUrl string) error
 		if errA != nil {
 			slog.Warn("cannot send to analyze engine",
 				slog.Any("error", err))
+			return err
 		}
-		return err
+		return nil
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			slog.Warn("Cannot close body",
+				slog.Any("error", err))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("the request %v received the status code %v", ar.Id, resp.StatusCode)

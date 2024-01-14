@@ -135,7 +135,7 @@ func NewApiHandler(stripeAPIPublicKey string, env string) *ApiHandler {
 
 func ServerTime(w http.ResponseWriter, _ *http.Request, u *db.UserDetail) {
 	currentTime := util.TimeNow()
-	util.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(util.SecondsAdd)+`}`)
+	util.WriteJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(util.SecondsAdd())+`}`)
 }
 
 func (h *ApiHandler) Config(w http.ResponseWriter, _ *http.Request) {
@@ -172,7 +172,7 @@ func TimeWarp(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	}
 
 	seconds := hours * 60 * 60
-	util.SecondsAdd += seconds
+	util.AddTimeNowSeconds(seconds)
 	slog.Info("Time warp",
 		slog.Any("time", util.TimeNow()))
 }

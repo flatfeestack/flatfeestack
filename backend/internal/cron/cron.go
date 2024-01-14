@@ -8,14 +8,14 @@ package cron
 
 import (
 	"backend/pkg/util"
-	"context"
 	"log/slog"
 	"time"
 )
 
 var (
 	jobs []Job
-	ctx  = context.Background()
+	done = make(chan bool)
+	t    *time.Ticker
 )
 
 type Job struct {
@@ -26,39 +26,42 @@ type Job struct {
 
 func init() {
 	go func() {
-		t := time.NewTicker(5 * time.Second)
-		defer t.Stop()
+		t = time.NewTicker(5 * time.Second)
 		for {
 			select {
 			case <-t.C:
-				again := true
-				for again {
-					again = false
-					for k, job := range jobs {
-						if job.nextExecAt.Before(util.TimeNow()) {
-							slog.Info("About to execute job",
-								slog.Any("time", job.nextExecAt))
-							err := job.job(job.nextExecAt)
-							if err != nil {
-								slog.Error("Error in job run",
-									slog.Any("time", job.nextExecAt),
-									slog.Any("error", err))
-							}
-							nextExecAt := job.nextExecFunc(job.nextExecAt)
-							jobs[k].nextExecAt = nextExecAt
-							again = true
-						}
-					}
-				}
-			case <-ctx.Done():
+				check()
+			case <-done:
 				return
 			}
 		}
 	}()
 }
 
+func check() {
+	for k, job := range jobs {
+		for job.nextExecAt.Before(util.TimeNow()) {
+			slog.Info("About to execute job",
+				slog.Any("time", job.nextExecAt))
+			err := job.job(job.nextExecAt)
+			if err != nil {
+				slog.Error("Error in job run",
+					slog.Any("time", job.nextExecAt),
+					slog.Any("error", err))
+			}
+			job.nextExecAt = job.nextExecFunc(job.nextExecAt)
+			jobs[k].nextExecAt = job.nextExecAt
+		}
+	}
+}
+
+func CheckNow() {
+	check()
+}
+
 func CronStop() {
-	ctx.Done()
+	done <- true
+	t.Stop()
 }
 
 func CronJobDay(job func(now time.Time) error, now time.Time) {
@@ -69,7 +72,7 @@ func CronJobDay(job func(now time.Time) error, now time.Time) {
 }
 
 func timeDayPlusOne(now time.Time) time.Time {
-	return time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	return time.Date(now.Year(), now.Month(), now.Day()+1, now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), now.Location())
 }
 
 func CronJobHour(job func(now time.Time) error, now time.Time) {
@@ -80,5 +83,5 @@ func CronJobHour(job func(now time.Time) error, now time.Time) {
 }
 
 func timeHourPlusOne(now time.Time) time.Time {
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, now.Minute(), now.Second(), now.Nanosecond(), now.Location())
 }

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	dbLib "github.com/flatfeestack/go-lib/database"
 	"log/slog"
 	"os"
@@ -12,7 +13,11 @@ type TestDb struct {
 
 func NewTestDb() *TestDb {
 	file, err := os.CreateTemp("", "test-db-ffs-*.sqlite")
-
+	if err != nil {
+		slog.Error("File error",
+			slog.Any("error", err))
+	}
+	fmt.Printf("SQLite DB path: %v", file.Name())
 	err = dbLib.InitDb("sqlite3", file.Name(), "")
 	if err != nil {
 		slog.Error("DB error",
@@ -22,7 +27,13 @@ func NewTestDb() *TestDb {
 }
 
 func (t *TestDb) CloseTestDb() {
-	defer os.Remove(t.file.Name())
+	defer func() {
+		err := os.Remove(t.file.Name())
+		if err != nil {
+			slog.Error("DB error",
+				slog.Any("error", err))
+		}
+	}()
 	err := dbLib.DB.Close()
 	if err != nil {
 		slog.Warn("Could not start resource",
