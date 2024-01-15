@@ -1,6 +1,6 @@
-# Flatfeestack API
+# FlatFeeStack API
 
-The Backend 🔙🔚  for the Flatfee(♭💰)stack platform 
+The Backend for the FlatFeeStack platform 
 
 ## Setup
 

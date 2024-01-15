@@ -5,7 +5,7 @@ RUN go mod download
 
 FROM base as builder
 
-COPY api/ ./api/
+COPY internal/api/ ./api/
 COPY clients/ ./clients/
 COPY db/ ./db/
 COPY utils/ ./utils/
@@ -23,7 +23,7 @@ RUN apk add --update --no-cache curl
 COPY --from=builder /app/banner.txt /app/backend /app/db/init.sql ./
 COPY --from=builder /app/db/init.sql ./db/
 
-COPY mail-templates ./mail-templates/
+COPY templates ./mail-templates/
 
 USER nonroot
 
