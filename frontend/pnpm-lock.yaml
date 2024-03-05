@@ -33,8 +33,8 @@ dependencies:
     specifier: ^1.0.0
     version: 1.0.0
   svelte-routing:
-    specifier: 1.6.0
-    version: 1.6.0(svelte@3.59.1)(typescript@5.1.3)
+    specifier: 1.11.0
+    version: 1.11.0
   svelte-simple-modal:
     specifier: ^1.5.2
     version: 1.5.2(svelte@3.59.1)
@@ -599,10 +599,6 @@ packages:
     engines: {node: '>=14.16'}
     dev: false
 
-  /dedent-js@1.0.1:
-    resolution: {integrity: sha512-OUepMozQULMLUmhxS95Vudo0jb0UchLimi3+pQ2plj61Fcy8axbP9hbiD4Sz6DPqn6XG3kfmziVfQ1rSys5AJQ==}
-    dev: false
-
   /deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
@@ -853,12 +849,6 @@ packages:
     engines: {node: '>=14.16'}
     dev: false
 
-  /lower-case@2.0.2:
-    resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
-    dependencies:
-      tslib: 2.5.3
-    dev: false
-
   /magic-string@0.27.0:
     resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
     engines: {node: '>=12'}
@@ -928,13 +918,6 @@ packages:
     hasBin: true
     dev: true
 
-  /no-case@3.0.4:
-    resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
-    dependencies:
-      lower-case: 2.0.2
-      tslib: 2.5.3
-    dev: false
-
   /normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -973,13 +956,6 @@ packages:
     dependencies:
       callsites: 3.1.0
     dev: true
-
-  /pascal-case@3.1.2:
-    resolution: {integrity: sha512-uWlGT3YSnK9x3BQJaOdcZwrnV6hPpd8jFH1/ucpiLRPh/2zCVJKS19E4GvYHvaCcACn3foXZ0cLB9Wrx1KGe5g==}
-    dependencies:
-      no-case: 3.0.4
-      tslib: 2.5.3
-    dev: false
 
   /path-is-absolute@1.0.1:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
@@ -1287,15 +1263,8 @@ packages:
     resolution: {integrity: sha512-7n/FPFhImPI68NCwChzYqzTbTpDhGCiFgGiCQY+IXS8sh0Xhzzd0wwQnN5n2BCJ0Uvti8s0RhKErwcw4Lp7RvQ==}
     dev: false
 
-  /svelte-routing@1.6.0(svelte@3.59.1)(typescript@5.1.3):
-    resolution: {integrity: sha512-+DbrSGttLA6lan7oWFz1MjyGabdn3tPRqn8Osyc471ut2UgCrzM5x1qViNMc2gahOP6fKbKK1aNtZMJEQP2vHQ==}
-    peerDependencies:
-      svelte: ^3.20.x
-    dependencies:
-      svelte: 3.59.1
-      svelte2tsx: 0.1.193(svelte@3.59.1)(typescript@5.1.3)
-    transitivePeerDependencies:
-      - typescript
+  /svelte-routing@1.11.0:
+    resolution: {integrity: sha512-/JlBAB6KxgM+Xl+4J/vOy4i4uYAJpWWbjh7vtRwsuu0MPl5B+ml+N/jCRkfjRa9ulODcS/G6PL8opyhczmrV8Q==}
     dev: false
 
   /svelte-simple-modal@1.5.2(svelte@3.59.1):
@@ -1310,18 +1279,6 @@ packages:
     resolution: {integrity: sha512-ZLt55XNWrytsMfaMUUxEknLjphYWqhRkRNcHmmkp7gbENKSB8rp6o6hZP5zWEoUGwYNiPGqpM/DgbXy27BdVIQ==}
     dependencies:
       '@stripe/stripe-js': 1.54.0
-    dev: false
-
-  /svelte2tsx@0.1.193(svelte@3.59.1)(typescript@5.1.3):
-    resolution: {integrity: sha512-vzy4YQNYDnoqp2iZPnJy7kpPAY6y121L0HKrSBjU/IWW7DQ6T7RMJed2VVHFmVYm0zAGYMDl9urPc6R4DDUyhg==}
-    peerDependencies:
-      svelte: ^3.24
-      typescript: ^4.1.2
-    dependencies:
-      dedent-js: 1.0.1
-      pascal-case: 3.1.2
-      svelte: 3.59.1
-      typescript: 5.1.3
     dev: false
 
   /svelte@3.59.1:
@@ -1354,6 +1311,7 @@ packages:
 
   /tslib@2.5.3:
     resolution: {integrity: sha512-mSxlJJwl3BMEQCUNnxXBU9jP4JBktcEGhURcPR6VQVlnP0FdDEsIaz0C35dXNGLyRfrATNofF0F5p2KPxQgB+w==}
+    dev: true
 
   /type-fest@2.19.0:
     resolution: {integrity: sha512-RAH822pAdBgcNMAfWnCBU3CFZcfZ/i1eZjwFU/dsLKumyuuP3niueg2UAukXYF0E2AAoc82ZSSf9J0WQBinzHA==}
@@ -1364,6 +1322,7 @@ packages:
     resolution: {integrity: sha512-XH627E9vkeqhlZFQuL+UsyAXEnibT0kWR2FWONlr4sTjvxyJYnyefgrkyECLzM5NenmKzRAy2rR/OlYLA1HkZw==}
     engines: {node: '>=14.17'}
     hasBin: true
+    dev: true
 
   /undici@5.22.1:
     resolution: {integrity: sha512-Ji2IJhFXZY0x/0tVBXeQwgPlLWw13GVzpsWPQ3rV50IFMMof2I55PZZxtm4P6iNq+L5znYN9nSTAq0ZyE6lSJw==}
