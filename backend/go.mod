@@ -7,7 +7,7 @@ require (
 	github.com/dimiro1/banner v1.1.0
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/flatfeestack/go-lib v0.0.6
-	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1
@@ -18,7 +18,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.8.4
 	github.com/stripe/stripe-go/v74 v74.21.0
-	golang.org/x/text v0.9.0
+	golang.org/x/text v0.14.0
 )
 
 require (
@@ -36,8 +36,8 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/sendgrid/sendgrid-go v3.12.0+incompatible // indirect
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
