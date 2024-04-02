@@ -22,7 +22,7 @@
     "schema:forum": "npx openapi-typescript ../forum/api/forum.yaml --output ./src/types/generated-forum-types.ts"
   },
   "devDependencies": {
-    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@sveltejs/vite-plugin-svelte": "^2.4.1",
     "@tsconfig/svelte": "^3.0.0",
     "openapi-typescript": "^6.2.7",
