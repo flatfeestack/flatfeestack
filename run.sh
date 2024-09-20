@@ -2,11 +2,22 @@
 
 # based on https://betterdev.blog/minimal-safe-bash-script-template/
 set -Eeuo pipefail
-trap cleanup SIGINT SIGTERM ERR EXIT
+trap 'cleanup $?' SIGINT SIGTERM ERR EXIT
 
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
   # script cleanup here
+  exit_code=$1
+  if [ $exit_code -ne 0 ]; then
+    echo -e "${RED}An error occurred. Exit code: $exit_code${NOFORMAT}"
+    echo aouaou
+    echo "${STRIPE_SECRET_WEBHOOK:-}" || true
+    #if [ -n "${STRIPE_SECRET_WEBHOOK+x}" ]; then
+    #  if echo "${STRIPE_SECRET_WEBHOOK}" | grep -q "status=40"; then
+    #    echo -e "${RED}[${STRIPE_SECRET_WEBHOOK}] ${NOFORMAT}"
+    #  fi
+    #fi
+  fi
   if [ -n "${PID-}" ]; then
     kill "$PID" 2>/dev/null
   fi
@@ -21,7 +32,7 @@ host_ip() {
       *)          host_ip="localhost";;
   esac
   export HOST_IP=$host_ip
-  msg "${GREEN}Using [${host_ip}] as IP to reach docker containers";
+  msg "${GREEN}Using [${host_ip}] as IP to reach docker containers${NOFORMAT}";
 }
 
 usage() {
@@ -36,7 +47,6 @@ Available options:
 -na, --no-auth      Don't start auth
 -ne, --no-engine    Don't start analyzer engine
 -nb, --no-backend   Don't start backend
--np, --no-payout    Don't start payout
 -nf, --no-frontend  Dont' start frontend
 -sb, --skip-build   Don't run docker-compose build (if your machine is slow)
 -db, --db-only      Run the DB instance only, this ignores all the other options
@@ -68,7 +78,7 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db caddy ganache auth analyzer backend payout frontend stripe-webhook'
+  internal='db caddy ganache auth analyzer backend frontend stripe-webhook'
 
   while :; do
     case "${1-}" in
@@ -77,7 +87,6 @@ parse_params() {
     -na | --no-auth) external="${external} auth"; internal="${internal//auth/}";;
     -ne | --no-engine) external="${external} analyzer"; internal="${internal//analyzer/}";;
     -nb | --no-backend) external="${external} backend"; internal="${internal//backend/}";;
-    -np | --no-payout) external="${external} payout"; internal="${internal//payout/}";;
     -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
     -ns | --no-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}";;
     -sb | --skip-build) include_build=false;;
@@ -93,25 +102,22 @@ parse_params() {
   return 0
 }
 
-run_cmd() {
-  if [ -f .env ]; then
-    source .env set
-    for i in {0..9}; do
-      cmd="CMD$i"
-      #echo "${!cmd}"
-      if [ -n "${!cmd-}" ]; then
-        msg "${GREEN}Running command [${!cmd}]${NOFORMAT}"
-        source <(printf "${!cmd}")
-      fi
-    done
-  fi
+stripe_setup() {
+  msg "${GREEN}Get API key from Stripe${NOFORMAT}"
+  STRIPE_SECRET_WEBHOOK=`stripe listen --print-secret`
+  sed -i "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" "backend/.env"
+  STRIPE_PUBLIC_API=`stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \'`
+  sed -i "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" "backend/.env"
+  STRIPE_SECRET_API=`stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \'`
+  sed -i "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" "backend/.env"
+  cp "$HOME"/.config/stripe/config.toml stripe
 }
 
 parse_params "$@"
 setup_colors
 
 host_ip
-run_cmd
+stripe_setup
 mkdir -p .db .ganache .repos
 
 # here we set hosts that can be used in docker-compose. For those hosts

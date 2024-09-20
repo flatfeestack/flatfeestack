@@ -1,33 +1,20 @@
-FROM golang:1.20-alpine AS base
+FROM golang:1.23-alpine AS base
 WORKDIR /app
 COPY go.* ./
 RUN go mod download
-
-FROM base as builder
-
-COPY api/ ./api/
-COPY clients/ ./clients/
+COPY *.go banner.txt ./
+COPY internal/ ./internal/
 COPY db/ ./db/
-COPY utils/ ./utils/
-COPY *.go *.sql banner.txt ./
-
+COPY pkg/ ./pkg/
+COPY templates/ ./templates/
 RUN go build
 
-FROM alpine:3.18
-
+FROM alpine:3.20
 WORKDIR /app
-
 RUN addgroup -S nonroot -g 31323 && adduser -S nonroot -G nonroot -u 31323
-RUN apk add --update --no-cache curl
-
-COPY --from=builder /app/banner.txt /app/backend /app/db/init.sql ./
-COPY --from=builder /app/db/init.sql ./db/
-
-COPY mail-templates ./mail-templates/
-
+COPY --from=base /app/db/init.sql ./db/init.sql
+COPY --from=base /app/banner.txt /app/backend ./
+COPY --from=base /app/templates ./templates
 USER nonroot
-
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:${PORT}/metrics || exit 1
-
+HEALTHCHECK --interval=30s --timeout=3s CMD wget --quiet --tries=1 --spider http://localhost:${PORT}/metrics || exit 1
 ENTRYPOINT ["/app/backend"]
