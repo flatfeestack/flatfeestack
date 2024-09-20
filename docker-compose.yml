@@ -56,7 +56,7 @@ services:
       - "9085:9085"
 
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     volumes:
       - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z
     ports:
@@ -81,8 +81,6 @@ services:
     image: "trufflesuite/ganache:v7.9.2"
     ports:
       - "8545:8545"
-    volumes:
-      - ".ganache:/ganache"
 
   stripe-webhook:
     build: ./stripe
