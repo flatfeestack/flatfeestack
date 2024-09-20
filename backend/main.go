@@ -167,7 +167,7 @@ func main() {
 	eh := api2.NewEmailHandler(ec)
 	rr := api2.NewResourceHandler(cfg)
 
-	f, err := os.Open("cmd/banner.txt")
+	f, err := os.Open("banner.txt")
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
 	} else {
@@ -204,16 +204,8 @@ func main() {
 	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
 	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 200*1024))
 	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
-	router.HandleFunc("POST /users/me/stripe", middlewareJwtAuthUserLog(sh.SetupStripe))
-	router.HandleFunc("DELETE /users/me/stripe", middlewareJwtAuthUserLog(api2.CancelSub))
-	router.HandleFunc("PUT /users/me/stripe/{freq}/{seats}", middlewareJwtAuthUserLog(api2.StripePaymentInitial))
-	router.HandleFunc("POST /users/me/nowPayment/{freq}/{seats}", middlewareJwtAuthUserLog(api2.NowPayment))
-	router.HandleFunc("POST /users/me/sponsored-users", middlewareJwtAuthUserLog(api2.StatusSponsoredUsers))
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
 	router.HandleFunc("GET /users/me/balance", middlewareJwtAuthUserLog(api2.UserBalance))
-	router.HandleFunc("POST /users/contrib-snd", middlewareJwtAuthUserLog(api2.ContributionsSend))
-	router.HandleFunc("POST /users/contrib-rcv", middlewareJwtAuthUserLog(api2.ContributionsRcv))
-	router.HandleFunc("POST /users/me/contributions-summary", middlewareJwtAuthUserLog(api2.ContributionsSum))
 	router.HandleFunc("GET /users/summary/{uuid}", api2.UserSummary2)
 	router.HandleFunc("GET /users/by/{email}", auth.BasicAuth(credentials, api2.GetUserByEmail))
 

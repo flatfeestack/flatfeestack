@@ -47,14 +47,14 @@ func (t *TestDb) CloseTestDb() {
 }
 
 func SetupTestData() {
-	err := dbLib.RunSQL("../../migrations/init.sql")
+	err := dbLib.RunSQL("../../db/init.sql")
 	if err != nil {
 		slog.Error("Could not run init.sql scripts",
 			slog.Any("error", err))
 	}
 }
 func TeardownTestData() {
-	err := dbLib.RunSQL("../../migrations/delAll_test.sql")
+	err := dbLib.RunSQL("../../db/delAll_test.sql")
 	if err != nil {
 		slog.Error("Could not run delAll_test.sql",
 			slog.Any("error", err))
