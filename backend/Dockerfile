@@ -4,7 +4,7 @@ COPY go.* ./
 RUN go mod download
 COPY *.go banner.txt ./
 COPY internal/ ./internal/
-COPY db/ ./db/
+COPY db/init.sql ./
 COPY pkg/ ./pkg/
 COPY templates/ ./templates/
 RUN go build
