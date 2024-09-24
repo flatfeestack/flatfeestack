@@ -104,12 +104,21 @@ parse_params() {
 
 stripe_setup() {
   msg "${GREEN}Get API key from Stripe${NOFORMAT}"
-  STRIPE_SECRET_WEBHOOK=`stripe listen --print-secret`
-  sed -i "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" "backend/.env"
-  STRIPE_PUBLIC_API=`stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \'`
-  sed -i "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" "backend/.env"
-  STRIPE_SECRET_API=`stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \'`
-  sed -i "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" "backend/.env"
+  STRIPE_SECRET_WEBHOOK=$(stripe listen --print-secret)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS (needs empty arg when using -i)
+    sed -i '' "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" backend/.env
+    STRIPE_PUBLIC_API=$(stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \')
+    sed -i '' "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" backend/.env
+    STRIPE_SECRET_API=$(stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \')
+    sed -i '' "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" backend/.env
+  else
+    sed -i "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" backend/.env
+    STRIPE_PUBLIC_API=$(stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \')
+    sed -i "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" backend/.env
+    STRIPE_SECRET_API=$(stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \')
+    sed -i "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" backend/.env
+  fi
   cp "$HOME"/.config/stripe/config.toml stripe
 }
 
@@ -127,11 +136,11 @@ mkdir -p .db .ganache .repos
 msg "${GREEN}Setting DNS hosts to [${external}], started at $(date)${NOFORMAT}"
 
 if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker-compose build --parallel ${internal}${NOFORMAT}"
-  EXTRA_HOSTS="${external}" docker-compose build --parallel ${internal}
+  msg "${GREEN}Run: docker compose build --parallel ${internal}${NOFORMAT}"
+  EXTRA_HOSTS="${external}" docker compose build --parallel ${internal}
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
-msg "${GREEN}Run: docker-compose up --abort-on-container-exit ${internal}${NOFORMAT}"
-EXTRA_HOSTS="${external}" docker-compose up --abort-on-container-exit ${internal}
+msg "${GREEN}Run: docker compose up --abort-on-container-exit ${internal}${NOFORMAT}"
+EXTRA_HOSTS="${external}" docker compose up --abort-on-container-exit ${internal}
