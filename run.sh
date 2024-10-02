@@ -7,20 +7,6 @@ trap 'cleanup $?' SIGINT SIGTERM ERR EXIT
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
   # script cleanup here
-  exit_code=$1
-  if [ $exit_code -ne 0 ]; then
-    echo -e "${RED}An error occurred. Exit code: $exit_code${NOFORMAT}"
-    echo aouaou
-    echo "${STRIPE_SECRET_WEBHOOK:-}" || true
-    #if [ -n "${STRIPE_SECRET_WEBHOOK+x}" ]; then
-    #  if echo "${STRIPE_SECRET_WEBHOOK}" | grep -q "status=40"; then
-    #    echo -e "${RED}[${STRIPE_SECRET_WEBHOOK}] ${NOFORMAT}"
-    #  fi
-    #fi
-  fi
-  if [ -n "${PID-}" ]; then
-    kill "$PID" 2>/dev/null
-  fi
 }
 
 host_ip() {
@@ -102,32 +88,9 @@ parse_params() {
   return 0
 }
 
-stripe_setup() {
-  msg "${GREEN}Get API key from Stripe${NOFORMAT}"
-  STRIPE_SECRET_WEBHOOK=$(stripe listen --print-secret)
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS (needs empty arg when using -i)
-    sed -i '' "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" backend/.env
-    STRIPE_PUBLIC_API=$(stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \')
-    sed -i '' "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" backend/.env
-    STRIPE_SECRET_API=$(stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \')
-    sed -i '' "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" backend/.env
-  else
-    sed -i "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" backend/.env
-    STRIPE_PUBLIC_API=$(stripe config --list | grep 'test_mode_pub_key' | awk -F '= ' '{print $2}' | tr -d \')
-    sed -i "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" backend/.env
-    STRIPE_SECRET_API=$(stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \')
-    sed -i "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" backend/.env
-  fi
-  cp "$HOME"/.config/stripe/config.toml stripe
-}
-
 parse_params "$@"
 setup_colors
-
 host_ip
-stripe_setup
-mkdir -p .db .ganache .repos
 
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker

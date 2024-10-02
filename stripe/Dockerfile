@@ -1,3 +1,4 @@
 FROM stripe/stripe-cli
-COPY ./config.toml /root/.config/stripe/config.toml
-ENTRYPOINT ["/bin/stripe", "listen", "--skip-verify", "--forward-to", "http://backend:9082"]
+COPY start-stripe.sh /bin
+RUN chmod +x /bin/start-stripe.sh
+ENTRYPOINT ["/bin/start-stripe.sh"]
