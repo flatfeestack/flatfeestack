@@ -64,7 +64,7 @@ services:
     env_file:
       - ${BASE_PATH:-.}/db/.env
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready" ]
+      test: ["CMD-SHELL", "pg_isready"]
       interval: 3s
       timeout: 5s
       retries: 30
@@ -84,5 +84,16 @@ services:
 
   stripe-webhook:
     build: ./stripe
+    volumes:
+      - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
+    extra_hosts:
+      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+
+  stripe-setup:
+    profiles: [setup]
+    build: ./stripe
+    volumes:
+      - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
+      - ${BASE_PATH:-.}/backend/.env:/root/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}

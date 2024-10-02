@@ -2,9 +2,12 @@ env
 .env
 flatfeestack-env-*.tar.gz
 .idea
+.zed
+.lapce
 .db
 .ganache
 .repos
+.stripe
 env*.tar.gz
 /payout-nodejs
 /search-proj
