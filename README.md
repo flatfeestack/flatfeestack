@@ -1,5 +1,5 @@
 # Flatfeestack Installation
-This repo combines all Flatfeestack packages using `docker-compose`.
+Before you can run, you need to copy the .env files. For local setup, the .example.env can be used
 
 ## Build / Start / Stop (local development)
 
@@ -9,12 +9,19 @@ cp analyzer/.example.env analyzer/.env
 cp backend/.example.env backend/.env
 cp forum/.example.env forum/.env
 cp fastauth/.example.env fastauth/.env
-cp payout/.example.env payout/.env
-echo "HOST=http://localhost:8080" >> caddy/.env
+cp db/.example.env db/.env
+```
 
-echo "POSTGRES_PASSWORD=password" > db/.env
-echo "POSTGRES_USER=postgres" >> db/.env
-echo "POSTGRES_DB=flatfeestack" >> db/.env
+Now you can either use the run script, that allows also to disable conveniently services for local development
+```
+./run.sh
+```
+
+Or use docker compose directly. Make sure to setup stripe which populates the .env in the backend to make the webhook work locally.
+
+```
+docker compose up stripe-setup
+docker compose up
 ```
 
 ## Register a user for the platform
