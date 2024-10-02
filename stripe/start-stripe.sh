@@ -21,7 +21,7 @@ if [ -f /root/.env ]; then
   sed -i "s/^STRIPE_PUBLIC_API=.*/STRIPE_PUBLIC_API=${STRIPE_PUBLIC_API}/" /tmp/.env
   STRIPE_SECRET_API=$(stripe config --list | grep 'test_mode_api_key' | awk -F '= ' '{print $2}' | tr -d \')
   sed -i "s/^STRIPE_SECRET_API=.*/STRIPE_SECRET_API=${STRIPE_SECRET_API}/" /tmp/.env
-  cat /tmp/.env > /root/.config/stripe/.env
+  cat /tmp/.env > /root/.env
 else
   echo "Starting Stripe Listener"
   stripe listen --skip-verify --forward-to http://backend:9082
