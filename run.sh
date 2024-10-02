@@ -1,51 +1,21 @@
 #!/usr/bin/env bash
 
-# based on https://betterdev.blog/minimal-safe-bash-script-template/
+# Improved version based on https://betterdev.blog/minimal-safe-bash-script-template/
 set -Eeuo pipefail
 trap 'cleanup $?' SIGINT SIGTERM ERR EXIT
 
+PROJECTS='db caddy ganache auth analyzer backend frontend stripe-webhook'
+
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
-  # script cleanup here
-}
-
-host_ip() {
-  # check what machine we are on
-  host_ip="localhost"
-  case "$(uname -s)" in
-      Linux*)     host_ip=$(ip -br -4 a show dev docker0|tr -s ' '|cut -d' ' -f 3|cut -d/ -f1);;
-      Darwin*)    host_ip="host.docker.internal";;
-      *)          host_ip="localhost";;
-  esac
-  export HOST_IP=$host_ip
-  msg "${GREEN}Using [${host_ip}] as IP to reach docker containers${NOFORMAT}";
-}
-
-usage() {
-  cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-np] [-npn] [-nf] [-sb] [-db] [-rm]
-
-Build and run flatfeestack.
-
-Available options:
-
--h, --help          Print this help and exit
--na, --no-auth      Don't start auth
--ne, --no-engine    Don't start analyzer engine
--nb, --no-backend   Don't start backend
--nf, --no-frontend  Dont' start frontend
--sb, --skip-build   Don't run docker-compose build (if your machine is slow)
--db, --db-only      Run the DB instance only, this ignores all the other options
--rm, --remove-data  Remove the database and chain folder
-EOF
-  exit
+  # sAdd any cleanup tasks here
 }
 
 setup_colors() {
   if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
-    NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
+    NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m'
   else
-    NOFORMAT='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
+    NOFORMAT='' RED='' GREEN='' ORANGE=''
   fi
 }
 
@@ -54,17 +24,64 @@ msg() {
 }
 
 die() {
-  local msg=$1
-  local code=${2-1} # default exit status 1
-  msg "$msg"
-  exit "$code"
+  msg "${RED}${1-}${NOFORMAT}"
+  exit "${2-1}"
+}
+
+manage_hosts() {
+    local action=$1
+    shift
+    local hostnames=("$@")
+
+    for hostname in "${hostnames[@]}"; do
+      if [ "$action" == "remove" ]; then
+        if [[ "$(uname)" == "Darwin" ]]; then
+          sudo sed -i "/[[:space:]]$hostname$/d" /etc/hosts
+        else
+          sudo sed -i '' "/[[:space:]]$hostname$/d" /etc/hosts
+        fi
+      elif [ "$action" == "add" ]; then
+        if ! grep -q "[[:space:]]$hostname$" /etc/hosts; then
+          echo "127.0.0.1 $hostname" | sudo tee -a /etc/hosts > /dev/null
+        fi
+      elif [ "$action" == "check" ]; then
+        if ! grep -q "$hostname" /etc/hosts; then
+          msg "${ORANGE}Not found: $hostname in /etc/hosts. Please run: $(basename "${BASH_SOURCE[0]}") --add-hosts${NOFORMAT}"
+        fi
+      fi
+    done
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-nf] [-ns] [-sb] [-db] [-rm] [-ah] [-rh]
+
+Build and run Flatfeestack.
+
+Available options:
+-h, --help          Print this help and exit
+-na, --no-auth      Don't start auth
+-ne, --no-engine    Don't start analyzer engine
+-nb, --no-backend   Don't start backend
+-nf, --no-frontend  Don't start frontend
+-ns, --no-stripe    Don't start stripe-webhook
+-sb, --skip-build   Don't run docker-compose build
+-db, --db-only      Run the DB instance only
+-rm, --remove-data  Remove the database and chain folder
+-ah, --add-hosts    Add project hostnames to /etc/hosts
+-rh, --remove-hosts Remove project hostnames from /etc/hosts
+EOF
+  exit
 }
 
 parse_params() {
   # default values of variables set from params
   include_build=true
   external=''
-  internal='db caddy ganache auth analyzer backend frontend stripe-webhook'
+  internal="$PROJECTS"
+  add_hosts=false;
+  remove_hosts=false;
+
 
   while :; do
     case "${1-}" in
@@ -76,8 +93,10 @@ parse_params() {
     -nf | --no-frontend) external="${external} frontend"; internal="${internal//frontend/}";;
     -ns | --no-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}";;
     -sb | --skip-build) include_build=false;;
-    -db | --db-only) internal='db'; external='caddy ganache auth analyzer backend payout frontend stripe-webhook'; break;; #if this is set everything else is ignored
-    -rm | --remove-data) sudo rm -rf .db .ganache .repos;;
+    -db | --db-only) internal='db'; external="${PROJECTS//db}";; #if this is set everything else is ignored
+    -ah | --add-hosts) add_hosts=true;;
+    -rh | --remove-hosts) remove_hosts=true;;
+    -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain;;
     -?*) die "Unknown option: $1";;
     *) break ;;
     esac
@@ -88,20 +107,32 @@ parse_params() {
   return 0
 }
 
-parse_params "$@"
 setup_colors
-host_ip
+parse_params "$@"
+
+if [ "$remove_hosts" = true ]; then
+  manage_hosts "remove" $PROJECTS
+elif [ "$add_hosts" = true ]; then
+  manage_hosts "remove" $PROJECTS
+  manage_hosts "add" $external
+fi
+
+manage_hosts "check" $external
+
+#if there is no login yet, it will prompt for one
+docker compose build stripe-setup
+docker compose up stripe-setup
+
+if [ "$include_build" = true ]; then
+  msg "${GREEN}Run: docker compose build ${internal}${NOFORMAT}"
+  docker compose build ${internal}
+fi
 
 # here we set hosts that can be used in docker-compose. For those hosts
 # that are excluded, one wants to start it locally. Since we use docker
 # DNS that resolves e.g, db to an IP, we need to resolve db to localhost
-[ -z "${external}" ] && external="localhost:127.0.0.1" || external="${external}:${host_ip}"
+external="${external} localhost:127.0.0.1"
 msg "${GREEN}Setting DNS hosts to [${external}], started at $(date)${NOFORMAT}"
-
-if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker compose build --parallel ${internal}${NOFORMAT}"
-  EXTRA_HOSTS="${external}" docker compose build --parallel ${internal}
-fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
