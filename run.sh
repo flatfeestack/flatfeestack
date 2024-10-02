@@ -96,7 +96,7 @@ parse_params() {
     -db | --db-only) internal='db'; external="${PROJECTS//db}";; #if this is set everything else is ignored
     -ah | --add-hosts) add_hosts=true;;
     -rh | --remove-hosts) remove_hosts=true;;
-    -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain;;
+    -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain .stripe;;
     -?*) die "Unknown option: $1";;
     *) break ;;
     esac

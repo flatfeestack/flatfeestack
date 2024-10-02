@@ -7,6 +7,7 @@ flatfeestack-env-*.tar.gz
 .db
 .ganache
 .repos
+.stripe
 env*.tar.gz
 /payout-nodejs
 /search-proj

@@ -94,6 +94,6 @@ services:
     build: ./stripe
     volumes:
       - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
-      - ${BASE_PATH:-.}/backend/.env:/root/.config/stripe/.env
+      - ${BASE_PATH:-.}/backend/.env:/root/.env
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
