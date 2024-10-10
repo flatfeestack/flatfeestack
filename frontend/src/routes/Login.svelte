@@ -73,13 +73,14 @@
         id="email"
         pattern={emailValidationPattern}
         name="email"
+        tabindex="1"
         bind:value={email}
       />
 
       <div class="flex py-1">
         <label for="password">Password</label>
         <label for="password">
-          <a href="/forgot" use:link>Forgot password?</a>
+          <a href="/forgot" use:link tabindex="3">Forgot password?</a>
         </label>
       </div>
 
@@ -90,6 +91,7 @@
         type="password"
         id="password"
         minlength="8"
+        tabindex="2"
         bind:value={password}
       />
       <button class="button1 btn my-4" disabled={isSubmitting} type="submit"
