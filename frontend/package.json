@@ -43,7 +43,7 @@
     "@metamask/detect-provider": "^2.0.0",
     "@stripe/stripe-js": "^1.54.0",
     "chart.js": "^4.3.0",
-    "ethers": "^6.6.0",
+    "ethers": "^6.13.4",
     "humanize-duration": "^3.28.0",
     "ky": "^0.33.3",
     "query-string": "^8.1.0",
