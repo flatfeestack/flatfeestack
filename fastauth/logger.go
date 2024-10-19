@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"github.com/felixge/httpsnoop"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-//https://husobee.github.io/golang/ip-address/2015/12/17/remote-ip-go.html
-//ipRange - a structure that holds the start and end of a range of ip addresses
+// https://husobee.github.io/golang/ip-address/2015/12/17/remote-ip-go.html
+// ipRange - a structure that holds the start and end of a range of ip addresses
 type ipRange struct {
 	start net.IP
 	end   net.IP
@@ -58,9 +58,9 @@ type HTTPReqInfo struct {
 	userAgent string
 }
 
-//https://presstige.io/p/Logging-HTTP-requests-in-Go-233de7fe59a747078b35b82a1b035d36
-func logRequestHandler(h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+// https://presstige.io/p/Logging-HTTP-requests-in-Go-233de7fe59a747078b35b82a1b035d36
+func logRequestHandler(h http.Handler) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ri := &HTTPReqInfo{
 			method:    r.Method,
 			uri:       r.URL.String(),
@@ -79,7 +79,6 @@ func logRequestHandler(h http.Handler) http.Handler {
 		ri.duration = m.Duration
 		logHTTPReq(ri, w.Header())
 	}
-	return http.HandlerFunc(fn)
 }
 
 func getIPAdress(r *http.Request) string {
@@ -144,8 +143,8 @@ func logHTTPReq(ri *HTTPReqInfo, h http.Header) {
 	}
 
 	if ri.code >= 400 {
-		log.Error(msg)
+		slog.Error(msg)
 	} else {
-		log.Print(msg)
+		slog.Debug(msg)
 	}
 }

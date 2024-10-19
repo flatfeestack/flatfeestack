@@ -8,19 +8,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	dbLib "github.com/flatfeestack/go-lib/database"
-	mail "github.com/flatfeestack/go-lib/email"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/go-jose/go-jose/v3"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/text/language"
 )
@@ -71,20 +66,24 @@ const (
 )
 
 func confirmEmail(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	token := vars["token"]
-	email := vars["email"]
+	token := r.PathValue("token")
+	email := r.PathValue("email")
 
 	err := updateEmailToken(email, token)
 	if err != nil {
-		log.Errorf("ERR-confirm-email-01, update email token for %v failed, token %v: %v", email, token, err)
+		slog.Error("Update email token failed",
+			slog.String("email", email),
+			slog.String("token", token),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Update Email Token failed. Please try again.")
 		return
 	}
 
 	result, err := findAuthByEmail(email)
 	if err != nil {
-		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		slog.Error("FindAuthByEmail failed",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -102,7 +101,7 @@ func confirmEmail(w http.ResponseWriter, r *http.Request) {
 func writeOAuth(w http.ResponseWriter, result *dbRes) {
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := encodeTokens(result)
 	if err != nil {
-		log.Errorf("cannot encode tokens %v", err)
+		slog.Error("cannot encode tokens", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -113,20 +112,21 @@ func writeOAuth(w http.ResponseWriter, result *dbRes) {
 		RefreshToken: encodedRefreshToken,
 		Expires:      strconv.FormatInt(expiresAt, 10),
 	}
+
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		log.Errorf("ERR-oauth-08, cannot verify refresh token %v", err)
+		slog.Error("cannot verify refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 		return
 	}
-	w.Write(oauthEnc)
+	writeJsonBytes(w, oauthEnc)
 }
 
 func confirmEmailPost(w http.ResponseWriter, r *http.Request) {
 	var et EmailToken
 	err := json.NewDecoder(r.Body).Decode(&et)
 	if err != nil {
-		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		slog.Error("cannot parse JSON credentials", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -135,14 +135,19 @@ func confirmEmailPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//the token can be only updated once. Otherwise, anyone with the link can always login. Thus, if the email
 		//leaks, the account is compromised. Thus, disallow this.
-		log.Errorf("ERR-confirm-email-01, update email token for %v failed, token %v: %v", et.Email, et.EmailToken, err)
+		slog.Error("update email token failed",
+			slog.String("email", et.Email),
+			slog.String("token", et.EmailToken),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusForbidden, GenericErrorMessage)
 		return
 	}
 
 	result, err := findAuthByEmail(et.Email)
 	if err != nil {
-		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", et.Email, err)
+		slog.Error("findAuthByEmail failed",
+			slog.String("email", et.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -151,14 +156,13 @@ func confirmEmailPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-	vars := mux.Vars(r)
-	email := vars["email"]
+	email := r.PathValue("email")
 
 	params := map[string]string{}
 	if r.Body != nil && r.Body != http.NoBody {
 		err := json.NewDecoder(r.Body).Decode(&params)
 		if err != nil {
-			log.Errorf("cannot decode invite %v", err)
+			slog.Error("cannot decode invite", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -167,7 +171,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	err := validateEmail(email)
 	if err != nil {
-		log.Errorf("email in invite is wrong %v", err)
+		slog.Error("email in invite is wrong", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Invalid email. Please check and try again.")
 		return
 	}
@@ -175,7 +179,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	u, err := findAuthByEmail(email)
 
 	if err != nil && err != sql.ErrNoRows {
-		log.Errorf("find email %v", err)
+		slog.Error("find email failed", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -183,21 +187,23 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	if u != nil {
 		//user already exists, send email to direct him to the invitations
 		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
-		sendgridRequest := mail.PrepareEmail(email, params,
+		sendgridRequest := PrepareEmail(email, params,
 			KeyInviteOld, "You have been invited by "+claims.Subject,
 			"Click on this link to see your invitation: "+params["url"],
 			params["lang"])
 		go func() {
-			request := mail.SendEmailRequest{
+			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
 				Url:             opts.EmailUrl,
 				EmailFromName:   opts.EmailFromName,
 				EmailFrom:       opts.EmailFrom,
 				EmailToken:      opts.EmailToken,
 			}
-			err = mail.SendEmail(request)
+			err = SendEmail(request)
 			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				slog.Info("send email failed",
+					slog.String("emailUrl", opts.EmailUrl),
+					slog.Any("error", err))
 			}
 		}()
 
@@ -206,14 +212,18 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	emailToken, err := genToken()
 	if err != nil {
-		log.Errorf("cannot generate rnd token for %v, err %v", email, err)
+		slog.Error("cannot generate rnd token",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	refreshToken, err := genToken()
 	if err != nil {
-		log.Errorf("cannot generate rnd refresh token for %v, err %v", email, err)
+		slog.Error("cannot generate rnd refresh token",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -221,28 +231,29 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	params["token"] = emailToken
 	params["email"] = email
 
-	//TODO: better check if user is already in DB
 	err = insertUser(email, nil, emailToken, refreshToken, flowInvitation, timeNow())
 	if err != nil {
-		log.Printf("could not insert user %v", err)
+		slog.Info("could not insert user", slog.Any("error", err))
 		params["url"] = opts.EmailLinkPrefix + "/login"
 
-		sendgridRequest := mail.PrepareEmail(email, params,
+		sendgridRequest := PrepareEmail(email, params,
 			KeyLogin, "You have been invited again by "+claims.Subject,
 			"Click on this link to login: "+params["url"],
 			params["lang"])
 
 		go func() {
-			request := mail.SendEmailRequest{
+			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
 				Url:             opts.EmailUrl,
 				EmailFromName:   opts.EmailFromName,
 				EmailFrom:       opts.EmailFrom,
 				EmailToken:      opts.EmailToken,
 			}
-			err = mail.SendEmail(request)
+			err = SendEmail(request)
 			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				slog.Info("send email failed",
+					slog.String("emailUrl", opts.EmailUrl),
+					slog.Any("error", err))
 			}
 		}()
 
@@ -252,27 +263,30 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	} else {
 		params["url"] = opts.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
 
-		sendgridRequest := mail.PrepareEmail(email, params,
+		sendgridRequest := PrepareEmail(email, params,
 			KeyInvite, "You have been invited by "+claims.Subject,
 			"Click on this link to create your account: "+params["url"],
 			params["lang"])
 
 		go func() {
-			request := mail.SendEmailRequest{
+			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
 				Url:             opts.EmailUrl,
 				EmailFromName:   opts.EmailFromName,
 				EmailFrom:       opts.EmailFrom,
 				EmailToken:      opts.EmailToken,
 			}
-			err = mail.SendEmail(request)
+			err = SendEmail(request)
 			if err != nil {
-				log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+				slog.Info("send email failed",
+					slog.String("emailUrl", opts.EmailUrl),
+					slog.Any("error", err))
 			}
 		}()
 
 		if opts.Env == "dev" || opts.Env == "local" {
-			w.Write([]byte(`{"url":"` + params["url"] + `"}`))
+			dev := `{"url":"` + params["url"] + `"}`
+			writeJsonBytes(w, []byte(dev))
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
@@ -283,27 +297,31 @@ func confirmInvite(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		slog.Error("cannot parse JSON credentials", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	newPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		slog.Error("key error",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	err = updatePasswordInvite(cred.Email, cred.EmailToken, newPw)
 	if err != nil {
-		log.Errorf("ERR-confirm-reset-email-07, update user failed: %v", err)
+		slog.Error("update user failed", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Update user failed.")
 		return
 	}
 
 	result, err := findAuthByEmail(cred.Email)
 	if err != nil {
-		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		slog.Error("findAuthByEmail failed",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -315,28 +333,30 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		slog.Error("cannot parse JSON credentials", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = validateEmail(cred.Email)
 	if err != nil {
-		log.Errorf("ERR-signup-02, email is wrong %v", err)
+		slog.Error("email is wrong", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = validatePassword(cred.Password)
 	if err != nil {
-		log.Errorf("ERR-signup-03, password is wrong %v", err)
+		slog.Error("password is wrong", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	emailToken, err := genToken()
 	if err != nil {
-		log.Errorf("ERR-signup-04, RND %v err %v", cred.Email, err)
+		slog.Error("RND error",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -344,14 +364,18 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	//https://security.stackexchange.com/questions/11221/how-big-should-salt-be
 	calcPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		slog.Error("key error",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	refreshToken, err := genToken()
 	if err != nil {
-		log.Errorf("ERR-signup-06, key %v error: %v", cred.Email, err)
+		slog.Error("key error",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -364,7 +388,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		if i < len(cred.RedirectUri) && i > 0 {
 			m, err := url.ParseQuery(cred.RedirectUri[strings.Index(cred.RedirectUri, "?")+1:])
 			if err != nil {
-				log.Errorf("ERR-signup-07, insert user failed: %v", err)
+				slog.Error("insert user failed", slog.Any("error", err))
 				WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 				return
 			}
@@ -379,7 +403,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	err = insertUser(cred.Email, calcPw, emailToken, refreshToken, flowType, timeNow())
 	if err != nil {
-		log.Errorf("ERR-signup-07, insert user failed: %v", err)
+		slog.Error("insert user failed", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -390,28 +414,30 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	params["url"] = opts.EmailLinkPrefix + "/confirm/signup/" + url.QueryEscape(cred.Email) + "/" + emailToken + urlParams
 	params["lang"] = lang(r)
 
-	sendgridRequest := mail.PrepareEmail(cred.Email, params,
+	sendgridRequest := PrepareEmail(cred.Email, params,
 		KeySignup, "Validate your email",
 		"Click on this link: "+params["url"],
 		params["lang"])
 
 	go func() {
-		request := mail.SendEmailRequest{
+		request := SendEmailRequest{
 			SendgridRequest: sendgridRequest,
 			Url:             opts.EmailUrl,
 			EmailFromName:   opts.EmailFromName,
 			EmailFrom:       opts.EmailFrom,
 			EmailToken:      opts.EmailToken,
 		}
-		err = mail.SendEmail(request)
+		err = SendEmail(request)
 		if err != nil {
-			log.Printf("ERR-signup-07, send email failed: %v, %v\n", opts.EmailUrl, err)
+			slog.Info("send email failed",
+				slog.String("emailUrl", opts.EmailUrl),
+				slog.Any("error", err))
 		}
 	}()
 
 	if opts.Env == "dev" || opts.Env == "local" {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"url":"` + params["url"] + `"}`))
+		dev := `{"url":"` + params["url"] + `"}`
+		writeJsonBytes(w, []byte(dev))
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -433,7 +459,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		bodyCopy, err = io.ReadAll(r.Body)
 		if err != nil {
-			log.Errorf("ERR-login-01, cannot parse POST data %v", err)
+			slog.Error("cannot parse POST data", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -445,46 +471,21 @@ func login(w http.ResponseWriter, r *http.Request) {
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyCopy))
 		err = r.ParseForm()
 		if err != nil {
-			log.Errorf("ERR-login-01, cannot parse POST data %v", err)
+			slog.Error("cannot parse POST data", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
-		err = schema.NewDecoder().Decode(&cred, r.PostForm)
-		if err != nil {
-			log.Errorf("ERR-login-02, cannot populate POST data %v", err)
-			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-			return
-		}
+		cred.Email = r.PostForm.Get("email")
+		cred.Password = r.PostForm.Get("password")
 	}
 
 	result, errString, err := checkEmailPassword(cred.Email, cred.Password)
 	if err != nil {
-		log.Errorf("ERR-login-02 %v, %v", err, errString)
+		slog.Error("login error",
+			slog.Any("error", err),
+			slog.String("errorString", errString))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
-	}
-
-	//SMS logic
-	if result.totp != nil && result.sms != nil && result.smsVerified != nil {
-		totp := newTOTP(*result.totp)
-		token := totp.Now()
-		if cred.TOTP == "" {
-			url := strings.Replace(opts.UrlSms, "{sms}", *result.sms, 1)
-			url = strings.Replace(url, "{token}", token, 1)
-			err = sendSMS(url)
-			if err != nil {
-				log.Errorf("ERR-login-07, send sms failed %v error: %v", cred.Email, err)
-				WriteErrorf(w, http.StatusUnauthorized, "Send SMS failed")
-				return
-			}
-			log.Errorf("ERR-login-08, waiting for sms verification: %v", cred.Email)
-			WriteErrorf(w, http.StatusLocked, GenericErrorMessage)
-			return
-		} else if token != cred.TOTP {
-			log.Errorf("ERR-login-09, sms wrong token, %v err %v", cred.Email, err)
-			WriteErrorf(w, http.StatusForbidden, GenericErrorMessage)
-			return
-		}
 	}
 
 	//TOTP logic
@@ -492,7 +493,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		totp := newTOTP(*result.totp)
 		token := totp.Now()
 		if token != cred.TOTP {
-			log.Errorf("ERR-login-10, totp wrong token, %v err %v", cred.Email, err)
+			slog.Error("totp wrong token",
+				slog.String("email", cred.Email),
+				slog.Any("error", err))
 			WriteErrorf(w, http.StatusForbidden, GenericErrorMessage)
 			return
 		}
@@ -506,13 +509,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	refreshToken, err := resetRefreshToken(result.refreshToken)
 	if err != nil {
-		log.Errorf("ERR-login-15, cannot reset refresh token %v", err)
+		slog.Error("cannot reset refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Cannot reset refresh token")
 		return
 	}
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(cred.Email, refreshToken)
 	if err != nil {
-		log.Errorf("ERR-login-16, cannot verify refresh token %v", err)
+		slog.Error("cannot verify refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 		return
 	}
@@ -520,18 +523,20 @@ func login(w http.ResponseWriter, r *http.Request) {
 	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		log.Errorf("ERR-login-17, cannot encode refresh token %v", err)
+		slog.Error("cannot encode refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Cannot encode refresh token")
 		return
 	}
 
-	w.Write(oauthEnc)
+	writeJsonBytes(w, oauthEnc)
 }
 
 func handleCode(w http.ResponseWriter, email string, codeChallenge string, codeChallengeMethod string, redirectUri string, redirectAs201 bool) {
 	encoded, _, err := encodeCodeToken(email, codeChallenge, codeChallengeMethod)
 	if err != nil {
-		log.Errorf("ERR-login-14, cannot set refresh token for %v, %v", email, err)
+		slog.Error("cannot set refresh token",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusInternalServerError, "Cannot set refresh token")
 		return
 	}
@@ -543,88 +548,58 @@ func handleCode(w http.ResponseWriter, email string, codeChallenge string, codeC
 	}
 }
 
-func displayEmail(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	token := vars["token"]
-	email, err := url.QueryUnescape(vars["email"])
-	if err != nil {
-		email = fmt.Sprintf("email decoding error %v", err)
-		log.Printf(email)
-	}
-	action, err := url.QueryUnescape(vars["action"])
-	if err != nil {
-		action = fmt.Sprintf("action decoding error %v", err)
-		log.Printf(action)
-	}
-
-	if action == "signup" {
-		fmt.Printf("go to URL: http://%s/confirm/signup/%s/%s\n", r.Host, email, token)
-	} else if action == "reset" {
-		fmt.Printf("go to URL: http://%s/confirm/reset/%s/%s\n", r.Host, email, token)
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func displaySMS(_ http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	token := vars["token"]
-	sms, err := url.QueryUnescape(vars["sms"])
-	if err != nil {
-		log.Printf("decoding error %v", err)
-	}
-	fmt.Printf("Send token [%s] to NR %s\n", token, sms)
-}
-
 func resetEmail(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	email, err := url.QueryUnescape(vars["email"])
+	vars := r.PathValue("email")
+	email, err := url.QueryUnescape(vars)
 	if err != nil {
-		log.Errorf("ERR-confirm-reset-email-01, query unescape email %v err: %v", vars["email"], err)
+		slog.Error("query unescape email failed",
+			slog.String("email", vars),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	forgetEmailToken, err := genToken()
 	if err != nil {
-		log.Errorf("ERR-reset-email-02, RND %v err %v", email, err)
+		slog.Error("RND error",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = updateEmailForgotToken(email, forgetEmailToken)
 	if err != nil {
-		log.Errorf("ERR-reset-email-03, update token for %v failed, token %v: %v", email, forgetEmailToken, err)
+		slog.Error("update token failed",
+			slog.String("email", email),
+			slog.String("token", forgetEmailToken),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	params := map[string]string{}
-	err = json.NewDecoder(r.Body).Decode(&params)
-	if err != nil {
-		log.Printf("No or wrong json, ignoring [%v]", err)
-	}
-
 	params["email"] = email
 	params["url"] = opts.EmailLinkPrefix + "/confirm/reset/" + email + "/" + forgetEmailToken
 	params["lang"] = lang(r)
 
-	sendgridRequest := mail.PrepareEmail(email, params,
+	sendgridRequest := PrepareEmail(email, params,
 		KeyReset, "Reset your email",
 		"Click on this link: "+params["url"],
 		params["lang"])
 
 	go func() {
-		request := mail.SendEmailRequest{
+		request := SendEmailRequest{
 			SendgridRequest: sendgridRequest,
 			Url:             opts.EmailUrl,
 			EmailFromName:   opts.EmailFromName,
 			EmailFrom:       opts.EmailFrom,
 			EmailToken:      opts.EmailToken,
 		}
-		err = mail.SendEmail(request)
+		err = SendEmail(request)
 		if err != nil {
-			log.Printf("ERR-reset-email-04, send email failed: %v", opts.EmailUrl)
+			slog.Info("send email failed",
+				slog.String("emailUrl", opts.EmailUrl))
 		}
 	}()
 
@@ -660,26 +635,30 @@ func confirmReset(w http.ResponseWriter, r *http.Request) {
 	var cred Credentials
 	err := json.NewDecoder(r.Body).Decode(&cred)
 	if err != nil {
-		log.Errorf("ERR-signup-01, cannot parse JSON credentials %v", err)
+		slog.Error("cannot parse JSON credentials", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	newPw, err := newPw(cred.Password, 0)
 	if err != nil {
-		log.Errorf("ERR-signup-05, key %v error: %v", cred.Email, err)
+		slog.Error("key error",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	err = updatePasswordForgot(cred.Email, cred.EmailToken, newPw)
 	if err != nil {
-		log.Errorf("ERR-confirm-reset-email-07, update user failed: %v", err)
+		slog.Error("update user failed", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, "Update user failed.")
 		return
 	}
 
 	result, err := findAuthByEmail(cred.Email)
 	if err != nil {
-		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cred.Email, err)
+		slog.Error("findAuthByEmail failed",
+			slog.String("email", cred.Email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -690,14 +669,18 @@ func confirmReset(w http.ResponseWriter, r *http.Request) {
 func setupTOTP(w http.ResponseWriter, _ *http.Request, claims *TokenClaims) {
 	secret, err := genToken()
 	if err != nil {
-		log.Errorf("ERR-setup-totp-01, RND %v err %v", claims.Subject, err)
+		slog.Error("RND error",
+			slog.String("subject", claims.Subject),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	err = updateTOTP(claims.Subject, secret)
 	if err != nil {
-		log.Errorf("ERR-setup-totp-02, update failed %v err %v", claims.Subject, err)
+		slog.Error("update failed",
+			slog.String("subject", claims.Subject),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -707,104 +690,49 @@ func setupTOTP(w http.ResponseWriter, _ *http.Request, claims *TokenClaims) {
 	p.Uri = totp.ProvisioningUri(claims.Subject, opts.Issuer)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+
+	pStr, err := json.Marshal(p)
+	if err != nil {
+		slog.Error("cannot encode refresh token", slog.Any("error", err))
+		WriteErrorf(w, http.StatusBadRequest, "Cannot encode refresh token")
+		return
+	}
+	writeJsonBytes(w, pStr)
 }
 
 func confirmTOTP(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-	vars := mux.Vars(r)
-	token, err := url.QueryUnescape(vars["token"])
+	token := r.PathValue("token")
+	token, err := url.QueryUnescape(token)
 	if err != nil {
-		log.Errorf("ERR-confirm-totp-01, query unescape token %v err: %v", vars["token"], err)
+		slog.Error("query unescape token failed",
+			slog.String("token", token),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		log.Errorf("ERR-confirm-totp-02, DB select, %v err %v", claims.Subject, err)
+		slog.Error("DB select failed",
+			slog.String("subject", claims.Subject),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	totp := newTOTP(*result.totp)
 	if token != totp.Now() {
-		log.Errorf("ERR-confirm-totp-03, token different, %v err %v", claims.Subject, err)
+		slog.Error("token different",
+			slog.String("subject", claims.Subject),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	err = updateTOTPVerified(claims.Subject, timeNow())
 	if err != nil {
-		log.Errorf("ERR-confirm-totp-04, DB select, %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func setupSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-	vars := mux.Vars(r)
-	sms, err := url.QueryUnescape(vars["sms"])
-	if err != nil {
-		log.Errorf("ERR-setup-sms-01, query unescape sms %v err: %v", vars["sms"], err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	secret, err := genToken()
-	if err != nil {
-		log.Errorf("ERR-setup-sms-02, RND %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	err = updateSMS(claims.Subject, secret, sms)
-	if err != nil {
-		log.Errorf("ERR-setup-sms-03, updateSMS failed %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	totp := newTOTP(secret)
-
-	url := strings.Replace(opts.UrlSms, "{sms}", sms, 1)
-	url = strings.Replace(url, "{token}", totp.Now(), 1)
-
-	err = sendSMS(url)
-	if err != nil {
-		log.Errorf("ERR-setup-sms-04, send SMS failed %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func confirmSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
-	vars := mux.Vars(r)
-	token, err := url.QueryUnescape(vars["token"])
-	if err != nil {
-		log.Errorf("ERR-confirm-sms-01, query unescape token %v err: %v", vars["token"], err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	result, err := findAuthByEmail(claims.Subject)
-	if err != nil {
-		log.Errorf("ERR-confirm-sms-02, DB select, %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-		return
-	}
-
-	totp := newTOTP(*result.totp)
-	if token != totp.Now() {
-		log.Errorf("ERR-confirm-sms-03, token different, %v err %v", claims.Subject, err)
-		WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
-		return
-	}
-	err = updateSMSVerified(claims.Subject, timeNow())
-	if err != nil {
-		log.Errorf("ERR-confirm-sms-04, update sms failed, %v err %v", claims.Subject, err)
+		slog.Error("DB select failed",
+			slog.String("subject", claims.Subject),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -813,9 +741,9 @@ func confirmSMS(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 }
 
 func readiness(w http.ResponseWriter, _ *http.Request) {
-	err := dbLib.DB.Ping()
+	err := DB.Ping()
 	if err != nil {
-		log.Printf(fmt.Sprintf("not ready: %v", err))
+		slog.Warn("not ready", slog.Any("error", err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -827,40 +755,40 @@ func liveness(w http.ResponseWriter, _ *http.Request) {
 }
 
 func jwkFunc(w http.ResponseWriter, _ *http.Request) {
-	json := []byte(`{"keys":[`)
+	j := []byte(`{"keys":[`)
 	if privRSA != nil {
 		k := jose.JSONWebKey{Key: privRSA.Public()}
 		kid, err := k.Thumbprint(crypto.SHA256)
 		if err != nil {
-			log.Errorf("ERR-jwk-1, %v", err)
+			slog.Error("jwk thumb", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		k.KeyID = hex.EncodeToString(kid)
 		mj, err := k.MarshalJSON()
 		if err != nil {
-			log.Errorf("ERR-jwk-2, %v", err)
+			slog.Error("jwk marshal", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
-		json = append(json, mj...)
+		j = append(j, mj...)
 	}
 	if privEdDSA != nil {
 		k := jose.JSONWebKey{Key: privEdDSA.Public()}
 		mj, err := k.MarshalJSON()
 		if err != nil {
-			log.Errorf("ERR-jwk-3, %v", err)
+			slog.Error("jwk marshal key", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
-		json = append(json, []byte(`,`)...)
-		json = append(json, mj...)
+		j = append(j, []byte(`,`)...)
+		j = append(j, mj...)
 	}
-	json = append(json, []byte(`]}`)...)
+	j = append(j, []byte(`]}`)...)
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write(json)
+	writeJsonBytes(w, j)
 }
 
 //****************** OAuth
@@ -875,26 +803,26 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 		refreshToken, err = param("refresh_token", r)
 	}
 	if err != nil {
-		log.Errorf("ERR-oauth-01, basic auth failed")
+		slog.Error("basic auth failed")
 		WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 		return
 	}
 	if refreshToken == "" {
-		log.Errorf("ERR-oauth-02, no refresh token")
+		slog.Error("no refresh token")
 		WriteErrorf(w, http.StatusBadRequest, "No refresh token")
 		return
 	}
 
 	refreshClaims, err := checkRefreshToken(refreshToken)
 	if err != nil {
-		log.Errorf("ERR-oauth-03, cannot verify refresh token %v", err)
+		slog.Error("cannot verify refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 		return
 	}
 
 	encodedAccessToken, encodedRefreshToken, expiresAt, err := checkRefresh(refreshClaims.Subject, refreshClaims.Token)
 	if err != nil {
-		log.Errorf("ERR-oauth-03, cannot verify refresh token %v", err)
+		slog.Error("cannot verify refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 		return
 	}
@@ -902,17 +830,17 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
-		log.Errorf("ERR-oauth-04, cannot verify refresh token %v", err)
+		slog.Error("cannot verify refresh token", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 		return
 	}
-	w.Write(oauthEnc)
+	writeJsonBytes(w, oauthEnc)
 }
 
 func oauth(w http.ResponseWriter, r *http.Request) {
 	grantType, err := param("grant_type", r)
 	if err != nil {
-		log.Errorf("ERR-oauth-01, basic auth failed")
+		slog.Error("basic auth failed")
 		WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 		return
 	}
@@ -923,14 +851,14 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 	case "client_credentials":
 		user, err := basicAuth(r)
 		if err != nil {
-			log.Errorf("Basic auth failed: %v", err)
+			slog.Error("Basic auth failed", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 			return
 		}
 
 		encodedAccessToken, err := encodeAccessToken(user, opts.Scope, opts.Audience, opts.Issuer, nil)
 		if err != nil {
-			log.Errorf("Basic auth failed: %v", err)
+			slog.Error("Basic auth failed", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 			return
 		}
@@ -941,39 +869,39 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 		}
 		oauthEnc, err := json.Marshal(oauth)
 		if err != nil {
-			log.Errorf("ERR-oauth-08, cannot verify refresh token %v", err)
+			slog.Error("cannot verify refresh token", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, CannotVerifyRefreshTokenMessage)
 			return
 		}
-		w.Write(oauthEnc)
+		writeJsonBytes(w, oauthEnc)
 
 	case "authorization_code":
 		code, err := param("code", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-01, basic auth failed")
+			slog.Error("basic auth failed")
 			WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 			return
 		}
 		codeVerifier, err := param("code_verifier", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-01, basic auth failed")
+			slog.Error("basic auth failed")
 			WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
 			return
 		}
 		//https://tools.ietf.org/html/rfc7636#section-4.1 length must be <= 43 <= 128
 		if len(codeVerifier) < 43 {
-			log.Errorf("ERR-oauth-01, min 43 chars")
+			slog.Error("minimum 43 characters required")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		if len(codeVerifier) > 128 {
-			log.Errorf("ERR-oauth-01, max 128 chars")
+			slog.Error("maximum 128 characters allowed")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		cc, err := checkCodeToken(code)
 		if err != nil {
-			log.Errorf("ERR-oauth-04, code check failed: %v", err)
+			slog.Error("code check failed", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -981,19 +909,21 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 			h := sha256.Sum256([]byte(codeVerifier))
 			s := base64.RawURLEncoding.EncodeToString(h[:])
 			if cc.CodeChallenge != s {
-				log.Errorf("ERR-oauth-04, auth challenge failed")
+				slog.Error("auth challenge failed")
 				WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 				return
 			}
 		} else {
-			log.Errorf("ERR-oauth-04, only S256 supported")
+			slog.Error("only S256 supported")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 
 		result, err := findAuthByEmail(cc.Subject)
 		if err != nil {
-			log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", cc.Subject, err)
+			slog.Error("findAuthByEmail failed",
+				slog.String("subject", cc.Subject),
+				slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
@@ -1001,44 +931,46 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 		writeOAuth(w, result)
 	case "password":
 		if !opts.PasswordFlow {
-			log.Errorf("ERR-oauth-05a, no username")
+			slog.Error("no username")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		email, err := param("username", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-05a, no username")
+			slog.Error("no username")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		password, err := param("password", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-05b, no password")
+			slog.Error("no password")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		scope, err := param("scope", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-05c, no scope")
+			slog.Error("no scope")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		if email == "" || password == "" || scope == "" {
-			log.Errorf("ERR-oauth-05, username, password, or scope empty")
+			slog.Error("ERR-oauth-05, username, password, or scope empty")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 
 		result, errString, err := checkEmailPassword(email, password)
 		if err != nil {
-			log.Errorf("ERR-oauth-06 %v, %v", err, errString)
+			slog.Error("ERR-oauth-06",
+				slog.Any("error", err),
+				slog.String("errorString", errString))
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 
 		writeOAuth(w, result)
 	default:
-		log.Errorf("ERR-oauth-09, unsupported grant type")
+		slog.Error("unsupported grant type")
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	}
 }
@@ -1062,30 +994,30 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 func revoke(w http.ResponseWriter, r *http.Request) {
 	tokenHint, err := param("token_type_hint", r)
 	if err != nil {
-		log.Errorf("ERR-oauth-07, unsupported grant type")
+		slog.Error("unsupported grant type")
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	if tokenHint == "refresh_token" {
 		oldToken, err := param("token", r)
 		if err != nil {
-			log.Errorf("ERR-oauth-07, unsupported grant type")
+			slog.Error("unsupported grant type")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		if oldToken == "" {
-			log.Errorf("ERR-oauth-07, unsupported grant type")
+			slog.Error("unsupported grant type")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 		_, err = resetRefreshToken(oldToken)
 		if err != nil {
-			log.Errorf("ERR-oauth-07, unsupported grant type")
+			slog.Error("unsupported grant type")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
 		}
 	} else {
-		log.Errorf("ERR-oauth-07, unsupported grant type")
+		slog.Error("unsupported grant type")
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -1097,7 +1029,7 @@ func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	result, err := findAuthByEmail(claims.Subject)
 	if err != nil {
-		log.Errorf("ERR-oauth-06 %v", err)
+		slog.Error("logout", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -1105,7 +1037,7 @@ func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	refreshToken := result.refreshToken
 	_, err = resetRefreshToken(refreshToken)
 	if err != nil {
-		log.Errorf("ERR-oauth-07, unsupported grant type: %v", err)
+		slog.Error("unsupported grant type", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -1120,32 +1052,34 @@ func logout(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
 	currentTime := timeNow()
-	writeJsonStr(w, `{"time":"`+currentTime.Format("2006-01-02 15:04:05")+`","offset":`+strconv.Itoa(secondsAdd)+`}`)
+	time := `{"time":"` + currentTime.Format("2006-01-02 15:04:05") + `","offset":` + strconv.Itoa(secondsAdd) + `}`
+	writeJsonBytes(w, []byte(time))
 }
 
 func timeWarp(w http.ResponseWriter, r *http.Request, adminEmail string) {
-	m := mux.Vars(r)
-	h := m["hours"]
+	h := r.PathValue("hours")
 	if h == "" {
-		log.Errorf("ERR-timewarp-01 %v", m)
+		slog.Error("timewarp parameter", slog.Any("message", m))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		log.Errorf("ERR-timewarp-02 %v", err)
+		slog.Error("timewarp parse", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 
 	seconds := hours * 60 * 60
 	secondsAdd += seconds
-	log.Printf("time warp: %v", timeNow())
+	slog.Info("time warp", slog.String("time", timeNow().String()))
 
 	//since we warp, the token will be invalid
 	result, err := findAuthByEmail(adminEmail)
 	if err != nil {
-		log.Errorf("ERR-timeWarp, findAuthByEmail for %v failed, %v", adminEmail, err)
+		slog.Error("findAuthByEmail failed",
+			slog.String("adminEmail", adminEmail),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -1153,11 +1087,12 @@ func timeWarp(w http.ResponseWriter, r *http.Request, adminEmail string) {
 }
 
 func asUser(w http.ResponseWriter, r *http.Request, _ string) {
-	m := mux.Vars(r)
-	email := m["email"]
+	email := r.PathValue("email")
 	result, err := findAuthByEmail(email)
 	if err != nil {
-		log.Errorf("ERR-writeOAuth, findAuthByEmail for %v failed, %v", email, err)
+		slog.Error("findAuthByEmail failed",
+			slog.String("email", email),
+			slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
@@ -1165,11 +1100,13 @@ func asUser(w http.ResponseWriter, r *http.Request, _ string) {
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request, admin string) {
-	m := mux.Vars(r)
-	email := m["email"]
+	email := r.PathValue("email")
 	err := deleteDbUser(email)
 	if err != nil {
-		log.Errorf("could not delete user %v, requested by %s", err, admin)
+		slog.Error("could not delete user",
+			slog.Any("error", err),
+			slog.String("requestedBy", admin))
+
 		WriteErrorf(w, http.StatusBadRequest, "Could not delete user")
 		return
 	}
@@ -1178,33 +1115,29 @@ func deleteUser(w http.ResponseWriter, r *http.Request, admin string) {
 
 func updateUser(w http.ResponseWriter, r *http.Request, admin string) {
 	//now we update the meta data that comes as system meta data. Thus we trust the system to provide the correct metadata, not the user
-	m := mux.Vars(r)
-	email := m["email"]
+	email := r.PathValue("email")
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Errorf("could not update user %v, requested by %s", err, admin)
+		slog.Error("could not update user",
+			slog.Any("error", err),
+			slog.String("requestedBy", admin))
 		WriteErrorf(w, http.StatusBadRequest, "Could not update user")
 		return
 	}
 	if !json.Valid(b) {
-		log.Errorf("invalid json [%s], requested by %s", string(b), admin)
+		slog.Error("invalid json",
+			slog.String("json", string(b)),
+			slog.String("requestedBy", admin))
 		WriteErrorf(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 	err = updateSystemMeta(email, string(b))
 	if err != nil {
-		log.Errorf("could not update system meta %v, requested by %s", err, admin)
+		slog.Error("could not update system meta",
+			slog.Any("error", err),
+			slog.String("requestedBy", admin))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func writeJsonStr(w http.ResponseWriter, obj string) {
-	w.Header().Set("Content-Type", "application/json")
-	_, err := w.Write([]byte(obj))
-	if err != nil {
-		log.Errorf("Could write json: %v", err)
-		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-	}
 }

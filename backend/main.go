@@ -14,11 +14,9 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/MatusOllah/slogcolor"
 	"github.com/dimiro1/banner"
-	"github.com/dusted-go/logging/prettylog"
-	"github.com/flatfeestack/go-lib/auth"
-	dbLib "github.com/flatfeestack/go-lib/database"
-	env "github.com/flatfeestack/go-lib/environment"
+	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -33,49 +31,63 @@ var (
 	cfg    *config.Config
 	jwtKey []byte
 	debug  bool
+	logger = slog.New(slogcolor.NewHandler(os.Stderr, &slogcolor.Options{
+		Level:         slog.LevelDebug,
+		TimeFormat:    "15:04:05.000",
+		SrcFileMode:   slogcolor.ShortFile,
+		SrcFileLength: 16,
+		MsgPrefix:     color.HiWhiteString("|"),
+		MsgColor:      color.New(color.FgHiWhite),
+		MsgLength:     16,
+	}))
 )
+
+func init() {
+	color.NoColor = false
+	slog.SetDefault(logger)
+}
 
 func parseFlags() {
 	cfg = &config.Config{}
 
-	flag.StringVar(&cfg.Env, "env", env.LookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&cfg.Port, "port", env.LookupEnvInt("PORT",
+	flag.StringVar(&cfg.Env, "env", util.LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&cfg.Port, "port", util.LookupEnvInt("PORT",
 		9082), "listening HTTP port")
-	flag.StringVar(&cfg.HS256, "hs256", env.LookupEnv("HS256"), "HS256 key")
-	flag.StringVar(&cfg.StripeAPISecretKey, "stripe-secret-api", env.LookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
-	flag.StringVar(&cfg.StripeAPIPublicKey, "stripe-public-api", env.LookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
-	flag.StringVar(&cfg.StripeWebhookSecretKey, "stripe-secret-webhook", env.LookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
-	flag.StringVar(&cfg.DBPath, "db-path", env.LookupEnv("DB_PATH",
+	flag.StringVar(&cfg.HS256, "hs256", util.LookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&cfg.StripeAPISecretKey, "stripe-secret-api", util.LookupEnv("STRIPE_SECRET_API"), "Stripe API secret")
+	flag.StringVar(&cfg.StripeAPIPublicKey, "stripe-public-api", util.LookupEnv("STRIPE_PUBLIC_API"), "Public Key for stripe")
+	flag.StringVar(&cfg.StripeWebhookSecretKey, "stripe-secret-webhook", util.LookupEnv("STRIPE_SECRET_WEBHOOK"), "Stripe webhook secret")
+	flag.StringVar(&cfg.DBPath, "db-path", util.LookupEnv("DB_PATH",
 		"postgresql://postgres:password@db:5432/flatfeestack?sslmode=disable"), "DB path")
-	flag.StringVar(&cfg.DBDriver, "db-driver", env.LookupEnv("DB_DRIVER",
+	flag.StringVar(&cfg.DBDriver, "db-driver", util.LookupEnv("DB_DRIVER",
 		"postgres"), "DB driver")
-	flag.StringVar(&cfg.DBScripts, "db-scripts", env.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&cfg.Admins, "admins", env.LookupEnv("ADMINS"), "Admins")
-	flag.StringVar(&cfg.EmailFrom, "email-from", env.LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
-	flag.StringVar(&cfg.EmailFromName, "email-from-name", env.LookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
-	flag.StringVar(&cfg.EmailUrl, "email-url", env.LookupEnv("EMAIL_URL",
+	flag.StringVar(&cfg.DBScripts, "db-scripts", util.LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
+	flag.StringVar(&cfg.Admins, "admins", util.LookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&cfg.EmailFrom, "email-from", util.LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&cfg.EmailFromName, "email-from-name", util.LookupEnv("EMAIL_FROM_NAME"), "Email from name, default is a empty string")
+	flag.StringVar(&cfg.EmailUrl, "email-url", util.LookupEnv("EMAIL_URL",
 		"http://localhost"), "Email service URL")
-	flag.StringVar(&cfg.EmailToken, "email-token", env.LookupEnv("EMAIL_TOKEN"), "Email service token")
-	flag.StringVar(&cfg.EmailLinkPrefix, "email-prefix", env.LookupEnv("EMAIL_PREFIX",
+	flag.StringVar(&cfg.EmailToken, "email-token", util.LookupEnv("EMAIL_TOKEN"), "Email service token")
+	flag.StringVar(&cfg.EmailLinkPrefix, "email-prefix", util.LookupEnv("EMAIL_PREFIX",
 		"http://localhost/"), "Email link prefix")
-	flag.StringVar(&cfg.EmailMarketing, "email-marketing", env.LookupEnv("EMAIL_MARKETING",
+	flag.StringVar(&cfg.EmailMarketing, "email-marketing", util.LookupEnv("EMAIL_MARKETING",
 		"tom.marketing@bocek.ch"), "Email marketing email. Set the value to 'live' to send out real emails")
-	flag.StringVar(&cfg.NowpaymentsToken, "nowpayments-token", env.LookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
-	flag.StringVar(&cfg.NowpaymentsIpnKey, "nowpayments-ipn-key", env.LookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
-	flag.StringVar(&cfg.NowpaymentsApiUrl, "nowpayments-api-url", env.LookupEnv("NOWPAYMENTS_API_URL",
+	flag.StringVar(&cfg.NowpaymentsToken, "nowpayments-token", util.LookupEnv("NOWPAYMENTS_TOKEN"), "Token for NOWPayments access")
+	flag.StringVar(&cfg.NowpaymentsIpnKey, "nowpayments-ipn-key", util.LookupEnv("NOWPAYMENTS_IPN_KEY"), "Key for NOWPayments IPN")
+	flag.StringVar(&cfg.NowpaymentsApiUrl, "nowpayments-api-url", util.LookupEnv("NOWPAYMENTS_API_URL",
 		"https://api.sandbox.nowpayments.io/v1"), "NOWPayments API URL")
-	flag.StringVar(&cfg.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", env.LookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
+	flag.StringVar(&cfg.NowpaymentsIpnCallbackUrl, "nowpayments-ipn-callback-url", util.LookupEnv("NOWPAYMENTS_IPN_CALLBACK_URL"), "Callback URL for NOWPayments IPN")
 
-	flag.StringVar(&cfg.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
-	flag.StringVar(&cfg.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+	flag.StringVar(&cfg.BackendUsername, "backend-username", util.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&cfg.BackendPassword, "backend-password", util.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
 
-	flag.StringVar(&cfg.AnalyzerUrl, "analyzer-url", env.LookupEnv("ANALYZER_URL"), "URL to analysis engine")
-	flag.StringVar(&cfg.AnalyzerUsername, "analyzer-username", env.LookupEnv("ANALYZER_USERNAME"), "Username to analysis engine")
-	flag.StringVar(&cfg.AnalyzerPassword, "analyzer-password", env.LookupEnv("ANALYZER_PASSWORD"), "Password to analysis engine")
+	flag.StringVar(&cfg.AnalyzerUrl, "analyzer-url", util.LookupEnv("ANALYZER_URL"), "URL to analysis engine")
+	flag.StringVar(&cfg.AnalyzerUsername, "analyzer-username", util.LookupEnv("ANALYZER_USERNAME"), "Username to analysis engine")
+	flag.StringVar(&cfg.AnalyzerPassword, "analyzer-password", util.LookupEnv("ANALYZER_PASSWORD"), "Password to analysis engine")
 
-	flag.StringVar(&cfg.NEOPrivateKey, "neo-private-key", env.LookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
-	flag.StringVar(&cfg.ETHPrivateKey, "eth-private-key", env.LookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
-	flag.StringVar(&cfg.ETHContractAddress, "eth-contract-address", env.LookupEnv("ETH_CONTRACT_ADDRESS"), "Ethereum contract address")
+	flag.StringVar(&cfg.NEOPrivateKey, "neo-private-key", util.LookupEnv("NEO_PRIVATE_KEY"), "NEO private key")
+	flag.StringVar(&cfg.ETHPrivateKey, "eth-private-key", util.LookupEnv("ETH_PRIVATE_KEY"), "Ethereum private key")
+	flag.StringVar(&cfg.ETHContractAddress, "eth-contract-address", util.LookupEnv("ETH_CONTRACT_ADDRESS"), "Ethereum contract address")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -86,15 +98,9 @@ func parseFlags() {
 	//set defaults, be explicit
 	if cfg.Env == "local" || cfg.Env == "dev" {
 		debug = true
-		util.SetDebug(true)
-		prettyHandler := prettylog.NewHandler(&slog.HandlerOptions{
-			Level:       slog.LevelDebug,
-			AddSource:   false,
-			ReplaceAttr: nil,
-		})
-		slog.SetDefault(slog.New(prettyHandler))
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 	} else {
-		util.SetDebug(false)
+		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
 
 	if cfg.HS256 != "" {
@@ -174,23 +180,23 @@ func main() {
 		slog.Info("could not display banner...")
 	}
 
-	err = dbLib.InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
+	err = db.InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
 	if err != nil {
 		slog.Error("DB not initialized",
 			slog.Any("error", err))
 		os.Exit(1)
 	}
+	defer db.CloseDb()
 
 	//stripe.Key = cfg.StripeAPISecretKey
 
-	credentials := auth.Credentials{
+	credentials := util.Credentials{
 		Username: cfg.BackendUsername,
 		Password: cfg.BackendPassword,
 	}
 
 	// Routes
 	router := http.NewServeMux()
-	//router := mux.NewRouter()
 
 	router.HandleFunc("GET /users/me", middlewareJwtAuthUserLog(api2.GetMyUser))
 	router.HandleFunc("GET /users/me/git-email", middlewareJwtAuthUserLog(api2.GetMyConnectedEmails))
@@ -207,7 +213,7 @@ func main() {
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
 	router.HandleFunc("GET /users/me/balance", middlewareJwtAuthUserLog(api2.UserBalance))
 	router.HandleFunc("GET /users/summary/{uuid}", api2.UserSummary2)
-	router.HandleFunc("GET /users/by/{email}", auth.BasicAuth(credentials, api2.GetUserByEmail))
+	router.HandleFunc("GET /users/by/{email}", util.BasicAuth(credentials, api2.GetUserByEmail))
 
 	//payment
 	router.HandleFunc("POST /users/me/stripe", middlewareJwtAuthUserLog(sh.SetupStripe))
@@ -238,7 +244,7 @@ func main() {
 	//hooks
 	router.HandleFunc("POST /hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 65536))
 	router.HandleFunc("POST /hooks/nowpayments", nh.NowWebhook)
-	router.HandleFunc("POST /hooks/analyzer", auth.BasicAuth(credentials, api2.AnalysisEngineHook))
+	router.HandleFunc("POST /hooks/analyzer", util.BasicAuth(credentials, api2.AnalysisEngineHook))
 
 	//admin
 	router.HandleFunc("GET /admin/time", middlewareJwtAuthAdminLog(api2.ServerTime))

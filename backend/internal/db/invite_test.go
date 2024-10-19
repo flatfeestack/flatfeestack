@@ -1,7 +1,6 @@
 package db
 
 import (
-	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -16,8 +15,8 @@ func insertInvite(t *testing.T, fromEmail string, toEmail string) uuid.UUID {
 }
 
 func TestInviteInsert(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 
 	insertInvite(t, "from", "to")
 	insertInvite(t, "from2", "to")
@@ -31,8 +30,8 @@ func TestInviteInsert(t *testing.T) {
 }
 
 func TestInviteFindMyAny(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 
 	insertInvite(t, "from", "to")
 	insertInvite(t, "from2", "to")
@@ -50,8 +49,8 @@ func TestInviteFindMyAny(t *testing.T) {
 }
 
 func TestDeleteInvite(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 
 	insertInvite(t, "from", "to")
 	insertInvite(t, "from2", "to")
@@ -66,8 +65,8 @@ func TestDeleteInvite(t *testing.T) {
 }
 
 func TestConfirmInvite(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 
 	insertInvite(t, "from", "to")
 

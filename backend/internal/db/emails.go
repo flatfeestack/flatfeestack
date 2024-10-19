@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"math/big"
 	"time"
@@ -17,11 +16,11 @@ type Marketing struct {
 func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 	var gitEmails []GitEmail
 	s := "SELECT email, confirmed_at, created_at FROM git_email WHERE user_id=$1"
-	rows, err := dbLib.DB.Query(s, uid)
+	rows, err := DB.Query(s, uid)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	for rows.Next() {
 		var gitEmail GitEmail
@@ -36,7 +35,7 @@ func FindGitEmailsByUserId(uid uuid.UUID) ([]GitEmail, error) {
 
 func CountExistingOrConfirmedGitEmail(uid uuid.UUID, email string) (int, error) {
 	var c int
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT count(*) AS c FROM git_email WHERE (user_id=$1 or confirmed_at is not null) and email=$2`, uid, email).
 		Scan(&c)
 	switch err {
@@ -50,11 +49,11 @@ func CountExistingOrConfirmedGitEmail(uid uuid.UUID, email string) (int, error) 
 }
 
 func InsertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token *string, now time.Time) error {
-	stmt, err := dbLib.DB.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
+	stmt, err := DB.Prepare("INSERT INTO git_email(id, user_id, email, token, created_at) VALUES($1, $2, $3, $4, $5)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO git_email for %v statement event: %v", email, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(id, uid, email, token, now)
@@ -65,11 +64,11 @@ func InsertGitEmail(id uuid.UUID, uid uuid.UUID, email string, token *string, no
 }
 
 func ConfirmGitEmail(email string, token string, now time.Time) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE git_email SET token=NULL, confirmed_at=$1 WHERE email=$2 AND token=$3")
+	stmt, err := DB.Prepare("UPDATE git_email SET token=NULL, confirmed_at=$1 WHERE email=$2 AND token=$3")
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(now, email, token)
@@ -81,11 +80,11 @@ func ConfirmGitEmail(email string, token string, now time.Time) error {
 
 func DeleteGitEmail(uid uuid.UUID, email string) error {
 	//TODO: don't delete, just mark as deleted
-	stmt, err := dbLib.DB.Prepare("DELETE FROM git_email WHERE email=$1 AND user_id=$2")
+	stmt, err := DB.Prepare("DELETE FROM git_email WHERE email=$1 AND user_id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM git_email for %v statement event: %v", email, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(email, uid)
@@ -97,11 +96,11 @@ func DeleteGitEmail(uid uuid.UUID, email string) error {
 
 func DeleteGitEmailFromUserEmailsSent(uid uuid.UUID, email string) error {
 	//TODO: find a better solution in future that allows multiple mails be sent to same mail address but still has spam protection
-	stmt, err := dbLib.DB.Prepare("DELETE FROM user_emails_sent WHERE email=$1 AND user_id=$2 and email_type=$3")
+	stmt, err := DB.Prepare("DELETE FROM user_emails_sent WHERE email=$1 AND user_id=$2 and email_type=$3")
 	if err != nil {
 		return fmt.Errorf("prepare DELETE FROM user_emails_sent for %v and user_id %v statement event: %v", email, uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(email, uid, "add-git"+email)
@@ -113,7 +112,7 @@ func DeleteGitEmailFromUserEmailsSent(uid uuid.UUID, email string) error {
 
 func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	var uid uuid.UUID
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT user_id FROM git_email WHERE email=$1`, gitEmail).
 		Scan(&uid)
 	switch err {
@@ -129,13 +128,13 @@ func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 //******* Emails Sent
 
 func InsertEmailSent(id uuid.UUID, userId *uuid.UUID, email string, emailType string, now time.Time) error {
-	stmt, err := dbLib.DB.Prepare(`
+	stmt, err := DB.Prepare(`
 			INSERT INTO user_emails_sent(id, user_id, email, email_type, created_at) 
 			VALUES($1, $2, $3, $4, $5)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO user_emails_sent for %v statement event: %v", userId, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(id, userId, email, emailType, now)
@@ -147,7 +146,7 @@ func InsertEmailSent(id uuid.UUID, userId *uuid.UUID, email string, emailType st
 
 func CountEmailSentById(userId uuid.UUID, emailType string) (int, error) {
 	var c int
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT count(*) AS c FROM user_emails_sent WHERE user_id=$1 and email_type=$2`, userId, emailType).
 		Scan(&c)
 	switch err {
@@ -162,7 +161,7 @@ func CountEmailSentById(userId uuid.UUID, emailType string) (int, error) {
 
 func CountEmailSentByEmail(email string, emailType string) (int, error) {
 	var c int
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT count(*) AS c FROM user_emails_sent WHERE email=$1 and email_type=$2`, email, emailType).
 		Scan(&c)
 	switch err {
@@ -177,13 +176,13 @@ func CountEmailSentByEmail(email string, emailType string) (int, error) {
 
 func InsertUnclaimed(id uuid.UUID, email string, repoId uuid.UUID, balance *big.Int, currency string,
 	day time.Time, now time.Time) error {
-	stmt, err := dbLib.DB.Prepare(`
+	stmt, err := DB.Prepare(`
 			INSERT INTO unclaimed(id, email, repo_id, balance, currency, day, created_at) 
 			VALUES($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO unclaimed for %v statement event: %v", email, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(id, email, repoId, balance.String(), currency, day, now)
@@ -196,7 +195,7 @@ func InsertUnclaimed(id uuid.UUID, email string, repoId uuid.UUID, balance *big.
 // ******** Marketing
 func FindMarketingEmails() ([]Marketing, error) {
 	ms := []Marketing{}
-	rows, err := dbLib.DB.Query(`SELECT u.email, u.currency, COALESCE(sum(u.balance), 0) as balances
+	rows, err := DB.Query(`SELECT u.email, u.currency, COALESCE(sum(u.balance), 0) as balances
                         FROM unclaimed u
                         LEFT JOIN git_email g ON u.email = g.email 
                         WHERE g.email IS NULL 
@@ -206,7 +205,7 @@ func FindMarketingEmails() ([]Marketing, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	mk := Marketing{}
 	m := make(map[string]*big.Int)

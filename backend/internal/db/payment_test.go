@@ -1,7 +1,6 @@
 package db
 
 import (
-	"backend/pkg/util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -25,8 +24,8 @@ func insertPayInEvent(t *testing.T, externalId uuid.UUID, userId uuid.UUID, stat
 }
 
 func TestPayment(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 	u := insertTestUser(t, "email")
 	e := uuid.New()
 
@@ -40,8 +39,8 @@ func TestPayment(t *testing.T) {
 }
 
 func TestPaymentTwiceFailed(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 	u := insertTestUser(t, "email")
 	e := uuid.New()
 
@@ -62,8 +61,8 @@ func TestPaymentTwiceFailed(t *testing.T) {
 }
 
 func TestTwoPaymentTwice(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 	u := insertTestUser(t, "email")
 
 	e := uuid.New()
@@ -80,8 +79,8 @@ func TestTwoPaymentTwice(t *testing.T) {
 }
 
 func TestFindSumUserBalanceByCurrency(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 	u := insertTestUser(t, "email")
 
 	e := uuid.New()
@@ -106,8 +105,8 @@ func TestFindSumUserBalanceByCurrency(t *testing.T) {
 }
 
 func TestLatestCurrency(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	SetupTestData()
+	defer TeardownTestData()
 
 	u := uuid.New()
 	ub := PayInEvent{

@@ -49,7 +49,6 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
     volumes:
       - ${BASE_PATH:-.}/frontend:/app
     ports:

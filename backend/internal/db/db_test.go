@@ -1,7 +1,6 @@
 package db
 
 import (
-	"backend/pkg/util"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	testDb := util.NewTestDb()
+	testDb := NewTestDb()
 	code := m.Run()
 	testDb.CloseTestDb()
 	os.Exit(code)
