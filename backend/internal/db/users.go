@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/uuid"
 	"time"
@@ -39,11 +38,11 @@ type UserDetail struct {
 func FindAllEmails() ([]string, error) {
 	emails := []string{}
 	s := `SELECT email from users`
-	rows, err := dbLib.DB.Query(s)
+	rows, err := DB.Query(s)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	for rows.Next() {
 		var email string
@@ -58,7 +57,7 @@ func FindAllEmails() ([]string, error) {
 
 func FindUserByEmail(email string) (*UserDetail, error) {
 	var u UserDetail
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
                                email, name, image, seats, freq, created_at
                         FROM users 
@@ -77,7 +76,7 @@ func FindUserByEmail(email string) (*UserDetail, error) {
 
 func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	var u UserDetail
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
                                stripe_client_secret, email, name, image, seats, freq, created_at                          
                         FROM users 
@@ -96,7 +95,7 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 
 func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	var u PublicUser
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT id, name, image                       
                         FROM users 
                         WHERE id=$1`, uid).
@@ -112,11 +111,11 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 }
 
 func InsertUser(user *UserDetail) error {
-	stmt, err := dbLib.DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
+	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt)
 	if err != nil {
@@ -127,13 +126,13 @@ func InsertUser(user *UserDetail) error {
 }
 
 func UpdateStripe(user *UserDetail) error {
-	stmt, err := dbLib.DB.Prepare(`UPDATE users 
+	stmt, err := DB.Prepare(`UPDATE users 
                                    SET stripe_id=$1, stripe_payment_method=$2, stripe_last4=$3
                                    WHERE id=$4`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(user.StripeId, user.PaymentMethod, user.Last4, user.Id)
@@ -144,11 +143,11 @@ func UpdateStripe(user *UserDetail) error {
 }
 
 func UpdateUserName(uid uuid.UUID, name string) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET name=$1 WHERE id=$2")
+	stmt, err := DB.Prepare("UPDATE users SET name=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(name, uid)
@@ -159,11 +158,11 @@ func UpdateUserName(uid uuid.UUID, name string) error {
 }
 
 func UpdateUserImage(uid uuid.UUID, data string) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET image=$1 WHERE id=$2")
+	stmt, err := DB.Prepare("UPDATE users SET image=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(data, uid)
@@ -174,11 +173,11 @@ func UpdateUserImage(uid uuid.UUID, data string) error {
 }
 
 func DeleteUserImage(uid uuid.UUID) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET image=NULL WHERE id=$1")
+	stmt, err := DB.Prepare("UPDATE users SET image=NULL WHERE id=$1")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(uid)
@@ -189,11 +188,11 @@ func DeleteUserImage(uid uuid.UUID) error {
 }
 
 func UpdateSeatsFreq(userId uuid.UUID, seats int, freq int) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET seats=$1, freq=$2 WHERE id=$3")
+	stmt, err := DB.Prepare("UPDATE users SET seats=$1, freq=$2 WHERE id=$3")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", userId, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(seats, freq, userId)
@@ -207,11 +206,11 @@ func FindSponsoredUserBalances(invitedUserId uuid.UUID) ([]User, error) {
 	s := `SELECT id, name, email
           FROM users 
           WHERE invited_id = $1`
-	rows, err := dbLib.DB.Query(s, invitedUserId)
+	rows, err := DB.Query(s, invitedUserId)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	var userStatus []User
 	for rows.Next() {
@@ -226,11 +225,11 @@ func FindSponsoredUserBalances(invitedUserId uuid.UUID) ([]User, error) {
 }
 
 func UpdateUserInviteId(uid uuid.UUID, inviteId uuid.UUID) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET invited_id=$1 WHERE id=$2")
+	stmt, err := DB.Prepare("UPDATE users SET invited_id=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(inviteId, uid)
@@ -241,11 +240,11 @@ func UpdateUserInviteId(uid uuid.UUID, inviteId uuid.UUID) error {
 }
 
 func UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET stripe_client_secret=$1 WHERE id=$2")
+	stmt, err := DB.Prepare("UPDATE users SET stripe_client_secret=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	res, err = stmt.Exec(stripeClientSecret, uid)
@@ -256,11 +255,11 @@ func UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
 }
 
 func ClearUserName(uid uuid.UUID) error {
-	stmt, err := dbLib.DB.Prepare("UPDATE users SET name=NULL WHERE id=$1")
+	stmt, err := DB.Prepare("UPDATE users SET name=NULL WHERE id=$1")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 	var res sql.Result
 	res, err = stmt.Exec(uid)
 	if err != nil {

@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	dbLib "github.com/flatfeestack/go-lib/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"math/big"
@@ -33,14 +32,14 @@ type Contribution struct {
 
 func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
 
-	stmt, err := dbLib.DB.Prepare(`
+	stmt, err := DB.Prepare(`
 				INSERT INTO daily_contribution(id, user_sponsor_id, user_contributor_id, repo_id, 
 				                               balance, currency, day, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7, $8)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", userSponsorId, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	b := balance.String()
@@ -71,11 +70,11 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
             ORDER by d.day`
 	}
 
-	rows, err := dbLib.DB.Query(s, contributorUserId)
+	rows, err := DB.Query(s, contributorUserId)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	for rows.Next() {
 		var c Contribution
@@ -101,13 +100,13 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
 	currency string, day time.Time, createdAt time.Time) error {
 
-	stmt, err := dbLib.DB.Prepare(`
+	stmt, err := DB.Prepare(`
 				INSERT INTO future_contribution(id, user_sponsor_id, repo_id, balance, currency, day, created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO future_contribution for %v statement event: %v", uid, err)
 	}
-	defer dbLib.CloseAndLog(stmt)
+	defer CloseAndLog(stmt)
 
 	var res sql.Result
 	b := balance.String()
@@ -120,7 +119,7 @@ func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
 }
 
 func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := dbLib.DB.
+	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM daily_contribution 
                      WHERE user_contributor_id = $1
@@ -129,7 +128,7 @@ func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int,
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -153,7 +152,7 @@ func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int,
 }
 
 func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := dbLib.DB.
+	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM daily_contribution 
                      WHERE user_sponsor_id = $1
@@ -162,7 +161,7 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -186,7 +185,7 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 }
 
 func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := dbLib.DB.
+	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
                      WHERE user_sponsor_id = $1
@@ -195,7 +194,7 @@ func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -233,7 +232,7 @@ for k, _ := range m2 {
 return m1, nil*/
 
 func FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := dbLib.DB.
+	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
                              FROM future_contribution 
                              WHERE repo_id = $1
@@ -242,7 +241,7 @@ func FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -266,7 +265,7 @@ func FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error)
 }
 
 func FindSumDailyBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := dbLib.DB.
+	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
                              FROM daily_contribution 
                              WHERE repo_id = $1
@@ -275,7 +274,7 @@ func FindSumDailyBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	m := make(map[string]*big.Int)
 	for rows.Next() {
@@ -302,11 +301,11 @@ func FindOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uui
 	contributionIds := []uuid.UUID{}
 
 	s := `SELECT id FROM daily_contribution WHERE user_contributor_id = $1 AND currency = $2`
-	rows, err := dbLib.DB.Query(s, contributorUserId, currency)
+	rows, err := DB.Query(s, contributorUserId, currency)
 	if err != nil {
 		return nil, err
 	}
-	defer dbLib.CloseAndLog(rows)
+	defer CloseAndLog(rows)
 
 	for rows.Next() {
 		var id uuid.UUID
@@ -323,7 +322,7 @@ func FindOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uui
 
 func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
 	var c string
-	err := dbLib.DB.
+	err := DB.
 		QueryRow(`SELECT COALESCE(SUM(balance), 0) AS c FROM daily_contribution WHERE id = ANY($1)`, pq.Array(contributionIds)).
 		Scan(&c)
 	switch err {

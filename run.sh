@@ -29,27 +29,31 @@ die() {
 }
 
 manage_hosts() {
-    local action=$1
-    shift
-    local hostnames=("$@")
+    local hostnamesToAdd=("$@")
+    IFS=' ' read -r -a hostnamesToRemove <<< "$PROJECTS"
 
-    for hostname in "${hostnames[@]}"; do
-      if [ "$action" == "remove" ]; then
-        if [[ "$(uname)" == "Darwin" ]]; then
-          sudo sed -i "/[[:space:]]$hostname$/d" /etc/hosts
-        else
-          sudo sed -i '' "/[[:space:]]$hostname$/d" /etc/hosts
-        fi
-      elif [ "$action" == "add" ]; then
-        if ! grep -q "[[:space:]]$hostname$" /etc/hosts; then
-          echo "127.0.0.1 $hostname" | sudo tee -a /etc/hosts > /dev/null
-        fi
-      elif [ "$action" == "check" ]; then
-        if ! grep -q "$hostname" /etc/hosts; then
-          msg "${ORANGE}Not found: $hostname in /etc/hosts. Please run: $(basename "${BASH_SOURCE[0]}") --add-hosts${NOFORMAT}"
-        fi
+    for hostname in "${hostnamesToRemove[@]}"; do
+      if [[ "$(uname)" == "Darwin" ]]; then
+        sudo sed -i '' "/[[:space:]]$hostname$/d" /etc/hosts
+      else
+        sudo sed -i "/[[:space:]]$hostname$/d" /etc/hosts
       fi
     done
+
+    for hostname in "${hostnamesToAdd[@]}"; do
+      if ! grep -q "[[:space:]]$hostname$" /etc/hosts; then
+        echo "127.0.0.1 $hostname" | sudo tee -a /etc/hosts > /dev/null
+      fi
+    done
+}
+
+check_hosts() {
+  local hostnames=("$@")
+  for hostname in "${hostnames[@]}"; do
+    if ! grep -q "$hostname" /etc/hosts; then
+      msg "${ORANGE}Not found: $hostname in /etc/hosts. Please run: $(basename "${BASH_SOURCE[0]}") --add-hosts${NOFORMAT}"
+    fi
+  done
 }
 
 usage() {
@@ -82,7 +86,6 @@ parse_params() {
   add_hosts=false;
   remove_hosts=false;
 
-
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
@@ -103,7 +106,7 @@ parse_params() {
     shift
   done
 
-  args=("$@")
+  #args=("$@")
   return 0
 }
 
@@ -111,13 +114,12 @@ setup_colors
 parse_params "$@"
 
 if [ "$remove_hosts" = true ]; then
-  manage_hosts "remove" $PROJECTS
+  manage_hosts
 elif [ "$add_hosts" = true ]; then
-  manage_hosts "remove" $PROJECTS
-  manage_hosts "add" $external
+  manage_hosts $external
 fi
 
-manage_hosts "check" $external
+check_hosts $external
 
 #if there is no login yet, it will prompt for one
 docker compose build stripe-setup

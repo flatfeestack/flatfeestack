@@ -18,7 +18,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testDb := util.NewTestDb()
+	testDb := db.NewTestDb()
 	code := m.Run()
 	testDb.CloseTestDb()
 	os.Exit(code)
@@ -52,8 +52,8 @@ func SetupAnalysisTestServer(t *testing.T) *httptest.Server {
 }
 
 func TestHourlyRunTwice(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	now := time.Now().UTC()
 	threeMonthsAgo := now.AddDate(0, -3, 0)
@@ -86,8 +86,8 @@ func TestHourlyRunTwice(t *testing.T) {
 }
 
 func TestHourlyRun(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	now := time.Now().UTC()
 
@@ -111,8 +111,8 @@ func TestHourlyRun(t *testing.T) {
 }
 
 func TestOneContributor(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	//we have 5 sponsors, but only the first sponsor added funds
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
@@ -159,8 +159,8 @@ func TestOneContributor(t *testing.T) {
 }
 
 func TestOneContributorLowFunds(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 	client.EmailNotifications = 0
 
 	//we have 5 sponsors, but only the first sponsor added funds
@@ -196,8 +196,8 @@ func TestOneContributorLowFunds(t *testing.T) {
 }
 
 func TestMultipleFutures(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -241,8 +241,8 @@ func TestMultipleFutures(t *testing.T) {
 }
 
 func TestThreeContributors(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -324,8 +324,8 @@ func TestThreeContributors(t *testing.T) {
 }
 
 func TestThreeContributorsTwice(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -401,8 +401,8 @@ func TestThreeContributorsTwice(t *testing.T) {
 }
 
 func TestFutureContribution(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -446,8 +446,8 @@ func TestFutureContribution(t *testing.T) {
 }
 
 func TestUsdAndNeo(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
@@ -503,8 +503,8 @@ func TestUsdAndNeo(t *testing.T) {
 }
 
 func TestSponsor(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
 	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)

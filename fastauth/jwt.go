@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -15,22 +15,22 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth0(r)
 		if claims != nil && err != nil {
-			log.Errorf("Token expired: %v, available: %v", claims.Subject, emails)
+			slog.Error("Token expired", slog.String("claims.Subject", claims.Subject))
 			WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
 			return
 		} else if claims == nil && err != nil {
-			log.Errorf("jwtAuthAdmin error: %v", err)
+			slog.Error("jwtAuthAdmin error", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 			return
 		}
 		for _, email := range emails {
 			if claims.Subject == email {
-				log.Printf("Authenticated admin %s\n", email)
+				slog.Info("Authenticated admin", slog.String("email", email))
 				next(w, r, email)
 				return
 			}
 		}
-		log.Errorf("ERR-01,jwtAuthAdmin error: %v != %v", claims.Subject, emails)
+		slog.Error("No admin found", slog.String("claims.Subject", claims.Subject), slog.Any("emails", emails))
 		WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 	}
 }
@@ -44,20 +44,20 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 
 			if claims != nil {
 				if ru != "" {
-					log.Printf("Token expired: %v", claims.Subject)
+					slog.Error("Token expired", slog.String("subject", claims.Subject))
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					log.Errorf("Token expired: %v", claims.Subject)
+					slog.Error("Token expired", slog.String("subject", claims.Subject))
 					WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
 				}
 			} else if claims == nil {
 				if ru != "" {
-					log.Printf("jwtAuthAdmin error: %v", err)
+					slog.Error("jwtAuth error", slog.Any("error", err))
 					w.Header().Set("Location", ru)
 					w.WriteHeader(http.StatusSeeOther)
 				} else {
-					log.Errorf("jwtAuthAdmin error: %v", err)
+					slog.Error("jwtAuth error", slog.Any("error", err))
 					WriteErrorf(w, http.StatusBadRequest, NotAllowedToViewMessage)
 				}
 			}
@@ -178,7 +178,7 @@ func encodeAccessToken(subject string, scope string, audience string, issuer str
 		return "", fmt.Errorf("JWT access token %v failed: %v", tokenClaims.Subject, err)
 	}
 	if opts.Dev != "" {
-		log.Printf("Access token: [%s]", accessTokenString)
+		slog.Debug("Access token", slog.String("accessToken", accessTokenString))
 	}
 	return accessTokenString, nil
 }
@@ -210,7 +210,7 @@ func encodeCodeToken(subject string, codeChallenge string, codeChallengeMethod s
 		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
 	}
 	if opts.Dev != "" {
-		log.Printf("Code token: [%s]", codeToken)
+		slog.Debug("Code token", slog.String("codeToken", codeToken))
 	}
 	return codeToken, cc.ExpiresAt, nil
 }
@@ -247,7 +247,7 @@ func checkRefresh(email string, token string) (string, string, int64, error) {
 
 	if result.refreshToken == "" || token != result.refreshToken {
 		if opts.Dev != "" {
-			log.Printf("refresh token mismatch %v != %v", token, result.refreshToken)
+			slog.Warn("refresh token mismatch, not the same", slog.String("token", token), slog.String("result.refreshToken", result.refreshToken))
 		}
 		return "", "", 0, fmt.Errorf("ERR-refresh-05, refresh token mismatch")
 
@@ -354,7 +354,7 @@ func encodeRefreshToken(subject string, token string) (string, int64, error) {
 		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
 	}
 	if opts.Dev != "" {
-		log.Printf("Refresh token: [%s]", refreshToken)
+		slog.Debug("Refresh token", slog.String("refreshToken", refreshToken))
 	}
 	return refreshToken, rc.ExpiresAt, nil
 }

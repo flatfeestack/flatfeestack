@@ -1,7 +1,7 @@
 package api
 
 import (
-	"backend/pkg/util"
+	"backend/internal/db"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -12,8 +12,8 @@ import (
 
 func TestGetUserById(t *testing.T) {
 	t.Run("should return user", func(t *testing.T) {
-		util.SetupTestData()
-		defer util.TeardownTestData()
+		db.SetupTestData()
+		defer db.TeardownTestData()
 
 		userDetail := insertTestUser(t, "hello@world.com")
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+userDetail.Id.String(), nil)
@@ -28,8 +28,8 @@ func TestGetUserById(t *testing.T) {
 	})
 
 	t.Run("returns 400 if id format is faulty", func(t *testing.T) {
-		util.SetupTestData()
-		defer util.TeardownTestData()
+		db.SetupTestData()
+		defer db.TeardownTestData()
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/hello", nil)
 		//it does not go via router, so add it manually
@@ -41,8 +41,8 @@ func TestGetUserById(t *testing.T) {
 	})
 
 	t.Run("returns 404 if user does not exist", func(t *testing.T) {
-		util.SetupTestData()
-		defer util.TeardownTestData()
+		db.SetupTestData()
+		defer db.TeardownTestData()
 
 		uuid := uuid.New()
 		request, _ := http.NewRequest(http.MethodPost, "/users/"+uuid.String(), nil)

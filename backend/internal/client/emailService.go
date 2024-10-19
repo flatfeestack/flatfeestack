@@ -3,13 +3,17 @@ package client
 import (
 	"backend/internal/db"
 	"backend/pkg/util"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	mail "github.com/flatfeestack/go-lib/email"
+	"github.com/alecthomas/template"
 	"github.com/google/uuid"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,7 +34,7 @@ const (
 )
 
 var (
-	queue                chan *mail.SendEmailRequest
+	queue                chan *SendEmailRequest
 	EmailNotifications   = 0
 	EmailNoNotifications = 0
 	lastMailTo           = ""
@@ -79,12 +83,12 @@ type WebhookResponse struct {
 }
 
 func init() {
-	queue = make(chan *mail.SendEmailRequest)
+	queue = make(chan *SendEmailRequest)
 	go func() {
 		for {
 			select {
 			case e := <-queue:
-				err := mail.SendEmail(*e)
+				err := SendEmail(*e)
 				if err != nil {
 					slog.Error("cannot send email",
 						slog.Any("error", err))
@@ -95,7 +99,7 @@ func init() {
 
 }
 
-func sendEmail(e *mail.SendEmailRequest) {
+func sendEmail(e *SendEmailRequest) {
 	queue <- e
 }
 
@@ -135,7 +139,7 @@ func (e *EmailClient) prepareSendEmail(
 	defaultText string,
 	lang string) error {
 
-	sendgridRequest := mail.PrepareEmail(data["mailTo"], data, templateKey, defaultSubject, defaultText, lang)
+	sendgridRequest := PrepareEmail(data["mailTo"], data, templateKey, defaultSubject, defaultText, lang)
 
 	shouldSend, err := shouldSendEmail(uid, data["email"], data["key"])
 	if err != nil {
@@ -149,7 +153,7 @@ func (e *EmailClient) prepareSendEmail(
 			slog.String("mailTo", data["mailTo"]))
 		lastMailTo = sendgridRequest.MailTo
 		if e.env != "local" {
-			request := mail.SendEmailRequest{
+			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
 				Url:             e.emailUrl,
 				EmailFromName:   e.emailFromName,
@@ -451,4 +455,103 @@ func (e *EmailClient) SendStripeFailed(userId uuid.UUID, externalId uuid.UUID) e
 		"Insufficient funds",
 		"Your credit card transfer failed. If you have enough funds, please go to: "+params["url"],
 		params["lang"])
+}
+
+type SendEmailRequest struct {
+	SendgridRequest SendgridRequest
+	Url             string
+	EmailFromName   string
+	EmailFrom       string
+	EmailToken      string
+}
+
+type SendgridRequest struct {
+	MailTo      string `json:"mail_to,omitempty"`
+	Subject     string `json:"subject"`
+	TextMessage string `json:"text_message"`
+	HtmlMessage string `json:"html_message"`
+}
+
+func SendEmail(sendEmailRequest SendEmailRequest) error {
+	c := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	var jsonData []byte
+	var err error
+	if strings.Contains(sendEmailRequest.Url, "sendgrid") {
+		sendGridReq := mail.NewSingleEmail(
+			mail.NewEmail(sendEmailRequest.EmailFromName, sendEmailRequest.EmailFrom),
+			sendEmailRequest.SendgridRequest.Subject,
+			mail.NewEmail("", sendEmailRequest.SendgridRequest.MailTo),
+			sendEmailRequest.SendgridRequest.TextMessage,
+			sendEmailRequest.SendgridRequest.HtmlMessage)
+		jsonData, err = json.Marshal(sendGridReq)
+	} else {
+		jsonData, err = json.Marshal(sendEmailRequest.SendgridRequest)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", sendEmailRequest.Url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+sendEmailRequest.EmailToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("could not send email: %v %v", resp.Status, resp.StatusCode)
+	}
+	return nil
+}
+
+func PrepareEmail(
+	mailTo string,
+	data map[string]string,
+	templateKey string,
+	defaultSubject string,
+	defaultText string,
+	lang string) SendgridRequest {
+	textMessage := parseTemplate("plain/"+lang+"/"+templateKey+".txt", data)
+	if textMessage == "" {
+		textMessage = defaultText
+	}
+
+	headerTemplate := parseTemplate("html/"+lang+"/header.html", data)
+	footerTemplate := parseTemplate("html/"+lang+"/footer.html", data)
+	htmlBody := parseTemplate("html/"+lang+"/"+templateKey+".html", data)
+	htmlMessage := headerTemplate + htmlBody + footerTemplate
+
+	return SendgridRequest{
+		MailTo:      mailTo,
+		Subject:     defaultSubject,
+		TextMessage: textMessage,
+		HtmlMessage: htmlMessage,
+	}
+}
+
+func parseTemplate(filename string, other map[string]string) string {
+	textMessage := ""
+	tmplPlain, err := template.ParseFiles("mail-templates/" + filename)
+	if err == nil {
+		var buf bytes.Buffer
+		err = tmplPlain.Execute(&buf, other)
+		if err == nil {
+			textMessage = buf.String()
+		} else {
+			slog.Warn("cannot execute template file", slog.String("filename", filename), slog.Any("error", err))
+		}
+	} else {
+		slog.Warn("cannot prepare file template file", slog.String("filename", filename), slog.Any("error", err))
+	}
+	return textMessage
 }

@@ -17,7 +17,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testDb := util.NewTestDb()
+	testDb := db.NewTestDb()
 	code := m.Run()
 	testDb.CloseTestDb()
 	os.Exit(code)
@@ -74,8 +74,8 @@ func insertPayInEvent(t *testing.T, externalId uuid.UUID, userId uuid.UUID, stat
 }
 
 func TestStrategyDeductMax(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	u := insertTestUser(t, "test@test.test")
 	e1 := uuid.New()

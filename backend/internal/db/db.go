@@ -8,14 +8,22 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
+	"io"
 	"log/slog"
 	"math/big"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 )
 
 const (
 	Active = iota + 1
 	Inactive
+)
+
+var (
+	DB *sql.DB
 )
 
 type RepoBalance struct {
@@ -125,4 +133,78 @@ func SetupRepo(url string) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &r.Id, nil
+}
+
+func CloseDb() {
+	err := DB.Close()
+	slog.Warn("could not close the db", slog.Any("error", err))
+}
+
+func InitDb(dbDriver string, dbPath string, dbScripts string) error {
+	// Open the connection
+	var err error
+	DB, err = sql.Open(dbDriver, dbPath)
+	if err != nil {
+		return err
+	}
+
+	//we wait for ten seconds to connect
+	err = DB.Ping()
+	now := time.Now()
+	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
+		time.Sleep(time.Second)
+		err = DB.Ping()
+	}
+	if err != nil {
+		return err
+	}
+
+	files := strings.Split(dbScripts, ":")
+	err = RunSQL(files...)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Successfully connected!")
+	return nil
+}
+
+func RunSQL(files ...string) error {
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+		//https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+		if _, err := os.Stat(file); err == nil {
+			fileBytes, err := os.ReadFile(file)
+			if err != nil {
+				return err
+			}
+
+			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
+			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+			newBytes := re.ReplaceAll(fileBytes, nil)
+
+			requests := strings.Split(string(newBytes), ";")
+			for _, request := range requests {
+				request = strings.TrimSpace(request)
+				if len(request) > 0 {
+					_, err := DB.Exec(request)
+					if err != nil {
+						return fmt.Errorf("[%v] %v", request, err)
+					}
+				}
+			}
+		} else {
+			slog.Info("ignoring file %v (%v)", slog.String("file", file), slog.Any("error", err))
+		}
+	}
+	return nil
+}
+
+func CloseAndLog(c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		slog.Info("could not close: %v", slog.Any("error", err))
+	}
 }

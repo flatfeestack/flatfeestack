@@ -25,8 +25,8 @@ var (
 )
 
 func TestStripeConfirmsSuccessfulPayment(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	userDetail := insertTestUser(t, "hello@world.com")
 	payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -62,8 +62,8 @@ func TestStripeConfirmsSuccessfulPayment(t *testing.T) {
 }
 
 func TestStripeRequiresActionToContinuePayment(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	userDetail := insertTestUser(t, "hello@world.com")
 	payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -92,8 +92,8 @@ func TestStripeRequiresActionToContinuePayment(t *testing.T) {
 }
 
 func TestStripeMissesPaymentMethod(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	userDetail := insertTestUser(t, "hello@world.com")
 	payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
@@ -119,8 +119,8 @@ func TestStripeMissesPaymentMethod(t *testing.T) {
 }
 
 func TestStripeHasIssue(t *testing.T) {
-	util.SetupTestData()
-	defer util.TeardownTestData()
+	db.SetupTestData()
+	defer db.TeardownTestData()
 
 	userDetail := insertTestUser(t, "hello@world.com")
 	payInEvent := insertPayInEvent(t, uuid.New(), userDetail.Id, db.PayInRequest, "USD", Plans[1].PriceBase, 1, Plans[1].Freq)
