@@ -310,4 +310,5 @@
       </tbody>
     </table>
   </div>
+<!--  Add multiplier selection option here-->
 </Navigation>
