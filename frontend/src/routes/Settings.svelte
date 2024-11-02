@@ -116,6 +116,12 @@
     dailyLimit = newDailyLimit // call backend
   }
 
+  function handleLimitKeyDown(event) {
+    if (event.key === "Enter") {
+      setDailyLimit();
+    }
+  }
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
@@ -416,19 +422,18 @@
   {#if multiplierActive}
     <div class="container-col" id="tipping-limit-div">
       <p>Your tipping limit is set to <strong>${ dailyLimit }</strong> per day.</p>
-      <form on:submit={setDailyLimit}>
-        <label for="daily-limit-input" class="p-2 m-2 nobreak">Change daily limit: </label>
+      <div class="container">
+        <label for="daily-limit-input">Daily Limit </label>
         <input
           id="daily-limit-input"
           type="number"
           class="m-4 max-w20"
           bind:value={newDailyLimit}
+          on:keydown={handleLimitKeyDown}
           placeholder="$"
-          min="10"
-          max="1000"
         />
-        <button type="submit" class="ml-5 p-2 button1">set new daily limit</button>
-      </form>
+        <button on:click={setDailyLimit} class="ml-5 p-2 button1">Set Daily Limit</button>
+      </div>
     </div>
   {/if}
 </Navigation>
