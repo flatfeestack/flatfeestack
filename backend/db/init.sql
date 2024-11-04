@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     image                 BYTEA,
     seats                 BIGINT DEFAULT 1,
     freq                  BIGINT DEFAULT 365,
-    created_at            TIMESTAMP NOT NULL
+    created_at            TIMESTAMP NOT NULL,
+    mltplr                BOOLEAN DEFAULT FALSE, /*Multiplier set*/
+    mltplr_dly_amt        NUMERIC(78) DEFAULT 0 /*Multiplier Daily Amount*/
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email); /*we search for emails*/
 CREATE INDEX IF NOT EXISTS users_invited_id_idx ON users(invited_id);

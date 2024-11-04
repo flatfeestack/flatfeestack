@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
+
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/uuid"
-	"time"
 )
 
 type PublicUser struct {
@@ -23,16 +24,18 @@ type User struct {
 
 type UserDetail struct {
 	User
-	InvitedId          *uuid.UUID
-	StripeId           *string `json:"-"`
-	Image              *string `json:"image"`
-	PaymentMethod      *string `json:"paymentMethod"`
-	StripeClientSecret *string `json:"clientSecret"`
-	Last4              *string `json:"last4"`
-	Seats              int     `json:"seats"`
-	Freq               int     `json:"freq"`
-	Claims             *jwt.Claims
-	Role               string `json:"role,omitempty"`
+	InvitedId             *uuid.UUID
+	StripeId              *string `json:"-"`
+	Image                 *string `json:"image"`
+	PaymentMethod         *string `json:"paymentMethod"`
+	StripeClientSecret    *string `json:"clientSecret"`
+	Last4                 *string `json:"last4"`
+	Seats                 int     `json:"seats"`
+	Freq                  int     `json:"freq"`
+	Claims                *jwt.Claims
+	Role                  string `json:"role,omitempty"`
+	Multiplier            bool   `json:"multiplier"`
+	MultiplierDailyAmount int    `json:"multiplierDailyAmount"`
 }
 
 func FindAllEmails() ([]string, error) {
@@ -59,11 +62,12 @@ func FindUserByEmail(email string) (*UserDetail, error) {
 	var u UserDetail
 	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
-                               email, name, image, seats, freq, created_at
+                               email, name, image, seats, freq, created_at, mltplr, mltplr_dly_amt
                         FROM users 
                         WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
-			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt)
+			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
+			&u.Multiplier, &u.MultiplierDailyAmount)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -78,11 +82,13 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	var u UserDetail
 	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
-                               stripe_client_secret, email, name, image, seats, freq, created_at                          
+                               stripe_client_secret, email, name, image, seats, freq, created_at,
+							   mltplr, mltplr_dly_amt                        
                         FROM users 
                         WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
-			&u.StripeClientSecret, &u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt)
+			&u.StripeClientSecret, &u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
+			&u.Multiplier, &u.MultiplierDailyAmount)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -96,7 +102,7 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	var u PublicUser
 	err := DB.
-		QueryRow(`SELECT id, name, image                       
+		QueryRow(`SELECT id, name, image 
                         FROM users 
                         WHERE id=$1`, uid).
 		Scan(&u.Id, &u.Name, &u.Image)
@@ -256,6 +262,50 @@ func UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
 
 func ClearUserName(uid uuid.UUID) error {
 	stmt, err := DB.Prepare("UPDATE users SET name=NULL WHERE id=$1")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer CloseAndLog(stmt)
+	var res sql.Result
+	res, err = stmt.Exec(uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
+	stmt, err := DB.Prepare("UPDATE users SET mltplr=$1 WHERE id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(isSet, uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func UpdateMultiplierDailyAmount(uid uuid.UUID, amt int64) error {
+	stmt, err := DB.Prepare("UPDATE users SET mltplr_dly_amt=$1 WHERE id=$2")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
+	}
+	defer CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(amt, uid)
+	if err != nil {
+		return err
+	}
+	return handleErrMustInsertOne(res)
+}
+
+func ClearMultiplierDailyAmount(uid uuid.UUID) error {
+	stmt, err := DB.Prepare("UPDATE users SET mltplr_dly_amt=NULL WHERE id=$1")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}

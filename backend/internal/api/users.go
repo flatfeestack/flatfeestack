@@ -4,11 +4,14 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
+
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/paymentmethod"
-	"log/slog"
-	"net/http"
 )
 
 func GetUserById(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +118,75 @@ func ClearName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 		slog.Error("Could not clear username",
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, "Could not clear username. Please try again.")
+		return
+	}
+}
+
+func UpdateMltplr(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	isSetEsc := r.PathValue("isSet")
+	isSetStr, err := url.QueryUnescape(isSetEsc)
+
+	if err != nil {
+		slog.Error("Query unescape multiplier",
+			slog.String("multiplier", isSetStr),
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not unescape multiplier. Please try again.")
+		return
+	}
+
+	isSet, err := strconv.ParseBool(isSetStr)
+	if err != nil {
+		slog.Error("Cannot convert bool multiplier",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not convert multiplier. Please try again.")
+		return
+	}
+
+	err = db.UpdateMultiplier(user.Id, isSet)
+	if err != nil {
+		slog.Error("Could not save Multiplier",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not save multiplier. Please try again.")
+		return
+	}
+}
+
+func UpdateMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+
+	amountEsc := r.PathValue("amount")
+	amountStr, err := url.QueryUnescape(amountEsc)
+
+	if err != nil {
+		slog.Error("Query unescape multiplier daily amount",
+			slog.String("amount", amountEsc),
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not unescape multiplier daily amount. Please try again.")
+		return
+	}
+
+	amount, err := strconv.ParseInt(amountStr, 10, 64)
+	if err != nil {
+		slog.Error("Cannot convert number multiplier daily amount",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not convert multiplier daily amount. Please try again.")
+		return
+	}
+
+	err = db.UpdateMultiplierDailyAmount(user.Id, amount)
+	if err != nil {
+		slog.Error("Could not save multiplier daily amount",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not save multiplier daily amount. Please try again.")
+		return
+	}
+}
+
+func ClearMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	err := db.ClearMultiplierDailyAmount(user.Id)
+	if err != nil {
+		slog.Error("Could not clear multiplier",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Could not clear multiplier. Please try again.")
 		return
 	}
 }

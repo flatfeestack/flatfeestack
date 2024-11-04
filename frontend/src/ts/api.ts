@@ -203,6 +203,9 @@ export const API = {
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
+    setMltplr: (isSet: boolean) => backendToken.put(`users/me/multiplier/${isSet}`),
+    setMltplrDlyAmt: (amount: number) => backendToken.put(`users/me/multiplierDailyAmount/${amount}`),
+    clearMltplrDlyAmt: () => backendToken.put(`users/me/clear/multiplierDailyAmount`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () => backendToken.delete(`users/me/image`),

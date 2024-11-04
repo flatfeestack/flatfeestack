@@ -13,7 +13,7 @@
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
-  import { fade } from 'svelte/transition';
+  import { fade, slide } from 'svelte/transition';
 
   let fileInput;
   let username: undefined | string;
@@ -21,14 +21,22 @@
   let gitEmails: GitUser[] = [];
   let newEmail = "";
 
-  let multiplierActive = false; // add this to a store when using it for other pages
+  let multiplierActive: boolean;
   let showMultiplierInfo = false;
-  let dailyLimit = 120; // should refer to backend
+  let dailyLimit: number | null = null;
   let newDailyLimit;
 
   $: {
     if (typeof username === "undefined" && $user.name) {
       username = $user.name;
+    }
+
+    if ($user.multiplier) {
+      multiplierActive = $user.multiplier;
+    }
+
+    if (dailyLimit === null && $user.multiplierDailyAmount) {
+      dailyLimit = $user.multiplierDailyAmount;
     }
   }
 
@@ -98,12 +106,14 @@
   };
 
   function handleMultiplierToggle() {
-    if (multiplierActive) {
-      console.log("Switch is ON");
-      // call backend
-    } else {
-      console.log("Switch is OFF");
-      // call backend
+    try {
+      if (multiplierActive) {
+        API.user.setMltplr(true);
+      } else {
+        API.user.setMltplr(false);
+      }
+    } catch (e) {
+      $error = e;
     }
   }
 
@@ -112,8 +122,18 @@
   }
 
   function setDailyLimit () {
-    console.log(dailyLimit);
-    dailyLimit = newDailyLimit // call backend
+    try {
+      if (newDailyLimit === "" || newDailyLimit == 0) {
+        API.user.clearMltplrDlyAmt();
+      } else if (newDailyLimit > 0) {
+        API.user.setMltplrDlyAmt(newDailyLimit);
+        dailyLimit = newDailyLimit;
+      } else {
+        $error = "The daily limit must be a number greater than or equal to 0";
+      }
+    } catch (e) {
+      $error = e;
+    }
   }
 
   function handleLimitKeyDown(event) {
@@ -410,7 +430,7 @@
       </div>
     </div>
     {#if showMultiplierInfo}
-      <p class="m-0" transition:fade={{ duration: 250 }}>
+      <p class="m-0" style="margin-left: 1rem;" transition:fade={{ duration: 250 }}>
         What are multiplier options? Multiplier options allow you to boost your support for your favorite projects.
         When enabled, a special icon (ICON HERE) appears in the search tab. <br>
         By clicking the multiplier icon next to a repository, you activate a multiplier to support it.
@@ -420,8 +440,12 @@
     {/if}
   </div>
   {#if multiplierActive}
-    <div class="container-col" id="tipping-limit-div">
-      <p>Your tipping limit is set to <strong>${ dailyLimit }</strong> per day.</p>
+    <div class="container-col" id="tipping-limit-div" style="margin-left: 2rem;" transition:slide={{ duration: 500 }}>
+      {#if dailyLimit > 0 && dailyLimit !== null}
+        <p>Your tipping limit is set to <strong>${dailyLimit}</strong> per day.</p>
+      {:else}
+      <p>Your tipping limit is not set yet.</p>
+      {/if}
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>
         <input
