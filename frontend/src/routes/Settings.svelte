@@ -124,11 +124,11 @@
   function setDailyLimit () {
     try {
       console.log(newDailyLimit);
-      if (newDailyLimit > 0) {
+      if (newDailyLimit >= 1) {
         API.user.setMultiplierDailyLimit(newDailyLimit);
         dailyLimit = newDailyLimit;
       } else {
-        $error = "The daily limit must be a number greater than 0";
+        $error = "The daily limit must be a number greater than or equalt to 1";
       }
     } catch (e) {
       $error = e;
