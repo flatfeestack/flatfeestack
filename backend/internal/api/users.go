@@ -151,7 +151,7 @@ func UpdateMltplr(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
-func UpdateMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func UpdateMltplrDlyLimit(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	amountEsc := r.PathValue("amount")
 	amountStr, err := url.QueryUnescape(amountEsc)
@@ -172,7 +172,14 @@ func UpdateMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDet
 		return
 	}
 
-	err = db.UpdateMultiplierDailyAmount(user.Id, amount)
+	if amount <= 1 {
+		slog.Error("Limit hat to be at least 1$",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, "Limit hat to be at least 1$. Please try again.")
+		return
+	}
+
+	err = db.UpdateMultiplierDailyLimit(user.Id, amount)
 	if err != nil {
 		slog.Error("Could not save multiplier daily amount",
 			slog.Any("error", err))
@@ -181,8 +188,8 @@ func UpdateMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDet
 	}
 }
 
-func ClearMltplrDlyAmt(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	err := db.ClearMultiplierDailyAmount(user.Id)
+func ClearMltplrDlyLimit(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	err := db.ClearMultiplierDailyLimit(user.Id)
 	if err != nil {
 		slog.Error("Could not clear multiplier",
 			slog.Any("error", err))

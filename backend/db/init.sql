@@ -1,20 +1,20 @@
 --CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
-    id                    UUID PRIMARY KEY,
-    invited_id            UUID CONSTRAINT users_id_fk REFERENCES users(id), /*if this is set, then this email pays the amount*/
-    stripe_id             VARCHAR(255),
-    stripe_payment_method VARCHAR(255),
-    stripe_last4          VARCHAR(8),
-    stripe_client_secret  VARCHAR(64),
-    email                 VARCHAR(64) UNIQUE NOT NULL,
-    name                  VARCHAR(255),
-    image                 BYTEA,
-    seats                 BIGINT DEFAULT 1,
-    freq                  BIGINT DEFAULT 365,
-    created_at            TIMESTAMP NOT NULL,
-    mltplr                BOOLEAN DEFAULT FALSE, /*Multiplier set*/
-    mltplr_dly_amt        NUMERIC(78) DEFAULT 0 /*Multiplier Daily Amount*/
+    id                     UUID PRIMARY KEY,
+    invited_id             UUID CONSTRAINT users_id_fk REFERENCES users(id), /*if this is set, then this email pays the amount*/
+    stripe_id              VARCHAR(255),
+    stripe_payment_method  VARCHAR(255),
+    stripe_last4           VARCHAR(8),
+    stripe_client_secret   VARCHAR(64),
+    email                  VARCHAR(64) UNIQUE NOT NULL,
+    name                   VARCHAR(255),
+    image                  BYTEA,
+    seats                  BIGINT DEFAULT 1,
+    freq                   BIGINT DEFAULT 365,
+    created_at             TIMESTAMP NOT NULL,
+    multiplier             BOOLEAN DEFAULT FALSE, /*Multiplier set*/
+    multiplier_daily_limit NUMERIC(78) DEFAULT 100 /*Multiplier Daily Amount*/
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email); /*we search for emails*/
 CREATE INDEX IF NOT EXISTS users_invited_id_idx ON users(invited_id);

@@ -21,9 +21,9 @@
   let gitEmails: GitUser[] = [];
   let newEmail = "";
 
-  let multiplierActive: boolean;
+  let multiplierActive: undefined | boolean;
   let showMultiplierInfo = false;
-  let dailyLimit: number | null = null;
+  let dailyLimit: undefined | number;
   let newDailyLimit;
 
   $: {
@@ -31,12 +31,12 @@
       username = $user.name;
     }
 
-    if ($user.multiplier) {
+    if (typeof multiplierActive === "undefined" && $user.multiplier) {
       multiplierActive = $user.multiplier;
     }
 
-    if (dailyLimit === null && $user.multiplierDailyAmount) {
-      dailyLimit = $user.multiplierDailyAmount;
+    if (typeof dailyLimit === "undefined" && $user.multiplierDailyLimit) {
+      dailyLimit = $user.multiplierDailyLimit;
     }
   }
 
@@ -108,9 +108,9 @@
   function handleMultiplierToggle() {
     try {
       if (multiplierActive) {
-        API.user.setMltplr(true);
+        API.user.setMultiplier(true);
       } else {
-        API.user.setMltplr(false);
+        API.user.setMultiplier(false);
       }
     } catch (e) {
       $error = e;
@@ -123,13 +123,12 @@
 
   function setDailyLimit () {
     try {
-      if (newDailyLimit === "" || newDailyLimit == 0) {
-        API.user.clearMltplrDlyAmt();
-      } else if (newDailyLimit > 0) {
-        API.user.setMltplrDlyAmt(newDailyLimit);
+      console.log(newDailyLimit);
+      if (newDailyLimit > 0) {
+        API.user.setMultiplierDailyLimit(newDailyLimit);
         dailyLimit = newDailyLimit;
       } else {
-        $error = "The daily limit must be a number greater than or equal to 0";
+        $error = "The daily limit must be a number greater than 0";
       }
     } catch (e) {
       $error = e;
@@ -441,11 +440,7 @@
   </div>
   {#if multiplierActive}
     <div class="container-col" id="tipping-limit-div" style="margin-left: 2rem;" transition:slide={{ duration: 500 }}>
-      {#if dailyLimit > 0 && dailyLimit !== null}
-        <p>Your tipping limit is set to <strong>${dailyLimit}</strong> per day.</p>
-      {:else}
-      <p>Your tipping limit is not set yet.</p>
-      {/if}
+      <p>Your tipping limit is set to <strong>${dailyLimit}</strong> per day.</p>
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>
         <input

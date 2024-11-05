@@ -752,7 +752,7 @@ export interface components {
       freq?: number | null;
       role?: string | null;
       multiplier?: boolean;
-      multiplierDailyAmount?: number;
+      multiplierDailyLimit?: number;
     };
     Claims: {
       iss?: string | null;

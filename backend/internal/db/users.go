@@ -24,18 +24,18 @@ type User struct {
 
 type UserDetail struct {
 	User
-	InvitedId             *uuid.UUID
-	StripeId              *string `json:"-"`
-	Image                 *string `json:"image"`
-	PaymentMethod         *string `json:"paymentMethod"`
-	StripeClientSecret    *string `json:"clientSecret"`
-	Last4                 *string `json:"last4"`
-	Seats                 int     `json:"seats"`
-	Freq                  int     `json:"freq"`
-	Claims                *jwt.Claims
-	Role                  string `json:"role,omitempty"`
-	Multiplier            bool   `json:"multiplier"`
-	MultiplierDailyAmount int    `json:"multiplierDailyAmount"`
+	InvitedId            *uuid.UUID
+	StripeId             *string `json:"-"`
+	Image                *string `json:"image"`
+	PaymentMethod        *string `json:"paymentMethod"`
+	StripeClientSecret   *string `json:"clientSecret"`
+	Last4                *string `json:"last4"`
+	Seats                int     `json:"seats"`
+	Freq                 int     `json:"freq"`
+	Claims               *jwt.Claims
+	Role                 string `json:"role,omitempty"`
+	Multiplier           bool   `json:"multiplier"`
+	MultiplierDailyLimit int    `json:"multiplierDailyLimit"`
 }
 
 func FindAllEmails() ([]string, error) {
@@ -62,12 +62,12 @@ func FindUserByEmail(email string) (*UserDetail, error) {
 	var u UserDetail
 	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
-                               email, name, image, seats, freq, created_at, mltplr, mltplr_dly_amt
+                               email, name, image, seats, freq, created_at, multiplier, multiplier_daily_limit
                         FROM users 
                         WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
 			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
-			&u.Multiplier, &u.MultiplierDailyAmount)
+			&u.Multiplier, &u.MultiplierDailyLimit)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -83,12 +83,12 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	err := DB.
 		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
                                stripe_client_secret, email, name, image, seats, freq, created_at,
-							   mltplr, mltplr_dly_amt                        
+							   multiplier, multiplier_daily_limit                        
                         FROM users 
                         WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
 			&u.StripeClientSecret, &u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
-			&u.Multiplier, &u.MultiplierDailyAmount)
+			&u.Multiplier, &u.MultiplierDailyLimit)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -275,7 +275,7 @@ func ClearUserName(uid uuid.UUID) error {
 }
 
 func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
-	stmt, err := DB.Prepare("UPDATE users SET mltplr=$1 WHERE id=$2")
+	stmt, err := DB.Prepare("UPDATE users SET multiplier=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
@@ -289,8 +289,8 @@ func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
 	return handleErrMustInsertOne(res)
 }
 
-func UpdateMultiplierDailyAmount(uid uuid.UUID, amt int64) error {
-	stmt, err := DB.Prepare("UPDATE users SET mltplr_dly_amt=$1 WHERE id=$2")
+func UpdateMultiplierDailyLimit(uid uuid.UUID, amt int64) error {
+	stmt, err := DB.Prepare("UPDATE users SET multiplier_daily_limit=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
@@ -304,8 +304,8 @@ func UpdateMultiplierDailyAmount(uid uuid.UUID, amt int64) error {
 	return handleErrMustInsertOne(res)
 }
 
-func ClearMultiplierDailyAmount(uid uuid.UUID) error {
-	stmt, err := DB.Prepare("UPDATE users SET mltplr_dly_amt=NULL WHERE id=$1")
+func ClearMultiplierDailyLimit(uid uuid.UUID) error {
+	stmt, err := DB.Prepare("UPDATE users SET multiplier_daily_limit=0 WHERE id=$1")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
 	}
