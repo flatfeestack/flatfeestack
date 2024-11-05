@@ -211,7 +211,6 @@ func main() {
 	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
 	router.HandleFunc("PUT /users/me/multiplier/{isSet}", middlewareJwtAuthUserLog(api2.UpdateMltplr))
 	router.HandleFunc("PUT /users/me/multiplierDailyLimit/{amount}", middlewareJwtAuthUserLog(api2.UpdateMltplrDlyLimit))
-	router.HandleFunc("PUT /users/me/clear/multiplierDailyLimit", middlewareJwtAuthUserLog(api2.ClearMltplrDlyLimit))
 	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 200*1024))
 	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))

@@ -205,7 +205,6 @@ export const API = {
     clearName: () => backendToken.put(`users/me/clear/name`),
     setMultiplier: (isSet: boolean) => backendToken.put(`users/me/multiplier/${isSet}`),
     setMultiplierDailyLimit: (amount: number) => backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
-    clearMultiplierDailyLimit: () => backendToken.put(`users/me/clear/multiplierDailyLimit`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () => backendToken.delete(`users/me/image`),

@@ -188,16 +188,6 @@ func UpdateMltplrDlyLimit(w http.ResponseWriter, r *http.Request, user *db.UserD
 	}
 }
 
-func ClearMltplrDlyLimit(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	err := db.ClearMultiplierDailyLimit(user.Id)
-	if err != nil {
-		slog.Error("Could not clear multiplier",
-			slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusInternalServerError, "Could not clear multiplier. Please try again.")
-		return
-	}
-}
-
 func UpdateImage(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	var img ImageRequest
 	err := json.NewDecoder(r.Body).Decode(&img)
