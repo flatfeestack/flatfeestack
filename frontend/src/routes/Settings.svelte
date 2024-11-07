@@ -112,6 +112,7 @@
       } else {
         API.user.setMultiplier(false);
       }
+      $user.multiplier = multiplierActive;
     } catch (e) {
       $error = e;
     }
