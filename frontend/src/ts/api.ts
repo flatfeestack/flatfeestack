@@ -50,7 +50,7 @@ async function addToken(request: Request) {
 async function refreshToken(
   request: Request,
   options: any,
-  response: Response
+  response: Response,
 ) {
   if (response.status === 401 && request.headers.get("Retry") !== "true") {
     console.log("need to refresh due to:" + response);
@@ -203,8 +203,10 @@ export const API = {
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
-    setMultiplier: (isSet: boolean) => backendToken.put(`users/me/multiplier/${isSet}`),
-    setMultiplierDailyLimit: (amount: number) => backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
+    setMultiplier: (isSet: boolean) =>
+      backendToken.put(`users/me/multiplier/${isSet}`),
+    setMultiplierDailyLimit: (amount: number) =>
+      backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () => backendToken.delete(`users/me/image`),
@@ -320,7 +322,7 @@ export const API = {
     updateComment: (
       postId: PostId,
       commentId: CommentId,
-      commentInput: CommentInput
+      commentInput: CommentInput,
     ) =>
       forumToken
         .put(`posts/${postId}/comments/${commentId}`, { json: commentInput })
