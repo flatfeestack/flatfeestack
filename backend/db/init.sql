@@ -158,6 +158,20 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON user_emails_sent(user
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(email_type); /*we do a count on email_type*/
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
 
+CREATE TYPE trust_value_threshold_bound AS (
+    lower_bound INTEGER,
+    upper_bound INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS trust_value_treshold (
+    id                    UUID PRIMARY KEY,
+    th_contributer_count  range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
+    th_commit_count       range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
+    th_metric3            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
+    th_metric4            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
+    th_metric5            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound)
+)
+
 CREATE TABLE IF NOT EXISTS trust_value (
     id                  UUID PRIMARY KEY,
     repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
