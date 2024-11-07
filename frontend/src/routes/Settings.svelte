@@ -13,7 +13,7 @@
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
-  import { fade } from 'svelte/transition';
+  import { fade } from "svelte/transition";
 
   let fileInput;
   let username: undefined | string;
@@ -122,7 +122,7 @@
     showMultiplierInfo = !showMultiplierInfo;
   }
 
-  function setDailyLimit () {
+  function setDailyLimit() {
     try {
       if (newDailyLimit >= 1) {
         API.user.setMultiplierDailyLimit(newDailyLimit);
@@ -172,60 +172,60 @@
   }
 
   label.switch {
-      position: relative;
-      display: inline-block;
-      flex-shrink: 0;
-      width: 60px;
-      height: 34px;
-      margin: 1rem 1rem 1rem 0;
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: 60px;
+    height: 34px;
+    margin: 1rem 1rem 1rem 0;
   }
   label.switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
+    opacity: 0;
+    width: 0;
+    height: 0;
   }
   .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      -webkit-transition: .4s;
-      transition: .4s;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
   }
 
   .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      -webkit-transition: .4s;
-      transition: .4s;
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
   }
 
   input:checked + .slider {
-      background-color: var(--primary-500);
+    background-color: var(--primary-500);
   }
 
   input:focus + .slider {
-      box-shadow: 0 0 1px var(--primary-500);
+    box-shadow: 0 0 1px var(--primary-500);
   }
 
   input:checked + .slider:before {
-      -ms-transform: translateX(26px);
-      transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
   }
   .slider.round {
-      border-radius: 34px;
+    border-radius: 34px;
   }
 
   .slider.round:before {
-      border-radius: 50%;
+    border-radius: 50%;
   }
 
   @media screen and (max-width: 600px) {
@@ -422,27 +422,47 @@
   <div class="container-col m-4">
     <div class="container-small">
       <label class="switch">
-        <input type="checkbox" bind:checked={multiplierActive} on:change={handleMultiplierToggle}>
-        <span class="slider round"></span>
+        <input
+          type="checkbox"
+          bind:checked={multiplierActive}
+          on:change={handleMultiplierToggle}
+        />
+        <span class="slider round" />
       </label>
       <div class="container-small">
-        <p class="m-0"><strong>enable multiplier options</strong> <br></p>
-        <button class="button1 ml-5" on:click={toggleMultiplierInfoVisibility}>?</button>
+        <p class="m-0"><strong>enable multiplier options</strong> <br /></p>
+        <button class="button1 ml-5" on:click={toggleMultiplierInfoVisibility}
+          >?</button
+        >
       </div>
     </div>
     {#if showMultiplierInfo}
-      <p class="m-0" style="margin-left: 1rem;" transition:fade={{ duration: 250 }}>
-        What are multiplier options? Multiplier options allow you to boost your support for your favorite projects.
-        When enabled, a special icon (ICON HERE) appears in the search tab. <br>
-        By clicking the multiplier icon next to a repository, you activate a multiplier to support it.
-        This means that each time another FlatFeeStack user donates to that repository, you'll automatically contribute up to 0.9% of their initial donation as well. <br>
-        If you're interested in the exact mechanism of this feature, you can read it <strong>here</strong>.
+      <p
+        class="m-0"
+        style="margin-left: 1rem;"
+        transition:fade={{ duration: 250 }}
+      >
+        What are multiplier options? Multiplier options allow you to boost your
+        support for your favorite projects. When enabled, a special icon (ICON
+        HERE) appears in the search tab. <br />
+        By clicking the multiplier icon next to a repository, you activate a multiplier
+        to support it. This means that each time another FlatFeeStack user donates
+        to that repository, you'll automatically contribute up to 0.9% of their initial
+        donation as well. <br />
+        If you're interested in the exact mechanism of this feature, you can read
+        it <strong>here</strong>.
       </p>
     {/if}
   </div>
   {#if multiplierActive}
-    <div class="container-col" id="tipping-limit-div" style="margin-left: 2rem;">
-      <p>Your tipping limit is set to <strong>${dailyLimit}</strong> per day.</p>
+    <div
+      class="container-col"
+      id="tipping-limit-div"
+      style="margin-left: 2rem;"
+    >
+      <p>
+        Your tipping limit is set to <strong>${dailyLimit}</strong> per day.
+      </p>
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>
         <input
@@ -453,7 +473,9 @@
           on:keydown={handleLimitKeyDown}
           placeholder="$"
         />
-        <button on:click={setDailyLimit} class="ml-5 p-2 button1">Set Daily Limit</button>
+        <button on:click={setDailyLimit} class="ml-5 p-2 button1"
+          >Set Daily Limit</button
+        >
       </div>
     </div>
   {/if}
