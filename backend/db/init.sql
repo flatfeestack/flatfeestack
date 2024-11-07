@@ -157,3 +157,14 @@ CREATE TABLE IF NOT EXISTS user_emails_sent (
 CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON user_emails_sent(user_id);
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(email_type); /*we do a count on email_type*/
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
+
+CREATE TABLE IF NOT EXISTS trust_value (
+    id                  UUID PRIMARY KEY,
+    repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    contributer_count   DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
+    commit_count        DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
+    metric_3            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
+    metric_4            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
+    metric_5            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00)
+);
