@@ -13,7 +13,7 @@
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
-  import { fade, slide } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
 
   let fileInput;
   let username: undefined | string;
@@ -123,10 +123,11 @@
 
   function setDailyLimit () {
     try {
-      console.log(newDailyLimit);
       if (newDailyLimit >= 1) {
         API.user.setMultiplierDailyLimit(newDailyLimit);
         dailyLimit = newDailyLimit;
+        $user.multiplierDailyLimit = newDailyLimit;
+        newDailyLimit = "";
       } else {
         $error = "The daily limit must be a number greater than or equalt to 1";
       }
@@ -439,7 +440,7 @@
     {/if}
   </div>
   {#if multiplierActive}
-    <div class="container-col" id="tipping-limit-div" style="margin-left: 2rem;" transition:slide={{ duration: 500 }}>
+    <div class="container-col" id="tipping-limit-div" style="margin-left: 2rem;">
       <p>Your tipping limit is set to <strong>${dailyLimit}</strong> per day.</p>
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>
