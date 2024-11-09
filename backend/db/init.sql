@@ -163,22 +163,28 @@ CREATE TYPE trust_value_threshold_bound AS (
     upper_bound INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS trust_value_treshold (
-    id                    UUID PRIMARY KEY,
-    th_contributer_count  range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
-    th_commit_count       range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
-    th_metric3            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
-    th_metric4            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound),
-    th_metric5            range_values trust_value_threshold_bound CHECK ((range_values).lower_bound <= (range_values).upper_bound)
-)
+CREATE TYPE trust_value_weighted AS (
+    value DECIMAL(3,2),  -- Changed from (1,2) to allow values > 0.99
+    weight INTEGER
+);
 
+CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
+    id                    UUID PRIMARY KEY,
+    th_contributer_count  trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
+    th_commit_count       trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
+    th_metric3            trust_value_threshold_bound CHECK ((th_metric3).lower_bound <= (th_metric3).upper_bound),
+    th_metric4            trust_value_threshold_bound CHECK ((th_metric4).lower_bound <= (th_metric4).upper_bound),
+    th_metric5            trust_value_threshold_bound CHECK ((th_metric5).lower_bound <= (th_metric5).upper_bound)
+);
+
+--repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
 CREATE TABLE IF NOT EXISTS trust_value (
     id                  UUID PRIMARY KEY,
-    repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    contributer_count   DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
-    commit_count        DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
-    metric_3            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
-    metric_4            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00),
-    metric_5            DECIMAL(3,2) CHECK (rating >= 0.00 AND rating <= 2.00)
+    repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
+    contributer_count   trust_value_weighted CHECK ((contributer_count).value >= 0.00 AND (contributer_count).value <= 2.00),
+    commit_count        trust_value_weighted CHECK ((commit_count).value >= 0.00 AND (commit_count).value <= 2.00),
+    metric_3            trust_value_weighted CHECK ((metric_3).value >= 0.00 AND (metric_3).value <= 2.00),
+    metric_4            trust_value_weighted CHECK ((metric_4).value >= 0.00 AND (metric_4).value <= 2.00),
+    metric_5            trust_value_weighted CHECK ((metric_5).value >= 0.00 AND (metric_5).value <= 2.00)
 );
