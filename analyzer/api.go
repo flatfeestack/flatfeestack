@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type AnalysisRequest struct {
@@ -25,9 +27,10 @@ type AnalysisResponse struct {
 }
 
 type AnalysisCallback struct {
-	RequestId uuid.UUID       `json:"requestId"`
-	Error     string          `json:"error,omitempty"`
-	Result    []FlatFeeWeight `json:"result"`
+	RequestId     uuid.UUID          `json:"requestId"`
+	Error         string             `json:"error,omitempty"`
+	Result        []FlatFeeWeight    `json:"result"`
+	ContribCommit ContribCommitCount `json:contribcommit`
 }
 
 type FlatFeeWeight struct {
@@ -38,6 +41,9 @@ type FlatFeeWeight struct {
 
 func analyze(w http.ResponseWriter, r *http.Request) {
 	var request AnalysisRequest
+	fmt.Println("---------------------------")
+	fmt.Println(r.Body)
+	fmt.Println("---------------------------")
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
@@ -65,6 +71,12 @@ func analyzeBackground(request AnalysisRequest) {
 		return
 	}
 
+	trustValueContributersCommits, err := getTotalContributersCommits(contributionMap)
+	if err != nil {
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "getTotalContributersCommits: " + err.Error()}, opts.BackendCallbackUrl)
+		return
+	}
+
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
 		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.BackendCallbackUrl)
@@ -72,11 +84,16 @@ func analyzeBackground(request AnalysisRequest) {
 	}
 
 	callbackToWebhook(AnalysisCallback{
-		RequestId: request.Id,
-		Result:    weightsMap,
+		RequestId:     request.Id,
+		Result:        weightsMap,
+		ContribCommit: *trustValueContributersCommits,
 	}, opts.BackendCallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.Id)
+}
+
+func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
+	return nil, fmt.Errorf("unimplemented")
 }
 
 // makeHttpStatusErr writes an http status error with a specific message

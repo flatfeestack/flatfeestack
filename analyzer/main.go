@@ -3,6 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+
 	"github.com/dimiro1/banner"
 	"github.com/flatfeestack/go-lib/auth"
 	env "github.com/flatfeestack/go-lib/environment"
@@ -11,9 +15,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"os"
-	"strconv"
 )
 
 var (

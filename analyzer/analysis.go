@@ -2,10 +2,6 @@ package main
 
 import (
 	"fmt"
-	git "github.com/libgit2/git2go/v34"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"math"
 	"net/url"
 	"os"
@@ -15,6 +11,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	git "github.com/libgit2/git2go/v34"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Contribution struct {
@@ -23,6 +24,11 @@ type Contribution struct {
 	Deletion int
 	Merges   int
 	Commits  int
+}
+
+type ContribCommitCount struct {
+	ContributerCount int
+	CommitCount      int
 }
 
 const (
