@@ -161,7 +161,10 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email)
 
 DO $$ BEGIN 
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'trust_value_threshold_bound') THEN
-    CREATE TYPE trust_value_threshold_bound AS (lower_bound INTEGER, upper_bound INTEGER); 
+    CREATE TYPE trust_value_threshold_bound AS (
+      lower_bound INTEGER,
+      upper_bound INTEGER
+    ); 
   END IF; 
 END $$;
 
@@ -190,7 +193,7 @@ CREATE TABLE IF NOT EXISTS trust_value (
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
     contributer_count           trust_value_weighted CHECK ((contributer_count).value >= 0.00 AND (contributer_count).value <= 2.00),
     commit_count                trust_value_weighted CHECK ((commit_count).value >= 0.00 AND (commit_count).value <= 2.00),
-    th_sponsor_donation         trust_value_weighted CHECK ((th_sponsor_donation).value >= 0.00 AND (th_sponsor_donation).value <= 2.00),
-    th_sponsor_star_multiplier  trust_value_weighted CHECK ((th_sponsor_star_multiplier).value >= 0.00 AND (th_sponsor_star_multiplier).value <= 2.00),
-    th_repo_sponsor_donated     trust_value_weighted CHECK ((th_repo_sponsor_donated).value >= 0.00 AND (th_repo_sponsor_donated).value <= 2.00)
+    sponsor_donation            trust_value_weighted CHECK ((sponsor_donation).value >= 0.00 AND (sponsor_donation).value <= 2.00),
+    sponsor_star_multiplier     trust_value_weighted CHECK ((sponsor_star_multiplier).value >= 0.00 AND (sponsor_star_multiplier).value <= 2.00),
+    repo_sponsor_donated        trust_value_weighted CHECK ((repo_sponsor_donated).value >= 0.00 AND (repo_sponsor_donated).value <= 2.00)
 );
