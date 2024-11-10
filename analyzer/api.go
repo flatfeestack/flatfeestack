@@ -39,8 +39,9 @@ type FlatFeeWeight struct {
 }
 
 type ContribCommitCount struct {
-	ContributerCount int `json:"contributercount"`
-	CommitCount      int `json:"commitcount"`
+	RepoId           uuid.UUID `json:"repoid"`
+	ContributerCount int       `json:"contributercount"`
+	CommitCount      int       `json:"commitcount"`
 }
 
 func analyze(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +78,7 @@ func analyzeBackground(request AnalysisRequest) {
 		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "getTotalContributersCommits: " + err.Error()}, opts.BackendCallbackUrl)
 		return
 	}
+	trustValueContributersCommits.RepoId = request.RepoId
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
