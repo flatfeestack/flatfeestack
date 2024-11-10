@@ -168,17 +168,9 @@ DO $$ BEGIN
   END IF; 
 END $$;
 
-DO $$ BEGIN 
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'trust_value_weighted') THEN
-    CREATE TYPE trust_value_weighted AS (
-        value DECIMAL(3,2),  -- Changed from (1,2) to allow values > 0.99 
-        weight INTEGER
-    );
-  END IF; 
-END $$;
-
 CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
-    id                          UUID PRIMARY KEY,
+    id                          SERIAL PRIMARY KEY,
+    created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     th_contributer_count        trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
     th_commit_count             trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
     th_sponsor_donation         trust_value_threshold_bound CHECK ((th_sponsor_donation).lower_bound <= (th_sponsor_donation).upper_bound),
@@ -187,13 +179,13 @@ CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name 
 );
 
 --repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
-CREATE TABLE IF NOT EXISTS trust_value (
-    id                          UUID PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS trust_value_metrics (
+    id                          SERIAL PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
-    contributer_count           trust_value_weighted CHECK ((contributer_count).value >= 0.00 AND (contributer_count).value <= 2.00),
-    commit_count                trust_value_weighted CHECK ((commit_count).value >= 0.00 AND (commit_count).value <= 2.00),
-    sponsor_donation            trust_value_weighted CHECK ((sponsor_donation).value >= 0.00 AND (sponsor_donation).value <= 2.00),
-    sponsor_star_multiplier     trust_value_weighted CHECK ((sponsor_star_multiplier).value >= 0.00 AND (sponsor_star_multiplier).value <= 2.00),
-    repo_sponsor_donated        trust_value_weighted CHECK ((repo_sponsor_donated).value >= 0.00 AND (repo_sponsor_donated).value <= 2.00)
+    contributer_count           NUMERIC(78),
+    commit_count                NUMERIC(78),
+    sponsor_donation            NUMERIC(78),
+    sponsor_star_multiplier     NUMERIC(78),
+    repo_sponsor_donated        NUMERIC(78)
 );
