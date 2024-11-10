@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
-  import { route } from "../ts/mainStore";
-  import {activeRootRoute} from "../ts/mainStore"
+  import { route, activeRootRoute } from "../ts/mainStore";
   import Fa from "svelte-fa";
 
   export let href: string;

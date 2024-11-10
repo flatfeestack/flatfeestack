@@ -15,9 +15,9 @@
   import CatchAll from "../routes/CatchAllRoute.svelte";
   import Income from "../routes/Income.svelte";
   import Payments from "../routes/Payments.svelte";
-  import Admin from "../routes/Admin/Test.svelte";
+  //import Admin from "../routes/Admin/Test.svelte"; -- Not used yet
   import Test from "../routes/Admin/Test.svelte";
-  import TrustedRepos from "../routes/Admin/TrustedRepos.svelte";
+  //import TrustedRepos from "../routes/Admin/TrustedRepos.svelte"; -- Not used yet
   import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
   import Settings from "../routes/Settings.svelte";
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
