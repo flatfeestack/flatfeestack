@@ -75,9 +75,11 @@
     />
     <NavItem href="/user/badges" icon={faMedal} label="Badges" />
 
-    {#if $user.role === "admin"}
-      <NavItem href="/user/admin" icon={faShieldAlt} label="Admin" />
-    {/if}
+    <NavItem href="/user/admin" icon={faShieldAlt} label="Admin" sublinks={[
+      { href: '/user/admin/test', label: 'Test' },
+      { href: '/user/admin/trusted-repos', label: 'Trusted Repos' },
+      { href: '/user/admin/trusted-repo-assessment', label: 'Repo Assessment' }
+    ]} />
   </nav>
   <div>
     {#if $isSubmitting}<Spinner />{/if}
