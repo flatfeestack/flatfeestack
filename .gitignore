@@ -16,3 +16,4 @@ env*.tar.gz
 stripe/config.toml
 /monitoring/.grafana_data
 /monitoring/.prometheus_data
+.vscode
