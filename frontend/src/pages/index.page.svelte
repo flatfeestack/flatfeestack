@@ -15,7 +15,6 @@
   import CatchAll from "../routes/CatchAllRoute.svelte";
   import Income from "../routes/Income.svelte";
   import Payments from "../routes/Payments.svelte";
-  import Admin from "../routes/Admin/Test.svelte";
   import Test from "../routes/Admin/Test.svelte";
   import TrustedRepos from "../routes/Admin/TrustedRepos.svelte";
   import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
@@ -104,7 +103,7 @@
         <PrivateRoute path="/user/admin/test">
           <Test />
         </PrivateRoute>
-        <PrivateRoute path="/user/admin/test">
+        <PrivateRoute path="/user/admin/trusted-repos">
           <TrustedRepos />
         </PrivateRoute>
 

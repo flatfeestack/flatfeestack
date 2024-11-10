@@ -12,3 +12,4 @@ export const sponsoredRepos = writable<Repo[]>([]);
 export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("");
 export const activeRootRoute = writable<string | null>(null);
+export const trustedRepos = writable<Repo[]>([]);

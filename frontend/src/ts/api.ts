@@ -50,7 +50,7 @@ async function addToken(request: Request) {
 async function refreshToken(
   request: Request,
   options: any,
-  response: Response,
+  response: Response
 ) {
   if (response.status === 401 && request.headers.get("Retry") !== "true") {
     console.log("need to refresh due to:" + response);
@@ -322,7 +322,7 @@ export const API = {
     updateComment: (
       postId: PostId,
       commentId: CommentId,
-      commentInput: CommentInput,
+      commentInput: CommentInput
     ) =>
       forumToken
         .put(`posts/${postId}/comments/${commentId}`, { json: commentInput })
