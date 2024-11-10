@@ -8,40 +8,38 @@ import (
 	"github.com/google/uuid"
 )
 
-type TrustValue struct {
-	Id               uuid.UUID `json:"uuid"`
-	RepoId           uuid.UUID `json:"uuid"`
-	CreatedAt        time.Time `json:"createdAt"`
-	ContributerCount float32   `json:"contributerCount"`
-	CommitCount      float32   `json:"commitCount"`
-	MetricOne        float32   `json:"metricOne"`
-	MetricTwo        float32   `json:"metricTwo"`
-	MetricThree      float32   `json:"metricThree"`
+type TrustValueMetrics struct {
+	Id                    int       `json:"id"`
+	RepoId                uuid.UUID `json:"uuid"`
+	CreatedAt             time.Time `json:"createdat"`
+	ContributerCount      int       `json:"contributercount"`
+	CommitCount           int       `json:"commitcount"`
+	SponsorCount          int       `json:"sponsorcount"`
+	SponsorStarMultiplier int       `json:"sponsorstarmultiplier"`
+	RepoSponsorDonated    int       `json:"reposponsordonated"`
 }
 
-func InsertOrUpdateTrustValue(repo *Repo) error {
-	stmt, err := DB.Prepare(`INSERT INTO repo (id, repo_id, created_at, contributer_count, commit_count, metric_3, metric_4, metric_5)
-								   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-								   RETURNING id`)
+// This works, do you understand, Mino?
+func InsertTrustValue(trustValueMetric TrustValueMetrics) error {
+	stmt, err := DB.Prepare("INSERT INTO trust_value_metrics (repo_id, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated) VALUES ($1, $2, $3, $4, $5, $6)")
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO repo for %v statement event: %v", repo, err)
+		return fmt.Errorf("prepare INSERT INTO trust_value_metrics for %v statement event: %v", trustValueMetric, err)
 	}
 	defer CloseAndLog(stmt)
 
-	var lastInsertId uuid.UUID
-	err = stmt.QueryRow(repo.Id, repo.Url, repo.GitUrl, repo.Name, repo.Description, repo.Score, repo.Source, repo.CreatedAt).Scan(&lastInsertId)
+	res, err := stmt.Exec(trustValueMetric.RepoId, trustValueMetric.ContributerCount, trustValueMetric.CommitCount, trustValueMetric.SponsorCount, trustValueMetric.SponsorStarMultiplier, trustValueMetric.RepoSponsorDonated)
 	if err != nil {
 		return err
 	}
-	repo.Id = lastInsertId
-	return nil
+
+	return handleErrMustInsertOne(res)
 }
 
-func FindTrustValueById(id uuid.UUID) (*TrustValue, error) {
-	var tv TrustValue
+func FindTrustValueById(id int) (*TrustValueMetrics, error) {
+	var tv TrustValueMetrics
 	err := DB.
-		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count, metric_3, metric_4, metric_5 from trust_value WHERE id=$1", id).
-		Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.MetricOne, &tv.MetricTwo, &tv.MetricThree)
+		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count,  sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE id=$1", id).
+		Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.SponsorCount, &tv.SponsorStarMultiplier, &tv.RepoSponsorDonated)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +54,7 @@ func FindTrustValueById(id uuid.UUID) (*TrustValue, error) {
 	}
 }
 
-func FindTrustValueByRepoId(repoId uuid.UUID) ([]TrustValue, error) {
+func FindTrustValueByRepoId(repoId uuid.UUID) ([]TrustValueMetrics, error) {
 	//var tv TrustValue
 	rows, err := DB.
 		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, metric_3, metric_4, metric_5 from trust_value WHERE repo_id=$1 order by created_at desc limit 1", repoId)
@@ -67,11 +65,11 @@ func FindTrustValueByRepoId(repoId uuid.UUID) ([]TrustValue, error) {
 	return scanTrustValue(rows)
 }
 
-func scanTrustValue(rows *sql.Rows) ([]TrustValue, error) {
-	trustValues := []TrustValue{}
+func scanTrustValue(rows *sql.Rows) ([]TrustValueMetrics, error) {
+	trustValues := []TrustValueMetrics{}
 	for rows.Next() {
-		var tv TrustValue
-		err := rows.Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.MetricOne, &tv.MetricTwo, &tv.MetricThree)
+		var tv TrustValueMetrics
+		err := rows.Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.SponsorCount, &tv.SponsorStarMultiplier, &tv.RepoSponsorDonated)
 		if err != nil {
 			return nil, err
 		}
