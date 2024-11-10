@@ -15,9 +15,7 @@
   import CatchAll from "../routes/CatchAllRoute.svelte";
   import Income from "../routes/Income.svelte";
   import Payments from "../routes/Payments.svelte";
-  import Admin from "../routes/Admin/Test.svelte";
-  import Test from "../routes/Admin/Test.svelte";
-  import TrustedRepos from "../routes/Admin/TrustedRepos.svelte";
+  import Admin from "../routes/Admin.svelte";
   import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
   import Settings from "../routes/Settings.svelte";
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
@@ -101,11 +99,8 @@
         <PrivateRoute path="/user/invitations">
           <Invitations />
         </PrivateRoute>
-        <PrivateRoute path="/user/admin/test">
-          <Test />
-        </PrivateRoute>
-        <PrivateRoute path="/user/admin/test">
-          <TrustedRepos />
+        <PrivateRoute path="/user/admin" admin={true}>
+          <Admin />
         </PrivateRoute>
 
         <Route path="/dao/home" component={DAOHome} />
