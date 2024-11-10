@@ -26,11 +26,6 @@ type Contribution struct {
 	Commits  int
 }
 
-type ContribCommitCount struct {
-	ContributerCount int
-	CommitCount      int
-}
-
 const (
 	// Represents the factor of the total changed lines
 	// with witch the merger gets rewarded for merging the branch.
@@ -438,4 +433,17 @@ func exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
+	commitCounter := 0
+	contribCounter := len(contributionMap)
+	for _, contribution := range contributionMap {
+		commitCounter += contribution.Commits
+	}
+
+	return &ContribCommitCount{
+		ContributerCount: contribCounter,
+		CommitCount:      commitCounter,
+	}, nil
 }

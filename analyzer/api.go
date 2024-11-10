@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -30,7 +29,7 @@ type AnalysisCallback struct {
 	RequestId     uuid.UUID          `json:"requestId"`
 	Error         string             `json:"error,omitempty"`
 	Result        []FlatFeeWeight    `json:"result"`
-	ContribCommit ContribCommitCount `json:contribcommit`
+	ContribCommit ContribCommitCount `json:"contribcommit"`
 }
 
 type FlatFeeWeight struct {
@@ -39,11 +38,13 @@ type FlatFeeWeight struct {
 	Weight float64  `json:"weight"`
 }
 
+type ContribCommitCount struct {
+	ContributerCount int `json:"contributercount"`
+	CommitCount      int `json:"commitcount"`
+}
+
 func analyze(w http.ResponseWriter, r *http.Request) {
 	var request AnalysisRequest
-	fmt.Println("---------------------------")
-	fmt.Println(r.Body)
-	fmt.Println("---------------------------")
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
@@ -90,10 +91,6 @@ func analyzeBackground(request AnalysisRequest) {
 	}, opts.BackendCallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.Id)
-}
-
-func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
-	return nil, fmt.Errorf("unimplemented")
 }
 
 // makeHttpStatusErr writes an http status error with a specific message

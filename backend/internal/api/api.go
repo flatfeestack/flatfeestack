@@ -4,11 +4,12 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"golang.org/x/text/language"
 	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
+
+	"golang.org/x/text/language"
 )
 
 const (
@@ -48,9 +49,10 @@ type GitUrl struct {
 }
 
 type WebhookCallback struct {
-	RequestId string          `json:"requestId"`
-	Error     *string         `json:"error"`
-	Result    []FlatFeeWeight `json:"result"`
+	RequestId     string             `json:"requestId"`
+	Error         *string            `json:"error"`
+	Result        []FlatFeeWeight    `json:"result"`
+	ContribCommit ContribCommitCount `json:"contribcommit"`
 }
 
 type FakeRepoMapping struct {
@@ -65,6 +67,11 @@ type FlatFeeWeight struct {
 	Names  []string `json:"names"`
 	Email  string   `json:"email"`
 	Weight float64  `json:"weight"`
+}
+
+type ContribCommitCount struct {
+	ContributerCount int `json:"contributercount"`
+	CommitCount      int `json:"commitcount"`
 }
 
 type Plan struct {

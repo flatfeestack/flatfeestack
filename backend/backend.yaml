@@ -1169,6 +1169,8 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/FlatFeeWeight"
+          contribcommit:
+            type: list
     FlatFeeWeight:
       type: object
       properties:

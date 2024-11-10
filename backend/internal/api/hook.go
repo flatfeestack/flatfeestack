@@ -4,9 +4,11 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/google/uuid"
+	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +21,7 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
+	fmt.Println(data.ContribCommit)
 
 	reqId, err := uuid.Parse(data.RequestId)
 	if err != nil {
