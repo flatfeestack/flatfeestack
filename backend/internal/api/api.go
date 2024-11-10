@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"golang.org/x/text/language"
 )
 
@@ -70,8 +71,9 @@ type FlatFeeWeight struct {
 }
 
 type ContribCommitCount struct {
-	ContributerCount int `json:"contributercount"`
-	CommitCount      int `json:"commitcount"`
+	RepoId           uuid.UUID `json:"repoid"`
+	ContributerCount int       `json:"contributercount"`
+	CommitCount      int       `json:"commitcount"`
 }
 
 type Plan struct {
