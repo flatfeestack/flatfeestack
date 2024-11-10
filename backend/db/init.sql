@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS payment_in_event (
     created_at          TIMESTAMP NOT NULL,
     UNIQUE(status, external_id)
 );
+
 CREATE INDEX IF NOT EXISTS payment_in_event_user_id_idx ON payment_in_event(user_id);
 CREATE INDEX IF NOT EXISTS payment_in_event_currency_idx ON payment_in_event(currency);
 CREATE INDEX IF NOT EXISTS payment_in_event_status_idx ON payment_in_event(status);
@@ -158,15 +159,20 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON user_emails_sent(user
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(email_type); /*we do a count on email_type*/
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
 
-CREATE TYPE trust_value_threshold_bound AS (
-    lower_bound INTEGER,
-    upper_bound INTEGER
-);
+DO $$ BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'trust_value_threshold_bound') THEN
+    CREATE TYPE trust_value_threshold_bound AS (lower_bound INTEGER, upper_bound INTEGER); 
+  END IF; 
+END $$;
 
-CREATE TYPE trust_value_weighted AS (
-    value DECIMAL(3,2),  -- Changed from (1,2) to allow values > 0.99
-    weight INTEGER
-);
+DO $$ BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'trust_value_weighted') THEN
+    CREATE TYPE trust_value_weighted AS (
+        value DECIMAL(3,2),  -- Changed from (1,2) to allow values > 0.99 
+        weight INTEGER
+    );
+  END IF; 
+END $$;
 
 CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
     id                    UUID PRIMARY KEY,
