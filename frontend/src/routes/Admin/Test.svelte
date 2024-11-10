@@ -2,11 +2,11 @@
   import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { navigate } from "svelte-routing";
-  import Navigation from "../components/Navigation.svelte";
-  import Spinner from "../components/Spinner.svelte";
-  import { API } from "../ts/api";
-  import { config, error, loadedSponsoredRepos, user } from "../ts/mainStore";
-  import { formatDate, formatNowUTC, storeToken } from "../ts/services";
+  import Navigation from "../../components/Navigation.svelte";
+  import Spinner from "../../components/Spinner.svelte";
+  import { API } from "../../ts/api";
+  import { config, error, loadedSponsoredRepos, user } from "../../ts/mainStore";
+  import { formatDate, formatNowUTC, storeToken } from "../../ts/services";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
