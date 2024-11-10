@@ -11,7 +11,7 @@
   let hasSubPages = sublinks.length > 0;
 
   $: isActiveRoot = $activeRootRoute === href;
-  $: isRootRoute = href.split('/').length === 3;
+  $: isRootRoute = href.split("/").length === 3;
   $: sublinksExpanded = isActiveRoot && hasSubPages;
 
   function handleMainClick(event: MouseEvent) {
@@ -30,20 +30,23 @@
     color: var(--primary-900);
   }
   ul.sublinks {
-      list-style-type: none;
-      margin: 0 0 0 1em;
-      padding: 0;
+    list-style-type: none;
+    margin: 0 0 0 1em;
+    padding: 0;
   }
   ul.sublinks a {
-      padding: 0.5em;
+    padding: 0.5em;
   }
   ul.sublinks span {
-      font-size: 1.1rem;
+    font-size: 1.1rem;
   }
 </style>
 
-<a {href} on:click={handleMainClick}
-   class={$route.pathname === href ? `selected` : ``}>
+<a
+  {href}
+  on:click={handleMainClick}
+  class={$route.pathname === href ? `selected` : ``}
+>
   <Fa {icon} size="sm" class="icon" />
   <span class="hide-sx">{label}</span>
 </a>
@@ -52,7 +55,7 @@
   <ul class="sublinks">
     {#each sublinks as { href, label }}
       <li>
-        <a href={href} class="sublink {$route.pathname === href ? 'selected' : ''}">
+        <a {href} class="sublink {$route.pathname === href ? 'selected' : ''}">
           <Fa {icon} size="sm" class="icon" />
           <span class="hide-sx">{label}</span>
         </a>
