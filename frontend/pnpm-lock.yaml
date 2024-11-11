@@ -36,8 +36,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       svelte-routing:
-        specifier: 1.6.0
-        version: 1.6.0(svelte@3.59.1)(typescript@5.1.3)
+        specifier: 1.11.0
+        version: 1.11.0
       svelte-simple-modal:
         specifier: ^1.5.2
         version: 1.5.2(svelte@3.59.1)
@@ -53,7 +53,7 @@ importers:
         version: 6.4.0
       '@sveltejs/vite-plugin-svelte':
         specifier: ^2.4.1
-        version: 2.4.1(svelte@3.59.1)(vite@4.3.9)
+        version: 2.4.1(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13))
       '@tsconfig/svelte':
         specifier: ^3.0.0
         version: 3.0.0
@@ -68,19 +68,19 @@ importers:
         version: 2.10.1(prettier@2.8.8)(svelte@3.59.1)
       rollup-plugin-visualizer:
         specifier: ^5.9.2
-        version: 5.9.2
+        version: 5.9.2(rollup@3.24.0)
       svelte:
         specifier: ^3.59.1
         version: 3.59.1
       svelte-check:
         specifier: ^3.4.3
-        version: 3.4.3(svelte@3.59.1)
+        version: 3.4.3(postcss@8.4.24)(svelte@3.59.1)
       svelte-fa:
         specifier: ^3.0.4
         version: 3.0.4
       svelte-preprocess:
         specifier: ^5.0.4
-        version: 5.0.4(svelte@3.59.1)(typescript@5.1.3)
+        version: 5.0.4(postcss@8.4.24)(svelte@3.59.1)(typescript@5.1.3)
       tslib:
         specifier: ^2.5.3
         version: 2.5.3
@@ -89,13 +89,13 @@ importers:
         version: 5.1.3
       vite:
         specifier: ^4.3.9
-        version: 4.3.9
+        version: 4.3.9(@types/node@18.15.13)
       vite-plugin-compression:
         specifier: ^0.5.1
-        version: 0.5.1(vite@4.3.9)
+        version: 0.5.1(vite@4.3.9(@types/node@18.15.13))
       vite-plugin-ssr:
         specifier: ^0.4.131
-        version: 0.4.131(vite@4.3.9)
+        version: 0.4.131(vite@4.3.9(@types/node@18.15.13))
 
 packages:
 
@@ -417,9 +417,6 @@ packages:
     resolution: {integrity: sha512-+8VxcR21HhTy8nOt6jf20w0c9CADrw1O8d+VZ/YzzCt4bJ3uBjw+D1q2osAB8RnpwwaeYBxy0HyKQxD5JBMuuQ==}
     engines: {node: '>=14.16'}
 
-  dedent-js@1.0.1:
-    resolution: {integrity: sha512-OUepMozQULMLUmhxS95Vudo0jb0UchLimi3+pQ2plj61Fcy8axbP9hbiD4Sz6DPqn6XG3kfmziVfQ1rSys5AJQ==}
-
   deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
@@ -491,6 +488,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
@@ -508,6 +506,7 @@ packages:
 
   inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
+    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -556,9 +555,6 @@ packages:
     resolution: {integrity: sha512-CasD9OCEQSFIam2U8efFK81Yeg8vNMTBUqtMOHlrcWQHqUX3HeCl9Dr31u4toV7emlH8Mymk5+9p0lL6mKb/Xw==}
     engines: {node: '>=14.16'}
 
-  lower-case@2.0.2:
-    resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
-
   magic-string@0.27.0:
     resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
     engines: {node: '>=12'}
@@ -605,9 +601,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  no-case@3.0.4:
-    resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
-
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -626,9 +619,6 @@ packages:
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
-
-  pascal-case@3.1.2:
-    resolution: {integrity: sha512-uWlGT3YSnK9x3BQJaOdcZwrnV6hPpd8jFH1/ucpiLRPh/2zCVJKS19E4GvYHvaCcACn3foXZ0cLB9Wrx1KGe5g==}
 
   path-is-absolute@1.0.1:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
@@ -684,6 +674,7 @@ packages:
 
   rimraf@2.7.1:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
 
   rollup-plugin-visualizer@5.9.2:
@@ -816,10 +807,8 @@ packages:
   svelte-qr@1.0.0:
     resolution: {integrity: sha512-7n/FPFhImPI68NCwChzYqzTbTpDhGCiFgGiCQY+IXS8sh0Xhzzd0wwQnN5n2BCJ0Uvti8s0RhKErwcw4Lp7RvQ==}
 
-  svelte-routing@1.6.0:
-    resolution: {integrity: sha512-+DbrSGttLA6lan7oWFz1MjyGabdn3tPRqn8Osyc471ut2UgCrzM5x1qViNMc2gahOP6fKbKK1aNtZMJEQP2vHQ==}
-    peerDependencies:
-      svelte: ^3.20.x
+  svelte-routing@1.11.0:
+    resolution: {integrity: sha512-/JlBAB6KxgM+Xl+4J/vOy4i4uYAJpWWbjh7vtRwsuu0MPl5B+ml+N/jCRkfjRa9ulODcS/G6PL8opyhczmrV8Q==}
 
   svelte-simple-modal@1.5.2:
     resolution: {integrity: sha512-kQ+9/bonxMMJe6dGTCPXBkYQQ4zF8rqqPp+PvTWOJB8QtB+Z0S/h7ZJRDZOAnkXTUClwd+Qmb2HHTIXVkjlSvA==}
@@ -828,12 +817,6 @@ packages:
 
   svelte-stripe@0.0.22:
     resolution: {integrity: sha512-ZLt55XNWrytsMfaMUUxEknLjphYWqhRkRNcHmmkp7gbENKSB8rp6o6hZP5zWEoUGwYNiPGqpM/DgbXy27BdVIQ==}
-
-  svelte2tsx@0.1.193:
-    resolution: {integrity: sha512-vzy4YQNYDnoqp2iZPnJy7kpPAY6y121L0HKrSBjU/IWW7DQ6T7RMJed2VVHFmVYm0zAGYMDl9urPc6R4DDUyhg==}
-    peerDependencies:
-      svelte: ^3.24
-      typescript: ^4.1.2
 
   svelte@3.59.1:
     resolution: {integrity: sha512-pKj8fEBmqf6mq3/NfrB9SLtcJcUvjYSWyePlfCqN9gujLB25RitWK8PvFzlwim6hD/We35KbPlRteuA6rnPGcQ==}
@@ -1080,26 +1063,26 @@ snapshots:
 
   '@stripe/stripe-js@1.54.0': {}
 
-  '@sveltejs/vite-plugin-svelte-inspector@1.0.2(@sveltejs/vite-plugin-svelte@2.4.1)(svelte@3.59.1)(vite@4.3.9)':
+  '@sveltejs/vite-plugin-svelte-inspector@1.0.2(@sveltejs/vite-plugin-svelte@2.4.1(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13)))(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte': 2.4.1(svelte@3.59.1)(vite@4.3.9)
+      '@sveltejs/vite-plugin-svelte': 2.4.1(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13))
       debug: 4.3.4
       svelte: 3.59.1
-      vite: 4.3.9
+      vite: 4.3.9(@types/node@18.15.13)
     transitivePeerDependencies:
       - supports-color
 
-  '@sveltejs/vite-plugin-svelte@2.4.1(svelte@3.59.1)(vite@4.3.9)':
+  '@sveltejs/vite-plugin-svelte@2.4.1(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte-inspector': 1.0.2(@sveltejs/vite-plugin-svelte@2.4.1)(svelte@3.59.1)(vite@4.3.9)
+      '@sveltejs/vite-plugin-svelte-inspector': 1.0.2(@sveltejs/vite-plugin-svelte@2.4.1(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13)))(svelte@3.59.1)(vite@4.3.9(@types/node@18.15.13))
       debug: 4.3.4
       deepmerge: 4.3.1
       kleur: 4.1.5
       magic-string: 0.30.0
       svelte: 3.59.1
       svelte-hmr: 0.15.2(svelte@3.59.1)
-      vite: 4.3.9
-      vitefu: 0.2.4(vite@4.3.9)
+      vite: 4.3.9(@types/node@18.15.13)
+      vitefu: 0.2.4(vite@4.3.9(@types/node@18.15.13))
     transitivePeerDependencies:
       - supports-color
 
@@ -1191,8 +1174,6 @@ snapshots:
       ms: 2.1.2
 
   decode-uri-component@0.4.1: {}
-
-  dedent-js@1.0.1: {}
 
   deepmerge@4.3.1: {}
 
@@ -1342,10 +1323,6 @@ snapshots:
 
   ky@0.33.3: {}
 
-  lower-case@2.0.2:
-    dependencies:
-      tslib: 2.5.3
-
   magic-string@0.27.0:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.4.15
@@ -1381,11 +1358,6 @@ snapshots:
 
   nanoid@3.3.6: {}
 
-  no-case@3.0.4:
-    dependencies:
-      lower-case: 2.0.2
-      tslib: 2.5.3
-
   normalize-path@3.0.0: {}
 
   once@1.4.0:
@@ -1410,11 +1382,6 @@ snapshots:
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
-
-  pascal-case@3.1.2:
-    dependencies:
-      no-case: 3.0.4
-      tslib: 2.5.3
 
   path-is-absolute@1.0.1: {}
 
@@ -1459,12 +1426,14 @@ snapshots:
     dependencies:
       glob: 7.2.3
 
-  rollup-plugin-visualizer@5.9.2:
+  rollup-plugin-visualizer@5.9.2(rollup@3.24.0):
     dependencies:
       open: 8.4.2
       picomatch: 2.3.1
       source-map: 0.7.4
       yargs: 17.7.2
+    optionalDependencies:
+      rollup: 3.24.0
 
   rollup@3.24.0:
     optionalDependencies:
@@ -1531,7 +1500,7 @@ snapshots:
       chart.js: 4.3.0
       svelte: 3.59.1
 
-  svelte-check@3.4.3(svelte@3.59.1):
+  svelte-check@3.4.3(postcss@8.4.24)(svelte@3.59.1):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.18
       chokidar: 3.5.3
@@ -1540,7 +1509,7 @@ snapshots:
       picocolors: 1.0.0
       sade: 1.8.1
       svelte: 3.59.1
-      svelte-preprocess: 5.0.4(svelte@3.59.1)(typescript@5.1.3)
+      svelte-preprocess: 5.0.4(postcss@8.4.24)(svelte@3.59.1)(typescript@5.1.3)
       typescript: 5.1.3
     transitivePeerDependencies:
       - '@babel/core'
@@ -1559,7 +1528,7 @@ snapshots:
     dependencies:
       svelte: 3.59.1
 
-  svelte-preprocess@5.0.4(svelte@3.59.1)(typescript@5.1.3):
+  svelte-preprocess@5.0.4(postcss@8.4.24)(svelte@3.59.1)(typescript@5.1.3):
     dependencies:
       '@types/pug': 2.0.6
       detect-indent: 6.1.0
@@ -1567,16 +1536,13 @@ snapshots:
       sorcery: 0.11.0
       strip-indent: 3.0.0
       svelte: 3.59.1
+    optionalDependencies:
+      postcss: 8.4.24
       typescript: 5.1.3
 
   svelte-qr@1.0.0: {}
 
-  svelte-routing@1.6.0(svelte@3.59.1)(typescript@5.1.3):
-    dependencies:
-      svelte: 3.59.1
-      svelte2tsx: 0.1.193(svelte@3.59.1)(typescript@5.1.3)
-    transitivePeerDependencies:
-      - typescript
+  svelte-routing@1.11.0: {}
 
   svelte-simple-modal@1.5.2(svelte@3.59.1):
     dependencies:
@@ -1585,13 +1551,6 @@ snapshots:
   svelte-stripe@0.0.22:
     dependencies:
       '@stripe/stripe-js': 1.54.0
-
-  svelte2tsx@0.1.193(svelte@3.59.1)(typescript@5.1.3):
-    dependencies:
-      dedent-js: 1.0.1
-      pascal-case: 3.1.2
-      svelte: 3.59.1
-      typescript: 5.1.3
 
   svelte@3.59.1: {}
 
@@ -1619,16 +1578,16 @@ snapshots:
 
   universalify@2.0.0: {}
 
-  vite-plugin-compression@0.5.1(vite@4.3.9):
+  vite-plugin-compression@0.5.1(vite@4.3.9(@types/node@18.15.13)):
     dependencies:
       chalk: 4.1.2
       debug: 4.3.4
       fs-extra: 10.1.0
-      vite: 4.3.9
+      vite: 4.3.9(@types/node@18.15.13)
     transitivePeerDependencies:
       - supports-color
 
-  vite-plugin-ssr@0.4.131(vite@4.3.9):
+  vite-plugin-ssr@0.4.131(vite@4.3.9(@types/node@18.15.13)):
     dependencies:
       '@brillout/import': 0.2.3
       '@brillout/json-serializer': 0.5.3
@@ -1640,19 +1599,20 @@ snapshots:
       esbuild: 0.17.19
       fast-glob: 3.2.12
       sirv: 2.0.3
-      vite: 4.3.9
+      vite: 4.3.9(@types/node@18.15.13)
 
-  vite@4.3.9:
+  vite@4.3.9(@types/node@18.15.13):
     dependencies:
       esbuild: 0.17.19
       postcss: 8.4.24
       rollup: 3.24.0
     optionalDependencies:
+      '@types/node': 18.15.13
       fsevents: 2.3.2
 
-  vitefu@0.2.4(vite@4.3.9):
-    dependencies:
-      vite: 4.3.9
+  vitefu@0.2.4(vite@4.3.9(@types/node@18.15.13)):
+    optionalDependencies:
+      vite: 4.3.9(@types/node@18.15.13)
 
   wrap-ansi@7.0.0:
     dependencies:
