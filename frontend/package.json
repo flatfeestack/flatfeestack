@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@metamask/detect-provider": "^2.0.0",
-    "@stripe/stripe-js": "^1.54.0",
+    "@stripe/stripe-js": "^1.54.2",
     "chart.js": "^4.3.0",
     "ethers": "^6.6.0",
     "humanize-duration": "^3.28.0",
