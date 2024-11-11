@@ -52,7 +52,7 @@ func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
 func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.TrustValueMetrics) {
 	if trustValue.RepoId == uuid.Nil {
 		slog.Error("RepoId is missing",
-			slog.String("Trust Value id", string(trustValue.Id)))
+			slog.String("Trust Value id", strconv.Itoa(trustValue.Id)))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
