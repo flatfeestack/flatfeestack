@@ -4,7 +4,7 @@
 set -Eeuo pipefail
 trap 'cleanup $?' SIGINT SIGTERM ERR EXIT
 
-PROJECTS='db caddy ganache auth analyzer backend frontend stripe-webhook'
+PROJECTS='db caddy ganache auth analyzer backend frontend-svelte5 stripe-webhook'
 
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT

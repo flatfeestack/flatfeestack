@@ -2,21 +2,10 @@
     admin off
     auto_https off
     log {
-        output stdout
-        format json {
-            time_key time
-            time_format iso8601
-        }
+        format console
     }
 }
 :8080 {
-  log {
-    output stdout
-    format json {
-        time_key time
-        time_format iso8601
-    }
-  }
   handle_path /auth/* {
     reverse_proxy auth:9081 {
       header_up Host {upstream_hostport}
@@ -60,7 +49,7 @@
   }
 
   handle {
-    reverse_proxy frontend:9085 {
+    reverse_proxy frontend-svelte5:3000 {
       header_up Host {upstream_hostport}
       header_up X-Real-IP {remote}
     }

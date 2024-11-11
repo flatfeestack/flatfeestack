@@ -1,0 +1,29 @@
+{
+  "name": "svelte5-rsbuild-ssr-template",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "node ssr-server.mjs",
+    "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
+    "build": "NODE_ENV=production rsbuild build && node ssr-prod.mjs -s dist/server.js -c dist/index.html -o dist/index.html && find dist -type f \\( -name \"*.js\" -o -name \"*.css\" -o -name \"*.html\" \\) -print0 | parallel -0 -j+0 'gzip -9kq {}; brotli -k {}; zstd -19k {} > /dev/null 2>&1'"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.6.0",
+    "@mateothegreat/svelte5-router": "0.0.25",
+    "svelte": "5.1.13",
+    "ky": "^1.7.2",
+    "@stripe/stripe-js": "^4.9.0",
+    "query-string": "^9.1.1",
+    "ethers": "^6.13.4",
+    "@metamask/detect-provider": "^2.0.0"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "1.1.0",
+    "@rsbuild/plugin-svelte": "1.0.3",
+    "@tsconfig/svelte": "5.0.4",
+    "commander": "^12.1.0",
+    "express": "^4.21.1",
+    "svelte-check": "^4.0.6",
+    "svelte-server": "^0.4.2",
+    "typescript": "^5.6.3"
+  }
+}

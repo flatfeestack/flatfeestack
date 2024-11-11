@@ -46,13 +46,15 @@ services:
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
-  frontend:
+  frontend-svelte5:
     build:
-      context: ./frontend
+      context: ./frontend-svelte5
+      dockerfile: Dockerfile.dev
     volumes:
-      - ${BASE_PATH:-.}/frontend:/app
+      - ${BASE_PATH:-.}/frontend-svelte5/src:/app/src
+      - ${BASE_PATH:-.}/frontend-svelte5/public:/app/public
     ports:
-      - "9085:9085"
+      - "9085:3000"
 
   db:
     image: postgres:16-alpine
@@ -69,9 +71,11 @@ services:
       retries: 30
 
   caddy:
-    build: ./caddy
+    image: caddy:2-alpine
     ports:
       - "8080:8080"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
@@ -87,6 +91,7 @@ services:
       - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
     extra_hosts:
       - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+    stop_grace_period: 0s
 
   stripe-setup:
     profiles: [setup]
