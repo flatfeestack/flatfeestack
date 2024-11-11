@@ -4,14 +4,13 @@
   import {
     error,
     isSubmitting,
-    loadedSponsoredRepos,
-    sponsoredRepos,
+    loadedTrustedRepos,
+    trustedRepos,
   } from "../../ts/mainStore";
   import type { Repo } from "../../types/backend";
 
   import Dots from "../../components/Dots.svelte";
   import Navigation from "../../components/Navigation.svelte";
-  import RepoCard from "../../components/RepoCard.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
   // import SearchResult from "../../components/SearchResult.svelte";
   // import { Link } from "svelte-routing";
@@ -34,11 +33,11 @@
   };
 
   onMount(async () => {
-    if (!$loadedSponsoredRepos) {
+    if (!$loadedTrustedRepos) {
       try {
         $isSubmitting = true;
-        $sponsoredRepos = await API.user.getSponsored();
-        $loadedSponsoredRepos = true;
+        $trustedRepos = await API.repos.getTrusted();
+        $loadedTrustedRepos = true;
       } catch (e) {
         $error = e;
       } finally {
@@ -69,14 +68,6 @@
 
 <Navigation>
   <div class="p-2">
-    {#if $sponsoredRepos.length > 0}
-      <div class="m-2 wrap">
-        {#each $sponsoredRepos as repo, key (repo.uuid)}
-          <RepoCard {repo} />
-        {/each}
-      </div>
-    {/if}
-
     <div class="m-2">
       <form class="flex" on:submit|preventDefault={handleSearch}>
         <input type="text" bind:value={search} />

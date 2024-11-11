@@ -241,6 +241,9 @@ func main() {
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
 	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
+	router.HandleFunc("GET /repos/trusted", middlewareJwtAuthUserLog(api2.GetTrustedRepos))
+	router.HandleFunc("POST /repos/{id}/trust", middlewareJwtAuthAdminLog(rh.TrustRepo))
+	router.HandleFunc("POST /repos/{id}/untrust", middlewareJwtAuthAdminLog(rh.UnTrustRepo))
 	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	//payment
 
