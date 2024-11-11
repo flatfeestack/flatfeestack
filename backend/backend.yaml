@@ -501,6 +501,21 @@ paths:
                   $ref: '#/components/schemas/Repo'
         '400':
           description: Bad Request
+  /repos/trusted:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
   /repos/{id}:
     get:
       tags:
@@ -553,6 +568,54 @@ paths:
         - Repos
       security:
         - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/trust:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/untrust:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
       parameters:
         - name: id
           in: path

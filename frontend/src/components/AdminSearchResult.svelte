@@ -10,11 +10,11 @@
   const onTrusted = async () => {
     try {
       if (verifiedStar) {
-        await API.repos.untag(repo.uuid);
+        await API.repos.untrust(repo.uuid);
         $trustedRepos = $trustedRepos.filter((r) => r.uuid !== repo.uuid);
         verifiedStar = false;
       } else {
-        const res = await API.repos.tag(repo.uuid);
+        const res = await API.repos.trust(repo.uuid);
         $trustedRepos = [...$trustedRepos, res];
         verifiedStar = true;
       }

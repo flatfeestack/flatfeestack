@@ -262,7 +262,11 @@ export const API = {
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)
         .json<ChartDataTotal>(),
-  },
+    trust: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+    untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
+    getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
+},
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),
     invite: (email: string) => backendToken.post(`invite/${email}`),
