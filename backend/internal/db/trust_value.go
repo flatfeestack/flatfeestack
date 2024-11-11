@@ -35,11 +35,27 @@ func InsertTrustValue(trustValueMetric TrustValueMetrics) error {
 	return handleErrMustInsertOne(res)
 }
 
+func UpdateTrustValue(trustValueMetric TrustValueMetrics) error {
+	stmt, err := DB.Prepare("UPDATE trust_value_metrics SET repo_id=$1, contributer_count=$2, commit_count=$3, sponsor_donation=$4, sponsor_star_multiplier=$5, repo_sponsor_donated=$6) WHERE id=$7")
+	if err != nil {
+		return fmt.Errorf("prepare UPDATE trust_value_metrics for %v statement failed: %v", trustValueMetric, err)
+	}
+	defer CloseAndLog(stmt)
+
+	var res sql.Result
+	res, err = stmt.Exec(trustValueMetric.RepoId, trustValueMetric.ContributerCount, trustValueMetric.CommitCount, trustValueMetric.SponsorCount, trustValueMetric.SponsorStarMultiplier, trustValueMetric.RepoSponsorDonated, trustValueMetric.Id)
+	if err != nil {
+		return err
+	}
+
+	return handleErrMustInsertOne(res)
+}
+
 func FindTrustValueById(id int) (*TrustValueMetrics, error) {
-	var tv TrustValueMetrics
+	var trustValue TrustValueMetrics
 	err := DB.
 		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count,  sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE id=$1", id).
-		Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.SponsorCount, &tv.SponsorStarMultiplier, &tv.RepoSponsorDonated)
+		Scan(&trustValue.Id, &trustValue.RepoId, &trustValue.CreatedAt, &trustValue.ContributerCount, &trustValue.CommitCount, &trustValue.SponsorCount, &trustValue.SponsorStarMultiplier, &trustValue.RepoSponsorDonated)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +64,7 @@ func FindTrustValueById(id int) (*TrustValueMetrics, error) {
 	case sql.ErrNoRows:
 		return nil, nil
 	case nil:
-		return &tv, nil
+		return &trustValue, nil
 	default:
 		return nil, err
 	}
