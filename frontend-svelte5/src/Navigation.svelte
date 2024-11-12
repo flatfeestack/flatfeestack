@@ -55,19 +55,14 @@
 
 <div class="page">
   <nav>
-    <NavItem href="/user/settings" icon={faUserCog} label="Settings" />
-    <NavItem href="/user/search" icon={faSearch} label="Search" />
-    <NavItem href="/user/payments" icon={faCreditCard} label="Payments" />
-    <NavItem href="/user/income" icon={faHandHoldingUsd} label="Income" />
-    <NavItem
-      href="/user/invitations"
-      icon={faUserFriends}
-      label="Invitations"
-    />
-    <NavItem href="/user/badges" icon={faMedal} label="Badges" />
-
+    <NavItem href="/user/settings" icon="fa-user-cog" label="Settings" />
+    <NavItem href="/user/search" icon="fa-search" label="Search" />
+    <NavItem href="/user/payments" icon="fa-credit-card" label="Payments" />
+    <NavItem href="/user/income" icon="fa-hand-holding-usd" label="Income" />
+    <NavItem href="/user/invitations" icon="fa-user-friends" label="Invitations"/>
+    <NavItem href="/user/badges" icon="fa-medal" label="Badges" />
     {#if $user.role === "admin"}
-      <NavItem href="/user/admin" icon={faShieldAlt} label="Admin" />
+      <NavItem href="/user/admin" icon="fa-shield-alt" label="Admin" />
     {/if}
   </nav>
   <div>

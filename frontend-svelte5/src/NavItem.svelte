@@ -2,7 +2,7 @@
   import { route } from "@/mainStore";
 
   export let href: string;
-  export let icon: IconDefinition;
+  export let icon: string;
   export let label: string;
   import '@fortawesome/fontawesome-free/css/all.min.css'
 </script>
