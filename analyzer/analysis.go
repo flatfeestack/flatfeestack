@@ -290,9 +290,10 @@ func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight
 		}
 
 		result = append(result, FlatFeeWeight{
-			Names:  contribution.Names,
-			Email:  email,
-			Weight: changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
+			Names:       contribution.Names,
+			Email:       email,
+			Weight:      changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
+			CommitCount: totalCommit,
 		})
 
 		log.Infof("authors: %v=+%v/-%v, c:%v,m:%v", contribution.Names, contribution.Addition, contribution.Deletion, contribution.Commits, contribution.Merges)
@@ -435,15 +436,15 @@ func exists(path string) (bool, error) {
 	return false, err
 }
 
-func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
-	commitCounter := 0
-	contribCounter := len(contributionMap)
-	for _, contribution := range contributionMap {
-		commitCounter += contribution.Commits
-	}
+// func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
+// 	commitCounter := 0
+// 	contribCounter := len(contributionMap)
+// 	for _, contribution := range contributionMap {
+// 		commitCounter += contribution.Commits
+// 	}
 
-	return &ContribCommitCount{
-		ContributerCount: contribCounter,
-		CommitCount:      commitCounter,
-	}, nil
-}
+// 	return &ContribCommitCount{
+// 		ContributerCount: contribCounter,
+// 		CommitCount:      commitCounter,
+// 	}, nil
+// }

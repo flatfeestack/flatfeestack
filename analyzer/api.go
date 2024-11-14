@@ -26,10 +26,10 @@ type AnalysisResponse struct {
 }
 
 type AnalysisCallback struct {
-	RequestId     uuid.UUID          `json:"requestId"`
-	Error         string             `json:"error,omitempty"`
-	Result        []FlatFeeWeight    `json:"result"`
-	ContribCommit ContribCommitCount `json:"contribcommit"`
+	RequestId uuid.UUID       `json:"requestId"`
+	Error     string          `json:"error,omitempty"`
+	Result    []FlatFeeWeight `json:"result"`
+	RepoId    uuid.UUID       `json:"repoid"`
 }
 
 type FlatFeeWeight struct {
@@ -39,11 +39,11 @@ type FlatFeeWeight struct {
 	CommitCount int      `json:"commitcount"`
 }
 
-type ContribCommitCount struct {
-	RepoId           uuid.UUID `json:"repoid"`
-	ContributerCount int       `json:"contributercount"`
-	CommitCount      int       `json:"commitcount"`
-}
+// type ContribCommitCount struct {
+// 	RepoId           uuid.UUID `json:"repoid"`
+// 	ContributerCount int       `json:"contributercount"`
+// 	CommitCount      int       `json:"commitcount"`
+// }
 
 func analyze(w http.ResponseWriter, r *http.Request) {
 	var request AnalysisRequest
@@ -74,12 +74,12 @@ func analyzeBackground(request AnalysisRequest) {
 		return
 	}
 
-	trustValueContributersCommits, err := getTotalContributersCommits(contributionMap)
-	if err != nil {
-		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "getTotalContributersCommits: " + err.Error()}, opts.BackendCallbackUrl)
-		return
-	}
-	trustValueContributersCommits.RepoId = request.RepoId
+	// trustValueContributersCommits, err := getTotalContributersCommits(contributionMap)
+	// if err != nil {
+	// callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "getTotalContributersCommits: " + err.Error()}, opts.BackendCallbackUrl)
+	// return
+	// }
+	// trustValueContributersCommits.RepoId = request.RepoId
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
@@ -88,9 +88,9 @@ func analyzeBackground(request AnalysisRequest) {
 	}
 
 	callbackToWebhook(AnalysisCallback{
-		RequestId:     request.Id,
-		Result:        weightsMap,
-		ContribCommit: *trustValueContributersCommits,
+		RequestId: request.Id,
+		Result:    weightsMap,
+		RepoId:    request.RepoId,
 	}, opts.BackendCallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.Id)

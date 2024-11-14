@@ -194,7 +194,7 @@ DO $$ BEGIN
 END $$;
 
 CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
-    id                          SERIAL PRIMARY KEY,
+    id                          UUID PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     th_contributer_count        trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
     th_commit_count             trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name 
 --repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
 --repo_id                     UUID,
 CREATE TABLE IF NOT EXISTS trust_value_metrics (
-    id                          SERIAL PRIMARY KEY,
+    id                          UUID PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
     contributer_count           NUMERIC(78),
