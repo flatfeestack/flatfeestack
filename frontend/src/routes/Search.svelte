@@ -5,7 +5,9 @@
     error,
     isSubmitting,
     loadedSponsoredRepos,
+    loadedTrustedRepos,
     sponsoredRepos,
+    trustedRepos,
   } from "../ts/mainStore";
   import type { Repo } from "../types/backend";
 
@@ -38,6 +40,17 @@
         $isSubmitting = true;
         $sponsoredRepos = await API.user.getSponsored();
         $loadedSponsoredRepos = true;
+      } catch (e) {
+        $error = e;
+      } finally {
+        $isSubmitting = false;
+      }
+    }
+    if (!$loadedTrustedRepos) {
+      try {
+        $isSubmitting = true;
+        $trustedRepos = await API.repos.getTrusted();
+        $loadedTrustedRepos = true;
       } catch (e) {
         $error = e;
       } finally {
