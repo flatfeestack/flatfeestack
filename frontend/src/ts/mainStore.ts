@@ -9,6 +9,7 @@ export const user = writable<User>(<User>{});
 export const config = writable<Config>(<Config>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
+export const multiplierSponsoredRepos = writable<Repo[]>([]);
 export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("");
 export const activeRootRoute = writable<string | null>(null);

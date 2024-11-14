@@ -1,17 +1,30 @@
 <script lang="ts">
   import { API } from "../ts/api";
-  import { error, sponsoredRepos } from "../ts/mainStore";
+  import { error, sponsoredRepos, multiplierSponsoredRepos } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
 
   export let repo: Repo;
   let star = true;
+  let multiplier = true;
 
   async function unTag() {
     star = false;
     try {
       await API.repos.untag(repo.uuid);
       $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
+        return r.uuid !== repo.uuid;
+      });
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  async function noMultiplier() {
+    multiplier = false;
+    try {
+      await API.repos.untag(repo.uuid); // adjust backend for correct API
+      $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
     } catch (e) {
