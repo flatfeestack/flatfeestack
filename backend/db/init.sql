@@ -82,6 +82,18 @@ CREATE TABLE IF NOT EXISTS trust_event (
 CREATE INDEX IF NOT EXISTS trust_event_repo_id_idx ON trust_event(repo_id);
 CREATE INDEX IF NOT EXISTS trust_event_user_id_idx ON trust_event(user_id);
 
+CREATE TABLE IF NOT EXISTS multiplier_event (
+    id               UUID PRIMARY KEY,
+    repo_id          UUID CONSTRAINT multiplier_event_repo_id_fk REFERENCES repo(id),
+    user_id          UUID CONSTRAINT multiplier_event_user_id_fk REFERENCES users(id),
+    multiplier_at    TIMESTAMP NOT NULL,
+    un_multiplier_at TIMESTAMP,
+    UNIQUE(repo_id, user_id, multiplier_at)
+);
+
+CREATE INDEX IF NOT EXISTS multiplier_event_repo_id_idx ON multiplier_event(repo_id);
+CREATE INDEX IF NOT EXISTS multiplier_event_user_id_idx ON multiplier_event(user_id);
+
 CREATE TABLE IF NOT EXISTS analysis_request (
     id          UUID PRIMARY KEY,
     repo_id     UUID CONSTRAINT analysis_request_repo_id_fk REFERENCES repo(id),
@@ -98,6 +110,7 @@ CREATE INDEX IF NOT EXISTS analysis_request_repo_id_idx ON analysis_request(repo
 CREATE TABLE IF NOT EXISTS analysis_response (
     id                  UUID PRIMARY KEY,
     analysis_request_id UUID CONSTRAINT analysis_response_analysis_request_id_fk REFERENCES analysis_request(id),
+    repo_id             UUID CONSTRAINT analysis_request_repo_id_fk REFERENCES repo(id),
     git_email           VARCHAR(255) NOT NULL,
     git_names           VARCHAR(255),
     weight              DOUBLE PRECISION NOT NULL,
@@ -105,6 +118,7 @@ CREATE TABLE IF NOT EXISTS analysis_response (
     UNIQUE(analysis_request_id, git_email)
 );
 CREATE INDEX IF NOT EXISTS analysis_response_analysis_request_id_idx ON analysis_response(analysis_request_id);
+CREATE INDEX IF NOT EXISTS analysis_response_repo_id_idx ON analysis_response(repo_id);
 
 CREATE TABLE IF NOT EXISTS daily_contribution (
     id                   UUID PRIMARY KEY,
