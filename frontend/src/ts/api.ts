@@ -203,6 +203,10 @@ export const API = {
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
+    setMultiplier: (isSet: boolean) =>
+      backendToken.put(`users/me/multiplier/${isSet}`),
+    setMultiplierDailyLimit: (amount: number) =>
+      backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () => backendToken.delete(`users/me/image`),
@@ -258,6 +262,10 @@ export const API = {
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)
         .json<ChartDataTotal>(),
+    trust: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+    untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
+    getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

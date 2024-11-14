@@ -14,17 +14,18 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/MatusOllah/slogcolor"
 	"github.com/dimiro1/banner"
 	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"log/slog"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -208,6 +209,8 @@ func main() {
 	router.HandleFunc("GET /users/me/sponsored", middlewareJwtAuthUserLog(api2.GetSponsoredRepos))
 	router.HandleFunc("PUT /users/me/name/{name}", middlewareJwtAuthUserLog(api2.UpdateName))
 	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
+	router.HandleFunc("PUT /users/me/multiplier/{isSet}", middlewareJwtAuthUserLog(api2.UpdateMltplr))
+	router.HandleFunc("PUT /users/me/multiplierDailyLimit/{amount}", middlewareJwtAuthUserLog(api2.UpdateMltplrDlyLimit))
 	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 200*1024))
 	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
@@ -238,6 +241,9 @@ func main() {
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
 	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
+	router.HandleFunc("GET /repos/trusted", middlewareJwtAuthUserLog(api2.GetTrustedRepos))
+	router.HandleFunc("POST /repos/{id}/trust", middlewareJwtAuthAdminLog(rh.TrustRepo))
+	router.HandleFunc("POST /repos/{id}/untrust", middlewareJwtAuthAdminLog(rh.UnTrustRepo))
 	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	//payment
 

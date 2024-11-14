@@ -751,6 +751,8 @@ export interface components {
       /** Format: int64 */
       freq?: number | null;
       role?: string | null;
+      multiplier?: boolean;
+      multiplierDailyLimit?: number;
     };
     Claims: {
       iss?: string | null;

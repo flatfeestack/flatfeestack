@@ -11,3 +11,6 @@ export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
 export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("");
+export const activeRootRoute = writable<string | null>(null);
+export const trustedRepos = writable<Repo[]>([]);
+export const loadedTrustedRepos = writable<boolean>(false);

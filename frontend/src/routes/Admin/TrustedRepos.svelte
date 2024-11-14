@@ -1,21 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "../ts/api";
+  import { API } from "../../ts/api";
   import {
     error,
     isSubmitting,
-    loadedSponsoredRepos,
     loadedTrustedRepos,
-    sponsoredRepos,
     trustedRepos,
-  } from "../ts/mainStore";
-  import type { Repo } from "../types/backend";
+  } from "../../ts/mainStore";
+  import type { Repo } from "../../types/backend";
 
-  import Dots from "../components/Dots.svelte";
-  import Navigation from "../components/Navigation.svelte";
-  import RepoCard from "../components/RepoCard.svelte";
-  import SearchResult from "../components/SearchResult.svelte";
-  import { Link } from "svelte-routing";
+  import Dots from "../../components/Dots.svelte";
+  import Navigation from "../../components/Navigation.svelte";
+  import AdminSearchResult from "../../components/AdminSearchResult.svelte";
+  // import SearchResult from "../../components/SearchResult.svelte";
+  // import { Link } from "svelte-routing";
 
   let search = "";
   let searchRepos: Repo[] = [];
@@ -35,17 +33,6 @@
   };
 
   onMount(async () => {
-    if (!$loadedSponsoredRepos) {
-      try {
-        $isSubmitting = true;
-        $sponsoredRepos = await API.user.getSponsored();
-        $loadedSponsoredRepos = true;
-      } catch (e) {
-        $error = e;
-      } finally {
-        $isSubmitting = false;
-      }
-    }
     if (!$loadedTrustedRepos) {
       try {
         $isSubmitting = true;
@@ -81,30 +68,6 @@
 
 <Navigation>
   <div class="p-2">
-    {#if $sponsoredRepos.length > 0}
-      <div class="m-2 wrap">
-        {#each $sponsoredRepos as repo, key (repo.uuid)}
-          <RepoCard {repo} />
-        {/each}
-      </div>
-    {/if}
-
-    <h2 class="m-2">Find your favorite open-source projects</h2>
-    <p class="m-2">
-      Search for repositories you want to support. Only the GitHub search is
-      supported now, but you can enter a full URL (like
-      https://gitlab.com/fdroid/fdroiddata) into the field to find a repository
-      hosted elsewhere.
-    </p>
-
-    <p class="m-2">You can tag as many repositories as you want.</p>
-
-    <p class="m-2">
-      Please note that you need <Link to="/user/payments">credit</Link> on your account
-      to support projects. You can still tag them even without any balance, but the
-      project will not receive any contributions.
-    </p>
-
     <div class="m-2">
       <form class="flex" on:submit|preventDefault={handleSearch}>
         <input type="text" bind:value={search} />
@@ -118,7 +81,7 @@
       <h2 class="m-2">Results</h2>
       <div>
         {#each searchRepos as repo, key (repo.uuid)}
-          <SearchResult {repo} />
+          <AdminSearchResult {repo} />
         {/each}
       </div>
     {/if}

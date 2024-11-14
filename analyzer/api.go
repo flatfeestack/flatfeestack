@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type AnalysisRequest struct {
@@ -28,13 +29,21 @@ type AnalysisCallback struct {
 	RequestId uuid.UUID       `json:"requestId"`
 	Error     string          `json:"error,omitempty"`
 	Result    []FlatFeeWeight `json:"result"`
+	RepoId    uuid.UUID       `json:"repoid"`
 }
 
 type FlatFeeWeight struct {
-	Names  []string `json:"names"`
-	Email  string   `json:"email"`
-	Weight float64  `json:"weight"`
+	Names       []string `json:"names"`
+	Email       string   `json:"email"`
+	Weight      float64  `json:"weight"`
+	CommitCount int      `json:"commitcount"`
 }
+
+// type ContribCommitCount struct {
+// 	RepoId           uuid.UUID `json:"repoid"`
+// 	ContributerCount int       `json:"contributercount"`
+// 	CommitCount      int       `json:"commitcount"`
+// }
 
 func analyze(w http.ResponseWriter, r *http.Request) {
 	var request AnalysisRequest
@@ -65,6 +74,13 @@ func analyzeBackground(request AnalysisRequest) {
 		return
 	}
 
+	// trustValueContributersCommits, err := getTotalContributersCommits(contributionMap)
+	// if err != nil {
+	// callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "getTotalContributersCommits: " + err.Error()}, opts.BackendCallbackUrl)
+	// return
+	// }
+	// trustValueContributersCommits.RepoId = request.RepoId
+
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
 		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.BackendCallbackUrl)
@@ -74,6 +90,7 @@ func analyzeBackground(request AnalysisRequest) {
 	callbackToWebhook(AnalysisCallback{
 		RequestId: request.Id,
 		Result:    weightsMap,
+		RepoId:    request.RepoId,
 	}, opts.BackendCallbackUrl)
 
 	log.Debugf("Finished request %s\n", request.Id)

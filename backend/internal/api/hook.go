@@ -4,9 +4,10 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +45,12 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 	if errA != nil {
 		slog.Warn("Update problem",
 			slog.Any("error", errA))
+	}
+
+	errHV := manageRepoHealthMetrics(data.Result, data.RepoId)
+	if errHV != nil {
+		slog.Warn("Update problem into trustValueMetrics",
+			slog.Any("error", errHV))
 	}
 
 	slog.Info("Analysis stats",
