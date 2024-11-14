@@ -5,26 +5,26 @@ import (
 	"backend/pkg/util"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 )
 
 func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	convertedTrustValueId, err := strconv.Atoi(id)
+	var id uuid.UUID
+	id = uuid.MustParse(r.PathValue("id"))
+	//convertedTrustValueId, err := strconv.Atoi(id)
 
-	if err != nil {
-		slog.Error("Invalid user ID",
-			slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-	}
+	//if err != nil {
+	//	slog.Error("Invalid user ID",
+	//		slog.Any("error", err))
+	//	util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+	//}
 
-	trustValue, err := db.FindTrustValueById(convertedTrustValueId)
+	trustValue, err := db.FindTrustValueById(id)
 
 	if trustValue == nil {
 		slog.Error("Trust Value not found %s",
-			slog.String("id", id))
+			slog.String("id", id.String()))
 		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 	} else if err != nil {
 		slog.Error("Could not fetch trust value",
@@ -36,9 +36,9 @@ func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.TrustValueMetrics) {
-	if trustValue.RepoId == uuid.Nil {
+	if trustValue.Id == uuid.Nil {
 		slog.Error("RepoId is missing",
-			slog.String("Trust Value id", strconv.Itoa(trustValue.Id)))
+			slog.String("Trust Value id", trustValue.Id.String()))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
