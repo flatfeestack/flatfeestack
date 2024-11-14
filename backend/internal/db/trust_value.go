@@ -73,7 +73,7 @@ func FindTrustValueById(id int) (*TrustValueMetrics, error) {
 func FindTrustValueByRepoId(repoId uuid.UUID) ([]TrustValueMetrics, error) {
 	//var tv TrustValue
 	rows, err := DB.
-		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, metric_3, metric_4, metric_5 from trust_value WHERE repo_id=$1 order by created_at desc limit 1", repoId)
+		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE repo_id=$1 order by created_at desc limit 1", repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -92,4 +92,14 @@ func scanTrustValue(rows *sql.Rows) ([]TrustValueMetrics, error) {
 		trustValues = append(trustValues, tv)
 	}
 	return trustValues, nil
+}
+
+func GetAllTrustValues() ([]TrustValueMetrics, error) {
+	rows, err := DB.
+		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE repo_id=$1 order by created_at desc")
+	if err != nil {
+		return nil, err
+	}
+
+	return scanTrustValue(rows)
 }

@@ -33,9 +33,10 @@ type AnalysisCallback struct {
 }
 
 type FlatFeeWeight struct {
-	Names  []string `json:"names"`
-	Email  string   `json:"email"`
-	Weight float64  `json:"weight"`
+	Names       []string `json:"names"`
+	Email       string   `json:"email"`
+	Weight      float64  `json:"weight"`
+	CommitCount int      `json:"commitcount"`
 }
 
 type ContribCommitCount struct {

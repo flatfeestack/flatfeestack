@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name 
 );
 
 --repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
+--repo_id                     UUID,
 CREATE TABLE IF NOT EXISTS trust_value_metrics (
     id                          SERIAL PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
