@@ -23,7 +23,7 @@
     padding-top: 2rem;
     display: flex;
     flex-flow: column;
-    min-width: 12rem;
+    min-width: 14rem;
     background-color: var(--secondary-100);
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
@@ -75,19 +75,19 @@
     />
     <NavItem href="/user/badges" icon={faMedal} label="Badges" />
 
-    <NavItem
-      href="/user/admin"
-      icon={faShieldAlt}
-      label="Admin"
-      sublinks={[
-        { href: "/user/admin/test", label: "Test" },
-        { href: "/user/admin/trusted-repos", label: "Trusted Repos" },
-        {
-          href: "/user/admin/trusted-repo-assessment",
-          label: "Repo Assessment",
-        },
-      ]}
-    />
+    {#if $user.role === "admin"}
+      <NavItem href="/user/admin/test" icon={faShieldAlt} label="Test" />
+      <NavItem
+        href="/user/admin/trusted-repos"
+        icon={faShieldAlt}
+        label="Trusted Repos"
+      />
+      <NavItem
+        href="/user/admin/trusted-repo-assessment"
+        icon={faShieldAlt}
+        label="Repo Assessment"
+      />
+    {/if}
   </nav>
   <div>
     {#if $isSubmitting}<Spinner />{/if}
