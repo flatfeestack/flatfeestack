@@ -35,7 +35,7 @@ func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.TrustValueMetrics) {
+func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.RepoHealthMetrics) {
 	if trustValue.Id == uuid.Nil {
 		slog.Error("RepoId is missing",
 			slog.String("Trust Value id", trustValue.Id.String()))
@@ -83,14 +83,14 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	return nil
 }
 
-func manageInternalHealthMetrics(repoId uuid.UUID) *db.TrustValueMetrics {
+func manageInternalHealthMetrics(repoId uuid.UUID) *db.RepoHealthMetrics {
 	// get magical internal metrics
 
 	// plox mino
 	var sponsorCount, repoStarCount, repoMultiplierCount int
 	//sponsorCount, repoStarCount, repoMultiplierCount := db.GetInternalMetrics(repoid)
 
-	repoHealthMetrics := db.TrustValueMetrics{
+	repoHealthMetrics := db.RepoHealthMetrics{
 		SponsorCount:        sponsorCount,
 		RepoStarCount:       repoStarCount,
 		RepoMultiplierCount: repoMultiplierCount,
