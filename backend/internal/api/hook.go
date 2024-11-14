@@ -4,7 +4,6 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -21,7 +20,6 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	fmt.Println(data.ContribCommit)
 
 	reqId, err := uuid.Parse(data.RequestId)
 	if err != nil {
@@ -49,26 +47,10 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", errA))
 	}
 
-	/*
-		Add magical trust value update
-
-		TODO: Mino add additional functionality for the other three values
-		errTV := foobar.MinosMagicalFunction(data.ContribCommit)
-	*/
-
-	trustValueMetrics := db.TrustValueMetrics{
-		RepoId:                data.ContribCommit.RepoId,
-		ContributerCount:      data.ContribCommit.ContributerCount,
-		CommitCount:           data.ContribCommit.CommitCount,
-		SponsorCount:          0,
-		SponsorStarMultiplier: 0,
-		RepoSponsorDonated:    0,
-	}
-
-	errTV := db.InsertTrustValue(trustValueMetrics)
-	if errTV != nil {
+	errHV := manageRepoHealthMetrics(data.Result, data.RepoId)
+	if errHV != nil {
 		slog.Warn("Update problem into trustValueMetrics",
-			slog.Any("error", errTV))
+			slog.Any("error", errHV))
 	}
 
 	slog.Info("Analysis stats",

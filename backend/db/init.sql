@@ -193,25 +193,26 @@ DO $$ BEGIN
   END IF; 
 END $$;
 
-CREATE TABLE IF NOT EXISTS trust_value_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
+CREATE TABLE IF NOT EXISTS repo_health_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
     id                          UUID PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     th_contributer_count        trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
     th_commit_count             trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
     th_sponsor_donation         trust_value_threshold_bound CHECK ((th_sponsor_donation).lower_bound <= (th_sponsor_donation).upper_bound),
-    th_sponsor_star_multiplier  trust_value_threshold_bound CHECK ((th_sponsor_star_multiplier).lower_bound <= (th_sponsor_star_multiplier).upper_bound),
-    th_repo_sponsor_donated     trust_value_threshold_bound CHECK ((th_repo_sponsor_donated).lower_bound <= (th_repo_sponsor_donated).upper_bound)
+    th_repo_star_count          trust_value_threshold_bound CHECK ((th_sponsor_star_multiplier).lower_bound <= (th_sponsor_star_multiplier).upper_bound),
+    th_repo_multiplier_count    trust_value_threshold_bound CHECK ((th_sponsor_star_multiplier).lower_bound <= (th_sponsor_star_multiplier).upper_bound),
 );
 
 --repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
 --repo_id                     UUID,
-CREATE TABLE IF NOT EXISTS trust_value_metrics (
+CREATE TABLE IF NOT EXISTS repo_health_metrics (
     id                          UUID PRIMARY KEY,
     created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
     contributer_count           NUMERIC(78),
     commit_count                NUMERIC(78),
     sponsor_donation            NUMERIC(78),
-    sponsor_star_multiplier     NUMERIC(78),
-    repo_sponsor_donated        NUMERIC(78)
+    repo_star_count             NUMERIC(78),
+    repo_multplier_count        NUMERIC(78),
+    repo_weight                 NUMERIC(78)
 );

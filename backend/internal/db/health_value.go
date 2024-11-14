@@ -9,14 +9,15 @@ import (
 )
 
 type TrustValueMetrics struct {
-	Id                    int       `json:"id"`
-	RepoId                uuid.UUID `json:"uuid"`
-	CreatedAt             time.Time `json:"createdat"`
-	ContributerCount      int       `json:"contributercount"`
-	CommitCount           int       `json:"commitcount"`
-	SponsorCount          int       `json:"sponsorcount"`
-	SponsorStarMultiplier int       `json:"sponsorstarmultiplier"`
-	RepoSponsorDonated    int       `json:"reposponsordonated"`
+	Id                  uuid.UUID `json:"id"`
+	RepoId              uuid.UUID `json:"uuid"`
+	CreatedAt           time.Time `json:"createdat"`
+	ContributerCount    int       `json:"contributercount"`
+	CommitCount         int       `json:"commitcount"`
+	SponsorCount        int       `json:"sponsorcount"`
+	RepoStarCount       int       `json:"repostarcount"`
+	RepoMultiplierCount int       `json:"repomultipliercount"`
+	RepoWeight          float64   `json:"reposponsordonated"`
 }
 
 // This works, do you understand, Mino?
