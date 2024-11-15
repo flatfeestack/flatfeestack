@@ -249,9 +249,9 @@ func addInitialUserWithMeta(username string, password string, metaSystem *string
 }
 
 func addInitialUsers() {
-	if opts.Users != "" {
+	if cfg.Users != "" {
 		//add user for development
-		users := strings.Split(opts.Users, ";")
+		users := strings.Split(cfg.Users, ";")
 		for _, user := range users {
 			userPwMeta := strings.SplitN(user, ":", 3)
 

@@ -394,9 +394,9 @@ func mainTest(args ...string) *http.ServeMux {
 	os.Args = append(os.Args, args...)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError) //flags are now reset
 
-	opts = NewOpts()
+	cfg = NewOpts()
 	var err error
-	err = InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
+	err = InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}

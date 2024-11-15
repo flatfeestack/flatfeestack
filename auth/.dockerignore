@@ -1,0 +1,11 @@
+.git
+.gitignore
+.idea
+LICENSE
+README.md
+.example.env
+.env
+Dockerfile
+Dockerfile.dev
+api.http
+

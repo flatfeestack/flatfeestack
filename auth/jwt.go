@@ -177,7 +177,7 @@ func encodeAccessToken(subject string, scope string, audience string, issuer str
 	if err != nil {
 		return "", fmt.Errorf("JWT access token %v failed: %v", tokenClaims.Subject, err)
 	}
-	if opts.Dev != "" {
+	if cfg.Dev != "" {
 		slog.Debug("Access token", slog.String("accessToken", accessTokenString))
 	}
 	return accessTokenString, nil
@@ -209,7 +209,7 @@ func encodeCodeToken(subject string, codeChallenge string, codeChallengeMethod s
 	if err != nil {
 		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
 	}
-	if opts.Dev != "" {
+	if cfg.Dev != "" {
 		slog.Debug("Code token", slog.String("codeToken", codeToken))
 	}
 	return codeToken, cc.ExpiresAt, nil
@@ -246,7 +246,7 @@ func checkRefresh(email string, token string) (string, string, int64, error) {
 	}
 
 	if result.refreshToken == "" || token != result.refreshToken {
-		if opts.Dev != "" {
+		if cfg.Dev != "" {
 			slog.Warn("refresh token mismatch, not the same", slog.String("token", token), slog.String("result.refreshToken", result.refreshToken))
 		}
 		return "", "", 0, fmt.Errorf("ERR-refresh-05, refresh token mismatch")
@@ -273,7 +273,7 @@ func encodeAccessTokens(email string, metaSystem *string) (string, error) {
 		return "", fmt.Errorf("cannot encode system meta in encodeTokens for %v, %v", email, err)
 	}
 
-	encodedAccessToken, err := encodeAccessToken(email, opts.Scope, opts.Audience, opts.Issuer, jsonMapSystem)
+	encodedAccessToken, err := encodeAccessToken(email, cfg.Scope, cfg.Audience, cfg.Issuer, jsonMapSystem)
 	if err != nil {
 		return "", fmt.Errorf("ERR-refresh-06, cannot set access token for %v, %v", email, err)
 	}
@@ -282,7 +282,7 @@ func encodeAccessTokens(email string, metaSystem *string) (string, error) {
 }
 
 func encodeRefreshTokens(email string, refreshToken string) (string, int64, error) {
-	if opts.ResetRefresh {
+	if cfg.ResetRefresh {
 		var err error
 		refreshToken, err = resetRefreshToken(refreshToken)
 		if err != nil {
@@ -353,7 +353,7 @@ func encodeRefreshToken(subject string, token string) (string, int64, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
 	}
-	if opts.Dev != "" {
+	if cfg.Dev != "" {
 		slog.Debug("Refresh token", slog.String("refreshToken", refreshToken))
 	}
 	return refreshToken, rc.ExpiresAt, nil

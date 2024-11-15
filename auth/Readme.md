@@ -1,4 +1,4 @@
-# FastAuth
+# Auth
 
 This is a simple authentication server that can also be used for local development 
 with reasonable defaults to kickstart the local development. This server is meant to 
@@ -17,15 +17,15 @@ make
 To run with reasonable dev settings, execute:
 
 ```
-./fastauth -dev myhs256pw
+./auth -dev myhs256pw
 ```
 
 This inserts the user with the name "user" and the password "pass". 
 For **non** PKCE flow, open in browser [http://localhost:8080/oauth/authorize?response_type=code](http://localhost:8080/oauth/authorize?response_type=code). 
-The token will use RS256, to use HS256, start fastauth as follows:
+The token will use RS256, to use HS256, start auth as follows:
 
 ```
-./fastauth -dev test -rs256 false -ed256 false
+./auth -dev test -rs256 false -ed256 false
 ```
 
 You should see in your browser the access token:
@@ -71,6 +71,6 @@ And we will get the access and refresh token
 # Run with docker
 
 ```
-docker build -t fastauth .
-docker run -it --rm fastauth
+docker build -t auth .
+docker run -it --rm auth
 ```

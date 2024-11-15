@@ -7,7 +7,6 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"github.com/xlzd/gotp"
 	"html/template"
@@ -64,9 +63,9 @@ func newTOTP(secret string) *gotp.TOTP {
 }
 
 func basicAuth(r *http.Request) (string, error) {
-	if opts.OAuthUser != "" || opts.OAuthPass != "" {
+	if cfg.OAuthUser != "" || cfg.OAuthPass != "" {
 		user, pass, ok := r.BasicAuth()
-		if !ok || user != opts.OAuthUser || pass != opts.OAuthPass {
+		if !ok || user != cfg.OAuthUser || pass != cfg.OAuthPass {
 			clientId, err := param("client_id", r)
 			if err != nil {
 				return "", fmt.Errorf("no client_id %v", err)
@@ -75,7 +74,7 @@ func basicAuth(r *http.Request) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("no client_secret %v", err)
 			}
-			if clientId != opts.OAuthUser || clientSecret != opts.OAuthPass {
+			if clientId != cfg.OAuthUser || clientSecret != cfg.OAuthPass {
 				return "", fmt.Errorf("no match, user/pass %v", err)
 			}
 		}
@@ -85,7 +84,7 @@ func basicAuth(r *http.Request) (string, error) {
 }
 
 func param(name string, r *http.Request) (string, error) {
-	n1 := mux.Vars(r)[name]
+	n1 := r.PathValue(name)
 	n2, err := url.QueryUnescape(r.URL.Query().Get(name))
 	if err != nil {
 		return "", err

@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	opts         *Opts
+	cfg          *Config
 	jwtKey       []byte
 	privRSA      *rsa.PrivateKey
 	privRSAKid   string
@@ -108,7 +108,7 @@ type OAuthSystem struct {
 	Expires     string `json:"expires_in"`
 }
 
-type Opts struct {
+type Config struct {
 	Env             string
 	Dev             string
 	Issuer          string
@@ -154,48 +154,48 @@ func hash(s string) int64 {
 	return int64(h.Sum64())
 }
 
-func NewOpts() *Opts {
-	opts := &Opts{}
-	flag.StringVar(&opts.Env, "env", LookupEnv("ENV"), "ENV variable")
-	flag.StringVar(&opts.Dev, "dev", LookupEnv("DEV"), "Dev settings with initial secret")
-	flag.StringVar(&opts.Issuer, "issuer", LookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
-	flag.IntVar(&opts.Port, "port", LookupEnvInt("PORT",
+func parseFLag() {
+	cfg = &Config{}
+	flag.StringVar(&cfg.Env, "env", LookupEnv("ENV"), "ENV variable")
+	flag.StringVar(&cfg.Dev, "dev", LookupEnv("DEV"), "Dev settings with initial secret")
+	flag.StringVar(&cfg.Issuer, "issuer", LookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
+	flag.IntVar(&cfg.Port, "port", LookupEnvInt("PORT",
 		8080), "listening HTTP port")
-	flag.StringVar(&opts.DBPath, "db-path", LookupEnv("DB_PATH",
-		"./fastauth.db"), "DB path")
-	flag.StringVar(&opts.DBDriver, "db-driver", LookupEnv("DB_DRIVER",
+	flag.StringVar(&cfg.DBPath, "db-path", LookupEnv("DB_PATH",
+		"./auth.db"), "DB path")
+	flag.StringVar(&cfg.DBDriver, "db-driver", LookupEnv("DB_DRIVER",
 		"sqlite3"), "DB driver")
-	flag.StringVar(&opts.DBScripts, "db-scripts", LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
-	flag.StringVar(&opts.EmailFrom, "email-from", LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
-	flag.StringVar(&opts.EmailFromName, "email-from-name", LookupEnv("EMAIL_FROM_NAME",
-		"email@fastauth"), "Email from name, default is a empty string")
-	flag.StringVar(&opts.EmailUrl, "email-url", LookupEnv("EMAIL_URL"), "Email service URL")
-	flag.StringVar(&opts.EmailToken, "email-token", LookupEnv("EMAIL_TOKEN"), "Email service token")
-	flag.StringVar(&opts.EmailLinkPrefix, "email-prefix", LookupEnv("EMAIL_PREFIX"), "Email link prefix")
-	flag.StringVar(&opts.Audience, "audience", LookupEnv("AUDIENCE"), "Audience, default in dev is my-audience")
-	flag.IntVar(&opts.ExpireAccess, "expire-access", LookupEnvInt("EXPIRE_ACCESS",
+	flag.StringVar(&cfg.DBScripts, "db-scripts", LookupEnv("DB_SCRIPTS"), "DB scripts to run at startup")
+	flag.StringVar(&cfg.EmailFrom, "email-from", LookupEnv("EMAIL_FROM"), "Email from, default is info@flatfeestack.io")
+	flag.StringVar(&cfg.EmailFromName, "email-from-name", LookupEnv("EMAIL_FROM_NAME",
+		"email@auth"), "Email from name, default is a empty string")
+	flag.StringVar(&cfg.EmailUrl, "email-url", LookupEnv("EMAIL_URL"), "Email service URL")
+	flag.StringVar(&cfg.EmailToken, "email-token", LookupEnv("EMAIL_TOKEN"), "Email service token")
+	flag.StringVar(&cfg.EmailLinkPrefix, "email-prefix", LookupEnv("EMAIL_PREFIX"), "Email link prefix")
+	flag.StringVar(&cfg.Audience, "audience", LookupEnv("AUDIENCE"), "Audience, default in dev is my-audience")
+	flag.IntVar(&cfg.ExpireAccess, "expire-access", LookupEnvInt("EXPIRE_ACCESS",
 		30*60), "Access token expiration in seconds, default 30min")
-	flag.IntVar(&opts.ExpireRefresh, "expire-refresh", LookupEnvInt("EXPIRE_REFRESH",
+	flag.IntVar(&cfg.ExpireRefresh, "expire-refresh", LookupEnvInt("EXPIRE_REFRESH",
 		180*24*60*60), "Refresh token expiration in seconds, default 6month")
-	flag.IntVar(&opts.ExpireCode, "expire-code", LookupEnvInt("EXPIRE_CODE",
+	flag.IntVar(&cfg.ExpireCode, "expire-code", LookupEnvInt("EXPIRE_CODE",
 		60), "Authtoken flow expiration in seconds, default 1min")
-	flag.StringVar(&opts.HS256, "hs256", LookupEnv("HS256"), "HS256 key")
-	flag.StringVar(&opts.RS256, "rs256", LookupEnv("RS256"), "RS256 key")
-	flag.StringVar(&opts.EdDSA, "eddsa", LookupEnv("EDDSA"), "EdDSA key")
-	flag.StringVar(&opts.OAuthUser, "oauth-user", LookupEnv("OAUTH_USER"), "Basic auth username for the server meta data")
-	flag.StringVar(&opts.OAuthPass, "oauth-pass", LookupEnv("OAUTH_PASS"), "Basic auth password for the server meta data")
-	flag.BoolVar(&opts.ResetRefresh, "reset-refresh", LookupEnv("RESET_REFRESH") != "", "Reset refresh token when setting the token")
-	flag.StringVar(&opts.Users, "users", LookupEnv("USERS"), "add these initial users. E.g, -users tom@test.ch:pw123;test@test.ch:123pw")
-	flag.BoolVar(&opts.AdminEndpoints, "admin-endpoints", LookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.UserEndpoints, "user-endpoints", LookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.OauthEndpoints, "oauth-enpoints", LookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&opts.DetailedError, "details", LookupEnv("DETAILS") != "", "Enable detailed errors")
-	flag.StringVar(&opts.Redirects, "redir", LookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
-	flag.BoolVar(&opts.PasswordFlow, "pwflow", LookupEnv("PWFLOW") != "", "enable password flow, default disabled")
-	flag.StringVar(&opts.Scope, "scope", LookupEnv("SCOPE"), "scope, default in dev is my-scope")
-	flag.StringVar(&opts.LogPath, "log", LookupEnv("LOG",
+	flag.StringVar(&cfg.HS256, "hs256", LookupEnv("HS256"), "HS256 key")
+	flag.StringVar(&cfg.RS256, "rs256", LookupEnv("RS256"), "RS256 key")
+	flag.StringVar(&cfg.EdDSA, "eddsa", LookupEnv("EDDSA"), "EdDSA key")
+	flag.StringVar(&cfg.OAuthUser, "oauth-user", LookupEnv("OAUTH_USER"), "Basic auth username for the server meta data")
+	flag.StringVar(&cfg.OAuthPass, "oauth-pass", LookupEnv("OAUTH_PASS"), "Basic auth password for the server meta data")
+	flag.BoolVar(&cfg.ResetRefresh, "reset-refresh", LookupEnv("RESET_REFRESH") != "", "Reset refresh token when setting the token")
+	flag.StringVar(&cfg.Users, "users", LookupEnv("USERS"), "add these initial users. E.g, -users tom@test.ch:pw123;test@test.ch:123pw")
+	flag.BoolVar(&cfg.AdminEndpoints, "admin-endpoints", LookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&cfg.UserEndpoints, "user-endpoints", LookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&cfg.OauthEndpoints, "oauth-enpoints", LookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
+	flag.BoolVar(&cfg.DetailedError, "details", LookupEnv("DETAILS") != "", "Enable detailed errors")
+	flag.StringVar(&cfg.Redirects, "redir", LookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
+	flag.BoolVar(&cfg.PasswordFlow, "pwflow", LookupEnv("PWFLOW") != "", "enable password flow, default disabled")
+	flag.StringVar(&cfg.Scope, "scope", LookupEnv("SCOPE"), "scope, default in dev is my-scope")
+	flag.StringVar(&cfg.LogPath, "log", LookupEnv("LOG",
 		os.TempDir()+"/ffs"), "Log directory, default is /tmp/ffs")
-	flag.StringVar(&opts.Admins, "admins", LookupEnv("ADMINS"), "Admins")
+	flag.StringVar(&cfg.Admins, "admins", LookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -204,7 +204,7 @@ func NewOpts() *Opts {
 	flag.Parse()
 
 	//set defaults, be explicit
-	if opts.Env == "local" || opts.Env == "dev" {
+	if cfg.Env == "local" || cfg.Env == "dev" {
 		debug = true
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	} else {
@@ -212,33 +212,33 @@ func NewOpts() *Opts {
 	}
 
 	//set defaults
-	if opts.Dev != "" {
-		if opts.Scope == "" {
-			opts.Scope = "my-scope"
+	if cfg.Dev != "" {
+		if cfg.Scope == "" {
+			cfg.Scope = "my-scope"
 		}
-		if opts.Audience == "" {
-			opts.Audience = "my-audience"
+		if cfg.Audience == "" {
+			cfg.Audience = "my-audience"
 		}
-		if opts.Issuer == "" {
-			opts.Issuer = "my-issuer"
+		if cfg.Issuer == "" {
+			cfg.Issuer = "my-issuer"
 		}
-		if opts.EmailUrl == "" {
-			opts.EmailUrl = "http://localhost:8080/send/email/{email}/{token}"
+		if cfg.EmailUrl == "" {
+			cfg.EmailUrl = "http://localhost:8080/send/email/{email}/{token}"
 		}
 
-		if strings.ToLower(opts.RS256) == "true" {
+		if strings.ToLower(cfg.RS256) == "true" {
 			//work around this issue: https://github.com/golang/go/issues/38548
 			//we want for testing to have the same key, I don't care for any database keys
-			rsaPrivKey1, err := rsa.GenerateKey(rnd.New(rnd.NewSource(hash(opts.Dev))), 2048)
+			rsaPrivKey1, err := rsa.GenerateKey(rnd.New(rnd.NewSource(hash(cfg.Dev))), 2048)
 			if err != nil {
 				slog.Error("cannot generate rsa key", slog.Any("error", err))
 			}
-			rsaPrivKey2, err := rsa.GenerateKey(rnd.New(rnd.NewSource(hash(opts.Dev))), 2048)
+			rsaPrivKey2, err := rsa.GenerateKey(rnd.New(rnd.NewSource(hash(cfg.Dev))), 2048)
 			if err != nil {
 				slog.Error("cannot generate rsa key", slog.Any("error", err))
 			}
 			for rsaPrivKey1.Equal(rsaPrivKey2) {
-				rsaPrivKey2, err = rsa.GenerateKey(rnd.New(rnd.NewSource(hash(opts.Dev))), 2048)
+				rsaPrivKey2, err = rsa.GenerateKey(rnd.New(rnd.NewSource(hash(cfg.Dev))), 2048)
 				if err != nil {
 					slog.Error("cannot generate rsa key", slog.Any("error", err))
 				}
@@ -255,58 +255,58 @@ func NewOpts() *Opts {
 			if err != nil {
 				slog.Error("cannot generate rsa key", slog.Any("error", err))
 			}
-			opts.RS256 = base32.StdEncoding.EncodeToString(encPrivRSA)
-		} else if strings.ToLower(opts.EdDSA) == "true" {
-			_, edPrivKey, err := ed25519.GenerateKey(rnd.New(rnd.NewSource(hash(opts.Dev))))
+			cfg.RS256 = base32.StdEncoding.EncodeToString(encPrivRSA)
+		} else if strings.ToLower(cfg.EdDSA) == "true" {
+			_, edPrivKey, err := ed25519.GenerateKey(rnd.New(rnd.NewSource(hash(cfg.Dev))))
 			if err != nil {
 				slog.Error("cannot generate eddsa key", slog.Any("error", err))
 			}
-			opts.EdDSA = base32.StdEncoding.EncodeToString(edPrivKey)
-		} else if strings.ToLower(opts.HS256) != "true" && opts.HS256 != "" {
-			slog.Warn("DEV mode enabled, ignoring key", slog.String("opts.HS256", opts.HS256))
+			cfg.EdDSA = base32.StdEncoding.EncodeToString(edPrivKey)
+		} else if strings.ToLower(cfg.HS256) != "true" && cfg.HS256 != "" {
+			slog.Warn("DEV mode enabled, ignoring key", slog.String("cfg.HS256", cfg.HS256))
 		} else {
 			h := sha256.New()
-			h.Write([]byte(opts.Dev))
+			h.Write([]byte(cfg.Dev))
 			jwtKey = h.Sum(nil)
-			opts.HS256 = base32.StdEncoding.EncodeToString(jwtKey)
+			cfg.HS256 = base32.StdEncoding.EncodeToString(jwtKey)
 		}
-		if opts.OAuthUser == "" {
-			opts.OAuthUser = "clientId"
+		if cfg.OAuthUser == "" {
+			cfg.OAuthUser = "clientId"
 		}
-		if opts.OAuthPass == "" {
-			opts.OAuthPass = "secret"
+		if cfg.OAuthPass == "" {
+			cfg.OAuthPass = "secret"
 		}
-		opts.AdminEndpoints = true
-		opts.OauthEndpoints = true
-		opts.UserEndpoints = true
-		opts.DetailedError = true
-		opts.PasswordFlow = true
+		cfg.AdminEndpoints = true
+		cfg.OauthEndpoints = true
+		cfg.UserEndpoints = true
+		cfg.DetailedError = true
+		cfg.PasswordFlow = true
 
-		if opts.Users == "" {
-			opts.Users = "user:pass"
+		if cfg.Users == "" {
+			cfg.Users = "user:pass"
 		}
 
-		slog.Debug("DEV mode active, key is %v, hex(%v)", slog.String("opts.Dev", opts.Dev), slog.String("opts.HS256", opts.HS256))
-		slog.Debug("DEV mode active, rsa is hex(%v)", slog.String("opts.RS256", opts.RS256))
-		slog.Debug("DEV mode active, eddsa is hex(%v)", slog.String("opts.EdDSA", opts.EdDSA))
+		slog.Debug("DEV mode active, key is %v, hex(%v)", slog.String("cfg.Dev", cfg.Dev), slog.String("cfg.HS256", cfg.HS256))
+		slog.Debug("DEV mode active, rsa is hex(%v)", slog.String("cfg.RS256", cfg.RS256))
+		slog.Debug("DEV mode active, eddsa is hex(%v)", slog.String("cfg.EdDSA", cfg.EdDSA))
 	}
 
-	admins = strings.Split(opts.Admins, ";")
-	if opts.OAuthUser != "" {
-		admins = append(admins, opts.OAuthUser)
+	admins = strings.Split(cfg.Admins, ";")
+	if cfg.OAuthUser != "" {
+		admins = append(admins, cfg.OAuthUser)
 	}
 
 	// Check that exactly one of HS256, RS256, or EdDSA is set.
 	count := 0
-	if opts.HS256 != "" {
+	if cfg.HS256 != "" {
 		count += 1
 	}
 
-	if opts.RS256 != "" {
+	if cfg.RS256 != "" {
 		count += 1
 	}
 
-	if opts.EdDSA != "" {
+	if cfg.EdDSA != "" {
 		count += 1
 	}
 	if count != 1 {
@@ -315,22 +315,22 @@ func NewOpts() *Opts {
 		os.Exit(1)
 	}
 
-	if opts.HS256 != "" {
+	if cfg.HS256 != "" {
 		var err error
-		jwtKey, err = base32.StdEncoding.DecodeString(opts.HS256)
+		jwtKey, err = base32.StdEncoding.DecodeString(cfg.HS256)
 		if err != nil {
 			slog.Error("cannot hash", slog.Any("error", err))
 		}
 	}
 
-	if opts.RS256 != "" {
-		rsaDec, err := base32.StdEncoding.DecodeString(opts.RS256)
+	if cfg.RS256 != "" {
+		rsaDec, err := base32.StdEncoding.DecodeString(cfg.RS256)
 		if err != nil {
-			slog.Error("cannot decode", slog.String("opts.RS256", opts.RS256))
+			slog.Error("cannot decode", slog.String("cfg.RS256", cfg.RS256))
 		}
 		i, err := x509.ParsePKCS8PrivateKey(rsaDec)
 		if err != nil {
-			slog.Error("cannot create private key", slog.String("rsaDec", opts.RS256))
+			slog.Error("cannot create private key", slog.String("rsaDec", cfg.RS256))
 		}
 		privRSA = i.(*rsa.PrivateKey)
 		k := jose.JSONWebKey{Key: privRSA.Public()}
@@ -342,10 +342,10 @@ func NewOpts() *Opts {
 		slog.Info("kid", slog.String("privRSAKid", privRSAKid))
 	}
 
-	if opts.EdDSA != "" {
-		eddsa, err := base32.StdEncoding.DecodeString(opts.EdDSA)
+	if cfg.EdDSA != "" {
+		eddsa, err := base32.StdEncoding.DecodeString(cfg.EdDSA)
 		if err != nil {
-			slog.Error("cannot decode", slog.String("opts.EdDSA", opts.EdDSA))
+			slog.Error("cannot decode", slog.String("cfg.EdDSA", cfg.EdDSA))
 		}
 		privEdDSA0 := ed25519.PrivateKey(eddsa)
 		privEdDSA = &privEdDSA0
@@ -357,11 +357,9 @@ func NewOpts() *Opts {
 		privEdDSAKid = hex.EncodeToString(kid)
 	}
 
-	tokenExp = time.Second * time.Duration(opts.ExpireAccess)
-	refreshExp = time.Second * time.Duration(opts.ExpireRefresh)
-	codeExp = time.Second * time.Duration(opts.ExpireCode)
-
-	return opts
+	tokenExp = time.Second * time.Duration(cfg.ExpireAccess)
+	refreshExp = time.Second * time.Duration(cfg.ExpireRefresh)
+	codeExp = time.Second * time.Duration(cfg.ExpireCode)
 }
 
 func checkEmailPassword(email string, password string) (*dbRes, string, error) {
@@ -415,7 +413,7 @@ func middlewareJwtAdminLog(handlerFunc func(http.ResponseWriter, *http.Request, 
 func setupRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
-	if opts.UserEndpoints {
+	if cfg.UserEndpoints {
 		router.HandleFunc("POST /login", middlewareLog(login))
 		router.HandleFunc("POST /refresh", middlewareLog(refresh))
 		router.HandleFunc("POST /signup", middlewareLog(signup))
@@ -443,19 +441,19 @@ func setupRouter() *http.ServeMux {
 		router.HandleFunc("POST /admin/timewarp/{hours}", middlewareJwtAdminLog(timeWarp))
 	}
 
-	if opts.OauthEndpoints {
+	if cfg.OauthEndpoints {
 		router.HandleFunc("POST /oauth/login", middlewareLog(login))
 		router.HandleFunc("POST /oauth/token", middlewareLog(oauth))
 		router.HandleFunc("POST /oauth/revoke", middlewareLog(revoke))
 		router.HandleFunc("GET /oauth/authorize", middlewareLog(authorize))
 		//convenience function
-		if opts.Env == "dev" || opts.Env == "local" {
+		if cfg.Env == "dev" || cfg.Env == "local" {
 			router.HandleFunc("GET /", middlewareLog(authorize))
 		}
 		router.HandleFunc("GET /.well-known/jwks.json", middlewareLog(jwkFunc))
 	}
 
-	if opts.AdminEndpoints {
+	if cfg.AdminEndpoints {
 		router.HandleFunc("POST /users/usernames/{email}/cancellation", middlewareJwtAdminLog(deleteUser))
 		router.HandleFunc("PATCH /users/usernames/{email}/attributes", middlewareJwtAdminLog(updateUser))
 		router.HandleFunc("POST /admin/login-as/{email}", middlewareJwtAdminLog(asUser))
@@ -476,7 +474,7 @@ func main() {
 		slog.Info("Could not find .env file, using defaults")
 	}
 
-	opts = NewOpts()
+	parseFLag()
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -485,7 +483,7 @@ func main() {
 		slog.Info("could not display banner...")
 	}
 
-	err = InitDb(opts.DBDriver, opts.DBPath, opts.DBScripts)
+	err = InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
 	if err != nil {
 		slog.Error("DB not initialized",
 			slog.Any("error", err))
@@ -498,7 +496,7 @@ func main() {
 	router := setupRouter()
 
 	s := &http.Server{
-		Addr:         ":" + strconv.Itoa(opts.Port),
+		Addr:         ":" + strconv.Itoa(cfg.Port),
 		Handler:      router,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,

@@ -186,7 +186,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 
 	if u != nil {
 		//user already exists, send email to direct him to the invitations
-		params["url"] = opts.EmailLinkPrefix + "/user/invitations"
+		params["url"] = cfg.EmailLinkPrefix + "/user/invitations"
 		sendgridRequest := PrepareEmail(email, params,
 			KeyInviteOld, "You have been invited by "+claims.Subject,
 			"Click on this link to see your invitation: "+params["url"],
@@ -194,15 +194,15 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		go func() {
 			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
-				Url:             opts.EmailUrl,
-				EmailFromName:   opts.EmailFromName,
-				EmailFrom:       opts.EmailFrom,
-				EmailToken:      opts.EmailToken,
+				Url:             cfg.EmailUrl,
+				EmailFromName:   cfg.EmailFromName,
+				EmailFrom:       cfg.EmailFrom,
+				EmailToken:      cfg.EmailToken,
 			}
 			err = SendEmail(request)
 			if err != nil {
 				slog.Info("send email failed",
-					slog.String("emailUrl", opts.EmailUrl),
+					slog.String("emailUrl", cfg.EmailUrl),
 					slog.Any("error", err))
 			}
 		}()
@@ -234,7 +234,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 	err = insertUser(email, nil, emailToken, refreshToken, flowInvitation, timeNow())
 	if err != nil {
 		slog.Info("could not insert user", slog.Any("error", err))
-		params["url"] = opts.EmailLinkPrefix + "/login"
+		params["url"] = cfg.EmailLinkPrefix + "/login"
 
 		sendgridRequest := PrepareEmail(email, params,
 			KeyLogin, "You have been invited again by "+claims.Subject,
@@ -244,15 +244,15 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		go func() {
 			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
-				Url:             opts.EmailUrl,
-				EmailFromName:   opts.EmailFromName,
-				EmailFrom:       opts.EmailFrom,
-				EmailToken:      opts.EmailToken,
+				Url:             cfg.EmailUrl,
+				EmailFromName:   cfg.EmailFromName,
+				EmailFrom:       cfg.EmailFrom,
+				EmailToken:      cfg.EmailToken,
 			}
 			err = SendEmail(request)
 			if err != nil {
 				slog.Info("send email failed",
-					slog.String("emailUrl", opts.EmailUrl),
+					slog.String("emailUrl", cfg.EmailUrl),
 					slog.Any("error", err))
 			}
 		}()
@@ -261,7 +261,7 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		params["url"] = opts.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
+		params["url"] = cfg.EmailLinkPrefix + "/confirm/invite/" + url.QueryEscape(email) + "/" + emailToken + "/" + claims.Subject
 
 		sendgridRequest := PrepareEmail(email, params,
 			KeyInvite, "You have been invited by "+claims.Subject,
@@ -271,20 +271,20 @@ func invite(w http.ResponseWriter, r *http.Request, claims *TokenClaims) {
 		go func() {
 			request := SendEmailRequest{
 				SendgridRequest: sendgridRequest,
-				Url:             opts.EmailUrl,
-				EmailFromName:   opts.EmailFromName,
-				EmailFrom:       opts.EmailFrom,
-				EmailToken:      opts.EmailToken,
+				Url:             cfg.EmailUrl,
+				EmailFromName:   cfg.EmailFromName,
+				EmailFrom:       cfg.EmailFrom,
+				EmailToken:      cfg.EmailToken,
 			}
 			err = SendEmail(request)
 			if err != nil {
 				slog.Info("send email failed",
-					slog.String("emailUrl", opts.EmailUrl),
+					slog.String("emailUrl", cfg.EmailUrl),
 					slog.Any("error", err))
 			}
 		}()
 
-		if opts.Env == "dev" || opts.Env == "local" {
+		if cfg.Env == "dev" || cfg.Env == "local" {
 			dev := `{"url":"` + params["url"] + `"}`
 			writeJsonBytes(w, []byte(dev))
 		} else {
@@ -411,7 +411,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	params := map[string]string{}
 	params["token"] = emailToken
 	params["email"] = cred.Email
-	params["url"] = opts.EmailLinkPrefix + "/confirm/signup/" + url.QueryEscape(cred.Email) + "/" + emailToken + urlParams
+	params["url"] = cfg.EmailLinkPrefix + "/confirm/signup/" + url.QueryEscape(cred.Email) + "/" + emailToken + urlParams
 	params["lang"] = lang(r)
 
 	sendgridRequest := PrepareEmail(cred.Email, params,
@@ -422,20 +422,20 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		request := SendEmailRequest{
 			SendgridRequest: sendgridRequest,
-			Url:             opts.EmailUrl,
-			EmailFromName:   opts.EmailFromName,
-			EmailFrom:       opts.EmailFrom,
-			EmailToken:      opts.EmailToken,
+			Url:             cfg.EmailUrl,
+			EmailFromName:   cfg.EmailFromName,
+			EmailFrom:       cfg.EmailFrom,
+			EmailToken:      cfg.EmailToken,
 		}
 		err = SendEmail(request)
 		if err != nil {
 			slog.Info("send email failed",
-				slog.String("emailUrl", opts.EmailUrl),
+				slog.String("emailUrl", cfg.EmailUrl),
 				slog.Any("error", err))
 		}
 	}()
 
-	if opts.Env == "dev" || opts.Env == "local" {
+	if cfg.Env == "dev" || cfg.Env == "local" {
 		dev := `{"url":"` + params["url"] + `"}`
 		writeJsonBytes(w, []byte(dev))
 	} else {
@@ -580,7 +580,7 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 
 	params := map[string]string{}
 	params["email"] = email
-	params["url"] = opts.EmailLinkPrefix + "/confirm/reset/" + email + "/" + forgetEmailToken
+	params["url"] = cfg.EmailLinkPrefix + "/confirm/reset/" + email + "/" + forgetEmailToken
 	params["lang"] = lang(r)
 
 	sendgridRequest := PrepareEmail(email, params,
@@ -591,15 +591,15 @@ func resetEmail(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		request := SendEmailRequest{
 			SendgridRequest: sendgridRequest,
-			Url:             opts.EmailUrl,
-			EmailFromName:   opts.EmailFromName,
-			EmailFrom:       opts.EmailFrom,
-			EmailToken:      opts.EmailToken,
+			Url:             cfg.EmailUrl,
+			EmailFromName:   cfg.EmailFromName,
+			EmailFrom:       cfg.EmailFrom,
+			EmailToken:      cfg.EmailToken,
 		}
 		err = SendEmail(request)
 		if err != nil {
 			slog.Info("send email failed",
-				slog.String("emailUrl", opts.EmailUrl))
+				slog.String("emailUrl", cfg.EmailUrl))
 		}
 	}()
 
@@ -687,7 +687,7 @@ func setupTOTP(w http.ResponseWriter, _ *http.Request, claims *TokenClaims) {
 
 	totp := newTOTP(secret)
 	p := ProvisioningUri{}
-	p.Uri = totp.ProvisioningUri(claims.Subject, opts.Issuer)
+	p.Uri = totp.ProvisioningUri(claims.Subject, cfg.Issuer)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -856,7 +856,7 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		encodedAccessToken, err := encodeAccessToken(user, opts.Scope, opts.Audience, opts.Issuer, nil)
+		encodedAccessToken, err := encodeAccessToken(user, cfg.Scope, cfg.Audience, cfg.Issuer, nil)
 		if err != nil {
 			slog.Error("Basic auth failed", slog.Any("error", err))
 			WriteErrorf(w, http.StatusBadRequest, BasicAuthFailedMessage)
@@ -930,7 +930,7 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 
 		writeOAuth(w, result)
 	case "password":
-		if !opts.PasswordFlow {
+		if !cfg.PasswordFlow {
 			slog.Error("no username")
 			WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return

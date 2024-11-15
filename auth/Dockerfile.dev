@@ -1,0 +1,8 @@
+FROM golang:1.23-alpine AS base
+RUN apk add --no-cache delve
+RUN go install github.com/air-verse/air@v1.61.1 && go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+WORKDIR /app
+#cache dependencies
+COPY go.* ./
+RUN go mod download
+ENTRYPOINT ["air"]
