@@ -199,8 +199,8 @@ CREATE TABLE IF NOT EXISTS repo_health_threshold (  -- Fixed typo in table name 
     th_contributer_count        trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
     th_commit_count             trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
     th_sponsor_donation         trust_value_threshold_bound CHECK ((th_sponsor_donation).lower_bound <= (th_sponsor_donation).upper_bound),
-    th_repo_star_count          trust_value_threshold_bound CHECK ((th_sponsor_star_multiplier).lower_bound <= (th_sponsor_star_multiplier).upper_bound),
-    th_repo_multiplier_count    trust_value_threshold_bound CHECK ((th_sponsor_star_multiplier).lower_bound <= (th_sponsor_star_multiplier).upper_bound),
+    th_repo_star_count          trust_value_threshold_bound CHECK ((th_repo_star_count).lower_bound <= (th_repo_star_count).upper_bound),
+    th_repo_multiplier_count    trust_value_threshold_bound CHECK ((th_repo_multiplier_count).lower_bound <= (th_repo_multiplier_count).upper_bound)
 );
 
 --repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
