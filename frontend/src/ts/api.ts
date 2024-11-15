@@ -260,7 +260,8 @@ export const API = {
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
     setMultiplier: (repoId: string) =>
       backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
-    unsetMultiplier: (repoId: string) => backendToken.post(`repos/${repoId}/unsetMultiplier`),
+    unsetMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)

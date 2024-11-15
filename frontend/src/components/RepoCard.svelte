@@ -1,6 +1,10 @@
 <script lang="ts">
   import { API } from "../ts/api";
-  import { error, sponsoredRepos, multiplierSponsoredRepos } from "../ts/mainStore";
+  import {
+    error,
+    sponsoredRepos,
+    multiplierSponsoredRepos,
+  } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
 
@@ -24,9 +28,11 @@
     multiplier = false;
     try {
       await API.repos.untag(repo.uuid); // adjust backend for correct API
-      $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter((r: Repo) => {
-        return r.uuid !== repo.uuid;
-      });
+      $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter(
+        (r: Repo) => {
+          return r.uuid !== repo.uuid;
+        }
+      );
     } catch (e) {
       $error = e;
     }

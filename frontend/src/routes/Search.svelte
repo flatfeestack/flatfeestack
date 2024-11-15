@@ -9,7 +9,7 @@
     loadedMultiplierRepos,
     sponsoredRepos,
     trustedRepos,
-    multiplierSponsoredRepos
+    multiplierSponsoredRepos,
   } from "../ts/mainStore";
   import type { Repo } from "../types/backend";
 
