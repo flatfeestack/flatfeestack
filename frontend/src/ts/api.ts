@@ -258,6 +258,9 @@ export const API = {
     tag: (repoId: string) =>
       backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
+    setMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
+    unsetMultiplier: (repoId: string) => backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)
@@ -266,6 +269,7 @@ export const API = {
       backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
     untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
+    getMultiplier: () => backendToken.get("repos/multiplier").json<Repo[]>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),
