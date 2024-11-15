@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Navigation from "@/Navigation.svelte";
+  import Navigation from "./Navigation.svelte";
   import { onMount } from "svelte";
-  import { API } from "@/api";
-  import { error, user } from "@/mainStore";
-  import type { Contribution, ContributionSummary } from "@/types/backend";
-  import { formatDay, formatBalance } from "@/services";
+  import { API } from "./ts/api.ts";
+  import { appState } from "ts/state.ts";
+  import type { Contribution, ContributionSummary } from "./types/backend";
+  import { formatDay, formatBalance } from "./services";
   /*import {
     Chart,
     LineController,
@@ -18,7 +18,7 @@
     Tooltip,
   } from "chart.js";
   import { Line, Bar } from "svelte-chartjs";*/
-  import { htmlLegendPlugin } from "@/utils";
+  //import { htmlLegendPlugin } from "utils";
   import '@fortawesome/fontawesome-free/css/all.min.css'
 
   let contributionSummaries: ContributionSummary[] = [];
@@ -39,7 +39,7 @@
   );*/
 
   //https://www.chartjs.org/docs/latest/configuration/tooltip.html
-  let dataOptions = {
+  /*let dataOptions = {
     scales: {
       y: {
         ticks: {
@@ -92,7 +92,7 @@
         display: false,
       },
     },
-  };
+  };*/
 
   onMount(async () => {
     try {
@@ -105,7 +105,7 @@
       const res3 = await pr3;
       contributionSummaries = res3 || contributionSummaries;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   });
 </script>
@@ -178,12 +178,9 @@
                 class={cs.repo.description ? "" : "no-desc"}
                 >{cs.repo.description}</td
               >
-              <td data-label="Unclaimed"
-                >{#each Object.entries(cs.currencyBalance) as [key, value]}{formatBalance(
-                    value,
-                    key
-                  )}{/each}</td
-              >
+              <td data-label="Unclaimed">
+                {#each Object.entries(cs.currencyBalance) as [key, value]}{formatBalance(value, key)}{/each}
+              </td>
               <td data-label="Graph">
                 <div>
                   <button
@@ -235,7 +232,7 @@
                       </button>
                     {/if}
                   {:catch err}
-                    {($error = err.message)}
+                    {(appState.$state.error = err.message)}
                   {/await}
                 </td>
               </tr>
@@ -306,6 +303,6 @@
     <p class="p-2 m-2">No contributions yet.</p>
   {/if}
   <p class="p-2 m-2">
-    Public URL: <a href="/badges/{$user.id}">/badges/{$user.id}</a>
+    Public URL: <a href="/badges/{appState.$state.user.id}">/badges/{appState.$state.user.id}</a>
   </p>
 </Navigation>

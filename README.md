@@ -8,7 +8,7 @@ Before you can run, you need to copy the .env files. For local setup, the .examp
 cp analyzer/.example.env analyzer/.env
 cp backend/.example.env backend/.env
 cp forum/.example.env forum/.env
-cp fastauth/.example.env fastauth/.env
+cp auth/.example.env auth/.env
 cp db/.example.env db/.env
 ```
 

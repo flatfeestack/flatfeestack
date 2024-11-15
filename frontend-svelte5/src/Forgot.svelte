@@ -1,8 +1,8 @@
 <script lang="ts">
   import {route} from "@mateothegreat/svelte5-router";
-  import { API } from "@/api";
+  import { API } from "./ts/api.ts";
   import Dots from "./Dots.svelte";
-  import { emailValidationPattern } from "@/utils";
+  import { emailValidationPattern } from "./utils";
   let email = "";
   let error = "";
   let isSubmitting = false;
@@ -12,7 +12,7 @@
     try {
       error = "";
       isSubmitting = true;
-      const res = await API.auth.reset(email);
+      await API.auth.reset(email);
       isSubmitting = false;
       email = "";
       info =
@@ -87,7 +87,7 @@
       </form>
     {/if}
 
-    <div class="divider" />
+    <div class="divider"></div>
     <div class="flex">
       Already have an account?&nbsp;<a href="/login" use:route>Log in</a>
     </div>

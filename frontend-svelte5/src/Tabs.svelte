@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   export let items = [];
   export let activeTabValue = 1;
   export let total;

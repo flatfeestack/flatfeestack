@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { confirmEmail } from "@/services";
+  import { confirmEmail } from "ts/auth";
   import {goto, route} from "@mateothegreat/svelte5-router";
-  import Spinner from "@/Spinner.svelte";
+  import Spinner from "./Spinner.svelte";
 
   export let email: string;
   export let token: string;
@@ -40,7 +40,7 @@
 
       <div class="bg-red rounded p-2">{error}</div>
 
-      <div class="divider" />
+      <div class="divider"></div>
       <div class="flex">
         Already have an account?&nbsp;<a href="/login" use:route>Log in</a>
       </div>

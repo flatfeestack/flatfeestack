@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { route } from "@/mainStore";
+  import {appState} from "./ts/state.ts";
 
   export let href: string;
   export let icon: string;
@@ -14,7 +14,7 @@
   }
 </style>
 
-<a {href} class={$route.pathname === href ? `selected` : ``}>
+<a {href} class={appState.$state.route === href ? `selected` : ``}>
   <i class="{icon}"></i>
   <span class="hide-sx">{label}</span>
 </a>

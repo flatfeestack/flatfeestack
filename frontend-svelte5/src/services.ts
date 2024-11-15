@@ -1,124 +1,10 @@
-import { token, user, loginFailed, config } from "@/mainStore";
-import { API } from "./api";
-import type { User } from "@/types/backend";
-import type { Token } from "@/types/auth";
+import {appState} from "./ts/state.ts";
+import { API } from "ts/api.ts";
+import type { ClientSecret } from "types/backend";
+
 import { get } from "svelte/store";
 import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
-import type { ClientSecret } from "@/types/backend";
 //import { formatUnits } from "ethers";
-
-export const confirmReset = async (
-  email: string,
-  password: string,
-  emailToken: string
-) => {
-  const p1 = API.auth.confirmReset(email, password, emailToken);
-  const p2 = API.config.config();
-
-  const res = await p1;
-  const p3 = API.user.get();
-
-  const conf = await p2;
-  config.set(conf);
-  storeToken(res);
-
-  const u = await p3;
-  user.set(u);
-};
-
-export const confirmEmail = async (email: string, emailToken: string) => {
-  const p1 = API.auth.confirmEmail(email, emailToken);
-  const p2 = API.config.config();
-
-  const res = await p1;
-  storeToken(res);
-  const p3 = API.user.get();
-
-  const conf = await p2;
-  config.set(conf);
-
-  const u = await p3;
-  user.set(u);
-};
-
-export const confirmInvite = async (
-  email: string,
-  password: string,
-  emailToken: string,
-  inviteByEmail: string
-) => {
-  const p1 = API.auth.confirmInvite(email, password, emailToken);
-  const p2 = API.config.config();
-
-  const res = await p1;
-  storeToken(res);
-
-  const p3 = API.invite.confirmInvite(inviteByEmail);
-  const p4 = API.user.get();
-  const conf = await p2;
-  config.set(conf);
-
-  await p3;
-
-  const u = await p4;
-  user.set(u);
-};
-
-export const login = async (email: string, password: string) => {
-  const p1 = API.auth.login(email, password);
-  const p2 = API.config.config();
-
-  const res = await p1;
-  storeToken(res);
-
-  const conf = await p2;
-  config.set(conf);
-
-  const u = await API.user.get();
-  user.set(u);
-};
-
-export const refresh = async (): Promise<string> => {
-  const p2 = API.config.config();
-  const refresh = localStorage.getItem("ffs-refresh");
-  if (refresh === null) {
-    throw "No refresh token not in local storage";
-  }
-  const p1 = API.auth.refresh(refresh);
-
-  const tok = await p1;
-  const conf = await p2;
-  config.set(conf);
-  storeToken(tok);
-  return tok.access_token;
-};
-
-export const removeSession = async () => {
-  try {
-    await API.authToken.logout();
-  } finally {
-    removeToken();
-  }
-};
-
-export const removeToken = () => {
-  localStorage.removeItem("ffs-refresh");
-  user.set(<User>{});
-  token.set("");
-  loginFailed.set(true);
-};
-
-export const storeToken = (token1: Token) => {
-  const t = token1.access_token;
-  const r = token1.refresh_token;
-  if (!t || !r) {
-    loginFailed.set(true);
-    throw "No token in the request";
-  }
-  loginFailed.set(false);
-  token.set(t);
-  localStorage.setItem("ffs-refresh", r);
-};
 
 //https://stackoverflow.com/questions/38552003/how-to-decode-jwt-token-in-javascript-without-using-a-library
 /*export const parseJwt = (token) => {
@@ -181,8 +67,7 @@ export const formatDay = (d: Date): string => {
 };
 
 export function minBalanceName(c: string): string {
-  const conf = get(config);
-  const currency = conf.supportedCurrencies[c.toUpperCase()];
+  const currency = appState.$state.config.supportedCurrencies[c.toUpperCase()];
   if (!currency) {
     console.debug("Unknown currency: " + c);
     return c;
@@ -202,8 +87,7 @@ export const formatBalance = (n: bigint, c: string): string => {
       return num.toString(10) + "¢";
     }
   } else {
-    const conf = get(config);
-    const currency = conf.supportedCurrencies[c.toUpperCase()];
+    const currency = appState.$state.config.supportedCurrencies[c.toUpperCase()];
     if (!currency) {
       console.debug("Unknown currency: " + c);
       return n.toString(10);
@@ -256,9 +140,7 @@ export const stripePaymentMethod = async (
       (result.error.decline_code ? ", " + result.error.decline_code : "")
     );
   }
-  user.set(
-    await API.user.updatePaymentMethod(result.setupIntent.payment_method)
-  );
+  appState.$state.user =await API.user.updatePaymentMethod(result.setupIntent.payment_method);
 };
 
 export const stripePayment = async (

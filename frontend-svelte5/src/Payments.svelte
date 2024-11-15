@@ -1,14 +1,14 @@
 <script lang="ts">
-  import Navigation from "@/Navigation.svelte";
-  import { error } from "@/mainStore";
-  import { API } from "@/api";
+  import Navigation from "./Navigation.svelte";
+  import {appState} from "./ts/state.ts";
+  import { API } from "./ts/api.ts";
   import { onMount, onDestroy } from "svelte";
-  import type { UserBalance } from "@/types/backend";
-  import { formatBalance } from "@/services";
-  import PaymentSelection from "@/PaymentSelection.svelte";
+  import type { UserBalance } from "./types/backend";
+  import { formatBalance } from "./services";
+  import PaymentSelection from "./PaymentSelection.svelte";
 
   let userBalances: UserBalance[] = [];
-  let intervalId: number;
+  let intervalId:any;
 
   const fetchData = async () => {
     userBalances = await API.user.userBalance();
@@ -20,7 +20,7 @@
       await fetchData();
       intervalId = setInterval(fetchData, 5000); // Poll every 5 seconds
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   });
 

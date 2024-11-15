@@ -1,3 +1,4 @@
+<script lang="ts"></script>
 <style>
   .loader {
     border: 0.3rem solid var(--secondary-100);
@@ -23,4 +24,4 @@
   }
 </style>
 
-<div class="loader" />
+<div class="loader" ></div>

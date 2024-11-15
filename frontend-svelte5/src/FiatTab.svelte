@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { error, user, config } from "@/mainStore";
-  import Dots from "@/Dots.svelte";
-  import { stripePayment, stripePaymentMethod } from "@/services";
+  import { appState } from "ts/state.ts";
+  import Dots from "./Dots.svelte";
+  import { stripePayment, stripePaymentMethod } from "./services";
   import { loadStripe } from "@stripe/stripe-js/pure";
   /*import {
     CardCvc,
@@ -10,7 +10,7 @@
     Elements,
     PaymentElement,
   } from "svelte-stripe";*/
-  import { API } from "@/api";
+  import { API } from "./ts/api.ts";
   import type { Stripe } from "@stripe/stripe-js";
 
   export let total: number;
@@ -25,26 +25,26 @@
   let showSuccess = false;
 
   $: {
-    if ($config.stripePublicApi) {
+    if (appState.$state.config.stripePublicApi) {
       load();
     }
   }
 
   async function load() {
-    stripe = await loadStripe($config.stripePublicApi);
+    stripe = await loadStripe(appState.$state.config.stripePublicApi);
   }
 
   const handleSubmit = async () => {
     paymentProcessing = true;
     isSubmitting = true;
     try {
-      if (!$user.paymentMethod) {
+      if (!appState.$state.user.paymentMethod) {
         await stripePaymentMethod(stripe, cardElement);
       }
-      await stripePayment(stripe, freq, seats, $user.paymentMethod);
+      await stripePayment(stripe, freq, seats, appState.$state.user.paymentMethod);
       showSuccess = true;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     } finally {
       paymentProcessing = false;
       isSubmitting = false;
@@ -56,12 +56,12 @@
     try {
       const p1 = API.user.deletePaymentMethod();
       const p2 = API.user.cancelSub();
-      $user.paymentMethod = null;
-      $user.last4 = null;
+      appState.$state.user.paymentMethod = null;
+      appState.$state.user.last4 = null;
       await p1;
       await p2;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     } finally {
       isSubmitting = false;
     }
@@ -98,11 +98,11 @@
   }
 </style>
 
-{#if $user.paymentMethod}
+{#if appState.$state.user.paymentMethod}
   <div class="container">
     <p class="nobreak">Credit card:</p>
     <div class="container">
-      <span>*** *** *** {$user.last4}</span>
+      <span>*** *** *** {appState.$state.user.last4}</span>
       <form class="p-2" on:submit|preventDefault={deletePaymentMethod}>
         <button class="button3" disabled={isSubmitting} type="submit"
           >Cancel

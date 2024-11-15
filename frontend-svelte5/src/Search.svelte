@@ -1,18 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "@/api";
-  import {
-    error,
-    isSubmitting,
-    loadedSponsoredRepos,
-    sponsoredRepos,
-  } from "@/mainStore";
-  import type { Repo } from "@/types/backend";
+  import { API } from "./ts/api.ts";
+  import {appState} from "./ts/state.ts";
+  import type { Repo } from "./types/backend";
 
-  import Dots from "@/Dots.svelte";
-  import Navigation from "@/Navigation.svelte";
-  import RepoCard from "@/RepoCard.svelte";
-  import SearchResult from "@/SearchResult.svelte";
+  import Dots from "./Dots.svelte";
+  import Navigation from "./Navigation.svelte";
+  import RepoCard from "./RepoCard.svelte";
+  import SearchResult from "./SearchResult.svelte";
   import {route} from "@mateothegreat/svelte5-router";
 
   let search = "";
@@ -26,22 +21,22 @@
       isSearchSubmitting = true;
       searchRepos = await API.repos.search(search);
     } catch (e) {
-      $error = e;
+      appState.setError(e as Error);
     } finally {
       isSearchSubmitting = false;
     }
   };
 
   onMount(async () => {
-    if (!$loadedSponsoredRepos) {
+    if (!appState.$state.loadedSponsoredRepos) {
       try {
-        $isSubmitting = true;
-        $sponsoredRepos = await API.user.getSponsored();
-        $loadedSponsoredRepos = true;
+        appState.$state.isSubmitting = true;
+        appState.$state.sponsoredRepos = await API.user.getSponsored();
+        appState.$state.loadedSponsoredRepos = true;
       } catch (e) {
-        $error = e;
+        appState.setError(e as Error);
       } finally {
-        $isSubmitting = false;
+        appState.$state.isSubmitting = false;
       }
     }
   });
@@ -68,9 +63,9 @@
 
 <Navigation>
   <div class="p-2">
-    {#if $sponsoredRepos.length > 0}
+    {#if appState.$state.sponsoredRepos.length > 0}
       <div class="m-2 wrap">
-        {#each $sponsoredRepos as repo, key (repo.uuid)}
+        {#each appState.$state.sponsoredRepos as repo, key (repo.uuid)}
           <RepoCard {repo} />
         {/each}
       </div>

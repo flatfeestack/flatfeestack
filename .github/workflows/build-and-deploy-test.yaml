@@ -150,7 +150,7 @@ jobs:
           push: true
           tags: "registry.digitalocean.com/flatfeestack/forum:${{ github.ref_name }}"
 
-  build-and-push-fastauth:
+  build-and-push-auth:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -173,19 +173,19 @@ jobs:
       - name: Build container
         uses: docker/build-push-action@v4
         with:
-          context: fastauth
+          context: auth
           load: true
-          tags: "registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}"
+          tags: "registry.digitalocean.com/flatfeestack/auth:${{ github.ref_name }}"
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Run Postgres server for testing
         run: docker run --env-file db/.example.env -p 5432:5432 -d postgres:15-alpine
 
-      - name: Run fastauth
-        run: docker run --env-file fastauth/.example.env -d --network="host" -e DB_PATH=postgresql://postgres:password@127.0.0.1:5432/flatfeestack?sslmode=disable registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}
+      - name: Run auth
+        run: docker run --env-file auth/.example.env -d --network="host" -e DB_PATH=postgresql://postgres:password@127.0.0.1:5432/flatfeestack?sslmode=disable registry.digitalocean.com/flatfeestack/auth:${{ github.ref_name }}
 
-      - name: Check if fastauth is reachable
+      - name: Check if auth is reachable
         uses: nick-fields/retry@v2
         with:
           timeout_seconds: 15
@@ -195,9 +195,9 @@ jobs:
       - name: Push
         uses: docker/build-push-action@v4
         with:
-          context: fastauth
+          context: auth
           push: true
-          tags: "registry.digitalocean.com/flatfeestack/fastauth:${{ github.ref_name }}"
+          tags: "registry.digitalocean.com/flatfeestack/auth:${{ github.ref_name }}"
 
   build-and-push-frontend:
     runs-on: ubuntu-latest
@@ -343,7 +343,7 @@ jobs:
     - build-and-push-analyzer
     - build-and-push-backend
     - build-and-push-caddy
-    - build-and-push-fastauth
+    - build-and-push-auth
     - build-and-push-forum
     - build-and-push-frontend
     - build-and-push-payout

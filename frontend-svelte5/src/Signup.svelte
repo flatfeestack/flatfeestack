@@ -1,9 +1,9 @@
 <script lang="ts">
   import {route} from "@mateothegreat/svelte5-router";
-  import { API } from "@/api";
-  import Dots from "@/Dots.svelte";
-  import { removeToken } from "@/services";
-  import { emailValidationPattern } from "@/utils";
+  import { API } from "./ts/api.ts";
+  import Dots from "./Dots.svelte";
+  import { removeToken } from "ts/auth";
+  import { emailValidationPattern } from "./utils";
 
   let email = "";
   let password = "";
@@ -111,7 +111,7 @@
       </form>
     {/if}
 
-    <div class="divider" />
+    <div class="divider"></div>
     <div class="flex">
       Already have an account?&nbsp;<a href="/login" use:route>Log in</a>
     </div>

@@ -1,10 +1,11 @@
 <script lang="ts">
   import {goto} from "@mateothegreat/svelte5-router";
-  import Navigation from "@/Navigation.svelte";
-  import Spinner from "@/Spinner.svelte";
-  import { API } from "@/api";
-  import { config, error, loadedSponsoredRepos, user } from "@/mainStore";
-  import { formatDate, formatNowUTC, storeToken } from "@/services";
+  import Navigation from "Navigation.svelte";
+  import Spinner from "Spinner.svelte";
+  import { API } from "ts/api.ts";
+  import { appState } from "ts/state.ts";
+  import { formatDate, formatNowUTC } from "services";
+  import { storeToken } from "ts/auth";
   import '@fortawesome/fontawesome-free/css/all.min.css'
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
@@ -16,7 +17,7 @@
     try {
       await API.payouts.fakeUser(fakeUserEmail);
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   };
 
@@ -24,7 +25,7 @@
     try {
       await API.payouts.fakePayment(fakePaymentEmail, seats);
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   };
 
@@ -32,7 +33,7 @@
     try {
       await API.payouts.fakeContribution(JSON.parse(json));
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   };
 
@@ -47,7 +48,7 @@
       await p1;
       await p3;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   };
 
@@ -58,7 +59,7 @@
         showSuccess = true;
       }
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   };
 
@@ -98,12 +99,11 @@
     try {
       const res = await API.authToken.loginAs(email);
       storeToken(res);
-      const u = await API.user.get();
-      user.set(u);
-      loadedSponsoredRepos.set(false);
+      appState.$state.user = await API.user.get();
+      appState.$state.loadedSponsoredRepos = false;
       goto("/user/search");
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 </script>
@@ -150,7 +150,7 @@
     {/await}
   </div>
 
-  {#if $config.env == "local" || $config.env == "dev"}
+  {#if appState.$state.config.env === "local" || appState.$state.config.env === "dev"}
     <h2 class="p-2 m-2">Timewarp</h2>
     <div class="container">
       <button class="button1 m-2" on:click={() => handleWarp(1)}>
@@ -186,10 +186,10 @@
         <tbody>
           {#if userEmails && userEmails.length > 1}
             {#each userEmails as userEmail}
-              {#if $user.email !== userEmail}
+              {#if appState.$state.user.email !== userEmail}
                 <tr>
                   <td>{userEmail}</td>
-                  <td><button class="accessible-btn" on:click={() => loginAs(userEmail)}>
+                  <td><button class="accessible-btn" on:click={() => loginAs(userEmail)} aria-label="Email">
                     <i class="fa-sign-in-alt"></i>
                   </button>
                   </td>
@@ -204,7 +204,7 @@
         </tbody>
       </table>
     {:catch err}
-      {error.set(err)}
+      {appState.setError(err)}
     {/await}
   </div>
 

@@ -1,16 +1,16 @@
 <script lang="ts">
-  import FiatTab from "@/FiatTab.svelte";
-  import CryptoTab from "@/CryptoTab.svelte";
-  import Tabs from "@/Tabs.svelte";
-  import { config, error } from "@/mainStore";
+  import FiatTab from "./FiatTab.svelte";
+  import CryptoTab from "./CryptoTab.svelte";
+  import Tabs from "./Tabs.svelte";
+  import {appState} from "./ts/state.ts";
   import { onMount } from "svelte";
-  import { API } from "@/api";
-  import type { Plan } from "@/types/backend";
+  import { API } from "./ts/api.ts";
+  import type { Plan } from "./types/backend";
 
   // List of tab items with labels, values and assigned components
   let items = [{ label: "Credit Card", value: 1, component: FiatTab }];
 
-  if ($config.env == "local" || $config.env == "staging") {
+  if (appState.$state.config.env === "local" || appState.$state.config.env === "stage") {
     items.push({
       label: "Crypto Currencies",
       value: 2,
@@ -23,10 +23,10 @@
   let selectedPlan: Plan;
 
   $: {
-    if ($config && $config.plans) {
-      selectedPlan = $config.plans.find((e) => e.freq === currentFreq);
+    if (appState.$state.config && appState.$state.config.plans) {
+      selectedPlan = appState.$state.config.plans.find((e) => e.freq === currentFreq);
       if (!selectedPlan) {
-        selectedPlan = $config.plans[0];
+        selectedPlan =appState.$state.config.plans[0];
       }
     }
   }
@@ -46,7 +46,7 @@
         currentSeats = res.seats;
       }
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   });
 </script>
@@ -82,8 +82,8 @@
   account in accordance with the terms of my agreement with you.
 </p>
 <div class="container-stretch">
-  {#if $config.plans}
-    {#each $config.plans as { title, desc, disclaimer, freq }}
+  {#if appState.$state.config.plans}
+    {#each appState.$state.config.plans as { title, desc, disclaimer, freq }}
       <div
         class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
         freq
@@ -105,7 +105,7 @@
     <input size="5" type="number" min="1" bind:value={currentSeats} /> Seats
   </div>
   <div class="p-2">
-    {#if $config.plans}
+    {#if appState.$state.config.plans}
       <div>
         Sponsoring Amount:<span class="bold">$ {total.toFixed(2)}</span>
       </div>

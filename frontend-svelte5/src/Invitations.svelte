@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Navigation from "@/Navigation.svelte";
-  import { error, isSubmitting, user } from "@/mainStore";
-  import { API } from "@/api";
+  import Navigation from "./Navigation.svelte";
+  import { appState } from "ts/state.ts";
+  import { API } from "./ts/api.ts";
   import { onMount } from "svelte";
-  import type { Invitation, UserStatus } from "@/types/backend";
-  import { formatDate, timeSince } from "@/services";
-  import Dots from "@/Dots.svelte";
-  import { emailValidationPattern } from "@/utils";
+  import type { Invitation, UserStatus } from "./types/backend";
+  import { formatDate, timeSince } from "./services";
+  import Dots from "./Dots.svelte";
+  import { emailValidationPattern } from "./utils";
 
   let invites: Invitation[] = [];
   let inviteEmail: string;
@@ -20,7 +20,7 @@
         return inv.email !== email || inv.inviteEmail !== inviteEmail;
       });
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
@@ -31,7 +31,7 @@
         return inv.email !== email || inv.inviteEmail !== inviteEmail;
       });
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
@@ -40,32 +40,32 @@
       await API.invite.confirmInvite(email);
       await refreshInvite();
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
   async function refreshInvite() {
-    $isSubmitting = true;
+    appState.$state.isSubmitting = true;
     try {
       const res1 = await API.invite.invites();
       invites = res1 || [];
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     } finally {
-      $isSubmitting = false;
+      appState.$state.isSubmitting = false;
     }
   }
 
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-      if (inviteEmail === $user.email) {
+      if (inviteEmail === appState.$state.user.email) {
         throw "Oops something went wrong. You aren't able to invite yourself.";
       }
       await API.invite.invite(inviteEmail);
       await API.invite.inviteAuth(inviteEmail);
       const inv: Invitation = {
-        email: $user.email,
+        email: appState.$state.user.email,
         inviteEmail,
         createdAt: new Date().toISOString(),
         confirmedAt: null,
@@ -73,7 +73,7 @@
       invites = [...invites, inv];
       inviteEmail = "";
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     } finally {
       isAddInviteSubmitting = false;
     }
@@ -159,7 +159,7 @@
       </thead>
       <tbody>
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.email === $user.email}
+          {#if inv.email === appState.$state.user.email}
             <tr>
               <td data-label="Invited">{inv.inviteEmail}</td>
               <td data-label="Status" class="text-center">
@@ -236,7 +236,7 @@
       </thead>
       <tbody>
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.inviteEmail === $user.email}
+          {#if inv.inviteEmail === appState.$state.user.email}
             <tr>
               <td data-label="Invited By">{inv.email}</td>
               <td data-label="Status" class="text-center">

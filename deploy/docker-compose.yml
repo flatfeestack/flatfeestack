@@ -2,7 +2,7 @@
 version: '3.9'
 services:
   auth:
-    image: registry.digitalocean.com/flatfeestack/fastauth:${TAG_IMAGE:-latest}
+    image: registry.digitalocean.com/flatfeestack/auth:${TAG_IMAGE:-latest}
     restart: always
     environment:
       ADMINS: ${TEST_ADMINS}

@@ -1,20 +1,18 @@
 <script lang="ts">
   import { BrowserProvider, Contract, Signature } from "ethers";
   import { onMount } from "svelte";
-  import {goto} from "@mateothegreat/svelte5-router";
-  import Navigation from "@/Navigation.svelte";
-  import Spinner from "@/Spinner.svelte";
+  //import {goto} from "@mateothegreat/svelte5-router";
+  import Navigation from "./Navigation.svelte";
+  import Spinner from "./Spinner.svelte";
   //import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   //import { PayoutEthABI } from "../contracts/PayoutEth";
-  import { API } from "@/api";
-  import { getChainId, lastEthRoute, provider, signer } from "@/ethStore";
-  import { error } from "@/mainStore";
-  import { formatBalance, formatDate, timeSince } from "@/services";
-  import type { PayoutResponse } from "@/types/backend";
-  import type { PayoutConfig } from "@/types/payout";
-  import setSigner from "@/setSigner";
-  import showMetaMaskRequired from "@/showMetaMaskRequired";
-  import detectEthereumProvider from "@metamask/detect-provider";
+  import { API } from "./ts/api.ts";
+  import { appState } from "ts/state.ts";
+  import { formatBalance, formatDate, timeSince } from "./services";
+  import type { PayoutResponse } from "./types/backend";
+  import type { PayoutConfig } from "./types/payout";
+  //import setSigner from "./setSigner";
+  //import showMetaMaskRequired from "./showMetaMaskRequired";
 
   let ethSignature: Signature;
   let isLoading = false;
@@ -29,11 +27,11 @@
         ethSignature = Signature.from(payoutSignature.signature);
       }
     } catch (e) {
-      $error = e.message;
+      appState.setError(e);
     }
   }
 
-  async function doEthPayout() {
+  /*async function doEthPayout() {
     isLoading = true;
 
     try {
@@ -60,17 +58,17 @@
       let contract: Contract;
 
       if (payoutSignature.currency === "ETH") {
-        /*contract = new Contract(
+        contract = new Contract(
           payoutConfig.payoutContractAddresses.eth,
           PayoutEthABI,
           $signer
-        );*/
+        );
       } else {
-        /*contract = new Contract(
+        contract = new Contract(
           payoutConfig.payoutContractAddresses.usdc,
           PayoutERC20ABI,
           $signer
-        );*/
+        );
       }
 
       try {
@@ -99,7 +97,7 @@
     payoutSignature = undefined;
     isLoading = false;
     document.body.scrollIntoView();
-  }
+  }*/
 
   onMount(async () => {
     payoutConfig = await API.payout.payoutConfig();
@@ -222,7 +220,7 @@
           </p>
 
           <div class="container">
-            <button on:click={() => doEthPayout()} class="button1"
+            <button class="button1"
               >Withdraw!</button
             >
           </div>
@@ -284,6 +282,6 @@
       <p class="p-2 m-2">No contributions received so far.</p>
     {/if}
   {:catch err}
-    {($error = err.message)}
+    {(appState.$state.error = err)}
   {/await}
 </Navigation>

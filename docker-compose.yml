@@ -1,22 +1,30 @@
 services:
   auth:
-    build: ./fastauth
+    build:
+      context: ./auth
+      dockerfile: Dockerfile.dev
     env_file:
-      - ${BASE_PATH:-.}/fastauth/.env
+      - ${BASE_PATH:-.}/auth/.env
+    volumes:
+      - ./auth:/app:rw,delegated
     ports:
       - "9081:9081"
+      - "2342:2345"
     depends_on:
       db:
         condition: service_healthy
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     env_file:
       - ${BASE_PATH:-.}/backend/.env
+    volumes:
+      - ./backend:/app:rw,delegated
     ports:
       - "9082:9082"
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+      - "2340:2345"
     depends_on:
       db:
         condition: service_healthy
@@ -27,8 +35,6 @@ services:
       - ${BASE_PATH:-.}/forum/.env
     ports:
       - "9086:9086"
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     depends_on:
       db:
         condition: service_healthy
@@ -36,23 +42,25 @@ services:
         condition: service_started
 
   analyzer:
-    build: ./analyzer
+    build:
+      context: ./analyzer
+      dockerfile: Dockerfile.dev
     env_file:
       - ${BASE_PATH:-.}/analyzer/.env
     volumes:
+      - ./analyzer:/app:rw,delegated
       - ${BASE_PATH:-.}/.repos:/tmp/repos
     ports:
       - "9083:9083"
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
+      - "2341:2345"
 
   frontend-svelte5:
     build:
       context: ./frontend-svelte5
       dockerfile: Dockerfile.dev
     volumes:
-      - ${BASE_PATH:-.}/frontend-svelte5/src:/app/src
-      - ${BASE_PATH:-.}/frontend-svelte5/public:/app/public
+      - ${BASE_PATH:-.}/frontend-svelte5/src:/app/src:rw,delegated
+      - ${BASE_PATH:-.}/frontend-svelte5/public:/app/public:rw,delegated
     ports:
       - "9085:3000"
 
@@ -76,8 +84,6 @@ services:
       - "8080:8080"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
 
   ganache:
     command: '--database.dbPath "/ganache" --logging.verbose --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,100000000000000000000" --wallet.accounts "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,100000000000000000000" --wallet.accounts "0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1,100000000000000000000" --wallet.accounts "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e,100000000000000000000" -b 12 --miner.timestampIncrement "12" -h 0.0.0.0'
@@ -89,8 +95,6 @@ services:
     build: ./stripe
     volumes:
       - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}
     stop_grace_period: 0s
 
   stripe-setup:
@@ -99,5 +103,3 @@ services:
     volumes:
       - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
       - ${BASE_PATH:-.}/backend/.env:/root/.env
-    extra_hosts:
-      - ${EXTRA_HOSTS:-localhost:127.0.0.1}

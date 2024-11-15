@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Navigation from "@/Navigation.svelte";
-  import { API } from "@/api";
-  import { error, user } from "@/mainStore";
-  import { formatDate, timeSince } from "@/services";
-  import type { GitUser } from "@/types/backend";
-  import { emailValidationPattern } from "@/utils";
+  import Navigation from "./Navigation.svelte";
+  import { API } from "./ts/api.ts";
+  import {appState} from "./ts/state.ts";
+  import { formatDate, timeSince } from "./services";
+  import type { GitUser } from "./types/backend";
+  import { emailValidationPattern } from "./utils";
 
   let fileInput;
   let username: undefined | string;
@@ -14,27 +14,27 @@
   let newEmail = "";
 
   $: {
-    if (typeof username === "undefined" && $user.name) {
-      username = $user.name;
+    if (typeof username === "undefined" && appState.$state.user.name) {
+      username = appState.$state.user.name;
     }
   }
 
-  const onFileSelected = (e) => {
+  const onFileSelected = (e:any) => {
     let image = e.target.files[0];
     let reader = new FileReader();
     reader.readAsDataURL(image);
-    reader.onload = (e) => {
+    reader.onload = () => {
       if (typeof reader.result !== "string") {
-        $error = "not a string?";
+        appState.setError("not a string?");
         return;
       }
       const data: string = reader.result as string;
       if (data.length > 200 * 1024) {
-        $error = "image too large, max is 200KB";
+        appState.setError("image too large, max is 200KB");
         return;
       }
       API.user.setImage(data);
-      $user.image = data;
+      appState.$state.user.image = data;
     };
   };
 
@@ -44,10 +44,10 @@
         API.user.clearName();
       } else {
         API.user.setName(username);
-        $user.name = username;
+        appState.$state.user.name = username;
       }
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
@@ -62,7 +62,7 @@
       gitEmails = [...gitEmails, ge];
       newEmail = "";
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
@@ -71,16 +71,16 @@
       await API.user.removeGitEmail(email);
       gitEmails = gitEmails.filter((e) => e.email !== email);
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 
   const deleteImage = async () => {
     try {
       await API.user.deleteImage();
-      $user.image = null;
+      appState.$state.user.image = null;
     } catch (e) {
-      $error = e.message;
+      appState.setError(e);
     }
   };
 
@@ -90,7 +90,7 @@
       const res1 = await pr1;
       gitEmails = res1 ? res1 : gitEmails;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   });
 </script>
@@ -189,7 +189,7 @@
   <h2 class="p-2 m-2">Account Settings</h2>
   <div class="grid-2">
     <p class="p-2 m-2 nobreak">Email:</p>
-    <span class="p-2 m-2">{$user.email}</span>
+    <span class="p-2 m-2">{appState.$state.user.email}</span>
     <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
     <input
       id="username-input"
@@ -209,12 +209,12 @@
       >Profile picture:</label
     >
     <div>
-      {#if $user.image}
+      {#if appState.$state.user.image}
         <div class="image-container">
           <button class="upload accessible-btn" on:click={deleteImage}>
             <i class ="fa-trash-can"></i>
           </button>
-          <img class="image-org" src={$user.image} alt="profile img" />
+          <img class="image-org" src={appState.$state.user.image} alt="profile img" />
         </div>
       {:else}
         <button

@@ -1,14 +1,14 @@
-name: Test and build fastauth
+name: Test and build auth
 
 on:
   push:
     paths:
-      - ".github/workflows/fastauth.yaml"
-      - "fastauth/**"
+      - ".github/workflows/auth.yaml"
+      - "../../auth/**"
   pull_request:
     paths:
-      - ".github/workflows/fastauth.yaml"
-      - "fastauth/**"
+      - ".github/workflows/auth.yaml"
+      - "../../auth/**"
   workflow_dispatch:
 
 jobs:
@@ -27,29 +27,29 @@ jobs:
       - name: Build test container
         uses: docker/build-push-action@v4
         with:
-          context: fastauth
+          context: auth
           load: true
           target: builder
-          tags: fastauth
+          tags: auth
 
       - name: Run tests
         run: |
-          docker run -v $(pwd)/fastauth:/app --rm fastauth go test -v ./...
+          docker run -v $(pwd)/auth:/app --rm auth go test -v ./...
 
       - name: Build container
         uses: docker/build-push-action@v4
         with:
-          context: fastauth
+          context: auth
           load: true
-          tags: fastauth
+          tags: auth
 
       - name: Run Postgres server for testing
         run: docker run --env-file db/.example.env -p 5432:5432 -d postgres:15-alpine
 
-      - name: Run fastauth
-        run: docker run --env-file fastauth/.example.env -d --network="host" -e DB_PATH=postgresql://postgres:password@127.0.0.1:5432/flatfeestack?sslmode=disable fastauth
+      - name: Run auth
+        run: docker run --env-file auth/.example.env -d --network="host" -e DB_PATH=postgresql://postgres:password@127.0.0.1:5432/flatfeestack?sslmode=disable auth
 
-      - name: Check if fastauth is reachable
+      - name: Check if auth is reachable
         uses: nick-fields/retry@v2
         with:
           timeout_seconds: 15

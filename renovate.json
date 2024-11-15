@@ -61,9 +61,9 @@
       ]
     },
     {
-      "groupName": "fastauth - all non-major dependencies",
+      "groupName": "auth - all non-major dependencies",
       "matchPaths": [
-        "fastauth/"
+        "auth/"
       ],
       "matchUpdateTypes": [
         "minor",

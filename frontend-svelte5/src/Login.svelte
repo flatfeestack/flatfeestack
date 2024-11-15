@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { login } from "@/services";
-  import Dots from "@/Dots.svelte";
+  import { login } from "ts/auth";
+  import Dots from "./Dots.svelte";
   import {goto, route} from "@mateothegreat/svelte5-router";
-  import { emailValidationPattern } from "@/utils";
+  import { emailValidationPattern } from "./utils";
+  import {appState} from "./ts/state.ts";
 
   let email = "";
   let password = "";
@@ -21,11 +22,7 @@
     } catch (e) {
       isSubmitting = false;
       password = "";
-      if (e?.response?.status === 400) {
-        error = "No match found for username / password combination";
-      } else {
-        error = "Something went wrong. Please try again.";
-      }
+      appState.setError(e);
     }
   }
 </script>

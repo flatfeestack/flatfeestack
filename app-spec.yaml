@@ -20,7 +20,7 @@ ingress:
         path:
           prefix: /analyzer
     - component:
-        name: fastauth
+        name: auth
       match:
         path:
           prefix: /auth
@@ -215,11 +215,11 @@ services:
     image:
       deploy_on_push: {}
       registry_type: DOCR
-      repository: fastauth
+      repository: auth
       tag: main
     instance_count: 1
     instance_size_slug: basic-xxs
-    name: fastauth
+    name: auth
   - http_port: 9085
     image:
       deploy_on_push: {}

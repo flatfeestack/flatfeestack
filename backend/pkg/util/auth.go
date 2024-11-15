@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -25,9 +26,8 @@ func BasicAuth(cred Credentials, next func(w http.ResponseWriter, r *http.Reques
 			_, err := w.Write([]byte("Unauthorized.\n"))
 
 			if err != nil {
-				return
+				slog.Error("Basic Auth write error", slog.Any("error", err))
 			}
-
 			return
 		}
 

@@ -1,3 +1,4 @@
+<script lang="ts"></script>
 <style>
   #dots #dot1 {
     animation: load 1s infinite;

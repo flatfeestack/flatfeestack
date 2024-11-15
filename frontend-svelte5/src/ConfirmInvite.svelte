@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Dots from "@/Dots.svelte";
-  import { confirmInvite } from "@/services";
+  import Dots from "./Dots.svelte";
+  import { confirmInvite } from "ts/auth";
   import {goto, route} from "@mateothegreat/svelte5-router";
-  import { emailValidationPattern } from "@/utils";
+  import { emailValidationPattern } from "./utils";
   export let email: string;
   export let emailToken: string;
   export let inviteByEmail: string;
@@ -115,7 +115,7 @@
       {/if}
     </form>
 
-    <div class="divider" />
+    <div class="divider"></div>
     <div class="flex">
       Already have an account?&nbsp;<a href="/login" use:route>Log in</a>
     </div>

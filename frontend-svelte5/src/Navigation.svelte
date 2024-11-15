@@ -1,8 +1,7 @@
 <script lang="ts">
-  import {route} from "@mateothegreat/svelte5-router";
-  import { isSubmitting, user } from "@/mainStore";
-  import Spinner from "@/Spinner.svelte";
-  import NavItem from "@/NavItem.svelte";
+  import {appState} from "./ts/state.ts";
+  import Spinner from "./Spinner.svelte";
+  import NavItem from "./NavItem.svelte";
 </script>
 
 <style>
@@ -61,12 +60,12 @@
     <NavItem href="/user/income" icon="fa-hand-holding-usd" label="Income" />
     <NavItem href="/user/invitations" icon="fa-user-friends" label="Invitations"/>
     <NavItem href="/user/badges" icon="fa-medal" label="Badges" />
-    {#if $user.role === "admin"}
+    {#if appState.$state.user.role === "admin"}
       <NavItem href="/user/admin" icon="fa-shield-alt" label="Admin" />
     {/if}
   </nav>
   <div>
-    {#if $isSubmitting}<Spinner />{/if}
+    {#if appState.$state.isSubmitting}<Spinner />{/if}
     <slot />
   </div>
 </div>

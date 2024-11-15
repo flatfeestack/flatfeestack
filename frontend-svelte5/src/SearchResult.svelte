@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { API } from "@/api";
-  import { error, sponsoredRepos } from "@/mainStore";
-  import { getColor1 } from "@/utils";
-  import type { Repo } from "@/types/backend";
+  import { API } from "./ts/api.ts";
+  import {appState} from "./ts/state.ts";
+  import { getColor1 } from "./utils";
+  import type { Repo } from "./types/backend";
 
   export let repo: Repo;
   let star = false;
@@ -10,16 +10,16 @@
   const onSponsor = async () => {
     try {
       const res = await API.repos.tag(repo.uuid);
-      $sponsoredRepos = [...$sponsoredRepos, res];
+      appState.$state.sponsoredRepos = [...appState.$state.sponsoredRepos, res];
       star = true;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
       star = false;
     }
   };
 
   $: {
-    const tmp = $sponsoredRepos.find((r: Repo) => {
+    const tmp = appState.$state.sponsoredRepos.find((r: Repo) => {
       return r.uuid === repo.uuid;
     });
     star = tmp !== undefined;

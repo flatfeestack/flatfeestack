@@ -14,7 +14,7 @@ Now:
 - [x] Create SendGrid account
 - [x] Integrate / configure sendgrid to backend
 - [x] Evaluate whether the "scheduler" should be deleted for good or not; If yes, delete.
-- [ ] Sendgrid: change the if-statement in the backend + fastauth
+- [ ] Sendgrid: change the if-statement in the backend + auth
 - [ ] Deployment: volume for logs in all services (that we don't loose the logs on every deployment!)
 - [ ] Automatically add the user registration email (flatfeestrack account) to the git emails -- since that email is already confirmed! 
 
@@ -23,7 +23,7 @@ Future plans:
 - [ ] Additional blockchains? (NEO, ...)
 - [ ] Monitoring dashboard (Guil)
 - [ ] Front-end Design
-- [ ] Migration DB engine for backend + fastauth
+- [ ] Migration DB engine for backend + auth
 - [ ] Sanity check and alerting if payments are not correct (sum, etc)
 - [ ] What if a user donates to a SINGLE repo, but no developer registers 
 in flatfeestack after 3 months? Should the amount be returned to the user, or be 

@@ -1,26 +1,23 @@
 @charset "UTF-8";
 
 :root {
+  /* Primary (Green) */
   --primary-100: #ecf3ef;
-  --primary-300: #a9d4ba;
-  --primary-400: #84d3a4;
+  --primary-300: #84d3a4;
   --primary-500: #4caf50;
-  --primary-700: #499768;
-  --primary-900: #285338;
+  --primary-700: #285338;
 
+  /* Secondary (Gray) */
   --secondary-100: #f0f0f0;
-  --secondary-200: #dddddd;
   --secondary-300: #b8b8b8;
   --secondary-500: #808080;
   --secondary-700: #494949;
-  --secondary-900: #000000;
 
-  --tertiary-100: #cae2c8;
-  --tertiary-300: #89bd84;
-  --tertiary-400: #72b06c;
-  --tertiary-500: #5ca353;
-  --tertiary-700: #488340;
-  --tertiary-900: #2e5328;
+  /* Tertiary (Blue) */
+  --tertiary-100: #e3f2fd;
+  --tertiary-300: #64b5f6;
+  --tertiary-500: #2196f3;
+  --tertiary-700: #1565c0;
 }
 
 body,

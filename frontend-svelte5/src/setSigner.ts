@@ -1,6 +1,6 @@
 import detectEthereumProvider from "@metamask/detect-provider";
-import { signer } from "@/ethStore";
-import showMetaMaskRequired from "@/showMetaMaskRequired";
+//import { signer } from "./ethStore";
+import showMetaMaskRequired from "./showMetaMaskRequired";
 import { BrowserProvider } from "ethers";
 
 async function setSigner(providerValue: BrowserProvider | null) {
@@ -18,7 +18,7 @@ async function setSigner(providerValue: BrowserProvider | null) {
     showMetaMaskRequired();
   } else {
     await providerValue.send("eth_requestAccounts", []);
-    signer.set(await providerValue.getSigner());
+    //signer.set(await providerValue.getSigner());
   }
 }
 

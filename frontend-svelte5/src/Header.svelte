@@ -1,12 +1,10 @@
 <script lang="ts">
-    import { user, loginFailed, error, config } from "@/mainStore";
-    import { removeSession } from "@/services";
+    import { appState } from "ts/state.ts";
+    import {hasToken, removeSession} from "ts/auth";
     import { onMount } from "svelte";
-    import { API } from "@/api";
+    import { API } from "./ts/api.ts";
     import '@fortawesome/fontawesome-free/css/all.min.css'
     import {route, goto} from "@mateothegreat/svelte5-router";
-
-    let loading = true;
 
     function logout() {
         removeSession();
@@ -15,19 +13,18 @@
 
     onMount(async () => {
         try {
-            loading = true;
-            $user = await API.user.get();
+            if(!appState.$state.user && hasToken()) {
+                appState.$state.user = await API.user.get();
+            }
         } catch (e) {
-            $loginFailed = true;
-        } finally {
-            loading = false;
+            appState.setError(e);
         }
     });
 </script>
 
 <style>
     header {
-        padding: 1em;
+        padding: 0;
         background-color: #fff;
         border-bottom: 1px #000 solid;
         justify-content: space-between;
@@ -38,7 +35,7 @@
     nav {
         display: flex;
         align-items: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     header :global(a),
@@ -62,11 +59,6 @@
     .err-container button {
         margin-right: 30px;
     }
-
-    .imgSmallLogo {
-        padding-right: 0.25em;
-        width: 3rem;
-    }
     .imgNormalLogo {
         padding-right: 0.25em;
         width: 10rem;
@@ -79,25 +71,20 @@
 <header>
     <a href="/" use:route>
         <img
-                class="hide-mda imgSmallLogo"
-                src="/images/favicon.svg"
-                alt="FlatFeeStack"
-        />
-        <img
                 class="hide-sx imgNormalLogo"
                 src="/images/ffs-logo.svg"
                 alt="FlatFeeStack"
         />
     </a>
     <nav>
-        {#if $user.id}
-            <a href="/user/search" use:route>
+        {#if appState.$state.user.id}
+            <a href="/user/search" use:route aria-label="Dashboard">
                 <i class="fa-ome icon" ></i>
             </a>
-            {#if $user.image}
-                <img class="image-org-sx" src={$user.image} alt="user profile img" />
+            {#if appState.$state.user.image}
+                <img class="image-org-sx" src={appState.$state.user.image} alt="user profile img" />
             {/if}
-            <p class="hide-sx">{$user.email}</p>
+            <p class="hide-sx">{appState.$state.user.email}</p>
             <form on:submit|preventDefault={logout}>
                 <button class="button3 center mx-2" type="submit">Sign out</button>
             </form>
@@ -109,7 +96,7 @@
                 <button class="button1 center mx-2" type="submit">Sign Up</button>
             </form>
         {/if}
-        {#if $config.env == "local" || $config.env == "staging"}
+        {#if appState.$state.config.env === "local" || appState.$state.config.env === "stage"}
             <button class="button4 center mx-2" on:click={() => goto("/dao/home")}
             >DAO</button
             >
@@ -117,16 +104,11 @@
     </nav>
 </header>
 
-{#if $error}
+{#if appState.$state.error}
     <div class="bg-red p-2 parent err-container">
-        <div class="w-100">{@html $error}</div>
+        <div class="w-100">{@html appState.$state.error}</div>
         <div>
-            <button
-                    class="close accessible-btn"
-                    on:click|preventDefault={() => {
-          $error = "";
-        }}
-            >
+            <button class="close accessible-btn" on:click|preventDefault={() => {appState.$state.error = "";}}>
                 ✕
             </button>
         </div>

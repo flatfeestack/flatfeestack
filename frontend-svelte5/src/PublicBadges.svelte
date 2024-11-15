@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "@/api";
-  import { error } from "@/mainStore";
-  import type { ContributionSummary, User } from "@/types/backend";
+  import { API } from "./ts/api.ts";
+  import {appState} from "./ts/state.ts";
+  import type { ContributionSummary, User } from "./types/backend";
 
   export let uuid: string;
   let contributionSummaries: ContributionSummary[] = [];
@@ -19,7 +19,7 @@
       contributionSummaries = res1 || contributionSummaries;
       user = res2;
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   });
 </script>

@@ -277,11 +277,10 @@ func main() {
 	cron.CronJobDay(c.DailyRunner, util.TimeNow())
 	cron.CronJobHour(c.HourlyRunner, util.TimeNow())
 
-	slog.Info("Starting FlatFeeStack backend", "port", cfg.Port)
+	slog.Info("Starting FlatFeeStack Backend", "port", cfg.Port)
 	err = http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router)
 	if err != nil {
-		slog.Error("Server stopped",
-			slog.Any("error", err))
+		slog.Error("Server stopped", slog.Any("error", err))
 	}
 	cron.CronStop()
 }

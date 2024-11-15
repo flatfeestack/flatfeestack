@@ -446,7 +446,7 @@ function createRow(y: number, width: number): SVGGElement {
     return row;
 }
 
-function buildFloor(width: number, height: number, config: FloorConfig): SVGElement {
+function buildFloor(width: number, height: number): SVGElement {
     const group: SVGGElement = document.createElementNS("http://www.w3.org/2000/svg", "g");
     group.setAttribute("id", "floorGroup");
     //group.setAttribute("transform", `translate(${config.viewOffsetX},${config.viewOffsetY})`);
@@ -902,7 +902,7 @@ export function initAnimation( ): () => void {
         requestAnimationFrame(animate);
     }
 
-    const element = buildFloor(12, 24, floorConfig);
+    const element = buildFloor(12, 24);
     const svg = document.getElementById('scrollingFloor');
     if(svg) {
         svg.appendChild(element);

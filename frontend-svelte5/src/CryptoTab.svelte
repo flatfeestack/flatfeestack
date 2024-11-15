@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { config, error } from "@/mainStore";
-  import { API } from "@/api";
+  import { appState } from "ts/state.ts";
+  import { API } from "./ts/api.ts";
   // noinspection TypeScriptCheckImport
   //import QR from "svelte-qr";
-  import { formatBalance, minBalanceName, qrString } from "@/services";
-  import type { PaymentResponse } from "@/types/backend";
+  import { formatBalance, minBalanceName, qrString } from "./services";
+  import type { PaymentResponse } from "./types/backend";
 
   export let total: number;
   export let seats: number;
@@ -17,7 +17,7 @@
     try {
       paymentResponse = await API.user.nowPayment(selected, freq, seats);
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 </script>
@@ -37,7 +37,7 @@
   <div class="container">
     <div class="p-2">
       <select bind:value={selected}>
-        {#each Object.entries($config.supportedCurrencies) as [key, value]}
+        {#each Object.entries(appState.$state.config.supportedCurrencies) as [key, value]}
           {#if value.isCrypto}
             <option value={key}>
               {value.name}

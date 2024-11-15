@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { API } from "@/api";
-  import { error, sponsoredRepos } from "@/mainStore";
-  import { getColor1, getColor2 } from "@/utils";
-  import type { Repo } from "@/types/backend";
+  import { API } from "./ts/api.ts";
+  import {appState} from "./ts/state.ts";
+  import { getColor1, getColor2 } from "./utils";
+  import type { Repo } from "./types/backend";
 
   export let repo: Repo;
   let star = true;
@@ -11,11 +11,11 @@
     star = false;
     try {
       await API.repos.untag(repo.uuid);
-      $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
+      appState.$state.sponsoredRepos = appState.$state.sponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
     } catch (e) {
-      $error = e;
+      appState.setError(e);
     }
   }
 </script>
