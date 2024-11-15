@@ -148,6 +148,42 @@ paths:
       responses:
         '200':
           description: OK
+  /users/me/multiplier/{isSet}:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: isSet
+          in: path
+          required: true
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
+  /users/me/multiplierDailyLimit/{amount}:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: amount
+          in: path
+          required: true
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
   /users/me/image:
     post:
       tags:
