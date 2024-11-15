@@ -10,29 +10,50 @@
 
   export let repo: Repo;
   let star = true;
-  let multiplier = true;
+  let multiplier: boolean;
+
+  $: {
+    const tmpMultiplier = $multiplierSponsoredRepos.find(
+      (r: Repo) => r.uuid === repo.uuid
+    );
+    multiplier = tmpMultiplier !== undefined;
+  }
+
+  async function unsetMultiplierHelper() {
+    await API.repos.unsetMultiplier(repo.uuid);
+    $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter((r: Repo) => {
+      return r.uuid !== repo.uuid;
+    });
+  }
 
   async function unTag() {
     star = false;
+    multiplier = false;
     try {
       await API.repos.untag(repo.uuid);
       $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
+      unsetMultiplierHelper();
     } catch (e) {
       $error = e;
     }
   }
 
-  async function noMultiplier() {
+  async function unsetMultiplier() {
     multiplier = false;
     try {
-      await API.repos.untag(repo.uuid); // adjust backend for correct API
-      $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter(
-        (r: Repo) => {
-          return r.uuid !== repo.uuid;
-        }
-      );
+      unsetMultiplierHelper();
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  async function setMultiplier() {
+    try {
+      const resMultiplier = await API.repos.setMultiplier(repo.uuid);
+      $multiplierSponsoredRepos = [...$multiplierSponsoredRepos, resMultiplier];
+      multiplier = true;
     } catch (e) {
       $error = e;
     }
@@ -129,6 +150,62 @@
             stroke-width="40"
           />
         </svg>
+      {/if}
+      {#if multiplier}
+        <a href={"#"} on:click|preventDefault={unsetMultiplier}>
+          <svg
+            width="800px"
+            height="800px"
+            viewBox="-2 -2 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMinYMin"
+            class="jam jam-coin"
+          >
+            <defs>
+              <radialGradient
+                id="greenGradient"
+                cx="50%"
+                cy="50%"
+                r="50%"
+                fx="50%"
+                fy="50%"
+              >
+                <stop offset="0%" style="stop-color:#98FB98; stop-opacity:1" />
+                <!-- Light green -->
+                <stop offset="50%" style="stop-color:#32CD32; stop-opacity:1" />
+                <!-- Medium green -->
+                <stop
+                  offset="100%"
+                  style="stop-color:#006400; stop-opacity:1"
+                />
+                <!-- Dark green -->
+              </radialGradient>
+            </defs>
+            <circle cx="10" cy="10" r="10" fill="url(#greenGradient)" />
+            <path
+              fill="#004d00"
+              d="M9 13v-2a3 3 0 1 1 0-6V4a1 1 0 1 1 2 0v1h.022A2.978 2.978 0 0 1 14 7.978a1 1 0 0 1-2 0A.978.978 0 0 0 11.022 7H11v2a3 3 0 0 1 0 6v1a1 1 0 0 1-2 0v-1h-.051A2.949 2.949 0 0 1 6 12.051a1 1 0 1 1 2 0 .95.95 0 0 0 .949.949H9zm2 0a1 1 0 0 0 0-2v2zM9 7a1 1 0 1 0 0 2V7zm1 13C4.477 20 0 15.523 0 10S4.477 0 10 0s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"
+            />
+          </svg>
+        </a>
+      {:else}
+        <a href={"#"} on:click|preventDefault={setMultiplier}>
+          <svg
+            fill="#000000"
+            width="800px"
+            height="800px"
+            viewBox="-2 -2 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMinYMin"
+            class="jam jam-coin"
+          >
+            <path
+              d="M9 13v-2a3 3 0 1 1 0-6V4a1 1 0 1 1 2 0v1h.022A2.978 2.978 0 0 1 14 7.978a1 1 0 0 1-2 0A.978.978 0 0 0 11.022 7H11v2a3 3 0 0 1 0 6v1a1 1 0 0 1-2 0v-1h-.051A2.949 2.949 0 0 1 6 12.051a1 1 0 1 1 2 0 .95.95 0 0 0 .949.949H9zm2 0a1 1 0 0 0 0-2v2zM9 7a1 1 0 1 0 0 2V7zm1 13C4.477 20 0 15.523 0 10S4.477 0 10 0s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"
+            />
+            <line x1="2" y1="2" x2="18" y2="18" stroke="red" stroke-width="3" />
+            <line x1="18" y1="2" x2="2" y2="18" stroke="red" stroke-width="3" />
+          </svg>
+        </a>
       {/if}
     </div>
   </div>
