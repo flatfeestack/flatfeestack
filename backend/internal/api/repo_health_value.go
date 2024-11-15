@@ -73,7 +73,11 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 		repoWeight += email.Weight
 	}
 
-	repoHealthMetrics := manageInternalHealthMetrics(repoId)
+	repoHealthMetrics, err := manageInternalHealthMetrics(repoId)
+	if err != nil {
+		return err
+	}
+
 	repoHealthMetrics.Id = uuid.New()
 	repoHealthMetrics.RepoId = repoId
 	repoHealthMetrics.ContributerCount = contributerCount
@@ -83,18 +87,17 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	return nil
 }
 
-func manageInternalHealthMetrics(repoId uuid.UUID) *db.RepoHealthMetrics {
-	// get magical internal metrics
-
-	// plox mino
-	var sponsorCount, repoStarCount, repoMultiplierCount int
-	//sponsorCount, repoStarCount, repoMultiplierCount := db.GetInternalMetrics(repoid)
-
-	repoHealthMetrics := db.RepoHealthMetrics{
-		SponsorCount:        sponsorCount,
-		RepoStarCount:       repoStarCount,
-		RepoMultiplierCount: repoMultiplierCount,
+func manageInternalHealthMetrics(repoId uuid.UUID) (*db.RepoHealthMetrics, error) {
+	internalHealthMetric, err := db.GetInternalMetrics(repoId)
+	if err != nil {
+		return nil, err
 	}
 
-	return &repoHealthMetrics
+	repoHealthMetrics := db.RepoHealthMetrics{
+		SponsorCount:        internalHealthMetric.SponsorCount,
+		RepoStarCount:       internalHealthMetric.RepoStarCount,
+		RepoMultiplierCount: internalHealthMetric.RepoMultiplierCount,
+	}
+
+	return &repoHealthMetrics, nil
 }
