@@ -4,14 +4,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
-)
-
-var (
-	t01 = time.Time{}.Add(time.Duration(1) * time.Second)
-	t02 = time.Time{}.Add(time.Duration(2) * time.Second)
-	t03 = time.Time{}.Add(time.Duration(3) * time.Second)
-	t04 = time.Time{}.Add(time.Duration(4) * time.Second)
 )
 
 func TestTrustedRepoTwice(t *testing.T) {
@@ -25,8 +17,8 @@ func TestTrustedRepoTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
-		UnTrustAt: &t01,
+		TrustAt:   &t1,
+		UnTrustAt: &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -34,8 +26,8 @@ func TestTrustedRepoTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
-		UnTrustAt: &t02,
+		TrustAt:   &t2,
+		UnTrustAt: &t2,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -57,7 +49,7 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -65,7 +57,7 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t02,
+		UnTrustAt: &t2,
 	}
 
 	tr3 := TrustEvent{
@@ -73,7 +65,7 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t03,
+		UnTrustAt: &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -97,7 +89,7 @@ func TestUnTrustWrong(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t01,
+		UnTrustAt: &t1,
 	}
 
 	//we want to untrust, but we are currently not trusting this repo
@@ -116,7 +108,7 @@ func TestTrustWrongOrder(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	tr2 := TrustEvent{
@@ -124,7 +116,7 @@ func TestTrustWrongOrder(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t01,
+		UnTrustAt: &t1,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -146,7 +138,7 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	tr2 := TrustEvent{
@@ -154,7 +146,7 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t04,
+		UnTrustAt: &t4,
 	}
 
 	tr3 := TrustEvent{
@@ -162,7 +154,7 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t03,
+		UnTrustAt: &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -187,7 +179,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -195,7 +187,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t02,
+		UnTrustAt: &t2,
 	}
 
 	tr3 := TrustEvent{
@@ -203,7 +195,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Active,
-		TrustAt:   &t03,
+		TrustAt:   &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -223,7 +215,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Inactive,
-		UnTrustAt: &t04,
+		UnTrustAt: &t4,
 	}
 	err = InsertOrUpdateTrustRepo(&tr4)
 	assert.Nil(t, err)
@@ -245,7 +237,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -253,7 +245,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -278,7 +270,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r.Id,
 //		EventType: Active,
-//		SponsorAt: &t01,
+//		SponsorAt: &t1,
 //	}
 //
 //	s2 := SponsorEvent{
@@ -286,7 +278,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r2.Id,
 //		EventType: Active,
-//		SponsorAt: &t02,
+//		SponsorAt: &t2,
 //	}
 //
 //	err := InsertOrUpdateSponsor(&s1)
@@ -294,7 +286,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //	err = InsertOrUpdateSponsor(&s2)
 //	assert.Nil(t, err)
 //
-//	res, err := FindSponsorsBetween(t03, t04)
+//	res, err := FindSponsorsBetween(t3, t4)
 //	assert.Nil(t, err)
 //	assert.Equal(t, 2, len(res[0].RepoIds))
 //}
@@ -311,7 +303,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r.Id,
 //		EventType: Active,
-//		SponsorAt: &t01,
+//		SponsorAt: &t1,
 //	}
 //
 //	s2 := SponsorEvent{
@@ -319,7 +311,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r2.Id,
 //		EventType: Active,
-//		SponsorAt: &t02,
+//		SponsorAt: &t2,
 //	}
 //
 //	err := InsertOrUpdateSponsor(&s1)
@@ -327,7 +319,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //	err = InsertOrUpdateSponsor(&s2)
 //	assert.Nil(t, err)
 //
-//	res, err := FindSponsorsBetween(t02, t04)
+//	res, err := FindSponsorsBetween(t2, t4)
 //	assert.Nil(t, err)
 //	assert.Equal(t, 1, len(res[0].RepoIds))
 //}
@@ -344,7 +336,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r.Id,
 //		EventType: Active,
-//		SponsorAt: &t01,
+//		SponsorAt: &t1,
 //	}
 //
 //	s2 := SponsorEvent{
@@ -352,7 +344,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:       u.Id,
 //		RepoId:    r2.Id,
 //		EventType: Active,
-//		SponsorAt: &t02,
+//		SponsorAt: &t2,
 //	}
 //
 //	s3 := SponsorEvent{
@@ -360,7 +352,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //		Uid:         u.Id,
 //		RepoId:      r2.Id,
 //		EventType:   Inactive,
-//		UnSponsorAt: &t03,
+//		UnSponsorAt: &t3,
 //	}
 //
 //	err := InsertOrUpdateSponsor(&s1)
@@ -370,7 +362,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 //	err = InsertOrUpdateSponsor(&s3)
 //	assert.Nil(t, err)
 //
-//	res, err := FindSponsorsBetween(t02, t04)
+//	res, err := FindSponsorsBetween(t2, t4)
 //	assert.Nil(t, err)
 //	assert.Equal(t, 1, len(res[0].RepoIds))
 //}
