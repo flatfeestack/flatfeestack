@@ -20,15 +20,17 @@ type RepoHealthMetrics struct {
 	RepoWeight          float64   `json:"reposponsordonated"`
 }
 
-// This works, do you understand, Mino?
-func InsertTrustValue(trustValueMetric RepoHealthMetrics) error {
-	stmt, err := DB.Prepare("INSERT INTO trust_value_metrics (repo_id, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
+// tested
+func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
+	stmt, err := DB.Prepare(`INSERT INTO repo_health_metrics 
+		(id, created_at, repo_id, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
 	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO trust_value_metrics for %v statement event: %v", trustValueMetric, err)
+		return fmt.Errorf("prepare INSERT INTO repo_health_metrics for %v statement event: %v", repoHealthMetrics, err)
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(trustValueMetric.Id, trustValueMetric.RepoId, trustValueMetric.ContributerCount, trustValueMetric.CommitCount, trustValueMetric.SponsorCount, trustValueMetric.RepoStarCount, trustValueMetric.RepoMultiplierCount, trustValueMetric.RepoWeight)
+	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight)
 	if err != nil {
 		return err
 	}
@@ -36,15 +38,16 @@ func InsertTrustValue(trustValueMetric RepoHealthMetrics) error {
 	return handleErrMustInsertOne(res)
 }
 
-func UpdateTrustValue(trustValueMetric RepoHealthMetrics) error {
-	stmt, err := DB.Prepare("UPDATE trust_value_metrics SET repo_id=$1, contributer_count=$2, commit_count=$3, sponsor_donation=$4, sponsor_star_multiplier=$5, repo_sponsor_donated=$6) WHERE id=$7")
+// tested
+func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
+	stmt, err := DB.Prepare("UPDATE repo_health_metrics SET contributer_count=$1, commit_count=$2, sponsor_donation=$3, repo_star_count=$4, repo_multiplier_count=$5, repo_weight=$6 WHERE id=$7")
 	if err != nil {
-		return fmt.Errorf("prepare UPDATE trust_value_metrics for %v statement failed: %v", trustValueMetric, err)
+		return fmt.Errorf("prepare UPDATE repo_health_metrics for %v statement failed: %v", repoHealthMetrics, err)
 	}
 	defer CloseAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(trustValueMetric.Id, trustValueMetric.RepoId, trustValueMetric.ContributerCount, trustValueMetric.CommitCount, trustValueMetric.SponsorCount, trustValueMetric.RepoStarCount, trustValueMetric.RepoMultiplierCount, trustValueMetric.RepoWeight)
+	res, err = stmt.Exec(repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight, repoHealthMetrics.Id)
 	if err != nil {
 		return err
 	}
@@ -52,29 +55,27 @@ func UpdateTrustValue(trustValueMetric RepoHealthMetrics) error {
 	return handleErrMustInsertOne(res)
 }
 
-func FindTrustValueById(id uuid.UUID) (*RepoHealthMetrics, error) {
-	var trustValue RepoHealthMetrics
+// tested
+func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
+	var healthValue RepoHealthMetrics
 	err := DB.
-		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count,  sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE id=$1", id).
-		Scan(&trustValue.Id, &trustValue.RepoId, &trustValue.CreatedAt, &trustValue.ContributerCount, &trustValue.CommitCount, &trustValue.SponsorCount, &trustValue.RepoStarCount, &trustValue.RepoMultiplierCount)
+		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count,  sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics WHERE id=$1", id).
+		Scan(&healthValue.Id, &healthValue.RepoId, &healthValue.CreatedAt, &healthValue.ContributerCount, &healthValue.CommitCount, &healthValue.SponsorCount, &healthValue.RepoStarCount, &healthValue.RepoMultiplierCount, &healthValue.RepoWeight)
 	if err != nil {
 		return nil, err
 	}
-
-	switch err {
-	case sql.ErrNoRows:
+	fmt.Println(healthValue)
+	if err == sql.ErrNoRows {
 		return nil, nil
-	case nil:
-		return &trustValue, nil
-	default:
-		return nil, err
 	}
+	return &healthValue, err
 }
 
-func FindTrustValueByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
+// done
+func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
 	//var tv TrustValue
 	rows, err := DB.
-		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value WHERE repo_id=$1 order by created_at desc limit 1", repoId)
+		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics WHERE repo_id=$1 order by created_at desc", repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -82,22 +83,24 @@ func FindTrustValueByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
 	return scanTrustValue(rows)
 }
 
+// tested by integration testing
 func scanTrustValue(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 	trustValues := []RepoHealthMetrics{}
 	for rows.Next() {
-		var tv RepoHealthMetrics
-		err := rows.Scan(&tv.Id, &tv.RepoId, &tv.CreatedAt, &tv.ContributerCount, &tv.CommitCount, &tv.SponsorCount, &tv.RepoStarCount, &tv.RepoMultiplierCount, &tv.RepoWeight)
+		var repoHealthMetrics RepoHealthMetrics
+		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
 		if err != nil {
 			return nil, err
 		}
-		trustValues = append(trustValues, tv)
+		trustValues = append(trustValues, repoHealthMetrics)
 	}
 	return trustValues, nil
 }
 
+// tested
 func GetAllTrustValues() ([]RepoHealthMetrics, error) {
 	rows, err := DB.
-		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, sponsor_star_multiplier, repo_sponsor_donated from trust_value order by created_at desc")
+		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics order by created_at desc")
 	if err != nil {
 		return nil, err
 	}

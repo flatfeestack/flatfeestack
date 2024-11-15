@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
+func GetRepoHealthMetricsById(w http.ResponseWriter, r *http.Request) {
 	var id uuid.UUID
 	id = uuid.MustParse(r.PathValue("id"))
 	//convertedTrustValueId, err := strconv.Atoi(id)
@@ -20,7 +20,7 @@ func GetTrustValueById(w http.ResponseWriter, r *http.Request) {
 	//	util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 	//}
 
-	trustValue, err := db.FindTrustValueById(id)
+	trustValue, err := db.FindRepoHealthMetricsById(id)
 
 	if trustValue == nil {
 		slog.Error("Trust Value not found %s",
@@ -43,12 +43,12 @@ func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.Rep
 		return
 	}
 
-	err := db.UpdateTrustValue(*trustValue)
+	err := db.UpdateRepoHealthMetrics(*trustValue)
 	if err != nil {
 		util.WriteErrorf(w, http.StatusNoContent, "Could not update trust value: %v", err)
 		return
 	}
-	trustValue, err = db.FindTrustValueById(trustValue.Id)
+	trustValue, err = db.FindRepoHealthMetricsById(trustValue.Id)
 	if err != nil {
 		util.WriteErrorf(w, http.StatusNoContent, "Could not find trust value: %v", err)
 		return
