@@ -5,7 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -43,7 +44,7 @@ func analyze(w http.ResponseWriter, r *http.Request) {
 		makeHttpStatusErr(w, err.Error(), http.StatusBadRequest)
 	}
 
-	log.Infof("analyze repo: %v", request)
+	slog.Info("analyze repo: %v", request)
 
 	err = json.NewEncoder(w).Encode(AnalysisResponse{RequestId: request.Id})
 	if err != nil {
@@ -51,37 +52,36 @@ func analyze(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go analyzeBackground(request)
-	log.Debugf("is analyzing")
-
+	slog.Debug("is analyzing")
 }
 
 func analyzeBackground(request AnalysisRequest) {
-	log.Debugf("---> webhook request for repository %s\n", request.GitUrl)
-	log.Debugf("Request id: %s\n", request.Id)
+	slog.Debug("---> webhook request for repository %s\n", request.GitUrl)
+	slog.Debug("Request id: %s\n", request.Id)
 
 	contributionMap, err := analyzeRepository(request.DateFrom, request.DateTo, request.GitUrl)
 	if err != nil {
-		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "analyzeRepositoryFromString: " + err.Error()}, opts.BackendCallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "analyzeRepositoryFromString: " + err.Error()}, cfg.BackendCallbackUrl)
 		return
 	}
 
 	weightsMap, err := weightContributions(contributionMap)
 	if err != nil {
-		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, opts.BackendCallbackUrl)
+		callbackToWebhook(AnalysisCallback{RequestId: request.Id, Error: "weightContributions: " + err.Error()}, cfg.BackendCallbackUrl)
 		return
 	}
 
 	callbackToWebhook(AnalysisCallback{
 		RequestId: request.Id,
 		Result:    weightsMap,
-	}, opts.BackendCallbackUrl)
+	}, cfg.BackendCallbackUrl)
 
-	log.Debugf("Finished request %s\n", request.Id)
+	slog.Debug("Finished request %s\n", request.Id)
 }
 
 // makeHttpStatusErr writes an http status error with a specific message
 func makeHttpStatusErr(w http.ResponseWriter, errString string, httpStatusError int) {
-	log.Error(errString)
+	slog.Error(errString)
 	w.WriteHeader(httpStatusError)
 }
 
@@ -91,7 +91,7 @@ func callbackToWebhook(body AnalysisCallback, url string) {
 	}
 
 	reqBody, _ := json.Marshal(body)
-	log.Printf("Call to %s with success %v", opts.BackendCallbackUrl, body.Error == "")
+	log.Printf("Call to %s with success %v", cfg.BackendCallbackUrl, body.Error == "")
 
 	c := &http.Client{
 		Timeout: 15 * time.Second,
@@ -103,7 +103,7 @@ func callbackToWebhook(body AnalysisCallback, url string) {
 		return
 	}
 
-	auth := opts.BackendUsername + ":" + opts.BackendPassword
+	auth := cfg.BackendUsername + ":" + cfg.BackendPassword
 	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -115,5 +115,5 @@ func callbackToWebhook(body AnalysisCallback, url string) {
 	}
 
 	defer resp.Body.Close()
-	log.Debugf("return value: %v", resp.StatusCode)
+	slog.Debug("return value: %v", resp.StatusCode)
 }

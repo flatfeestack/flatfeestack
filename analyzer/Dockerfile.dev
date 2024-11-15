@@ -1,0 +1,17 @@
+FROM golang:1.23-bookworm AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/libgit2/lib/pkgconfig"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/libgit2/lib"
+RUN apt update && apt -y install ca-certificates cmake gcc git g++ libssh2-1-dev libssl-dev make pkg-config
+RUN go install github.com/air-verse/air@v1.61.1 && go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+WORKDIR /app
+RUN git clone https://github.com/libgit2/libgit2.git && \
+    cd /app/libgit2 && git checkout v1.5.0 && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/opt/libgit2 -DBUILD_TESTS=false && \
+    cmake --build . --target install -j $(nproc)
+#cache dependencies
+COPY go.* ./
+RUN go mod download
+ENTRYPOINT ["air"]

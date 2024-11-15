@@ -3,25 +3,30 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/MatusOllah/slogcolor"
 	"github.com/dimiro1/banner"
-	"github.com/flatfeestack/go-lib/auth"
-	env "github.com/flatfeestack/go-lib/environment"
-	prom "github.com/flatfeestack/go-lib/prometheus"
-	"github.com/gorilla/mux"
+	"github.com/fatih/color"
 	"github.com/joho/godotenv"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 )
 
 var (
-	opts  *Opts
-	debug bool
+	cfg    *Config
+	logger = slog.New(slogcolor.NewHandler(os.Stderr, &slogcolor.Options{
+		Level:         slog.LevelDebug,
+		TimeFormat:    "15:04:05.000",
+		SrcFileMode:   slogcolor.ShortFile,
+		SrcFileLength: 16,
+		MsgPrefix:     color.HiWhiteString("|"),
+		MsgColor:      color.New(color.FgHiWhite),
+		MsgLength:     16,
+	}))
 )
 
-type Opts struct {
+type Config struct {
 	Port               int
 	Env                string
 	HS256              string
@@ -35,78 +40,65 @@ type Opts struct {
 }
 
 func init() {
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
+	color.NoColor = false
+	slog.SetDefault(logger)
 }
 
-func NewOpts() *Opts {
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Could not find env file [%v], using defaults", err)
-	}
+func parseFlags() {
+	cfg = &Config{}
 
-	o := &Opts{}
+	flag.StringVar(&cfg.Env, "env", LookupEnv("ENV"), "ENV variable")
+	flag.IntVar(&cfg.Port, "port", LookupEnvInt("PORT", 9083), "listening HTTP port")
+	flag.StringVar(&cfg.GitBasePath, "git-base", LookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
 
-	flag.StringVar(&o.Env, "env", env.LookupEnv("ENV"), "ENV variable")
-	flag.IntVar(&o.Port, "port", env.LookupEnvInt("PORT", 9083), "listening HTTP port")
-	flag.StringVar(&o.GitBasePath, "git-base", env.LookupEnv("GIT_BASE", "/tmp"), "Git base storage path")
+	flag.StringVar(&cfg.AnalyzerUsername, "analyzer-username", LookupEnv("ANALYZER_USERNAME"), "Username for accessing API")
+	flag.StringVar(&cfg.AnalyzerPassword, "analyzer-password", LookupEnv("ANALYZER_PASSWORD"), "Password for accessing API")
 
-	flag.StringVar(&o.AnalyzerUsername, "analyzer-username", env.LookupEnv("ANALYZER_USERNAME"), "Username for accessing API")
-	flag.StringVar(&o.AnalyzerPassword, "analyzer-password", env.LookupEnv("ANALYZER_PASSWORD"), "Password for accessing API")
-
-	flag.StringVar(&o.BackendCallbackUrl, "callback", env.LookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
-	flag.StringVar(&o.BackendUsername, "backend-username", env.LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
-	flag.StringVar(&o.BackendPassword, "backend-password", env.LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
+	flag.StringVar(&cfg.BackendCallbackUrl, "callback", LookupEnv("BACKEND_CALLBACK_URL"), "Callback URL")
+	flag.StringVar(&cfg.BackendUsername, "backend-username", LookupEnv("BACKEND_USERNAME"), "Username for accessing backend API")
+	flag.StringVar(&cfg.BackendPassword, "backend-password", LookupEnv("BACKEND_PASSWORD"), "Password for accessing backend API")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Printf("Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
 	//set defaults, be explicit
-	if o.Env == "local" || o.Env == "dev" {
-		debug = true
-		log.SetLevel(log.DebugLevel)
+	if cfg.Env == "local" || cfg.Env == "dev" {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 	} else {
-		log.SetLevel(log.InfoLevel)
+		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
-
-	return o
 }
 
 func main() {
 	//the .env should be loaded before showing the banner, as the banner shows also the ENVs
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("Could not find env file [%v], using defaults", err)
+		slog.Info("Could not find .env file, using defaults")
 	}
 	//this will set the default ENVs
-	opts = NewOpts()
+	parseFlags()
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
 		banner.Init(os.Stdout, true, false, f)
 	} else {
-		log.Printf("could not display banner...")
+		slog.Info("could not display banner...")
 	}
-	credentials := auth.Credentials{
-		Username: opts.AnalyzerUsername,
-		Password: opts.AnalyzerPassword,
+	credentials := Credentials{
+		Username: cfg.AnalyzerUsername,
+		Password: cfg.AnalyzerPassword,
 	}
 
-	router := mux.NewRouter().StrictSlash(true)
-	registry := prom.CreateRegistry()
-	router.Use(prom.PrometheusMiddleware)
-	router.Path("/metrics").Handler(promhttp.HandlerFor(
-		registry,
-		promhttp.HandlerOpts{
-			Registry: registry,
-			// Opt into OpenMetrics to support exemplars.
-			EnableOpenMetrics: true,
-		},
-	))
-	router.HandleFunc("/analyze", auth.BasicAuth(credentials, analyze)).Methods("POST")
-	log.Println("Starting analysis on port " + strconv.Itoa(opts.Port))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(opts.Port), router))
+	router := http.NewServeMux()
+
+	router.HandleFunc("POST /analyze", BasicAuth(credentials, analyze))
+
+	slog.Info("Starting FlatFeeStack Git Analyzer", "port", cfg.Port)
+	err = http.ListenAndServe(":"+strconv.Itoa(cfg.Port), router)
+	if err != nil {
+		slog.Error("Server stopped", slog.Any("error", err))
+	}
 }

@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	git "github.com/libgit2/git2go/v34"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"log/slog"
 	"math"
 	"net/url"
 	"os"
@@ -78,7 +78,7 @@ func analyzeRepository(startTime time.Time, stopTime time.Time, location string)
 	}
 	defer repo.Free()
 
-	log.Infof("---> cloned/updated repository in %dms\n", time.Since(cloneUpdateStart).Milliseconds())
+	slog.Info("---> cloned/updated repository in %dms\n", time.Since(cloneUpdateStart).Milliseconds())
 
 	authorMap := map[string]Contribution{}
 	gitAnalysisStart := time.Now()
@@ -115,7 +115,7 @@ func analyzeRepository(startTime time.Time, stopTime time.Time, location string)
 	}
 	wg.Wait()
 
-	log.Infof("---> #%v git analysis in %dms\n", commitCounter, time.Since(gitAnalysisStart).Milliseconds())
+	slog.Info("---> #%v git analysis in %dms\n", commitCounter, time.Since(gitAnalysisStart).Milliseconds())
 	return authorMap, nil
 }
 
@@ -181,7 +181,7 @@ func collectInfo(commit *git.Commit, parentCommit *git.Commit, authorMap map[str
 		return err
 	}
 
-	log.Debugf("commit: %v (%v/%v) [%v/%v] | %v, time: %v",
+	slog.Debug("commit: %v (%v/%v) [%v/%v] | %v, time: %v",
 		commit.Id().String(), author.Email, committer.Email, stats.Insertions(),
 		stats.Deletions(), commit.Summary(), time.Since(start).Milliseconds())
 
@@ -214,12 +214,12 @@ func fillAuthorMap(author *git.Signature, committer *git.Signature, ts []git.Tra
 				i := strings.IndexByte(v.Value, '<')
 				if e == "" && i < 0 { //no email, and no <>
 					e = "no-email-found@flatfeestack.com"
-					log.Warnf("no email found in [%v]", v.Value)
+					slog.Warn("no email found in [%v]", v.Value)
 				} else if e != "" && i < 0 {
 					var err error
 					n, err = emailToName(e)
 					if err != nil {
-						log.Warnf("no name found, using email as name [%v]", v.Value)
+						slog.Warn("no name found, using email as name [%v]", v.Value)
 					}
 				} else {
 					n = strings.TrimSpace(v.Value[:i])
@@ -294,7 +294,7 @@ func weightContributions(contributions map[string]Contribution) ([]FlatFeeWeight
 			Weight: changesPercentage*changesWeight + gitHistoryPercentage*gitHistoryWeight,
 		})
 
-		log.Infof("authors: %v=+%v/-%v, c:%v,m:%v", contribution.Names, contribution.Addition, contribution.Deletion, contribution.Commits, contribution.Merges)
+		slog.Info("authors: %v=+%v/-%v, c:%v,m:%v", contribution.Names, contribution.Addition, contribution.Deletion, contribution.Commits, contribution.Merges)
 	}
 
 	return result, nil
@@ -314,7 +314,7 @@ func cloneOrUpdate(gitUrl string) (*git.Repository, error) {
 	//directory already existing,
 	if err != nil {
 		// still log the error, could be the issue is something else than "directory does already exist"
-		log.Errorln(err)
+		slog.Error("error", slog.Any("error", err))
 
 		repo, err = git.OpenRepository(p)
 		if err != nil {
@@ -367,7 +367,7 @@ func pathName(gitUrl string) (string, error) {
 	}
 	folderName := u.Host + strings.ReplaceAll(u.Path, "/", "")
 	folderName = strings.ReplaceAll(folderName, ".", "")
-	return opts.GitBasePath + "/" + folderName, nil
+	return cfg.GitBasePath + "/" + folderName, nil
 }
 
 func contains(s []string, e string) bool {
@@ -385,7 +385,7 @@ func contains(s []string, e string) bool {
 func expired(commit *git.Commit, startTime time.Time, stopTime time.Time) bool {
 	if (startTime != defaultTime && commit.Author().When.Before(startTime) && commit.Committer().When.Before(startTime)) ||
 		(stopTime != defaultTime && commit.Author().When.After(stopTime) && commit.Committer().When.After(stopTime)) {
-		log.Debugf("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
+		slog.Debug("time reached: %v -  %v/%v", commit.Id().String(), commit.Author().When, commit.Committer().When)
 		return true
 	}
 	return false

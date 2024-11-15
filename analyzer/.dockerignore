@@ -1,7 +1,10 @@
 .git
 .gitignore
 .idea
-api.http
+LICENSE
 README.md
 .example.env
-test-repository.zip
+.env
+Dockerfile
+Dockerfile.dev
+api.http
