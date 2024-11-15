@@ -213,6 +213,6 @@ CREATE TABLE IF NOT EXISTS repo_health_metrics (
     commit_count                NUMERIC(78),
     sponsor_donation            NUMERIC(78),
     repo_star_count             NUMERIC(78),
-    repo_multplier_count        NUMERIC(78),
+    repo_multiplier_count       NUMERIC(78),
     repo_weight                 NUMERIC(78)
 );
