@@ -115,8 +115,8 @@ func GetAllTrustValues() ([]RepoHealthMetrics, error) {
 	return scanTrustValue(rows)
 }
 
-func GetInternalMetrics(repoId uuid.UUID) (*InternalHealthMetrics, error) {
-	var internalHealthMetric InternalHealthMetrics
+func GetInternalMetrics(repoId uuid.UUID) (*RepoHealthMetrics, error) {
+	var internalHealthMetric RepoHealthMetrics
 	rowsMetricSponsorDonation, err := DB.Query(
 		`SELECT
 			COUNT(DISTINCT user_sponsor_id) AS total_sponsor_count
@@ -249,12 +249,8 @@ func GetInternalMetrics(repoId uuid.UUID) (*InternalHealthMetrics, error) {
 		return nil, err
 	}
 
-	switch err {
-	case sql.ErrNoRows:
+	if err == sql.ErrNoRows {
 		return nil, nil
-	case nil:
-		return &internalHealthMetric, nil
-	default:
-		return nil, err
 	}
+	return &internalHealthMetric, err
 }
