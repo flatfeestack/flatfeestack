@@ -56,13 +56,19 @@ func TestGetLatestThresholds(t *testing.T) {
 func TestGetRepoThresholdHistory(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
-	for range 5 {
+	iterations := 5
+	for range iterations {
 		_ = InsertRepoHealthThreshold(*getRepoHealthThresholdtTestData())
 	}
 	res, err := GetRepoThresholdHistory()
-	for _, value := range res {
-		t.Logf("%v\n", value.ThCommitCount)
-	}
 	assert.Nil(t, err)
-	assert.Len(t, res, 5)
+	assert.Len(t, res, iterations+1)
+}
+
+func TestInitialValue(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	res, err := GetFirstRepoHealthThreshold()
+	assert.Nil(t, err)
+	assert.Equal(t, uuid.MustParse("b7244c4a-dadd-45f5-bd12-0fcefb5d66c2"), res.Id)
 }

@@ -77,6 +77,28 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 
 	return handleErrMustInsertOne(res)
 }
+func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
+	query :=
+		`SELECT 
+			id,                                          	
+			created_at,                                  	
+			th_contributer_count,                        	
+			th_commit_count,                             	
+			th_sponsor_donation,                         	
+			th_repo_star_count,                          	
+			th_repo_multiplier                           	
+		FROM                                          	
+			repo_health_threshold                        	
+		ORDER BY                                      	
+			created_at ASC
+		LIMIT 1`
+
+	result, err := executeRepoThresholdQuery(query)
+	if err != nil {
+		return nil, err
+	}
+	return &result[0], nil
+}
 
 func GetLatestThresholds() (*RepoHealthThreshold, error) {
 	query :=
