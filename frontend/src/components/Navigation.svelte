@@ -41,6 +41,10 @@
     color: var(--primary-900);
   }
 
+  .page-content {
+    width: calc(100vw - 16rem);
+  }
+
   @media (max-width: 36rem) {
     .page {
       flex-direction: column;
@@ -89,7 +93,7 @@
       />
     {/if}
   </nav>
-  <div>
+  <div class="page-content">
     {#if $isSubmitting}<Spinner />{/if}
     <slot />
   </div>

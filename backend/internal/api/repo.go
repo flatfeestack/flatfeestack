@@ -274,7 +274,15 @@ func (rs *RepoHandler) trustRepo0(w http.ResponseWriter, user *db.UserDetail, re
 		return
 	}
 
-	util.WriteJson(w, repo)
+	repoWithTrustDate, err := db.FindRepoWithTrustDateById(repoId)
+	if err != nil {
+		slog.Error("Could not find repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		return
+	}
+
+	util.WriteJson(w, repoWithTrustDate)
 }
 
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {

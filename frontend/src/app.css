@@ -117,6 +117,9 @@ h1 {
 .ml-5 {
   margin-left: 0.5rem;
 }
+.ml-0 {
+  margin-left: 0;
+}
 .m-0 {
   margin: 0;
 }
@@ -542,4 +545,63 @@ tbody tr:last-of-type {
 
 .inline {
   display: inline;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.drop-button {
+  margin: 0;
+  width: 100%;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  min-width: 12rem;
+  max-width: 15rem;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  border-radius: 5px;
+}
+
+.dropdown-content button {
+  color: black;
+  border: none;
+  background-color: var(--secondary-100);
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  display: block;
+  transition: background 0.5s;
+  border-radius: 0;
+  text-align: left;
+}
+
+.dropdown-content button:first-child {
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.dropdown-content button:last-child {
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.dropdown-content button:hover {
+  background: var(--primary-400);
+}
+
+.dropdown-content button:active {
+  background: var(--primary-900);
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown:hover .drop-button {
+  background-color: #3e8e41;
 }
