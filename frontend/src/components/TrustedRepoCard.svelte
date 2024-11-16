@@ -36,12 +36,14 @@
     height: 2.5em;
     box-shadow: 0 3px 2px -2px black;
   }
-  .center2 {
+  .repo-title {
     font-weight: bold;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding: 0.5rem 0 0 0;
   }
+
   .body {
     text-align: center;
     font-size: medium;
@@ -116,7 +118,7 @@
     </div>
   </div>
   {#if repo}
-    <div class="center center2 py-2">{repo.name}</div>
+    <div class="center repo-title" title={repo.name}>{repo.name}</div>
     <div>
       <a href={repo.url} class="py-2 url" target="_blank" rel="noreferrer">
         {repo.url}

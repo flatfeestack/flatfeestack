@@ -2,24 +2,30 @@
   import { onMount } from "svelte";
   import { API } from "../../ts/api";
   import {
+    faCaretUp,
+    type IconDefinition,
+  } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
+
+  import {
     error,
     isSubmitting,
     loadedTrustedRepos,
-    sponsoredRepos,
     trustedRepos,
   } from "../../ts/mainStore";
   import type { Repo } from "../../types/backend";
-
   import Dots from "../../components/Dots.svelte";
   import Navigation from "../../components/Navigation.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
   import TrustedRepoCard from "../../components/TrustedRepoCard.svelte";
   // import { Link } from "svelte-routing";
 
+  let icon: IconDefinition;
   let search = "";
   let searchRepos: Repo[] = [];
   let isSearchSubmitting = false;
   let sortingFunction: (a: Repo, b: Repo) => number;
+  let sortingTitle: string;
 
   $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
 
@@ -76,6 +82,7 @@
 
   // Set default sorting function
   sortingFunction = sortByDateDesc;
+  sortingTitle = "Recently Added:";
 
   onMount(async () => {
     if (!$loadedTrustedRepos) {
@@ -94,9 +101,6 @@
 </script>
 
 <style>
-  .dropdown {
-    margin: 0.5rem 0.5rem 0.5rem 0;
-  }
   .cards-overflow-x {
     display: flex;
     flex-direction: row;
@@ -107,17 +111,42 @@
     -webkit-overflow-scrolling: touch;
   }
   .cards-overflow-x::-webkit-scrollbar {
-    height: 8px; /* Height of the scrollbar */
-    background: #f1f1f1; /* Scrollbar track color */
+    height: 8px;
+    background: #f1f1f1;
   }
 
   .cards-overflow-x::-webkit-scrollbar-thumb {
-    background: #888; /* Scrollbar thumb color */
-    border-radius: 4px; /* Rounded corners for the thumb */
+    background: #888;
+    border-radius: 4px;
   }
 
   .cards-overflow-x::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Darker thumb on hover */
+    background: #555;
+  }
+
+  .search-overflow-y {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    height: 800px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-top: solid 1px var(--secondary-300);
+    -webkit-overflow-scrolling: touch;
+  }
+  .search-overflow-y::-webkit-scrollbar {
+    width: 8px;
+    background: #f1f1f1;
+  }
+
+  .search-overflow-y::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  .search-overflow-y::-webkit-scrollbar-thumb:hover {
+    background: #555;
   }
 
   @media screen and (max-width: 600px) {
@@ -135,49 +164,69 @@
 </style>
 
 <Navigation>
-  <div class="p-2">
-    <h2>Healthy Repositories</h2>
+  <h2 class="p-2 m-2">Healthy Repositories</h2>
+
+  <div class="container-col2 m-4">
     <div class="container-small">
-      <div class="container-small dropdown">
-        <button class="button1 drop-button" id="drop-button">Sort</button>
+      <div class="container-small m-2 dropdown">
+        <button class="button1 drop-button" id="drop-button"
+          ><Fa icon={faCaretUp} /> Sort</button
+        >
         <div class="dropdown-content">
-          <button on:click={() => (sortingFunction = sortByDateDesc)}
-            >Sort by Date Desc</button
+          <button
+            on:click={() => {
+              sortingFunction = sortByDateDesc;
+              sortingTitle = "Recently Added:";
+            }}>Sort by Date - Recently Added</button
           >
-          <button on:click={() => (sortingFunction = sortByDateAsc)}
-            >Sort by Date Asc</button
+          <button
+            on:click={() => {
+              sortingFunction = sortByDateAsc;
+              sortingTitle = "First Added:";
+            }}>Sort by Date - First Added</button
           >
-          <button on:click={() => (sortingFunction = sortByDate)}
-            >Sort by Score</button
+          <button
+            on:click={() => {
+              sortingFunction = sortByDateDesc;
+              sortingTitle = "Score - high to low:";
+            }}>Sort by Score - high to low</button
+          >
+          <button
+            on:click={() => {
+              sortingFunction = sortByDateAsc;
+              sortingTitle = "Score - low to high:";
+            }}>Sort by Score - low to high</button
           >
         </div>
       </div>
-      <h3 class="m-2">Recently Added:</h3>
+      <h3 class="m-2">{sortingTitle}</h3>
     </div>
     {#if $trustedRepos.length > 0}
-      <div class="m-2 cards-overflow-x">
+      <div class="cards-overflow-x">
         {#each sortedTrustedRepos as repo, key (repo.uuid)}
           <TrustedRepoCard {repo} />
         {/each}
       </div>
     {/if}
+  </div>
 
-    <h2>Add new Healthy Repositories</h2>
-    <div class="m-2">
-      <form class="flex" on:submit|preventDefault={handleSearch}>
-        <input type="text" bind:value={search} />
-        <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
-          >Search{#if isSearchSubmitting}<Dots />{/if}</button
-        >
-      </form>
-    </div>
+  <h2 class="p-2 m-2">Add new Healthy Repositories</h2>
 
+  <div class="container-col2 m-4">
+    <form class="flex" on:submit|preventDefault={handleSearch}>
+      <input type="text" bind:value={search} />
+      <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
+        >Search{#if isSearchSubmitting}<Dots />{/if}</button
+      >
+    </form>
     {#if searchRepos?.length > 0}
-      <h3 class="m-2">Results</h3>
-      <div>
-        {#each searchRepos as repo, key (repo.uuid)}
-          <AdminSearchResult {repo} />
-        {/each}
+      <div class="search-overflow-y my-2">
+        <h3 class="m-2">Results</h3>
+        <div>
+          {#each searchRepos as repo, key (repo.uuid)}
+            <AdminSearchResult {repo} />
+          {/each}
+        </div>
       </div>
     {/if}
   </div>

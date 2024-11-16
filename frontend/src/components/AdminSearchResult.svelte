@@ -32,13 +32,6 @@
 </script>
 
 <style>
-  .container {
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 2em;
-    max-width: 40rem;
-  }
-
   svg,
   p.square-1 {
     margin: 0.25em;

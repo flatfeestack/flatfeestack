@@ -547,6 +547,7 @@ tbody tr:last-of-type {
   display: inline;
 }
 
+/* Drop Down Menu Template*/
 .dropdown {
   position: relative;
   display: inline-block;
@@ -560,8 +561,8 @@ tbody tr:last-of-type {
 .dropdown-content {
   display: none;
   position: absolute;
-  min-width: 12rem;
-  max-width: 15rem;
+  min-width: 16rem;
+  max-width: 20rem;
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
   z-index: 1;
   border-radius: 5px;
@@ -604,4 +605,12 @@ tbody tr:last-of-type {
 
 .dropdown:hover .drop-button {
   background-color: #3e8e41;
+}
+
+.drop-button svg {
+  transition: transform 0.5s ease-in-out;
+}
+
+.dropdown:hover .drop-button svg {
+  transform: rotate(180deg);
 }
