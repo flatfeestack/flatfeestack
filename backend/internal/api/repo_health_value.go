@@ -10,16 +10,7 @@ import (
 )
 
 func GetRepoHealthMetricsById(w http.ResponseWriter, r *http.Request) {
-	var id uuid.UUID
-	id = uuid.MustParse(r.PathValue("id"))
-	//convertedTrustValueId, err := strconv.Atoi(id)
-
-	//if err != nil {
-	//	slog.Error("Invalid user ID",
-	//		slog.Any("error", err))
-	//	util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-	//}
-
+	id := uuid.MustParse(r.PathValue("id"))
 	trustValue, err := db.FindRepoHealthMetricsById(id)
 
 	if trustValue == nil {
@@ -83,6 +74,11 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.ContributerCount = contributerCount
 	repoHealthMetrics.CommitCount = commitCount
 	repoHealthMetrics.RepoWeight = repoWeight
+
+	err = db.InsertRepoHealthMetrics(*repoHealthMetrics)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
