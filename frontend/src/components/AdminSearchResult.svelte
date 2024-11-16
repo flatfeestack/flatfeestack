@@ -7,7 +7,7 @@
   export let repo: Repo;
   let verifiedStar = false;
 
-  const onTrusted = async () => {
+  const onTrustEvent = async () => {
     try {
       if (verifiedStar) {
         await API.repos.untrust(repo.uuid);
@@ -32,13 +32,6 @@
 </script>
 
 <style>
-  .container {
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 2em;
-    max-width: 40rem;
-  }
-
   svg,
   p.square-1 {
     margin: 0.25em;
@@ -88,7 +81,7 @@
   style="border-left: solid 6px {getColor1(repo.uuid)}"
 >
   <div class="container-col2 trust-icons-div">
-    <a href="#" on:click|preventDefault={onTrusted}>
+    <a href="#" on:click|preventDefault={onTrustEvent}>
       {#if !verifiedStar}
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
