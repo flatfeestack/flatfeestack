@@ -87,11 +87,11 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanTrustValue(rows)
+	return scanRepoHealthMetrics(rows)
 }
 
 // tested by integration testing
-func scanTrustValue(rows *sql.Rows) ([]RepoHealthMetrics, error) {
+func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 	trustValues := []RepoHealthMetrics{}
 	for rows.Next() {
 		var repoHealthMetrics RepoHealthMetrics
@@ -112,7 +112,7 @@ func GetAllTrustValues() ([]RepoHealthMetrics, error) {
 		return nil, err
 	}
 
-	return scanTrustValue(rows)
+	return scanRepoHealthMetrics(rows)
 }
 
 func GetInternalMetrics(repoId uuid.UUID) (*RepoHealthMetrics, error) {
