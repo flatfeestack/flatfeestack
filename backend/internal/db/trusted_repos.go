@@ -123,7 +123,7 @@ func FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time
 
 func FindTrustedRepos() ([]Repo, error) {
 	//we want to send back an empty array, don't change
-	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
+	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, t.trust_at
             FROM trust_event t
             INNER JOIN repo r ON t.repo_id=r.id
 			WHERE t.un_trust_at IS NULL`

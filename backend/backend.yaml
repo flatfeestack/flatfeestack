@@ -1060,6 +1060,9 @@ components:
         createdAt:
           type: string
           format: date-time
+        trustAt:
+          type: string
+          format: date-time
       required:
         - uuid
         - score

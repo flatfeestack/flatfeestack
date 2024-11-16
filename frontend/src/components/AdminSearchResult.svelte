@@ -58,6 +58,10 @@
     align-items: center;
   }
 
+  .trust-icons-div :global(a:hover) {
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
+  }
+
   #trust-value-p {
     display: flex;
     justify-content: center;
