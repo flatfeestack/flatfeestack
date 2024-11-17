@@ -97,7 +97,7 @@ func handleErrMustInsertOne(res sql.Result) error {
 	if nr == 0 {
 		return fmt.Errorf("0 rows affacted, need at least 1")
 	} else if nr != 1 {
-		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
+		return fmt.Errorf("only 1 row needs to be affacted, got %v", nr)
 	}
 	return nil
 }
