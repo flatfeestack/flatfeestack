@@ -213,7 +213,7 @@
   <h2 class="p-2 m-2">Add new Healthy Repositories</h2>
 
   <div class="container-col2 m-4">
-    <form class="flex" on:submit|preventDefault={handleSearch}>
+    <form class="flex m-2" on:submit|preventDefault={handleSearch}>
       <input type="text" bind:value={search} />
       <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
         >Search{#if isSearchSubmitting}<Dots />{/if}</button
