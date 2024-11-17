@@ -9,52 +9,51 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetRepoHealthMetricsById(w http.ResponseWriter, r *http.Request) {
-	id := uuid.MustParse(r.PathValue("id"))
-	trustValue, err := db.FindRepoHealthMetricsById(id)
+type RepoHealthValue struct {
+	RepoId      uuid.UUID `json:"repoid"`
+	HealthValue float32   `json:"healthvalue"`
+}
 
-	if trustValue == nil {
-		slog.Error("Trust Value not found %s",
-			slog.String("id", id.String()))
+func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request) {
+	repoId := uuid.MustParse(r.PathValue("id"))
+	healthValue, err := getRepoHealthValue(repoId)
+
+	if healthValue == nil {
+		slog.Error("Repo Health Metrics not found %s",
+			slog.String("id", repoId.String()))
 		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 	} else if err != nil {
 		slog.Error("Could not fetch trust value",
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 	} else {
-		util.WriteJson(w, trustValue)
+		util.WriteJson(w, healthValue)
 	}
 }
 
-func UpdateTrustValue(w http.ResponseWriter, r *http.Request, trustValue *db.RepoHealthMetrics) {
-	if trustValue.Id == uuid.Nil {
+func UpdateRepoHealthValue(w http.ResponseWriter, r *http.Request, repoHealthMetrics *db.RepoHealthMetrics) {
+	if repoHealthMetrics.Id == uuid.Nil {
 		slog.Error("RepoId is missing",
-			slog.String("Trust Value id", trustValue.Id.String()))
+			slog.String("Repo Health Metrics id", repoHealthMetrics.Id.String()))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
 
-	err := db.UpdateRepoHealthMetrics(*trustValue)
+	err := db.UpdateRepoHealthMetrics(*repoHealthMetrics)
 	if err != nil {
 		util.WriteErrorf(w, http.StatusNoContent, "Could not update trust value: %v", err)
 		return
 	}
-	trustValue, err = db.FindRepoHealthMetricsById(trustValue.Id)
+	repoHealthMetrics, err = db.FindRepoHealthMetricsById(repoHealthMetrics.Id)
 	if err != nil {
 		util.WriteErrorf(w, http.StatusNoContent, "Could not find trust value: %v", err)
 		return
 	}
 
-	util.WriteJson(w, trustValue)
-}
-
-func GetAllTrustValuesUnique(w http.ResponseWriter, r *http.Request) {
-
+	util.WriteJson(w, repoHealthMetrics)
 }
 
 func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
-	//var repoHealthMetrics db.TrustValueMetrics
-
 	contributerCount := 0
 	var commitCount int
 	var repoWeight float64
@@ -97,3 +96,90 @@ func manageInternalHealthMetrics(repoId uuid.UUID) (*db.RepoHealthMetrics, error
 
 	return &repoHealthMetrics, nil
 }
+
+func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
+	healthMetrics, err := db.FindRepoHealthMetricsByRepoIdHistory(repoId)
+	if err != nil {
+		return nil, err
+	}
+	healthThreshold, err := db.GetLatestThresholds()
+	var repoHealthHistory []RepoHealthValue
+
+	for _, metrics := range healthMetrics {
+		tmp, err := calculateRepoHealthValue(healthThreshold, &metrics)
+		if err != nil {
+			return nil, err
+		}
+		repoHealthHistory = append(repoHealthHistory, *tmp)
+	}
+	return repoHealthHistory, nil
+}
+
+func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
+	healthMetrics, err := db.FindRepoHealthMetricsByRepoId(repoId)
+	if err != nil {
+		return nil, err
+	}
+	healthThreshold, err := db.GetLatestThresholds()
+
+	repoHealthValue, err := calculateRepoHealthValue(healthThreshold, healthMetrics)
+	if err != nil {
+		return nil, err
+	}
+	return repoHealthValue, nil
+}
+
+func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) (*RepoHealthValue, error) {
+	healthValueObject := RepoHealthValue{
+		RepoId:      metrics.RepoId,
+		HealthValue: 0.0,
+	}
+	healthMetrics := []int{
+		metrics.ContributerCount,
+		metrics.CommitCount,
+		metrics.SponsorCount,
+		metrics.RepoStarCount,
+		metrics.RepoMultiplierCount,
+	}
+
+	healthThreshold := [][]float32{
+		{threshold.ThContributerCount.Lower, threshold.ThContributerCount.Upper},
+		{threshold.ThCommitCount.Lower, threshold.ThCommitCount.Upper},
+		{threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper},
+		{threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper},
+		{threshold.ThRepoMultiplier.Lower, threshold.ThRepoMultiplier.Upper},
+	}
+
+	for i := range 5 {
+		var partialHealthValue float32
+		currentMetric := float32(healthMetrics[i])
+		currentThresholdLower := healthThreshold[i][0]
+		currentThresholdUpper := healthThreshold[i][1]
+
+		if currentMetric <= currentThresholdLower {
+			partialHealthValue = 0.0
+		} else if currentMetric >= currentThresholdUpper {
+			partialHealthValue = 2.0
+		} else {
+			thresholdDifference := currentThresholdUpper - currentThresholdLower - 1
+			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
+			partialHealthValue = (2 / thresholdDifference) * normalizedCurrentMetric
+		}
+		healthValueObject.HealthValue += partialHealthValue
+	}
+
+	return &healthValueObject, nil
+}
+
+/*
+Frontend benötigt health value
+rest alles backend
+
+handlerFunktion: Ufgob
+- mach den e ufgo
+- bearbeitet nur ein Item
+
+History:
+
+One Item:
+*/
