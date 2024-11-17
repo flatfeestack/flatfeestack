@@ -66,8 +66,30 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 	var healthValue RepoHealthMetrics
 	err := DB.
-		QueryRow("SELECT id, repo_id, created_at, contributer_count, commit_count,  sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics WHERE id=$1", id).
-		Scan(&healthValue.Id, &healthValue.RepoId, &healthValue.CreatedAt, &healthValue.ContributerCount, &healthValue.CommitCount, &healthValue.SponsorCount, &healthValue.RepoStarCount, &healthValue.RepoMultiplierCount, &healthValue.RepoWeight)
+		QueryRow(`
+			SELECT id,
+				repo_id,
+				created_at,
+				contributer_count,
+				commit_count,
+				sponsor_donation,
+				repo_star_count,
+				repo_multiplier_count,
+				repo_weight 
+			FROM 
+				repo_health_metrics 
+			WHERE 
+				id=$1`, id).
+		Scan(
+			&healthValue.Id,
+			&healthValue.RepoId,
+			&healthValue.CreatedAt,
+			&healthValue.ContributerCount,
+			&healthValue.CommitCount,
+			&healthValue.SponsorCount,
+			&healthValue.RepoStarCount,
+			&healthValue.RepoMultiplierCount,
+			&healthValue.RepoWeight)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +101,60 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 }
 
 // done
-func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
+func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error) {
 	//var tv TrustValue
 	rows, err := DB.
-		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics WHERE repo_id=$1 order by created_at desc", repoId)
+		Query(`
+			SELECT 
+				id,
+				repo_id,
+				created_at,
+				contributer_count,
+				commit_count,
+				sponsor_donation,
+				repo_star_count,
+				repo_multiplier_count,
+				repo_weight 
+			FROM 
+				repo_health_metrics 
+			WHERE 
+				repo_id=$1 
+			ORDER BY 
+				created_at DESC
+			LIMIT 1`,
+			repoId)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+	result, err := scanRepoHealthMetrics(rows)
+	if err != nil {
+		return nil, err
+	}
+	return &result[0], nil
+}
+
+func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
+	//var tv TrustValue
+	rows, err := DB.
+		Query(`
+			SELECT 
+				id,
+				repo_id,
+				created_at,
+				contributer_count,
+				commit_count,
+				sponsor_donation,
+				repo_star_count,
+				repo_multiplier_count,
+				repo_weight 
+			FROM 
+				repo_health_metrics 
+			WHERE 
+				repo_id=$1 
+			ORDER BY 
+				created_at DESC`,
+			repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -92,16 +164,16 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) ([]RepoHealthMetrics, error
 
 // tested by integration testing
 func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
-	trustValues := []RepoHealthMetrics{}
+	healthMetrics := []RepoHealthMetrics{}
 	for rows.Next() {
 		var repoHealthMetrics RepoHealthMetrics
 		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
 		if err != nil {
 			return nil, err
 		}
-		trustValues = append(trustValues, repoHealthMetrics)
+		healthMetrics = append(healthMetrics, repoHealthMetrics)
 	}
-	return trustValues, nil
+	return healthMetrics, nil
 }
 
 // tested
