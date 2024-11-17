@@ -220,7 +220,7 @@
       >
     </form>
     {#if searchRepos?.length > 0}
-      <div class="search-overflow-y my-2">
+      <div class="search-overflow-y m-2">
         <h3 class="m-2">Results</h3>
         <div>
           {#each searchRepos as repo, key (repo.uuid)}
