@@ -103,8 +103,11 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 		return nil, err
 	}
 	healthThreshold, err := db.GetLatestThresholds()
-	var repoHealthHistory []RepoHealthValue
+	if err != nil {
+		return nil, err
+	}
 
+	var repoHealthHistory []RepoHealthValue
 	for _, metrics := range healthMetrics {
 		tmp, err := calculateRepoHealthValue(healthThreshold, &metrics)
 		if err != nil {
@@ -121,6 +124,9 @@ func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
 		return nil, err
 	}
 	healthThreshold, err := db.GetLatestThresholds()
+	if err != nil {
+		return nil, err
+	}
 
 	repoHealthValue, err := calculateRepoHealthValue(healthThreshold, healthMetrics)
 	if err != nil {
