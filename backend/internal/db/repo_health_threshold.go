@@ -16,10 +16,10 @@ type Threshold struct {
 type RepoHealthThreshold struct {
 	Id                 uuid.UUID  `db:"id"`
 	CreatedAt          time.Time  `db:"created_at"`
-	ThContributerCount *Threshold `db:"th_contributer_count validate:"required""`
-	ThCommitCount      *Threshold `db:"th_commit_count validate:"required""`
-	ThSponsorDonation  *Threshold `db:"th_sponsor_donation validate:"required""`
-	ThRepoStarCount    *Threshold `db:"th_repo_star_count validate:"required""`
+	ThContributerCount *Threshold `db:"th_contributer_count" validate:"required"`
+	ThCommitCount      *Threshold `db:"th_commit_count" validate:"required"`
+	ThSponsorDonation  *Threshold `db:"th_sponsor_donation" validate:"required"`
+	ThRepoStarCount    *Threshold `db:"th_repo_star_count" validate:"required"`
 	ThRepoMultiplier   *Threshold `db:"th_repo_multiplier" validate:"required"`
 }
 
