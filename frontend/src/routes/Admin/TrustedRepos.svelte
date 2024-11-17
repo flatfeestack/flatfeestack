@@ -213,14 +213,14 @@
   <h2 class="p-2 m-2">Add new Healthy Repositories</h2>
 
   <div class="container-col2 m-4">
-    <form class="flex" on:submit|preventDefault={handleSearch}>
+    <form class="flex m-2" on:submit|preventDefault={handleSearch}>
       <input type="text" bind:value={search} />
       <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
         >Search{#if isSearchSubmitting}<Dots />{/if}</button
       >
     </form>
     {#if searchRepos?.length > 0}
-      <div class="search-overflow-y my-2">
+      <div class="search-overflow-y m-2">
         <h3 class="m-2">Results</h3>
         <div>
           {#each searchRepos as repo, key (repo.uuid)}

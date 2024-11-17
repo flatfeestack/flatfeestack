@@ -7,9 +7,13 @@
   export let repo: Repo;
   let verifiedStar = true;
   let abortUntrustEvent = false;
+  let unTrustProgress = 100;
+  let unTrustProcessRunning = false;
 
   async function unTrust() {
     verifiedStar = false;
+    unTrustProgress = 100;
+    unTrustProcessRunning = true;
     try {
       await API.repos.untrust(repo.uuid);
       $trustedRepos = $trustedRepos.filter((r: Repo) => {
@@ -18,17 +22,40 @@
     } catch (e) {
       $error = e;
       verifiedStar = true;
+    } finally {
+      unTrustProcessRunning = false;
+      unTrustProgress = 100;
     }
   }
 
   function delayUntrust() {
     verifiedStar = false;
+    unTrustProcessRunning = true;
+
+    const duration = 5000;
+    const interval = 100;
+    const decrement = (100 / duration) * interval;
+
+    const intervalId = setInterval(() => {
+      if (abortUntrustEvent) {
+        clearInterval(intervalId);
+        unTrustProgress = 100;
+        unTrustProcessRunning = false;
+        return;
+      }
+      unTrustProgress -= decrement;
+      if (unTrustProgress <= 0) {
+        clearInterval(intervalId);
+        unTrustProgress = 0;
+      }
+    }, interval);
+
     setTimeout(async () => {
       if (!abortUntrustEvent) {
         await unTrust();
       }
       abortUntrustEvent = false;
-    }, 5000);
+    }, duration);
   }
 
   function trustRepo() {
@@ -48,6 +75,8 @@
     box-shadow: 0.25em 0.25em 0.25em #e1e1e3;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
+    position: relative;
+    overflow: hidden;
   }
   .color {
     border-top-left-radius: 10px;
@@ -62,7 +91,16 @@
     white-space: nowrap;
     padding: 0.5rem 0 0 0;
   }
-
+  .progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 0.25rem;
+    background-color: #169df0;
+    width: 100%;
+    transition: width 0.1s linear;
+    z-index: 1;
+  }
   .body {
     text-align: center;
     font-size: medium;
@@ -80,11 +118,9 @@
     height: 2em;
     width: 2em;
   }
-
   .color :global(a:hover) {
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
-
   @media screen and (max-width: 600px) {
     .child {
       max-width: unset;
@@ -97,6 +133,12 @@
 
 <div class="child rounded">
   <div
+    class="progress-bar"
+    style="width: {unTrustProgress}%; visibility: {unTrustProcessRunning
+      ? 'visible'
+      : 'hidden'}"
+  />
+  <div
     class="color container-small"
     style="background-image:radial-gradient(circle at top right,{getColor2(
       repo.uuid
@@ -104,7 +146,11 @@
   >
     <div class="container-small">
       {#if verifiedStar}
-        <a class="container-small" href={"#"} on:click|preventDefault={delayUntrust}>
+        <a
+          class="container-small"
+          href={"#"}
+          on:click|preventDefault={delayUntrust}
+        >
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -117,8 +163,16 @@
           </svg>
         </a>
       {:else}
-        <a class="container-small" href={"#"} on:click|preventDefault={trustRepo}>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <a
+          class="container-small"
+          href={"#"}
+          on:click|preventDefault={trustRepo}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M8.38 12L10.79 14.42L15.62 9.57996"
               stroke="#169df0"
