@@ -1235,8 +1235,8 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/FlatFeeWeight"
-          contribcommit:
-            type: list
+          repoid:
+            type: string
     FlatFeeWeight:
       type: object
       properties:
@@ -1247,6 +1247,16 @@ components:
         email:
           type: string
         weight:
+          type: number
+        commitcount:
+          type: integer
+          format: int32
+    RepoHealthValue:
+      type: object
+      properties:
+        repoid:
+          type: string
+        healthvalue:
           type: number
     Time:
       type: object

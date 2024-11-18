@@ -65,8 +65,32 @@ func TestFindRepoHealthMetricsByRepoId(t *testing.T) {
 
 	result, err := FindRepoHealthMetricsByRepoId(r.Id)
 	assert.Nil(t, err)
-	assert.Equal(t, result[0], *newRepoMetrics)
+	assert.Equal(t, result, newRepoMetrics)
+
+	// newRepoMetrics2 := getTestData(r)
+	// assert.NotEqual(t, newRepoMetrics, newRepoMetrics2)
+	//
+	// err = InsertRepoHealthMetrics(*newRepoMetrics2)
+	// assert.Nil(t, err)
+	//
+	// result, err = FindRepoHealthMetricsByRepoId(r.Id)
+	// assert.Nil(t, err)
+	// assert.Len(t, result, 2)
+	// assert.Equal(t, result[0].RepoId, result[1].RepoId)
+	// assert.NotEmpty(t, result[0], result[1])
+}
+
+func TestFindRepoHealthMetricsByRepoIdHistory(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	r := insertTestRepo(t)
+	newRepoMetrics := getTestData(r)
+	_ = InsertRepoHealthMetrics(*newRepoMetrics)
+
+	result, err := FindRepoHealthMetricsByRepoIdHistory(r.Id)
+	assert.Nil(t, err)
 	assert.Len(t, result, 1)
+	assert.Equal(t, result[0], *newRepoMetrics)
 
 	newRepoMetrics2 := getTestData(r)
 	assert.NotEqual(t, newRepoMetrics, newRepoMetrics2)
@@ -74,11 +98,11 @@ func TestFindRepoHealthMetricsByRepoId(t *testing.T) {
 	err = InsertRepoHealthMetrics(*newRepoMetrics2)
 	assert.Nil(t, err)
 
-	result, err = FindRepoHealthMetricsByRepoId(r.Id)
+	result, err = FindRepoHealthMetricsByRepoIdHistory(r.Id)
 	assert.Nil(t, err)
 	assert.Len(t, result, 2)
 	assert.Equal(t, result[0].RepoId, result[1].RepoId)
-	assert.NotEmpty(t, result[0], result[1])
+
 }
 
 // done
@@ -125,13 +149,13 @@ func TestGetAllTrustValues(t *testing.T) {
 	r := insertTestRepo(t)
 	newRepoMetrics := getTestData(r)
 	_ = InsertRepoHealthMetrics(*newRepoMetrics)
-	result, err := GetAllTrustValues()
+	result, err := GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
 	assert.Len(t, result, 1)
 	for _ = range 5 {
 		_ = InsertRepoHealthMetrics(*getTestData(insertTestRepo(t)))
 	}
-	result, err = GetAllTrustValues()
+	result, err = GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
 	assert.Len(t, result, 6)
 }

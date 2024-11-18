@@ -16,10 +16,10 @@ type Threshold struct {
 type RepoHealthThreshold struct {
 	Id                 uuid.UUID  `db:"id"`
 	CreatedAt          time.Time  `db:"created_at"`
-	ThContributerCount *Threshold `db:"th_contributer_count validate:"required""`
-	ThCommitCount      *Threshold `db:"th_commit_count validate:"required""`
-	ThSponsorDonation  *Threshold `db:"th_sponsor_donation validate:"required""`
-	ThRepoStarCount    *Threshold `db:"th_repo_star_count validate:"required""`
+	ThContributerCount *Threshold `db:"th_contributer_count" validate:"required"`
+	ThCommitCount      *Threshold `db:"th_commit_count" validate:"required"`
+	ThSponsorDonation  *Threshold `db:"th_sponsor_donation" validate:"required"`
+	ThRepoStarCount    *Threshold `db:"th_repo_star_count" validate:"required"`
 	ThRepoMultiplier   *Threshold `db:"th_repo_multiplier" validate:"required"`
 }
 
@@ -49,8 +49,8 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 		return fmt.Errorf("error marshaling multiplier threshold: %w", err)
 	}
 
-	query :=
-		`INSERT INTO 
+	query := `
+		INSERT INTO 
 			repo_health_threshold (
       	id,
       	created_at,
@@ -58,8 +58,15 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
       	th_commit_count,
       	th_sponsor_donation,
       	th_repo_star_count,
-      	th_repo_multiplier
-  	  ) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+      	th_repo_multiplier)
+		VALUES (
+			$1,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6,
+			$7)`
 
 	res, err := DB.Exec(query,
 		threshold.Id,
@@ -78,8 +85,8 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 	return handleErrMustInsertOne(res)
 }
 func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
-	query :=
-		`SELECT 
+	query := `
+		SELECT 
 			id,                                          	
 			created_at,                                  	
 			th_contributer_count,                        	
@@ -101,8 +108,8 @@ func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
 }
 
 func GetLatestThresholds() (*RepoHealthThreshold, error) {
-	query :=
-		`SELECT 
+	query := `
+		SELECT 
 			id,
 			created_at,
 			th_contributer_count,
