@@ -31,7 +31,7 @@ func AnalysisEngineHook(w http.ResponseWriter, r *http.Request) {
 
 	rowsAffected := 0
 	for _, v := range data.Result {
-		err = db.InsertAnalysisResponse(reqId, v.Email, v.Names, v.Weight, util.TimeNow())
+		err = db.InsertAnalysisResponse(reqId, data.RepoId, v.Email, v.Names, v.Weight, util.TimeNow())
 		if err != nil {
 			slog.Error("Insert problem",
 				slog.Any("error", err))
