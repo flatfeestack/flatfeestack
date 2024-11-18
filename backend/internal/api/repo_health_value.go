@@ -4,6 +4,7 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"log/slog"
+	"math"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -162,14 +163,14 @@ func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.Rep
 		currentThresholdLower := healthThreshold[i][0]
 		currentThresholdUpper := healthThreshold[i][1]
 
-		if currentMetric <= currentThresholdLower {
+		if currentMetric < currentThresholdLower {
 			partialHealthValue = 0.0
-		} else if currentMetric >= currentThresholdUpper {
+		} else if currentMetric > currentThresholdUpper {
 			partialHealthValue = 2.0
 		} else {
-			thresholdDifference := currentThresholdUpper - currentThresholdLower - 1
+			thresholdDifference := currentThresholdUpper - currentThresholdLower + 1
 			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
-			partialHealthValue = (2 / thresholdDifference) * normalizedCurrentMetric
+			partialHealthValue = float32(math.Round(float64((2/thresholdDifference)*normalizedCurrentMetric)*100) / 100)
 		}
 		healthValueObject.HealthValue += partialHealthValue
 	}
