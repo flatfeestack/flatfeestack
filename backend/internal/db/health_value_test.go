@@ -145,13 +145,13 @@ func TestGetAllTrustValues(t *testing.T) {
 	r := insertTestRepo(t)
 	newRepoMetrics := getTestData(r)
 	_ = InsertRepoHealthMetrics(*newRepoMetrics)
-	result, err := GetAllTrustValues()
+	result, err := GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
 	assert.Len(t, result, 1)
 	for _ = range 5 {
 		_ = InsertRepoHealthMetrics(*getTestData(insertTestRepo(t)))
 	}
-	result, err = GetAllTrustValues()
+	result, err = GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
 	assert.Len(t, result, 6)
 }

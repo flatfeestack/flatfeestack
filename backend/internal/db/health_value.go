@@ -206,7 +206,7 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 }
 
 // tested
-func GetAllTrustValues() ([]RepoHealthMetrics, error) {
+func GetAllRepoHealthMetrics() ([]RepoHealthMetrics, error) {
 	rows, err := DB.Query(`
 		SELECT
 			id,
