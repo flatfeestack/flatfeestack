@@ -33,8 +33,6 @@ func getTestData(r *Repo) *RepoHealthMetrics {
 
 }
 
-// analysis_response
-
 // done
 func TestInsertTrustValue(t *testing.T) {
 	SetupTestData()
@@ -160,6 +158,7 @@ func TestGetAllTrustValues(t *testing.T) {
 	assert.Len(t, result, 6)
 }
 
+// not finished, need to merge multiplier to finish the test
 func TestGetInternalMetrics(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
@@ -192,10 +191,40 @@ func TestGetInternalMetrics(t *testing.T) {
 	}
 	_ = InsertAnalysisRequest(a, time.Now())
 
-	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.5, time.Now())
-	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.4, time.Now())
-	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom2", []string{"tom2"}, 0.4, time.Now())
+	_ = InsertAnalysisResponse(a.Id, a.RepoId, "email3", []string{"tom"}, 0.5, time.Now())
 
-	//internalMetrics, _ := GetInternalMetrics(r.Id, false)
-	// not finished
+	s1 := SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       uid1,
+		RepoId:    r.Id,
+		EventType: Active,
+		SponsorAt: &t1,
+	}
+
+	s2 := SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       uid2,
+		RepoId:    r.Id,
+		EventType: Active,
+		SponsorAt: &t2,
+	}
+
+	_ = InsertOrUpdateSponsor(&s1)
+	_ = InsertOrUpdateSponsor(&s2)
+
+	t1 := TrustEvent{
+		Id:        uuid.New(),
+		Uid:       uid1,
+		RepoId:    r.Id,
+		EventType: Active,
+		TrustAt:   &t1,
+	}
+
+	_ = InsertOrUpdateTrustRepo(&t1)
+
+	internalMetrics, _ := GetInternalMetrics(r.Id, false)
+	assert.Equal(t, 2, internalMetrics.SponsorCount)
+	assert.Equal(t, 2, internalMetrics.RepoStarCount)
+	assert.Equal(t, 2, internalMetrics.RepoMultiplierCount)
+	assert.Equal(t, 2, internalMetrics.RepoWeight)
 }
