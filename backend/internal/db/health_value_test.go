@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -30,6 +32,8 @@ func getTestData(r *Repo) *RepoHealthMetrics {
 	return &newRepoMetrics
 
 }
+
+// analysis_response
 
 // done
 func TestInsertTrustValue(t *testing.T) {
@@ -156,9 +160,42 @@ func TestGetAllTrustValues(t *testing.T) {
 	assert.Len(t, result, 6)
 }
 
-func TestTemp(t *testing.T) {
+func TestGetInternalMetrics(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
-	foo, bar := GetInternalMetricsDummy()
-	t.Logf("%v, %v", foo.SponsorCount, bar)
+	r := insertTestRepo(t)
+
+	for _ = range 10 {
+		_ = insertTestRepo(t)
+	}
+
+	uid1 := insertTestUser(t, "email1").Id
+	uid2 := insertTestUser(t, "email2").Id
+	uid3 := insertTestUser(t, "email3").Id
+
+	_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{})
+	_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(3), "XBTC", time.Time{}, time.Time{})
+
+	uids := []uuid.UUID{uid1, uid2, uid3}
+
+	for i := range uids {
+		uid := uids[i%len(uids)]
+		_ = InsertGitEmail(uuid.New(), uid, fmt.Sprintf("email%d", i), stringPointer("A"), time.Now())
+	}
+
+	a := AnalysisRequest{
+		Id:       uuid.New(),
+		RepoId:   r.Id,
+		DateFrom: day1,
+		DateTo:   day2,
+		GitUrl:   *r.GitUrl,
+	}
+	_ = InsertAnalysisRequest(a, time.Now())
+
+	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.5, time.Now())
+	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.4, time.Now())
+	_ = InsertAnalysisResponse(a.Id, a.RepoId, "tom2", []string{"tom2"}, 0.4, time.Now())
+
+	//internalMetrics, _ := GetInternalMetrics(r.Id, false)
+	// not finished
 }
