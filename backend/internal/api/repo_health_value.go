@@ -176,16 +176,3 @@ func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.Rep
 
 	return &healthValueObject, nil
 }
-
-/*
-Frontend benötigt health value
-rest alles backend
-
-handlerFunktion: Ufgob
-- mach den e ufgo
-- bearbeitet nur ein Item
-
-History:
-
-One Item:
-*/
