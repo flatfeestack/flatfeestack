@@ -141,7 +141,6 @@ func TestFindTrustValueById(t *testing.T) {
 // done
 func TestGetAllTrustValues(t *testing.T) {
 	SetupTestData()
-	SetupTestData()
 	defer TeardownTestData()
 	r := insertTestRepo(t)
 	newRepoMetrics := getTestData(r)
@@ -155,4 +154,11 @@ func TestGetAllTrustValues(t *testing.T) {
 	result, err = GetAllTrustValues()
 	assert.Nil(t, err)
 	assert.Len(t, result, 6)
+}
+
+func TestTemp(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	foo, bar := GetInternalMetricsDummy()
+	t.Logf("%v, %v", foo.SponsorCount, bar)
 }

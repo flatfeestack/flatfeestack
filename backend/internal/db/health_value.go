@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/exp/rand"
 )
 
 type RepoHealthMetrics struct {
@@ -236,9 +237,9 @@ Thus this dummy function will replace GetLatestThresholds for now
 */
 func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 	return &RepoHealthMetrics{
-		SponsorCount:        0,
-		RepoStarCount:       0,
-		RepoMultiplierCount: 0,
+		SponsorCount:        rand.Intn(100) + 1,
+		RepoStarCount:       rand.Intn(100) + 1,
+		RepoMultiplierCount: rand.Intn(100) + 1,
 	}, nil
 }
 
