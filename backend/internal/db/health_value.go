@@ -29,9 +29,28 @@ type InternalHealthMetrics struct {
 
 // tested
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
-	stmt, err := DB.Prepare(`INSERT INTO repo_health_metrics 
-		(id, created_at, repo_id, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
+	stmt, err := DB.Prepare(`
+		INSERT INTO 
+			repo_health_metrics (
+				id,
+				created_at,
+				repo_id,
+				contributer_count,
+				commit_count,
+				sponsor_donation,
+				repo_star_count,
+				repo_multiplier_count,
+				repo_weight)
+		VALUES (
+			$1,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6,
+			$7,
+			$8,
+			$9)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO repo_health_metrics for %v statement event: %v", repoHealthMetrics, err)
 	}
@@ -47,7 +66,18 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 
 // tested
 func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
-	stmt, err := DB.Prepare("UPDATE repo_health_metrics SET contributer_count=$1, commit_count=$2, sponsor_donation=$3, repo_star_count=$4, repo_multiplier_count=$5, repo_weight=$6 WHERE id=$7")
+	stmt, err := DB.Prepare(`
+	UPDATE 
+		repo_health_metrics 
+	SET 
+		contributer_count=$1,
+		commit_count=$2,
+		sponsor_donation=$3,
+		repo_star_count=$4,
+		repo_multiplier_count=$5,
+		repo_weight=$6 
+	WHERE 
+		id=$7`)
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE repo_health_metrics for %v statement failed: %v", repoHealthMetrics, err)
 	}
@@ -121,8 +151,7 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error)
 				repo_id=$1 
 			ORDER BY 
 				created_at DESC
-			LIMIT 1`,
-			repoId)
+			LIMIT 1`, repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +182,7 @@ func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics
 			WHERE 
 				repo_id=$1 
 			ORDER BY 
-				created_at DESC`,
-			repoId)
+				created_at DESC`, repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -178,13 +206,40 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 
 // tested
 func GetAllTrustValues() ([]RepoHealthMetrics, error) {
-	rows, err := DB.
-		Query("SELECT id, repo_id, created_at, contributer_count, commit_count, sponsor_donation, repo_star_count, repo_multiplier_count, repo_weight from repo_health_metrics order by created_at desc")
+	rows, err := DB.Query(`
+		SELECT
+			id,
+			repo_id,
+			created_at,
+			contributer_count,
+			commit_count,
+			sponsor_donation,
+			repo_star_count,
+			repo_multiplier_count,
+			repo_weight
+		FROM
+			repo_health_metrics
+		ORDER BY 
+			created_at desc`)
 	if err != nil {
 		return nil, err
 	}
 
 	return scanRepoHealthMetrics(rows)
+}
+
+/*
+Currently GetLatestThresholds doesn't work reliably
+Values are missing
+The query statements aren't working
+Thus this dummy function will replace GetLatestThresholds for now
+*/
+func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
+	return &RepoHealthMetrics{
+		SponsorCount:        0,
+		RepoStarCount:       0,
+		RepoMultiplierCount: 0,
+	}, nil
 }
 
 func GetInternalMetrics(repoId uuid.UUID) (*RepoHealthMetrics, error) {
