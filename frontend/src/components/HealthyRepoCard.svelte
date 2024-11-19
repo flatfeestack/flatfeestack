@@ -70,8 +70,8 @@
   .child {
     flex: 1 0;
     margin: 0.5em;
-    max-width: 10em;
-    min-width: 10em;
+    max-width: 7em;
+    min-width: 7em;
     box-shadow: 0.25em 0.25em 0.25em #e1e1e3;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
@@ -89,7 +89,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 0.5rem 0 0 0;
+    text-align: center;
+    display: block;
   }
   .progress-bar {
     position: absolute;
@@ -106,12 +107,8 @@
     font-size: medium;
   }
   .url {
-    text-align: center;
-    font-size: small;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
+    text-decoration: none;
+    color: black;
   }
   svg {
     padding: 0.25em;
@@ -193,11 +190,20 @@
     </div>
   </div>
   {#if repo}
-    <div class="center repo-title" title={repo.name}>{repo.name}</div>
-    <div>
-      <a href={repo.url} class="py-2 url" target="_blank" rel="noreferrer">
-        {repo.url}
+    <div title={repo.name}>
+      <a
+        href={repo.url}
+        class="repo-title py-2 url"
+        target="_blank"
+        rel="noreferrer"
+      >
+        {repo.name}
       </a>
     </div>
+    <!--    <div>-->
+    <!--      <a href={repo.url} class="py-2 url" target="_blank" rel="noreferrer">-->
+    <!--        {repo.url}-->
+    <!--      </a>-->
+    <!--    </div>-->
   {/if}
 </div>

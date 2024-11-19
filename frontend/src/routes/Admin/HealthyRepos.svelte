@@ -101,6 +101,45 @@
 </script>
 
 <style>
+  .grid-healthy-repos {
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: auto calc(
+        100vh - 2rem - 1rem - (1.2rem * 1.2) - 1rem - (1.1rem * 1.2) - 319px
+      );
+    height: calc(100vh - 2rem - 1rem - (1.2rem * 1.2) - 1rem - (1.1rem * 1.2));
+  }
+
+  .healty-repos-div {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+  }
+
+  .add-healthy-repos-div {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    height: calc(
+      100vh - 2rem - 1rem - (1.2rem * 1.2) - 1rem - (1.1rem * 1.2) - 319px
+    );
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .add-healthy-repos-div::-webkit-scrollbar {
+    width: 0.5rem;
+    background: #f1f1f1;
+  }
+
+  .add-healthy-repos-div::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  .add-healthy-repos-div::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
   .cards-overflow-x {
     display: flex;
     flex-direction: row;
@@ -111,7 +150,7 @@
     -webkit-overflow-scrolling: touch;
   }
   .cards-overflow-x::-webkit-scrollbar {
-    height: 8px;
+    height: 0.5rem;
     background: #f1f1f1;
   }
 
@@ -124,29 +163,11 @@
     background: #555;
   }
 
-  .search-overflow-y {
+  .search-container {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     width: 100%;
-    height: 800px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    border-top: solid 1px var(--secondary-300);
-    -webkit-overflow-scrolling: touch;
-  }
-  .search-overflow-y::-webkit-scrollbar {
-    width: 8px;
-    background: #f1f1f1;
-  }
-
-  .search-overflow-y::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-
-  .search-overflow-y::-webkit-scrollbar-thumb:hover {
-    background: #555;
   }
 
   @media screen and (max-width: 600px) {
@@ -164,70 +185,80 @@
 </style>
 
 <Navigation>
-  <h2 class="p-2 m-2">Healthy Repositories</h2>
+  <div class="grid-healthy-repos">
+    <div class="healty-repos-div">
+      <h2 class="p-2 m-2">Healthy Repositories</h2>
 
-  <div class="container-col2 m-4">
-    <div class="container-small">
-      <div class="container-small m-2 dropdown">
-        <button class="button1 drop-button" id="drop-button"
-          ><Fa icon={faCaretUp} /> Sort</button
-        >
-        <div class="dropdown-content">
-          <button
-            on:click={() => {
-              sortingFunction = sortByDateDesc;
-              sortingTitle = "Recently Added:";
-            }}>Sort by Date - Recently Added</button
-          >
-          <button
-            on:click={() => {
-              sortingFunction = sortByDateAsc;
-              sortingTitle = "First Added:";
-            }}>Sort by Date - First Added</button
-          >
-          <button
-            on:click={() => {
-              sortingFunction = sortByDateDesc;
-              sortingTitle = "Score - high to low:";
-            }}>Sort by Score - high to low</button
-          >
-          <button
-            on:click={() => {
-              sortingFunction = sortByDateAsc;
-              sortingTitle = "Score - low to high:";
-            }}>Sort by Score - low to high</button
-          >
+      <div class="container-col2 m-4">
+        <div class="container-small">
+          <div class="container-small m-2 dropdown">
+            <button class="button1 drop-button" id="drop-button"
+              ><Fa icon={faCaretUp} /> Sort</button
+            >
+            <div class="dropdown-content">
+              <button
+                on:click={() => {
+                  sortingFunction = sortByDateDesc;
+                  sortingTitle = "Recently Added:";
+                }}>Sort by Date - Recently Added</button
+              >
+              <button
+                on:click={() => {
+                  sortingFunction = sortByDateAsc;
+                  sortingTitle = "First Added:";
+                }}>Sort by Date - First Added</button
+              >
+              <button
+                on:click={() => {
+                  sortingFunction = sortByDateDesc;
+                  sortingTitle = "Score - high to low:";
+                }}>Sort by Score - high to low</button
+              >
+              <button
+                on:click={() => {
+                  sortingFunction = sortByDateAsc;
+                  sortingTitle = "Score - low to high:";
+                }}>Sort by Score - low to high</button
+              >
+            </div>
+          </div>
+          <h3 class="m-2">{sortingTitle}</h3>
         </div>
+        {#if $trustedRepos.length > 0}
+          <div class="cards-overflow-x">
+            {#each sortedTrustedRepos as repo, key (repo.uuid)}
+              <TrustedRepoCard {repo} />
+            {/each}
+          </div>
+        {/if}
       </div>
-      <h3 class="m-2">{sortingTitle}</h3>
     </div>
-    {#if $trustedRepos.length > 0}
-      <div class="cards-overflow-x">
-        {#each sortedTrustedRepos as repo, key (repo.uuid)}
-          <TrustedRepoCard {repo} />
-        {/each}
-      </div>
-    {/if}
-  </div>
 
-  <h2 class="p-2 m-2">Add new Healthy Repositories</h2>
+    <div class="add-healthy-repos-div">
+      <h2 class="p-2 m-2">Add new Healthy Repositories</h2>
 
-  <div class="container-col2 m-4">
-    <form class="flex m-2" on:submit|preventDefault={handleSearch}>
-      <input type="text" bind:value={search} placeholder="Search all Repos" />
-      <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
-        >Search{#if isSearchSubmitting}<Dots />{/if}</button
-      >
-    </form>
-    {#if searchRepos?.length > 0}
-      <div class="search-overflow-y m-2">
-        <h3 class="m-2">Results</h3>
-        <div>
-          {#each searchRepos as repo, key (repo.uuid)}
-            <AdminSearchResult {repo} />
-          {/each}
-        </div>
+      <div class="container-col2 m-4">
+        <form class="flex m-2" on:submit|preventDefault={handleSearch}>
+          <input
+            type="text"
+            bind:value={search}
+            placeholder="Search all Repos"
+          />
+          <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
+            >Search{#if isSearchSubmitting}<Dots />{/if}</button
+          >
+        </form>
+        {#if searchRepos?.length > 0}
+          <div class="search-container m-2">
+            <h3 class="m-2">Results</h3>
+            <div class="wrap-container">
+              {#each searchRepos as repo, key (repo.uuid)}
+                <AdminSearchResult {repo} />
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
-    {/if}
+    </div>
   </div>
 </Navigation>

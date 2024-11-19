@@ -28,7 +28,7 @@
 
 <style>
   header {
-    padding: 1em;
+    padding: 1rem;
     background-color: #fff;
     border-bottom: 1px #000 solid;
     justify-content: space-between;

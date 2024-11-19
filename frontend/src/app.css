@@ -419,6 +419,12 @@ tbody tr:last-of-type {
   justify-content: center;
 }
 
+.wrap-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: min-content 1fr;

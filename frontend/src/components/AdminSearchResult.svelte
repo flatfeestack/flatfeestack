@@ -32,6 +32,11 @@
 </script>
 
 <style>
+  .container {
+    flex: 1 0;
+    min-width: 30rem;
+    max-width: 60rem;
+  }
   svg,
   p.square-1 {
     margin: 0.25em;
@@ -77,7 +82,7 @@
 </style>
 
 <div
-  class="container rounded p-2 m-2"
+  class="container rounded px-2 m-2"
   style="border-left: solid 6px {getColor1(repo.uuid)}"
 >
   <div class="container-col2 trust-icons-div">
