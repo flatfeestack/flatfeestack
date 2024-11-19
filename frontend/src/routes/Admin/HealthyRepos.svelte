@@ -26,13 +26,14 @@
   let isSearchSubmitting = false;
   let sortingFunction: (a: Repo, b: Repo) => number;
   let sortingTitle: string;
+  let amountOfShownRepos: number = 50;
 
   $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
 
   $: sortedTrustedRepos = $trustedRepos
     .slice()
     .sort(sortingFunction)
-    .slice(0, 50);
+    .slice(0, amountOfShownRepos);
 
   const handleSearch = async () => {
     try {
@@ -163,6 +164,22 @@
     background: #555;
   }
 
+  .dropdown-content-sort {
+    min-width: 16rem;
+    max-width: 20rem;
+  }
+  .dropdown-content-amount-filter {
+    min-width: 4rem;
+    max-width: 5rem;
+  }
+
+  .separator-y {
+    height: 3rem;
+    width: 2px;
+    background-color: var(--secondary-300);
+    border-radius: 5px;
+  }
+
   .search-container {
     display: flex;
     flex-direction: column;
@@ -190,40 +207,75 @@
       <h2 class="p-2 m-2">Healthy Repositories</h2>
 
       <div class="container-col2 m-4">
-        <div class="container-small">
-          <div class="container-small m-2 dropdown">
-            <button class="button1 drop-button" id="drop-button"
-              ><Fa icon={faCaretUp} /> Sort</button
-            >
-            <div class="dropdown-content">
-              <button
-                on:click={() => {
-                  sortingFunction = sortByDateDesc;
-                  sortingTitle = "Recently Added:";
-                }}>Sort by Date - Recently Added</button
+        <div class="container-small justify-between w-100">
+          <div class="container-small w-100">
+            <div class="container-small m-2 dropdown">
+              <button class="button1 drop-button" id="drop-button"
+                ><Fa icon={faCaretUp} /> Sort</button
               >
-              <button
-                on:click={() => {
-                  sortingFunction = sortByDateAsc;
-                  sortingTitle = "First Added:";
-                }}>Sort by Date - First Added</button
-              >
-              <button
-                on:click={() => {
-                  sortingFunction = sortByDateDesc;
-                  sortingTitle = "Score - high to low:";
-                }}>Sort by Score - high to low</button
-              >
-              <button
-                on:click={() => {
-                  sortingFunction = sortByDateAsc;
-                  sortingTitle = "Score - low to high:";
-                }}>Sort by Score - low to high</button
-              >
+              <div class="dropdown-content dropdown-content-sort">
+                <button
+                  on:click={() => {
+                    sortingFunction = sortByDateDesc;
+                    sortingTitle = "Recently Added:";
+                  }}>Sort by Date - Recently Added</button
+                >
+                <button
+                  on:click={() => {
+                    sortingFunction = sortByDateAsc;
+                    sortingTitle = "First Added:";
+                  }}>Sort by Date - First Added</button
+                >
+                <button
+                  on:click={() => {
+                    sortingFunction = sortByDateDesc;
+                    sortingTitle = "Score - high to low:";
+                  }}>Sort by Score - high to low</button
+                >
+                <button
+                  on:click={() => {
+                    sortingFunction = sortByDateAsc;
+                    sortingTitle = "Score - low to high:";
+                  }}>Sort by Score - low to high</button
+                >
+              </div>
             </div>
+            <h3 class="m-2">{sortingTitle}</h3>
           </div>
-          <h3 class="m-2">{sortingTitle}</h3>
+
+          <div class="container-small w-100">
+            <h3 class="m-2">Show Top</h3>
+            <div class="container-small m-2 dropdown">
+              <button class="button1 drop-button" id="drop-button"
+                ><Fa icon={faCaretUp} /> {amountOfShownRepos}</button
+              >
+              <div class="dropdown-content dropdown-content-amount-filter">
+                <button
+                  on:click={() => {
+                    amountOfShownRepos = 10;
+                  }}>10</button
+                >
+                <button
+                  on:click={() => {
+                    amountOfShownRepos = 25;
+                  }}>25</button
+                >
+                <button
+                  on:click={() => {
+                    amountOfShownRepos = 50;
+                  }}>50</button
+                >
+                <button
+                  on:click={() => {
+                    amountOfShownRepos = 100;
+                  }}>100</button
+                >
+              </div>
+            </div>
+            <h3 class="m-2">Results:</h3>
+          </div>
         </div>
+
         {#if $trustedRepos.length > 0}
           <div class="cards-overflow-x">
             {#each sortedTrustedRepos as repo, key (repo.uuid)}

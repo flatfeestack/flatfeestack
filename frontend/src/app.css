@@ -108,6 +108,10 @@ h1 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
 }
+.mx-4 {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
 .mb-0 {
   margin-bottom: 0;
 }
@@ -496,6 +500,10 @@ tbody tr:last-of-type {
   justify-content: space-between;
 }
 
+.justify-evenly {
+  justify-content: space-evenly;
+}
+
 .color-secondary-500 {
   color: var(--secondary-500);
 }
@@ -567,8 +575,6 @@ tbody tr:last-of-type {
 .dropdown-content {
   display: none;
   position: absolute;
-  min-width: 16rem;
-  max-width: 20rem;
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
   z-index: 1;
   border-radius: 5px;
