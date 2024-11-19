@@ -289,7 +289,7 @@ func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
 	return handleErrMustInsertOne(res)
 }
 
-func UpdateMultiplierDailyLimit(uid uuid.UUID, amt int64) error {
+func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	stmt, err := DB.Prepare("UPDATE users SET multiplier_daily_limit=$1 WHERE id=$2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
@@ -297,7 +297,7 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amt int64) error {
 	defer CloseAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(amt, uid)
+	res, err = stmt.Exec(amount, uid)
 	if err != nil {
 		return err
 	}
