@@ -171,9 +171,15 @@
                   fx="50%"
                   fy="50%"
                 >
-                  <stop offset="0%" style="stop-color:#98FB98; stop-opacity:1" />
+                  <stop
+                    offset="0%"
+                    style="stop-color:#98FB98; stop-opacity:1"
+                  />
                   <!-- Light green -->
-                  <stop offset="50%" style="stop-color:#32CD32; stop-opacity:1" />
+                  <stop
+                    offset="50%"
+                    style="stop-color:#32CD32; stop-opacity:1"
+                  />
                   <!-- Medium green -->
                   <stop
                     offset="100%"
@@ -191,17 +197,45 @@
           </a>
         {:else}
           <a href={"#"} on:click|preventDefault={setMultiplier}>
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin" overflow="visible" class="jam jam-coin">
-                <defs>
-                    <radialGradient id="greyGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                        <stop offset="0%" style="stop-color:#D3D3D3; stop-opacity:1" /> <!-- Light grey -->
-                        <stop offset="50%" style="stop-color:#A9A9A9; stop-opacity:1" /> <!-- Medium grey -->
-                        <stop offset="100%" style="stop-color:#696969; stop-opacity:1" /> <!-- Dark grey -->
-                    </radialGradient>
-                </defs>
-                <circle cx="10" cy="10" r="10" fill="url(#greyGradient)" />
-                <path fill="#404040" d="M9 13v-2a3 3 0 1 1 0-6V4a1 1 0 1 1 2 0v1h.022A2.978 2.978 0 0 1 14 7.978a1 1 0 0 1-2 0A.978.978 0 0 0 11.022 7H11v2a3 3 0 0 1 0 6v1a1 1 0 0 1-2 0v-1h-.051A2.949 2.949 0 0 1 6 12.051a1 1 0 1 1 2 0 .95.95 0 0 0 .949.949H9zm2 0a1 1 0 0 0 0-2v2zM9 7a1 1 0 1 0 0 2V7zm1 13C4.477 20 0 15.523 0 10S4.477 0 10 0s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>
-            </svg>          
+            <svg
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="xMinYMin"
+              overflow="visible"
+              class="jam jam-coin"
+            >
+              <defs>
+                <radialGradient
+                  id="greyGradient"
+                  cx="50%"
+                  cy="50%"
+                  r="50%"
+                  fx="50%"
+                  fy="50%"
+                >
+                  <stop
+                    offset="0%"
+                    style="stop-color:#D3D3D3; stop-opacity:1"
+                  />
+                  <!-- Light grey -->
+                  <stop
+                    offset="50%"
+                    style="stop-color:#A9A9A9; stop-opacity:1"
+                  />
+                  <!-- Medium grey -->
+                  <stop
+                    offset="100%"
+                    style="stop-color:#696969; stop-opacity:1"
+                  />
+                  <!-- Dark grey -->
+                </radialGradient>
+              </defs>
+              <circle cx="10" cy="10" r="10" fill="url(#greyGradient)" />
+              <path
+                fill="#404040"
+                d="M9 13v-2a3 3 0 1 1 0-6V4a1 1 0 1 1 2 0v1h.022A2.978 2.978 0 0 1 14 7.978a1 1 0 0 1-2 0A.978.978 0 0 0 11.022 7H11v2a3 3 0 0 1 0 6v1a1 1 0 0 1-2 0v-1h-.051A2.949 2.949 0 0 1 6 12.051a1 1 0 1 1 2 0 .95.95 0 0 0 .949.949H9zm2 0a1 1 0 0 0 0-2v2zM9 7a1 1 0 1 0 0 2V7zm1 13C4.477 20 0 15.523 0 10S4.477 0 10 0s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"
+              />
+            </svg>
           </a>
         {/if}
       {/if}
