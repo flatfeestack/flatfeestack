@@ -17,7 +17,7 @@
   import Dots from "../../components/Dots.svelte";
   import Navigation from "../../components/Navigation.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
-  import TrustedRepoCard from "../../components/TrustedRepoCard.svelte";
+  import TrustedRepoCard from "../../components/HealthyRepoCard.svelte";
   // import { Link } from "svelte-routing";
 
   let icon: IconDefinition;
@@ -214,7 +214,7 @@
 
   <div class="container-col2 m-4">
     <form class="flex m-2" on:submit|preventDefault={handleSearch}>
-      <input type="text" bind:value={search} />
+      <input type="text" bind:value={search} placeholder="Search all Repos" />
       <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
         >Search{#if isSearchSubmitting}<Dots />{/if}</button
       >
