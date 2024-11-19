@@ -22,6 +22,7 @@
 
   let icon: IconDefinition;
   let search = "";
+  let healthyRepoSearch: string = "";
   let searchRepos: Repo[] = [];
   let isSearchSubmitting = false;
   let sortingFunction: (a: Repo, b: Repo) => number;
@@ -32,6 +33,9 @@
 
   $: sortedTrustedRepos = $trustedRepos
     .slice()
+    .filter(repo =>
+      repo.name?.toLowerCase().includes(healthyRepoSearch.trim().toLowerCase())
+    )
     .sort(sortingFunction)
     .slice(0, amountOfShownRepos);
 
@@ -273,6 +277,14 @@
               </div>
             </div>
             <h3 class="m-2">Results:</h3>
+          </div>
+
+          <div class="container-small w-100">
+            <input
+              type="text"
+              bind:value={healthyRepoSearch}
+              placeholder="Search Healthy Repos"
+            />
           </div>
         </div>
 
