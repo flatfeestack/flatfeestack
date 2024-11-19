@@ -82,12 +82,12 @@
     {#if $user.role === "admin"}
       <NavItem href="/user/admin/test" icon={faShieldAlt} label="Test" />
       <NavItem
-        href="/user/admin/trusted-repos"
+        href="/user/admin/healthy-repos"
         icon={faShieldAlt}
-        label="Trusted Repos"
+        label="Healthy Repos"
       />
       <NavItem
-        href="/user/admin/trusted-repo-assessment"
+        href="/user/admin/healthy-repo-assessment"
         icon={faShieldAlt}
         label="Repo Assessment"
       />
