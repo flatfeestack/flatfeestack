@@ -535,6 +535,25 @@ export interface paths {
       };
     };
   };
+  "/repos/{id}/healthvalue": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RepoHealthValue"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
   "/hooks/stripe": {
     post: {
       responses: {
@@ -840,6 +859,10 @@ export interface components {
       /** Format: date-time */
       trustAt?: string;
     };
+    RepoHealthValue: {
+      repoid?: string;
+      healthvalue?: number;
+    };
     PaymentEvent: ({
         /** Format: uuid */
         id: string;
@@ -918,12 +941,14 @@ export interface components {
       requestId?: string;
       error?: string | null;
       result?: (components["schemas"]["FlatFeeWeight"])[];
-      contribcommit?: Record<string, never>;
+      repoid?: string;
     };
     FlatFeeWeight: {
       names?: (string)[];
       email?: string;
       weight?: number;
+      /** Format: int32 */
+      commitcount?: number;
     };
     Time: {
       /** Format: date-time */
