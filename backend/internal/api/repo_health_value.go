@@ -15,7 +15,7 @@ type RepoHealthValue struct {
 	HealthValue float32   `json:"healthvalue"`
 }
 
-func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request) {
+func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repoId := uuid.MustParse(r.PathValue("id"))
 	healthValue, err := getRepoHealthValue(repoId)
 
