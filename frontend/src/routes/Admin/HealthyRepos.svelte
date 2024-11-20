@@ -87,7 +87,7 @@
 
   // Set default sorting function
   sortingFunction = sortByDateDesc;
-  sortingTitle = "Recently Added:";
+  sortingTitle = "Date - Recently Added";
 
   onMount(async () => {
     if (!$loadedTrustedRepos) {
@@ -173,8 +173,13 @@
     max-width: 20rem;
   }
   .dropdown-content-amount-filter {
-    min-width: 4rem;
-    max-width: 5rem;
+    min-width: 4.5rem;
+    max-width: 4.5rem;
+  }
+
+  #amount-drop-button {
+    min-width: 4.5rem;
+    max-width: 4.5rem;
   }
 
   .separator-y {
@@ -212,45 +217,50 @@
 
       <div class="container-col2 m-4">
         <div class="container-small justify-between w-100">
-          <div class="container-small w-100">
+          <div class="container-small">
+            <h3 class="m-2">Sort by</h3>
             <div class="container-small m-2 dropdown">
               <button class="button1 drop-button" id="drop-button"
-                ><Fa icon={faCaretUp} /> Sort</button
+                ><Fa icon={faCaretUp} /> {sortingTitle}</button
               >
               <div class="dropdown-content dropdown-content-sort">
                 <button
                   on:click={() => {
                     sortingFunction = sortByDateDesc;
-                    sortingTitle = "Recently Added:";
-                  }}>Sort by Date - Recently Added</button
+                    sortingTitle = "Date - Recently Added";
+                  }}>Date - Recently Added</button
                 >
                 <button
                   on:click={() => {
                     sortingFunction = sortByDateAsc;
-                    sortingTitle = "First Added:";
-                  }}>Sort by Date - First Added</button
+                    sortingTitle = "Date - First Added";
+                  }}>Date - First Added</button
                 >
                 <button
                   on:click={() => {
                     sortingFunction = sortByDateDesc;
-                    sortingTitle = "Score - high to low:";
-                  }}>Sort by Score - high to low</button
+                    sortingTitle = "Score - high to low";
+                  }}>Score - high to low</button
                 >
                 <button
                   on:click={() => {
                     sortingFunction = sortByDateAsc;
-                    sortingTitle = "Score - low to high:";
+                    sortingTitle = "Score - low to high";
                   }}>Sort by Score - low to high</button
                 >
               </div>
             </div>
-            <h3 class="m-2">{sortingTitle}</h3>
           </div>
 
-          <div class="container-small w-100">
-            <h3 class="m-2">Show Top</h3>
+          <div class="container-small">
+            <input
+              type="text"
+              bind:value={healthyRepoSearch}
+              placeholder="Search Healthy Repos"
+            />
+
             <div class="container-small m-2 dropdown">
-              <button class="button1 drop-button" id="drop-button"
+              <button class="button1 drop-button" id="amount-drop-button"
                 ><Fa icon={faCaretUp} /> {amountOfShownRepos}</button
               >
               <div class="dropdown-content dropdown-content-amount-filter">
@@ -276,15 +286,6 @@
                 >
               </div>
             </div>
-            <h3 class="m-2">Results:</h3>
-          </div>
-
-          <div class="container-small w-100">
-            <input
-              type="text"
-              bind:value={healthyRepoSearch}
-              placeholder="Search Healthy Repos"
-            />
           </div>
         </div>
 
