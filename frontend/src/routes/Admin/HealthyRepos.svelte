@@ -33,7 +33,7 @@
 
   $: sortedTrustedRepos = $trustedRepos
     .slice()
-    .filter(repo =>
+    .filter((repo) =>
       repo.name?.toLowerCase().includes(healthyRepoSearch.trim().toLowerCase())
     )
     .sort(sortingFunction)

@@ -15,13 +15,13 @@
   }
 
   a.nav-item {
-      padding: 1em;
+    padding: 1em;
   }
 
   @media screen and (max-height: 875px) {
-      a.nav-item {
-          padding: 0.5em 1em;
-      }
+    a.nav-item {
+      padding: 0.5em 1em;
+    }
   }
 </style>
 
