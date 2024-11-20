@@ -41,6 +41,25 @@ func TestInsertTrustValue(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestFindRepoHealthMetricsByRepoIdEmptyRepoId(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	var repoId uuid.UUID
+	res, err := FindRepoHealthMetricsByRepoId(repoId)
+	assert.Nil(t, res)
+	assert.Equal(t, err.Error(), "repoId is empty")
+}
+
+func TestFindRepoHealthMetricsByRepoIdMissingHealthValue(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	r := insertTestRepo(t)
+	//newRepoMetrics := getTestData(r)
+	res, err := FindRepoHealthMetricsByRepoId(r.Id)
+	assert.Nil(t, res)
+	assert.Nil(t, err)
+}
+
 func TestInsertTrustValueDuplicateId(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()

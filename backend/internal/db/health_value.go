@@ -134,6 +134,9 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 // done
 func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error) {
 	//var tv TrustValue
+	if repoId == uuid.Nil {
+		return nil, fmt.Errorf("repoId is empty")
+	}
 	rows, err := DB.
 		Query(`
 			SELECT 
@@ -158,10 +161,22 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error)
 	}
 	defer CloseAndLog(rows)
 	result, err := scanRepoHealthMetrics(rows)
-	if err != nil {
+
+	if len(result) == 0 {
+		return nil, nil
+	}
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &result[0], nil
+	default:
 		return nil, err
 	}
-	return &result[0], nil
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return &result[0], nil
 }
 
 func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
