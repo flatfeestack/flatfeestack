@@ -135,6 +135,50 @@ func FindTrustedRepos() ([]Repo, error) {
 	return scanRepo(rows)
 }
 
+func CountTrustedRepos(userId uuid.UUID) (int, error) {
+	var trustedCount int
+	query := `SELECT COUNT(DISTINCT r.repo_id) 
+              FROM repo r
+              INNER JOIN trust_event te ON r.repo_id = te.repo_id
+              WHERE r.user_id = $1
+              AND te.un_trust_at IS NULL`
+
+	err := DB.QueryRow(query, userId).Scan(&trustedCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return trustedCount, nil
+}
+
+func GetRepoWeight(repoId uuid.UUID, isPostgres bool) (float64, error) {
+	email, err := GetRepoEmail(repoId)
+	if err != nil {
+		return 0.0, err
+	}
+
+	userId, err := FindUserByGitEmail(email)
+	if err != nil {
+		return 0.0, err
+	}
+
+	active, err := IsActiveUser(*userId, isPostgres)
+	if err != nil {
+		return 0.0, err
+	}
+
+	if !active {
+		return 0.0, nil
+	}
+
+	trustedRepoCount, err := CountTrustedRepos(*userId)
+	if err != nil {
+		return 0.0, err
+	}
+
+	return float64(trustedRepoCount), nil
+}
+
 //type TrustResult struct {
 //	UserId  uuid.UUID
 //	RepoIds []uuid.UUID

@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"math/big"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Marketing struct {
@@ -123,6 +124,20 @@ func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	default:
 		return nil, err
 	}
+}
+
+func GetRepoEmail(repoId uuid.UUID) (string, error) {
+	var email string
+	query := `SELECT ar.git_email
+              FROM analysis_response ar
+              WHERE ar.repo_id = $1`
+
+	err := DB.QueryRow(query, repoId).Scan(&email)
+	if err != nil {
+		return "", err
+	}
+
+	return email, nil
 }
 
 //******* Emails Sent
