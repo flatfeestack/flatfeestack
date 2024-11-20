@@ -264,6 +264,10 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 		}
 	}
 
+	// only user that have donated once in the last month and only trusted repo
+	// get multiplier by repo id
+	// get star by repo id
+
 	if isPostgres { // For Postgres
 		queryForMetricRepoStarMultiplier = `
 		WITH active_sponsors AS (
@@ -396,6 +400,9 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 			return nil, err
 		}
 	}
+
+	// only user that have donated (from aboth)
+	// look if there is a user that ownes the repo
 
 	if isPostgres { // Postgres
 		queryForMetricRepoWeight = `
