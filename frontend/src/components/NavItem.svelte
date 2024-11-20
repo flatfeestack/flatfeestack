@@ -13,9 +13,19 @@
     background-color: var(--primary-300);
     color: var(--primary-900);
   }
+
+  a.nav-item {
+      padding: 1em;
+  }
+
+  @media screen and (max-height: 875px) {
+      a.nav-item {
+          padding: 0.5em 1em;
+      }
+  }
 </style>
 
-<a {href} class={$route.pathname === href ? `selected` : ``}>
+<a {href} class="nav-item {$route.pathname === href ? `selected` : ``}">
   <Fa {icon} size="sm" class="icon" />
   <span class="hide-sx">{label}</span>
 </a>
