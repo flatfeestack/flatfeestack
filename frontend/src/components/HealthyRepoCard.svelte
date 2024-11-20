@@ -3,12 +3,14 @@
   import { error, trustedRepos } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
+  import { onMount } from "svelte";
 
   export let repo: Repo;
   let verifiedStar = true;
   let abortUntrustEvent = false;
   let unTrustProgress = 100;
   let unTrustProcessRunning = false;
+  let repoHealthValue: Number | "NA";
 
   async function unTrust() {
     verifiedStar = false;
@@ -64,6 +66,23 @@
       verifiedStar = true;
     }
   }
+
+  async function getHealthValue() {
+    try {
+      const res = await API.repos.getHealthValue(repo.uuid);
+      console.log("res:", res);
+      return res.healthvalue;
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  onMount(async () => {
+    repoHealthValue =
+      (await getHealthValue()) !== undefined
+        ? ((await getHealthValue()) as number)
+        : "NA";
+  });
 </script>
 
 <style>
@@ -115,6 +134,23 @@
     height: 2em;
     width: 2em;
   }
+
+  p.square-1 {
+    margin: 0.25em;
+    height: 1.7em;
+    width: 1.7em;
+    padding: 0;
+  }
+
+  #trust-value-p {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border: 0.15em solid #494949;
+    border-radius: 0.5em;
+  }
+
   .color :global(a:hover) {
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
@@ -136,7 +172,7 @@
       : 'hidden'}"
   />
   <div
-    class="color container-small"
+    class="color container-small justify-between"
     style="background-image:radial-gradient(circle at top right,{getColor2(
       repo.uuid
     )},{getColor1(repo.uuid)});"
@@ -188,6 +224,7 @@
         </a>
       {/if}
     </div>
+    <p id="trust-value-p" class="square-1">{repoHealthValue}</p>
   </div>
   {#if repo}
     <div title={repo.name}>

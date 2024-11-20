@@ -18,6 +18,7 @@ import type {
   PayoutResponse,
   PublicUser,
   UserBalance,
+  RepoHealthValue,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -266,6 +267,8 @@ export const API = {
       backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
     untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
+    getHealthValue: (repoId: string) =>
+      backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

@@ -3,12 +3,14 @@
   import { error, trustedRepos } from "../ts/mainStore";
   import { getColor1 } from "../ts/utils";
   import type { Repo } from "../types/backend";
+  import { onMount } from "svelte";
 
   export let repo: Repo;
   let verifiedStar = false;
   let abortUntrustEvent = false;
   let unTrustProgress = 100;
   let unTrustProcessRunning = false;
+  let repoHealthValue: Number | "NA";
 
   async function unTrust() {
     verifiedStar = false;
@@ -75,12 +77,29 @@
     verifiedStar = true;
   }
 
+  async function getHealthValue() {
+    try {
+      const res = await API.repos.getHealthValue(repo.uuid);
+      console.log("res:", res);
+      return res.healthvalue;
+    } catch (e) {
+      $error = e;
+    }
+  }
+
   $: {
     const tmp = $trustedRepos.find((r: Repo) => {
       return r.uuid === repo.uuid;
     });
     verifiedStar = tmp !== undefined;
   }
+
+  onMount(async () => {
+    repoHealthValue =
+      (await getHealthValue()) !== undefined
+        ? ((await getHealthValue()) as number)
+        : "NA";
+  });
 </script>
 
 <style>
@@ -185,7 +204,7 @@
       </a>
     {/if}
 
-    <p id="trust-value-p" class="square-1">8.9</p>
+    <p id="trust-value-p" class="square-1">{repoHealthValue}</p>
   </div>
   <div>
     <div class="title">{repo.name}</div>

@@ -3,6 +3,7 @@ package api
 import (
 	"backend/internal/db"
 	"backend/pkg/util"
+	"log"
 	"log/slog"
 	"math"
 	"net/http"
@@ -58,15 +59,21 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	contributerCount := 0
 	var commitCount int
 	var repoWeight float64
+	var repoHealthMetrics *db.RepoHealthMetrics
+	var err error
+
 	for _, email := range data {
 		contributerCount++
 		commitCount += email.CommitCount
 		repoWeight += email.Weight
 	}
 
-	repoHealthMetrics, err := manageInternalHealthMetrics(repoId)
+	repoHealthMetrics, err = manageInternalHealthMetrics(repoId)
 	if err != nil {
-		return err
+		log.Printf("This is an arrow: %v", err)
+		repoHealthMetrics.SponsorCount = 0
+		repoHealthMetrics.RepoStarCount = 0
+		repoHealthMetrics.RepoMultiplierCount = 0
 	}
 
 	repoHealthMetrics.Id = uuid.New()
