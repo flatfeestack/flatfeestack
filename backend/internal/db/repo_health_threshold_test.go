@@ -18,11 +18,11 @@ func getRepoHealthThresholdtTestData() *RepoHealthThreshold {
 	newThresholdData := RepoHealthThreshold{
 		Id:                 newId,
 		CreatedAt:          parsedTime,
-		ThContributerCount: &Threshold{Upper: rand.Float32() + 1, Lower: rand.Float32() + 1},
-		ThCommitCount:      &Threshold{Upper: rand.Float32() + 1, Lower: rand.Float32() + 1},
-		ThSponsorDonation:  &Threshold{Upper: rand.Float32() + 1, Lower: rand.Float32() + 1},
-		ThRepoStarCount:    &Threshold{Upper: rand.Float32() + 1, Lower: rand.Float32() + 1},
-		ThRepoMultiplier:   &Threshold{Upper: rand.Float32() + 1, Lower: rand.Float32() + 1},
+		ThContributerCount: &Threshold{Upper: rand.Float64() + 1, Lower: rand.Float64() + 1},
+		ThCommitCount:      &Threshold{Upper: rand.Float64() + 1, Lower: rand.Float64() + 1},
+		ThSponsorDonation:  &Threshold{Upper: rand.Float64() + 1, Lower: rand.Float64() + 1},
+		ThRepoStarCount:    &Threshold{Upper: rand.Float64() + 1, Lower: rand.Float64() + 1},
+		ThRepoMultiplier:   &Threshold{Upper: rand.Float64() + 1, Lower: rand.Float64() + 1},
 	}
 
 	return &newThresholdData

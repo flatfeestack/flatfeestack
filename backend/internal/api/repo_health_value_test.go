@@ -31,6 +31,52 @@ func getTestData(a, b, c, d, e int) *db.RepoHealthMetrics {
 
 }
 
+func stringPointer(s string) *string {
+	return &s
+}
+
+func insertTestRepo(t *testing.T) *db.Repo {
+	return insertTestRepoGitUrl(t, "git-url")
+}
+
+func insertTestRepoGitUrl(t *testing.T, gitUrl string) *db.Repo {
+	rid := uuid.New()
+	r := db.Repo{
+		Id:          rid,
+		Url:         stringPointer("url"),
+		GitUrl:      stringPointer(gitUrl),
+		Source:      stringPointer("source"),
+		Name:        stringPointer("name"),
+		Description: stringPointer("desc"),
+	}
+	err := db.InsertOrUpdateRepo(&r)
+	assert.Nil(t, err)
+	r2, err := db.FindRepoById(r.Id)
+	assert.Nil(t, err)
+	return r2
+}
+
+func TestGetRepoHealthValueByRepoIdNilRepoId(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	var repoId uuid.UUID
+	result, err := getRepoHealthValue(repoId)
+	assert.Nil(t, result)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "couldn't get repo health metrics: repoId is empty")
+}
+func TestGetRepoHealthValueByRepoIdHealthMetricsEmpty(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	r := insertTestRepo(t)
+	//getRepoHealthValue(r.Id)
+	result, err := getRepoHealthValue(r.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, result.HealthValue, float64(0))
+}
+
 // i'm da best
 func TestCalculateRepoHealthValue(t *testing.T) {
 	db.SetupTestData()
@@ -48,6 +94,6 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 
 	result, err := calculateRepoHealthValue(&threshold, metrics)
 	assert.Nil(t, err)
-	assert.Equal(t, result.HealthValue, float32(5.13))
+	assert.Equal(t, result.HealthValue, float64(5.13))
 
 }
