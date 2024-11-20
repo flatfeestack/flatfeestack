@@ -122,7 +122,7 @@ func ClearName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
-func UpdateMltplr(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func UpdateMultiplierApi(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	isSetEsc := r.PathValue("isSet")
 	isSetStr, err := url.QueryUnescape(isSetEsc)
 
@@ -151,7 +151,7 @@ func UpdateMltplr(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
-func UpdateMltplrDlyLimit(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func UpdateMultiplierDailyLimitApi(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 
 	amountEsc := r.PathValue("amount")
 	amountStr, err := url.QueryUnescape(amountEsc)

@@ -69,7 +69,7 @@ func TestUserUpdateMltplr(t *testing.T) {
 		request.SetPathValue("isSet", strMultiplier)
 		response := httptest.NewRecorder()
 
-		UpdateMltplr(response, request, userDetail)
+		UpdateMultiplierApi(response, request, userDetail)
 		assert.Equal(t, 200, response.Code)
 	})
 
@@ -84,7 +84,7 @@ func TestUserUpdateMltplr(t *testing.T) {
 		request.SetPathValue("isSet", strMultiplier)
 		response := httptest.NewRecorder()
 
-		UpdateMltplr(response, request, userDetail)
+		UpdateMultiplierApi(response, request, userDetail)
 		assert.Equal(t, 500, response.Code)
 	})
 
@@ -99,7 +99,7 @@ func TestUserUpdateMltplr(t *testing.T) {
 		request.SetPathValue("amount", strMultiplierDailyLimit)
 		response := httptest.NewRecorder()
 
-		UpdateMltplrDlyLimit(response, request, userDetail)
+		UpdateMultiplierDailyLimitApi(response, request, userDetail)
 		assert.Equal(t, 200, response.Code)
 	})
 
@@ -114,7 +114,7 @@ func TestUserUpdateMltplr(t *testing.T) {
 		request.SetPathValue("amount", strMultiplierDailyLimit)
 		response := httptest.NewRecorder()
 
-		UpdateMltplrDlyLimit(response, request, userDetail)
+		UpdateMultiplierDailyLimitApi(response, request, userDetail)
 		assert.Equal(t, 500, response.Code)
 	})
 }
