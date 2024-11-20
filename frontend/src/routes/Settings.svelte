@@ -13,6 +13,7 @@
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
+  import { fade } from "svelte/transition";
 
   let fileInput;
   let username: undefined | string;
@@ -20,9 +21,22 @@
   let gitEmails: GitUser[] = [];
   let newEmail = "";
 
+  let multiplierActive: undefined | boolean;
+  let showMultiplierInfo = false;
+  let dailyLimit: undefined | number;
+  let newDailyLimit;
+
   $: {
     if (typeof username === "undefined" && $user.name) {
       username = $user.name;
+    }
+
+    if (typeof multiplierActive === "undefined" && $user.multiplier) {
+      multiplierActive = $user.multiplier;
+    }
+
+    if (typeof dailyLimit === "undefined" && $user.multiplierDailyLimit) {
+      dailyLimit = $user.multiplierDailyLimit;
     }
   }
 
@@ -91,6 +105,44 @@
     }
   };
 
+  function handleMultiplierToggle() {
+    try {
+      if (multiplierActive) {
+        API.user.setMultiplier(true);
+      } else {
+        API.user.setMultiplier(false);
+      }
+      $user.multiplier = multiplierActive;
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  function toggleMultiplierInfoVisibility() {
+    showMultiplierInfo = !showMultiplierInfo;
+  }
+
+  function setDailyLimit() {
+    try {
+      if (newDailyLimit >= 1) {
+        API.user.setMultiplierDailyLimit(newDailyLimit);
+        dailyLimit = newDailyLimit;
+        $user.multiplierDailyLimit = newDailyLimit;
+        newDailyLimit = "";
+      } else {
+        $error = "The daily limit must be a number greater than or equalt to 1";
+      }
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  function handleLimitKeyDown(event) {
+    if (event.key === "Enter") {
+      setDailyLimit();
+    }
+  }
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
@@ -117,6 +169,63 @@
   .image-container {
     display: flex;
     align-items: center;
+  }
+
+  label.switch {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: 60px;
+    height: 34px;
+    margin: 1rem 1rem 1rem 0;
+  }
+  label.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+  }
+
+  input:checked + .slider {
+    background-color: var(--primary-500);
+  }
+
+  input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-500);
+  }
+
+  input:checked + .slider:before {
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+  }
+  .slider.round {
+    border-radius: 34px;
+  }
+
+  .slider.round:before {
+    border-radius: 50%;
   }
 
   @media screen and (max-width: 600px) {
@@ -310,4 +419,64 @@
       </tbody>
     </table>
   </div>
+  <div class="container-col m-4">
+    <div class="container-small">
+      <label class="switch">
+        <input
+          type="checkbox"
+          bind:checked={multiplierActive}
+          on:change={handleMultiplierToggle}
+        />
+        <span class="slider round" />
+      </label>
+      <div class="container-small">
+        <p class="m-0"><strong>enable multiplier options</strong> <br /></p>
+        <button class="button1 ml-5" on:click={toggleMultiplierInfoVisibility}
+          >?</button
+        >
+      </div>
+    </div>
+    {#if showMultiplierInfo}
+      <p
+        class="m-0"
+        style="margin-left: 1rem;"
+        transition:fade={{ duration: 250 }}
+      >
+        What are multiplier options? Multiplier options allow you to boost your
+        support for your favorite projects. When enabled, a special icon (ICON
+        HERE) appears in the search tab. <br />
+        By clicking the multiplier icon next to a repository, you activate a multiplier
+        to support it. This means that each time another FlatFeeStack user donates
+        to that repository, you'll automatically contribute up to 0.9% of their initial
+        donation as well. <br />
+        If you're interested in the exact mechanism of this feature, you can read
+        it <strong>here</strong>.
+      </p>
+    {/if}
+  </div>
+  {#if multiplierActive}
+    <div
+      class="container-col"
+      id="tipping-limit-div"
+      style="margin-left: 2rem;"
+    >
+      <p>
+        Your tipping limit is set to <strong>${dailyLimit}</strong> per day.
+      </p>
+      <div class="container">
+        <label for="daily-limit-input">Daily Limit </label>
+        <input
+          id="daily-limit-input"
+          type="number"
+          class="m-4 max-w20"
+          bind:value={newDailyLimit}
+          on:keydown={handleLimitKeyDown}
+          placeholder="$"
+        />
+        <button on:click={setDailyLimit} class="ml-5 p-2 button1"
+          >Set Daily Limit</button
+        >
+      </div>
+    </div>
+  {/if}
 </Navigation>

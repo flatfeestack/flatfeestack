@@ -2,12 +2,14 @@ package api
 
 import (
 	"backend/internal/db"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetUserById(t *testing.T) {
@@ -52,5 +54,67 @@ func TestGetUserById(t *testing.T) {
 
 		GetUserById(response, request)
 		assert.Equal(t, 404, response.Code)
+	})
+}
+
+func TestUserUpdateMltplr(t *testing.T) {
+	t.Run("update user multiplier", func(t *testing.T) {
+		db.SetupTestData()
+		defer db.TeardownTestData()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		strMultiplier := strconv.FormatBool(true)
+		request, _ := http.NewRequest(http.MethodPost, "/users/me/multiplier/"+strMultiplier, nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("isSet", strMultiplier)
+		response := httptest.NewRecorder()
+
+		UpdateMltplr(response, request, userDetail)
+		assert.Equal(t, 200, response.Code)
+	})
+
+	t.Run("update user multiplier with non bool", func(t *testing.T) {
+		db.SetupTestData()
+		defer db.TeardownTestData()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		strMultiplier := "test"
+		request, _ := http.NewRequest(http.MethodPost, "/users/me/multiplier/"+strMultiplier, nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("isSet", strMultiplier)
+		response := httptest.NewRecorder()
+
+		UpdateMltplr(response, request, userDetail)
+		assert.Equal(t, 500, response.Code)
+	})
+
+	t.Run("update user multiplier daily limit", func(t *testing.T) {
+		db.SetupTestData()
+		defer db.TeardownTestData()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		strMultiplierDailyLimit := strconv.FormatInt(2000, 10)
+		request, _ := http.NewRequest(http.MethodPost, "/users/me/multiplierDailyLimit/"+strMultiplierDailyLimit, nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("amount", strMultiplierDailyLimit)
+		response := httptest.NewRecorder()
+
+		UpdateMltplrDlyLimit(response, request, userDetail)
+		assert.Equal(t, 200, response.Code)
+	})
+
+	t.Run("update user multiplier daily limit not a number", func(t *testing.T) {
+		db.SetupTestData()
+		defer db.TeardownTestData()
+
+		userDetail := insertTestUser(t, "hello@world.com")
+		strMultiplierDailyLimit := "test"
+		request, _ := http.NewRequest(http.MethodPost, "/users/me/multiplierDailyLimit/"+strMultiplierDailyLimit, nil)
+		//it does not go via router, so add it manually
+		request.SetPathValue("amount", strMultiplierDailyLimit)
+		response := httptest.NewRecorder()
+
+		UpdateMltplrDlyLimit(response, request, userDetail)
+		assert.Equal(t, 500, response.Code)
 	})
 }
