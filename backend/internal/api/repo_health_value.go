@@ -94,7 +94,7 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 }
 
 func manageInternalHealthMetrics(repoId uuid.UUID) (*db.RepoHealthMetrics, error) {
-	internalHealthMetric, err := db.GetInternalMetrics(repoId)
+	internalHealthMetric, err := db.GetInternalMetrics(repoId, true)
 	if err != nil {
 		return &db.RepoHealthMetrics{
 			SponsorCount:        0,
@@ -136,7 +136,6 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
 	healthMetrics, err := db.FindRepoHealthMetricsByRepoId(repoId)
 	if err != nil {
-		//healthMetrics := *&RepoHealthValue{RepoId: repoId}
 		return nil, fmt.Errorf("couldn't get repo health metrics: %v", err)
 	}
 
