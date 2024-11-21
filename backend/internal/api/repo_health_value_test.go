@@ -92,8 +92,7 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 	}
 	metrics := getTestData(3, 131, 5, 20, 12)
 
-	result, err := calculateRepoHealthValue(&threshold, metrics)
-	assert.Nil(t, err)
-	assert.Equal(t, result.HealthValue, float64(5.13))
+	result := calculateRepoHealthValue(&threshold, metrics)
+	assert.Equal(t, result, float64(5.13))
 
 }

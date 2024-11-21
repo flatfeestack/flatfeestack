@@ -124,11 +124,12 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 
 	var repoHealthHistory []RepoHealthValue
 	for _, metrics := range healthMetrics {
-		tmp, err := calculateRepoHealthValue(healthThreshold, &metrics)
-		if err != nil {
-			return nil, err
-		}
-		repoHealthHistory = append(repoHealthHistory, *tmp)
+		tmp := calculateRepoHealthValue(healthThreshold, &metrics)
+		repoHealthHistory = append(
+			repoHealthHistory,
+			RepoHealthValue{
+				RepoId:      repoId,
+				HealthValue: tmp})
 	}
 	return repoHealthHistory, nil
 }
@@ -150,18 +151,14 @@ func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get latest threshold values: %v", err)
 	}
-	repoHealthValue, err := calculateRepoHealthValue(healthThreshold, healthMetrics)
-	if err != nil {
-		return nil, fmt.Errorf("error calculating repo health value: %v", err)
-	}
-	return repoHealthValue, nil
+	healthValue := calculateRepoHealthValue(healthThreshold, healthMetrics)
+	return &RepoHealthValue{
+		RepoId:      repoId,
+		HealthValue: healthValue,
+	}, nil
 }
 
-func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) (*RepoHealthValue, error) {
-	//healthValueObject := RepoHealthValue{
-	//	RepoId:      metrics.RepoId,
-	//	HealthValue: 0.0,
-	//}
+func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) float64 {
 	healthValue := 0.0
 
 	healthMetrics := []int{
@@ -172,7 +169,7 @@ func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.Rep
 		metrics.RepoMultiplierCount,
 	}
 
-	healthThreshold := [][]float64{
+	healthThreshold := [][]int{
 		{threshold.ThContributerCount.Lower, threshold.ThContributerCount.Upper},
 		{threshold.ThCommitCount.Lower, threshold.ThCommitCount.Upper},
 		{threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper},
@@ -182,7 +179,7 @@ func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.Rep
 
 	for i := range 5 {
 		var partialHealthValue float64
-		currentMetric := float64(healthMetrics[i])
+		currentMetric := healthMetrics[i]
 		currentThresholdLower := healthThreshold[i][0]
 		currentThresholdUpper := healthThreshold[i][1]
 
@@ -193,14 +190,14 @@ func calculateRepoHealthValue(threshold *db.RepoHealthThreshold, metrics *db.Rep
 		} else {
 			thresholdDifference := currentThresholdUpper - currentThresholdLower + 1
 			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
-			partialHealthValue = 2 / thresholdDifference * normalizedCurrentMetric
+			partialHealthValue = 2 / float64(thresholdDifference) * float64(normalizedCurrentMetric)
 		}
 		healthValue += partialHealthValue
 	}
-	healthValue = math.Round(healthValue*100) / 100
+	return math.Round(healthValue*100) / 100
 
-	return &RepoHealthValue{
-		RepoId:      metrics.RepoId,
-		HealthValue: healthValue,
-	}, nil
+	//return &RepoHealthValue{
+	//	RepoId:      metrics.RepoId,
+	//	HealthValue: healthValue,
+	//}, nil
 }

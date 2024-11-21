@@ -1085,6 +1085,9 @@ components:
         trustAt:
           type: string
           format: date-time
+        healthValue:
+          type: number
+          format: float
       required:
         - uuid
         - score

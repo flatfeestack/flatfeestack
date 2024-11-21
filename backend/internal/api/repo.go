@@ -283,6 +283,13 @@ func (rs *RepoHandler) trustRepo0(w http.ResponseWriter, user *db.UserDetail, re
 		return
 	}
 
+	healthValue, err := getRepoHealthValue(repoWithTrustDate.Id)
+	if err != nil {
+		repoWithTrustDate.HealthValue = 0.0
+	} else {
+		repoWithTrustDate.HealthValue = healthValue.HealthValue
+	}
+
 	util.WriteJson(w, repoWithTrustDate)
 }
 
@@ -305,6 +312,15 @@ func GetTrustedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
+	}
+
+	for _, repo := range repos {
+		value, err := getRepoHealthValue(repo.Id)
+		if err != nil {
+			repo.HealthValue = 0.0
+		} else {
+			repo.HealthValue = value.HealthValue
+		}
 	}
 
 	util.WriteJson(w, repos)
@@ -393,6 +409,12 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
+		}
+		healthValue, err := getRepoHealthValue(repo.Id)
+		if err != nil {
+			repo.HealthValue = 0.0
+		} else {
+			repo.HealthValue = healthValue.HealthValue
 		}
 		repos = append(repos, *repo)
 	}

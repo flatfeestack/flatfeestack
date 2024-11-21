@@ -237,6 +237,7 @@ func main() {
 
 	//github
 	router.HandleFunc("GET /repos/search", middlewareJwtAuthUserLog(rh.SearchRepoGitHub))
+
 	//repo
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))

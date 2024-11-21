@@ -9,8 +9,8 @@ import (
 )
 
 type Threshold struct {
-	Upper float64 `json:"upper"`
-	Lower float64 `json:"lower"`
+	Upper int `json:"upper"`
+	Lower int `json:"lower"`
 }
 
 type RepoHealthThreshold struct {

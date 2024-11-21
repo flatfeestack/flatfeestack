@@ -3,8 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Repo struct {
@@ -17,6 +18,7 @@ type Repo struct {
 	Source      *string   `json:"source"`
 	CreatedAt   time.Time `json:"createdAt"`
 	TrustAt     time.Time `json:"trustAt"`
+	HealthValue float64   `json:"healthValue"`
 }
 
 func InsertOrUpdateRepo(repo *Repo) error {
