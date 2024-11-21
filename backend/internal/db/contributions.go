@@ -3,10 +3,11 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"math/big"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type Contributions struct {
@@ -337,4 +338,84 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	default:
 		return big.NewInt(0), err
 	}
+}
+
+func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
+	var query string
+
+	if isPostgres {
+		query = `
+            WITH trusted_repos AS (
+                SELECT repo_id
+                FROM trust_event
+                WHERE un_trust_at IS NULL
+            )
+            SELECT DISTINCT dc.user_sponsor_id
+            FROM daily_contribution dc
+            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+            WHERE dc.created_at >= CURRENT_DATE - INTERVAL $1`
+	} else {
+		query = fmt.Sprintf(`
+            WITH trusted_repos AS (
+                SELECT repo_id
+                FROM trust_event
+                WHERE un_trust_at IS NULL
+            )
+            SELECT DISTINCT dc.user_sponsor_id
+            FROM daily_contribution dc
+            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+            WHERE dc.created_at >= date('now', '-%d days')`, days)
+	}
+
+	var rows *sql.Rows
+	var err error
+	if isPostgres {
+		rows, err = DB.Query(query, fmt.Sprintf("%d days", days))
+	} else {
+		rows, err = DB.Query(query)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var sponsors []uuid.UUID
+	for rows.Next() {
+		var sponsor uuid.UUID
+		if err := rows.Scan(&sponsor); err != nil {
+			return nil, err
+		}
+		sponsors = append(sponsors, sponsor)
+	}
+
+	return sponsors, nil
+}
+
+func IsActiveUser(userId uuid.UUID, isPostgres bool) (bool, error) {
+	var count int
+	var query string
+
+	// Construct the query based on whether it's Postgres or SQLite
+	if isPostgres {
+		query = `
+            SELECT COUNT(DISTINCT dc.user_sponsor_id) 
+            FROM daily_contribution dc
+            WHERE dc.user_sponsor_id = $1
+            AND dc.created_at >= CURRENT_DATE - INTERVAL '1 month'`
+	} else { // SQLite
+		query = `
+            SELECT COUNT(DISTINCT dc.user_sponsor_id) 
+            FROM daily_contribution dc
+            WHERE dc.user_sponsor_id = ? 
+            AND dc.created_at >= date('now', '-1 month')`
+	}
+
+	// Execute the query
+	err := DB.QueryRow(query, userId).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

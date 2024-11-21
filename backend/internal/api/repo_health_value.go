@@ -94,7 +94,7 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 }
 
 func manageInternalHealthMetrics(repoId uuid.UUID) (*db.RepoHealthMetrics, error) {
-	internalHealthMetric, err := db.GetInternalMetrics(repoId, true)
+	internalHealthMetric, err := db.GetInternalMetrics(repoId)
 	if err != nil {
 		return &db.RepoHealthMetrics{
 			SponsorCount:        0,
