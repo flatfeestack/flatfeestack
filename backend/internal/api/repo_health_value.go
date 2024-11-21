@@ -74,7 +74,7 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 		repoWeight += email.Weight
 	}
 
-	repoHealthMetrics, err = manageInternalHealthMetrics(repoId)
+	repoHealthMetrics, err = manageInternalHealthMetrics(repoId, true)
 	if err != nil {
 		log.Printf("This is an arrow: %v", err)
 	}
@@ -93,8 +93,8 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	return nil
 }
 
-func manageInternalHealthMetrics(repoId uuid.UUID) (*db.RepoHealthMetrics, error) {
-	internalHealthMetric, err := db.GetInternalMetrics(repoId, true)
+func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHealthMetrics, error) {
+	internalHealthMetric, err := db.GetInternalMetrics(repoId, isPostgres)
 	if err != nil {
 		return &db.RepoHealthMetrics{
 			SponsorCount:        0,
