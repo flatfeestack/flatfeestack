@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -81,18 +82,6 @@ func TestFindRepoHealthMetricsByRepoId(t *testing.T) {
 	result, err := FindRepoHealthMetricsByRepoId(r.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, result, newRepoMetrics)
-
-	// newRepoMetrics2 := getTestData(r)
-	// assert.NotEqual(t, newRepoMetrics, newRepoMetrics2)
-	//
-	// err = InsertRepoHealthMetrics(*newRepoMetrics2)
-	// assert.Nil(t, err)
-	//
-	// result, err = FindRepoHealthMetricsByRepoId(r.Id)
-	// assert.Nil(t, err)
-	// assert.Len(t, result, 2)
-	// assert.Equal(t, result[0].RepoId, result[1].RepoId)
-	// assert.NotEmpty(t, result[0], result[1])
 }
 
 func TestFindRepoHealthMetricsByRepoIdHistory(t *testing.T) {
@@ -119,9 +108,20 @@ func TestFindRepoHealthMetricsByRepoIdHistory(t *testing.T) {
 	assert.Equal(t, result[0].RepoId, result[1].RepoId)
 
 }
+func TestFindRepoHealthMetricsByRepoIdHistoryEmpty(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	r := insertTestRepo(t)
+	// newRepoMetrics := getTestData(r)
+	// _ = InsertRepoHealthMetrics(*newRepoMetrics)
+
+	result, err := FindRepoHealthMetricsByRepoIdHistory(r.Id)
+	assert.Nil(t, err)
+	assert.Empty(t, result)
+}
 
 // done
-func TestUpdateTrustValue(t *testing.T) {
+func TestUpdateHealthValue(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	r := insertTestRepo(t)
@@ -141,11 +141,10 @@ func TestUpdateTrustValue(t *testing.T) {
 	result, err := FindRepoHealthMetricsById(alteredRepoMetrics.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, alteredRepoMetrics, *result)
-
 }
 
 // done
-func TestFindTrustValueById(t *testing.T) {
+func TestFindHealthValueById(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	r := insertTestRepo(t)
@@ -155,6 +154,13 @@ func TestFindTrustValueById(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, newRepoMetrics, result)
 
+}
+
+func TestScanRepohealthMetricsEmptyRows(t *testing.T) {
+	var rows *sql.Rows
+	result, err := scanRepoHealthMetrics(rows)
+	assert.Nil(t, err)
+	assert.Empty(t, result)
 }
 
 // done

@@ -124,7 +124,6 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(healthValue)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -209,6 +208,10 @@ func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics
 // tested by integration testing
 func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 	healthMetrics := []RepoHealthMetrics{}
+	if rows == nil {
+		return healthMetrics, nil
+	}
+
 	for rows.Next() {
 		var repoHealthMetrics RepoHealthMetrics
 		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
@@ -217,6 +220,7 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 		}
 		healthMetrics = append(healthMetrics, repoHealthMetrics)
 	}
+
 	return healthMetrics, nil
 }
 
