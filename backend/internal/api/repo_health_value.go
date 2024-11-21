@@ -21,9 +21,6 @@ func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, user *db
 	repoId := uuid.MustParse(r.PathValue("id"))
 	healthValue, err := getRepoHealthValue(repoId)
 
-	//log.Printf("My healthvalue: %v", healthValue)
-	log.Printf("My error: %v", err)
-
 	if healthValue == nil {
 		slog.Error("Health Value not found %s",
 			slog.String("id", repoId.String()))
@@ -81,6 +78,7 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 
 	repoHealthMetrics.Id = uuid.New()
 	repoHealthMetrics.RepoId = repoId
+	repoHealthMetrics.CreatedAt = util.TimeNow()
 	repoHealthMetrics.ContributerCount = contributerCount
 	repoHealthMetrics.CommitCount = commitCount
 	repoHealthMetrics.RepoWeight = repoWeight
