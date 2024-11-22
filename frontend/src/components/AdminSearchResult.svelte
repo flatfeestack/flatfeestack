@@ -89,7 +89,7 @@
       await unTrust();
       unTrustOnDestroy = true;
     }
-  })
+  });
 </script>
 
 <style>

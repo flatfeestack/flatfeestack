@@ -80,7 +80,7 @@
       await unTrust();
       unTrustOnDestroy = true;
     }
-  })
+  });
 </script>
 
 <style>
@@ -237,10 +237,5 @@
         {repo.name}
       </a>
     </div>
-    <!--    <div>-->
-    <!--      <a href={repo.url} class="py-2 url" target="_blank" rel="noreferrer">-->
-    <!--        {repo.url}-->
-    <!--      </a>-->
-    <!--    </div>-->
   {/if}
 </div>
