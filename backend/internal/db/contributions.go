@@ -353,7 +353,7 @@ func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
             SELECT DISTINCT dc.user_sponsor_id
             FROM daily_contribution dc
             JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= CURRENT_DATE - INTERVAL $1`
+            WHERE dc.created_at >= CURRENT_DATE - INTERVAL $1 || ' days'`
 	} else {
 		query = fmt.Sprintf(`
             WITH trusted_repos AS (
@@ -370,7 +370,7 @@ func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
 	var rows *sql.Rows
 	var err error
 	if isPostgres {
-		rows, err = DB.Query(query, fmt.Sprintf("%d days", days))
+		rows, err = DB.Query(query, days)
 	} else {
 		rows, err = DB.Query(query)
 	}
