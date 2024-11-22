@@ -18,7 +18,6 @@
   import Navigation from "../../components/Navigation.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
   import TrustedRepoCard from "../../components/HealthyRepoCard.svelte";
-  // import { Link } from "svelte-routing";
 
   let icon: IconDefinition;
   let search = "";
@@ -48,41 +47,30 @@
     } finally {
       isSearchSubmitting = false;
     }
-    // console.log('sortedtrustedRepos', sortedTrustedRepos);
   };
-
-  function sortByName(a: Repo, b: Repo) {
-    return a.name?.localeCompare(b.name || "") || 0;
-  }
 
   function sortByDate(a: Repo, b: Repo, ascending: boolean = true): number {
     const dateA = new Date(a.trustAt).getTime();
-    // console.log('dateA:', dateA)
     const dateB = new Date(b.trustAt).getTime();
-    // console.log('dateB:', dateB)
     return ascending ? dateA - dateB : dateB - dateA;
   }
   function sortByDateAsc(a: Repo, b: Repo) {
-    return sortByDate(a, b, true); // Ascending
+    return sortByDate(a, b, true);
   }
   function sortByDateDesc(a: Repo, b: Repo) {
-    return sortByDate(a, b, false); // Descending
+    return sortByDate(a, b, false);
   }
 
-  // function sortByScore(a: Repo, b: Repo, ascending: boolean = true): number {
-  //   const scoreA =
-  //   const scoreB =
-  //   return ascending ? scoreA - scoreB : scoreB - scoreA;
-  // }
-  // function sortByScoreAsc(a: Repo, b: Repo) {
-  //   return sortByScore(a, b, true); // Ascending
-  // }
-  // function sortByScoreDesc(a: Repo, b: Repo) {
-  //   return sortByScore(a, b, false); // Descending
-  // }
-
-  function sortByScore(a: Repo, b: Repo) {
-    return (b.score || 0) - (a.score || 0);
+  function sortByScore(a: Repo, b: Repo, ascending: boolean = true): number {
+    const scoreA = a.healthValue;
+    const scoreB = b.healthValue;
+    return ascending ? scoreA - scoreB : scoreB - scoreA;
+  }
+  function sortByScoreAsc(a: Repo, b: Repo) {
+    return sortByScore(a, b, true);
+  }
+  function sortByScoreDesc(a: Repo, b: Repo) {
+    return sortByScore(a, b, false);
   }
 
   // Set default sorting function
@@ -101,7 +89,6 @@
         $isSubmitting = false;
       }
     }
-    // console.log('trustedRepos', $trustedRepos);
   });
 </script>
 
@@ -238,15 +225,15 @@
                 >
                 <button
                   on:click={() => {
-                    sortingFunction = sortByDateDesc;
+                    sortingFunction = sortByScoreDesc;
                     sortingTitle = "Score - high to low";
                   }}>Score - high to low</button
                 >
                 <button
                   on:click={() => {
-                    sortingFunction = sortByDateAsc;
+                    sortingFunction = sortByScoreAsc;
                     sortingTitle = "Score - low to high";
-                  }}>Sort by Score - low to high</button
+                  }}>Score - low to high</button
                 >
               </div>
             </div>

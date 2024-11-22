@@ -858,6 +858,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       trustAt?: string;
+      /** Format: float */
+      healthValue?: number;
     };
     RepoHealthValue: {
       repoid?: string;

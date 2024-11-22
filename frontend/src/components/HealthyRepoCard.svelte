@@ -3,14 +3,22 @@
   import { error, trustedRepos } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   export let repo: Repo;
   let verifiedStar = true;
   let abortUntrustEvent = false;
   let unTrustProgress = 100;
   let unTrustProcessRunning = false;
+  let unTrustOnDestroy = false;
   let repoHealthValue: Number | "NA";
+
+  $: {
+    const tmp = $trustedRepos.find((r: Repo) => {
+      return r.uuid === repo.uuid;
+    });
+    repoHealthValue = tmp ? tmp.healthValue : "NA";
+  }
 
   async function unTrust() {
     verifiedStar = false;
@@ -53,7 +61,7 @@
     }, interval);
 
     setTimeout(async () => {
-      if (!abortUntrustEvent) {
+      if (!abortUntrustEvent && !unTrustOnDestroy) {
         await unTrust();
       }
       abortUntrustEvent = false;
@@ -67,22 +75,12 @@
     }
   }
 
-  async function getHealthValue() {
-    try {
-      const res = await API.repos.getHealthValue(repo.uuid);
-      console.log("res:", res);
-      return res.healthvalue;
-    } catch (e) {
-      $error = e;
+  onDestroy(async () => {
+    if (unTrustProcessRunning) {
+      await unTrust();
+      unTrustOnDestroy = true;
     }
-  }
-
-  onMount(async () => {
-    repoHealthValue =
-      (await getHealthValue()) !== undefined
-        ? ((await getHealthValue()) as number)
-        : "NA";
-  });
+  })
 </script>
 
 <style>
@@ -139,7 +137,6 @@
     margin: 0.25em;
     height: 1.7em;
     width: 1.7em;
-    padding: 0;
   }
 
   #trust-value-p {
@@ -149,6 +146,9 @@
     text-align: center;
     border: 0.15em solid #494949;
     border-radius: 0.5em;
+    padding: 0.2em;
+    font-size: 0.9rem;
+    font-weight: bold;
   }
 
   .color :global(a:hover) {

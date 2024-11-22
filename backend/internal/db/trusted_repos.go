@@ -132,7 +132,7 @@ func FindTrustedRepos() ([]Repo, error) {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanRepo(rows)
+	return scanRepoWithTrustEvent(rows)
 }
 
 func CountTrustedRepos(userId uuid.UUID) (int, error) {

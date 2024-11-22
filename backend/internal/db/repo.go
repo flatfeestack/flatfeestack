@@ -88,6 +88,19 @@ func scanRepo(rows *sql.Rows) ([]Repo, error) {
 	repos := []Repo{}
 	for rows.Next() {
 		var r Repo
+		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, r)
+	}
+	return repos, nil
+}
+
+func scanRepoWithTrustEvent(rows *sql.Rows) ([]Repo, error) {
+	repos := []Repo{}
+	for rows.Next() {
+		var r Repo
 		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.TrustAt)
 		if err != nil {
 			return nil, err
