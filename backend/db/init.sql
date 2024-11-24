@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS trust_event (
     id            UUID PRIMARY KEY,
     repo_id       UUID CONSTRAINT trust_event_repo_id_fk REFERENCES repo(id),
     user_id       UUID CONSTRAINT trust_event_user_id_fk REFERENCES users(id),
-    trust_at    TIMESTAMP NOT NULL,
-    un_trust_at TIMESTAMP,
+    trust_at      TIMESTAMP NOT NULL,
+    un_trust_at   TIMESTAMP,
     UNIQUE(repo_id, user_id, trust_at)
 );
 CREATE INDEX IF NOT EXISTS trust_event_repo_id_idx ON trust_event(repo_id);
