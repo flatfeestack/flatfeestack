@@ -21,7 +21,7 @@ func TestSetMultiplierRepoTwice(t *testing.T) {
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -30,7 +30,7 @@ func TestSetMultiplierRepoTwice(t *testing.T) {
 		UnMultiplierAt: &t001,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -39,10 +39,10 @@ func TestSetMultiplierRepoTwice(t *testing.T) {
 		UnMultiplierAt: &t002,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	//we want to InsertOrUpdateMultiplierRepo, but we are already trusting this repo
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	//we want to InsertOrUpdateMultiplierRepo, but we are already set a multiplier for this repo
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.NotNil(t, err)
 
 }
@@ -53,7 +53,7 @@ func TestUnsetMultiplierTwice(t *testing.T) {
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r.Id,
@@ -61,7 +61,7 @@ func TestUnsetMultiplierTwice(t *testing.T) {
 		MultiplierAt: &t001,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -69,7 +69,7 @@ func TestUnsetMultiplierTwice(t *testing.T) {
 		UnMultiplierAt: &t002,
 	}
 
-	tr3 := MultiplierEvent{
+	m3 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -77,12 +77,12 @@ func TestUnsetMultiplierTwice(t *testing.T) {
 		UnMultiplierAt: &t003,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.Nil(t, err)
-	//we want to untrust, but we already untrusted it
-	err = InsertOrUpdateMultiplierRepo(&tr3)
+	// we want to UnMultiply, but we already UnMultiplied it
+	err = InsertOrUpdateMultiplierRepo(&m3)
 	assert.NotNil(t, err)
 
 }
@@ -93,7 +93,7 @@ func TestUnsetMultiplierWrong(t *testing.T) {
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -101,8 +101,8 @@ func TestUnsetMultiplierWrong(t *testing.T) {
 		UnMultiplierAt: &t001,
 	}
 
-	//we want to untrust, but we are currently not trusting this repo
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	//we want to unMultiply, but we are currently not multiplying this repo
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.NotNil(t, err)
 }
 
@@ -112,7 +112,7 @@ func TestMultiplierWrongOrder(t *testing.T) {
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r.Id,
@@ -120,7 +120,7 @@ func TestMultiplierWrongOrder(t *testing.T) {
 		MultiplierAt: &t002,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -128,10 +128,10 @@ func TestMultiplierWrongOrder(t *testing.T) {
 		UnMultiplierAt: &t001,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	//we want to untrunst, but the untrust date is before the trust date
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	// we want to unMultiply, but the unMultiply date is before the multiply date
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.NotNil(t, err)
 
 }
@@ -142,7 +142,7 @@ func TestMultiplierWrongOrderActive(t *testing.T) {
 	u := insertTestUser(t, "email")
 	r := insertTestRepo(t)
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r.Id,
@@ -150,7 +150,7 @@ func TestMultiplierWrongOrderActive(t *testing.T) {
 		MultiplierAt: &t002,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -158,7 +158,7 @@ func TestMultiplierWrongOrderActive(t *testing.T) {
 		UnMultiplierAt: &t004,
 	}
 
-	tr3 := MultiplierEvent{
+	m3 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -166,12 +166,12 @@ func TestMultiplierWrongOrderActive(t *testing.T) {
 		UnMultiplierAt: &t003,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.Nil(t, err)
-	//we want to untrust, but we already untrusted it at 0001-01-01 00:00:04 +0000 UTC
-	err = InsertOrUpdateMultiplierRepo(&tr3)
+	//we want to unMultiply, but we already unMultiplied it at 0001-01-01 00:00:04 +0000 UTC
+	err = InsertOrUpdateMultiplierRepo(&m3)
 	assert.NotNil(t, err)
 
 }
@@ -183,7 +183,7 @@ func TestMultiplierCorrect(t *testing.T) {
 	r := insertTestRepo(t)
 	r2 := insertTestRepoGitUrl(t, "git-url2")
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r.Id,
@@ -191,7 +191,7 @@ func TestMultiplierCorrect(t *testing.T) {
 		MultiplierAt: &t001,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r.Id,
@@ -199,7 +199,7 @@ func TestMultiplierCorrect(t *testing.T) {
 		UnMultiplierAt: &t002,
 	}
 
-	tr3 := MultiplierEvent{
+	m3 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r2.Id,
@@ -207,29 +207,29 @@ func TestMultiplierCorrect(t *testing.T) {
 		MultiplierAt: &t003,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.Nil(t, err)
-	err = InsertOrUpdateMultiplierRepo(&tr3)
+	err = InsertOrUpdateMultiplierRepo(&m3)
 	assert.Nil(t, err)
 
-	rs, err := FindTrustedRepos()
+	rs, err := FindMultipliedRepos()
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 	assert.Equal(t, r2.Id, rs[0].Id)
 
-	tr4 := MultiplierEvent{
+	m4 := MultiplierEvent{
 		Id:             uuid.New(),
 		Uid:            u.Id,
 		RepoId:         r2.Id,
 		EventType:      Inactive,
 		UnMultiplierAt: &t004,
 	}
-	err = InsertOrUpdateMultiplierRepo(&tr4)
+	err = InsertOrUpdateMultiplierRepo(&m4)
 	assert.Nil(t, err)
 
-	rs, err = FindTrustedRepos()
+	rs, err = FindMultipliedRepos()
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(rs))
 }
@@ -241,7 +241,7 @@ func TestTwoMultipliedRepos(t *testing.T) {
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
 
-	tr1 := MultiplierEvent{
+	m1 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r.Id,
@@ -249,7 +249,7 @@ func TestTwoMultipliedRepos(t *testing.T) {
 		MultiplierAt: &t001,
 	}
 
-	tr2 := MultiplierEvent{
+	m2 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          u.Id,
 		RepoId:       r2.Id,
@@ -257,12 +257,12 @@ func TestTwoMultipliedRepos(t *testing.T) {
 		MultiplierAt: &t002,
 	}
 
-	err := InsertOrUpdateMultiplierRepo(&tr1)
+	err := InsertOrUpdateMultiplierRepo(&m1)
 	assert.Nil(t, err)
-	err = InsertOrUpdateMultiplierRepo(&tr2)
+	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.Nil(t, err)
 
-	rs, err := FindTrustedRepos()
+	rs, err := FindMultipliedRepos()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rs))
 }

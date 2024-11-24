@@ -18,7 +18,7 @@ type MultiplierEvent struct {
 }
 
 func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
-	//first get last multiplier event to check if we need to InsertOrUpdateTrustRepo or unset the multiplier
+	//first get last multiplier event to check if we need to InsertOrUpdateMultiplierRepo or unset the multiplier
 	//TODO: use mutex
 	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.RepoId)
 	if err != nil {
