@@ -64,8 +64,8 @@
       if (!abortUntrustEvent && !unTrustOnDestroy) {
         await unTrust();
       }
-      abortUntrustEvent = false;
     }, duration);
+    abortUntrustEvent = false;
   }
 
   function trustRepo() {
