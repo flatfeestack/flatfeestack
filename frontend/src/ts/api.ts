@@ -201,6 +201,7 @@ export const API = {
       backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getMultiplier: () => backendToken.get("users/me/multiplied").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
     setMultiplier: (isSet: boolean) =>
@@ -258,10 +259,18 @@ export const API = {
     tag: (repoId: string) =>
       backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
+    setMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
+    unsetMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)
         .json<ChartDataTotal>(),
+    trust: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+    untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
+    getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

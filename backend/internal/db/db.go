@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"log/slog"
 	"math/big"
@@ -15,6 +13,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -183,12 +184,26 @@ func RunSQL(files ...string) error {
 
 			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
 			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+
 			newBytes := re.ReplaceAll(fileBytes, nil)
 
 			requests := strings.Split(string(newBytes), ";")
+			var placeholder string
 			for _, request := range requests {
 				request = strings.TrimSpace(request)
+				if strings.Contains(request, "DO $$ BEGIN") || strings.Contains(request, "END IF") {
+					placeholder += fmt.Sprintf("%s;\n", request)
+					continue
+				}
+				if strings.Contains(request, "END $$") {
+					placeholder += request
+					request = placeholder
+				}
+
+				//fmt.Println("#############################")
 				if len(request) > 0 {
+					placeholder = ""
+					//fmt.Println(request)
 					_, err := DB.Exec(request)
 					if err != nil {
 						return fmt.Errorf("[%v] %v", request, err)
@@ -199,6 +214,7 @@ func RunSQL(files ...string) error {
 			slog.Info("ignoring file %v (%v)", slog.String("file", file), slog.Any("error", err))
 		}
 	}
+
 	return nil
 }
 

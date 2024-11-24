@@ -207,6 +207,7 @@ func main() {
 	router.HandleFunc("PUT /users/me/method/{method}", middlewareJwtAuthUserLog(api2.UpdateMethod))
 	router.HandleFunc("DELETE /users/me/method", middlewareJwtAuthUserLog(api2.DeleteMethod))
 	router.HandleFunc("GET /users/me/sponsored", middlewareJwtAuthUserLog(api2.GetSponsoredRepos))
+	router.HandleFunc("GET /users/me/multiplied", middlewareJwtAuthUserLog(api2.GetMultipliedRepos))
 	router.HandleFunc("PUT /users/me/name/{name}", middlewareJwtAuthUserLog(api2.UpdateName))
 	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
 	router.HandleFunc("PUT /users/me/multiplier/{isSet}", middlewareJwtAuthUserLog(api2.UpdateMultiplierApi))
@@ -241,6 +242,11 @@ func main() {
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
 	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
+	router.HandleFunc("POST /repos/{id}/setMultiplier", middlewareJwtAuthUserLog(rh.SetMultiplierRepo))
+	router.HandleFunc("POST /repos/{id}/unsetMultiplier", middlewareJwtAuthUserLog(rh.UnsetMultiplierRepo))
+	router.HandleFunc("GET /repos/trusted", middlewareJwtAuthUserLog(api2.GetTrustedRepos))
+	router.HandleFunc("POST /repos/{id}/trust", middlewareJwtAuthAdminLog(rh.TrustRepo))
+	router.HandleFunc("POST /repos/{id}/untrust", middlewareJwtAuthAdminLog(rh.UnTrustRepo))
 	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	//payment
 
