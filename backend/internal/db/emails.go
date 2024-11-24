@@ -126,18 +126,46 @@ func FindUserByGitEmail(gitEmail string) (*uuid.UUID, error) {
 	}
 }
 
-func GetRepoEmail(repoId uuid.UUID) (string, error) {
-	var email string
-	query := `SELECT ar.git_email
-              FROM analysis_response ar
-              WHERE ar.repo_id = $1`
-
-	err := DB.QueryRow(query, repoId).Scan(&email)
-	if err != nil {
-		return "", err
+func FindUsersByGitEmails(emails []string) ([]uuid.UUID, error) {
+	if len(emails) == 0 {
+		return nil, nil
 	}
 
-	return email, nil
+	query := `SELECT DISTINCT user_id FROM git_email WHERE email IN (` + GeneratePlaceholders(len(emails)) + `)`
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(emails)...)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var userIds []uuid.UUID
+	for rows.Next() {
+		var userId uuid.UUID
+		if err := rows.Scan(&userId); err != nil {
+			return nil, err
+		}
+		userIds = append(userIds, userId)
+	}
+	return userIds, nil
+}
+
+func GetRepoEmails(repoId uuid.UUID) ([]string, error) {
+	query := `SELECT DISTINCT git_email FROM analysis_response WHERE repo_id = $1`
+	rows, err := DB.Query(query, repoId)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var emails []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, err
+		}
+		emails = append(emails, email)
+	}
+	return emails, nil
 }
 
 //******* Emails Sent

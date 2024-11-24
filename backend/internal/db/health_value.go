@@ -270,14 +270,14 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 		return nil, fmt.Errorf("failed to fetch active sponsors: %v", err)
 	}
 
+	// To add after pull request, because Multiplier is on different branch
 	/*
 		func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
-			var query string
-
 			if len(activeSponsors) == 0 {
 				return 0, nil
 			}
 
+			var query string
 			if isPostgres {
 				query = `
 					SELECT COUNT(DISTINCT user_id)
@@ -290,27 +290,19 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 					WHERE repo_id = ? AND user_id IN (?) AND un_multiplier_at IS NULL`
 			}
 
-			var count int
-			var err error
+			var args []interface{}
 			if isPostgres {
-				err = DB.QueryRow(query, repoId, activeSponsors).Scan(&count)
+				args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
 			} else {
-				placeholders := "?" + strings.Repeat(",?", len(activeSponsors)-1)
-				if len(activeSponsors) > 0 {
-					query = fmt.Sprintf(query, placeholders)
-				}
-
-				args := []interface{}{repoId}
-				for _, sponsor := range activeSponsors {
-					args = append(args, sponsor)
-				}
-
-				err = DB.QueryRow(query, args...).Scan(&count)
+				args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
 			}
 
+			var count int
+			err := DB.QueryRow(query, args...).Scan(&count)
 			if err != nil {
 				return 0, err
 			}
+
 			return count, nil
 		}
 	*/

@@ -392,30 +392,39 @@ func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
 	return sponsors, nil
 }
 
-func IsActiveUser(userId uuid.UUID, isPostgres bool) (bool, error) {
-	var count int
-	var query string
+func FilterActiveUsers(userIds []uuid.UUID, isPostgres bool) ([]uuid.UUID, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
 
-	// Construct the query based on whether it's Postgres or SQLite
+	var query string
 	if isPostgres {
 		query = `
-            SELECT COUNT(DISTINCT dc.user_sponsor_id) 
-            FROM daily_contribution dc
-            WHERE dc.user_sponsor_id = $1
-            AND dc.created_at >= CURRENT_DATE - INTERVAL '1 month'`
-	} else { // SQLite
+			SELECT DISTINCT user_sponsor_id 
+			FROM daily_contribution 
+			WHERE user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `) 
+			AND created_at >= CURRENT_DATE - INTERVAL '1 month'`
+	} else {
 		query = `
-            SELECT COUNT(DISTINCT dc.user_sponsor_id) 
-            FROM daily_contribution dc
-            WHERE dc.user_sponsor_id = ? 
-            AND dc.created_at >= date('now', '-1 month')`
+			SELECT DISTINCT user_sponsor_id 
+			FROM daily_contribution 
+			WHERE user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `) 
+			AND created_at >= date('now', '-1 month')`
 	}
 
-	// Execute the query
-	err := DB.QueryRow(query, userId).Scan(&count)
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(userIds)...)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+	defer CloseAndLog(rows)
 
-	return count > 0, nil
+	var activeUsers []uuid.UUID
+	for rows.Next() {
+		var userId uuid.UUID
+		if err := rows.Scan(&userId); err != nil {
+			return nil, err
+		}
+		activeUsers = append(activeUsers, userId)
+	}
+	return activeUsers, nil
 }

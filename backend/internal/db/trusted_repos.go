@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -135,43 +136,68 @@ func FindTrustedRepos() ([]Repo, error) {
 	return scanRepoWithTrustEvent(rows)
 }
 
-func CountTrustedRepos(userId uuid.UUID) (int, error) {
-	var trustedCount int
-	query := `SELECT COUNT(DISTINCT r.repo_id) 
-              FROM repo r
-              INNER JOIN trust_event te ON r.repo_id = te.repo_id
-              WHERE r.user_id = $1
-              AND te.un_trust_at IS NULL`
+func GeneratePlaceholders(n int) string {
+	var placeholders []string
+	for i := 1; i <= n; i++ {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
+	}
+	return strings.Join(placeholders, ", ")
+}
 
-	err := DB.QueryRow(query, userId).Scan(&trustedCount)
+func ConvertToInterfaceSlice[T any](values []T) []interface{} {
+	result := make([]interface{}, len(values))
+	for i, v := range values {
+		result[i] = v
+	}
+	return result
+}
+
+func CountTrustedReposForUsers(userIds []uuid.UUID) (int, error) {
+	if len(userIds) == 0 {
+		return 0, nil
+	}
+
+	query := `
+		WITH trusted_repos AS (
+			SELECT repo_id 
+			FROM trust_event 
+			WHERE un_trust_at IS NULL
+		)
+		SELECT COUNT(DISTINCT dc.repo_id)
+		FROM daily_contribution dc
+		JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+		WHERE dc.user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `)`
+
+	var count int
+	err := DB.QueryRow(query, ConvertToInterfaceSlice(userIds)...).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
 
-	return trustedCount, nil
+	return count, nil
 }
 
 func GetRepoWeight(repoId uuid.UUID, isPostgres bool) (float64, error) {
-	email, err := GetRepoEmail(repoId)
+	emails, err := GetRepoEmails(repoId)
 	if err != nil {
 		return 0.0, err
 	}
 
-	userId, err := FindUserByGitEmail(email)
+	userIds, err := FindUsersByGitEmails(emails)
 	if err != nil {
 		return 0.0, err
 	}
 
-	active, err := IsActiveUser(*userId, isPostgres)
+	activeUsers, err := FilterActiveUsers(userIds, isPostgres)
 	if err != nil {
 		return 0.0, err
 	}
 
-	if !active {
+	if len(activeUsers) == 0 {
 		return 0.0, nil
 	}
 
-	trustedRepoCount, err := CountTrustedRepos(*userId)
+	trustedRepoCount, err := CountTrustedReposForUsers(activeUsers)
 	if err != nil {
 		return 0.0, err
 	}

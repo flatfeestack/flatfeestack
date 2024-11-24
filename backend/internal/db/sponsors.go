@@ -4,7 +4,6 @@ import (
 	"backend/pkg/util"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -186,44 +185,35 @@ func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, erro
 }
 
 func GetStarCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
-	var query string
-
 	if len(activeSponsors) == 0 {
 		return 0, nil
 	}
 
+	var query string
 	if isPostgres {
 		query = `
-            SELECT COUNT(DISTINCT user_id)
-            FROM sponsor_event
-            WHERE repo_id = $1 AND user_id = ANY($2) AND un_sponsor_at IS NULL`
+			SELECT COUNT(DISTINCT user_id)
+			FROM sponsor_event
+			WHERE repo_id = $1 AND user_id = ANY($2) AND un_sponsor_at IS NULL`
 	} else {
 		query = `
-            SELECT COUNT(DISTINCT user_id)
-            FROM sponsor_event
-            WHERE repo_id = ? AND user_id IN (?) AND un_sponsor_at IS NULL`
+			SELECT COUNT(DISTINCT user_id)
+			FROM sponsor_event
+			WHERE repo_id = ? AND user_id IN (` + GeneratePlaceholders(len(activeSponsors)) + `) AND un_sponsor_at IS NULL`
+	}
+
+	var args []interface{}
+	if isPostgres {
+		args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
+	} else {
+		args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
 	}
 
 	var count int
-	var err error
-	if isPostgres {
-		err = DB.QueryRow(query, repoId, activeSponsors).Scan(&count)
-	} else {
-		placeholders := "?" + strings.Repeat(",?", len(activeSponsors)-1)
-		if len(activeSponsors) > 0 {
-			query = fmt.Sprintf(query, placeholders)
-		}
-
-		args := []interface{}{repoId}
-		for _, sponsor := range activeSponsors {
-			args = append(args, sponsor)
-		}
-
-		err = DB.QueryRow(query, args...).Scan(&count)
-	}
-
+	err := DB.QueryRow(query, args...).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
+
 	return count, nil
 }
