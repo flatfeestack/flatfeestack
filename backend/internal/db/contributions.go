@@ -340,7 +340,7 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	}
 }
 
-func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
+func GetActiveSponsors(isPostgres bool) ([]uuid.UUID, error) {
 	var query string
 
 	if isPostgres {
@@ -353,9 +353,9 @@ func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
             SELECT DISTINCT dc.user_sponsor_id
             FROM daily_contribution dc
             JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= CURRENT_DATE - INTERVAL $1 || ' days'`
+            WHERE dc.created_at >= CURRENT_DATE - INTERVAL '1 month'`
 	} else {
-		query = fmt.Sprintf(`
+		query = `
             WITH trusted_repos AS (
                 SELECT repo_id
                 FROM trust_event
@@ -364,16 +364,10 @@ func GetActiveSponsors(days int, isPostgres bool) ([]uuid.UUID, error) {
             SELECT DISTINCT dc.user_sponsor_id
             FROM daily_contribution dc
             JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= date('now', '-%d days')`, days)
+            WHERE dc.created_at >= date('now', '-1 month')`
 	}
 
-	var rows *sql.Rows
-	var err error
-	if isPostgres {
-		rows, err = DB.Query(query, days)
-	} else {
-		rows, err = DB.Query(query)
-	}
+	rows, err := DB.Query(query)
 
 	if err != nil {
 		return nil, err

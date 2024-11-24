@@ -265,7 +265,7 @@ func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, error) {
 	var metrics RepoHealthMetrics
 
-	activeSponsors, err := GetActiveSponsors(30, isPostgres)
+	activeSponsors, err := GetActiveSponsors(isPostgres)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch active sponsors: %v", err)
 	}
