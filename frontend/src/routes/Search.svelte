@@ -62,7 +62,7 @@
     if (!$loadedMultiplierRepos) {
       try {
         $isSubmitting = true;
-        $multiplierSponsoredRepos = await API.repos.getMultiplier();
+        $multiplierSponsoredRepos = await API.user.getMultiplier();
         $loadedMultiplierRepos = true;
       } catch (e) {
         $error = e;

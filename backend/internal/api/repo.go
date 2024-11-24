@@ -351,7 +351,7 @@ func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDeta
 }
 
 func GetMultipliedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	repos, err := db.FindMultipliedRepos()
+	repos, err := db.FindMultiplierRepoByUserId(user.Id)
 	if err != nil {
 		slog.Error("Could not get repos",
 			slog.Any("error", err))

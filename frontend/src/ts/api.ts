@@ -201,6 +201,7 @@ export const API = {
       backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getMultiplier: () => backendToken.get("users/me/multiplied").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
     setMultiplier: (isSet: boolean) =>
@@ -270,7 +271,6 @@ export const API = {
       backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
     untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
-    getMultiplier: () => backendToken.get("repos/multiplier").json<Repo[]>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

@@ -121,13 +121,12 @@ func FindLastEventMultiplierRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.T
 	}
 }
 
-func FindMultipliedRepos() ([]Repo, error) {
-	//we want to send back an empty array, don't change
-	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
-            FROM multiplier_event t
-            INNER JOIN repo r ON t.repo_id=r.id
-			WHERE t.un_multiplier_at IS NULL`
-	rows, err := DB.Query(t)
+func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
+	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
+            FROM multiplier_event m
+            INNER JOIN repo r ON m.repo_id=r.id
+			WHERE m.user_id=$1 AND m.un_multiplier_at IS NULL`
+	rows, err := DB.Query(s, userId)
 	if err != nil {
 		return nil, err
 	}

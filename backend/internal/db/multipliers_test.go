@@ -214,7 +214,7 @@ func TestMultiplierCorrect(t *testing.T) {
 	err = InsertOrUpdateMultiplierRepo(&m3)
 	assert.Nil(t, err)
 
-	rs, err := FindMultipliedRepos()
+	rs, err := FindMultiplierRepoByUserId(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(rs))
 	assert.Equal(t, r2.Id, rs[0].Id)
@@ -229,7 +229,7 @@ func TestMultiplierCorrect(t *testing.T) {
 	err = InsertOrUpdateMultiplierRepo(&m4)
 	assert.Nil(t, err)
 
-	rs, err = FindMultipliedRepos()
+	rs, err = FindMultiplierRepoByUserId(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(rs))
 }
@@ -262,7 +262,7 @@ func TestTwoMultipliedRepos(t *testing.T) {
 	err = InsertOrUpdateMultiplierRepo(&m2)
 	assert.Nil(t, err)
 
-	rs, err := FindMultipliedRepos()
+	rs, err := FindMultiplierRepoByUserId(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rs))
 }
