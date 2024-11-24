@@ -1,13 +1,15 @@
 package db
 
 import (
+	"fmt"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func insertTestRepo(t *testing.T) *Repo {
-	return insertTestRepoGitUrl(t, "git-url")
+	return insertTestRepoGitUrl(t, fmt.Sprintf("git-url-%s", uuid.New().String()))
 }
 
 func insertTestRepoGitUrl(t *testing.T, gitUrl string) *Repo {
