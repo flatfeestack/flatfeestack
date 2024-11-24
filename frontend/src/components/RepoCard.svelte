@@ -35,7 +35,7 @@
       $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
-      unsetMultiplierHelper();
+      await unsetMultiplierHelper();
     } catch (e) {
       $error = e;
     }
@@ -44,7 +44,7 @@
   async function unsetMultiplier() {
     multiplier = false;
     try {
-      unsetMultiplierHelper();
+      await unsetMultiplierHelper();
     } catch (e) {
       $error = e;
     }
