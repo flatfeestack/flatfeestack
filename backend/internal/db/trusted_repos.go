@@ -177,7 +177,7 @@ func CountTrustedReposForUsers(userIds []uuid.UUID) (int, error) {
 	return count, nil
 }
 
-func GetRepoWeight(repoId uuid.UUID, isPostgres bool) (float64, error) {
+func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, isPostgres bool) (float64, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
 		return 0.0, err
@@ -188,7 +188,7 @@ func GetRepoWeight(repoId uuid.UUID, isPostgres bool) (float64, error) {
 		return 0.0, err
 	}
 
-	activeUsers, err := FilterActiveUsers(userIds, isPostgres)
+	activeUsers, err := FilterActiveUsers(userIds, activeUserMinMonths, isPostgres)
 	if err != nil {
 		return 0.0, err
 	}

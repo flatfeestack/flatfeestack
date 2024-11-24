@@ -340,11 +340,11 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	}
 }
 
-func GetActiveSponsors(isPostgres bool) ([]uuid.UUID, error) {
+func GetActiveSponsors(months int, isPostgres bool) ([]uuid.UUID, error) {
 	var query string
 
 	if isPostgres {
-		query = `
+		query = fmt.Sprintf(`
             WITH trusted_repos AS (
                 SELECT repo_id
                 FROM trust_event
@@ -353,9 +353,9 @@ func GetActiveSponsors(isPostgres bool) ([]uuid.UUID, error) {
             SELECT DISTINCT dc.user_sponsor_id
             FROM daily_contribution dc
             JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= CURRENT_DATE - INTERVAL '1 month'`
+            WHERE dc.created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
 	} else {
-		query = `
+		query = fmt.Sprintf(`
             WITH trusted_repos AS (
                 SELECT repo_id
                 FROM trust_event
@@ -364,7 +364,7 @@ func GetActiveSponsors(isPostgres bool) ([]uuid.UUID, error) {
             SELECT DISTINCT dc.user_sponsor_id
             FROM daily_contribution dc
             JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= date('now', '-1 month')`
+            WHERE dc.created_at >= date('now', '-%d month')`, months)
 	}
 
 	rows, err := DB.Query(query)
@@ -386,24 +386,24 @@ func GetActiveSponsors(isPostgres bool) ([]uuid.UUID, error) {
 	return sponsors, nil
 }
 
-func FilterActiveUsers(userIds []uuid.UUID, isPostgres bool) ([]uuid.UUID, error) {
+func FilterActiveUsers(userIds []uuid.UUID, months int, isPostgres bool) ([]uuid.UUID, error) {
 	if len(userIds) == 0 {
 		return nil, nil
 	}
 
 	var query string
 	if isPostgres {
-		query = `
+		query = fmt.Sprintf(`
 			SELECT DISTINCT user_sponsor_id 
 			FROM daily_contribution 
-			WHERE user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `) 
-			AND created_at >= CURRENT_DATE - INTERVAL '1 month'`
+			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
+			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
 	} else {
-		query = `
+		query = fmt.Sprintf(`
 			SELECT DISTINCT user_sponsor_id 
 			FROM daily_contribution 
-			WHERE user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `) 
-			AND created_at >= date('now', '-1 month')`
+			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
+			AND created_at >= date('now', '-%d month')`, months)
 	}
 
 	rows, err := DB.Query(query, ConvertToInterfaceSlice(userIds)...)
