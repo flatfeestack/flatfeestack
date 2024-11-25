@@ -37,18 +37,33 @@ func TestInsertRepoHealthThreshold(t *testing.T) {
 	assert.Nil(t, err)
 	err = InsertRepoHealthThreshold(*newRepoHealthThreshold)
 	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "error inserting repo health threshold: UNIQUE constraint failed: repo_health_threshold.id")
+}
+
+func TestInsertRepoHealthThresholdNil(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	var newRepoHealthThreshold RepoHealthThreshold
+	err := InsertRepoHealthThreshold(newRepoHealthThreshold)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "Threshold values can't be empty, aborting")
 }
 
 func TestGetLatestThresholds(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
+
+	res, err := GetLatestThresholds()
+	assert.Nil(t, err)
+	assert.Equal(t, res.Id.String(), "b7244c4a-dadd-45f5-bd12-0fcefb5d66c2")
+
 	for range 5 {
 		_ = InsertRepoHealthThreshold(*getRepoHealthThresholdtTestData())
 	}
 	newRepoHealthThreshold := getRepoHealthThresholdtTestData()
 	_ = InsertRepoHealthThreshold(*newRepoHealthThreshold)
 
-	res, err := GetLatestThresholds()
+	res, err = GetLatestThresholds()
 	assert.Nil(t, err)
 	assert.Equal(t, newRepoHealthThreshold, res)
 }

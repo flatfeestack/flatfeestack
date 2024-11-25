@@ -23,7 +23,15 @@ type RepoHealthThreshold struct {
 	ThRepoMultiplier   *Threshold `db:"th_repo_multiplier" validate:"required"`
 }
 
+/*
+Marshal not tested for the reason taht RepoHealthThreshold already restricted
+to types that can't trigger an error.
+*/
 func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
+	if threshold.ThCommitCount == nil || threshold.ThContributerCount == nil || threshold.ThRepoMultiplier == nil || threshold.ThRepoStarCount == nil || threshold.ThSponsorDonation == nil {
+		return fmt.Errorf("Threshold values can't be empty, aborting")
+	}
+
 	contributerJSON, err := json.Marshal(threshold.ThContributerCount)
 	if err != nil {
 		return fmt.Errorf("error marshaling contributer threshold: %w", err)
@@ -84,6 +92,10 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 
 	return handleErrMustInsertOne(res)
 }
+
+/*
+No negative testing as a base value is loaded when the database is initialized
+*/
 func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
 	query := `
 		SELECT 
@@ -146,7 +158,9 @@ func GetRepoThresholdHistory() ([]RepoHealthThreshold, error) {
 	return executeRepoThresholdQuery(query)
 }
 
-// func GetRepoThresholdHistory() ([]RepoHealthThreshold, error) {
+/*
+Both functions from here on are tested via other autoamted acceptance tests
+*/
 func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 	var repoHealthThresholds []RepoHealthThreshold
 
