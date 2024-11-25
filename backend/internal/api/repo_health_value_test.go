@@ -71,13 +71,11 @@ func TestGetRepoHealthValueByRepoIdHealthMetricsEmpty(t *testing.T) {
 	defer db.TeardownTestData()
 
 	r := insertTestRepo(t)
-	//getRepoHealthValue(r.Id)
 	result, err := getRepoHealthValue(r.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, result.HealthValue, float64(0))
 }
 
-// i'm da best
 func TestCalculateRepoHealthValue(t *testing.T) {
 	db.SetupTestData()
 	defer db.TeardownTestData()
