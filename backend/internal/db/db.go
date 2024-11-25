@@ -188,9 +188,22 @@ func RunSQL(files ...string) error {
 			newBytes := re.ReplaceAll(fileBytes, nil)
 
 			requests := strings.Split(string(newBytes), ";")
+			var placeholder string
 			for _, request := range requests {
 				request = strings.TrimSpace(request)
+				if strings.Contains(request, "DO $$ BEGIN") || strings.Contains(request, "END IF") {
+					placeholder += fmt.Sprintf("%s;\n", request)
+					continue
+				}
+				if strings.Contains(request, "END $$") {
+					placeholder += request
+					request = placeholder
+				}
+
+				//fmt.Println("#############################")
 				if len(request) > 0 {
+					placeholder = ""
+					//fmt.Println(request)
 					_, err := DB.Exec(request)
 					if err != nil {
 						return fmt.Errorf("[%v] %v", request, err)
