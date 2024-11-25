@@ -252,6 +252,7 @@ func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, error) {
 	var metrics RepoHealthMetrics
 	var activeUserMinMonths = 1
+	var latestRepoSponsoringMonths = 6
 
 	activeSponsors, err := GetActiveSponsors(activeUserMinMonths, isPostgres)
 	if err != nil {
@@ -316,7 +317,7 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	}
 	metrics.RepoStarCount = starCount
 
-	repoWeight, err := GetRepoWeight(repoId, activeUserMinMonths, isPostgres)
+	repoWeight, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			repoWeight = 0.0

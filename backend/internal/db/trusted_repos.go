@@ -151,21 +151,28 @@ func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 }
 
 // no unit testing
-func CountTrustedReposForUsers(userIds []uuid.UUID) (int, error) {
+func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
+	var query string
+
 	if len(userIds) == 0 {
 		return 0, nil
 	}
 
-	query := `
-		WITH trusted_repos AS (
-			SELECT repo_id 
-			FROM trust_event 
-			WHERE un_trust_at IS NULL
-		)
-		SELECT COUNT(DISTINCT dc.repo_id)
-		FROM daily_contribution dc
-		JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-		WHERE dc.user_sponsor_id IN (` + GeneratePlaceholders(len(userIds)) + `)`
+	if isPostgres {
+		query = fmt.Sprintf(`
+		SELECT COUNT(repo_id)
+		FROM daily_contribution
+		WHERE
+			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
+			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
+	} else {
+		query = fmt.Sprintf(`
+		SELECT COUNT(repo_id)
+		FROM daily_contribution
+		WHERE
+			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
+			AND created_at >= date('now', '-%d month')`, months)
+	}
 
 	var count int
 	err := DB.QueryRow(query, ConvertToInterfaceSlice(userIds)...).Scan(&count)
@@ -177,7 +184,7 @@ func CountTrustedReposForUsers(userIds []uuid.UUID) (int, error) {
 }
 
 // no unit testing
-func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, isPostgres bool) (float64, error) {
+func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (float64, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
 		return 0.0, err
@@ -197,7 +204,7 @@ func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, isPostgres bool) (
 		return 0.0, nil
 	}
 
-	trustedRepoCount, err := CountTrustedReposForUsers(activeUsers)
+	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		return 0.0, err
 	}
