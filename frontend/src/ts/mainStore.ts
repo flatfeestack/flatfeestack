@@ -13,3 +13,7 @@ export const loadedSponsoredRepos = writable<boolean>(false);
 export const route = writable("");
 export const trustedRepos = writable<Repo[]>([]);
 export const loadedTrustedRepos = writable<boolean>(false);
+export const reposToUnTrustAfterTimeout = writable<Repo[]>([]);
+// export const undoDuration: number = 5000;
+export const abortUntrustEvent = writable(false);
+export const reposInSearchResult = writable<Repo[]>([]);
