@@ -262,7 +262,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		_ = InsertOrUpdateTrustRepo(&tr1)
 
 		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, 0, -31)
+		previousTime := currentTime.AddDate(0, -1, -1)
 		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 
@@ -314,7 +314,7 @@ func TestGetInternalMetrics(t *testing.T) {
 			_ = InsertOrUpdateTrustRepo(&tr1)
 
 			currentTime := time.Now()
-			previousTime := currentTime.AddDate(0, 0, -31)
+			previousTime := currentTime.AddDate(0, 0, -61)
 			_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
 			_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 
@@ -350,32 +350,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		defer TeardownTestData()
 		r := insertTestRepo(t)
 		r2 := insertTestRepo(t)
-
-		uid1 := insertTestUser(t, "email1").Id
-		uid2 := insertTestUser(t, "email2").Id
-		uid3 := insertTestUser(t, "email3").Id
-
-		tr1 := TrustEvent{
-			Id:        uuid.New(),
-			Uid:       uid3,
-			RepoId:    r2.Id,
-			EventType: Active,
-			TrustAt:   &t1,
-		}
-
-		_ = InsertOrUpdateTrustRepo(&tr1)
-
-		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, 0, -10)
-		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
-		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
-
-		uids := []uuid.UUID{uid1, uid2, uid3}
-
-		for i := range uids {
-			uid := uids[i%len(uids)]
-			_ = InsertGitEmail(uuid.New(), uid, fmt.Sprintf("email%d", i), stringPointer("A"), time.Now())
-		}
+		r3 := insertTestRepo(t)
 
 		a := AnalysisRequest{
 			Id:       uuid.New(),
@@ -388,6 +363,33 @@ func TestGetInternalMetrics(t *testing.T) {
 
 		_ = InsertAnalysisResponse(a.Id, a.RepoId, "email1", []string{"tom"}, 0.5, time.Now())
 		_ = InsertAnalysisResponse(a.Id, a.RepoId, "email2", []string{"classi"}, 0.5, time.Now())
+
+		uid1 := insertTestUser(t, "email1").Id
+		uid2 := insertTestUser(t, "email2").Id
+		uid3 := insertTestUser(t, "email3").Id
+
+		uids := []uuid.UUID{uid1, uid2, uid3}
+
+		for i := range uids {
+			uid := uids[i%len(uids)]
+			_ = InsertGitEmail(uuid.New(), uid, fmt.Sprintf("email%d", i+1), stringPointer("A"), time.Now())
+		}
+
+		tr1 := TrustEvent{
+			Id:        uuid.New(),
+			Uid:       uid3,
+			RepoId:    r2.Id,
+			EventType: Active,
+			TrustAt:   &t1,
+		}
+
+		_ = InsertOrUpdateTrustRepo(&tr1)
+
+		currentTime := time.Now()
+		previousTime := currentTime.AddDate(0, -1, -1)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
+		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
 
 		internalMetricsFocusSponsorEvent, _ := GetInternalMetrics(r.Id, false)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.SponsorCount)
