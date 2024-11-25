@@ -121,6 +121,21 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Repo'
+  /users/me/multiplied:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
   /users/me/name/{name}:
     put:
       tags:
@@ -537,21 +552,6 @@ paths:
                   $ref: '#/components/schemas/Repo'
         '400':
           description: Bad Request
-  /repos/multiplier:
-    get:
-      tags:
-        - Repos
-      security:
-        - bearerAuth: [ User ]
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Repo'
   /repos/trusted:
     get:
       tags:

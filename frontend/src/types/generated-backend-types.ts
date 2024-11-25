@@ -93,6 +93,18 @@ export interface paths {
       };
     };
   };
+  "/users/me/multiplied": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"][];
+          };
+        };
+      };
+    };
+  };
   "/users/me/name/{name}": {
     put: {
       parameters: {
@@ -472,6 +484,18 @@ export interface paths {
       };
     };
   };
+  "/repos/trusted": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"][];
+          };
+        };
+      };
+    };
+  };
   "/repos/{id}": {
     get: {
       parameters: {
@@ -519,6 +543,106 @@ export interface paths {
     };
   };
   "/repos/{id}/untag": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: never;
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/repos/{id}/setMultiplier": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: never;
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/repos/{id}/unsetMultiplier": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: never;
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/repos/{id}/trust": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: never;
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/repos/{id}/untrust": {
     post: {
       parameters: {
         path: {
@@ -1006,6 +1130,7 @@ export interface components {
       requestId?: string;
       error?: string | null;
       result?: components["schemas"]["FlatFeeWeight"][];
+      contribcommit?: Record<string, never>;
     };
     FlatFeeWeight: {
       names?: string[];
