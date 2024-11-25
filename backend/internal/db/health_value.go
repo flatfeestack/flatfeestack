@@ -28,7 +28,6 @@ type InternalHealthMetrics struct {
 	RepoWeight          float64 `json:"reposponsordonated"`
 }
 
-// tested
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	stmt, err := DB.Prepare(`
 		INSERT INTO 
@@ -59,7 +58,7 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 
 	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight)
 	if err != nil {
-		return err
+		return fmt.Errorf("error occured trying to insert: %v", err)
 	}
 
 	return handleErrMustInsertOne(res)
@@ -87,7 +86,7 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	var res sql.Result
 	res, err = stmt.Exec(repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight, repoHealthMetrics.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("something went wrong updating the health value: %v", err)
 	}
 
 	return handleErrMustInsertOne(res)
@@ -172,14 +171,9 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error)
 	default:
 		return nil, err
 	}
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return &result[0], nil
 }
 
 func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics, error) {
-	//var tv TrustValue
 	rows, err := DB.
 		Query(`
 			SELECT 
@@ -224,7 +218,6 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 	return healthMetrics, nil
 }
 
-// tested
 func GetAllRepoHealthMetrics() ([]RepoHealthMetrics, error) {
 	rows, err := DB.Query(`
 		SELECT
@@ -248,12 +241,6 @@ func GetAllRepoHealthMetrics() ([]RepoHealthMetrics, error) {
 	return scanRepoHealthMetrics(rows)
 }
 
-/*
-Currently GetLatestThresholds doesn't work reliably
-Values are missing
-The query statements aren't working
-Thus this dummy function will replace GetLatestThresholds for now
-*/
 func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 	return &RepoHealthMetrics{
 		SponsorCount:        rand.Intn(100) + 1,

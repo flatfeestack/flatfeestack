@@ -42,6 +42,10 @@ func TestInsertTrustValue(t *testing.T) {
 	newRepoMetrics := getTestData(r)
 	err := InsertRepoHealthMetrics(*newRepoMetrics)
 	assert.Nil(t, err)
+	err = InsertRepoHealthMetrics(*newRepoMetrics)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "error occured trying to insert: UNIQUE constraint failed: repo_health_metrics.id")
+	//r2 := insertTestRepo(t)
 }
 
 func TestFindRepoHealthMetricsByRepoIdEmptyRepoId(t *testing.T) {
@@ -53,14 +57,18 @@ func TestFindRepoHealthMetricsByRepoIdEmptyRepoId(t *testing.T) {
 	assert.Equal(t, err.Error(), "repoId is empty")
 }
 
-func TestFindRepoHealthMetricsByRepoIdMissingHealthValue(t *testing.T) {
+func TestFindRepoHealthMetricsByRepoIdMissing(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	r := insertTestRepo(t)
-	//newRepoMetrics := getTestData(r)
 	res, err := FindRepoHealthMetricsByRepoId(r.Id)
 	assert.Nil(t, res)
 	assert.Nil(t, err)
+
+	res, err = FindRepoHealthMetricsByRepoId(uuid.New())
+	assert.Nil(t, res)
+	assert.Nil(t, err)
+
 }
 
 func TestInsertTrustValueDuplicateId(t *testing.T) {
@@ -114,8 +122,6 @@ func TestFindRepoHealthMetricsByRepoIdHistoryEmpty(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	r := insertTestRepo(t)
-	// newRepoMetrics := getTestData(r)
-	// _ = InsertRepoHealthMetrics(*newRepoMetrics)
 
 	result, err := FindRepoHealthMetricsByRepoIdHistory(r.Id)
 	assert.Nil(t, err)
