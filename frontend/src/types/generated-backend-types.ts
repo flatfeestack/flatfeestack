@@ -496,18 +496,6 @@ export interface paths {
       };
     };
   };
-  "/repos/trusted": {
-    get: {
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": (components["schemas"]["Repo"])[];
-          };
-        };
-      };
-    };
-  };
   "/repos/{id}": {
     get: {
       parameters: {
@@ -679,48 +667,6 @@ export interface paths {
       };
     };
   };
-  "/repos/{id}/trust": {
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Repo"];
-          };
-        };
-        /** @description Bad Request */
-        400: never;
-        /** @description Internal Server Error */
-        500: never;
-      };
-    };
-  };
-  "/repos/{id}/untrust": {
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Repo"];
-          };
-        };
-        /** @description Bad Request */
-        400: never;
-        /** @description Internal Server Error */
-        500: never;
-      };
-    };
-  };
   "/repos/{id}/{offset}/graph": {
     get: {
       parameters: {
@@ -758,7 +704,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -1092,6 +1040,8 @@ export interface components {
       /** Format: int64 */
       freq?: number | null;
       role?: string | null;
+      multiplier?: boolean | null;
+      multiplierDailyLimit?: number | null;
     };
     Claims: {
       iss?: string | null;
@@ -1210,9 +1160,8 @@ export interface components {
     WebhookCallback: {
       requestId?: string;
       error?: string | null;
-      result?: (components["schemas"]["FlatFeeWeight"])[];
+      result?: components["schemas"]["FlatFeeWeight"][];
       repoid?: string;
-      contribcommit?: Record<string, never>;
     };
     FlatFeeWeight: {
       names?: string[];

@@ -23,7 +23,7 @@
 
   let multiplierActive: undefined | boolean;
   let showMultiplierInfo = false;
-  let dailyLimit: undefined | number;
+  let dailyLimit: number = 100;
   let newDailyLimit;
 
   $: {
@@ -35,7 +35,7 @@
       multiplierActive = $user.multiplier;
     }
 
-    if (typeof dailyLimit === "undefined" && $user.multiplierDailyLimit) {
+    if ($user.multiplierDailyLimit) {
       dailyLimit = $user.multiplierDailyLimit;
     }
   }
