@@ -134,51 +134,36 @@ func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 	return scanRepo(rows)
 }
 
-//type TrustResult struct {
-//	UserId  uuid.UUID
-//	RepoIds []uuid.UUID
-//}
+func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
+	if len(activeSponsors) == 0 {
+		return 0, nil
+	}
 
-// can be used to provide filter function in frontend
-//func FindMultipliedReposBetween(start time.Time, stop time.Time) ([]TrustResult, error) {
-//	rows, err := DB.Query(`
-//			SELECT user_id, repo_id
-//			FROM multiplier_event
-//			WHERE multiplier_at < $1 AND (un_multiplier_at IS NULL OR un_multiplier_at >= $2)
-//			GROUP BY user_id, repo_id
-//			ORDER BY user_id`, start, stop)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer CloseAndLog(rows)
-//
-//	multiplierResults := []TrustResult{}
-//	var userIdOld uuid.UUID
-//	var userId uuid.UUID
-//	multiplierResult := TrustResult{}
-//	for rows.Next() {
-//		var repoId uuid.UUID
-//		err = rows.Scan(&userId, &repoId)
-//
-//		if userId != userIdOld && !util.IsUUIDZero(userIdOld) {
-//			multiplierResult.UserId = userIdOld
-//			multiplierResults = append(multiplierResults, multiplierResult)
-//
-//			multiplierResult = TrustResult{}
-//			userIdOld = userId
-//		}
-//
-//		if err != nil {
-//			return nil, err
-//		}
-//		multiplierResult.RepoIds = append(multiplierResult.RepoIds, repoId)
-//		if util.IsUUIDZero(userIdOld) {
-//			userIdOld = userId
-//		}
-//	}
-//
-//	multiplierResult.UserId = userId
-//	multiplierResults = append(multiplierResults, multiplierResult)
-//
-//	return multiplierResults, nil
-//}
+	var query string
+	if isPostgres {
+		query = `
+			SELECT COUNT(DISTINCT user_id)
+			FROM multiplier_event
+			WHERE repo_id = $1 AND user_id = ANY($2) AND un_multiplier_at IS NULL`
+	} else {
+		query = `
+			SELECT COUNT(DISTINCT user_id)
+			FROM multiplier_event
+			WHERE repo_id = ? AND user_id IN (?) AND un_multiplier_at IS NULL`
+	}
+
+	var args []interface{}
+	if isPostgres {
+		args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
+	} else {
+		args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
+	}
+
+	var count int
+	err := DB.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

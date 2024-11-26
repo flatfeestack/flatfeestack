@@ -292,58 +292,56 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
 	})
 
-	/*
-		t.Run("active/inactive user multiplier", func(t *testing.T) {
-			SetupTestData()
-			defer TeardownTestData()
-			r := insertTestRepo(t)
-			r2 := insertTestRepo(t)
+	t.Run("active/inactive user multiplier", func(t *testing.T) {
+		SetupTestData()
+		defer TeardownTestData()
+		r := insertTestRepo(t)
+		r2 := insertTestRepo(t)
 
-			uid1 := insertTestUser(t, "email1").Id
-			uid2 := insertTestUser(t, "email2").Id
-			uid3 := insertTestUser(t, "email3").Id
+		uid1 := insertTestUser(t, "email1").Id
+		uid2 := insertTestUser(t, "email2").Id
+		uid3 := insertTestUser(t, "email3").Id
 
-			tr1 := TrustEvent{
-				Id:        uuid.New(),
-				Uid:       uid3,
-				RepoId:    r2.Id,
-				EventType: Active,
-				TrustAt:   &t1,
-			}
+		tr1 := TrustEvent{
+			Id:        uuid.New(),
+			Uid:       uid3,
+			RepoId:    r2.Id,
+			EventType: Active,
+			TrustAt:   &t1,
+		}
 
-			_ = InsertOrUpdateTrustRepo(&tr1)
+		_ = InsertOrUpdateTrustRepo(&tr1)
 
-			currentTime := time.Now()
-			previousTime := currentTime.AddDate(0, 0, -61)
-			_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
-			_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
+		currentTime := time.Now()
+		previousTime := currentTime.AddDate(0, -1, -1)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 
-			s1 := MultiplierEvent{
-				Id:        uuid.New(),
-				Uid:       uid1,
-				RepoId:    r.Id,
-				EventType: Active,
-				SponsorAt: &t1,
-			}
+		s1 := MultiplierEvent{
+			Id:           uuid.New(),
+			Uid:          uid1,
+			RepoId:       r.Id,
+			EventType:    Active,
+			MultiplierAt: &t1,
+		}
 
-			s2 := MultiplierEvent{
-				Id:        uuid.New(),
-				Uid:       uid2,
-				RepoId:    r.Id,
-				EventType: Active,
-				SponsorAt: &t2,
-			}
+		s2 := MultiplierEvent{
+			Id:           uuid.New(),
+			Uid:          uid2,
+			RepoId:       r.Id,
+			EventType:    Active,
+			MultiplierAt: &t2,
+		}
 
-			_ = InsertOrUpdateMultiplierRepo(&s1)
-			_ = InsertOrUpdateMultiplierRepo(&s2)
+		_ = InsertOrUpdateMultiplierRepo(&s1)
+		_ = InsertOrUpdateMultiplierRepo(&s2)
 
-			internalMetrics, _ := GetInternalMetrics(r.Id, false)
-			assert.Equal(t, 0, internalMetrics.SponsorCount)
-			assert.Equal(t, 0, internalMetrics.RepoStarCount)
-			assert.Equal(t, 1, internalMetrics.RepoMultiplierCount)
-			assert.Equal(t, 0.0, internalMetrics.RepoWeight)
-		})
-	*/
+		internalMetrics, _ := GetInternalMetrics(r.Id, false)
+		assert.Equal(t, 0, internalMetrics.SponsorCount)
+		assert.Equal(t, 0, internalMetrics.RepoStarCount)
+		assert.Equal(t, 1, internalMetrics.RepoMultiplierCount)
+		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+	})
 
 	t.Run("test repo weight", func(t *testing.T) {
 		SetupTestData()

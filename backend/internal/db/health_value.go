@@ -259,52 +259,14 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 		return nil, fmt.Errorf("failed to fetch active sponsors: %v", err)
 	}
 
-	// To add after pull request, because Multiplier is on different branch
-	/*
-		func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
-			if len(activeSponsors) == 0 {
-				return 0, nil
-			}
-
-			var query string
-			if isPostgres {
-				query = `
-					SELECT COUNT(DISTINCT user_id)
-					FROM multiplier_event
-					WHERE repo_id = $1 AND user_id = ANY($2) AND un_multiplier_at IS NULL`
-			} else {
-				query = `
-					SELECT COUNT(DISTINCT user_id)
-					FROM multiplier_event
-					WHERE repo_id = ? AND user_id IN (?) AND un_multiplier_at IS NULL`
-			}
-
-			var args []interface{}
-			if isPostgres {
-				args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
-			} else {
-				args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
-			}
-
-			var count int
-			err := DB.QueryRow(query, args...).Scan(&count)
-			if err != nil {
-				return 0, err
-			}
-
-			return count, nil
+	multiplierCount, err := GetMultiplierCount(repoId, activeSponsors, isPostgres)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			multiplierCount = 0
+		} else {
+			return nil, fmt.Errorf("failed to fetch multiplier count: %v", err)
 		}
-	*/
-
-	// multiplierCount, err := GetMultiplierCount(repoId, activeSponsors)
-	// if err != nil {
-	// 	if err == sql.ErrNoRows {
-	// 		multiplierCount = 0
-	// 	} else {
-	// 		return nil, fmt.Errorf("failed to fetch multiplier count: %v", err)
-	// 	}
-	// }
-	multiplierCount := 0
+	}
 	metrics.RepoMultiplierCount = multiplierCount
 
 	starCount, err := GetStarCount(repoId, activeSponsors, isPostgres)
