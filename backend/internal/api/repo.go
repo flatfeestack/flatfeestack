@@ -94,6 +94,30 @@ func (rs *RepoHandler) UnTagRepo(w http.ResponseWriter, r *http.Request, user *d
 	rs.tagRepo0(w, user, repoId, db.Inactive)
 }
 
+func (rs *RepoHandler) SetMultiplierRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
+	if err != nil {
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
+	rs.multiplierRepo0(w, user, repoId, db.Active)
+}
+
+func (rs *RepoHandler) UnsetMultiplierRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
+	if err != nil {
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
+	rs.multiplierRepo0(w, user, repoId, db.Inactive)
+}
+
 func (rs *RepoHandler) TrustRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	idStr := r.PathValue("id")
 	repoId, err := uuid.Parse(idStr)
@@ -242,6 +266,42 @@ func (rs *RepoHandler) tagRepo0(w http.ResponseWriter, user *db.UserDetail, repo
 	util.WriteJson(w, repo)
 }
 
+func (rs *RepoHandler) multiplierRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
+	repo, err := db.FindRepoById(repoId)
+	if err != nil {
+		slog.Error("Could not find repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		return
+	}
+
+	now := util.TimeNow()
+	event := db.MultiplierEvent{
+		Id:             uuid.New(),
+		Uid:            user.Id,
+		RepoId:         repo.Id,
+		EventType:      newEventType,
+		MultiplierAt:   &now,
+		UnMultiplierAt: &now,
+	}
+
+	if newEventType == db.Active {
+		event.UnMultiplierAt = nil
+	} else {
+		event.MultiplierAt = nil
+	}
+
+	err = db.InsertOrUpdateMultiplierRepo(&event)
+	if err != nil {
+		slog.Error("Could not save to DB",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		return
+	}
+
+	util.WriteJson(w, repo)
+}
+
 func (rs *RepoHandler) trustRepo0(w http.ResponseWriter, user *db.UserDetail, repoId uuid.UUID, newEventType uint8) {
 	repo, err := db.FindRepoById(repoId)
 	if err != nil {
@@ -300,6 +360,18 @@ func (rs *RepoHandler) trustRepo0(w http.ResponseWriter, user *db.UserDetail, re
 
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	repos, err := db.FindSponsoredReposByUserId(user.Id)
+	if err != nil {
+		slog.Error("Could not get repos",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		return
+	}
+
+	util.WriteJson(w, repos)
+}
+
+func GetMultipliedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	repos, err := db.FindMultiplierRepoByUserId(user.Id)
 	if err != nil {
 		slog.Error("Could not get repos",
 			slog.Any("error", err))

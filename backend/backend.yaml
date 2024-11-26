@@ -121,6 +121,21 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Repo'
+  /users/me/multiplied:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repo'
   /users/me/name/{name}:
     put:
       tags:
@@ -148,6 +163,42 @@ paths:
       responses:
         '200':
           description: OK
+  /users/me/multiplier/{isSet}:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: isSet
+          in: path
+          required: true
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
+  /users/me/multiplierDailyLimit/{amount}:
+    put:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+      parameters:
+        - name: amount
+          in: path
+          required: true
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
   /users/me/image:
     post:
       tags:
@@ -563,6 +614,54 @@ paths:
         '500':
           description: Internal Server Error
   /repos/{id}/untag:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/setMultiplier:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repo'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/unsetMultiplier:
     post:
       tags:
         - Repos
