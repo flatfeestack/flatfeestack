@@ -28,14 +28,16 @@
   }
 
   async function unTag() {
-    star = false;
-    multiplier = false;
     try {
       await API.repos.untag(repo.uuid);
       $sponsoredRepos = $sponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
-      await unsetMultiplierHelper();
+      if (multiplier) {
+        await unsetMultiplierHelper();
+        multiplier = false;
+      }
+      star = false;
     } catch (e) {
       $error = e;
     }
