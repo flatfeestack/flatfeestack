@@ -61,7 +61,7 @@ func InsertOrUpdateTrustRepo(event *TrustEvent) error {
 						"event.TrustAt: %v, unTrustAt: %v", event.TrustAt, unTrustAt)
 				}
 			}
-		} else { // not tested, I doubt that's even possible to test.
+		} else {
 			return fmt.Errorf("unknown event type %v", event.EventType)
 		}
 

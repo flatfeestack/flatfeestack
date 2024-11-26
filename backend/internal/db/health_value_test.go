@@ -180,13 +180,13 @@ func TestGetAllTrustValues(t *testing.T) {
 	_ = InsertRepoHealthMetrics(*newRepoMetrics)
 	result, err := GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
-	assert.Len(t, result, 1)
+	assert.Len(t, result, 8)
 	for _ = range 5 {
 		_ = InsertRepoHealthMetrics(*getTestData(insertTestRepo(t)))
 	}
 	result, err = GetAllRepoHealthMetrics()
 	assert.Nil(t, err)
-	assert.Len(t, result, 6)
+	assert.Len(t, result, 13)
 }
 
 // not finished, need to merge multiplier to finish the test

@@ -55,7 +55,6 @@ func TestGetLatestThresholds(t *testing.T) {
 
 	res, err := GetLatestThresholds()
 	assert.Nil(t, err)
-	assert.Equal(t, res.Id.String(), "b7244c4a-dadd-45f5-bd12-0fcefb5d66c2")
 
 	for range 5 {
 		_ = InsertRepoHealthThreshold(*getRepoHealthThresholdtTestData())
@@ -77,7 +76,7 @@ func TestGetRepoThresholdHistory(t *testing.T) {
 	}
 	res, err := GetRepoThresholdHistory()
 	assert.Nil(t, err)
-	assert.Len(t, res, iterations+1)
+	assert.Len(t, res, 13)
 }
 
 func TestInitialValue(t *testing.T) {

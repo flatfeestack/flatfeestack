@@ -1,21 +1,42 @@
 <script lang="ts">
   import { API } from "../ts/api";
-  import { error, trustedRepos } from "../ts/mainStore";
+  import {
+    error,
+    trustedRepos,
+    reposToUnTrustAfterTimeout,
+    reposInSearchResult,
+  } from "../ts/mainStore";
   import { getColor1 } from "../ts/utils";
   import type { Repo } from "../types/backend";
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   export let repo: Repo;
   let verifiedStar = false;
-  let abortUntrustEvent = false;
   let unTrustProgress = 100;
-  let unTrustProcessRunning = false;
   let unTrustOnDestroy = false;
+  let intervalId: NodeJS.Timer | null = null;
+  let showUnTrustProgressBar = false;
+  const undoDuration: number = 5000;
+
+  $: {
+    const tmp = $trustedRepos.find((r: Repo) => {
+      return r.uuid === repo.uuid;
+    });
+    const repoIsTrusted = tmp !== undefined;
+
+    showUnTrustProgressBar = $reposToUnTrustAfterTimeout.some(
+      (r) => r.uuid === repo.uuid
+    );
+
+    verifiedStar = repoIsTrusted && !showUnTrustProgressBar;
+
+    if (showUnTrustProgressBar) {
+      startProgressBar();
+    }
+  }
 
   async function unTrust() {
-    verifiedStar = false;
     unTrustProgress = 100;
-    unTrustProcessRunning = true;
     try {
       await API.repos.untrust(repo.uuid);
       $trustedRepos = $trustedRepos.filter((r: Repo) => {
@@ -23,72 +44,83 @@
       });
     } catch (e) {
       $error = e;
-      verifiedStar = true;
     } finally {
-      unTrustProcessRunning = false;
-      unTrustProgress = 100;
+      reposToUnTrustAfterTimeout.update((list) =>
+        list.filter((r) => r !== repo)
+      );
     }
   }
 
   function delayUnTrust() {
-    verifiedStar = false;
-    unTrustProcessRunning = true;
-
-    const duration = 5000;
-    const interval = 100;
-    const decrement = (100 / duration) * interval;
-
-    const intervalId = setInterval(() => {
-      if (abortUntrustEvent) {
-        clearInterval(intervalId);
-        unTrustProgress = 100;
-        unTrustProcessRunning = false;
-        return;
-      }
-      unTrustProgress -= decrement;
-      if (unTrustProgress <= 0) {
-        clearInterval(intervalId);
-        unTrustProgress = 0;
-      }
-    }, interval);
+    reposToUnTrustAfterTimeout.update((list) => [...list, repo]);
 
     setTimeout(async () => {
-      if (!abortUntrustEvent && !unTrustOnDestroy) {
+      if (
+        $reposToUnTrustAfterTimeout.some((r) => r.uuid === repo.uuid) &&
+        !unTrustOnDestroy &&
+        unTrustProgress <= 2
+      ) {
         await unTrust();
       }
-    }, duration);
-    abortUntrustEvent = false;
+    }, undoDuration);
   }
 
   async function trustRepo() {
-    if (unTrustProcessRunning) {
-      abortUntrustEvent = true;
+    if ($reposToUnTrustAfterTimeout.some((r) => r.uuid === repo.uuid)) {
+      reposToUnTrustAfterTimeout.update((list) =>
+        list.filter((r) => r.uuid !== repo.uuid)
+      );
     } else {
       try {
         if (!verifiedStar) {
           const res = await API.repos.trust(repo.uuid);
           $trustedRepos = [...$trustedRepos, res];
-          verifiedStar = true;
         }
       } catch (e) {
         $error = e;
       }
     }
-    verifiedStar = true;
   }
 
-  $: {
-    const tmp = $trustedRepos.find((r: Repo) => {
-      return r.uuid === repo.uuid;
-    });
-    verifiedStar = tmp !== undefined;
+  function startProgressBar(): void {
+    if (intervalId) return;
+
+    const interval = 100;
+    const decrement = (100 / undoDuration) * interval;
+
+    intervalId = setInterval(() => {
+      if (!$reposToUnTrustAfterTimeout.some((r) => r.uuid === repo.uuid)) {
+        clearProgressBar();
+        return;
+      }
+      unTrustProgress -= decrement;
+      if (unTrustProgress <= 0) {
+        clearProgressBar();
+        unTrustProgress = 0;
+      }
+    }, interval);
+  }
+
+  function clearProgressBar(): void {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    unTrustProgress = 100;
   }
 
   onDestroy(async () => {
-    if (unTrustProcessRunning) {
+    if ($reposToUnTrustAfterTimeout.some((r) => r.uuid === repo.uuid)) {
       await unTrust();
-      unTrustOnDestroy = true;
     }
+    unTrustOnDestroy = true;
+    setTimeout(() => {
+      reposInSearchResult.update((list) => list.filter((r) => r !== repo));
+    }, 100);
+  });
+
+  onMount(() => {
+    reposInSearchResult.update((list) => [...list, repo]);
   });
 </script>
 
@@ -162,7 +194,7 @@
 >
   <div
     class="progress-bar"
-    style="width: {unTrustProgress}%; visibility: {unTrustProcessRunning
+    style="width: {unTrustProgress}%; visibility: {showUnTrustProgressBar
       ? 'visible'
       : 'hidden'}"
   />
