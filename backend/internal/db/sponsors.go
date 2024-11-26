@@ -4,8 +4,9 @@ import (
 	"backend/pkg/util"
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type SponsorEvent struct {
@@ -181,4 +182,38 @@ func FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorResult, erro
 	sponsorResults = append(sponsorResults, sponsorResult)
 
 	return sponsorResults, nil
+}
+
+func GetStarCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
+	if len(activeSponsors) == 0 {
+		return 0, nil
+	}
+
+	var query string
+	if isPostgres {
+		query = `
+			SELECT COUNT(DISTINCT user_id)
+			FROM sponsor_event
+			WHERE repo_id = $1 AND user_id = ANY($2) AND un_sponsor_at IS NULL`
+	} else {
+		query = `
+			SELECT COUNT(DISTINCT user_id)
+			FROM sponsor_event
+			WHERE repo_id = ? AND user_id IN (` + GeneratePlaceholders(len(activeSponsors)) + `) AND un_sponsor_at IS NULL`
+	}
+
+	var args []interface{}
+	if isPostgres {
+		args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
+	} else {
+		args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
+	}
+
+	var count int
+	err := DB.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

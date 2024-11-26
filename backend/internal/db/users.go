@@ -116,6 +116,31 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	}
 }
 
+func GetUserThatSponsoredTrustedRepo() ([]User, error) {
+	s := `SELECT
+				DISTINCT user_sponsor_id AS user_id
+			FROM
+				daily_contribution
+			WHERE
+				created_at >= CURRENT_DATE - INTERVAL '1 month'`
+	rows, err := DB.Query(s)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var userStatus []User
+	for rows.Next() {
+		var userState User
+		err = rows.Scan(&userState.Id, &userState.Name, &userState.Email)
+		if err != nil {
+			return nil, err
+		}
+		userStatus = append(userStatus, userState)
+	}
+	return userStatus, nil
+}
+
 func InsertUser(user *UserDetail) error {
 	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {

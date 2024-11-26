@@ -496,6 +496,18 @@ export interface paths {
       };
     };
   };
+  "/repos/trusted": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+      };
+    };
+  };
   "/repos/{id}": {
     get: {
       parameters: {
@@ -667,6 +679,48 @@ export interface paths {
       };
     };
   };
+  "/repos/{id}/trust": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/untrust": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
   "/repos/{id}/{offset}/graph": {
     get: {
       parameters: {
@@ -686,6 +740,25 @@ export interface paths {
         400: {
           content: never;
         };
+      };
+    };
+  };
+  "/repos/{id}/healthvalue": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RepoHealthValue"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
       };
     };
   };
@@ -1051,6 +1124,14 @@ export interface components {
       source?: string | null;
       /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
+      trustAt?: string;
+      /** Format: float */
+      healthValue?: number;
+    };
+    RepoHealthValue: {
+      repoid?: string;
+      healthvalue?: number;
     };
     PaymentEvent: {
         /** Format: uuid */
@@ -1129,13 +1210,16 @@ export interface components {
     WebhookCallback: {
       requestId?: string;
       error?: string | null;
-      result?: components["schemas"]["FlatFeeWeight"][];
+      result?: (components["schemas"]["FlatFeeWeight"])[];
+      repoid?: string;
       contribcommit?: Record<string, never>;
     };
     FlatFeeWeight: {
       names?: string[];
       email?: string;
       weight?: number;
+      /** Format: int32 */
+      commitcount?: number;
     };
     Time: {
       /** Format: date-time */

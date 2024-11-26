@@ -760,6 +760,28 @@ paths:
                 $ref: '#/components/schemas/Data'
         '400':
           description: Bad Request
+  /repos/{id}/healthvalue:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth:  [ User]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepoHealthValue'
+        '400':
+          description: Bad Request
   /hooks/stripe:
     post:
       tags:
@@ -1159,10 +1181,25 @@ components:
         createdAt:
           type: string
           format: date-time
+        trustAt:
+          type: string
+          format: date-time
+        healthValue:
+          type: number
+          format: float
       required:
         - uuid
         - score
         - createdAt
+    RepoHealthValue:
+      type: object
+      properties:
+        repoid:
+          type: string
+        healthvalue:
+          type: number
+      required:
+        - uuid
     PaymentEvent:
       type: array
       items:
@@ -1331,8 +1368,8 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/FlatFeeWeight"
-          contribcommit:
-            type: list
+          repoid:
+            type: string
     FlatFeeWeight:
       type: object
       properties:
@@ -1344,6 +1381,9 @@ components:
           type: string
         weight:
           type: number
+        commitcount:
+          type: integer
+          format: int32
     Time:
       type: object
       properties:

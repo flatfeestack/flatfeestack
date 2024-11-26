@@ -16,7 +16,7 @@
   import Income from "../routes/Income.svelte";
   import Payments from "../routes/Payments.svelte";
   import Test from "../routes/Admin/Test.svelte";
-  import TrustedRepos from "../routes/Admin/TrustedRepos.svelte";
+  import HealthyRepos from "../routes/Admin/HealthyRepos.svelte";
   import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
   import Settings from "../routes/Settings.svelte";
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
@@ -103,8 +103,8 @@
         <PrivateRoute path="/user/admin/test">
           <Test />
         </PrivateRoute>
-        <PrivateRoute path="/user/admin/trusted-repos">
-          <TrustedRepos />
+        <PrivateRoute path="/user/admin/healthy-repos">
+          <HealthyRepos />
         </PrivateRoute>
 
         <Route path="/dao/home" component={DAOHome} />

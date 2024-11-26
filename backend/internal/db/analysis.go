@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type AnalysisRequest struct {
@@ -43,7 +44,7 @@ func InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
 	return handleErrMustInsertOne(res)
 }
 
-func InsertAnalysisResponse(reqId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
+func InsertAnalysisResponse(reqId uuid.UUID, repoId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
 
 	bytes, err := json.Marshal(names)
 	if err != nil {
@@ -51,15 +52,15 @@ func InsertAnalysisResponse(reqId uuid.UUID, gitEmail string, names []string, we
 	}
 
 	stmt, err := DB.Prepare(`INSERT INTO analysis_response(
-                                     id, analysis_request_id, git_email, git_names, weight, created_at) 
-									 VALUES ($1, $2, $3, $4, $5, $6)`)
+                                     id, analysis_request_id, repo_id, git_email, git_names, weight, created_at) 
+									 VALUES ($1, $2, $3, $4, $5, $6, $7)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO analysis_response for %v statement event: %v", reqId, err)
 	}
 	defer CloseAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(uuid.New(), reqId, gitEmail, string(bytes), weight, now)
+	res, err = stmt.Exec(uuid.New(), reqId, repoId, gitEmail, string(bytes), weight, now)
 	if err != nil {
 		return err
 	}

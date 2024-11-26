@@ -97,7 +97,7 @@ func handleErrMustInsertOne(res sql.Result) error {
 	if nr == 0 {
 		return fmt.Errorf("0 rows affacted, need at least 1")
 	} else if nr != 1 {
-		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
+		return fmt.Errorf("only 1 row needs to be affacted, got %v", nr)
 	}
 	return nil
 }
@@ -188,22 +188,9 @@ func RunSQL(files ...string) error {
 			newBytes := re.ReplaceAll(fileBytes, nil)
 
 			requests := strings.Split(string(newBytes), ";")
-			var placeholder string
 			for _, request := range requests {
 				request = strings.TrimSpace(request)
-				if strings.Contains(request, "DO $$ BEGIN") || strings.Contains(request, "END IF") {
-					placeholder += fmt.Sprintf("%s;\n", request)
-					continue
-				}
-				if strings.Contains(request, "END $$") {
-					placeholder += request
-					request = placeholder
-				}
-
-				//fmt.Println("#############################")
 				if len(request) > 0 {
-					placeholder = ""
-					//fmt.Println(request)
 					_, err := DB.Exec(request)
 					if err != nil {
 						return fmt.Errorf("[%v] %v", request, err)

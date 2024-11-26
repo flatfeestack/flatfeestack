@@ -1,20 +1,13 @@
 package db
 
 import (
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
-var (
-	t01 = time.Time{}.Add(time.Duration(1) * time.Second)
-	t02 = time.Time{}.Add(time.Duration(2) * time.Second)
-	t03 = time.Time{}.Add(time.Duration(3) * time.Second)
-	t04 = time.Time{}.Add(time.Duration(4) * time.Second)
-)
-
-func TestTrustedRepoTwice(t *testing.T) {
+func TestInsertOrUpdateTrustedRepoTwice(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	u := insertTestUser(t, "email")
@@ -25,8 +18,8 @@ func TestTrustedRepoTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
-		UnTrustAt: &t01,
+		TrustAt:   &t1,
+		UnTrustAt: &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -34,15 +27,15 @@ func TestTrustedRepoTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
-		UnTrustAt: &t02,
+		TrustAt:   &t2,
+		UnTrustAt: &t2,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
 	assert.Nil(t, err)
-	//we want to InsertOrUpdateTrustRepo, but we are already trusting this repo
 	err = InsertOrUpdateTrustRepo(&tr2)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "to trust, we must set the trust_at, but not the untrust_at: event.TrustAt: 0001-01-01 00:00:02 +0000 UTC, event.UnTrustAt: 0001-01-01 00:00:02 +0000 UTC")
 
 }
 
@@ -57,7 +50,7 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -65,7 +58,7 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t02,
+		UnTrustAt: &t2,
 	}
 
 	tr3 := TrustEvent{
@@ -73,16 +66,16 @@ func TestUnTrustedTwice(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t03,
+		UnTrustAt: &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
 	assert.Nil(t, err)
 	err = InsertOrUpdateTrustRepo(&tr2)
 	assert.Nil(t, err)
-	//we want to untrust, but we already untrusted it
 	err = InsertOrUpdateTrustRepo(&tr3)
 	assert.NotNil(t, err)
+	assert.Equal(t, err.Error(), "we want to untrust, but we already untrusted it: unTrustAt: 0001-01-01 00:00:02 +0000 UTC")
 
 }
 
@@ -97,12 +90,12 @@ func TestUnTrustWrong(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t01,
+		UnTrustAt: &t1,
 	}
 
-	//we want to untrust, but we are currently not trusting this repo
 	err := InsertOrUpdateTrustRepo(&tr1)
 	assert.NotNil(t, err)
+	assert.Equal(t, err.Error(), "we want to untrust, but we are currently not trusting this repo")
 }
 
 func TestTrustWrongOrder(t *testing.T) {
@@ -116,7 +109,7 @@ func TestTrustWrongOrder(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	tr2 := TrustEvent{
@@ -124,14 +117,14 @@ func TestTrustWrongOrder(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t01,
+		UnTrustAt: &t1,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
 	assert.Nil(t, err)
-	//we want to untrunst, but the untrust date is before the trust date
 	err = InsertOrUpdateTrustRepo(&tr2)
 	assert.NotNil(t, err)
+	assert.Equal(t, err.Error(), "we want to untrust, but the untrust date is before the trust date: trustAt: 0001-01-01 00:00:02 +0000 UTC, event.UnTrustAt: 0001-01-01 00:00:01 +0000 UTC")
 
 }
 
@@ -146,7 +139,7 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	tr2 := TrustEvent{
@@ -154,7 +147,7 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t04,
+		UnTrustAt: &t4,
 	}
 
 	tr3 := TrustEvent{
@@ -162,16 +155,16 @@ func TestTrustWrongOrderActive(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t03,
+		UnTrustAt: &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
 	assert.Nil(t, err)
 	err = InsertOrUpdateTrustRepo(&tr2)
 	assert.Nil(t, err)
-	//we want to untrust, but we already untrusted it at 0001-01-01 00:00:04 +0000 UTC
 	err = InsertOrUpdateTrustRepo(&tr3)
 	assert.NotNil(t, err)
+	assert.Equal(t, err.Error(), "we want to untrust, but we already untrusted it: unTrustAt: 0001-01-01 00:00:04 +0000 UTC")
 
 }
 
@@ -187,7 +180,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -195,7 +188,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Inactive,
-		UnTrustAt: &t02,
+		UnTrustAt: &t2,
 	}
 
 	tr3 := TrustEvent{
@@ -203,7 +196,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Active,
-		TrustAt:   &t03,
+		TrustAt:   &t3,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -223,7 +216,7 @@ func TestTrustCorrect(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Inactive,
-		UnTrustAt: &t04,
+		UnTrustAt: &t4,
 	}
 	err = InsertOrUpdateTrustRepo(&tr4)
 	assert.Nil(t, err)
@@ -245,7 +238,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r.Id,
 		EventType: Active,
-		TrustAt:   &t01,
+		TrustAt:   &t1,
 	}
 
 	tr2 := TrustEvent{
@@ -253,7 +246,7 @@ func TestTwoTrustedRepos(t *testing.T) {
 		Uid:       u.Id,
 		RepoId:    r2.Id,
 		EventType: Active,
-		TrustAt:   &t02,
+		TrustAt:   &t2,
 	}
 
 	err := InsertOrUpdateTrustRepo(&tr1)
@@ -265,112 +258,3 @@ func TestTwoTrustedRepos(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rs))
 }
-
-//func TestSponsorsBetween(t *testing.T) {
-//	SetupTestData()
-//	defer TeardownTestData()
-//	u := insertTestUser(t, "email")
-//	r := insertTestRepoGitUrl(t, "git-url")
-//	r2 := insertTestRepoGitUrl(t, "git-url2")
-//
-//	s1 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r.Id,
-//		EventType: Active,
-//		SponsorAt: &t01,
-//	}
-//
-//	s2 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r2.Id,
-//		EventType: Active,
-//		SponsorAt: &t02,
-//	}
-//
-//	err := InsertOrUpdateSponsor(&s1)
-//	assert.Nil(t, err)
-//	err = InsertOrUpdateSponsor(&s2)
-//	assert.Nil(t, err)
-//
-//	res, err := FindSponsorsBetween(t03, t04)
-//	assert.Nil(t, err)
-//	assert.Equal(t, 2, len(res[0].RepoIds))
-//}
-//
-//func TestSponsorsBetween2(t *testing.T) {
-//	SetupTestData()
-//	defer TeardownTestData()
-//	u := insertTestUser(t, "email")
-//	r := insertTestRepoGitUrl(t, "git-url")
-//	r2 := insertTestRepoGitUrl(t, "git-url2")
-//
-//	s1 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r.Id,
-//		EventType: Active,
-//		SponsorAt: &t01,
-//	}
-//
-//	s2 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r2.Id,
-//		EventType: Active,
-//		SponsorAt: &t02,
-//	}
-//
-//	err := InsertOrUpdateSponsor(&s1)
-//	assert.Nil(t, err)
-//	err = InsertOrUpdateSponsor(&s2)
-//	assert.Nil(t, err)
-//
-//	res, err := FindSponsorsBetween(t02, t04)
-//	assert.Nil(t, err)
-//	assert.Equal(t, 1, len(res[0].RepoIds))
-//}
-//
-//func TestSponsorsBetween3(t *testing.T) {
-//	SetupTestData()
-//	defer TeardownTestData()
-//	u := insertTestUser(t, "email")
-//	r := insertTestRepoGitUrl(t, "git-url")
-//	r2 := insertTestRepoGitUrl(t, "git-url2")
-//
-//	s1 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r.Id,
-//		EventType: Active,
-//		SponsorAt: &t01,
-//	}
-//
-//	s2 := SponsorEvent{
-//		Id:        uuid.New(),
-//		Uid:       u.Id,
-//		RepoId:    r2.Id,
-//		EventType: Active,
-//		SponsorAt: &t02,
-//	}
-//
-//	s3 := SponsorEvent{
-//		Id:          uuid.New(),
-//		Uid:         u.Id,
-//		RepoId:      r2.Id,
-//		EventType:   Inactive,
-//		UnSponsorAt: &t03,
-//	}
-//
-//	err := InsertOrUpdateSponsor(&s1)
-//	assert.Nil(t, err)
-//	err = InsertOrUpdateSponsor(&s2)
-//	assert.Nil(t, err)
-//	err = InsertOrUpdateSponsor(&s3)
-//	assert.Nil(t, err)
-//
-//	res, err := FindSponsorsBetween(t02, t04)
-//	assert.Nil(t, err)
-//	assert.Equal(t, 1, len(res[0].RepoIds))
-//}

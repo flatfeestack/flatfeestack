@@ -335,7 +335,27 @@ func (rs *RepoHandler) trustRepo0(w http.ResponseWriter, user *db.UserDetail, re
 		return
 	}
 
-	util.WriteJson(w, repo)
+	if newEventType == db.Active {
+		repoWithTrustDate, err := db.FindRepoWithTrustDateById(repoId)
+		if err != nil {
+			slog.Error("Could not find repo",
+				slog.Any("error", err))
+			util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+			return
+		}
+
+		healthValue, err := getRepoHealthValue(repoWithTrustDate.Id)
+		if err != nil {
+			repoWithTrustDate.HealthValue = 0.0
+		} else {
+			repoWithTrustDate.HealthValue = healthValue.HealthValue
+		}
+
+		util.WriteJson(w, repoWithTrustDate)
+	} else {
+		util.WriteJson(w, repo)
+	}
+
 }
 
 func GetSponsoredRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
@@ -369,6 +389,15 @@ func GetTrustedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
 		return
+	}
+
+	for i, repo := range repos {
+		value, err := getRepoHealthValue(repo.Id)
+		if err != nil {
+			repos[i].HealthValue = 0
+		} else {
+			repos[i].HealthValue = value.HealthValue
+		}
 	}
 
 	util.WriteJson(w, repos)
@@ -457,6 +486,12 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 				slog.Any("error", err))
 			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 			return
+		}
+		healthValue, err := getRepoHealthValue(repo.Id)
+		if err != nil {
+			repo.HealthValue = 0.0
+		} else {
+			repo.HealthValue = healthValue.HealthValue
 		}
 		repos = append(repos, *repo)
 	}

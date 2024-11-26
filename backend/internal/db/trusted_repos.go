@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,15 +26,13 @@ func InsertOrUpdateTrustRepo(event *TrustEvent) error {
 		return err
 	}
 
-	//no event found
 	if id == nil && event.EventType == Inactive {
 		return fmt.Errorf("we want to untrust, but we are currently not trusting this repo")
 	}
 
-	//event found
 	if id != nil {
 		if event.EventType == Inactive {
-			if event.TrustAt != nil || event.UnTrustAt == nil {
+			if event.TrustAt != nil || event.UnTrustAt == nil { // Not tested
 				return fmt.Errorf("to untrust, we must set the untrust_at, but not the trust_at: "+
 					"event.TrustAt: %v, event.UnTrustAt: %v", event.TrustAt, event.UnTrustAt)
 			}
@@ -49,16 +48,16 @@ func InsertOrUpdateTrustRepo(event *TrustEvent) error {
 				return fmt.Errorf("to trust, we must set the trust_at, but not the untrust_at: "+
 					"event.TrustAt: %v, event.UnTrustAt: %v", event.TrustAt, event.UnTrustAt)
 			}
-			if unTrustAt == nil {
+			if unTrustAt == nil { // not tested
 				return fmt.Errorf("we want to trust, but we are already trusting this repo: "+
 					"trust_at: %v, un_trust_at: %v", event.TrustAt, unTrustAt)
 			} else {
-				if event.TrustAt.Before(*trustAt) {
-					return fmt.Errorf("we want to trust, but we want want to trust this repo in the past: "+
+				if event.TrustAt.Before(*trustAt) { // both not tested
+					return fmt.Errorf("we want to trust, but we want to trust this repo in the past: "+
 						"event.TrustAt: %v, trustAt: %v", event.TrustAt, trustAt)
 				}
 				if event.TrustAt.Before(*unTrustAt) {
-					return fmt.Errorf("we want to trust, but we want want to trust this repo in the past: "+
+					return fmt.Errorf("we want to trust, but we want to trust this repo in the past: "+
 						"event.TrustAt: %v, unTrustAt: %v", event.TrustAt, unTrustAt)
 				}
 			}
@@ -68,8 +67,8 @@ func InsertOrUpdateTrustRepo(event *TrustEvent) error {
 
 	}
 
+	// I don't see this tested anywhere?
 	if event.EventType == Active {
-		//insert
 		stmt, err := DB.Prepare("INSERT INTO trust_event (id, user_id, repo_id, trust_at) VALUES ($1, $2, $3, $4)")
 		if err != nil {
 			return fmt.Errorf("prepare INSERT INTO trust_event for %v statement event: %v", event, err)
@@ -83,7 +82,6 @@ func InsertOrUpdateTrustRepo(event *TrustEvent) error {
 		}
 		return handleErrMustInsertOne(res)
 	} else if event.EventType == Inactive {
-		//update
 		stmt, err := DB.Prepare("UPDATE trust_event SET un_trust_at=$1 WHERE id=$2 AND un_trust_at IS NULL")
 		if err != nil {
 			return fmt.Errorf("prepare UPDATE trust_event for %v statement failed: %v", id, err)
@@ -122,8 +120,7 @@ func FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time
 }
 
 func FindTrustedRepos() ([]Repo, error) {
-	//we want to send back an empty array, don't change
-	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
+	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, t.trust_at
             FROM trust_event t
             INNER JOIN repo r ON t.repo_id=r.id
 			WHERE t.un_trust_at IS NULL`
@@ -132,54 +129,85 @@ func FindTrustedRepos() ([]Repo, error) {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanRepo(rows)
+	return scanRepoWithTrustEvent(rows)
 }
 
-//type TrustResult struct {
-//	UserId  uuid.UUID
-//	RepoIds []uuid.UUID
-//}
+// no unit testing
+func GeneratePlaceholders(n int) string {
+	var placeholders []string
+	for i := 1; i <= n; i++ {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
+	}
+	return strings.Join(placeholders, ", ")
+}
 
-// can be used to provide filter function in frontend
-//func FindTrustedReposBetween(start time.Time, stop time.Time) ([]TrustResult, error) {
-//	rows, err := DB.Query(`
-//			SELECT user_id, repo_id
-//			FROM trust_event
-//			WHERE trust_at < $1 AND (un_trust_at IS NULL OR un_trust_at >= $2)
-//			GROUP BY user_id, repo_id
-//			ORDER BY user_id`, start, stop)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer CloseAndLog(rows)
-//
-//	trustResults := []TrustResult{}
-//	var userIdOld uuid.UUID
-//	var userId uuid.UUID
-//	trustResult := TrustResult{}
-//	for rows.Next() {
-//		var repoId uuid.UUID
-//		err = rows.Scan(&userId, &repoId)
-//
-//		if userId != userIdOld && !util.IsUUIDZero(userIdOld) {
-//			trustResult.UserId = userIdOld
-//			trustResults = append(trustResults, trustResult)
-//
-//			trustResult = TrustResult{}
-//			userIdOld = userId
-//		}
-//
-//		if err != nil {
-//			return nil, err
-//		}
-//		trustResult.RepoIds = append(trustResult.RepoIds, repoId)
-//		if util.IsUUIDZero(userIdOld) {
-//			userIdOld = userId
-//		}
-//	}
-//
-//	trustResult.UserId = userId
-//	trustResults = append(trustResults, trustResult)
-//
-//	return trustResults, nil
-//}
+// no unit testing
+func ConvertToInterfaceSlice[T any](values []T) []interface{} {
+	result := make([]interface{}, len(values))
+	for i, v := range values {
+		result[i] = v
+	}
+	return result
+}
+
+// no unit testing
+func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
+	var query string
+
+	if len(userIds) == 0 {
+		return 0, nil
+	}
+
+	if isPostgres {
+		query = fmt.Sprintf(`
+		SELECT COUNT(repo_id)
+		FROM daily_contribution
+		WHERE
+			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
+			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
+	} else {
+		query = fmt.Sprintf(`
+		SELECT COUNT(repo_id)
+		FROM daily_contribution
+		WHERE
+			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
+			AND created_at >= date('now', '-%d month')`, months)
+	}
+
+	var count int
+	err := DB.QueryRow(query, ConvertToInterfaceSlice(userIds)...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// no unit testing
+func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (float64, error) {
+	emails, err := GetRepoEmails(repoId)
+	if err != nil {
+		return 0.0, err
+	}
+
+	userIds, err := FindUsersByGitEmails(emails)
+	if err != nil {
+		return 0.0, err
+	}
+
+	activeUsers, err := FilterActiveUsers(userIds, activeUserMinMonths, isPostgres)
+	if err != nil {
+		return 0.0, err
+	}
+
+	if len(activeUsers) == 0 {
+		return 0.0, nil
+	}
+
+	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
+	if err != nil {
+		return 0.0, err
+	}
+
+	return float64(trustedRepoCount), nil
+}

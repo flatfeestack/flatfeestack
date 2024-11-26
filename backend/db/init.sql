@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS trust_event (
     id            UUID PRIMARY KEY,
     repo_id       UUID CONSTRAINT trust_event_repo_id_fk REFERENCES repo(id),
     user_id       UUID CONSTRAINT trust_event_user_id_fk REFERENCES users(id),
-    trust_at    TIMESTAMP NOT NULL,
-    un_trust_at TIMESTAMP,
+    trust_at      TIMESTAMP NOT NULL,
+    un_trust_at   TIMESTAMP,
     UNIQUE(repo_id, user_id, trust_at)
 );
 CREATE INDEX IF NOT EXISTS trust_event_repo_id_idx ON trust_event(repo_id);
@@ -184,35 +184,46 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON user_emails_sent(user
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(email_type); /*we do a count on email_type*/
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
 
-DO $$ BEGIN 
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'trust_value_threshold_bound') THEN
-    CREATE TYPE trust_value_threshold_bound AS (
-      lower_bound INTEGER,
-      upper_bound INTEGER
-    ); 
-  END IF; 
-END $$;
-
-CREATE TABLE IF NOT EXISTS repo_health_threshold (  -- Fixed typo in table name "treshold" -> "threshold"
-    id                          UUID PRIMARY KEY,
-    created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    th_contributer_count        trust_value_threshold_bound CHECK ((th_contributer_count).lower_bound <= (th_contributer_count).upper_bound),
-    th_commit_count             trust_value_threshold_bound CHECK ((th_commit_count).lower_bound <= (th_commit_count).upper_bound),
-    th_sponsor_donation         trust_value_threshold_bound CHECK ((th_sponsor_donation).lower_bound <= (th_sponsor_donation).upper_bound),
-    th_repo_star_count          trust_value_threshold_bound CHECK ((th_repo_star_count).lower_bound <= (th_repo_star_count).upper_bound),
-    th_repo_multiplier_count    trust_value_threshold_bound CHECK ((th_repo_multiplier_count).lower_bound <= (th_repo_multiplier_count).upper_bound)
+CREATE TABLE IF NOT EXISTS repo_health_threshold (
+    id                     UUID PRIMARY KEY,
+    created_at             TIMESTAMP, 
+    th_contributer_count   JSON,
+    th_commit_count        JSON,
+    th_sponsor_donation    JSON,
+    th_repo_star_count     JSON,
+    th_repo_multiplier     JSON
 );
+CREATE INDEX IF NOT EXISTS repo_health_threshold_id_idx ON repo_health_threshold(id);
 
---repo_id             UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
---repo_id                     UUID,
+-- set initial values for threshold
+INSERT INTO repo_health_threshold (
+  id,
+  created_at,
+  th_contributer_count,
+  th_commit_count,
+  th_sponsor_donation,
+  th_repo_star_count,
+  th_repo_multiplier) 
+VALUES (
+  'b7244c4a-dadd-45f5-bd12-0fcefb5d66c2',
+  '2022-12-31 23:59:59.999999999',
+  '{"lower": 4, "upper": 13}',
+  '{"lower": 40, "upper": 130}',
+  '{"lower": 5, "upper": 20}',
+  '{"lower": 5, "upper": 20}',
+  '{"lower": 5, "upper": 20}'
+)
+ON CONFLICT (id) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS repo_health_metrics (
     id                          UUID PRIMARY KEY,
-    created_at                  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at                  TIMESTAMP NOT NULL,
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
     contributer_count           NUMERIC(78),
     commit_count                NUMERIC(78),
     sponsor_donation            NUMERIC(78),
     repo_star_count             NUMERIC(78),
-    repo_multplier_count        NUMERIC(78),
+    repo_multiplier_count       NUMERIC(78),
     repo_weight                 NUMERIC(78)
 );
+CREATE INDEX IF NOT EXISTS repo_health_metrics_repo_id_idx ON repo_health_metrics(repo_id);
