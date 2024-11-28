@@ -90,7 +90,7 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 	}
 	metrics := getTestData(3, 131, 5, 20, 12)
 
-	result := calculateRepoHealthValue(&threshold, metrics)
+	partialResult := getPartialRepoHealthValues(&threshold, metrics)
+	result := calculateRepoHealthValue(*partialResult)
 	assert.Equal(t, result, float64(5.13))
-
 }

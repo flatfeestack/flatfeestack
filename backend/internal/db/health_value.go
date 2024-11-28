@@ -21,13 +21,6 @@ type RepoHealthMetrics struct {
 	RepoWeight          float64   `json:"reposponsordonated"`
 }
 
-type InternalHealthMetrics struct {
-	SponsorCount        int     `json:"sponsorcount"`
-	RepoStarCount       int     `json:"repostarcount"`
-	RepoMultiplierCount int     `json:"repomultipliercount"`
-	RepoWeight          float64 `json:"reposponsordonated"`
-}
-
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	stmt, err := DB.Prepare(`
 		INSERT INTO 
