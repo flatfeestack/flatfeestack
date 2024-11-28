@@ -17,7 +17,7 @@ type RepoHealthValue struct {
 	HealthValue float64   `json:"healthvalue"`
 }
 
-func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	repoId := uuid.MustParse(r.PathValue("id"))
 	healthValue, err := getRepoHealthValue(repoId)
 
@@ -34,6 +34,25 @@ func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, user *db
 	} else {
 		util.WriteJson(w, healthValue)
 	}
+}
+func GetRepoMetricsById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	repoId := uuid.MustParse(r.PathValue("id"))
+	repoMetrics, err := db.FindRepoHealthMetricsByRepoId(repoId)
+
+	if repoMetrics == nil {
+		slog.Error("repo metrics not found %s",
+			slog.String("id", repoId.String()))
+		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
+		//util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
+	} else if err != nil {
+		slog.Error("Could not fetch repo metrics",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+		//util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
+	} else {
+		util.WriteJson(w, repoMetrics)
+	}
+
 }
 
 func UpdateRepoHealthValue(w http.ResponseWriter, r *http.Request, repoHealthMetrics *db.RepoHealthMetrics) {
