@@ -187,7 +187,7 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email)
 CREATE TABLE IF NOT EXISTS repo_health_threshold (
     id                     UUID PRIMARY KEY,
     created_at             TIMESTAMP, 
-    th_contributer_count   JSON,
+    th_contributor_count   JSON,
     th_commit_count        JSON,
     th_sponsor_donation    JSON,
     th_repo_star_count     JSON,
@@ -199,7 +199,7 @@ CREATE INDEX IF NOT EXISTS repo_health_threshold_id_idx ON repo_health_threshold
 INSERT INTO repo_health_threshold (
   id,
   created_at,
-  th_contributer_count,
+  th_contributor_count,
   th_commit_count,
   th_sponsor_donation,
   th_repo_star_count,
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS repo_health_metrics (
     id                          UUID PRIMARY KEY,
     created_at                  TIMESTAMP NOT NULL,
     repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
-    contributer_count           NUMERIC(78),
+    contributor_count           NUMERIC(78),
     commit_count                NUMERIC(78),
     sponsor_donation            NUMERIC(78),
     repo_star_count             NUMERIC(78),

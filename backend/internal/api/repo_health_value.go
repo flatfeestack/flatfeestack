@@ -18,11 +18,11 @@ type RepoHealthValue struct {
 }
 
 type PartialHealthValues struct {
-	ContributerCount    float64
-	CommitCount         float64
-	SponsorCount        float64
-	RepoStarCount       float64
-	RepoMultiplierCount float64
+	ContributorValue    float64
+	CommitValue         float64
+	SponsorValue        float64
+	RepoStarValue       float64
+	RepoMultiplierValue float64
 }
 
 func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
@@ -86,14 +86,14 @@ func UpdateRepoHealthValue(w http.ResponseWriter, r *http.Request, repoHealthMet
 }
 
 func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
-	contributerCount := 0
+	contributorCount := 0
 	var commitCount int
 	var repoWeight float64
 	var repoHealthMetrics *db.RepoHealthMetrics
 	var err error
 
 	for _, email := range data {
-		contributerCount++
+		contributorCount++
 		commitCount += email.CommitCount
 		repoWeight += email.Weight
 	}
@@ -106,7 +106,7 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.Id = uuid.New()
 	repoHealthMetrics.RepoId = repoId
 	repoHealthMetrics.CreatedAt = util.TimeNow()
-	repoHealthMetrics.ContributerCount = contributerCount
+	repoHealthMetrics.ContributorCount = contributorCount
 	repoHealthMetrics.CommitCount = commitCount
 	repoHealthMetrics.RepoWeight = repoWeight
 
@@ -188,7 +188,7 @@ func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
 
 func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) *PartialHealthValues {
 	healthMetrics := []int{
-		metrics.ContributerCount,
+		metrics.ContributorCount,
 		metrics.CommitCount,
 		metrics.SponsorCount,
 		metrics.RepoStarCount,
@@ -197,7 +197,7 @@ func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.R
 	var partialHealthValues []float64
 
 	healthThreshold := [][]int{
-		{threshold.ThContributerCount.Lower, threshold.ThContributerCount.Upper},
+		{threshold.ThContributorCount.Lower, threshold.ThContributorCount.Upper},
 		{threshold.ThCommitCount.Lower, threshold.ThCommitCount.Upper},
 		{threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper},
 		{threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper},
@@ -223,15 +223,15 @@ func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.R
 		partialHealthValues = append(partialHealthValues, partialHealthValue)
 	}
 	return &PartialHealthValues{
-		ContributerCount:    partialHealthValues[0],
-		CommitCount:         partialHealthValues[1],
-		SponsorCount:        partialHealthValues[2],
-		RepoStarCount:       partialHealthValues[3],
-		RepoMultiplierCount: partialHealthValues[4],
+		ContributorValue:    partialHealthValues[0],
+		CommitValue:         partialHealthValues[1],
+		SponsorValue:        partialHealthValues[2],
+		RepoStarValue:       partialHealthValues[3],
+		RepoMultiplierValue: partialHealthValues[4],
 	}
 }
 
 func calculateRepoHealthValue(partialHealthValues PartialHealthValues) float64 {
-	healthValue := partialHealthValues.CommitCount + partialHealthValues.ContributerCount + partialHealthValues.SponsorCount + partialHealthValues.RepoStarCount + partialHealthValues.RepoMultiplierCount
+	healthValue := partialHealthValues.CommitValue + partialHealthValues.ContributorValue + partialHealthValues.SponsorValue + partialHealthValues.RepoStarValue + partialHealthValues.RepoMultiplierValue
 	return math.Round(healthValue*100) / 100
 }

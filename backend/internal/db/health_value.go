@@ -13,7 +13,7 @@ type RepoHealthMetrics struct {
 	Id                  uuid.UUID `json:"id"`
 	RepoId              uuid.UUID `json:"repoid"`
 	CreatedAt           time.Time `json:"createdat"`
-	ContributerCount    int       `json:"contributercount"`
+	ContributorCount    int       `json:"contributorcount"`
 	CommitCount         int       `json:"commitcount"`
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
@@ -28,7 +28,7 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 				id,
 				created_at,
 				repo_id,
-				contributer_count,
+				contributor_count,
 				commit_count,
 				sponsor_donation,
 				repo_star_count,
@@ -49,7 +49,7 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight)
+	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributorCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight)
 	if err != nil {
 		return fmt.Errorf("error occured trying to insert: %v", err)
 	}
@@ -63,7 +63,7 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	UPDATE 
 		repo_health_metrics 
 	SET 
-		contributer_count=$1,
+		contributor_count=$1,
 		commit_count=$2,
 		sponsor_donation=$3,
 		repo_star_count=$4,
@@ -77,7 +77,7 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	defer CloseAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight, repoHealthMetrics.Id)
+	res, err = stmt.Exec(repoHealthMetrics.ContributorCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight, repoHealthMetrics.Id)
 	if err != nil {
 		return fmt.Errorf("something went wrong updating the health value: %v", err)
 	}
@@ -93,7 +93,7 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 			SELECT id,
 				repo_id,
 				created_at,
-				contributer_count,
+				contributor_count,
 				commit_count,
 				sponsor_donation,
 				repo_star_count,
@@ -107,7 +107,7 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 			&healthValue.Id,
 			&healthValue.RepoId,
 			&healthValue.CreatedAt,
-			&healthValue.ContributerCount,
+			&healthValue.ContributorCount,
 			&healthValue.CommitCount,
 			&healthValue.SponsorCount,
 			&healthValue.RepoStarCount,
@@ -134,7 +134,7 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error)
 				id,
 				repo_id,
 				created_at,
-				contributer_count,
+				contributor_count,
 				commit_count,
 				sponsor_donation,
 				repo_star_count,
@@ -173,7 +173,7 @@ func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics
 				id,
 				repo_id,
 				created_at,
-				contributer_count,
+				contributor_count,
 				commit_count,
 				sponsor_donation,
 				repo_star_count,
@@ -201,7 +201,7 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 
 	for rows.Next() {
 		var repoHealthMetrics RepoHealthMetrics
-		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
+		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributorCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +217,7 @@ func GetAllRepoHealthMetrics() ([]RepoHealthMetrics, error) {
 			id,
 			repo_id,
 			created_at,
-			contributer_count,
+			contributor_count,
 			commit_count,
 			sponsor_donation,
 			repo_star_count,

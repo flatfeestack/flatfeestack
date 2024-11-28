@@ -19,7 +19,7 @@ func getTestData(a, b, c, d, e int) *db.RepoHealthMetrics {
 		Id:                  uuid.New(),
 		RepoId:              uuid.New(),
 		CreatedAt:           parsedTime,
-		ContributerCount:    a,
+		ContributorCount:    a,
 		CommitCount:         b,
 		SponsorCount:        c,
 		RepoStarCount:       d,
@@ -82,7 +82,7 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 
 	// For testing purposes, the thresholds are fixed
 	threshold := db.RepoHealthThreshold{
-		ThContributerCount: &db.Threshold{Upper: 13.0, Lower: 4.0},
+		ThContributorCount: &db.Threshold{Upper: 13.0, Lower: 4.0},
 		ThCommitCount:      &db.Threshold{Upper: 130.0, Lower: 40.0},
 		ThSponsorDonation:  &db.Threshold{Upper: 20.0, Lower: 5.0},
 		ThRepoStarCount:    &db.Threshold{Upper: 20.0, Lower: 5.0},
