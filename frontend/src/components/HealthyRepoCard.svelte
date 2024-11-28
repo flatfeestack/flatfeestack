@@ -225,13 +225,12 @@
 
   .overlay-container {
     position: absolute;
-    width: 50vw;
+    width: 60vw;
     height: 80vh;
     background-color: white;
     color: black;
     overflow-y: auto;
-    padding: 0.5vh 1vw;
-    margin: 9.5vh 24vw;
+    margin: 10vh 20vw;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     cursor: pointer;
@@ -339,6 +338,8 @@
   on:keydown={(e) => (e.key === "Enter" || e.key === " ") && hideOverlay()}
 >
   <div class="overlay-container">
-    <RepoAssessmentOverlay {repo} />
+    {#if assessmentOverlayVisible}
+      <RepoAssessmentOverlay {repo} />
+    {/if}
   </div>
 </div>

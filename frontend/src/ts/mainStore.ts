@@ -1,5 +1,10 @@
 import { writable } from "svelte/store";
-import type { User, Config, Repo } from "../types/backend";
+import type {
+  User,
+  Config,
+  Repo,
+  HealthValueThreshold,
+} from "../types/backend";
 
 export const error = writable("");
 export const isSubmitting = writable(false);
@@ -19,3 +24,5 @@ export const reposToUnTrustAfterTimeout = writable<Repo[]>([]);
 // export const undoDuration: number = 5000;
 export const abortUntrustEvent = writable(false);
 export const reposInSearchResult = writable<Repo[]>([]);
+export const loadedLatestThresholds = writable<boolean>(false);
+export const latestThresholds = writable<HealthValueThreshold>();

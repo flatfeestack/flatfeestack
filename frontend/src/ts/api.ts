@@ -19,6 +19,8 @@ import type {
   PublicUser,
   UserBalance,
   RepoHealthValue,
+  HealthValueThreshold,
+  RepoMetrics,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -274,6 +276,14 @@ export const API = {
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
     getHealthValue: (repoId: string) =>
       backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
+    getLatestHealthValueThresholds: () =>
+      backendToken
+        .get(`repos/healthvaluethreshold`)
+        .json<HealthValueThreshold>(),
+    getRepoMetricsById: (repoId: string) =>
+      backendToken
+        .get(`repos/${repoId}/healthvalue/metrics`)
+        .json<RepoMetrics>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

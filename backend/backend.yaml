@@ -1246,7 +1246,7 @@ components:
         createdAt:
           type: string
           format: date-time
-        ThContributerCount:
+        ThContributorCount:
           $ref: '#/components/schemas/Threshold'
         ThCommitCount:
             $ref: '#/components/schemas/Threshold'
@@ -1256,12 +1256,6 @@ components:
             $ref: '#/components/schemas/Threshold'
         ThRepoMultiplier:
             $ref: '#/components/schemas/Threshold'
-      required:
-        - thContributerCount
-        - thCommitCount
-        - thSponsorDonation
-        - thRepoStarCount
-        - thRepoMultiplier
     Threshold:
       type: object
       properties:
@@ -1286,7 +1280,7 @@ components:
         createdat:
           type: string
           format: date-time
-        contributercount:
+        contributorcount:
           type: integer
           format: int64
         commitcount:

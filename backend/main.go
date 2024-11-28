@@ -250,6 +250,9 @@ func main() {
 	router.HandleFunc("POST /repos/{id}/untrust", middlewareJwtAuthAdminLog(rh.UnTrustRepo))
 	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	router.HandleFunc("GET /repos/{id}/healthvalue", middlewareJwtAuthUserLog(api2.GetRepoHealthValueByRepoId))
+	router.HandleFunc("GET /repos/{id}/healthvalue/metrics", middlewareJwtAuthAdminLog(api2.GetRepoMetricsById))
+	// router.HandleFunc("GET /repos/{id}/healthvalue/partial", middlewareJwtAuthAdminLog(api2.))
+	router.HandleFunc("GET /repos/healthvaluethreshold", middlewareJwtAuthAdminLog(api2.GetLatestThresholds))
 	//payment
 
 	//hooks
