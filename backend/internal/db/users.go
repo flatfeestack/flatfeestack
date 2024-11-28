@@ -116,7 +116,7 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	}
 }
 
-func GetUserThatSponsoredTrustedRepo() ([]User, error) {
+/*func GetUserThatSponsoredTrustedRepo() ([]User, error) {
 	s := `SELECT
 				DISTINCT user_sponsor_id AS user_id
 			FROM
@@ -139,7 +139,7 @@ func GetUserThatSponsoredTrustedRepo() ([]User, error) {
 		userStatus = append(userStatus, userState)
 	}
 	return userStatus, nil
-}
+}*/
 
 func InsertUser(user *UserDetail) error {
 	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")

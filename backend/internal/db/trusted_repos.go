@@ -132,6 +132,38 @@ func FindTrustedRepos() ([]Repo, error) {
 	return scanRepoWithTrustEvent(rows)
 }
 
+func GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
+	if len(rids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT repo_id
+		FROM trust_event
+		WHERE repo_id IN (` + GeneratePlaceholders(len(rids)) + `)`
+
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trustedRepos []uuid.UUID
+	for rows.Next() {
+		var repoID uuid.UUID
+		if err := rows.Scan(&repoID); err != nil {
+			return nil, err
+		}
+		trustedRepos = append(trustedRepos, repoID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return trustedRepos, nil
+}
+
 // no unit testing
 func GeneratePlaceholders(n int) string {
 	var placeholders []string

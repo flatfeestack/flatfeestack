@@ -134,6 +134,67 @@ func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 	return scanRepo(rows)
 }
 
+func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
+	s := `SELECT u.id, u.stripe_id, u.invited_id, u.stripe_payment_method, u.stripe_last4, 
+                u.email, u.name, u.image, u.seats, u.freq, u.created_at, u.multiplier, u.multiplier_daily_limit
+            FROM multiplier_event m
+			INNER JOIN users u ON m.user_id = u.id
+			WHERE m.repo_id=$1 AND m.un_multiplier_at IS NULL`
+	rows, err := DB.Query(s, rid)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var userStatus []UserDetail
+	for rows.Next() {
+		var u UserDetail
+		err = rows.Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
+			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
+			&u.Multiplier, &u.MultiplierDailyLimit)
+		if err != nil {
+			return nil, err
+		}
+		userStatus = append(userStatus, u)
+	}
+	return userStatus, nil
+}
+
+func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
+	if len(rids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT u.id, u.name, u.email
+		FROM multiplier_event m
+		INNER JOIN users u ON m.user_id = u.id
+		WHERE m.repo_id IN (` + GeneratePlaceholders(len(rids)) + `)
+		AND m.un_multiplier_at IS NULL`
+
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err = rows.Scan(&user.Id, &user.Name, &user.Email)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
 	if len(activeSponsors) == 0 {
 		return 0, nil

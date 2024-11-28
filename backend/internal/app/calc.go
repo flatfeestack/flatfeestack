@@ -6,10 +6,11 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"fmt"
-	"github.com/google/uuid"
 	"log/slog"
 	"math/big"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CalcHandler struct {
@@ -139,6 +140,26 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 }
 
 func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
+	var payoutlimit *big.Float
+	var amountPerPart *big.Float
+	trustedRepos, err := db.GetTrustedReposFromList(rids)
+	if err != nil {
+		return err
+	}
+	if len(trustedRepos) > 0 {
+		pool := new(big.Int).Mul(distributeDeduct, big.NewInt(int64(len(trustedRepos))))
+		allFoundations, err := db.GetAllFoundationsSupportingRepos(rids)
+		if err != nil {
+			return err
+		}
+		parts := len(allFoundations)
+		payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(distributeDeduct), big.NewFloat(0.9))
+
+		poolAsFloat := new(big.Float).SetInt(pool)
+		partsAsFloat := big.NewFloat(float64(parts))
+		amountPerPart = new(big.Float).Quo(poolAsFloat, partsAsFloat)
+	}
+
 	for _, rid := range rids {
 		//get weights for the contributors
 		a, err := db.FindLatestAnalysisRequest(rid)
@@ -225,6 +246,30 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 				err = db.InsertContribution(uid, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow())
 				if err != nil {
 					return err
+				}
+			}
+		}
+		if len(trustedRepos) > 0 {
+			var amount *big.Float
+			foundations, err := db.GetFoundationsSupportingRepo(rid)
+			if err != nil {
+				return err
+			}
+
+			foundationCount := big.NewInt(int64(len(foundations)))
+			totalAmountForRepo := new(big.Float).Mul(new(big.Float).SetInt(foundationCount), amountPerPart)
+
+			if totalAmountForRepo.Cmp(payoutlimit) > 0 {
+				amount = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
+			} else {
+				amount = amountPerPart
+			}
+
+			for _, foundation := range foundations {
+				if foundation.Multiplier {
+					// check if dailyLimit not spent yet foundation.MultiplierDailyLimit
+					// make contribution based on the amount
+					fmt.Sprint(amount)
 				}
 			}
 		}
