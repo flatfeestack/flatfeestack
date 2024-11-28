@@ -1200,6 +1200,28 @@ components:
           type: number
       required:
         - uuid
+    PartialHealthValues:
+      type: object
+      properties:
+        repoid:
+          type: string
+          format: uuid
+        contributorvalue:
+          type: number
+          format: float
+        commitvalue:
+          type: number
+          format: float
+        sponsorvalue:
+          type: number
+          format: float
+        repostarvalue:
+          type: number
+          format: float
+        repomultipliervalue:
+          type: number
+          format: float
+
     PaymentEvent:
       type: array
       items:

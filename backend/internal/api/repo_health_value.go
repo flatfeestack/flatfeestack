@@ -18,11 +18,12 @@ type RepoHealthValue struct {
 }
 
 type PartialHealthValues struct {
-	ContributorValue    float64
-	CommitValue         float64
-	SponsorValue        float64
-	RepoStarValue       float64
-	RepoMultiplierValue float64
+	RepoId              uuid.UUID `json:"repoid"`
+	ContributorValue    float64   `json:"contributorvalue"`
+	CommitValue         float64   `json:"commitvalue"`
+	SponsorValue        float64   `json:"sponsorvalue"`
+	RepoStarValue       float64   `json:"repostarvalue"`
+	RepoMultiplierValue float64   `json:"repomultipliervalue"`
 }
 
 func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
