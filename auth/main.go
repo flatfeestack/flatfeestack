@@ -96,16 +96,14 @@ type ProvisioningUri struct {
 
 type OAuth struct {
 	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
 	RefreshToken string `json:"refresh_token"`
-	Expires      string `json:"expires_in"`
+	ExpiresAt    string `json:"expires_at"`
 }
 
 // system user does not need refresh token
 type OAuthSystem struct {
 	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	Expires     string `json:"expires_in"`
+	ExpiresAt   string `json:"expires_at"`
 }
 
 type Config struct {

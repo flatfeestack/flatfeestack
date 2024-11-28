@@ -95,13 +95,13 @@ export const removeToken = () => {
 };
 
 export const storeToken = (token1: Token) => {
-    if (!token1 || !token1.access_token || !token1.refresh_token || !token1.expire) {
+    if (!token1 || !token1.access_token || !token1.refresh_token || !token1.expires_at) {
         appState.$state.loginFailed = true;
         throw "Invalid/empty token in the request";
     }
     appState.$state.loginFailed = false;
     appState.$state.accessToken = token1.access_token;
-    appState.$state.accessTokenExpire = token1.expire;
+    appState.$state.accessTokenExpire = token1.expires_at;
     localStorage.setItem("ffs-refresh", token1.refresh_token);
 };
 

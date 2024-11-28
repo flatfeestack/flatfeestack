@@ -1,4 +1,4 @@
-export const emailValidationPattern = "[a-z0-9._%+-]+@[a-z0-9.-]+.[a-z]{2,}$";
+export const emailValidationPattern = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+";
 
 export const getColor1 = function (input: string) {
   return (
@@ -24,7 +24,7 @@ export const getColor2 = function (input: string) {
 };
 
 //https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript?rq=1
-const cyrb53 = function (str, seed = 0) {
+const cyrb53 = function (str: string, seed = 0) {
   let h1 = 0xdeadbeef ^ seed,
     h2 = 0x41c6ce57 ^ seed;
   for (let i = 0, ch; i < str.length; i++) {
@@ -42,7 +42,7 @@ const cyrb53 = function (str, seed = 0) {
   return hash / Number.MAX_SAFE_INTEGER;
 };
 
-export const htmlLegendPlugin = {
+/*export const htmlLegendPlugin = {
   id: "htmlLegend",
   afterUpdate(chart, args, options) {
     const ul = getOrCreateLegendList(chart, options.containerID);
@@ -114,4 +114,4 @@ const getOrCreateLegendList = (chart, id) => {
   }
 
   return listContainer;
-};
+};*/

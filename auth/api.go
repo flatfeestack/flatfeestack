@@ -108,9 +108,8 @@ func writeOAuth(w http.ResponseWriter, result *dbRes) {
 
 	oauth := OAuth{
 		AccessToken:  encodedAccessToken,
-		TokenType:    "Bearer",
 		RefreshToken: encodedRefreshToken,
-		Expires:      strconv.FormatInt(expiresAt, 10),
+		ExpiresAt:    strconv.FormatInt(expiresAt, 10),
 	}
 
 	oauthEnc, err := json.Marshal(oauth)
@@ -520,7 +519,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
+	oauth := OAuth{
+		AccessToken:  encodedAccessToken,
+		RefreshToken: encodedRefreshToken,
+		ExpiresAt:    strconv.FormatInt(expiresAt, 10)}
+
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
 		slog.Error("cannot encode refresh token", slog.Any("error", err))
@@ -827,7 +830,11 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauth := OAuth{AccessToken: encodedAccessToken, TokenType: "Bearer", RefreshToken: encodedRefreshToken, Expires: strconv.FormatInt(expiresAt, 10)}
+	oauth := OAuth{
+		AccessToken:  encodedAccessToken,
+		RefreshToken: encodedRefreshToken,
+		ExpiresAt:    strconv.FormatInt(expiresAt, 10)}
+
 	oauthEnc, err := json.Marshal(oauth)
 	if err != nil {
 		slog.Error("cannot verify refresh token", slog.Any("error", err))
@@ -865,7 +872,6 @@ func oauth(w http.ResponseWriter, r *http.Request) {
 
 		oauth := OAuthSystem{
 			AccessToken: encodedAccessToken,
-			TokenType:   "Bearer",
 		}
 		oauthEnc, err := json.Marshal(oauth)
 		if err != nil {

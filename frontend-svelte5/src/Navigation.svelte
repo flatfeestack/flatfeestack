@@ -2,6 +2,7 @@
   import {appState} from "./ts/state.ts";
   import Spinner from "./Spinner.svelte";
   import NavItem from "./NavItem.svelte";
+  import Header from "./Header.svelte";
 </script>
 
 <style>
@@ -52,6 +53,7 @@
   }
 </style>
 
+<Header></Header>
 <div class="page">
   <nav>
     <NavItem href="/user/settings" icon="fa-user-cog" label="Settings" />

@@ -3,7 +3,6 @@
   import Dots from "./Dots.svelte";
   import {goto, route} from "@mateothegreat/svelte5-router";
   import { emailValidationPattern } from "./utils";
-  import {appState} from "./ts/state.ts";
 
   let email = "";
   let password = "";
@@ -19,10 +18,10 @@
       goto("/user/search");
       email = "";
       password = "";
-    } catch (e) {
+    } catch (e: unknown) {
       isSubmitting = false;
       password = "";
-      appState.setError(e);
+      error = String(e);
     }
   }
 </script>
