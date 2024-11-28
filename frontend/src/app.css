@@ -561,6 +561,10 @@ tbody tr:last-of-type {
   display: inline;
 }
 
+.hidden {
+  display: none;
+}
+
 /* Drop Down Menu Template*/
 .dropdown {
   position: relative;
@@ -625,4 +629,40 @@ tbody tr:last-of-type {
 
 .dropdown:hover .drop-button svg {
   transform: rotate(180deg);
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: auto;
+  background-color: var(--tertiary-100);
+  color: black;
+  text-align: center;
+  border-radius: 0.5em;
+  padding: 0.25rem;
+  position: absolute;
+  top: 110%;
+  z-index: 1;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 135%;
+  left: 50%;
+  margin-left: -60px;
+  border-width: 5px;
+  border-style: solid;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
 }
