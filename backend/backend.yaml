@@ -567,6 +567,21 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Repo'
+  /repos/healthvaluethreshold:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HealthValueThreshold'
   /repos/{id}:
     get:
       tags:
@@ -780,6 +795,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RepoHealthValue'
+        '400':
+          description: Bad Request
+  /repos/{id}/healthvalue/metrics:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepoMetrics'
         '400':
           description: Bad Request
   /hooks/stripe:
@@ -1200,6 +1237,70 @@ components:
           type: number
       required:
         - uuid
+    HealthValueThreshold:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        ThContributerCount:
+          $ref: '#/components/schemas/Threshold'
+        ThCommitCount:
+            $ref: '#/components/schemas/Threshold'
+        ThSponsorDonation:
+            $ref: '#/components/schemas/Threshold'
+        ThRepoStarCount:
+            $ref: '#/components/schemas/Threshold'
+        ThRepoMultiplier:
+            $ref: '#/components/schemas/Threshold'
+      required:
+        - thContributerCount
+        - thCommitCount
+        - thSponsorDonation
+        - thRepoStarCount
+        - thRepoMultiplier
+    Threshold:
+      type: object
+      properties:
+        upper:
+          type: integer
+          format: int64
+        lower:
+          type: integer
+          format: int64
+      required:
+        - upper
+        - lower
+    RepoMetrics:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        repoid:
+          type: string
+          format: uuid
+        createdat:
+          type: string
+          format: date-time
+        contributercount:
+          type: integer
+          format: int64
+        commitcount:
+          type: integer
+          format: int64
+        sponsorcount:
+          type: integer
+          format: int64
+        repostarcount:
+          type: integer
+          format: int64
+        repomultipliercount:
+          type: integer
+          format: int64
     PaymentEvent:
       type: array
       items:
