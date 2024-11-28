@@ -6,8 +6,26 @@ import (
 	"net/http"
 )
 
+//type RepoMultiplier struct {
+//	foo
+//}
+
+// multiplier application
+/*
+              / Repo 1 / Repo 2 / Repo 3 / Repo 4 / Repo 5
+Foundation 01 /   x    /        /   x    /        /  x
+Foundation 02 /        /        /   x    /    x   /
+Foundation 03 /   x    /        /        /        /  x
+Foundation 04 /   x    /   x    /   x    /    x   /
+Foundation 05 /        /        /   x    /    x   /  x
+*/
+
 func GetMultiplier(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	fmt.Println("Working")
+}
+
+func calculateMultiplier() {
+
 }
 
 // Goal of successfully getting the multiplier
@@ -37,5 +55,6 @@ Every calculation of the multiplier value is dependent on
 // general structure and functions
 /*
 - Algorithm: Add function to get and return the multiplier value
+	- Fairly easy test cases.
 - Algorithm: Add function to calculate the multiplier value per repo - loop?
 */
