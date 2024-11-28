@@ -73,7 +73,7 @@ type FlatFeeWeight struct {
 
 type ContribCommitCount struct {
 	RepoId           uuid.UUID `json:"repoid"`
-	ContributerCount int       `json:"contributercount"`
+	ContributorCount int       `json:"contributorcount"`
 	CommitCount      int       `json:"commitcount"`
 }
 

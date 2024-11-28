@@ -16,7 +16,7 @@ type Threshold struct {
 type RepoHealthThreshold struct {
 	Id                 uuid.UUID  `db:"id"`
 	CreatedAt          time.Time  `db:"created_at"`
-	ThContributerCount *Threshold `db:"th_contributer_count" validate:"required"`
+	ThContributorCount *Threshold `db:"th_contributor_count" validate:"required"`
 	ThCommitCount      *Threshold `db:"th_commit_count" validate:"required"`
 	ThSponsorDonation  *Threshold `db:"th_sponsor_donation" validate:"required"`
 	ThRepoStarCount    *Threshold `db:"th_repo_star_count" validate:"required"`
@@ -28,13 +28,13 @@ Marshal not tested for the reason taht RepoHealthThreshold already restricted
 to types that can't trigger an error.
 */
 func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
-	if threshold.ThCommitCount == nil || threshold.ThContributerCount == nil || threshold.ThRepoMultiplier == nil || threshold.ThRepoStarCount == nil || threshold.ThSponsorDonation == nil {
+	if threshold.ThCommitCount == nil || threshold.ThContributorCount == nil || threshold.ThRepoMultiplier == nil || threshold.ThRepoStarCount == nil || threshold.ThSponsorDonation == nil {
 		return fmt.Errorf("Threshold values can't be empty, aborting")
 	}
 
-	contributerJSON, err := json.Marshal(threshold.ThContributerCount)
+	contributorJSON, err := json.Marshal(threshold.ThContributorCount)
 	if err != nil {
-		return fmt.Errorf("error marshaling contributer threshold: %w", err)
+		return fmt.Errorf("error marshaling contributor threshold: %w", err)
 	}
 
 	commitJSON, err := json.Marshal(threshold.ThCommitCount)
@@ -62,7 +62,7 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 			repo_health_threshold (
       	id,
       	created_at,
-      	th_contributer_count,
+      	th_contributor_count,
       	th_commit_count,
       	th_sponsor_donation,
       	th_repo_star_count,
@@ -79,7 +79,7 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 	res, err := DB.Exec(query,
 		threshold.Id,
 		threshold.CreatedAt,
-		contributerJSON,
+		contributorJSON,
 		commitJSON,
 		sponsorJSON,
 		starJSON,
@@ -101,7 +101,7 @@ func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
 		SELECT 
 			id,                                          	
 			created_at,                                  	
-			th_contributer_count,                        	
+			th_contributor_count,                        	
 			th_commit_count,                             	
 			th_sponsor_donation,                         	
 			th_repo_star_count,                          	
@@ -124,7 +124,7 @@ func GetLatestThresholds() (*RepoHealthThreshold, error) {
 		SELECT 
 			id,
 			created_at,
-			th_contributer_count,
+			th_contributor_count,
 			th_commit_count,
 			th_sponsor_donation,
 			th_repo_star_count,
@@ -147,7 +147,7 @@ func GetRepoThresholdHistory() ([]RepoHealthThreshold, error) {
     SELECT 
       id,
       created_at,
-      th_contributer_count,
+      th_contributor_count,
       th_commit_count,
       th_sponsor_donation,
       th_repo_star_count,
@@ -173,11 +173,11 @@ func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 	for rows.Next() {
 		var id uuid.UUID
 		var time time.Time
-		var contributerRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON []byte
+		var contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON []byte
 		err := rows.Scan(
 			&id,
 			&time,
-			&contributerRawJSON,
+			&contributorRawJSON,
 			&commitRawJSON,
 			&sponsorRawJSON,
 			&starRawJSON,
@@ -187,7 +187,7 @@ func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 			return nil, err
 		}
 
-		row := byteToJson(id, time, contributerRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON)
+		row := byteToJson(id, time, contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON)
 		repoHealthThresholds = append(repoHealthThresholds, *row)
 	}
 
@@ -195,9 +195,9 @@ func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 }
 
 func byteToJson(id uuid.UUID, time time.Time, contrib, commit, sponsor, star, multi []byte) *RepoHealthThreshold {
-	var contributerJSON, commitJSON, sponsorJSON, starJSON, multiplierJSON Threshold
+	var contributorJSON, commitJSON, sponsorJSON, starJSON, multiplierJSON Threshold
 
-	json.Unmarshal([]byte(contrib), &contributerJSON)
+	json.Unmarshal([]byte(contrib), &contributorJSON)
 	json.Unmarshal([]byte(commit), &commitJSON)
 	json.Unmarshal([]byte(sponsor), &sponsorJSON)
 	json.Unmarshal([]byte(star), &starJSON)
@@ -206,7 +206,7 @@ func byteToJson(id uuid.UUID, time time.Time, contrib, commit, sponsor, star, mu
 	row := RepoHealthThreshold{
 		Id:                 id,
 		CreatedAt:          time,
-		ThContributerCount: &contributerJSON,
+		ThContributorCount: &contributorJSON,
 		ThCommitCount:      &commitJSON,
 		ThSponsorDonation:  &sponsorJSON,
 		ThRepoStarCount:    &starJSON,
