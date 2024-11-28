@@ -33,3 +33,9 @@ Every calculation of the multiplier value is dependent on
 	-> Blackbox: with the polled database informations the max amount foundations are paying is calculated
 3. Blackbox: Execute HandleFoundationDonation to donate to the repositories
 */
+
+// general structure and functions
+/*
+- Algorithm: Add function to get and return the multiplier value
+- Algorithm: Add function to calculate the multiplier value per repo - loop?
+*/
