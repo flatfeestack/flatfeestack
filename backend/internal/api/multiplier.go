@@ -6,6 +6,12 @@ import (
 	"net/http"
 )
 
+type FoundationRepoSelection struct {
+	Foundations []string
+	Repos       []string
+	Data        [][]bool
+}
+
 //type RepoMultiplier struct {
 //	foo
 //}
@@ -25,7 +31,17 @@ func GetMultiplier(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 }
 
 func calculateMultiplier() {
+	/*
+		input: map of foundations with repos sponsoring to
+			- a matrix
+				              / Repo 1 / Repo 2 / Repo 3 / Repo 4 / Repo 5
+				Foundation 01 /   x    /        /   x    /        /  x
+				Foundation 02 /        /        /   x    /    x   /
+				Foundation 03 /   x    /        /        /        /  x
+				Foundation 04 /   x    /   x    /   x    /    x   /
+			- map[]
 
+	*/
 }
 
 // Goal of successfully getting the multiplier
