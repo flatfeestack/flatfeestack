@@ -52,14 +52,30 @@ func GetRepoMetricsById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail
 		slog.Error("repo metrics not found %s",
 			slog.String("id", repoId.String()))
 		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
-		//util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
 	} else if err != nil {
 		slog.Error("Could not fetch repo metrics",
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
-		//util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
 	} else {
 		util.WriteJson(w, repoMetrics)
+	}
+
+}
+
+func GetPartialHealthValuesById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	repoId := uuid.MustParse(r.PathValue("id"))
+	partialHealthValues, err := getPartialRepoHealthValues()
+
+	if partialHealthValues == nil {
+		slog.Error("repo metrics not found %s",
+			slog.String("id", repoId.String()))
+		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
+	} else if err != nil {
+		slog.Error("Could not fetch repo metrics",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+	} else {
+		util.WriteJson(w, partialHealthValues)
 	}
 
 }
@@ -150,8 +166,7 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 
 	var repoHealthHistory []RepoHealthValue
 	for _, metrics := range healthMetrics {
-		//tmp := calculateRepoHealthValue(healthThreshold, &metrics)
-		partialTmp := getPartialRepoHealthValues(healthThreshold, &metrics)
+		partialTmp := calculatePartialHealthValues(healthThreshold, &metrics)
 		tmp := calculateRepoHealthValue(*partialTmp)
 		repoHealthHistory = append(
 			repoHealthHistory,
@@ -163,23 +178,11 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 }
 
 func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
-	healthMetrics, err := db.FindRepoHealthMetricsByRepoId(repoId)
+	partialHealthValue, err := getPartialRepoHealthValues(repoId)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't get repo health metrics: %v", err)
+		return returnZeroHealthValue(repoId), fmt.Errorf("couldn't get partial health values for repo with id %v: %v", repoId, err)
 	}
 
-	if healthMetrics == nil {
-		return &RepoHealthValue{
-			RepoId:      repoId,
-			HealthValue: 0,
-		}, nil
-	}
-
-	healthThreshold, err := db.GetLatestThresholds()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't get latest threshold values: %v", err)
-	}
-	partialHealthValue := getPartialRepoHealthValues(healthThreshold, healthMetrics)
 	healthValue := calculateRepoHealthValue(*partialHealthValue)
 	return &RepoHealthValue{
 		RepoId:      repoId,
@@ -187,7 +190,25 @@ func getRepoHealthValue(repoId uuid.UUID) (*RepoHealthValue, error) {
 	}, nil
 }
 
-func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) *PartialHealthValues {
+func getPartialRepoHealthValues(repoId uuid.UUID) (*PartialHealthValues, error) {
+	healthMetrics, err := db.FindRepoHealthMetricsByRepoId(repoId)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get repo health metrics: %v", err)
+	}
+
+	if healthMetrics == nil {
+		return nil, fmt.Errorf("no health metrics founds to corresponding repoId, %v", repoId)
+	}
+
+	healthThreshold, err := db.GetLatestThresholds()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get latest threshold values: %v", err)
+	}
+
+	return calculatePartialHealthValues(healthThreshold, healthMetrics), nil
+}
+
+func calculatePartialHealthValues(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) *PartialHealthValues {
 	healthMetrics := []int{
 		metrics.ContributorCount,
 		metrics.CommitCount,
@@ -220,7 +241,6 @@ func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.R
 			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
 			partialHealthValue = 2 / float64(thresholdDifference) * float64(normalizedCurrentMetric)
 		}
-		//healthValue += partialHealthValue
 		partialHealthValues = append(partialHealthValues, partialHealthValue)
 	}
 	return &PartialHealthValues{
@@ -235,4 +255,8 @@ func getPartialRepoHealthValues(threshold *db.RepoHealthThreshold, metrics *db.R
 func calculateRepoHealthValue(partialHealthValues PartialHealthValues) float64 {
 	healthValue := partialHealthValues.CommitValue + partialHealthValues.ContributorValue + partialHealthValues.SponsorValue + partialHealthValues.RepoStarValue + partialHealthValues.RepoMultiplierValue
 	return math.Round(healthValue*100) / 100
+}
+
+func returnZeroHealthValue(repoId uuid.UUID) *RepoHealthValue {
+	return &RepoHealthValue{RepoId: repoId, HealthValue: 0}
 }

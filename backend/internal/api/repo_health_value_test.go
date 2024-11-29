@@ -62,9 +62,12 @@ func TestGetRepoHealthValueByRepoIdNilRepoId(t *testing.T) {
 
 	var repoId uuid.UUID
 	result, err := getRepoHealthValue(repoId)
-	assert.Nil(t, result)
+	compareValue := returnZeroHealthValue(uuid.MustParse("00000000-0000-0000-0000-000000000000"))
+
+	assert.NotNil(t, result)
+	assert.Equal(t, result, compareValue)
 	assert.Error(t, err)
-	assert.Equal(t, err.Error(), "couldn't get repo health metrics: repoId is empty")
+	assert.Equal(t, err.Error(), "couldn't get partial health values for repo with id 00000000-0000-0000-0000-000000000000: couldn't get repo health metrics: repoId is empty")
 }
 func TestGetRepoHealthValueByRepoIdHealthMetricsEmpty(t *testing.T) {
 	db.SetupTestData()
@@ -72,7 +75,7 @@ func TestGetRepoHealthValueByRepoIdHealthMetricsEmpty(t *testing.T) {
 
 	r := insertTestRepo(t)
 	result, err := getRepoHealthValue(r.Id)
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, result.HealthValue, float64(0))
 }
 
@@ -90,7 +93,7 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 	}
 	metrics := getTestData(3, 131, 5, 20, 12)
 
-	partialResult := getPartialRepoHealthValues(&threshold, metrics)
+	partialResult := calculatePartialHealthValues(&threshold, metrics)
 	result := calculateRepoHealthValue(*partialResult)
 	assert.Equal(t, result, float64(5.13))
 }
