@@ -582,6 +582,21 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/HealthValueThreshold'
+  /repos/{id}/healthvalue/partial:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartialHealthValues'
   /repos/{id}:
     get:
       tags:
