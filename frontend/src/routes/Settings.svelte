@@ -461,7 +461,11 @@
       style="margin-left: 2rem;"
     >
       <p>
-        Your tipping limit is set to <strong>${dailyLimit}</strong> per day.
+        Your tipping limit is set to <strong
+          >${new Intl.NumberFormat("de-CH", { useGrouping: true }).format(
+            dailyLimit
+          )}</strong
+        > per day.
       </p>
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>
