@@ -33,12 +33,10 @@ func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, _ *db.Us
 	if healthValue == nil {
 		slog.Error("Health Value not found %s",
 			slog.String("id", repoId.String()))
-		//util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
 		util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
 	} else if err != nil {
 		slog.Error("Could not fetch health value",
 			slog.Any("error", err))
-		//util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		util.WriteJson(w, &RepoHealthValue{RepoId: repoId, HealthValue: 0})
 	} else {
 		util.WriteJson(w, healthValue)
@@ -64,7 +62,7 @@ func GetRepoMetricsById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail
 
 func GetPartialHealthValuesById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	repoId := uuid.MustParse(r.PathValue("id"))
-	partialHealthValues, err := getPartialRepoHealthValues()
+	partialHealthValues, err := getPartialRepoHealthValues(repoId)
 
 	if partialHealthValues == nil {
 		slog.Error("repo metrics not found %s",
