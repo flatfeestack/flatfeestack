@@ -46,12 +46,6 @@
     try {
       $latestThresholds = await API.repos.getLatestHealthValueThresholds();
       $loadedLatestThresholds = true;
-      console.log("thresholds: ", $latestThresholds);
-      console.log("contributors: ", $latestThresholds.ThContributorCount);
-      console.log("commit: ", $latestThresholds.ThCommitCount);
-      console.log("sponsordonation: ", $latestThresholds.ThSponsorDonation);
-      console.log("multiplier: ", $latestThresholds.ThRepoMultiplier);
-      console.log("starCount: ", $latestThresholds.ThRepoStarCount);
     } catch (e) {
       $error = e;
     }
@@ -60,353 +54,146 @@
   async function getRepoHealthMetrics() {
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
-      console.log("repo metrics: ", repoMetrics);
-      console.log("repo metric contrib:", repoMetrics.contributorcount);
-      console.log("repo metric commit:", repoMetrics.commitcount);
     } catch (e) {
       $error = e;
     }
   }
 
   function initRepoMetricsChart() {
-    console.log("repo metric commit:", repoMetrics.commitcount);
-    const ctxEM1 = (
-      document.getElementById("repo-metrics-chart-em1") as HTMLCanvasElement
-    )?.getContext("2d");
-    const ctxEM2 = (
-      document.getElementById("repo-metrics-chart-em2") as HTMLCanvasElement
-    )?.getContext("2d");
-    const ctxIM1 = (
-      document.getElementById("repo-metrics-chart-im1") as HTMLCanvasElement
-    )?.getContext("2d");
-    const ctxIM2 = (
-      document.getElementById("repo-metrics-chart-im2") as HTMLCanvasElement
-    )?.getContext("2d");
-    const ctxIM3 = (
-      document.getElementById("repo-metrics-chart-im3") as HTMLCanvasElement
-    )?.getContext("2d");
+    const chartConfigs = [
+      {
+        chart: repoMetricsChartExternal1,
+        id: "repo-metrics-chart-em1",
+        label: "Contributor Count",
+        data: [repoMetrics.contributorcount],
+        backgroundColor: ["rgba(75, 192, 192, 0.6)"],
+        borderColor: ["rgba(75, 192, 192, 1)"],
+        thresholds: $latestThresholds.ThContributorCount,
+      },
+      {
+        chart: repoMetricsChartExternal2,
+        id: "repo-metrics-chart-em2",
+        label: "Commit Count",
+        data: [repoMetrics.commitcount],
+        backgroundColor: ["rgba(153, 102, 255, 0.6)"],
+        borderColor: ["rgba(153, 102, 255, 1)"],
+        thresholds: $latestThresholds.ThCommitCount,
+      },
+      {
+        chart: repoMetricsChartInternal1,
+        id: "repo-metrics-chart-im1",
+        label: "Sponsors with Donation",
+        data: [repoMetrics.sponsorcount],
+        backgroundColor: ["rgba(255, 159, 64, 0.6)"],
+        borderColor: ["rgba(255, 159, 64, 1)"],
+        thresholds: $latestThresholds.ThSponsorDonation,
+      },
+      {
+        chart: repoMetricsChartInternal2,
+        id: "repo-metrics-chart-im2",
+        label: "Multiplier Sponsors",
+        data: [repoMetrics.repomultipliercount],
+        backgroundColor: ["rgba(255, 99, 132, 0.6)"],
+        borderColor: ["rgba(255, 99, 132, 1)"],
+        thresholds: $latestThresholds.ThRepoMultiplier,
+      },
+      {
+        chart: repoMetricsChartInternal3,
+        id: "repo-metrics-chart-im3",
+        label: "User w/o Donation",
+        data: [repoMetrics.repostarcount],
+        backgroundColor: ["rgba(54, 162, 235, 0.6)"],
+        borderColor: ["rgba(54, 162, 235, 1)"],
+        thresholds: $latestThresholds.ThRepoStarCount,
+      },
+    ];
 
-    if (ctxEM1) {
-      Chart.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        LinearScale,
-        Tooltip,
-        Legend,
-        Title
-      );
-      repoMetricsChartExternal1 = new Chart(ctxEM1, {
-        type: "bar",
-        data: {
-          labels: [" "],
-          datasets: [
-            {
-              label: "Contributor Count",
-              data: [repoMetrics.contributorcount],
-              backgroundColor: ["rgba(75, 192, 192, 0.6)"],
-              borderColor: ["rgba(75, 192, 192, 1)"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-            x: {
-              min: 0,
-              max:
-                $latestThresholds.ThContributorCount.lower +
-                $latestThresholds.ThContributorCount.upper,
-            },
-          },
-          animation: {
-            onComplete: function () {
-              const chartInstance = repoMetricsChartExternal1;
-              const xScale = chartInstance.scales.x;
-              const yScale = chartInstance.scales.y;
-              const ctx = chartInstance.ctx;
+    chartConfigs.forEach((config) => {
+      const ctx = (
+        document.getElementById(config.id) as HTMLCanvasElement
+      )?.getContext("2d");
 
-              // Save context state
-              ctx.save();
-              ctx.lineWidth = 2;
-              ctx.setLineDash([5, 5]); // Dashed line
+      if (ctx) {
+        Chart.register(
+          BarController,
+          BarElement,
+          CategoryScale,
+          LinearScale,
+          Tooltip,
+          Legend,
+          Title
+        );
+        config.chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: [" "],
+            datasets: [
+              {
+                label: config.label,
+                data: config.data,
+                backgroundColor: config.backgroundColor,
+                borderColor: config.borderColor,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                enabled: true,
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+              x: {
+                min: 0,
+                max: config.thresholds.lower + config.thresholds.upper,
+              },
+            },
+            animation: {
+              onComplete: function () {
+                const chartInstance = config.chart;
+                const xScale = chartInstance.scales.x;
+                const yScale = chartInstance.scales.y;
+                const ctx = chartInstance.ctx;
 
-              // Draw the red line at lower Threshold
-              const lowerThreshold = xScale.getPixelForValue(
-                $latestThresholds.ThContributorCount.lower
-              );
-              ctx.strokeStyle = "red"; // Set color to red
-              ctx.beginPath();
-              ctx.moveTo(lowerThreshold, yScale.top); // Top of the y-axis
-              ctx.lineTo(lowerThreshold, yScale.bottom); // Bottom of the y-axis
-              ctx.stroke();
+                ctx.save();
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]); // Dashed line
 
-              // Draw the green line at upper Threshold
-              const upperThreshold = xScale.getPixelForValue(
-                $latestThresholds.ThContributorCount.upper
-              );
-              ctx.strokeStyle = "green"; // Set color to green
-              ctx.beginPath();
-              ctx.moveTo(upperThreshold, yScale.top); // Top of the y-axis
-              ctx.lineTo(upperThreshold, yScale.bottom); // Bottom of the y-axis
-              ctx.stroke();
+                const lowerThreshold = xScale.getPixelForValue(
+                  config.thresholds.lower
+                );
+                ctx.strokeStyle = "red";
+                ctx.beginPath();
+                ctx.moveTo(lowerThreshold, yScale.top);
+                ctx.lineTo(lowerThreshold, yScale.bottom);
+                ctx.stroke();
 
-              // Restore context state
-              ctx.restore();
-            },
-          },
-        },
-        // plugins: [thresholdPlugin],
-      });
-    }
-    if (ctxEM2) {
-      Chart.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        LinearScale,
-        Tooltip,
-        Legend,
-        Title
-      );
-      repoMetricsChartExternal2 = new Chart(ctxEM2, {
-        type: "bar",
-        data: {
-          labels: [" "],
-          datasets: [
-            {
-              label: "Commit Count",
-              data: [repoMetrics.commitcount],
-              backgroundColor: ["rgba(153, 102, 255, 0.6)"],
-              borderColor: ["rgba(153, 102, 255, 1)"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-            x: {
-              min: 0,
-              max:
-                $latestThresholds.ThCommitCount.lower +
-                $latestThresholds.ThCommitCount.upper,
-            },
-          },
-          animation: {
-            onComplete: function () {
-              const chartInstance = repoMetricsChartExternal2;
-              const xScale = chartInstance.scales.x;
-              const yScale = chartInstance.scales.y;
-              const ctx = chartInstance.ctx;
+                const upperThreshold = xScale.getPixelForValue(
+                  config.thresholds.upper
+                );
+                ctx.strokeStyle = "green";
+                ctx.beginPath();
+                ctx.moveTo(upperThreshold, yScale.top);
+                ctx.lineTo(upperThreshold, yScale.bottom);
+                ctx.stroke();
 
-              // Save context state
-              ctx.save();
-              ctx.lineWidth = 2;
-              ctx.setLineDash([5, 5]); // Dashed line
-
-              // Draw the red line at lower Threshold
-              const lowerThreshold = xScale.getPixelForValue(
-                $latestThresholds.ThCommitCount.lower
-              );
-              ctx.strokeStyle = "red"; // Set color to red
-              ctx.beginPath();
-              ctx.moveTo(lowerThreshold, yScale.top); // Top of the y-axis
-              ctx.lineTo(lowerThreshold, yScale.bottom); // Bottom of the y-axis
-              ctx.stroke();
-
-              // Draw the green line at upper Threshold
-              const upperThreshold = xScale.getPixelForValue(
-                $latestThresholds.ThCommitCount.upper
-              );
-              ctx.strokeStyle = "green"; // Set color to green
-              ctx.beginPath();
-              ctx.moveTo(upperThreshold, yScale.top); // Top of the y-axis
-              ctx.lineTo(upperThreshold, yScale.bottom); // Bottom of the y-axis
-              ctx.stroke();
-
-              // Restore context state
-              ctx.restore();
+                ctx.restore();
+              },
             },
           },
-        },
-        // plugins: [thresholdPlugin],
-      });
-    }
-    if (ctxIM1) {
-      Chart.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        LinearScale,
-        Tooltip,
-        Legend,
-        Title
-      );
-      repoMetricsChartInternal1 = new Chart(ctxIM1, {
-        type: "bar",
-        data: {
-          labels: [" "],
-          datasets: [
-            {
-              label: "Commit Count",
-              data: [repoMetrics.repostarcount],
-              backgroundColor: ["rgba(255, 159, 64, 0.6)"],
-              borderColor: ["rgba(255, 159, 64, 1)"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-            // x: {
-            //   min: thInternalMetric1.lower,
-            //   max: thInternalMetric1.upper,
-            // },
-          },
-        },
-        // plugins: [thresholdPlugin],
-      });
-    }
-    if (ctxIM2) {
-      Chart.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        LinearScale,
-        Tooltip,
-        Legend,
-        Title
-      );
-      repoMetricsChartInternal2 = new Chart(ctxIM2, {
-        type: "bar",
-        data: {
-          labels: [" "],
-          datasets: [
-            {
-              label: "Commit Count",
-              data: [repoMetrics.repomultipliercount],
-              backgroundColor: ["rgba(255, 99, 132, 0.6)"],
-              borderColor: ["rgba(255, 99, 132, 1)"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-            // x: {
-            //   min: thInternalMetric1.lower,
-            //   max: thInternalMetric1.upper,
-            // },
-          },
-        },
-        // plugins: [thresholdPlugin],
-      });
-    }
-    if (ctxIM3) {
-      Chart.register(
-        BarController,
-        BarElement,
-        CategoryScale,
-        LinearScale,
-        Tooltip,
-        Legend,
-        Title
-      );
-      repoMetricsChartInternal3 = new Chart(ctxIM3, {
-        type: "bar",
-        data: {
-          labels: [" "],
-          datasets: [
-            {
-              label: "Commit Count",
-              data: [repoMetrics.sponsorcount],
-              backgroundColor: ["rgba(54, 162, 235, 0.6)"],
-              borderColor: ["rgba(54, 162, 235, 1)"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-            // x: {
-            //   min: thInternalMetric1.lower,
-            //   max: thInternalMetric1.upper,
-            // },
-          },
-        },
-        // plugins: [thresholdPlugin],
-      });
-    }
+        });
+      }
+    });
   }
 
   function initHealthValueChart() {
@@ -415,31 +202,6 @@
     )?.getContext("2d");
 
     if (ctx) {
-      // const thresholds = [1.1, 1.1, 2.2, 2.2, 2.2];
-
-      // const thresholdPlugin = {
-      //   id: 'thresholdPlugin',
-      //   afterDatasetsDraw(chart: any) {
-      //     const { ctx, scales } = chart;
-      //     const xScale = scales.x;
-      //     const yScale = scales.y;
-      //
-      //     ctx.save();
-      //     thresholds.forEach((threshold, index) => {
-      //       const xCenter = xScale.getPixelForValue(index); // Center of the bar
-      //       const yThreshold = yScale.getPixelForValue(threshold); // Y position for threshold
-      //
-      //       ctx.beginPath();
-      //       ctx.strokeStyle = threshold > 2 ? 'red' : 'green'; // Red for > 2, green otherwise
-      //       ctx.lineWidth = 2;
-      //       ctx.moveTo(xCenter - xScale.getPixelForTickWidth() / 2, yThreshold);
-      //       ctx.lineTo(xCenter + xScale.getPixelForTickWidth() / 2, yThreshold);
-      //       ctx.stroke();
-      //     });
-      //     ctx.restore();
-      //   },
-      // }
-
       Chart.register(
         BarController,
         BarElement,
@@ -514,48 +276,7 @@
             },
           },
         },
-        // plugins: [thresholdPlugin],
       });
-      // repoMetricsChart = new Chart(ctx, {
-      //   type: 'bar',
-      //   data: {
-      //     labels: [
-      //       `External Metric 1`,
-      //     ],
-      //     datasets: [
-      //       {
-      //         data: [
-      //           externalMetric1,
-      //         ],
-      //         backgroundColor: [
-      //           'rgba(75, 192, 192, 0.6)',
-      //         ],
-      //         borderColor: [
-      //           'rgba(75, 192, 192, 1)',
-      //         ],
-      //         borderWidth: 1,
-      //       },
-      //     ],
-      //   },
-      //   options: {
-      //     indexAxis: 'y',
-      //     responsive: true,
-      //     plugins: {
-      //       legend: {
-      //         display: false,
-      //       },
-      //       tooltip: {
-      //         enabled: true,
-      //       },
-      //     },
-      //     scales: {
-      //       y: {
-      //         beginAtZero: true,
-      //       },
-      //     },
-      //   },
-      //   // plugins: [thresholdPlugin],
-      // });
     }
   }
 
