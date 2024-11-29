@@ -5,7 +5,11 @@
     loadedLatestThresholds,
     latestThresholds,
   } from "../ts/mainStore";
-  import type { Repo, RepoMetrics } from "../types/backend";
+  import type {
+    Repo,
+    RepoMetrics,
+    PartialHealthValues,
+  } from "../types/backend";
   import {
     Chart,
     BarElement,
@@ -21,19 +25,14 @@
 
   export let repo: Repo;
 
-  const externalMetric1Points = 1.1;
-  const externalMetric2Points = 1.2;
-  const internalMetric1Points = 2.1;
-  const internalMetric2Points = 2.2;
-  const internalMetric3Points = 2.3;
-
   let repoMetrics: RepoMetrics;
+  let partialHealthValues: PartialHealthValues;
 
-  let externalMetric1: number;
-  let externalMetric2: number;
-  let internalMetric1: number;
-  let internalMetric2: number;
-  let internalMetric3: number;
+  let externalMetricHV1: number;
+  let externalMetricHV2: number;
+  let internalMetricHV1: number;
+  let internalMetricHV2: number;
+  let internalMetricHV3: number;
 
   let healthValueChart: Chart | null = null;
   let repoMetricsChartExternal1: Chart | null = null;
@@ -54,6 +53,19 @@
   async function getRepoHealthMetrics() {
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  async function getPartialHealthValues() {
+    try {
+      partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
+      externalMetricHV1 = partialHealthValues.contributorvalue;
+      externalMetricHV2 = partialHealthValues.commitvalue;
+      internalMetricHV1 = partialHealthValues.sponsorvalue;
+      internalMetricHV2 = partialHealthValues.repomultipliervalue;
+      internalMetricHV3 = partialHealthValues.repostarvalue;
     } catch (e) {
       $error = e;
     }
@@ -215,11 +227,6 @@
         type: "bar",
         data: {
           labels: [
-            // `${externalMetric1} External Metric 1`,
-            // `${externalMetric2} External Metric 2`,
-            // `${internalMetric1} Internal Metric 1`,
-            // `${internalMetric2} Internal Metric 2`,
-            // `${internalMetric3} Internal Metric 3`,
             `External Metric 1`,
             `External Metric 2`,
             `Internal Metric 1`,
@@ -229,11 +236,11 @@
           datasets: [
             {
               data: [
-                externalMetric1Points,
-                externalMetric2Points,
-                internalMetric1Points,
-                internalMetric2Points,
-                internalMetric3Points,
+                externalMetricHV1,
+                externalMetricHV2,
+                internalMetricHV1,
+                internalMetricHV2,
+                internalMetricHV3,
               ],
               backgroundColor: [
                 "rgba(75, 192, 192, 0.6)",
@@ -285,6 +292,7 @@
       await getLatestThresholds();
     }
     await getRepoHealthMetrics();
+    await getPartialHealthValues();
     initHealthValueChart();
     initRepoMetricsChart();
   });
@@ -305,11 +313,11 @@
   }
   #health-value-chart-div {
     height: 40vh;
-    width: 52vw;
+    width: auto;
   }
   .repo-metrics-chart-div {
     height: 10vh;
-    width: 52vw;
+    width: auto;
   }
   #health-value-chart,
   #repo-metrics-chart-em1,
@@ -317,54 +325,84 @@
     height: 100%;
     width: 100%;
   }
+  table,
+  td {
+    border: 1px solid var(--primary-700);
+  }
+  table {
+    border-collapse: collapse;
+  }
 </style>
 
 <div class="container-col">
   <h2>Assessment of {repo.name}</h2>
   <div class="container-col2 m-2">
     <h3>
-      Total Health Value: <strong>{repo.healthValue}</strong>
+      Composition of Health Value: <strong>{repo.healthValue}</strong>
     </h3>
-    <p>
-      External Metric 1: <strong>{externalMetric1}</strong>
-      <br />
-      External Metric 2: <strong>{externalMetric2}</strong>
+
+    <div id="health-value-chart-div" class="container">
+      <canvas id="health-value-chart" />
+    </div>
+
+    <table class="m-4">
+      <tr>
+        <td>Corresponding Points for External Metric 1:</td>
+        <td><strong>{externalMetricHV1}</strong></td>
+      </tr>
+      <tr>
+        <td>Corresponding Points for External Metric 2:</td>
+        <td><strong>{externalMetricHV2}</strong></td>
+      </tr>
+      <tr>
+        <td>Corresponding Points for Internal Metric 1:</td>
+        <td><strong>{internalMetricHV1}</strong></td>
+      </tr>
+      <tr>
+        <td>Corresponding Points for Internal Metric 2:</td>
+        <td><strong>{internalMetricHV2}</strong></td>
+      </tr>
+      <tr>
+        <td>Corresponding Points for Internal Metric 3:</td>
+        <td><strong>{internalMetricHV3}</strong></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="container-col2 m-2">
+    <h3>Exact Values of Repo Metrics Analysis and Associated Thresholds</h3>
+
+    <p class="mtrl-4">
+      External Metric 1: Active contributors in the last three months
     </p>
-    <p>
-      Internal Metric 1: <strong>{internalMetric1}</strong>
-      <br />
-      Internal Metric 2: <strong>{internalMetric2}</strong>
-      <br />
-      Internal Metric 3: <strong>{internalMetric3}</strong>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-em1" />
+    </div>
+
+    <p class="mtrl-4">External Metric 2: Commits in the last three months</p>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-em2" />
+    </div>
+
+    <p class="mtrl-4">
+      Internal Metric 1: Total active sponsoring for the repo
     </p>
-  </div>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-im1" />
+    </div>
 
-  <div id="health-value-chart-div" class="container m-2">
-    <canvas id="health-value-chart" />
-  </div>
+    <p class="mtrl-4">
+      Internal Metric 2: Total active multiplier sponsoring for Repo
+    </p>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-im2" />
+    </div>
 
-  <p class="mt-4">Active contributors in the last three months</p>
-  <div class="repo-metrics-chart-div m-2 container">
-    <canvas id="repo-metrics-chart-em1" />
-  </div>
-
-  <p class="mt-4">Commits in the last three months</p>
-  <div class="repo-metrics-chart-div container m-2">
-    <canvas id="repo-metrics-chart-em2" />
-  </div>
-
-  <p class="mt-4">Total active sponsoring for the repo</p>
-  <div class="repo-metrics-chart-div container m-2">
-    <canvas id="repo-metrics-chart-im1" />
-  </div>
-
-  <p class="mt-4">Total active multiplier sponsoring for Repo</p>
-  <div class="repo-metrics-chart-div container m-2">
-    <canvas id="repo-metrics-chart-im2" />
-  </div>
-
-  <p class="mt-4">Total active sponsoring by acredited developers</p>
-  <div class="repo-metrics-chart-div container m-2">
-    <canvas id="repo-metrics-chart-im3" />
+    <p class="mtrl-4">
+      Internal Metric 3: Total active sponsoring by acredited developers
+    </p>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-im3" />
+    </div>
   </div>
 </div>

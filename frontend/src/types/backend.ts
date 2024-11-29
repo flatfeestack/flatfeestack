@@ -24,6 +24,8 @@ export type HealthValueThreshold =
 
 export type Threshold = components["schemas"]["Threshold"];
 
+export type PartialHealthValues = components["schemas"]["PartialHealthValues"];
+
 export type RepoMetrics = components["schemas"]["RepoMetrics"];
 
 export type GitUser = components["schemas"]["GitUser"];

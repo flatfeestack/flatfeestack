@@ -80,7 +80,9 @@ h1 {
 .pt-0 {
   padding-top: 0;
 }
-
+.p-0 {
+  padding: 0;
+}
 .p-1 {
   padding: 0.25rem;
 }
@@ -160,6 +162,9 @@ h1 {
 }
 .mb-20 {
   margin-bottom: 2rem;
+}
+.mtrl-4 {
+  margin: 1rem 1rem 0 1rem;
 }
 
 .m-2 {

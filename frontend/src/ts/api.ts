@@ -21,6 +21,7 @@ import type {
   RepoHealthValue,
   HealthValueThreshold,
   RepoMetrics,
+  PartialHealthValues,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -284,6 +285,10 @@ export const API = {
       backendToken
         .get(`repos/${repoId}/healthvalue/metrics`)
         .json<RepoMetrics>(),
+    getPartialHealthValues: (repoId: string) =>
+      backendToken
+        .get(`repos/${repoId}/healthvalue/partial`)
+        .json<PartialHealthValues>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),
