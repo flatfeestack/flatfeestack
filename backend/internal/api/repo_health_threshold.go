@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func GetLatestThresholds(w http.ResponseWriter, r *http.Request) {
+func GetLatestThresholds(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 	res, err := db.GetLatestThresholds()
 	if res == nil {
 
