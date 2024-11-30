@@ -151,8 +151,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	contributions, err := db.FindRepoContribution(repoId)
-	contributors, err := db.FindRepoContributors(repoId)
+	contributions, _ := db.FindRepoContribution(repoId)
+	contributors, _ := db.FindRepoContributors(repoId)
 
 	offsetString := r.PathValue("offset")
 	offset, err := strconv.Atoi(offsetString)
@@ -497,4 +497,31 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 	}
 
 	util.WriteJson(w, repos)
+}
+
+func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
+	if err != nil {
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
+
+	repo, err := db.FindRepoById(repoId)
+	if err != nil {
+		slog.Error("Could not find repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		return
+	}
+
+	err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
+	if err != nil {
+		slog.Warn("Could not submit analysis request",
+			slog.Any("error", err))
+	}
+
+	util.WriteJson(w, repo)
 }
