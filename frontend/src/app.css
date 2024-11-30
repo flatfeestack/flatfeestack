@@ -647,7 +647,7 @@ tbody tr:last-of-type {
 .tooltip .tooltiptext {
   visibility: hidden;
   width: auto;
-  background-color: var(--tertiary-100);
+  background-color: var(--primary-100);
   color: black;
   text-align: center;
   border-radius: 0.5em;

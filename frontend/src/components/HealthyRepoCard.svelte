@@ -198,7 +198,7 @@
   }
 
   #trust-value-button:hover {
-    background-color: #cae2c8;
+    background-color: var(--primary-100);
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
 
@@ -226,14 +226,21 @@
   .overlay-container {
     position: absolute;
     width: 60vw;
-    height: 80vh;
+    height: 90vh;
     background-color: white;
     color: black;
     overflow-y: auto;
-    margin: 10vh 20vw;
+    margin: 5vh 20vw;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     cursor: pointer;
+  }
+
+  @media screen and (min-width: 2000px) {
+    .overlay-container {
+      width: 1185px;
+      margin: 5vh calc((100vw - 1185px) / 2);
+    }
   }
 
   @media screen and (max-width: 600px) {
