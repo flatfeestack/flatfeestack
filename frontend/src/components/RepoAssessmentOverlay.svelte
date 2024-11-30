@@ -22,24 +22,33 @@
     Animation,
   } from "chart.js";
   import { onMount, onDestroy } from "svelte";
+  import Dots from "./Dots.svelte";
 
   export let repo: Repo;
+
+  let asyncDataLoaded: boolean = false;
 
   let repoMetrics: RepoMetrics;
   let partialHealthValues: PartialHealthValues;
 
-  let externalMetricHV1: number;
-  let externalMetricHV2: number;
-  let internalMetricHV1: number;
-  let internalMetricHV2: number;
-  let internalMetricHV3: number;
+  let contributorValue: number;
+  let commitValue: number;
+  let sponsorValue: number;
+  let multiplierSponsorValue: number;
+  let starValue: number;
+
+  let contributorCount: number;
+  let commitCount: number;
+  let sponsorCount: number;
+  let multiplierSponsorCount: number;
+  let starCount: number;
 
   let healthValueChart: Chart | null = null;
-  let repoMetricsChartExternal1: Chart | null = null;
-  let repoMetricsChartExternal2: Chart | null = null;
-  let repoMetricsChartInternal1: Chart | null = null;
-  let repoMetricsChartInternal2: Chart | null = null;
-  let repoMetricsChartInternal3: Chart | null = null;
+  let contributorCountChart: Chart | null = null;
+  let commitCountChart: Chart | null = null;
+  let sponsorCountChart: Chart | null = null;
+  let multiplierSponsorCountChart: Chart | null = null;
+  let starCountChart: Chart | null = null;
 
   async function getLatestThresholds() {
     try {
@@ -53,6 +62,11 @@
   async function getRepoHealthMetrics() {
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
+      contributorCount = repoMetrics.contributorcount;
+      commitCount = repoMetrics.commitcount;
+      sponsorCount = repoMetrics.sponsorcount;
+      multiplierSponsorCount = repoMetrics.repomultipliercount;
+      starCount = repoMetrics.repostarcount;
     } catch (e) {
       $error = e;
     }
@@ -61,11 +75,11 @@
   async function getPartialHealthValues() {
     try {
       partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
-      externalMetricHV1 = partialHealthValues.contributorvalue;
-      externalMetricHV2 = partialHealthValues.commitvalue;
-      internalMetricHV1 = partialHealthValues.sponsorvalue;
-      internalMetricHV2 = partialHealthValues.repomultipliervalue;
-      internalMetricHV3 = partialHealthValues.repostarvalue;
+      contributorValue = partialHealthValues.contributorvalue;
+      commitValue = partialHealthValues.commitvalue;
+      sponsorValue = partialHealthValues.sponsorvalue;
+      multiplierSponsorValue = partialHealthValues.repomultipliervalue;
+      starValue = partialHealthValues.repostarvalue;
     } catch (e) {
       $error = e;
     }
@@ -74,7 +88,7 @@
   function initRepoMetricsChart() {
     const chartConfigs = [
       {
-        chart: repoMetricsChartExternal1,
+        chart: contributorCountChart,
         id: "repo-metrics-chart-em1",
         label: "Contributor Count",
         data: [repoMetrics.contributorcount],
@@ -83,7 +97,7 @@
         thresholds: $latestThresholds.ThContributorCount,
       },
       {
-        chart: repoMetricsChartExternal2,
+        chart: commitCountChart,
         id: "repo-metrics-chart-em2",
         label: "Commit Count",
         data: [repoMetrics.commitcount],
@@ -92,7 +106,7 @@
         thresholds: $latestThresholds.ThCommitCount,
       },
       {
-        chart: repoMetricsChartInternal1,
+        chart: sponsorCountChart,
         id: "repo-metrics-chart-im1",
         label: "Sponsors with Donation",
         data: [repoMetrics.sponsorcount],
@@ -101,7 +115,7 @@
         thresholds: $latestThresholds.ThSponsorDonation,
       },
       {
-        chart: repoMetricsChartInternal2,
+        chart: multiplierSponsorCountChart,
         id: "repo-metrics-chart-im2",
         label: "Multiplier Sponsors",
         data: [repoMetrics.repomultipliercount],
@@ -110,7 +124,7 @@
         thresholds: $latestThresholds.ThRepoMultiplier,
       },
       {
-        chart: repoMetricsChartInternal3,
+        chart: starCountChart,
         id: "repo-metrics-chart-im3",
         label: "User w/o Donation",
         data: [repoMetrics.repostarcount],
@@ -227,20 +241,20 @@
         type: "bar",
         data: {
           labels: [
-            `External Metric 1`,
-            `External Metric 2`,
-            `Internal Metric 1`,
-            `Internal Metric 2`,
-            `Internal Metric 3`,
+            `Contributor Value`,
+            `Commit Value`,
+            `Sponsor Value`,
+            `Multiplier Sponsor Value`,
+            `Star Value`,
           ],
           datasets: [
             {
               data: [
-                externalMetricHV1,
-                externalMetricHV2,
-                internalMetricHV1,
-                internalMetricHV2,
-                internalMetricHV3,
+                contributorValue,
+                commitValue,
+                sponsorValue,
+                multiplierSponsorValue,
+                starValue,
               ],
               backgroundColor: [
                 "rgba(75, 192, 192, 0.6)",
@@ -248,11 +262,11 @@
                 "rgba(255, 159, 64, 0.6)",
                 "rgba(255, 99, 132, 0.6)",
                 "rgba(54, 162, 235, 0.6)",
-                // externalMetric1 > 2 ? 'red' : 'green',
-                // externalMetric2 > 2 ? 'red' : 'green',
-                // internalMetric1 > 2 ? 'red' : 'green',
-                // internalMetric2 > 2 ? 'red' : 'green',
-                // internalMetric3 > 2 ? 'red' : 'green',
+                // contributorCount > 2 ? 'red' : 'green',
+                // commitCount > 2 ? 'red' : 'green',
+                // sponsorCount > 2 ? 'red' : 'green',
+                // multiplierSponsorCount > 2 ? 'red' : 'green',
+                // starCount > 2 ? 'red' : 'green',
               ],
               borderColor: [
                 "rgba(75, 192, 192, 1)",
@@ -295,19 +309,25 @@
     await getPartialHealthValues();
     initHealthValueChart();
     initRepoMetricsChart();
+    asyncDataLoaded = true;
   });
 
   onDestroy(() => {
     if (healthValueChart) healthValueChart.destroy();
-    if (repoMetricsChartExternal1) repoMetricsChartExternal1.destroy();
-    if (repoMetricsChartExternal2) repoMetricsChartExternal2.destroy();
-    if (repoMetricsChartInternal1) repoMetricsChartInternal1.destroy();
-    if (repoMetricsChartInternal2) repoMetricsChartInternal2.destroy();
-    if (repoMetricsChartInternal3) repoMetricsChartInternal3.destroy();
+    if (contributorCountChart) contributorCountChart.destroy();
+    if (commitCountChart) commitCountChart.destroy();
+    if (sponsorCountChart) sponsorCountChart.destroy();
+    if (multiplierSponsorCountChart) multiplierSponsorCountChart.destroy();
+    if (starCountChart) starCountChart.destroy();
   });
 </script>
 
 <style>
+  h2,
+  h3 {
+    margin-bottom: 0;
+  }
+
   .container-col {
     padding: 0;
   }
@@ -325,12 +345,11 @@
     height: 100%;
     width: 100%;
   }
-  table,
-  td {
-    border: 1px solid var(--primary-700);
+  thead tr {
+    background-color: var(--primary-700);
   }
-  table {
-    border-collapse: collapse;
+  tbody tr:nth-of-type(even) {
+    background-color: var(--secondary-100);
   }
 </style>
 
@@ -338,68 +357,92 @@
   <h2>Assessment of {repo.name}</h2>
   <div class="container-col2 m-2">
     <h3>
-      Composition of Health Value: <strong>{repo.healthValue}</strong>
+      Overview - Composition of Health Value: {repo.healthValue}
     </h3>
+    <table class="m-4">
+      <thead>
+        <tr>
+          <th>Exact Values of Repo Metrics Analysis</th>
+          <th class="text-center">Partial Health Values</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td
+            >Corresponding points for <strong>{contributorCount}</strong> contributors:</td
+          >
+          <td class="text-center"><strong>{contributorValue}</strong></td>
+        </tr>
+        <tr>
+          <td
+            >Corresponding points for <strong>{commitCount}</strong> commits:</td
+          >
+          <td class="text-center"><strong>{commitValue}</strong></td>
+        </tr>
+        <tr>
+          <td
+            >Corresponding points for <strong>{sponsorCount}</strong> active sponsors:</td
+          >
+          <td class="text-center"><strong>{sponsorValue}</strong></td>
+        </tr>
+        <tr>
+          <td
+            >Corresponding points for <strong>{multiplierSponsorCount}</strong> active
+            multiplier sponsors:</td
+          >
+          <td class="text-center"><strong>{multiplierSponsorValue}</strong></td>
+        </tr>
+        <tr>
+          <td>Corresponding points for <strong>{starCount}</strong> stars:</td>
+          <td class="text-center"><strong>{starValue}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="container-col2 m-2">
+    <h3>Partial Health Values</h3>
 
     <div id="health-value-chart-div" class="container">
       <canvas id="health-value-chart" />
     </div>
-
-    <table class="m-4">
-      <tr>
-        <td>Corresponding Points for External Metric 1:</td>
-        <td><strong>{externalMetricHV1}</strong></td>
-      </tr>
-      <tr>
-        <td>Corresponding Points for External Metric 2:</td>
-        <td><strong>{externalMetricHV2}</strong></td>
-      </tr>
-      <tr>
-        <td>Corresponding Points for Internal Metric 1:</td>
-        <td><strong>{internalMetricHV1}</strong></td>
-      </tr>
-      <tr>
-        <td>Corresponding Points for Internal Metric 2:</td>
-        <td><strong>{internalMetricHV2}</strong></td>
-      </tr>
-      <tr>
-        <td>Corresponding Points for Internal Metric 3:</td>
-        <td><strong>{internalMetricHV3}</strong></td>
-      </tr>
-    </table>
   </div>
 
   <div class="container-col2 m-2">
     <h3>Exact Values of Repo Metrics Analysis and Associated Thresholds</h3>
 
     <p class="mtrl-4">
-      External Metric 1: Active contributors in the last three months
+      <strong>Contributor Count:</strong> Active contributors in the last three months
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-em1" />
     </div>
 
-    <p class="mtrl-4">External Metric 2: Commits in the last three months</p>
+    <p class="mtrl-4">
+      <strong>Commit Count:</strong> Commits in the last three months
+    </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-em2" />
     </div>
 
     <p class="mtrl-4">
-      Internal Metric 1: Total active sponsoring for the repo
+      <strong>Sponsoring Count:</strong> total amount of currently active sponsoring
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-im1" />
     </div>
 
     <p class="mtrl-4">
-      Internal Metric 2: Total active multiplier sponsoring for Repo
+      <strong>Multiplier Sponsoring Count:</strong> total amount of currently active
+      multiplier sponsoring
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-im2" />
     </div>
 
     <p class="mtrl-4">
-      Internal Metric 3: Total active sponsoring by acredited developers
+      <strong>Star Count:</strong> total recieved stars by users <br /> (only users
+      that donated on FlatFeeStack in the last 3 months are counted)
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-im3" />
