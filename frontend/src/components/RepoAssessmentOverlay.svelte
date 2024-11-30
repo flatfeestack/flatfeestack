@@ -92,8 +92,8 @@
         id: "repo-metrics-chart-em1",
         label: "Contributor Count",
         data: [repoMetrics.contributorcount],
-        backgroundColor: ["rgba(75, 192, 192, 0.6)"],
-        borderColor: ["rgba(75, 192, 192, 1)"],
+        backgroundColor: ["rgba(255, 159, 64, 0.6)"],
+        borderColor: ["rgba(255, 159, 64, 1)"],
         thresholds: $latestThresholds.ThContributorCount,
       },
       {
@@ -101,33 +101,33 @@
         id: "repo-metrics-chart-em2",
         label: "Commit Count",
         data: [repoMetrics.commitcount],
-        backgroundColor: ["rgba(153, 102, 255, 0.6)"],
-        borderColor: ["rgba(153, 102, 255, 1)"],
+        backgroundColor: ["rgba(255, 99, 132, 0.6)"],
+        borderColor: ["rgba(255, 99, 132, 1)"],
         thresholds: $latestThresholds.ThCommitCount,
       },
       {
         chart: sponsorCountChart,
         id: "repo-metrics-chart-im1",
         label: "Sponsors with Donation",
-        data: [repoMetrics.sponsorcount],
-        backgroundColor: ["rgba(255, 159, 64, 0.6)"],
-        borderColor: ["rgba(255, 159, 64, 1)"],
+        data: [repoMetrics.sponsorcount], // change back to repoMetrics.sponsorcount
+        backgroundColor: ["rgba(75, 192, 192, 0.6)"],
+        borderColor: ["rgba(75, 192, 192, 1)"],
         thresholds: $latestThresholds.ThSponsorDonation,
       },
       {
         chart: multiplierSponsorCountChart,
         id: "repo-metrics-chart-im2",
         label: "Multiplier Sponsors",
-        data: [repoMetrics.repomultipliercount],
-        backgroundColor: ["rgba(255, 99, 132, 0.6)"],
-        borderColor: ["rgba(255, 99, 132, 1)"],
+        data: [repoMetrics.repomultipliercount], // change back to repoMetrics.repomultipliercount
+        backgroundColor: ["rgba(153, 102, 255, 0.6)"],
+        borderColor: ["rgba(153, 102, 255, 1)"],
         thresholds: $latestThresholds.ThRepoMultiplier,
       },
       {
         chart: starCountChart,
         id: "repo-metrics-chart-im3",
         label: "User w/o Donation",
-        data: [repoMetrics.repostarcount],
+        data: [repoMetrics.repostarcount], // change back to repoMetrics.repostarcount
         backgroundColor: ["rgba(54, 162, 235, 0.6)"],
         borderColor: ["rgba(54, 162, 235, 1)"],
         thresholds: $latestThresholds.ThRepoStarCount,
@@ -252,16 +252,22 @@
               data: [
                 contributorValue,
                 commitValue,
-                sponsorValue,
-                multiplierSponsorValue,
-                starValue,
+                sponsorValue, // change back to sponsorValue
+                multiplierSponsorValue, // change back to multiplierSponsorValue
+                starValue, // change back to starValue
               ],
               backgroundColor: [
-                "rgba(75, 192, 192, 0.6)",
-                "rgba(153, 102, 255, 0.6)",
+                // contributorValue < 0.6
+                //   ? "red"
+                //   : contributorValue <= 1.5
+                //     ? "yellow"
+                //     : "green",
                 "rgba(255, 159, 64, 0.6)",
                 "rgba(255, 99, 132, 0.6)",
+                "rgba(75, 192, 192, 0.6)",
+                "rgba(153, 102, 255, 0.6)",
                 "rgba(54, 162, 235, 0.6)",
+
                 // contributorCount > 2 ? 'red' : 'green',
                 // commitCount > 2 ? 'red' : 'green',
                 // sponsorCount > 2 ? 'red' : 'green',
@@ -269,13 +275,13 @@
                 // starCount > 2 ? 'red' : 'green',
               ],
               borderColor: [
-                "rgba(75, 192, 192, 1)",
-                "rgba(153, 102, 255, 1)",
                 "rgba(255, 159, 64, 1)",
                 "rgba(255, 99, 132, 1)",
+                "rgba(75, 192, 192, 1)",
+                "rgba(153, 102, 255, 1)",
                 "rgba(54, 162, 235, 1)",
               ],
-              borderWidth: 1,
+              borderWidth: 2,
             },
           ],
         },
@@ -294,6 +300,10 @@
           scales: {
             y: {
               beginAtZero: true,
+            },
+            x: {
+              min: 0,
+              max: 2,
             },
           },
         },
