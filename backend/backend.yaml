@@ -620,7 +620,7 @@ paths:
         '404':
           description: Not Found
   /repos/{id}/forceAnalyzer:
-    post:
+    get:
       tags:
         - Repos
       security:
