@@ -1,0 +1,110 @@
+/* Padding */
+.p-025 {
+    padding: 0.25rem;
+}
+.p-050 {
+    padding: 0.5rem;
+}
+.p-075 {
+    padding: 0.75rem;
+}
+.p-125 {
+    padding: 1.25rem;
+}
+.p-300 {
+    padding: 3rem;
+}
+
+.px-050 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+.px-100 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.py-025 {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+.py-050 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+.py-075 {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+.py-125 {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+}
+.py-300 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+.pl-050 {
+    padding-left: 0.5rem;
+}
+
+.pt-100 {
+    padding-top: 1rem;
+}
+
+/* Margins */
+.m-0 {
+    margin: 0;
+}
+.m-050 {
+    margin: 0.5rem;
+}
+.m-100 {
+    margin: 1rem;
+}
+
+.mx-050 {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+.my-050 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.my-100 {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+.my-200 {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.mb-0 {
+    margin-bottom: 0;
+}
+.mb-050 {
+    margin-bottom: 0.5rem;
+}
+.mb-200 {
+    margin-bottom: 2rem;
+}
+
+.ml-050 {
+    margin-left: 0.5rem;
+}
+
+.mt-050 {
+    margin-top: 0.5rem;
+}
+.mt-200 {
+    margin-top: 2rem;
+}
+.mt-400 {
+    margin-top: 4rem;
+}
+.mt-600 {
+    margin-top: 6rem;
+}
+

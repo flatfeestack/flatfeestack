@@ -1,0 +1,31 @@
+input:invalid:not(:placeholder-shown) {
+    border: 2px solid red;
+}
+
+input:invalid:not(:placeholder-shown) + .help-text {
+    display: block;
+}
+
+.help-text {
+    color: red;
+    font-size: 0.8em;
+    margin-top: 4px;
+    display: none;
+}
+
+/* input fields */
+input[type="email"],
+input[type="text"],
+input[type="number"],
+input[type="password"],
+select,
+textarea {
+    border: 2px solid var(--primary-700);
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    border-radius: 6px;
+}
+
+textarea {
+    font-size: medium;
+}

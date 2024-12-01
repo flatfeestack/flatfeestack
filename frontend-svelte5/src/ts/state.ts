@@ -3,29 +3,26 @@ import type { User, Config, Repo } from "../types/backend.ts";
 type AppStateType = {
     error: string;
     isSubmitting: boolean;
-    loginFailed: boolean;
     user: User;
     config: Config;
     sponsoredRepos: Repo[];
     loadedSponsoredRepos: boolean;
     route: string;
     accessToken: string;
-    accessTokenExpire: string;
+    accessTokenExpire: number;
 }
-
 // Instead of stores, use state
 export class AppState {
     $state: AppStateType = {
         error: "",
         isSubmitting: false,
-        loginFailed: false,
         user: <User>{},
         config: <Config>{},
         sponsoredRepos: <Repo[]>[],
         loadedSponsoredRepos: false,
         route: "",
         accessToken: "",
-        accessTokenExpire: ""
+        accessTokenExpire: 0
     };
 
     isAccessTokenExpired(): boolean {
@@ -35,11 +32,10 @@ export class AppState {
         }
 
         try {
-            const expirationSeconds = parseInt(expireTime);
             const currentSeconds = Math.floor(Date.now() / 1000);
             const bufferSeconds = 30; // 30 second buffer
 
-            return currentSeconds + bufferSeconds >= expirationSeconds;
+            return currentSeconds + bufferSeconds >= expireTime;
         } catch {
             return true;
         }
@@ -48,6 +44,7 @@ export class AppState {
         this.$state.error = e instanceof Error ? e.message : String(e);
     }
 }
-
 // Create and export a single instance
 export const appState = new AppState();
+
+

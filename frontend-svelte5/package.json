@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",
-    "@mateothegreat/svelte5-router": "0.0.25",
+    "@mateothegreat/svelte5-router": "0.0.26",
     "svelte": "5.2.10",
     "ky": "^1.7.2",
     "@stripe/stripe-js": "^4.10.0",

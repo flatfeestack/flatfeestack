@@ -1,6 +1,6 @@
 <script lang="ts">
     import { appState } from "ts/state.ts";
-    import {hasToken, removeSession} from "ts/auth";
+    import {getRefreshToken, removeSession} from "ts/auth";
     import { onMount } from "svelte";
     import { API } from "./ts/api.ts";
     import '@fortawesome/fontawesome-free/css/all.min.css'
@@ -13,7 +13,7 @@
 
     onMount(async () => {
         try {
-            if(!appState.$state.user && hasToken()) {
+            if(!appState.$state.user && getRefreshToken() !== null) {
                 appState.$state.user = await API.user.get();
             }
         } catch (e) {

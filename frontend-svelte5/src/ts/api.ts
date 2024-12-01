@@ -1,7 +1,7 @@
 import ky from "ky";
 
 import { appState } from "ts/state.ts";
-import {refresh} from "ts/auth.ts";
+import {refresh, removeToken} from "ts/auth.ts";
 import type {
   ChartDataTotal,
   ClientSecret,
@@ -34,21 +34,19 @@ import type { DaoConfig, PayoutConfig } from "types/payout.ts";
 
 const timeout = 5000;
 
-export type ApiError = {
-  type: string;
-  values: Map<string, string>;
+export class ApiError extends Error {
+  constructor(
+      message: string,
+      public statusCode: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
 }
 
-type ApiErrorRaw = {
-  type: string;
-  values: { [key: string]: string };
-}
-
-function convertToApiError(rawError: ApiErrorRaw): ApiError {
-  return {
-    type: rawError.type,
-    values: new Map(Object.entries(rawError.values))
-  };
+interface ErrorResponse {
+  error: string;
 }
 
 function createAuthenticatedApi(prefix: string, timeout: number) {
@@ -60,8 +58,12 @@ function createAuthenticatedApi(prefix: string, timeout: number) {
       beforeRequest: [
         async (request) => {
           // If no token or token is expired, refresh immediately
-          if (!appState.$state.accessToken || appState.isAccessTokenExpired()) {
-            const accessToken = await refresh();
+          const refreshToken = localStorage.getItem("ffs-refresh");
+          if(!refreshToken) {
+            throw new Error("Refresh token is missing");
+          }
+          if (appState.isAccessTokenExpired()) {
+            const accessToken = await refresh(refreshToken);
             request.headers.set('Authorization', `Bearer ${accessToken}`);
             return;
           }
@@ -71,13 +73,17 @@ function createAuthenticatedApi(prefix: string, timeout: number) {
       afterResponse: [
         async (_request, _options, response) => {
           if (response.status !== 200) {
-            if (response.status === 403 || response.status === 429) {
+            if (response.status === 429) {
+              //expired, clear access token
               appState.$state.accessToken = "";
-              appState.$state.accessTokenExpire = "";
+              appState.$state.accessTokenExpire = 0;
+              return;
+            } else if (response.status === 404 && _request.url === "login") {
+              //user unknown, clear access and refresh token
+              removeToken();
             }
-            const rawError = await response.json();
-            const apiError = convertToApiError(rawError as ApiErrorRaw);
-            throw new Error(apiError.type);
+            const rawError: ErrorResponse = await response.json();
+            throw new ApiError(rawError.error, response.status);
           }
           return response;
         }
@@ -85,12 +91,12 @@ function createAuthenticatedApi(prefix: string, timeout: number) {
     },
     retry: {
       limit: 2,
-      statusCodes: [401, 429]
+      statusCodes: [429]
     }
   });
 }
 
-const authToken = createAuthenticatedApi("/auth", timeout);
+const authToken = createAuthenticatedApi("/auth2", timeout);
 const backendToken = createAuthenticatedApi("/backend", timeout);
 //const forumToken = createAuthenticatedApi("/forum", timeout);
 
@@ -103,27 +109,19 @@ const search = ky.create({prefixUrl: "/search", timeout});
 export const API = {
   authToken: {
     logout: () =>
-        authToken.get(`authen/logout?redirect_uri=/`),
+        authToken.get(`logout?redirect_uri=/`),
     timeWarp: (hours: number) =>
         authToken.post(`admin/timewarp/${hours}`).json<Token>(),
     loginAs: (email: string) =>
         authToken.post(`admin/login-as/${email}`).json<Token>(),
   },
   auth: {
-    signup: (email: string, password: string) =>
-        auth.post("signup", { json: { email, password } }),
-    login: (email: string, password: string) =>
-        auth.post("login", { json: { email, password } }).json<Token>(),
-    refresh: (refresh: string) =>
-        auth.post("refresh", { json: { refresh_token: refresh } }).json<Token>(),
-    reset: (email: string) =>
-        auth.post(`reset/${email}`),
-    confirmInvite: (email: string, password: string, emailToken: string) =>
-        auth.post("confirm/invite", { json: { email, password, emailToken } }).json<Token>(),
-    confirmEmail: (email: string, emailToken: string) =>
-      auth.post("confirm/signup", { json: { email, emailToken } }).json<Token>(),
-    confirmReset: (email: string, password: string, emailToken: string) =>
-      auth.post("confirm/reset", { json: { email, password, emailToken } }).json<Token>(),
+    login: (email: string) =>
+        auth.post(`login/${email}`).json<Token | null>(),
+    confirm: (email: string, emailToken: string) =>
+        auth.post(`confirm/${email}/${emailToken}`).json<Token>(),
+    refresh: (refresh_token: string, email: string) =>
+        auth.post("refresh", { json: { refresh_token, email } }).json<Token>(),
   },
   user: {
     get: () =>

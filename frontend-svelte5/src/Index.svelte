@@ -3,16 +3,10 @@
     import {Router} from "@mateothegreat/svelte5-router";
 
     import Landing from './Landing.svelte';
-    import Login from "./Login.svelte";
+    import Login from "./auth/Login.svelte";
     import CatchAllRoute from "./CatchAllRoute.svelte";
-    import Forgot from "./Forgot.svelte";
-    import Signup from "./Signup.svelte";
     import DifferentChainId from "./DifferentChainId.svelte";
     import PublicBadges from "./PublicBadges.svelte";
-    import ConfirmForgot from "./ConfirmForgot.svelte";
-    import ConfirmSignup from "./ConfirmSignup.svelte";
-    import ForwardGitEmail from "./ForwardGitEmail.svelte";
-    import ConfirmInvite from "./ConfirmInvite.svelte";
     import Search from "./Search.svelte";
     import Payments from "./Payments.svelte";
     import Settings from "./Settings.svelte";
@@ -20,13 +14,13 @@
     import Badges from "./Badges.svelte";
     import Invitations from "./Invitations.svelte";
     import Admin from "./Admin.svelte";
+    import LoginWait from "./auth/LoginWait.svelte";
+    import LoginConfirm from "./auth/LoginConfirm.svelte";
+    import {API} from "./ts/api.ts";
+    import {onMount} from "svelte";
+    import {appState} from "./ts/state.ts";
 
     const routes: Route[] = [
-        {path: "/confirm/reset/:email/:token", component: ConfirmForgot},
-        {path: "/confirm/signup/:email/:token", component: ConfirmSignup},
-        {path: "/confirm/git-email/:email/:token", component: ForwardGitEmail},
-        {path: "/confirm/invite/:email/:emailToken/:inviteByEmail", component: ConfirmInvite},
-
         {path: "/user/search", component: Search},
         {path: "/user/payments", component: Payments},
         {path: "/user/settings", component: Settings},
@@ -37,11 +31,18 @@
 
         {path: "/differentChainId", component: DifferentChainId},
         {path: "/badges/:uuid", component: PublicBadges},
-        {path: "/forgot", component: Forgot},
-        {path: "/signup", component: Signup},
+        {path: "/login-confirm", component: LoginConfirm},
+        {path: "/login-wait", component: LoginWait},
         {path: "/login", component: Login},
         {path: "/", component: Landing},
         {path: "*", component: CatchAllRoute}
     ];
+
+    onMount(async () => {
+        if (!appState.$state.config) {
+            appState.$state.config = await API.config.config();
+        }
+    });
+
 </script>
 <Router {routes}/>
