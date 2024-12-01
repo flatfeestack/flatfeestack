@@ -1,10 +1,11 @@
 Hi {{.email}},
 
-You have been invited by {{.inviter}} to join their project.
-To view the invitation and login, please click on the following link:
-
+Here's your secure login link for FlatFeeStack:
 {{.url}}
 
-Or copy the link and paste it in your browser,
+This link will expire in 30 minutes for security purposes. If the link doesn't work, you can copy and paste it directly into your browser.
 
-FlatFeeStack Team
+Need help? Just reply to this email.
+
+Best regards,
+The FlatFeeStack Team

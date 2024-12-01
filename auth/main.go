@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -38,9 +37,9 @@ var (
 	privEdDSAKid string
 	tokenExp     time.Duration
 	refreshExp   time.Duration
-	codeExp      time.Duration
 	secondsAdd   int
 	admins       []string
+	noAuthUsers  []string
 	debug        bool
 	logger       = slog.New(slogcolor.NewHandler(os.Stderr, &slogcolor.Options{
 		Level:         slog.LevelDebug,
@@ -73,21 +72,10 @@ type Credentials struct {
 	RedirectAs201 bool   `json:"redirectAs201,omitempty"`
 }
 
-type TokenClaims struct {
-	Scope string `json:"scope,omitempty"`
-	jwt.Claims
-}
-
 type RefreshClaims struct {
 	ExpiresAt int64  `json:"exp,omitempty"`
 	Subject   string `json:"role,omitempty"`
 	Token     string `json:"token,omitempty"`
-}
-type CodeClaims struct {
-	ExpiresAt               int64  `json:"exp,omitempty"`
-	Subject                 string `json:"role,omitempty"`
-	CodeChallenge           string `json:"code_challenge,omitempty"`
-	CodeCodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 }
 
 type ProvisioningUri struct {
@@ -97,19 +85,17 @@ type ProvisioningUri struct {
 type OAuth struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresAt    string `json:"expires_at"`
+	ExpiresAt    int64  `json:"expires_at"`
 }
 
-// system user does not need refresh token
-type OAuthSystem struct {
-	AccessToken string `json:"access_token"`
-	ExpiresAt   string `json:"expires_at"`
+type Refresh struct {
+	RefreshToken string `json:"refresh_token"`
+	Email        string `json:"email"`
 }
 
 type Config struct {
 	Env             string
 	Dev             string
-	Issuer          string
 	Port            int
 	DBPath          string
 	DBDriver        string
@@ -119,25 +105,15 @@ type Config struct {
 	EmailUrl        string
 	EmailToken      string
 	EmailLinkPrefix string
-	Audience        string
 	ExpireAccess    int
 	ExpireRefresh   int
-	ExpireCode      int
 	HS256           string
 	EdDSA           string
 	RS256           string
 	OAuthUser       string
 	OAuthPass       string
-	ResetRefresh    bool
-	Users           string
+	NoAuthUsers     string
 	AdminEndpoints  bool
-	UserEndpoints   bool
-	OauthEndpoints  bool
-	DetailedError   bool
-	Redirects       string
-	PasswordFlow    bool
-	Scope           string
-	LogPath         string
 	Admins          string
 }
 
@@ -152,11 +128,10 @@ func hash(s string) int64 {
 	return int64(h.Sum64())
 }
 
-func parseFLag() {
-	cfg = &Config{}
+func parseFLag() *Config {
+	cfg := &Config{}
 	flag.StringVar(&cfg.Env, "env", LookupEnv("ENV"), "ENV variable")
 	flag.StringVar(&cfg.Dev, "dev", LookupEnv("DEV"), "Dev settings with initial secret")
-	flag.StringVar(&cfg.Issuer, "issuer", LookupEnv("ISSUER"), "name of issuer, default in dev is my-issuer")
 	flag.IntVar(&cfg.Port, "port", LookupEnvInt("PORT",
 		8080), "listening HTTP port")
 	flag.StringVar(&cfg.DBPath, "db-path", LookupEnv("DB_PATH",
@@ -170,29 +145,17 @@ func parseFLag() {
 	flag.StringVar(&cfg.EmailUrl, "email-url", LookupEnv("EMAIL_URL"), "Email service URL")
 	flag.StringVar(&cfg.EmailToken, "email-token", LookupEnv("EMAIL_TOKEN"), "Email service token")
 	flag.StringVar(&cfg.EmailLinkPrefix, "email-prefix", LookupEnv("EMAIL_PREFIX"), "Email link prefix")
-	flag.StringVar(&cfg.Audience, "audience", LookupEnv("AUDIENCE"), "Audience, default in dev is my-audience")
 	flag.IntVar(&cfg.ExpireAccess, "expire-access", LookupEnvInt("EXPIRE_ACCESS",
 		30*60), "Access token expiration in seconds, default 30min")
 	flag.IntVar(&cfg.ExpireRefresh, "expire-refresh", LookupEnvInt("EXPIRE_REFRESH",
 		180*24*60*60), "Refresh token expiration in seconds, default 6month")
-	flag.IntVar(&cfg.ExpireCode, "expire-code", LookupEnvInt("EXPIRE_CODE",
-		60), "Authtoken flow expiration in seconds, default 1min")
 	flag.StringVar(&cfg.HS256, "hs256", LookupEnv("HS256"), "HS256 key")
 	flag.StringVar(&cfg.RS256, "rs256", LookupEnv("RS256"), "RS256 key")
 	flag.StringVar(&cfg.EdDSA, "eddsa", LookupEnv("EDDSA"), "EdDSA key")
 	flag.StringVar(&cfg.OAuthUser, "oauth-user", LookupEnv("OAUTH_USER"), "Basic auth username for the server meta data")
 	flag.StringVar(&cfg.OAuthPass, "oauth-pass", LookupEnv("OAUTH_PASS"), "Basic auth password for the server meta data")
-	flag.BoolVar(&cfg.ResetRefresh, "reset-refresh", LookupEnv("RESET_REFRESH") != "", "Reset refresh token when setting the token")
-	flag.StringVar(&cfg.Users, "users", LookupEnv("USERS"), "add these initial users. E.g, -users tom@test.ch:pw123;test@test.ch:123pw")
+	flag.StringVar(&cfg.NoAuthUsers, "users", LookupEnv("NO_AUTH_USERS"), "add these users that can skip email magic link. E.g, -users tom@test.ch;test@test.ch")
 	flag.BoolVar(&cfg.AdminEndpoints, "admin-endpoints", LookupEnv("ADMIN_ENDPOINTS") != "", "Enable admin-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&cfg.UserEndpoints, "user-endpoints", LookupEnv("USER_ENDPOINTS") != "", "Enable user-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&cfg.OauthEndpoints, "oauth-enpoints", LookupEnv("OAUTH_ENDPOINTS") != "", "Enable oauth-facing endpoints. In dev mode these are enabled by default")
-	flag.BoolVar(&cfg.DetailedError, "details", LookupEnv("DETAILS") != "", "Enable detailed errors")
-	flag.StringVar(&cfg.Redirects, "redir", LookupEnv("REDIR"), "add client redirects. E.g, -redir clientId1:http://blabla;clientId2:http://blublu")
-	flag.BoolVar(&cfg.PasswordFlow, "pwflow", LookupEnv("PWFLOW") != "", "enable password flow, default disabled")
-	flag.StringVar(&cfg.Scope, "scope", LookupEnv("SCOPE"), "scope, default in dev is my-scope")
-	flag.StringVar(&cfg.LogPath, "log", LookupEnv("LOG",
-		os.TempDir()+"/ffs"), "Log directory, default is /tmp/ffs")
 	flag.StringVar(&cfg.Admins, "admins", LookupEnv("ADMINS"), "Admins")
 
 	flag.Usage = func() {
@@ -211,15 +174,6 @@ func parseFLag() {
 
 	//set defaults
 	if cfg.Dev != "" {
-		if cfg.Scope == "" {
-			cfg.Scope = "my-scope"
-		}
-		if cfg.Audience == "" {
-			cfg.Audience = "my-audience"
-		}
-		if cfg.Issuer == "" {
-			cfg.Issuer = "my-issuer"
-		}
 		if cfg.EmailUrl == "" {
 			cfg.EmailUrl = "http://localhost:8080/send/email/{email}/{token}"
 		}
@@ -275,14 +229,6 @@ func parseFLag() {
 			cfg.OAuthPass = "secret"
 		}
 		cfg.AdminEndpoints = true
-		cfg.OauthEndpoints = true
-		cfg.UserEndpoints = true
-		cfg.DetailedError = true
-		cfg.PasswordFlow = true
-
-		if cfg.Users == "" {
-			cfg.Users = "user:pass"
-		}
 
 		slog.Debug("DEV mode active, key is %v, hex(%v)", slog.String("cfg.Dev", cfg.Dev), slog.String("cfg.HS256", cfg.HS256))
 		slog.Debug("DEV mode active, rsa is hex(%v)", slog.String("cfg.RS256", cfg.RS256))
@@ -290,6 +236,8 @@ func parseFLag() {
 	}
 
 	admins = strings.Split(cfg.Admins, ";")
+	noAuthUsers = strings.Split(cfg.NoAuthUsers, ";")
+
 	if cfg.OAuthUser != "" {
 		admins = append(admins, cfg.OAuthUser)
 	}
@@ -357,40 +305,8 @@ func parseFLag() {
 
 	tokenExp = time.Second * time.Duration(cfg.ExpireAccess)
 	refreshExp = time.Second * time.Duration(cfg.ExpireRefresh)
-	codeExp = time.Second * time.Duration(cfg.ExpireCode)
-}
 
-func checkEmailPassword(email string, password string) (*dbRes, string, error) {
-	result, err := findAuthByEmail(email)
-	if err != nil {
-		return nil, "not-found", fmt.Errorf("ERR-checkEmail-01, DB select, %v err %v", email, err)
-	}
-
-	if result.emailToken != nil {
-		return nil, "blocked", fmt.Errorf("ERR-checkEmail-02, user %v no email verified: %v", email, err)
-	}
-
-	if result.errorCount > 2 {
-		return nil, "blocked", fmt.Errorf("ERR-checkEmail-03, user %v no email verified: %v", email, err)
-	}
-
-	storedPw, calcPw, err := checkPw(password, result.password)
-	if err != nil {
-		return nil, "blocked", fmt.Errorf("ERR-checkEmail-04, key %v error: %v", email, err)
-	}
-
-	if !bytes.Equal(calcPw, storedPw) {
-		err = incErrorCount(email)
-		if err != nil {
-			return nil, "blocked", fmt.Errorf("ERR-checkEmail-05, key %v error: %v", email, err)
-		}
-		return nil, "refused", fmt.Errorf("ERR-checkEmail-06, user %v password mismatch", email)
-	}
-	err = resetCount(email)
-	if err != nil {
-		return nil, "blocked", fmt.Errorf("ERR-checkEmail-05, key %v error: %v", email, err)
-	}
-	return result, "", nil
+	return cfg
 }
 
 func middlewareLog(handlerFunc func(http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
@@ -398,7 +314,7 @@ func middlewareLog(handlerFunc func(http.ResponseWriter, *http.Request)) func(w 
 	return loggedHandler
 }
 
-func middlewareJwtLog(handlerFunc func(http.ResponseWriter, *http.Request, *TokenClaims)) func(w http.ResponseWriter, r *http.Request) {
+func middlewareJwtLog(handlerFunc func(http.ResponseWriter, *http.Request, *jwt.Claims)) func(w http.ResponseWriter, r *http.Request) {
 	jh := jwtAuth(handlerFunc)
 	return middlewareLog(jh)
 }
@@ -410,27 +326,10 @@ func middlewareJwtAdminLog(handlerFunc func(http.ResponseWriter, *http.Request, 
 
 func setupRouter() *http.ServeMux {
 	router := http.NewServeMux()
-
-	if cfg.UserEndpoints {
-		router.HandleFunc("POST /login", middlewareLog(login))
-		router.HandleFunc("POST /refresh", middlewareLog(refresh))
-		router.HandleFunc("POST /signup", middlewareLog(signup))
-		router.HandleFunc("POST /reset/{email}", middlewareLog(resetEmail))
-		router.HandleFunc("GET /confirm/signup/{email}/{token}", middlewareLog(confirmEmail))
-		router.HandleFunc("POST /confirm/signup", middlewareLog(confirmEmailPost))
-		router.HandleFunc("POST /confirm/invite", middlewareLog(confirmInvite))
-		router.HandleFunc("POST /confirm/reset", middlewareLog(confirmReset))
-
-		router.HandleFunc("POST /invite/{email}", middlewareJwtLog(invite))
-		router.HandleFunc("POST /setup/totp", middlewareJwtLog(setupTOTP))
-		router.HandleFunc("POST /confirm/totp/{token}", middlewareJwtLog(confirmTOTP))
-	}
-	//logout
-	router.HandleFunc("GET /authen/logout", middlewareJwtLog(logout))
-
-	//maintenance stuff
-	router.HandleFunc("GET /readiness", middlewareLog(readiness))
-	router.HandleFunc("GET /liveness", middlewareLog(liveness))
+	router.HandleFunc("POST /login/{email}", middlewareLog(login))
+	router.HandleFunc("POST /confirm/{email}/{emailToken}", middlewareLog(confirm))
+	router.HandleFunc("POST /refresh", middlewareLog(refresh))
+	router.HandleFunc("GET /logout", middlewareJwtLog(logout))
 
 	//display for debug and testing
 	if debug {
@@ -439,23 +338,13 @@ func setupRouter() *http.ServeMux {
 		router.HandleFunc("POST /admin/timewarp/{hours}", middlewareJwtAdminLog(timeWarp))
 	}
 
-	if cfg.OauthEndpoints {
-		router.HandleFunc("POST /oauth/login", middlewareLog(login))
-		router.HandleFunc("POST /oauth/token", middlewareLog(oauth))
-		router.HandleFunc("POST /oauth/revoke", middlewareLog(revoke))
-		router.HandleFunc("GET /oauth/authorize", middlewareLog(authorize))
-		//convenience function
-		if cfg.Env == "dev" || cfg.Env == "local" {
-			router.HandleFunc("GET /", middlewareLog(authorize))
-		}
-		router.HandleFunc("GET /.well-known/jwks.json", middlewareLog(jwkFunc))
-	}
-
 	if cfg.AdminEndpoints {
+		//admin endpoints
 		router.HandleFunc("POST /users/usernames/{email}/cancellation", middlewareJwtAdminLog(deleteUser))
 		router.HandleFunc("PATCH /users/usernames/{email}/attributes", middlewareJwtAdminLog(updateUser))
 		router.HandleFunc("POST /admin/login-as/{email}", middlewareJwtAdminLog(asUser))
 	}
+	router.HandleFunc("GET /.well-known/jwks.json", middlewareLog(jwkFunc))
 
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("[404] no route matched for", "url", r.URL, "method", r.Method)
@@ -472,7 +361,7 @@ func main() {
 		slog.Info("Could not find .env file, using defaults")
 	}
 
-	parseFLag()
+	cfg = parseFLag()
 
 	f, err := os.Open("banner.txt")
 	if err == nil {
@@ -488,8 +377,6 @@ func main() {
 		os.Exit(1)
 	}
 	defer CloseDb()
-
-	addInitialUsers()
 
 	router := setupRouter()
 

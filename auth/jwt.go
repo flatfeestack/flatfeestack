@@ -35,7 +35,7 @@ func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string
 	}
 }
 
-func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClaims)) func(http.ResponseWriter, *http.Request) {
+func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *jwt.Claims)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := jwtAuth0(r)
 		if err != nil {
@@ -67,7 +67,7 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *TokenClai
 	}
 }
 
-func jwtAuth0(r *http.Request) (*TokenClaims, error) {
+func jwtAuth0(r *http.Request) (*jwt.Claims, error) {
 	authHeader := r.Header.Get("Authorization")
 	split := strings.Split(authHeader, " ")
 	if len(split) != 2 {
@@ -80,7 +80,7 @@ func jwtAuth0(r *http.Request) (*TokenClaims, error) {
 		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
 	}
 
-	claims := &TokenClaims{}
+	claims := &jwt.Claims{}
 
 	if tok.Headers[0].Algorithm == string(jose.RS256) {
 		err = tok.Claims(privRSA.Public(), claims)
@@ -137,7 +137,7 @@ func checkRefreshToken(token string) (*RefreshClaims, error) {
 	return refreshClaims, nil
 }
 
-func encodeAccessToken(subject string, scope string, audience string, issuer string, systemMeta map[string]interface{}) (string, error) {
+func encodeAccessToken(subject string, systemMeta map[string]interface{}) (string, error) {
 	//if we have a system user, the system user only gets an access token that lives as long as the refresh token
 	//normal users get both, access and refresh token
 	var expiry *jwt.NumericDate
@@ -147,15 +147,10 @@ func encodeAccessToken(subject string, scope string, audience string, issuer str
 		expiry = jwt.NewNumericDate(timeNow().Add(tokenExp))
 	}
 
-	tokenClaims := &TokenClaims{
-		Scope: scope,
-		Claims: jwt.Claims{
-			Expiry:   expiry,
-			Subject:  subject,
-			Audience: []string{audience},
-			Issuer:   issuer,
-			IssuedAt: jwt.NewNumericDate(timeNow()),
-		},
+	tokenClaims := &jwt.Claims{
+		Expiry:   expiry,
+		Subject:  subject,
+		IssuedAt: jwt.NewNumericDate(timeNow()),
 	}
 
 	var sig jose.Signer
@@ -181,38 +176,6 @@ func encodeAccessToken(subject string, scope string, audience string, issuer str
 		slog.Debug("Access token", slog.String("accessToken", accessTokenString))
 	}
 	return accessTokenString, nil
-}
-
-func encodeCodeToken(subject string, codeChallenge string, codeChallengeMethod string) (string, int64, error) {
-	cc := &CodeClaims{}
-	cc.Subject = subject
-	cc.ExpiresAt = timeNow().Add(codeExp).Unix()
-	cc.CodeChallenge = codeChallenge
-	cc.CodeCodeChallengeMethod = codeChallengeMethod
-
-	var sig jose.Signer
-	var err error
-	if jwtKey != nil {
-		sig, err = jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: jwtKey}, (&jose.SignerOptions{}).WithType("JWT"))
-	} else if privRSA != nil {
-		sig, err = jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: privRSA}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", privRSAKid))
-	} else if privEdDSA != nil {
-		sig, err = jose.NewSigner(jose.SigningKey{Algorithm: jose.EdDSA, Key: *privEdDSA}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", privEdDSAKid))
-	} else {
-		return "", 0, fmt.Errorf("JWT refresh token %v no key", subject)
-	}
-
-	if err != nil {
-		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
-	}
-	codeToken, err := jwt.Signed(sig).Claims(cc).CompactSerialize()
-	if err != nil {
-		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
-	}
-	if cfg.Dev != "" {
-		slog.Debug("Code token", slog.String("codeToken", codeToken))
-	}
-	return codeToken, cc.ExpiresAt, nil
 }
 
 /*
@@ -273,7 +236,7 @@ func encodeAccessTokens(email string, metaSystem *string) (string, error) {
 		return "", fmt.Errorf("cannot encode system meta in encodeTokens for %v, %v", email, err)
 	}
 
-	encodedAccessToken, err := encodeAccessToken(email, cfg.Scope, cfg.Audience, cfg.Issuer, jsonMapSystem)
+	encodedAccessToken, err := encodeAccessToken(email, jsonMapSystem)
 	if err != nil {
 		return "", fmt.Errorf("ERR-refresh-06, cannot set access token for %v, %v", email, err)
 	}
@@ -282,58 +245,19 @@ func encodeAccessTokens(email string, metaSystem *string) (string, error) {
 }
 
 func encodeRefreshTokens(email string, refreshToken string) (string, int64, error) {
-	if cfg.ResetRefresh {
-		var err error
-		refreshToken, err = resetRefreshToken(refreshToken)
-		if err != nil {
-			return "", 0, fmt.Errorf("ERR-refresh-07, cannot reset access token for %v, %v", email, err)
-		}
-	}
+	rc := &RefreshClaims{}
+	rc.ExpiresAt = timeNow().Add(refreshExp).Unix()
+	rc.Subject = email
+	rc.Token = refreshToken
 
-	encodedRefreshToken, expiresAt, err := encodeRefreshToken(email, refreshToken)
+	encodedRefreshToken, err := encodeAnyToken(rc)
 	if err != nil {
 		return "", 0, fmt.Errorf("ERR-refresh-08, cannot set refresh token for %v, %v", email, err)
 	}
-	return encodedRefreshToken, expiresAt, nil
+	return encodedRefreshToken, rc.ExpiresAt, nil
 }
 
-func checkCodeToken(token string) (*CodeClaims, error) {
-	tok, err := jwt.ParseSigned(token)
-	if err != nil {
-		return nil, fmt.Errorf("ERR-check-refresh-01, could not check sig %v", err)
-	}
-	codeClaims := &CodeClaims{}
-	if tok.Headers[0].Algorithm == string(jose.RS256) {
-		err := tok.Claims(privRSA.Public(), codeClaims)
-		if err != nil {
-			return nil, fmt.Errorf("ERR-check-refresh-02, could not parse claims %v", err)
-		}
-	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
-		err := tok.Claims(jwtKey, codeClaims)
-		if err != nil {
-			return nil, fmt.Errorf("ERR-check-refresh-03, could not parse claims %v", err)
-		}
-	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
-		err := tok.Claims(privEdDSA.Public(), codeClaims)
-		if err != nil {
-			return nil, fmt.Errorf("ERR-check-refresh-04, could not parse claims %v", err)
-		}
-	} else {
-		return nil, fmt.Errorf("ERR-check-refresh-05, could not parse claims, no algo found %v", tok.Headers[0].Algorithm)
-	}
-	t := time.Unix(codeClaims.ExpiresAt, 0)
-	if !t.After(timeNow()) {
-		return nil, fmt.Errorf("ERR-check-refresh-06, expired %v", err)
-	}
-	return codeClaims, nil
-}
-
-func encodeRefreshToken(subject string, token string) (string, int64, error) {
-	rc := &RefreshClaims{}
-	rc.Subject = subject
-	rc.ExpiresAt = timeNow().Add(refreshExp).Unix()
-	rc.Token = token
-
+func encodeAnyToken(rc interface{}) (string, error) {
 	var sig jose.Signer
 	var err error
 	if jwtKey != nil {
@@ -343,20 +267,20 @@ func encodeRefreshToken(subject string, token string) (string, int64, error) {
 	} else if privEdDSA != nil {
 		sig, err = jose.NewSigner(jose.SigningKey{Algorithm: jose.EdDSA, Key: *privEdDSA}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", privEdDSAKid))
 	} else {
-		return "", 0, fmt.Errorf("JWT refresh token %v no key", subject)
+		return "", fmt.Errorf("JWT refresh token %v no key", rc)
 	}
 
 	if err != nil {
-		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
+		return "", fmt.Errorf("JWT refresh token %v failed: %v", rc, err)
 	}
 	refreshToken, err := jwt.Signed(sig).Claims(rc).CompactSerialize()
 	if err != nil {
-		return "", 0, fmt.Errorf("JWT refresh token %v failed: %v", subject, err)
+		return "", fmt.Errorf("JWT serialize %v failed: %v", rc, err)
 	}
 	if cfg.Dev != "" {
 		slog.Debug("Refresh token", slog.String("refreshToken", refreshToken))
 	}
-	return refreshToken, rc.ExpiresAt, nil
+	return refreshToken, nil
 }
 
 func toJsonMap(jsonStr *string) (map[string]interface{}, error) {

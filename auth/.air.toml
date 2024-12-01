@@ -16,3 +16,9 @@ bin = "tmp/main"
 full_bin = "dlv exec --accept-multiclient --headless --continue --listen :2345 --api-version 2 ./tmp/main"
 # Watch these filename extensions.
 include_ext = ["go", "tpl", "tmpl", "html"]
+
+[screen]
+clear_on_rebuild = true
+show_build_errors = true
+show_app_log = true
+show_runner_log = true

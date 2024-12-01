@@ -2,8 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/base32"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,30 +17,18 @@ var (
 
 type dbRes struct {
 	email        string
-	password     []byte
 	refreshToken string
 	emailToken   *string
-	totp         *string
-	totpVerified *time.Time
-	errorCount   int
-	flowType     string
 	metaSystem   *string
 }
 
 func findAuthByEmail(email string) (*dbRes, error) {
 	var res dbRes
-	var pw string
-	query := `SELECT password, meta_system, refresh_token, 
-       				 email_token, totp, totp_verified, error_count, flow_type
-              FROM auth WHERE email = $1`
-	err := DB.QueryRow(query, email).Scan(
-		&pw, &res.metaSystem, &res.refreshToken, &res.emailToken,
-		&res.totp, &res.totpVerified, &res.errorCount, &res.flowType)
+	query := `SELECT meta_system, refresh_token, email_token 
+              FROM auth
+              WHERE email = $1`
+	err := DB.QueryRow(query, email).Scan(&res.metaSystem, &res.refreshToken, &res.emailToken)
 
-	if err != nil {
-		return nil, err
-	}
-	res.password, err = base32.StdEncoding.DecodeString(pw)
 	if err != nil {
 		return nil, err
 	}
@@ -50,23 +36,17 @@ func findAuthByEmail(email string) (*dbRes, error) {
 	return &res, nil
 }
 
-func insertUser(email string, pwRaw []byte, emailToken string, refreshToken string, flowType string, now time.Time) error {
-	var pw *string
-	if pwRaw != nil {
-		s1 := base32.StdEncoding.EncodeToString(pwRaw)
-		pw = &s1
-	}
-	stmt, err := DB.Prepare(`INSERT INTO auth as a (email, password, email_token, refresh_token, flow_type, created_at) 
-								   VALUES ($1, $2, $3, $4, $5, $6)
+func insertOrUpdateUser(email string, emailToken string, refreshToken string, now time.Time) error {
+	stmt, err := DB.Prepare(`INSERT INTO auth as a (email, email_token, refresh_token, created_at) 
+								   VALUES ($1, $2, $3, $4)
 								   ON CONFLICT (email) DO
-								     UPDATE SET password=$2, email_token = $3
-								     WHERE a.email_token IS NOT NULL`)
+								     UPDATE SET email_token = $2`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO auth for %v statement failed: %v", email, err)
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(email, pw, emailToken, refreshToken, flowType, now)
+	res, err := stmt.Exec(email, emailToken, refreshToken, now)
 	return handleErrEffect(res, err, "error: INSERT INTO auth", email)
 }
 
@@ -103,97 +83,15 @@ func updateSystemMeta(email string, systemMeta string) error {
 	return handleErrEffect(res, err, "error: UPDATE meta_system", "n/a")
 }
 
-func updatePasswordInvite(email string, emailToken string, newPw []byte) error {
-	pw := base32.StdEncoding.EncodeToString(newPw)
-	stmt, err := DB.Prepare(`UPDATE auth SET password = $1, email_token = NULL 
-								   WHERE email = $2 AND email_token = $3 AND password IS NULL`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth password for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(pw, email, emailToken)
-	return handleErrEffect(res, err, "error: UPDATE auth password invite", email)
-}
-
-func updatePasswordForgot(email string, forgetEmailToken string, newPw []byte) error {
-	pw := base32.StdEncoding.EncodeToString(newPw)
-	stmt, err := DB.Prepare(`UPDATE auth SET password = $1, totp = NULL, forget_email_token = NULL 
-								   WHERE email = $2 AND forget_email_token = $3`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth password for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(pw, email, forgetEmailToken)
-	return handleErrEffect(res, err, "error: UPDATE auth password", email)
-}
-
-func updateEmailForgotToken(email string, token string) error {
-	//TODO: don't accept too old forget tokens
-	stmt, err := DB.Prepare("UPDATE auth SET forget_email_token = $1 WHERE email = $2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth forgetEmailToken for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(token, email)
-	return handleErrEffect(res, err, "error: UPDATE auth forgetEmailToken", email)
-}
-
-func updateTOTP(email string, totp string) error {
-	stmt, err := DB.Prepare("UPDATE auth SET totp = $1 WHERE email = $2 and totp IS NULL")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth totp for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(totp, email)
-	return handleErrEffect(res, err, "error: UPDATE auth totp", email)
-}
-
-func updateEmailToken(email string, token string) error {
+func updateEmailToken(email string, emailToken string) error {
 	stmt, err := DB.Prepare("UPDATE auth SET email_token = NULL WHERE email = $1 AND email_token = $2")
 	if err != nil {
 		return fmt.Errorf("prepare UPDATE auth for %v statement failed: %v", email, err)
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(email, token)
+	res, err := stmt.Exec(email, emailToken)
 	return handleErrEffect(res, err, "error: UPDATE auth", email)
-}
-
-func updateTOTPVerified(email string, now time.Time) error {
-	stmt, err := DB.Prepare("UPDATE auth SET totp_verified = $1 WHERE email = $2 AND totp IS NOT NULL")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(now, email)
-	return handleErrEffect(res, err, "error: UPDATE auth totp timestamp", email)
-}
-
-func incErrorCount(email string) error {
-	stmt, err := DB.Prepare("UPDATE auth set error_count = error_count + 1 WHERE email = $1")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth status for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(email)
-	return handleErrEffect(res, err, "error: UPDATE auth errorCount", email)
-}
-
-func resetCount(email string) error {
-	stmt, err := DB.Prepare("UPDATE auth set error_count = 0 WHERE email = $1")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE auth status for %v statement failed: %v", email, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(email)
-	return handleErrEffect(res, err, "error: UPDATE auth status", email)
 }
 
 func handleErrEffect(res sql.Result, err error, info string, email string) error {
@@ -219,60 +117,6 @@ func handleErr(res sql.Result, err error, info string, email string, mustHaveEff
 }
 
 // /////// Setup
-// Meta data can be additional information that will be encoded in the JWT token
-func addInitialUserWithMeta(username string, password string, metaSystem *string) error {
-	res, err := findAuthByEmail(username)
-	if res == nil || err != nil {
-		dk, err := newPw(password, 0)
-		if err != nil {
-			return err
-		}
-		err = insertUser(username, dk, "emailToken", "refreshToken", "sys", timeNow())
-		if err != nil {
-			return err
-		}
-		err = updateEmailToken(username, "emailToken")
-		if err != nil {
-			return err
-		}
-		if metaSystem != nil {
-			if !json.Valid([]byte(*metaSystem)) {
-				return fmt.Errorf("not valid json: %v", *metaSystem)
-			}
-			err = updateSystemMeta(username, *metaSystem)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func addInitialUsers() {
-	if cfg.Users != "" {
-		//add user for development
-		users := strings.Split(cfg.Users, ";")
-		for _, user := range users {
-			userPwMeta := strings.SplitN(user, ":", 3)
-
-			var metaSystem *string
-			if len(userPwMeta) >= 3 {
-				metaSystem = &userPwMeta[2]
-			}
-
-			if len(userPwMeta) >= 2 {
-				err := addInitialUserWithMeta(userPwMeta[0], userPwMeta[1], metaSystem)
-				if err == nil {
-					slog.Debug("insterted user %v", slog.String("userPwMeta[0]", userPwMeta[0]))
-				} else {
-					slog.Warn("could not insert %v: %v", slog.String("userPwMeta[0]", userPwMeta[0]), slog.Any("error", err))
-				}
-			} else {
-				slog.Warn("username and password need to be seperated by ':'")
-			}
-		}
-	}
-}
 
 func CloseDb() {
 	err := DB.Close()

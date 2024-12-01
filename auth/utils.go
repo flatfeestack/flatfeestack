@@ -3,16 +3,14 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
-	"github.com/xlzd/gotp"
+	"golang.org/x/text/language"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -40,82 +38,11 @@ func genToken() (string, error) {
 }
 
 func validateEmail(email string) error {
-	rxEmail := regexp.MustCompile(`(?i)^[a-z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$`)
+	rxEmail := regexp.MustCompile(`[^@\s]+@[^@\s]+\.[^@\s]+`)
 	if len(email) > 254 || !rxEmail.MatchString(email) {
 		return fmt.Errorf("[%s] is not a valid email address", email)
 	}
 	return nil
-}
-
-func validatePassword(password string) error {
-	if len(password) < 8 {
-		return fmt.Errorf("password is less than 8 characters")
-	}
-	return nil
-}
-
-func newTOTP(secret string) *gotp.TOTP {
-	hasher := &gotp.Hasher{
-		HashName: "sha256",
-		Digest:   sha256.New,
-	}
-	return gotp.NewTOTP(secret, 6, 30, hasher)
-}
-
-func basicAuth(r *http.Request) (string, error) {
-	if cfg.OAuthUser != "" || cfg.OAuthPass != "" {
-		user, pass, ok := r.BasicAuth()
-		if !ok || user != cfg.OAuthUser || pass != cfg.OAuthPass {
-			clientId, err := param("client_id", r)
-			if err != nil {
-				return "", fmt.Errorf("no client_id %v", err)
-			}
-			clientSecret, err := param("client_secret", r)
-			if err != nil {
-				return "", fmt.Errorf("no client_secret %v", err)
-			}
-			if clientId != cfg.OAuthUser || clientSecret != cfg.OAuthPass {
-				return "", fmt.Errorf("no match, user/pass %v", err)
-			}
-		}
-		return user, nil
-	}
-	return "", fmt.Errorf("no user/pass set")
-}
-
-func param(name string, r *http.Request) (string, error) {
-	n1 := r.PathValue(name)
-	n2, err := url.QueryUnescape(r.URL.Query().Get(name))
-	if err != nil {
-		return "", err
-	}
-	err = r.ParseForm()
-	if err != nil {
-		return "", err
-	}
-	n3 := r.FormValue(name)
-
-	if n1 == "" {
-		if n2 == "" {
-			return n3, nil
-		}
-		return n2, nil
-	}
-	return n1, nil
-}
-
-func paramJson(name string, r *http.Request) (string, error) {
-	var objmap map[string]json.RawMessage
-	err := json.NewDecoder(r.Body).Decode(&objmap)
-	if err != nil {
-		return "", err
-	}
-	var s string
-	err = json.Unmarshal(objmap[name], &s)
-	if err != nil {
-		return "", err
-	}
-	return s, nil
 }
 
 func timeNow() time.Time {
@@ -255,18 +182,17 @@ func SendEmail(sendEmailRequest SendEmailRequest) error {
 func PrepareEmail(
 	mailTo string,
 	data map[string]string,
-	templateKey string,
 	defaultSubject string,
 	defaultText string,
 	lang string) SendgridRequest {
-	textMessage := parseTemplate("plain/"+lang+"/"+templateKey+".txt", data)
+	textMessage := parseTemplate("plain/"+lang+"/login.txt", data)
 	if textMessage == "" {
 		textMessage = defaultText
 	}
 
 	headerTemplate := parseTemplate("html/"+lang+"/header.html", data)
 	footerTemplate := parseTemplate("html/"+lang+"/footer.html", data)
-	htmlBody := parseTemplate("html/"+lang+"/"+templateKey+".html", data)
+	htmlBody := parseTemplate("html/"+lang+"/login.html", data)
 	htmlMessage := headerTemplate + htmlBody + footerTemplate
 
 	return SendgridRequest{
@@ -292,4 +218,11 @@ func parseTemplate(filename string, other map[string]string) string {
 		slog.Warn("cannot prepare file template file", slog.String("filename", filename), slog.Any("error", err))
 	}
 	return textMessage
+}
+
+func lang(r *http.Request) string {
+	accept := r.Header.Get("Accept-Language")
+	tag, _ := language.MatchStrings(matcher, accept)
+	b, _ := tag.Base()
+	return b.String()
 }

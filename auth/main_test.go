@@ -8,8 +8,6 @@ import (
 	"flag"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/xlzd/gotp"
 	"io"
 	"log"
 	"net/http"
@@ -136,143 +134,6 @@ func TestRefresh(t *testing.T) {
 	assert.NotEqual(t, "", oauth.AccessToken)
 }
 
-func TestReset(t *testing.T) {
-	tmp := append(testParams, "-expire-refresh=1")
-	router := mainTest(tmp...)
-
-	resp := doAll(router, "tom@test.ch", "testtest", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp = doReset(router, "tom@test.ch")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	token, _ := getForgotEmailToken("tom@test.ch")
-
-	resp = doConfirmReset(router, "tom@test.ch", token, "testtest2")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp = doLogin(router, "tom@test.ch", "testtest2", "", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusSeeOther, resp.StatusCode)
-}
-
-func TestResetFailed(t *testing.T) {
-	tmp := append(testParams, "-expire-refresh=1")
-	router := mainTest(tmp...)
-	resp := doAll(router, "tom@test.ch", "testtest", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp = doReset(router, "tom@test.ch")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	token, _ := getForgotEmailToken("tom@test.ch")
-
-	resp = doConfirmReset(router, "tom@test.ch", token, "testtest2")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp = doLogin(router, "tom@test.ch", "testtest", "", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-}
-
-func TestTOTP(t *testing.T) {
-	router := mainTest(testParams...)
-	resp := doAll(router, "tom@test.ch", "testtest", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	oauth := OAuth{}
-	json.NewDecoder(resp.Body).Decode(&oauth)
-
-	resp = doTOTP(router, oauth.AccessToken)
-	p := ProvisioningUri{}
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(bodyBytes, &p)
-
-	u, err := url.Parse(p.Uri)
-	require.Nil(t, err)
-
-	secret := u.Query().Get("secret")
-	require.NotNil(t, secret)
-
-	totp := newTOTP(secret)
-	conf := totp.Now()
-
-	resp = doTOTPConfirm(router, conf, oauth.AccessToken)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func TestLoginTOTP(t *testing.T) {
-	router := mainTest(testParams...)
-	resp := doAll(router, "tom@test.ch", "testtest", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	oauth := OAuth{}
-	json.NewDecoder(resp.Body).Decode(&oauth)
-
-	totp := doAllTOTP(router, oauth.AccessToken)
-
-	resp = doLogin(router, "tom@test.ch", "testtest", totp.Now(), "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusSeeOther, resp.StatusCode)
-
-	resp = doLogin(router, "tom@test.ch", "testtest", "", "0123456789012345678901234567890123456789012")
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-}
-
-func doTOTP(router *http.ServeMux, token string) *http.Response {
-	req, _ := http.NewRequest("POST", testUrl+"/setup/totp", nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-	return rr.Result()
-}
-
-func doTOTPConfirm(router *http.ServeMux, conf string, token string) *http.Response {
-	req, _ := http.NewRequest("POST", testUrl+"/confirm/totp/"+conf, nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-	return rr.Result()
-}
-
-func doAllTOTP(router *http.ServeMux, token string) *gotp.TOTP {
-	resp := doTOTP(router, token)
-	p := ProvisioningUri{}
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(bodyBytes, &p)
-
-	u, err := url.Parse(p.Uri)
-	if err != nil {
-		panic(err)
-	}
-
-	secret := u.Query().Get("secret")
-	totp := newTOTP(secret)
-	conf := totp.Now()
-	resp = doTOTPConfirm(router, conf, token)
-	return totp
-}
-
-func doConfirmReset(router *http.ServeMux, email string, token string, password string) *http.Response {
-	data := Credentials{
-		Email:      email,
-		Password:   password,
-		EmailToken: token,
-	}
-	payloadBytes, _ := json.Marshal(data)
-	body := bytes.NewReader(payloadBytes)
-	req, _ := http.NewRequest("POST", testUrl+"/confirm/reset", body)
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-	return rr.Result()
-}
-
-func doReset(router *http.ServeMux, email string) *http.Response {
-	req, _ := http.NewRequest("POST", testUrl+"/reset/"+email, nil)
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-	return rr.Result()
-}
-
 func doAll(router *http.ServeMux, email string, pass string, secret string) *http.Response {
 	resp := doSignup(router, email, pass)
 	token := token(email)
@@ -373,15 +234,6 @@ func getEmailToken(email string) (string, error) {
 	return emailToken, nil
 }
 
-func getForgotEmailToken(email string) (string, error) {
-	var forgetEmailToken string
-	err := DB.QueryRow("SELECT forget_email_token from auth where email = $1", email).Scan(&forgetEmailToken)
-	if err != nil {
-		return "", err
-	}
-	return forgetEmailToken, nil
-}
-
 func TestSecret(t *testing.T) {
 	h := sha256.Sum256([]byte("test"))
 	s := base64.RawURLEncoding.EncodeToString(h[:])
@@ -394,13 +246,12 @@ func mainTest(args ...string) *http.ServeMux {
 	os.Args = append(os.Args, args...)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError) //flags are now reset
 
-	cfg = NewOpts()
+	cfg = parseFLag()
 	var err error
 	err = InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	addInitialUsers()
 
 	return setupRouter()
 }
