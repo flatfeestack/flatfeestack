@@ -518,7 +518,7 @@ func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, 
 	}
 
 	lastAnalysis, err := db.FindRepoHealthMetricsByRepoId(repoId)
-	if err != nil {
+	if err != nil || lastAnalysis == nil {
 		slog.Error("Could not find repo metrics. Requesting analysis.",
 			slog.Any("error", err))
 		err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
@@ -535,7 +535,6 @@ func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, 
 			slog.Warn("Could not submit analysis request",
 				slog.Any("error", err))
 		}
-
 	} else {
 		util.WriteErrorf(w, http.StatusInternalServerError, ForcingRepoAnalysisTooSoon)
 	}
