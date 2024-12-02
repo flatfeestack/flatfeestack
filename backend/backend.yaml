@@ -620,7 +620,7 @@ paths:
         '404':
           description: Not Found
   /repos/{id}/forceAnalyzer:
-    get:
+    post:
       tags:
         - Repos
       security:
@@ -635,10 +635,6 @@ paths:
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Repo'
         '400':
           description: Bad Request
         '500':

@@ -21,6 +21,7 @@ const (
 	GenericErrorMessage            = "Oops something went wrong. Please try again."
 	RepositoryNotFoundErrorMessage = "Oops something went wrong with retrieving the repositories. Please try again."
 	NotAllowedToViewMessage        = "Oops you are not allowed to view this resource."
+	ForcingRepoAnalysisTooSoon     = "Ooops you are trying to re-analyse too soon."
 )
 
 var matcher = language.NewMatcher([]language.Tag{

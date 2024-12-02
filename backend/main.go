@@ -241,7 +241,7 @@ func main() {
 
 	//repo
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
-	router.HandleFunc("GET /repos/{id}/forceAnalyze", middlewareJwtAuthAdminLog(rh.ForceAnalyzeRepo))
+	router.HandleFunc("POST /repos/{id}/forceAnalyze", middlewareJwtAuthAdminLog(rh.ForceAnalyzeRepo))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
 	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
 	router.HandleFunc("POST /repos/{id}/setMultiplier", middlewareJwtAuthUserLog(rh.SetMultiplierRepo))
