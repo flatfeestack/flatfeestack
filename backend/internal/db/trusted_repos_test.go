@@ -1,6 +1,7 @@
 package db
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -257,4 +258,65 @@ func TestTwoTrustedRepos(t *testing.T) {
 	rs, err := FindTrustedRepos()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rs))
+}
+
+func TestGeneratePlaceholders(t *testing.T) {
+	t.Run("ZeroPlaceholders", func(t *testing.T) {
+		result := GeneratePlaceholders(0)
+		expected := ""
+		assert.Equal(t, expected, result, "Expected empty string for 0 placeholders")
+	})
+
+	t.Run("OnePlaceholder", func(t *testing.T) {
+		result := GeneratePlaceholders(1)
+		expected := "$1"
+		assert.Equal(t, expected, result, "Expected '$1' for 1 placeholder")
+	})
+
+	t.Run("MultiplePlaceholders", func(t *testing.T) {
+		result := GeneratePlaceholders(5)
+		expected := "$1, $2, $3, $4, $5"
+		assert.Equal(t, expected, result, "Expected placeholders for 5 inputs")
+	})
+
+	t.Run("LargeNumberPlaceholders", func(t *testing.T) {
+		result := GeneratePlaceholders(100)
+		parts := strings.Split(result, ", ")
+		assert.Equal(t, 100, len(parts), "Expected 100 placeholders")
+		assert.Equal(t, "$1", parts[0], "First placeholder should be $1")
+		assert.Equal(t, "$100", parts[99], "Last placeholder should be $100")
+	})
+}
+
+func TestConvertToInterfaceSlice(t *testing.T) {
+	t.Run("EmptySlice", func(t *testing.T) {
+		input := []int{}
+		result := ConvertToInterfaceSlice(input)
+		assert.Equal(t, 0, len(result), "Expected empty interface slice for empty input slice")
+	})
+
+	t.Run("SingleElementSlice", func(t *testing.T) {
+		input := []string{"test"}
+		result := ConvertToInterfaceSlice(input)
+		assert.Equal(t, 1, len(result), "Expected one element in interface slice")
+		assert.Equal(t, "test", result[0], "Element should match input")
+	})
+
+	t.Run("MultipleElementSlice", func(t *testing.T) {
+		input := []int{1, 2, 3}
+		result := ConvertToInterfaceSlice(input)
+		expected := []interface{}{1, 2, 3}
+		assert.Equal(t, expected, result, "Expected interface slice to match input slice")
+	})
+
+	t.Run("LargeSlice", func(t *testing.T) {
+		input := make([]int, 100)
+		for i := 0; i < 100; i++ {
+			input[i] = i
+		}
+		result := ConvertToInterfaceSlice(input)
+		assert.Equal(t, 100, len(result), "Expected 100 elements in interface slice")
+		assert.Equal(t, 0, result[0], "First element should match input")
+		assert.Equal(t, 99, result[99], "Last element should match input")
+	})
 }

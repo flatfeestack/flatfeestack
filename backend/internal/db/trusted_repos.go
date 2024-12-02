@@ -164,7 +164,6 @@ func GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
 	return trustedRepos, nil
 }
 
-// no unit testing
 func GeneratePlaceholders(n int) string {
 	var placeholders []string
 	for i := 1; i <= n; i++ {
@@ -173,7 +172,6 @@ func GeneratePlaceholders(n int) string {
 	return strings.Join(placeholders, ", ")
 }
 
-// no unit testing
 func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 	result := make([]interface{}, len(values))
 	for i, v := range values {
