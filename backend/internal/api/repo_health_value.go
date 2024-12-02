@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -55,6 +56,9 @@ func GetRepoMetricsById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail
 			slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 	} else {
+		parsed, _ := time.Parse("2006-01-02 15:04:05", repoMetrics.CreatedAt.Format("2006-01-02 15:04:05"))
+		repoMetrics.CreatedAt = parsed
+
 		util.WriteJson(w, repoMetrics)
 	}
 
@@ -237,7 +241,7 @@ func calculatePartialHealthValues(threshold *db.RepoHealthThreshold, metrics *db
 		} else {
 			thresholdDifference := currentThresholdUpper - currentThresholdLower + 1
 			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
-			partialHealthValue = 2 / float64(thresholdDifference) * float64(normalizedCurrentMetric)
+			partialHealthValue = math.Round(100*(2/float64(thresholdDifference)*float64(normalizedCurrentMetric))) / 100
 		}
 		partialHealthValues = append(partialHealthValues, partialHealthValue)
 	}
