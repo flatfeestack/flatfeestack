@@ -180,11 +180,10 @@ func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 	return result
 }
 
-// no unit testing
 func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
 	var query string
 
-	if len(userIds) == 0 {
+	if len(userIds) == 0 || months < 0 {
 		return 0, nil
 	}
 
@@ -213,7 +212,6 @@ func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, 
 	return count, nil
 }
 
-// no unit testing
 func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (float64, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
