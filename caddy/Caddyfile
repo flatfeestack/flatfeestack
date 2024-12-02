@@ -1,11 +1,13 @@
 {
     admin off
-    auto_https off
     log {
         format console
+        level INFO   # or DEBUG for more detailed logs
+        output stdout
     }
 }
-:8080 {
+localhost:8080 {
+  tls internal
   handle_path /auth/* {
     reverse_proxy auth:9081 {
       header_up Host {upstream_hostport}
