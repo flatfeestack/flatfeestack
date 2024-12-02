@@ -250,7 +250,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			}
 		}
 		if len(trustedRepos) > 0 {
-			var amount *big.Float
+			var amountFoundation *big.Float
 			foundations, err := db.GetFoundationsSupportingRepo(rid)
 			if err != nil {
 				return err
@@ -260,16 +260,34 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			totalAmountForRepo := new(big.Float).Mul(new(big.Float).SetInt(foundationCount), amountPerPart)
 
 			if totalAmountForRepo.Cmp(payoutlimit) > 0 {
-				amount = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
+				amountFoundation = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
 			} else {
-				amount = amountPerPart
+				amountFoundation = amountPerPart
 			}
 
+			amountFoundationInt := new(big.Int)
+			amountFoundation.Int(amountFoundationInt)
+
 			for _, foundation := range foundations {
-				if foundation.Multiplier {
-					// check if dailyLimit not spent yet foundation.MultiplierDailyLimit
-					// make contribution based on the amount
-					fmt.Sprint(amount)
+				checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation)
+				if err != nil {
+					return err
+				}
+				if checkDailyLimit {
+					for contributorUserId, w := range uidInMap {
+						amount := calcSharePerUser(amountFoundationInt, w, total)
+						slog.Info("Claim",
+							slog.String("userId", contributorUserId.String()),
+							slog.String("rid", rid.String()),
+							slog.String("add", amountFoundationInt.String()),
+							slog.Float64("weight", w),
+							slog.Float64("total", total),
+							slog.String("amount", amount.String()))
+						err = db.InsertContribution(foundation.Id, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow())
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}

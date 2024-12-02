@@ -139,7 +139,7 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
                 u.email, u.name, u.image, u.seats, u.freq, u.created_at, u.multiplier, u.multiplier_daily_limit
             FROM multiplier_event m
 			INNER JOIN users u ON m.user_id = u.id
-			WHERE m.repo_id=$1 AND m.un_multiplier_at IS NULL`
+			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
 	rows, err := DB.Query(s, rid)
 	if err != nil {
 		return nil, err
@@ -170,6 +170,7 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
 		FROM multiplier_event m
 		INNER JOIN users u ON m.user_id = u.id
 		WHERE m.repo_id IN (` + GeneratePlaceholders(len(rids)) + `)
+		AND u.multiplier
 		AND m.un_multiplier_at IS NULL`
 
 	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)

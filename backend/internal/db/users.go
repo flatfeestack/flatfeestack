@@ -328,3 +328,29 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	}
 	return handleErrMustInsertOne(res)
 }
+
+func CheckDailyLimitStillAdheredTo(foundation *UserDetail) (bool, error) {
+	if foundation == nil {
+		return false, fmt.Errorf("foundation cannot be nil")
+	}
+
+	query := `
+		SELECT COALESCE(SUM(amount), 0)
+		FROM contributions
+		WHERE
+			foundation_id = $1
+			AND created_at >= NOW() - INTERVAL '1 day'`
+
+	var dailySum float64
+
+	err := DB.QueryRow(query, foundation.Id).Scan(&dailySum)
+	if err != nil {
+		return false, fmt.Errorf("failed to calculate daily contributions: %v", err)
+	}
+
+	if dailySum < float64(foundation.MultiplierDailyLimit) {
+		return true, nil
+	}
+
+	return false, nil
+}
