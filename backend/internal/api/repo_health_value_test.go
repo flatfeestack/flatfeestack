@@ -24,7 +24,7 @@ func getTestData(a, b, c, d, e int) *db.RepoHealthMetrics {
 		SponsorCount:        c,
 		RepoStarCount:       d,
 		RepoMultiplierCount: e,
-		RepoWeight:          rand.Int(),
+		ActiveFFSUserCount:  rand.Int(),
 	}
 
 	return &newRepoMetrics

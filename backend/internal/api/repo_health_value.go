@@ -102,7 +102,7 @@ func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHea
 		SponsorCount:        internalHealthMetric.SponsorCount,
 		RepoStarCount:       internalHealthMetric.RepoStarCount,
 		RepoMultiplierCount: internalHealthMetric.RepoMultiplierCount,
-		RepoWeight:          internalHealthMetric.RepoWeight,
+		ActiveFFSUserCount:  internalHealthMetric.ActiveFFSUserCount,
 	}
 
 	return &repoHealthMetrics, nil

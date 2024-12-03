@@ -18,14 +18,14 @@ type RepoHealthMetrics struct {
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
 	RepoMultiplierCount int       `json:"repomultipliercount"`
-	RepoWeight          int       `json:"reposponsordonated"`
+	ActiveFFSUserCount  int       `json:"reposponsordonated"`
 }
 
 type InternalHealthMetrics struct {
 	SponsorCount        int `json:"sponsorcount"`
 	RepoStarCount       int `json:"repostarcount"`
 	RepoMultiplierCount int `json:"repomultipliercount"`
-	RepoWeight          int `json:"reposponsordonated"`
+	ActiveFFSUserCount  int `json:"reposponsordonated"`
 }
 
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
@@ -40,7 +40,7 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 				sponsor_donation,
 				repo_star_count,
 				repo_multiplier_count,
-				repo_weight)
+				active_ffs_user_count)
 		VALUES (
 			$1,
 			$2,
@@ -56,7 +56,7 @@ func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight)
+	res, err := stmt.Exec(repoHealthMetrics.Id, repoHealthMetrics.CreatedAt, repoHealthMetrics.RepoId, repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.ActiveFFSUserCount)
 	if err != nil {
 		return fmt.Errorf("error occured trying to insert: %v", err)
 	}
@@ -75,7 +75,7 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 		sponsor_donation=$3,
 		repo_star_count=$4,
 		repo_multiplier_count=$5,
-		repo_weight=$6 
+		active_ffs_user_count=$6 
 	WHERE 
 		id=$7`)
 	if err != nil {
@@ -84,7 +84,7 @@ func UpdateRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
 	defer CloseAndLog(stmt)
 
 	var res sql.Result
-	res, err = stmt.Exec(repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.RepoWeight, repoHealthMetrics.Id)
+	res, err = stmt.Exec(repoHealthMetrics.ContributerCount, repoHealthMetrics.CommitCount, repoHealthMetrics.SponsorCount, repoHealthMetrics.RepoStarCount, repoHealthMetrics.RepoMultiplierCount, repoHealthMetrics.ActiveFFSUserCount, repoHealthMetrics.Id)
 	if err != nil {
 		return fmt.Errorf("something went wrong updating the health value: %v", err)
 	}
@@ -105,7 +105,7 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 				sponsor_donation,
 				repo_star_count,
 				repo_multiplier_count,
-				repo_weight 
+				active_ffs_user_count 
 			FROM 
 				repo_health_metrics 
 			WHERE 
@@ -119,7 +119,7 @@ func FindRepoHealthMetricsById(id uuid.UUID) (*RepoHealthMetrics, error) {
 			&healthValue.SponsorCount,
 			&healthValue.RepoStarCount,
 			&healthValue.RepoMultiplierCount,
-			&healthValue.RepoWeight)
+			&healthValue.ActiveFFSUserCount)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func FindRepoHealthMetricsByRepoId(repoId uuid.UUID) (*RepoHealthMetrics, error)
 				sponsor_donation,
 				repo_star_count,
 				repo_multiplier_count,
-				repo_weight 
+				active_ffs_user_count 
 			FROM 
 				repo_health_metrics 
 			WHERE 
@@ -185,7 +185,7 @@ func FindRepoHealthMetricsByRepoIdHistory(repoId uuid.UUID) ([]RepoHealthMetrics
 				sponsor_donation,
 				repo_star_count,
 				repo_multiplier_count,
-				repo_weight 
+				active_ffs_user_count 
 			FROM 
 				repo_health_metrics 
 			WHERE 
@@ -208,7 +208,7 @@ func scanRepoHealthMetrics(rows *sql.Rows) ([]RepoHealthMetrics, error) {
 
 	for rows.Next() {
 		var repoHealthMetrics RepoHealthMetrics
-		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.RepoWeight)
+		err := rows.Scan(&repoHealthMetrics.Id, &repoHealthMetrics.RepoId, &repoHealthMetrics.CreatedAt, &repoHealthMetrics.ContributerCount, &repoHealthMetrics.CommitCount, &repoHealthMetrics.SponsorCount, &repoHealthMetrics.RepoStarCount, &repoHealthMetrics.RepoMultiplierCount, &repoHealthMetrics.ActiveFFSUserCount)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +229,7 @@ func GetAllRepoHealthMetrics() ([]RepoHealthMetrics, error) {
 			sponsor_donation,
 			repo_star_count,
 			repo_multiplier_count,
-			repo_weight
+			active_ffs_user_count
 		FROM
 			repo_health_metrics
 		ORDER BY 
@@ -279,15 +279,15 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	}
 	metrics.RepoStarCount = starCount
 
-	repoWeight, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
+	activeFFSUserCount, err := GetActiveFFSUserCount(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			repoWeight = 0.0
+			activeFFSUserCount = 0.0
 		} else {
-			return nil, fmt.Errorf("failed to calculate repo weight: %v", err)
+			return nil, fmt.Errorf("failed to calculate active ffs user count: %v", err)
 		}
 	}
-	metrics.RepoWeight = repoWeight
+	metrics.ActiveFFSUserCount = activeFFSUserCount
 
 	err = DB.QueryRow(
 		`SELECT COUNT(DISTINCT user_sponsor_id)

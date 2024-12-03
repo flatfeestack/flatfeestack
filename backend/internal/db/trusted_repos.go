@@ -212,7 +212,7 @@ func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, 
 	return count, nil
 }
 
-func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
+func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
 		return 0, err

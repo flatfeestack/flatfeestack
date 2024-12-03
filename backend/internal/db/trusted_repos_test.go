@@ -366,13 +366,13 @@ func TestCountReposForUsers(t *testing.T) {
 	})
 }
 
-func TestGetRepoWeight(t *testing.T) {
+func TestGetActiveFFSUserCount(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 	t.Run("Invalid RepoId", func(t *testing.T) {
-		weight, err := GetRepoWeight(uuid.Nil, 6, 12, true)
+		count, err := GetActiveFFSUserCount(uuid.Nil, 6, 12, true)
 		assert.Nil(t, err)
-		assert.Equal(t, 0, weight)
+		assert.Equal(t, 0, count)
 	})
 
 	t.Run("2 valid repos", func(t *testing.T) {
@@ -419,7 +419,7 @@ func TestGetRepoWeight(t *testing.T) {
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(38), "XBTC", currentTime, previousTime)
 		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
 
-		weight, _ := GetRepoWeight(r.Id, 1, 6, false)
-		assert.Equal(t, 2, weight)
+		count, _ := GetActiveFFSUserCount(r.Id, 1, 6, false)
+		assert.Equal(t, 2, count)
 	})
 }
