@@ -490,9 +490,12 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 		healthValue, err := getRepoHealthValue(repo.Id)
 		if err != nil {
 			repo.HealthValue = 0.0
+			repo.Analyzed = false
 		} else {
 			repo.HealthValue = healthValue.HealthValue
+			repo.Analyzed = true
 		}
+
 		repos = append(repos, *repo)
 	}
 

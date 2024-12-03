@@ -27,7 +27,7 @@ func getTestData(r *Repo) *RepoHealthMetrics {
 		SponsorCount:        rand.Intn(100) + 1,
 		RepoStarCount:       rand.Intn(100) + 1,
 		RepoMultiplierCount: rand.Intn(100) + 1,
-		RepoWeight:          rand.Float64(),
+		RepoWeight:          rand.Intn(10) + 1,
 	}
 
 	return &newRepoMetrics
@@ -200,7 +200,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("not an active user staring and contributions", func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 2, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("active/inactive user staring", func(t *testing.T) {
@@ -289,7 +289,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 1, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("active/inactive user multiplier", func(t *testing.T) {
@@ -340,7 +340,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 1, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("test repo weight", func(t *testing.T) {
@@ -393,6 +393,6 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.SponsorCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoStarCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoMultiplierCount)
-		assert.Equal(t, 2.0, internalMetricsFocusSponsorEvent.RepoWeight)
+		assert.Equal(t, 2, internalMetricsFocusSponsorEvent.RepoWeight)
 	})
 }

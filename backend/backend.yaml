@@ -1255,6 +1255,8 @@ components:
         healthValue:
           type: number
           format: float
+        analyzed:
+          type: boolean
       required:
         - uuid
         - score
@@ -1324,6 +1326,9 @@ components:
           type: integer
           format: int64
         repomultipliercount:
+          type: integer
+          format: int64
+        activeffsusercount:
           type: integer
           format: int64
     PartialHealthValues:

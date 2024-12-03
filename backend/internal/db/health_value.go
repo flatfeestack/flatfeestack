@@ -18,7 +18,7 @@ type RepoHealthMetrics struct {
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
 	RepoMultiplierCount int       `json:"repomultipliercount"`
-	RepoWeight          float64   `json:"reposponsordonated"`
+	RepoWeight          int       `json:"activeffsusercount"`
 }
 
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
@@ -272,13 +272,16 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	}
 	metrics.RepoStarCount = starCount
 
-	repoWeight, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
+	var repoWeight int
+	repoWeightTmp, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			repoWeight = 0.0
+			repoWeight = 0
 		} else {
 			return nil, fmt.Errorf("failed to calculate repo weight: %v", err)
 		}
+	} else {
+		repoWeight = int(repoWeightTmp)
 	}
 	metrics.RepoWeight = repoWeight
 

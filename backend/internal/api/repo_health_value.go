@@ -25,6 +25,7 @@ type PartialHealthValues struct {
 	SponsorValue        float64   `json:"sponsorvalue"`
 	RepoStarValue       float64   `json:"repostarvalue"`
 	RepoMultiplierValue float64   `json:"repomultipliervalue"`
+	ActiveFFSUserValue  float64   `json:"activeffsuservalue"`
 }
 
 func GetRepoHealthValueByRepoId(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
@@ -50,7 +51,7 @@ func GetRepoMetricsById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail
 	if repoMetrics == nil {
 		slog.Error("repo metrics not found %s",
 			slog.String("id", repoId.String()))
-		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusNotFound, NoRepoMetricsAvailable)
 	} else if err != nil {
 		slog.Error("Could not fetch repo metrics",
 			slog.Any("error", err))
@@ -71,7 +72,7 @@ func GetPartialHealthValuesById(w http.ResponseWriter, r *http.Request, _ *db.Us
 	if partialHealthValues == nil {
 		slog.Error("repo metrics not found %s",
 			slog.String("id", repoId.String()))
-		util.WriteErrorf(w, http.StatusNotFound, GenericErrorMessage)
+		util.WriteErrorf(w, http.StatusNotFound, NoPartialHealthValuesAvailable)
 	} else if err != nil {
 		slog.Error("Could not fetch repo metrics",
 			slog.Any("error", err))
@@ -107,14 +108,12 @@ func UpdateRepoHealthValue(w http.ResponseWriter, r *http.Request, repoHealthMet
 func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	contributorCount := 0
 	var commitCount int
-	var repoWeight float64
 	var repoHealthMetrics *db.RepoHealthMetrics
 	var err error
 
 	for _, email := range data {
 		contributorCount++
 		commitCount += email.CommitCount
-		repoWeight += email.Weight
 	}
 
 	repoHealthMetrics, err = manageInternalHealthMetrics(repoId, true)
@@ -127,7 +126,6 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.CreatedAt = util.TimeNow()
 	repoHealthMetrics.ContributorCount = contributorCount
 	repoHealthMetrics.CommitCount = commitCount
-	repoHealthMetrics.RepoWeight = repoWeight
 
 	err = db.InsertRepoHealthMetrics(*repoHealthMetrics)
 	if err != nil {
@@ -217,6 +215,7 @@ func calculatePartialHealthValues(threshold *db.RepoHealthThreshold, metrics *db
 		metrics.SponsorCount,
 		metrics.RepoStarCount,
 		metrics.RepoMultiplierCount,
+		int(metrics.RepoWeight),
 	}
 	var partialHealthValues []float64
 
