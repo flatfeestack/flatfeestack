@@ -248,9 +248,9 @@
       width: 1185px;
       margin: 5vh calc((100vw - 1185px) / 2);
     }
-      #close-overlay-button {
-          right: calc(((100vw - 1185px) / 2) + 1vw);
-      }
+    #close-overlay-button {
+      right: calc(((100vw - 1185px) / 2) + 1vw);
+    }
   }
 
   @media screen and (max-width: 600px) {
