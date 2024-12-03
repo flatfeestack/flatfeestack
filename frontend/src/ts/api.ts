@@ -257,6 +257,8 @@ export const API = {
       backendToken
         .get(`repos/search?q=${encodeURIComponent(s)}`)
         .json<Repo[] | null>(),
+    triggerNewRepoAssessment: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/forceAnalyze`),
     searchName: (s: string) =>
       backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),

@@ -2,34 +2,34 @@
   import { API } from "../ts/api";
   import {
     error,
-    loadedLatestThresholds,
     latestThresholds,
+    loadedLatestThresholds,
+    reposWaitingForNewAnalysis,
   } from "../ts/mainStore";
   import type {
+    PartialHealthValues,
     Repo,
     RepoMetrics,
-    PartialHealthValues,
   } from "../types/backend";
   import {
-    Chart,
+    BarController,
     BarElement,
     CategoryScale,
-    LinearScale,
-    Tooltip,
+    Chart,
     Legend,
-    BarController,
+    LinearScale,
     Title,
-    Animation,
+    Tooltip,
   } from "chart.js";
-  import { onMount, onDestroy } from "svelte";
-  import Dots from "./Dots.svelte";
+  import { onDestroy, onMount } from "svelte";
 
   export let repo: Repo;
 
-  let asyncDataLoaded: boolean = false;
+  // let asyncDataLoaded: boolean = false;
 
   let repoMetrics: RepoMetrics;
   let partialHealthValues: PartialHealthValues;
+  let lastAnalysed: string;
 
   let contributorValue: number;
   let commitValue: number;
@@ -59,30 +59,54 @@
     }
   }
 
+  function setPartialHealthValues() {
+    contributorCount = repoMetrics.contributorcount;
+    commitCount = repoMetrics.commitcount;
+    sponsorCount = repoMetrics.sponsorcount;
+    multiplierSponsorCount = repoMetrics.repomultipliercount;
+    starCount = repoMetrics.repostarcount;
+    lastAnalysed = repoMetrics.createdat;
+  }
+
   async function getRepoHealthMetrics() {
+    // reposWaitingForNewAnalysis.update((list) => [...list, repo])
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
-      contributorCount = repoMetrics.contributorcount;
-      commitCount = repoMetrics.commitcount;
-      sponsorCount = repoMetrics.sponsorcount;
-      multiplierSponsorCount = repoMetrics.repomultipliercount;
-      starCount = repoMetrics.repostarcount;
+      setPartialHealthValues();
     } catch (e) {
       $error = e;
     }
   }
 
+  function setRepoMetricsVariables() {
+    contributorValue = partialHealthValues.contributorvalue;
+    commitValue = partialHealthValues.commitvalue;
+    sponsorValue = partialHealthValues.sponsorvalue;
+    multiplierSponsorValue = partialHealthValues.repomultipliervalue;
+    starValue = partialHealthValues.repostarvalue;
+  }
+
   async function getPartialHealthValues() {
     try {
       partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
-      contributorValue = partialHealthValues.contributorvalue;
-      commitValue = partialHealthValues.commitvalue;
-      sponsorValue = partialHealthValues.sponsorvalue;
-      multiplierSponsorValue = partialHealthValues.repomultipliervalue;
-      starValue = partialHealthValues.repostarvalue;
+      setRepoMetricsVariables();
     } catch (e) {
       $error = e;
     }
+  }
+
+  async function newRepoAssessment() {
+    console.log("repoMetrics before", repoMetrics);
+    try {
+      await API.repos.triggerNewRepoAssessment(repo.uuid);
+      partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
+      repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
+      setPartialHealthValues();
+      setRepoMetricsVariables();
+    } catch (e) {
+      $error = e;
+    }
+    console.log("repoMetrics after", repoMetrics);
   }
 
   function initRepoMetricsChart() {
@@ -257,22 +281,11 @@
                 starValue, // change back to starValue
               ],
               backgroundColor: [
-                // contributorValue < 0.6
-                //   ? "red"
-                //   : contributorValue <= 1.5
-                //     ? "yellow"
-                //     : "green",
                 "rgba(255, 159, 64, 0.6)",
                 "rgba(255, 99, 132, 0.6)",
                 "rgba(75, 192, 192, 0.6)",
                 "rgba(153, 102, 255, 0.6)",
                 "rgba(54, 162, 235, 0.6)",
-
-                // contributorCount > 2 ? 'red' : 'green',
-                // commitCount > 2 ? 'red' : 'green',
-                // sponsorCount > 2 ? 'red' : 'green',
-                // multiplierSponsorCount > 2 ? 'red' : 'green',
-                // starCount > 2 ? 'red' : 'green',
               ],
               borderColor: [
                 "rgba(255, 159, 64, 1)",
@@ -319,7 +332,7 @@
     await getPartialHealthValues();
     initHealthValueChart();
     initRepoMetricsChart();
-    asyncDataLoaded = true;
+    // asyncDataLoaded = true;
   });
 
   onDestroy(() => {
@@ -456,6 +469,14 @@
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-im3" />
+    </div>
+  </div>
+
+  <div class="container-col2 m-2">
+    <h3>Last Analysis of Repository</h3>
+    <div class="container justify-between">
+      <p>Date: {lastAnalysed}</p>
+      <button class="button1" on:click={newRepoAssessment}>Re-Analyse</button>
     </div>
   </div>
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { API } from "../ts/api";
+  import { faClose } from "@fortawesome/free-solid-svg-icons";
   import {
     error,
     trustedRepos,
@@ -10,6 +11,7 @@
   import type { Repo } from "../types/backend";
   import { onDestroy } from "svelte";
   import RepoAssessmentOverlay from "./RepoAssessmentOverlay.svelte";
+  import Fa from "svelte-fa";
 
   export let repo: Repo;
   let verifiedStar = true;
@@ -220,7 +222,6 @@
       0.3
     ); /* secondary-200 with 30% opacity */
     z-index: 2;
-    cursor: pointer;
   }
 
   .overlay-container {
@@ -233,7 +234,13 @@
     margin: 5vh 20vw;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
-    cursor: pointer;
+  }
+
+  #close-overlay-button {
+    position: absolute;
+    top: 5vh;
+    right: 21vw;
+    z-index: 3;
   }
 
   @media screen and (min-width: 2000px) {
@@ -241,6 +248,9 @@
       width: 1185px;
       margin: 5vh calc((100vw - 1185px) / 2);
     }
+      #close-overlay-button {
+          right: calc(((100vw - 1185px) / 2) + 1vw);
+      }
   }
 
   @media screen and (max-width: 600px) {
@@ -341,9 +351,12 @@
   class:hidden={!assessmentOverlayVisible}
   role="button"
   tabindex="0"
-  on:click={hideOverlay}
-  on:keydown={(e) => (e.key === "Enter" || e.key === " ") && hideOverlay()}
 >
+  <button
+    id="close-overlay-button"
+    class="button3 m-2 px-100"
+    on:click={hideOverlay}>close <Fa icon={faClose} class="ml-5" /></button
+  >
   <div class="overlay-container">
     {#if assessmentOverlayVisible}
       <RepoAssessmentOverlay {repo} />
