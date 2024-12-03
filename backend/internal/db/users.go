@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -329,7 +330,7 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	return handleErrMustInsertOne(res)
 }
 
-func CheckDailyLimitStillAdheredTo(foundation *UserDetail) (bool, error) {
+func CheckDailyLimitStillAdheredTo(foundation *UserDetail, amount *big.Int) (bool, error) {
 	if foundation == nil {
 		return false, fmt.Errorf("foundation cannot be nil")
 	}
@@ -341,14 +342,16 @@ func CheckDailyLimitStillAdheredTo(foundation *UserDetail) (bool, error) {
 			foundation_id = $1
 			AND created_at >= NOW() - INTERVAL '1 day'`
 
-	var dailySum float64
+	var dailySum *big.Int
 
 	err := DB.QueryRow(query, foundation.Id).Scan(&dailySum)
 	if err != nil {
 		return false, fmt.Errorf("failed to calculate daily contributions: %v", err)
 	}
 
-	if dailySum < float64(foundation.MultiplierDailyLimit) {
+	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
+
+	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) < 0 {
 		return true, nil
 	}
 

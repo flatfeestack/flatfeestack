@@ -147,13 +147,20 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 		return err
 	}
 	if len(trustedRepos) > 0 {
-		pool := new(big.Int).Mul(distributeDeduct, big.NewInt(int64(len(trustedRepos))))
+		var distributable *big.Int
+
+		if deductFutureContribution != nil {
+			distributable = new(big.Int).Add(distributeAdd, distributeDeduct)
+		} else {
+			distributable = distributeAdd
+		}
+		pool := new(big.Int).Mul(distributable, big.NewInt(int64(len(trustedRepos))))
 		allFoundations, err := db.GetAllFoundationsSupportingRepos(rids)
 		if err != nil {
 			return err
 		}
 		parts := len(allFoundations)
-		payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(distributeDeduct), big.NewFloat(0.9))
+		payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(distributable), big.NewFloat(0.9))
 
 		poolAsFloat := new(big.Float).SetInt(pool)
 		partsAsFloat := big.NewFloat(float64(parts))
@@ -269,11 +276,13 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 			amountFoundation.Int(amountFoundationInt)
 
 			for _, foundation := range foundations {
-				checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation)
+				checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt)
+				// check if payment was success and if the amount is enaugh
 				if err != nil {
 					return err
 				}
 				if checkDailyLimit {
+					// foundation pays only if there are developers on the repo right now, else to complicated, I dont understand
 					for contributorUserId, w := range uidInMap {
 						amount := calcSharePerUser(amountFoundationInt, w, total)
 						slog.Info("Claim",
