@@ -121,6 +121,7 @@ func (rs *RepoHandler) UnsetMultiplierRepo(w http.ResponseWriter, r *http.Reques
 func (rs *RepoHandler) TrustRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	idStr := r.PathValue("id")
 	repoId, err := uuid.Parse(idStr)
+
 	if err != nil {
 		slog.Error("Not a valid id",
 			slog.Any("error", err))

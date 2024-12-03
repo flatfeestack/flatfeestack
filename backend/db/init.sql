@@ -203,12 +203,14 @@ INSERT INTO repo_health_threshold (
   th_commit_count,
   th_sponsor_donation,
   th_repo_star_count,
-  th_repo_multiplier) 
+  th_repo_multiplier,
+  th_active_ffs_user_count) 
 VALUES (
   'b7244c4a-dadd-45f5-bd12-0fcefb5d66c2',
   '2022-12-31 23:59:59.999999999',
   '{"lower": 4, "upper": 13}',
   '{"lower": 40, "upper": 130}',
+  '{"lower": 1, "upper": 5}',
   '{"lower": 5, "upper": 20}',
   '{"lower": 5, "upper": 20}',
   '{"lower": 5, "upper": 20}'
