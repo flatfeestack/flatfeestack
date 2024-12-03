@@ -18,14 +18,14 @@ type RepoHealthMetrics struct {
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
 	RepoMultiplierCount int       `json:"repomultipliercount"`
-	RepoWeight          float64   `json:"reposponsordonated"`
+	RepoWeight          int       `json:"reposponsordonated"`
 }
 
 type InternalHealthMetrics struct {
-	SponsorCount        int     `json:"sponsorcount"`
-	RepoStarCount       int     `json:"repostarcount"`
-	RepoMultiplierCount int     `json:"repomultipliercount"`
-	RepoWeight          float64 `json:"reposponsordonated"`
+	SponsorCount        int `json:"sponsorcount"`
+	RepoStarCount       int `json:"repostarcount"`
+	RepoMultiplierCount int `json:"repomultipliercount"`
+	RepoWeight          int `json:"reposponsordonated"`
 }
 
 func InsertRepoHealthMetrics(repoHealthMetrics RepoHealthMetrics) error {
@@ -251,7 +251,7 @@ func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 
 func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, error) {
 	var metrics RepoHealthMetrics
-	var activeUserMinMonths = 1
+	var activeUserMinMonths = 3
 	var latestRepoSponsoringMonths = 6
 
 	activeSponsors, err := GetActiveSponsors(activeUserMinMonths, isPostgres)

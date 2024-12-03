@@ -212,30 +212,30 @@ func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, 
 	return count, nil
 }
 
-func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (float64, error) {
+func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	userIds, err := FindUsersByGitEmails(emails)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	activeUsers, err := FilterActiveUsers(userIds, activeUserMinMonths, isPostgres)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	if len(activeUsers) == 0 {
-		return 0.0, nil
+		return 0, nil
 	}
 
 	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
-	return float64(trustedRepoCount), nil
+	return trustedRepoCount, nil
 }

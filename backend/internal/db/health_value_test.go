@@ -27,7 +27,7 @@ func getTestData(r *Repo) *RepoHealthMetrics {
 		SponsorCount:        rand.Intn(100) + 1,
 		RepoStarCount:       rand.Intn(100) + 1,
 		RepoMultiplierCount: rand.Intn(100) + 1,
-		RepoWeight:          rand.Float64(),
+		RepoWeight:          rand.Intn(100) + 1,
 	}
 
 	return &newRepoMetrics
@@ -200,7 +200,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("not an active user staring and contributions", func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 2, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("active/inactive user staring", func(t *testing.T) {
@@ -262,7 +262,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		_ = InsertOrUpdateTrustRepo(&tr1)
 
 		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, -1, -1)
+		previousTime := currentTime.AddDate(0, -3, -1)
 		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 
@@ -289,7 +289,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 1, internalMetrics.RepoStarCount)
 		assert.Equal(t, 0, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("active/inactive user multiplier", func(t *testing.T) {
@@ -313,7 +313,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		_ = InsertOrUpdateTrustRepo(&tr1)
 
 		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, -1, -1)
+		previousTime := currentTime.AddDate(0, -3, -1)
 		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 
@@ -340,7 +340,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetrics.SponsorCount)
 		assert.Equal(t, 0, internalMetrics.RepoStarCount)
 		assert.Equal(t, 1, internalMetrics.RepoMultiplierCount)
-		assert.Equal(t, 0.0, internalMetrics.RepoWeight)
+		assert.Equal(t, 0, internalMetrics.RepoWeight)
 	})
 
 	t.Run("test repo weight", func(t *testing.T) {
@@ -384,7 +384,7 @@ func TestGetInternalMetrics(t *testing.T) {
 		_ = InsertOrUpdateTrustRepo(&tr1)
 
 		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, -1, -1)
+		previousTime := currentTime.AddDate(0, -3, -1)
 		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
 		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
@@ -393,6 +393,6 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.SponsorCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoStarCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoMultiplierCount)
-		assert.Equal(t, 2.0, internalMetricsFocusSponsorEvent.RepoWeight)
+		assert.Equal(t, 2, internalMetricsFocusSponsorEvent.RepoWeight)
 	})
 }

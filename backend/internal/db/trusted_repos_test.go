@@ -372,7 +372,7 @@ func TestGetRepoWeight(t *testing.T) {
 	t.Run("Invalid RepoId", func(t *testing.T) {
 		weight, err := GetRepoWeight(uuid.Nil, 6, 12, true)
 		assert.Nil(t, err)
-		assert.Equal(t, 0.0, weight)
+		assert.Equal(t, 0, weight)
 	})
 
 	t.Run("2 valid repos", func(t *testing.T) {
@@ -420,6 +420,6 @@ func TestGetRepoWeight(t *testing.T) {
 		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
 
 		weight, _ := GetRepoWeight(r.Id, 1, 6, false)
-		assert.Equal(t, 2.0, weight)
+		assert.Equal(t, 2, weight)
 	})
 }
