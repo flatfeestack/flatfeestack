@@ -33,12 +33,14 @@
   let sponsorValue: number;
   let multiplierSponsorValue: number;
   let starValue: number;
+  let activeFFSUserValue: number;
 
   let contributorCount: number;
   let commitCount: number;
   let sponsorCount: number;
   let multiplierSponsorCount: number;
   let starCount: number;
+  let activeFFSUserCount: number;
 
   let healthValueChart: Chart | null = null;
   let contributorCountChart: Chart | null = null;
@@ -46,6 +48,7 @@
   let sponsorCountChart: Chart | null = null;
   let multiplierSponsorCountChart: Chart | null = null;
   let starCountChart: Chart | null = null;
+  let activeFFSUserChart: Chart | null = null;
 
   async function getLatestThresholds() {
     try {
@@ -56,36 +59,38 @@
     }
   }
 
-  function setPartialHealthValues() {
+  function setRepoMetricsVariables() {
     contributorCount = repoMetrics.contributorcount;
     commitCount = repoMetrics.commitcount;
     sponsorCount = repoMetrics.sponsorcount;
     multiplierSponsorCount = repoMetrics.repomultipliercount;
     starCount = repoMetrics.repostarcount;
+    activeFFSUserCount = repoMetrics.activeffsusercount;
     lastAnalysed = repoMetrics.createdat;
   }
 
   async function getRepoHealthMetrics() {
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
-      setPartialHealthValues();
+      setRepoMetricsVariables();
     } catch (e) {
       $error = e;
     }
   }
 
-  function setRepoMetricsVariables() {
+  function setPartialHealthValues() {
     contributorValue = partialHealthValues.contributorvalue;
     commitValue = partialHealthValues.commitvalue;
     sponsorValue = partialHealthValues.sponsorvalue;
     multiplierSponsorValue = partialHealthValues.repomultipliervalue;
     starValue = partialHealthValues.repostarvalue;
+    activeFFSUserValue = partialHealthValues.activeffsuservalue;
   }
 
   async function getPartialHealthValues() {
     try {
       partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
-      setRepoMetricsVariables();
+      setPartialHealthValues();
     } catch (e) {
       $error = e;
     }
@@ -151,6 +156,15 @@
         backgroundColor: ["rgba(54, 162, 235, 0.6)"],
         borderColor: ["rgba(54, 162, 235, 1)"],
         thresholds: $latestThresholds.ThRepoStarCount,
+      },
+      {
+        chart: activeFFSUserChart,
+        id: "repo-metrics-chart-im4",
+        label: "Active FFS User",
+        data: [repoMetrics.activeffsusercount],
+        backgroundColor: ["rgba(255, 102, 178, 0.6)"],
+        borderColor: ["rgba(255, 102, 178, 1)"],
+        thresholds: $latestThresholds.ThActiveFFSUserCount,
       },
     ];
 
@@ -266,6 +280,7 @@
             `Sponsor Value`,
             `Multiplier Sponsor Value`,
             `Star Value`,
+            `Active FFS User Value`,
           ],
           datasets: [
             {
@@ -275,6 +290,7 @@
                 sponsorValue, // change back to sponsorValue
                 multiplierSponsorValue, // change back to multiplierSponsorValue
                 starValue, // change back to starValue
+                activeFFSUserValue,
               ],
               backgroundColor: [
                 "rgba(255, 159, 64, 0.6)",
@@ -282,6 +298,7 @@
                 "rgba(75, 192, 192, 0.6)",
                 "rgba(153, 102, 255, 0.6)",
                 "rgba(54, 162, 235, 0.6)",
+                "rgba(255, 102, 178, 0.6)",
               ],
               borderColor: [
                 "rgba(255, 159, 64, 1)",
@@ -289,6 +306,7 @@
                 "rgba(75, 192, 192, 1)",
                 "rgba(153, 102, 255, 1)",
                 "rgba(54, 162, 235, 1)",
+                "rgba(255, 102, 178, 1)",
               ],
               borderWidth: 2,
             },
@@ -338,6 +356,7 @@
     if (sponsorCountChart) sponsorCountChart.destroy();
     if (multiplierSponsorCountChart) multiplierSponsorCountChart.destroy();
     if (starCountChart) starCountChart.destroy();
+    if (activeFFSUserChart) activeFFSUserChart.destroy();
   });
 </script>
 
@@ -415,6 +434,17 @@
           <td>Corresponding points for <strong>{starCount}</strong> stars:</td>
           <td class="text-center"><strong>{starValue}</strong></td>
         </tr>
+        <tr>
+          <td
+            >Corresponding points for <strong>{activeFFSUserCount}</strong> active
+            FFS user in this repo:</td
+          >
+          <td class="text-center"><strong>{activeFFSUserValue}</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td class="text-center"><strong>{repo.healthValue}</strong></td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -465,6 +495,14 @@
     </p>
     <div class="repo-metrics-chart-div container">
       <canvas id="repo-metrics-chart-im3" />
+    </div>
+
+    <p class="mtrl-4">
+      <strong>Active FFS User Count:</strong> total active FlatFeeStack user contributing
+      to this repository
+    </p>
+    <div class="repo-metrics-chart-div container">
+      <canvas id="repo-metrics-chart-im4" />
     </div>
   </div>
 

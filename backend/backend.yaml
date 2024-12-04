@@ -1354,6 +1354,9 @@ components:
         repomultipliervalue:
           type: number
           format: float
+        activeffsuservalue:
+          type: number
+          format: float
     PaymentEvent:
       type: array
       items:

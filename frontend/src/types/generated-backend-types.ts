@@ -3,2768 +3,1240 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
-    "/users/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+  "/users/me": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["User"];
+          };
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["User"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
     };
-    "/users/me/git-email": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+  };
+  "/users/me/git-email": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["GitUser"])[];
+          };
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["GitUser"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: email */
-                        email?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete: {
-            parameters: {
-                query: {
-                    email: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
     };
-    "/users/me/method/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query: {
-                    method: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/sponsored": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/multiplied": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/name/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    name: {
-                        image?: string;
-                    };
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/clear/name": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/multiplier/{isSet}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    isSet: {
-                        image?: string;
-                    };
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/multiplierDailyLimit/{amount}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    amount: {
-                        image?: string;
-                    };
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/image": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        image?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/stripe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query: {
-                    freq: number;
-                    seats: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ClientSecret"];
-                    };
-                };
-            };
-        };
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ClientSecret"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/nowPayment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query: {
-                    freq: number;
-                    seats: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PaymentResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/payment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PaymentEvent"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/sponsored-users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["UserStatus"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["UserStatus"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/contrib-snd": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Contribution"][];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/contrib-rcv": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Contribution"][];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/contributions-summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/js  on": components["schemas"]["RepoBalance"][];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/contributions-summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query: {
-                    uuid: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RepoBalance"][];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query: {
-                    uuid: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["User"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/git-email": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["EmailToken"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/request-payout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query: {
-                    targetCurrency: "ETH" | "GAS" | "USD";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PayoutResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicUser"][];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/by/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            user?: components["schemas"]["User"];
-                        };
-                    };
-                };
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"][];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/name": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query: {
-                    q: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"][];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/trusted": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/healthvaluethreshold": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["HealthValueThreshold"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/healthvalue/partial": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PartialHealthValues"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/forceAnalyzer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/tag": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/untag": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/setMultiplier": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/unsetMultiplier": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/trust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/untrust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Repo"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/{offset}/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    offset: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Data"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/healthvalue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RepoHealthValue"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/repos/{id}/healthvalue/metrics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RepoMetrics"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/hooks/stripe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Service Unavailable */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/hooks/nowpayments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/hooks/analyzer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["WebhookCallback"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/payout/{exchangeRate}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    exchangeRate: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/time": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Time"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": string[];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Config"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/confirm/invite/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invite": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Invitation"][];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invite/by/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invite/my/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invite/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/fake/user/{email}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/fake/payment/{email}/{seats}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    email: string;
-                    seats: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/fake/contribution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["FakeRepoMapping"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/timewarp/{hours}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    hours: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/nowpayments/crontester": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        data?: {
-                            [key: string]: string;
-                        };
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-}
-export type webhooks = Record<string, never>;
-export interface components {
-    schemas: {
-        User: {
-            /** Format: uuid */
-            id: string;
-            email: string;
-            name?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: uuid */
-            invitedId?: string;
-            stripeId?: string | null;
-            image?: string | null;
-            paymentMethod?: string | null;
-            last4?: string | null;
-            /** Format: int64 */
-            seats?: number | null;
-            /** Format: int64 */
-            freq?: number | null;
-            role?: string | null;
-        };
-        Claims: {
-            iss?: string | null;
-            sub?: string | null;
-            aud?: string | null;
-            /** Format: int64 */
-            exp?: number | null;
-            /** Format: int64 */
-            nbf?: number | null;
-            /** Format: int64 */
-            iat?: number | null;
-            jti?: string | null;
-        };
-        GitUser: {
-            email: string;
-            /** Format: date-time */
-            confirmedAt?: string | null;
-            /** Format: date-time */
-            createdAt?: string | null;
-        };
-        Repo: {
-            /** Format: uuid */
-            uuid: string;
-            url?: string | null;
-            gitUrl?: string | null;
-            name?: string | null;
-            description?: string | null;
-            /** Format: uint32 */
-            score: number;
-            source?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            trustAt?: string;
-            /** Format: float */
-            healthValue?: number;
-            analyzed?: boolean;
-        };
-        RepoHealthValue: {
-            repoid?: string;
-            healthvalue?: number;
-        };
-        HealthValueThreshold: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            ThContributorCount?: components["schemas"]["Threshold"];
-            ThCommitCount?: components["schemas"]["Threshold"];
-            ThSponsorDonation?: components["schemas"]["Threshold"];
-            ThRepoStarCount?: components["schemas"]["Threshold"];
-            ThRepoMultiplier?: components["schemas"]["Threshold"];
-            ThActiveFFSUserCount?: components["schemas"]["Threshold"];
-        };
-        Threshold: {
-            /** Format: int64 */
-            upper: number;
-            /** Format: int64 */
-            lower: number;
-        };
-        RepoMetrics: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            repoid?: string;
-            /** Format: date-time */
-            createdat?: string;
-            /** Format: int64 */
-            contributorcount?: number;
-            /** Format: int64 */
-            commitcount?: number;
-            /** Format: int64 */
-            sponsorcount?: number;
-            /** Format: int64 */
-            repostarcount?: number;
-            /** Format: int64 */
-            repomultipliercount?: number;
-            /** Format: int64 */
-            activeffsusercount?: number;
-        };
-        PartialHealthValues: {
-            /** Format: uuid */
-            repoid?: string;
-            /** Format: float */
-            contributorvalue?: number;
-            /** Format: float */
-            commitvalue?: number;
-            /** Format: float */
-            sponsorvalue?: number;
-            /** Format: float */
-            repostarvalue?: number;
-            /** Format: float */
-            repomultipliervalue?: number;
-        };
-        PaymentEvent: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            externalId?: string;
-            /** Format: uuid */
-            userId?: string;
-            /** Format: bigint */
-            balance?: number;
-            currency?: string;
-            status?: string;
-            /** Format: int64 */
-            seats: number;
-            /** Format: int64 */
-            freq: number;
-            /** Format: date-time */
-            createdAt?: string;
-        }[];
-        UserStatus: {
-            /** Format: uuid */
-            userId?: string;
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
             /** Format: email */
             email?: string;
-            name?: string | null;
-            daysLeft?: number;
+          };
         };
-        UserBalance: {
-            currency?: string;
-            balance?: number;
-        }[];
-        Contribution: {
-            repoName: string;
-            repoUrl: string;
-            sponsorName?: string | null;
-            sponsorEmail: string;
-            contributorName?: string | null;
-            contributorEmail: string;
-            /** Format: int64 */
-            balance: string;
-            currency: string;
-            /** Format: uuid */
-            paymentCycleInId: string;
-            /** Format: date-time */
-            day: string;
-            /** Format: date-time */
-            claimedAt?: string;
-        };
-        RepoBalance: {
-            repo: components["schemas"]["Repo"];
-            currencyBalance: {
-                [key: string]: string;
-            };
-        };
-        EmailToken: {
-            email: string;
-            token: string;
-        };
-        Data: {
-            /** Format: int32 */
-            days?: number;
-            /** Format: int32 */
-            total?: number;
-            datasets?: components["schemas"]["Dataset"][];
-            labels?: string[];
-        };
-        Dataset: {
-            label?: string;
-            data?: number[];
-            fill?: boolean;
-            backgroundColor?: string;
-            borderColor?: string;
-            /** Format: int32 */
-            pointBorderWidth?: number;
-        };
-        WebhookCallback: {
-            requestId?: string;
-            error?: string | null;
-            result?: components["schemas"]["FlatFeeWeight"][];
-            repoid?: string;
-        };
-        FlatFeeWeight: {
-            names?: string[];
-            email?: string;
-            weight?: number;
-            /** Format: int32 */
-            commitcount?: number;
-        };
-        Time: {
-            /** Format: date-time */
-            time?: string;
-            offset?: string;
-        };
-        Config: {
-            stripePublicApi?: string;
-            plans?: components["schemas"]["Plan"][];
-            env?: string;
-            supportedCurrencies?: {
-                [key: string]: components["schemas"]["Currency"];
-            };
-        };
-        /** @example {
-         *       "ETH": {
-         *         "name": "Ethereum",
-         *         "short": "ETH",
-         *         "smallest": "wei",
-         *         "factorPow": 18,
-         *         "isCrypto": true
-         *       }
-         *     } */
-        Currency: {
-            name: string;
-            short: string;
-            smallest: string;
-            /** Format: int64 */
-            factorPow: number;
-            isCrypto: boolean;
-        };
-        Plan: {
-            title: string;
-            /** Format: float */
-            price: number;
-            /** Format: int64 */
-            freq: number;
-            desc?: string;
-            disclaimer?: string;
-            /** Format: int64 */
-            feePrm?: number;
-        };
-        Invitation: {
-            email: string;
-            inviteEmail: string;
-            /** Format: date-time */
-            confirmedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        ClientSecret: {
-            clientSecret: string;
-        };
-        PaymentResponse: {
-            payAddress?: string;
-            /** Format: int64 */
-            payAmount?: string;
-            payCurrency?: string;
-        };
-        FakeRepoMapping: {
-            startDate: string;
-            endDate: string;
-            name: string;
-            url: string;
-            weights?: components["schemas"]["FlatFeeWeight"][];
-        };
-        PayoutResponse: {
-            /** Format: int64 */
-            amount: string;
-            currency?: string;
-            /** Format: byte */
-            encodedUserId: string;
-            /** Format: byte */
-            signature: string;
-        };
-        PublicUser: {
-            /** Format: uuid */
-            id?: string;
-            name?: string | null;
-            image?: string | null;
-        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    delete: {
+      parameters: {
+        query: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/method/": {
+    put: {
+      parameters: {
+        query: {
+          method: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+    delete: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/sponsored": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/me/multiplied": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/me/name/{name}": {
+    put: {
+      parameters: {
+        path: {
+          name: {
+            image?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/clear/name": {
+    put: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/multiplier/{isSet}": {
+    put: {
+      parameters: {
+        path: {
+          isSet: {
+            image?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/multiplierDailyLimit/{amount}": {
+    put: {
+      parameters: {
+        path: {
+          amount: {
+            image?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/image": {
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            image?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+    delete: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/stripe": {
+    put: {
+      parameters: {
+        query: {
+          freq: number;
+          seats: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ClientSecret"];
+          };
+        };
+      };
+    };
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ClientSecret"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+    delete: {
+      responses: {
+        /** @description OK */
+        200: never;
+      };
+    };
+  };
+  "/users/me/nowPayment": {
+    post: {
+      parameters: {
+        query: {
+          freq: number;
+          seats: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaymentResponse"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/users/me/payment": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaymentEvent"];
+          };
+        };
+      };
+    };
+  };
+  "/users/me/sponsored-users": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserStatus"];
+          };
+        };
+      };
+    };
+  };
+  "/users/me/balance": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserStatus"];
+          };
+        };
+      };
+    };
+  };
+  "/users/contrib-snd": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Contribution"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/contrib-rcv": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Contribution"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/me/contributions-summary": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/js  on": (components["schemas"]["RepoBalance"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/contributions-summary": {
+    post: {
+      parameters: {
+        query: {
+          uuid: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["RepoBalance"])[];
+          };
+        };
+      };
+    };
+  };
+  "/users/summary": {
+    post: {
+      parameters: {
+        query: {
+          uuid: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["User"];
+          };
+        };
+      };
+    };
+  };
+  "/users/git-email": {
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EmailToken"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/users/me/request-payout": {
+    post: {
+      parameters: {
+        query: {
+          targetCurrency: "ETH" | "GAS" | "USD";
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PayoutResponse"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/users/{id}": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["PublicUser"])[];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/users/by/{email}": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              user?: components["schemas"]["User"];
+            };
+          };
+        };
+        /** @description No Content */
+        204: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/repos/search": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/repos/name": {
+    get: {
+      parameters: {
+        query: {
+          q: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/repos/trusted": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+      };
+    };
+  };
+  "/repos/healthvaluethreshold": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["HealthValueThreshold"])[];
+          };
+        };
+      };
+    };
+  };
+  "/repos/{id}/healthvalue/partial": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["PartialHealthValues"])[];
+          };
+        };
+      };
+    };
+  };
+  "/repos/{id}": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Not Found */
+        404: never;
+      };
+    };
+  };
+  "/repos/{id}/forceAnalyzer": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/tag": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/untag": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/setMultiplier": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/unsetMultiplier": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/trust": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/untrust": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Repo"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/{offset}/graph": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+          offset: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Data"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/repos/{id}/healthvalue": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RepoHealthValue"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/repos/{id}/healthvalue/metrics": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RepoMetrics"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/hooks/stripe": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Service Unavailable */
+        503: never;
+      };
+    };
+  };
+  "/hooks/nowpayments": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/hooks/analyzer": {
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["WebhookCallback"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/admin/payout/{exchangeRate}": {
+    post: {
+      parameters: {
+        path: {
+          exchangeRate: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/admin/time": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Time"];
+          };
+        };
+      };
+    };
+  };
+  "/admin/users": {
+    post: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (string)[];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/config": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Config"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/confirm/invite/{email}": {
+    post: {
+      parameters: {
+        path: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/invite": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["Invitation"])[];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/invite/by/{email}": {
+    delete: {
+      parameters: {
+        path: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/invite/my/{email}": {
+    delete: {
+      parameters: {
+        path: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/invite/{email}": {
+    post: {
+      parameters: {
+        path: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/admin/fake/user/{email}": {
+    post: {
+      parameters: {
+        path: {
+          email: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/admin/fake/payment/{email}/{seats}": {
+    post: {
+      parameters: {
+        path: {
+          email: string;
+          seats: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/admin/fake/contribution": {
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["FakeRepoMapping"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/admin/timewarp/{hours}": {
+    post: {
+      parameters: {
+        path: {
+          hours: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
+  "/nowpayments/crontester": {
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            data?: {
+              [key: string]: string | undefined;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+      };
+    };
+  };
 }
-export type $defs = Record<string, never>;
+
+export type webhooks = Record<string, never>;
+
+export interface components {
+  schemas: {
+    User: {
+      /** Format: uuid */
+      id: string;
+      email: string;
+      name?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: uuid */
+      invitedId?: string;
+      stripeId?: string | null;
+      image?: string | null;
+      paymentMethod?: string | null;
+      last4?: string | null;
+      /** Format: int64 */
+      seats?: number | null;
+      /** Format: int64 */
+      freq?: number | null;
+      role?: string | null;
+    };
+    Claims: {
+      iss?: string | null;
+      sub?: string | null;
+      aud?: string | null;
+      /** Format: int64 */
+      exp?: number | null;
+      /** Format: int64 */
+      nbf?: number | null;
+      /** Format: int64 */
+      iat?: number | null;
+      jti?: string | null;
+    };
+    GitUser: {
+      email: string;
+      /** Format: date-time */
+      confirmedAt?: string | null;
+      /** Format: date-time */
+      createdAt?: string | null;
+    };
+    Repo: {
+      /** Format: uuid */
+      uuid: string;
+      url?: string | null;
+      gitUrl?: string | null;
+      name?: string | null;
+      description?: string | null;
+      /** Format: uint32 */
+      score: number;
+      source?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      trustAt?: string;
+      /** Format: float */
+      healthValue?: number;
+      analyzed?: boolean;
+    };
+    RepoHealthValue: {
+      repoid?: string;
+      healthvalue?: number;
+    };
+    HealthValueThreshold: {
+      /** Format: uuid */
+      id?: string;
+      /** Format: date-time */
+      createdAt?: string;
+      ThContributorCount?: components["schemas"]["Threshold"];
+      ThCommitCount?: components["schemas"]["Threshold"];
+      ThSponsorDonation?: components["schemas"]["Threshold"];
+      ThRepoStarCount?: components["schemas"]["Threshold"];
+      ThRepoMultiplier?: components["schemas"]["Threshold"];
+      ThActiveFFSUserCount?: components["schemas"]["Threshold"];
+    };
+    Threshold: {
+      /** Format: int64 */
+      upper: number;
+      /** Format: int64 */
+      lower: number;
+    };
+    RepoMetrics: {
+      /** Format: uuid */
+      id?: string;
+      /** Format: uuid */
+      repoid?: string;
+      /** Format: date-time */
+      createdat?: string;
+      /** Format: int64 */
+      contributorcount?: number;
+      /** Format: int64 */
+      commitcount?: number;
+      /** Format: int64 */
+      sponsorcount?: number;
+      /** Format: int64 */
+      repostarcount?: number;
+      /** Format: int64 */
+      repomultipliercount?: number;
+      /** Format: int64 */
+      activeffsusercount?: number;
+    };
+    PartialHealthValues: {
+      /** Format: uuid */
+      repoid?: string;
+      /** Format: float */
+      contributorvalue?: number;
+      /** Format: float */
+      commitvalue?: number;
+      /** Format: float */
+      sponsorvalue?: number;
+      /** Format: float */
+      repostarvalue?: number;
+      /** Format: float */
+      repomultipliervalue?: number;
+      /** Format: float */
+      activeffsuservalue?: number;
+    };
+    PaymentEvent: ({
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        externalId?: string;
+        /** Format: uuid */
+        userId?: string;
+        /** Format: bigint */
+        balance?: number;
+        currency?: string;
+        status?: string;
+        /** Format: int64 */
+        seats: number;
+        /** Format: int64 */
+        freq: number;
+        /** Format: date-time */
+        createdAt?: string;
+      })[];
+    UserStatus: {
+      /** Format: uuid */
+      userId?: string;
+      /** Format: email */
+      email?: string;
+      name?: string | null;
+      daysLeft?: number;
+    };
+    UserBalance: ({
+        currency?: string;
+        balance?: number;
+      })[];
+    Contribution: {
+      repoName: string;
+      repoUrl: string;
+      sponsorName?: string | null;
+      sponsorEmail: string;
+      contributorName?: string | null;
+      contributorEmail: string;
+      /** Format: int64 */
+      balance: string;
+      currency: string;
+      /** Format: uuid */
+      paymentCycleInId: string;
+      /** Format: date-time */
+      day: string;
+      /** Format: date-time */
+      claimedAt?: string;
+    };
+    RepoBalance: {
+      repo: components["schemas"]["Repo"];
+      currencyBalance: {
+        [key: string]: string | undefined;
+      };
+    };
+    EmailToken: {
+      email: string;
+      token: string;
+    };
+    Data: {
+      /** Format: int32 */
+      days?: number;
+      /** Format: int32 */
+      total?: number;
+      datasets?: (components["schemas"]["Dataset"])[];
+      labels?: (string)[];
+    };
+    Dataset: {
+      label?: string;
+      data?: (number)[];
+      fill?: boolean;
+      backgroundColor?: string;
+      borderColor?: string;
+      /** Format: int32 */
+      pointBorderWidth?: number;
+    };
+    WebhookCallback: {
+      requestId?: string;
+      error?: string | null;
+      result?: (components["schemas"]["FlatFeeWeight"])[];
+      repoid?: string;
+    };
+    FlatFeeWeight: {
+      names?: (string)[];
+      email?: string;
+      weight?: number;
+      /** Format: int32 */
+      commitcount?: number;
+    };
+    Time: {
+      /** Format: date-time */
+      time?: string;
+      offset?: string;
+    };
+    Config: {
+      stripePublicApi?: string;
+      plans?: (components["schemas"]["Plan"])[];
+      env?: string;
+      supportedCurrencies?: {
+        [key: string]: components["schemas"]["Currency"] | undefined;
+      };
+    };
+    /**
+     * @example {
+     *   "ETH": {
+     *     "name": "Ethereum",
+     *     "short": "ETH",
+     *     "smallest": "wei",
+     *     "factorPow": 18,
+     *     "isCrypto": true
+     *   }
+     * }
+     */
+    Currency: {
+      name: string;
+      short: string;
+      smallest: string;
+      /** Format: int64 */
+      factorPow: number;
+      isCrypto: boolean;
+    };
+    Plan: {
+      title: string;
+      /** Format: float */
+      price: number;
+      /** Format: int64 */
+      freq: number;
+      desc?: string;
+      disclaimer?: string;
+      /** Format: int64 */
+      feePrm?: number;
+    };
+    Invitation: {
+      email: string;
+      inviteEmail: string;
+      /** Format: date-time */
+      confirmedAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ClientSecret: {
+      clientSecret: string;
+    };
+    PaymentResponse: {
+      payAddress?: string;
+      /** Format: int64 */
+      payAmount?: string;
+      payCurrency?: string;
+    };
+    FakeRepoMapping: {
+      startDate: string;
+      endDate: string;
+      name: string;
+      url: string;
+      weights?: (components["schemas"]["FlatFeeWeight"])[];
+    };
+    PayoutResponse: {
+      /** Format: int64 */
+      amount: string;
+      currency?: string;
+      /** Format: byte */
+      encodedUserId: string;
+      /** Format: byte */
+      signature: string;
+    };
+    PublicUser: {
+      /** Format: uuid */
+      id?: string;
+      name?: string | null;
+      image?: string | null;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
+}
+
+export type external = Record<string, never>;
+
 export type operations = Record<string, never>;
