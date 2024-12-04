@@ -5,10 +5,18 @@
     trustedRepos,
     reposToUnTrustAfterTimeout,
     reposInSearchResult,
+    reposWaitingForNewAnalysis,
   } from "../ts/mainStore";
   import { getColor1 } from "../ts/utils";
   import type { Repo } from "../types/backend";
   import { onDestroy, onMount } from "svelte";
+  import {
+    faClose,
+    faArrowsRotate,
+    faHourglass,
+  } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
+  import RepoAssessmentOverlay from "./RepoAssessmentOverlay.svelte";
 
   export let repo: Repo;
   let verifiedStar = false;
@@ -17,6 +25,8 @@
   let intervalId: NodeJS.Timer | null = null;
   let showUnTrustProgressBar = false;
   const undoDuration: number = 5000;
+  let assessmentOverlayVisible: boolean = false;
+  let analyzeRepoInProgress: boolean = false;
 
   $: {
     const tmp = $trustedRepos.find((r: Repo) => {
@@ -33,6 +43,11 @@
     if (showUnTrustProgressBar) {
       startProgressBar();
     }
+
+    const tmpAnalyze = $reposWaitingForNewAnalysis.find((r: Repo) => {
+      return r.uuid === repo.uuid;
+    });
+    analyzeRepoInProgress = tmpAnalyze !== undefined;
   }
 
   async function unTrust() {
@@ -109,6 +124,23 @@
     unTrustProgress = 100;
   }
 
+  async function analyzeRepo() {
+    reposWaitingForNewAnalysis.update((list) => [...list, repo]);
+    try {
+      await API.repos.triggerNewRepoAssessment(repo.uuid);
+    } catch (e) {
+      $error = e;
+    }
+  }
+
+  function showOverlay() {
+    assessmentOverlayVisible = true;
+  }
+
+  function hideOverlay() {
+    assessmentOverlayVisible = false;
+  }
+
   onDestroy(async () => {
     if ($reposToUnTrustAfterTimeout.some((r) => r.uuid === repo.uuid)) {
       await unTrust();
@@ -121,6 +153,19 @@
 
   onMount(() => {
     reposInSearchResult.update((list) => [...list, repo]);
+    if ($reposWaitingForNewAnalysis.some((r) => r.uuid === repo.uuid)) {
+      if (repo.analyzed) {
+        reposWaitingForNewAnalysis.update((list) =>
+          list.filter((r) => r !== repo)
+        );
+        analyzeRepoInProgress = true;
+      } else {
+        reposWaitingForNewAnalysis.update((list) =>
+          list.filter((r) => r !== repo)
+        );
+        analyzeRepoInProgress = false;
+      }
+    }
   });
 </script>
 
@@ -142,10 +187,10 @@
     z-index: 1;
   }
   svg,
-  p.square-1 {
-    margin: 0.25em;
-    height: 2em;
-    width: 2em;
+  button.square-1 {
+    margin: 0.25rem;
+    height: 2.25rem;
+    width: 2.25rem;
     padding: 0;
   }
   .url {
@@ -164,16 +209,83 @@
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
 
-  #trust-value-p {
+  #trust-value-button,
+  #analyse-button,
+  #analyse-progress-button {
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
     border: 0.15em solid #494949;
+    background-color: #ffffff;
+    color: black;
     border-radius: 0.5em;
-    font-size: 0.9em;
-    font-weight: bold;
     padding: 0.2em;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.1s linear, filter 0.1s linear;
+  }
+
+  #analyse-progress-button:disabled {
+    background-color: var(--primary-100);
+    cursor: not-allowed;
+  }
+
+  .tooltip .tooltiptext {
+    width: 10rem;
+    top: -10%;
+    left: 6rem;
+  }
+
+  #trust-value-button:hover,
+  #analyse-button:hover {
+    background-color: var(--primary-100);
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
+  }
+
+  .assessment-overlay {
+    position: fixed;
+    display: block;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(
+      221,
+      221,
+      221,
+      0.3
+    ); /* secondary-200 with 30% opacity */
+    z-index: 2;
+  }
+
+  .overlay-container {
+    position: absolute;
+    width: 60vw;
+    height: 90vh;
+    background-color: white;
+    color: black;
+    overflow-y: auto;
+    margin: 5vh 20vw;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  #close-overlay-button {
+    position: absolute;
+    top: 5vh;
+    right: 21vw;
+    z-index: 3;
+  }
+
+  @media screen and (min-width: 2000px) {
+    .overlay-container {
+      width: 1185px;
+      margin: 5vh calc((100vw - 1185px) / 2);
+    }
+    #close-overlay-button {
+      right: calc(((100vw - 1185px) / 2) + 1vw);
+    }
   }
 
   @media screen and (max-width: 600px) {
@@ -229,11 +341,52 @@
       </a>
     {/if}
 
-    <p id="trust-value-p" class="square-1">{repo.healthValue}</p>
+    {#if repo.analyzed}
+      <button
+        id="trust-value-button"
+        class="square-1 tooltip"
+        on:click={showOverlay}
+      >
+        {repo.healthValue}
+        <span class="tooltiptext">Show Repo Assessment</span>
+      </button>
+    {:else if analyzeRepoInProgress}
+      <button id="analyse-progress-button" class="square-1 tooltip" disabled>
+        <Fa icon={faHourglass} />
+        <span class="tooltiptext">in progress</span>
+      </button>
+    {:else}
+      <button
+        id="analyse-button"
+        class="square-1 tooltip"
+        on:click={analyzeRepo}
+      >
+        <Fa icon={faArrowsRotate} />
+        <span class="tooltiptext">Analyze Repo</span>
+      </button>
+    {/if}
   </div>
   <div>
     <div class="title">{repo.name}</div>
     <div class="desc">{repo.description}</div>
     <div class="url"><a href={repo.url}>{repo.url}</a></div>
+  </div>
+</div>
+
+<div
+  class:assessment-overlay={assessmentOverlayVisible}
+  class:hidden={!assessmentOverlayVisible}
+  role="button"
+  tabindex="0"
+>
+  <button
+    id="close-overlay-button"
+    class="button3 m-2 px-100"
+    on:click={hideOverlay}>close <Fa icon={faClose} class="ml-5" /></button
+  >
+  <div class="overlay-container">
+    {#if assessmentOverlayVisible}
+      <RepoAssessmentOverlay {repo} />
+    {/if}
   </div>
 </div>

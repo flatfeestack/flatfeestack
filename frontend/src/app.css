@@ -654,20 +654,10 @@ tbody tr:last-of-type {
   padding: 0.25rem;
   position: absolute;
   top: 110%;
-  z-index: 1;
+  z-index: 3;
   margin-left: -60px;
   opacity: 0;
   transition: opacity 0.1s;
-}
-
-.tooltip .tooltiptext::after {
-  content: "";
-  position: absolute;
-  top: 135%;
-  left: 50%;
-  margin-left: -60px;
-  border-width: 5px;
-  border-style: solid;
 }
 
 .tooltip:hover .tooltiptext {

@@ -497,6 +497,23 @@ export interface paths {
       };
     };
   };
+  "/repos/{id}/forceAnalyzer": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
   "/repos/{id}/tag": {
     post: {
       parameters: {
@@ -506,11 +523,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Repo"];
-          };
-        };
+        200: never;
         /** @description Bad Request */
         400: never;
         /** @description Internal Server Error */
@@ -987,6 +1000,7 @@ export interface components {
       trustAt?: string;
       /** Format: float */
       healthValue?: number;
+      analyzed?: boolean;
     };
     RepoHealthValue: {
       repoid?: string;
@@ -1026,6 +1040,8 @@ export interface components {
       repostarcount?: number;
       /** Format: int64 */
       repomultipliercount?: number;
+      /** Format: int64 */
+      activeffsusercount?: number;
     };
     PartialHealthValues: {
       /** Format: uuid */

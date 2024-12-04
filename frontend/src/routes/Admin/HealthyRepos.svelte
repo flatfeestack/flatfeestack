@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { API } from "../../ts/api";
   import {
     faCaretUp,
@@ -12,6 +12,8 @@
     isSubmitting,
     loadedTrustedRepos,
     trustedRepos,
+    reloadAdminSearchKey,
+    reposWaitingForNewAnalysis,
   } from "../../ts/mainStore";
   import type { Repo } from "../../types/backend";
   import Dots from "../../components/Dots.svelte";
@@ -27,6 +29,7 @@
   let sortingFunction: (a: Repo, b: Repo) => number;
   let sortingTitle: string;
   let amountOfShownRepos: number = 50;
+  let intervalId: any;
 
   $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
 
@@ -46,6 +49,26 @@
       $error = e;
     } finally {
       isSearchSubmitting = false;
+    }
+    if ($reloadAdminSearchKey === 0) {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(async () => {
+        reloadAdminSearchKey.update((key) => key + 1);
+        try {
+          console.log("reload key", $reloadAdminSearchKey);
+          searchRepos = await API.repos.search(search);
+        } catch (e) {
+          $error = e;
+        }
+      }, 15000);
+      setTimeout(() => {
+        if ($reposWaitingForNewAnalysis.length === 0) {
+          clearInterval(intervalId);
+          intervalId = null;
+          reloadAdminSearchKey.update(() => 0);
+          console.log("Interval stopped after 180 seconds");
+        }
+      }, 180000);
     }
   };
 
@@ -89,6 +112,11 @@
         $isSubmitting = false;
       }
     }
+  });
+
+  onDestroy(async () => {
+    reloadAdminSearchKey.update(() => 0);
+    if (intervalId) clearInterval(intervalId);
   });
 </script>
 
@@ -305,7 +333,9 @@
             <h3 class="m-2">Results</h3>
             <div class="wrap-container">
               {#each searchRepos as repo, key (repo.uuid)}
-                <AdminSearchResult {repo} />
+                {#key $reloadAdminSearchKey}
+                  <AdminSearchResult {repo} />
+                {/key}
               {/each}
             </div>
           </div>

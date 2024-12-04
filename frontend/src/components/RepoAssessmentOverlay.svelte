@@ -4,7 +4,6 @@
     error,
     latestThresholds,
     loadedLatestThresholds,
-    reposWaitingForNewAnalysis,
   } from "../ts/mainStore";
   import type {
     PartialHealthValues,
@@ -24,8 +23,6 @@
   import { onDestroy, onMount } from "svelte";
 
   export let repo: Repo;
-
-  // let asyncDataLoaded: boolean = false;
 
   let repoMetrics: RepoMetrics;
   let partialHealthValues: PartialHealthValues;
@@ -69,7 +66,6 @@
   }
 
   async function getRepoHealthMetrics() {
-    // reposWaitingForNewAnalysis.update((list) => [...list, repo])
     try {
       repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
       setPartialHealthValues();
@@ -95,19 +91,19 @@
     }
   }
 
-  async function newRepoAssessment() {
-    console.log("repoMetrics before", repoMetrics);
-    try {
-      await API.repos.triggerNewRepoAssessment(repo.uuid);
-      partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
-      repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
-      setPartialHealthValues();
-      setRepoMetricsVariables();
-    } catch (e) {
-      $error = e;
-    }
-    console.log("repoMetrics after", repoMetrics);
-  }
+  // async function newRepoAssessment() {
+  //   console.log("repoMetrics before", repoMetrics);
+  //   try {
+  //     await API.repos.triggerNewRepoAssessment(repo.uuid);
+  //     partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
+  //     repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
+  //     setPartialHealthValues();
+  //     setRepoMetricsVariables();
+  //   } catch (e) {
+  //     $error = e;
+  //   }
+  //   console.log("repoMetrics after", repoMetrics);
+  // }
 
   function initRepoMetricsChart() {
     const chartConfigs = [
@@ -476,7 +472,6 @@
     <h3>Last Analysis of Repository</h3>
     <div class="container justify-between">
       <p>Date: {lastAnalysed}</p>
-      <button class="button1" on:click={newRepoAssessment}>Re-Analyse</button>
     </div>
   </div>
 </div>

@@ -26,3 +26,4 @@ export const reposInSearchResult = writable<Repo[]>([]);
 export const loadedLatestThresholds = writable<boolean>(false);
 export const latestThresholds = writable<HealthValueThreshold>();
 export const reposWaitingForNewAnalysis = writable<Repo[]>([]);
+export const reloadAdminSearchKey = writable<number>(0);
