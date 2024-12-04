@@ -41,6 +41,37 @@
     .sort(sortingFunction)
     .slice(0, amountOfShownRepos);
 
+  $: {
+    if ($reposWaitingForNewAnalysis.length > 0) {
+      startBackendPolling();
+    } else {
+      stopBackendPolling();
+    }
+  }
+
+  async function startBackendPolling() {
+    if ($reloadAdminSearchKey === 0) {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(async () => {
+        reloadAdminSearchKey.update((key) => key + 1);
+        try {
+          searchRepos = await API.repos.search(search);
+        } catch (e) {
+          $error = e;
+        }
+      }, 5000);
+    }
+  }
+
+  function stopBackendPolling() {
+    if ($reposWaitingForNewAnalysis.length === 0) {
+      clearInterval(intervalId);
+      intervalId = null;
+      reloadAdminSearchKey.update(() => 0);
+    } else {
+    }
+  }
+
   const handleSearch = async () => {
     try {
       isSearchSubmitting = true;
@@ -49,26 +80,6 @@
       $error = e;
     } finally {
       isSearchSubmitting = false;
-    }
-    if ($reloadAdminSearchKey === 0) {
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(async () => {
-        reloadAdminSearchKey.update((key) => key + 1);
-        try {
-          console.log("reload key", $reloadAdminSearchKey);
-          searchRepos = await API.repos.search(search);
-        } catch (e) {
-          $error = e;
-        }
-      }, 15000);
-      setTimeout(() => {
-        if ($reposWaitingForNewAnalysis.length === 0) {
-          clearInterval(intervalId);
-          intervalId = null;
-          reloadAdminSearchKey.update(() => 0);
-          console.log("Interval stopped after 180 seconds");
-        }
-      }, 180000);
     }
   };
 
@@ -117,6 +128,7 @@
   onDestroy(async () => {
     reloadAdminSearchKey.update(() => 0);
     if (intervalId) clearInterval(intervalId);
+    reposWaitingForNewAnalysis.update(() => []);
   });
 </script>
 

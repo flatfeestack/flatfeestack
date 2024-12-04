@@ -158,7 +158,7 @@
     if ($reposWaitingForNewAnalysis.some((r) => r.uuid === repo.uuid)) {
       if (repo.analyzed) {
         reposWaitingForNewAnalysis.update((list) =>
-          list.filter((r) => r !== repo)
+          list.filter((r) => r.uuid !== repo.uuid)
         );
         analyzeRepoInProgress = false;
       } else {
