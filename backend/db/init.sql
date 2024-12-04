@@ -185,13 +185,14 @@ CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(e
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
 
 CREATE TABLE IF NOT EXISTS repo_health_threshold (
-    id                     UUID PRIMARY KEY,
-    created_at             TIMESTAMP, 
-    th_contributor_count   JSON,
-    th_commit_count        JSON,
-    th_sponsor_donation    JSON,
-    th_repo_star_count     JSON,
-    th_repo_multiplier     JSON
+    id                        UUID PRIMARY KEY,
+    created_at                TIMESTAMP, 
+    th_contributor_count      JSON,
+    th_commit_count           JSON,
+    th_sponsor_donation       JSON,
+    th_repo_star_count        JSON,
+    th_repo_multiplier        JSON,
+    th_active_ffs_user_count  JSON
 );
 CREATE INDEX IF NOT EXISTS repo_health_threshold_id_idx ON repo_health_threshold(id);
 
@@ -203,16 +204,17 @@ INSERT INTO repo_health_threshold (
   th_commit_count,
   th_sponsor_donation,
   th_repo_star_count,
-  th_repo_multiplier) 
+  th_repo_multiplier,
+  th_active_ffs_user_count) 
 VALUES (
   'b7244c4a-dadd-45f5-bd12-0fcefb5d66c2',
   '2022-12-31 23:59:59.999999999',
   '{"lower": 4, "upper": 13}',
   '{"lower": 40, "upper": 130}',
+  '{"lower": 1, "upper": 5}',
   '{"lower": 5, "upper": 20}',
   '{"lower": 5, "upper": 20}',
-  '{"lower": 5, "upper": 20}'
-)
+  '{"lower": 5, "upper": 20}')
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS repo_health_metrics (

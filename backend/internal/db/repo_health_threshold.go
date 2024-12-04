@@ -3,10 +3,20 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type MetricWeight struct {
+	WeightContributorCount   int
+	WeightCommitCount        int
+	WeightSponsorDonation    int
+	WeightRepoStarCount      int
+	WeightRepoMultiplier     int
+	WeightActiveFFSUserCount int
+}
 
 type Threshold struct {
 	Upper int `json:"upper"`
@@ -14,13 +24,32 @@ type Threshold struct {
 }
 
 type RepoHealthThreshold struct {
-	Id                 uuid.UUID  `db:"id"`
-	CreatedAt          time.Time  `db:"created_at"`
-	ThContributorCount *Threshold `db:"th_contributor_count" validate:"required"`
-	ThCommitCount      *Threshold `db:"th_commit_count" validate:"required"`
-	ThSponsorDonation  *Threshold `db:"th_sponsor_donation" validate:"required"`
-	ThRepoStarCount    *Threshold `db:"th_repo_star_count" validate:"required"`
-	ThRepoMultiplier   *Threshold `db:"th_repo_multiplier" validate:"required"`
+	Id                   uuid.UUID  `db:"id"`
+	CreatedAt            time.Time  `db:"created_at"`
+	ThContributorCount   *Threshold `db:"th_contributor_count" validate:"required"`
+	ThCommitCount        *Threshold `db:"th_commit_count" validate:"required"`
+	ThSponsorDonation    *Threshold `db:"th_sponsor_donation" validate:"required"`
+	ThRepoStarCount      *Threshold `db:"th_repo_star_count" validate:"required"`
+	ThRepoMultiplier     *Threshold `db:"th_repo_multiplier" validate:"required"`
+	ThActiveFFSUserCount *Threshold `db:"th_active_ffs_user_count" validate:"required"`
+}
+
+var (
+	DefaultMetricWeight *MetricWeight
+	configOnce          sync.Once
+)
+
+func init() {
+	configOnce.Do(func() {
+		DefaultMetricWeight = &MetricWeight{
+			WeightContributorCount:   2,
+			WeightCommitCount:        2,
+			WeightSponsorDonation:    2,
+			WeightRepoStarCount:      1,
+			WeightRepoMultiplier:     2,
+			WeightActiveFFSUserCount: 1,
+		}
+	})
 }
 
 /*

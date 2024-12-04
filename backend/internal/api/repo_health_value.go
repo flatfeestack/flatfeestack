@@ -166,7 +166,7 @@ func getRepoHealthValueHistory(repoId uuid.UUID) ([]RepoHealthValue, error) {
 
 	var repoHealthHistory []RepoHealthValue
 	for _, metrics := range healthMetrics {
-		partialTmp := calculatePartialHealthValues(healthThreshold, &metrics)
+		partialTmp := calculatePartialHealthValues(db.DefaultMetricWeight, healthThreshold, &metrics)
 		tmp := calculateRepoHealthValue(*partialTmp)
 		repoHealthHistory = append(
 			repoHealthHistory,
@@ -205,56 +205,34 @@ func getPartialRepoHealthValues(repoId uuid.UUID) (*PartialHealthValues, error) 
 		return nil, fmt.Errorf("couldn't get latest threshold values: %v", err)
 	}
 
-	return calculatePartialHealthValues(healthThreshold, healthMetrics), nil
+	return calculatePartialHealthValues(db.DefaultMetricWeight, healthThreshold, healthMetrics), nil
 }
 
-func calculatePartialHealthValues(threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) *PartialHealthValues {
-	healthMetrics := []int{
-		metrics.ContributorCount,
-		metrics.CommitCount,
-		metrics.SponsorCount,
-		metrics.RepoStarCount,
-		metrics.RepoMultiplierCount,
-		int(metrics.RepoWeight),
-	}
-	var partialHealthValues []float64
-
-	healthThreshold := [][]int{
-		{threshold.ThContributorCount.Lower, threshold.ThContributorCount.Upper},
-		{threshold.ThCommitCount.Lower, threshold.ThCommitCount.Upper},
-		{threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper},
-		{threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper},
-		{threshold.ThRepoMultiplier.Lower, threshold.ThRepoMultiplier.Upper},
-	}
-
-	for i := range 5 {
-		var partialHealthValue float64
-		currentMetric := healthMetrics[i]
-		currentThresholdLower := healthThreshold[i][0]
-		currentThresholdUpper := healthThreshold[i][1]
-
-		if currentMetric < currentThresholdLower {
-			partialHealthValue = 0.0
-		} else if currentMetric > currentThresholdUpper {
-			partialHealthValue = 2.0
-		} else {
-			thresholdDifference := currentThresholdUpper - currentThresholdLower + 1
-			normalizedCurrentMetric := currentMetric - currentThresholdLower + 1
-			partialHealthValue = math.Round(100*(2/float64(thresholdDifference)*float64(normalizedCurrentMetric))) / 100
-		}
-		partialHealthValues = append(partialHealthValues, partialHealthValue)
-	}
+func calculatePartialHealthValues(weights *db.MetricWeight, threshold *db.RepoHealthThreshold, metrics *db.RepoHealthMetrics) *PartialHealthValues {
 	return &PartialHealthValues{
-		ContributorValue:    partialHealthValues[0],
-		CommitValue:         partialHealthValues[1],
-		SponsorValue:        partialHealthValues[2],
-		RepoStarValue:       partialHealthValues[3],
-		RepoMultiplierValue: partialHealthValues[4],
+		ContributorValue:    calcValue(metrics.ContributorCount, threshold.ThContributorCount.Lower, threshold.ThContributorCount.Upper, weights.WeightContributorCount),
+		CommitValue:         calcValue(metrics.CommitCount, threshold.ThCommitCount.Lower, threshold.ThCommitCount.Upper, weights.WeightCommitCount),
+		SponsorValue:        calcValue(metrics.SponsorCount, threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper, weights.WeightSponsorDonation),
+		RepoStarValue:       calcValue(metrics.RepoStarCount, threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper, weights.WeightRepoStarCount),
+		RepoMultiplierValue: calcValue(metrics.RepoMultiplierCount, threshold.ThRepoMultiplier.Lower, threshold.ThRepoMultiplier.Upper, weights.WeightRepoMultiplier),
+		ActiveFFSUserValue:  calcValue(metrics.RepoWeight, threshold.ThActiveFFSUserCount.Lower, threshold.ThActiveFFSUserCount.Upper, weights.WeightActiveFFSUserCount),
+	}
+}
+
+func calcValue(metric, lower, upper, weight int) float64 {
+	if metric < lower {
+		return 0.0
+	} else if metric > upper {
+		return float64(weight)
+	} else {
+		thresholdDifference := upper - lower + 1
+		normalizedCurrentMetric := metric - lower + 1
+		return math.Round(100*(float64(weight)/float64(thresholdDifference)*float64(normalizedCurrentMetric))) / 100
 	}
 }
 
 func calculateRepoHealthValue(partialHealthValues PartialHealthValues) float64 {
-	healthValue := partialHealthValues.CommitValue + partialHealthValues.ContributorValue + partialHealthValues.SponsorValue + partialHealthValues.RepoStarValue + partialHealthValues.RepoMultiplierValue
+	healthValue := partialHealthValues.CommitValue + partialHealthValues.ContributorValue + partialHealthValues.SponsorValue + partialHealthValues.RepoStarValue + partialHealthValues.RepoMultiplierValue + partialHealthValues.ActiveFFSUserValue
 	return math.Round(healthValue*100) / 100
 }
 

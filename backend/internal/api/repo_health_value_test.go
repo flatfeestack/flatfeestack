@@ -7,10 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/rand"
 )
 
-func getTestData(a, b, c, d, e int) *db.RepoHealthMetrics {
+func getTestData(a, b, c, d, e, f int) *db.RepoHealthMetrics {
 	now := time.Now()
 	formatted := now.Format("2006-01-02 15:04:05.999999999")
 	parsedTime, _ := time.Parse("2006-01-02 15:04:05.999999999", formatted)
@@ -24,7 +23,7 @@ func getTestData(a, b, c, d, e int) *db.RepoHealthMetrics {
 		SponsorCount:        c,
 		RepoStarCount:       d,
 		RepoMultiplierCount: e,
-		RepoWeight:          rand.Int(),
+		RepoWeight:          f,
 	}
 
 	return &newRepoMetrics
@@ -85,15 +84,16 @@ func TestCalculateRepoHealthValue(t *testing.T) {
 
 	// For testing purposes, the thresholds are fixed
 	threshold := db.RepoHealthThreshold{
-		ThContributorCount: &db.Threshold{Upper: 13.0, Lower: 4.0},
-		ThCommitCount:      &db.Threshold{Upper: 130.0, Lower: 40.0},
-		ThSponsorDonation:  &db.Threshold{Upper: 20.0, Lower: 5.0},
-		ThRepoStarCount:    &db.Threshold{Upper: 20.0, Lower: 5.0},
-		ThRepoMultiplier:   &db.Threshold{Upper: 20.0, Lower: 5.0},
+		ThContributorCount:   &db.Threshold{Upper: 13, Lower: 4},
+		ThCommitCount:        &db.Threshold{Upper: 130, Lower: 40},
+		ThSponsorDonation:    &db.Threshold{Upper: 20, Lower: 5},
+		ThRepoStarCount:      &db.Threshold{Upper: 20, Lower: 5},
+		ThRepoMultiplier:     &db.Threshold{Upper: 20, Lower: 5},
+		ThActiveFFSUserCount: &db.Threshold{Upper: 20, Lower: 5},
 	}
-	metrics := getTestData(3, 131, 5, 20, 12)
+	metrics := getTestData(3, 131, 5, 20, 12, 12)
 
-	partialResult := calculatePartialHealthValues(&threshold, metrics)
+	partialResult := calculatePartialHealthValues(db.DefaultMetricWeight, &threshold, metrics)
 	result := calculateRepoHealthValue(*partialResult)
-	assert.Equal(t, result, float64(5.13))
+	assert.Equal(t, result, float64(4.63))
 }
