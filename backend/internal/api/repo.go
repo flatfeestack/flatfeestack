@@ -396,8 +396,10 @@ func GetTrustedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail
 		value, err := getRepoHealthValue(repo.Id)
 		if err != nil {
 			repos[i].HealthValue = 0
+			repos[i].Analyzed = false
 		} else {
 			repos[i].HealthValue = value.HealthValue
+			repos[i].Analyzed = true
 		}
 	}
 

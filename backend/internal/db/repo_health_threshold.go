@@ -86,6 +86,11 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 		return fmt.Errorf("error marshaling multiplier threshold: %w", err)
 	}
 
+	ffsuserJSON, err := json.Marshal(threshold.ThActiveFFSUserCount)
+	if err != nil {
+		return fmt.Errorf("error marshaling ffsuser threshold: %w", err)
+	}
+
 	query := `
 		INSERT INTO 
 			repo_health_threshold (
@@ -95,7 +100,8 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
       	th_commit_count,
       	th_sponsor_donation,
       	th_repo_star_count,
-      	th_repo_multiplier)
+      	th_repo_multiplier,
+				th_active_ffs_user_count)
 		VALUES (
 			$1,
 			$2,
@@ -103,7 +109,8 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 			$4,
 			$5,
 			$6,
-			$7)`
+			$7,
+			$8)`
 
 	res, err := DB.Exec(query,
 		threshold.Id,
@@ -113,6 +120,7 @@ func InsertRepoHealthThreshold(threshold RepoHealthThreshold) error {
 		sponsorJSON,
 		starJSON,
 		multiplierJSON,
+		ffsuserJSON,
 	)
 
 	if err != nil {
@@ -134,7 +142,8 @@ func GetFirstRepoHealthThreshold() (*RepoHealthThreshold, error) {
 			th_commit_count,                             	
 			th_sponsor_donation,                         	
 			th_repo_star_count,                          	
-			th_repo_multiplier                           	
+			th_repo_multiplier,
+			th_active_ffs_user_count
 		FROM                                          	
 			repo_health_threshold                        	
 		ORDER BY                                      	
@@ -157,7 +166,8 @@ func GetLatestThresholds() (*RepoHealthThreshold, error) {
 			th_commit_count,
 			th_sponsor_donation,
 			th_repo_star_count,
-			th_repo_multiplier
+			th_repo_multiplier,
+			th_active_ffs_user_count
 		FROM 
 			repo_health_threshold
 		ORDER BY 
@@ -180,7 +190,8 @@ func GetRepoThresholdHistory() ([]RepoHealthThreshold, error) {
       th_commit_count,
       th_sponsor_donation,
       th_repo_star_count,
-      th_repo_multiplier
+      th_repo_multiplier,
+			th_active_ffs_user_count
     FROM 
 			repo_health_threshold`
 
@@ -202,7 +213,7 @@ func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 	for rows.Next() {
 		var id uuid.UUID
 		var time time.Time
-		var contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON []byte
+		var contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON, ffsuserRawJSON []byte
 		err := rows.Scan(
 			&id,
 			&time,
@@ -211,35 +222,38 @@ func executeRepoThresholdQuery(query string) ([]RepoHealthThreshold, error) {
 			&sponsorRawJSON,
 			&starRawJSON,
 			&multiplierRawJSON,
+			&ffsuserRawJSON,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		row := byteToJson(id, time, contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON)
+		row := byteToJson(id, time, contributorRawJSON, commitRawJSON, sponsorRawJSON, starRawJSON, multiplierRawJSON, ffsuserRawJSON)
 		repoHealthThresholds = append(repoHealthThresholds, *row)
 	}
 
 	return repoHealthThresholds, nil
 }
 
-func byteToJson(id uuid.UUID, time time.Time, contrib, commit, sponsor, star, multi []byte) *RepoHealthThreshold {
-	var contributorJSON, commitJSON, sponsorJSON, starJSON, multiplierJSON Threshold
+func byteToJson(id uuid.UUID, time time.Time, contrib, commit, sponsor, star, multi, ffsuser []byte) *RepoHealthThreshold {
+	var contributorJSON, commitJSON, sponsorJSON, starJSON, multiplierJSON, ffsuserJSON Threshold
 
 	json.Unmarshal([]byte(contrib), &contributorJSON)
 	json.Unmarshal([]byte(commit), &commitJSON)
 	json.Unmarshal([]byte(sponsor), &sponsorJSON)
 	json.Unmarshal([]byte(star), &starJSON)
 	json.Unmarshal([]byte(multi), &multiplierJSON)
+	json.Unmarshal([]byte(ffsuser), &ffsuserJSON)
 
 	row := RepoHealthThreshold{
-		Id:                 id,
-		CreatedAt:          time,
-		ThContributorCount: &contributorJSON,
-		ThCommitCount:      &commitJSON,
-		ThSponsorDonation:  &sponsorJSON,
-		ThRepoStarCount:    &starJSON,
-		ThRepoMultiplier:   &multiplierJSON,
+		Id:                   id,
+		CreatedAt:            time,
+		ThContributorCount:   &contributorJSON,
+		ThCommitCount:        &commitJSON,
+		ThSponsorDonation:    &sponsorJSON,
+		ThRepoStarCount:      &starJSON,
+		ThRepoMultiplier:     &multiplierJSON,
+		ThActiveFFSUserCount: &ffsuserJSON,
 	}
 
 	return &row

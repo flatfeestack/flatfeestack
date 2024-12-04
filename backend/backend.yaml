@@ -1289,6 +1289,8 @@ components:
             $ref: '#/components/schemas/Threshold'
         ThRepoMultiplier:
             $ref: '#/components/schemas/Threshold'
+        ThActiveFFSUserCount:
+            $ref: '#/components/schemas/Threshold'
     Threshold:
       type: object
       properties:

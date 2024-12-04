@@ -215,7 +215,11 @@ func calculatePartialHealthValues(weights *db.MetricWeight, threshold *db.RepoHe
 		SponsorValue:        calcValue(metrics.SponsorCount, threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper, weights.WeightSponsorDonation),
 		RepoStarValue:       calcValue(metrics.RepoStarCount, threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper, weights.WeightRepoStarCount),
 		RepoMultiplierValue: calcValue(metrics.RepoMultiplierCount, threshold.ThRepoMultiplier.Lower, threshold.ThRepoMultiplier.Upper, weights.WeightRepoMultiplier),
-		ActiveFFSUserValue:  calcValue(metrics.RepoWeight, threshold.ThActiveFFSUserCount.Lower, threshold.ThActiveFFSUserCount.Upper, weights.WeightActiveFFSUserCount),
+		ActiveFFSUserValue: calcValue(
+			metrics.RepoWeight,
+			threshold.ThActiveFFSUserCount.Lower,
+			threshold.ThActiveFFSUserCount.Upper,
+			weights.WeightActiveFFSUserCount),
 	}
 }
 
