@@ -44,10 +44,10 @@
       startProgressBar();
     }
 
-    const tmpAnalyze = $reposWaitingForNewAnalysis.find((r: Repo) => {
-      return r.uuid === repo.uuid;
-    });
-    analyzeRepoInProgress = tmpAnalyze !== undefined;
+    // const tmpAnalyze = $reposWaitingForNewAnalysis.find((r: Repo) => {
+    //   return r.uuid === repo.uuid;
+    // });
+    // analyzeRepoInProgress = tmpAnalyze !== undefined;
   }
 
   async function unTrust() {
@@ -126,6 +126,7 @@
 
   async function analyzeRepo() {
     reposWaitingForNewAnalysis.update((list) => [...list, repo]);
+    analyzeRepoInProgress = true;
     try {
       await API.repos.triggerNewRepoAssessment(repo.uuid);
     } catch (e) {
@@ -153,17 +154,15 @@
 
   onMount(() => {
     reposInSearchResult.update((list) => [...list, repo]);
+
     if ($reposWaitingForNewAnalysis.some((r) => r.uuid === repo.uuid)) {
       if (repo.analyzed) {
         reposWaitingForNewAnalysis.update((list) =>
           list.filter((r) => r !== repo)
         );
-        analyzeRepoInProgress = true;
-      } else {
-        reposWaitingForNewAnalysis.update((list) =>
-          list.filter((r) => r !== repo)
-        );
         analyzeRepoInProgress = false;
+      } else {
+        analyzeRepoInProgress = true;
       }
     }
   });
@@ -203,6 +202,13 @@
   div.trust-icons-div {
     justify-content: center;
     align-items: center;
+  }
+  div.trust-icons-div a.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  div.trust-icons-div a.disabled:hover {
+    filter: none;
   }
 
   .trust-icons-div :global(a:hover) {
@@ -312,7 +318,12 @@
   />
   <div class="container-col2 trust-icons-div">
     {#if !verifiedStar}
-      <a href="#" on:click|preventDefault={trustRepo}>
+      <a
+        href="#"
+        on:click|preventDefault={repo.analyzed ? trustRepo : null}
+        class:disabled={!repo.analyzed}
+        aria-disabled={!repo.analyzed}
+      >
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
             d="M8.38 12L10.79 14.42L15.62 9.57996"
