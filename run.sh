@@ -30,15 +30,16 @@ die() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-na] [-ne] [-nb] [-nf] [-ns] [-sb] [-db] [-rm] [-ah] [-rh]
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-ss] [-sb] [-sd] [-rm]
 
-Build and run Flatfeestack.
+Build and run FlatFeeStack.
 
 Available options:
--h, --help          Print this help and exit
--ss, --skip-stripe  Don't setup stripe
--sb, --skip-build   Don't run docker-compose build
--rm, --remove-data  Remove the database and chain folder
+-h, --help               Print this help and exit
+-ss, --skip-stripe       Don't setup stripe
+-sb, --skip-build        Don't run docker-compose build
+-sd, --skip-start-docker Don't try to starte docker
+-rm, --remove-data       Remove the database and chain folder
 EOF
   exit
 }
@@ -47,6 +48,7 @@ parse_params() {
   # default values of variables set from params
   include_build=true
   include_stripe=true
+  include_docker_start=true
   external=''
   internal="$PROJECTS"
 
@@ -56,6 +58,7 @@ parse_params() {
     --no-color) NO_COLOR=1 ;;
     -ss | --skip-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}"; include_stripe=false;;
     -sb | --skip-build) include_build=false;;
+    -sd | --skip-start-docker) include_docker_start=false;;
     -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain .stripe;;
     -?*) die "Unknown option: $1";;
     *) break ;;
@@ -70,6 +73,31 @@ parse_params() {
 setup_colors
 parse_params "$@"
 
+# on linux, check if command exists, and start docker if not running
+# also make sure that no other containers are running, since we start all relevant containers
+# here. Use -sd to skip this check, or if you have containers, that you want to keep running
+if [ "$include_docker_start" = true ] && command -v systemctl >/dev/null 2>&1; then
+  if ! systemctl is-active --quiet docker; then
+    msg "Docker is not running. Starting Docker service..."
+    sudo systemctl start docker
+
+    # Wait for Docker to fully start
+    while ! systemctl is-active --quiet docker; do
+        sleep 1
+    done
+    msg "${GREEN}Docker service started successfully${NOFORMAT}"
+  fi
+
+  # Get all running containers and stop them
+  running_containers=$(docker ps -q)
+  if [ -n "$running_containers" ]; then
+    msg "Stopping all running containers..."
+    docker stop $running_containers
+    msg "${GREEN}All containers stopped${NOFORMAT}"
+  else
+    msg "${GREEN}No running containers found${NOFORMAT}"
+  fi
+fi
 
 if [ "$include_stripe" = true ]; then
   msg "${GREEN}Setup Stripe${NOFORMAT}"
