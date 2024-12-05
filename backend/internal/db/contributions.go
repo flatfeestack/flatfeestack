@@ -359,16 +359,19 @@ type UserDonationRepo struct {
 }
 
 func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.UUID][]UserDonationRepo, error) {
-	s := `SELECT
-			dc.user_sponsor_id,
-			te.repo_id,
-			dc.balance,
-			dc.currency,
-			te.un_trust_at
-		  FROM trust_event te
-		  RIGHT JOIN daily_contribution dc ON te.repo_id = dc.repo_id
-		  WHERE dc.user_sponsor_id = $1
-		  	AND dc.day = $2`
+	s := `
+        SELECT
+            dc.user_sponsor_id,
+            dc.repo_id,
+            dc.balance,
+            dc.currency,
+            COALESCE(te.trust_at IS NOT NULL AND te.un_trust_at IS NULL, FALSE) AS is_trusted
+        FROM daily_contribution dc
+        LEFT JOIN trust_event te ON te.repo_id = dc.repo_id
+        WHERE dc.user_sponsor_id = $1
+          AND dc.day = $2
+          AND dc.repo_id IS NOT NULL
+    `
 
 	rows, err := DB.Query(s, userId, yesterdayStart)
 	if err != nil {
@@ -383,11 +386,15 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 		var repoID uuid.UUID
 		var balance string
 		var currency string
-		var untrustAt sql.NullTime
+		var isTrusted bool
 
-		err := rows.Scan(&userSponsorID, &repoID, &balance, &currency, &untrustAt)
+		err := rows.Scan(&userSponsorID, &repoID, &balance, &currency, &isTrusted)
 		if err != nil {
 			return nil, err
+		}
+
+		if repoID == uuid.Nil {
+			continue
 		}
 
 		userDonationRepos, found := result[userSponsorID]
@@ -396,7 +403,6 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 		}
 
 		sponsorAmount := new(big.Int)
-
 		if balance != "" {
 			sponsorAmount, _ = sponsorAmount.SetString(balance, 10)
 		} else {
@@ -406,10 +412,10 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 		var repoAdded bool
 		for i, repo := range userDonationRepos {
 			if repo.Currency == currency {
-				if untrustAt.Valid {
-					userDonationRepos[i].UntrustedRepoSelected = append(userDonationRepos[i].UntrustedRepoSelected, repoID)
-				} else {
+				if isTrusted {
 					userDonationRepos[i].TrustedRepoSelected = append(userDonationRepos[i].TrustedRepoSelected, repoID)
+				} else {
+					userDonationRepos[i].UntrustedRepoSelected = append(userDonationRepos[i].UntrustedRepoSelected, repoID)
 				}
 
 				userDonationRepos[i].SponsorAmount.Add(&userDonationRepos[i].SponsorAmount, sponsorAmount)
@@ -426,10 +432,10 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 				UntrustedRepoSelected: []uuid.UUID{},
 			}
 
-			if untrustAt.Valid {
-				donationRepo.UntrustedRepoSelected = append(donationRepo.UntrustedRepoSelected, repoID)
-			} else {
+			if isTrusted {
 				donationRepo.TrustedRepoSelected = append(donationRepo.TrustedRepoSelected, repoID)
+			} else {
+				donationRepo.UntrustedRepoSelected = append(donationRepo.UntrustedRepoSelected, repoID)
 			}
 
 			userDonationRepos = append(userDonationRepos, donationRepo)
