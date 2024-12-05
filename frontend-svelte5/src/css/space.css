@@ -68,6 +68,10 @@
     margin-left: 0.5rem;
     margin-right: 0.5rem;
 }
+.mx-100 {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
 .my-050 {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;

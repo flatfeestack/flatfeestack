@@ -1,10 +1,10 @@
 <script lang="ts">
   import Navigation from "./Navigation.svelte";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import { API } from "./ts/api.ts";
   import { onMount, onDestroy } from "svelte";
   import type { UserBalance } from "./types/backend";
-  import { formatBalance } from "./services";
+  import { formatBalance } from "./ts/services.svelte.ts";
   import PaymentSelection from "./PaymentSelection.svelte";
 
   let userBalances: UserBalance[] = [];

@@ -1,10 +1,10 @@
 <script lang="ts">
   import Navigation from "./Navigation.svelte";
-  import { appState } from "ts/state.ts";
+  import { appState } from "ts/state.svelte.ts";
   import { API } from "./ts/api.ts";
   import { onMount } from "svelte";
   import type { Invitation, UserStatus } from "./types/backend";
-  import { formatDate, timeSince } from "./services";
+  import { formatDate, timeSince } from "./ts/services.svelte.ts";
   import Dots from "./Dots.svelte";
   import { emailValidationPattern } from "./utils";
 
@@ -45,27 +45,27 @@
   }
 
   async function refreshInvite() {
-    appState.$state.isSubmitting = true;
+    appState.isSubmitting = true;
     try {
       const res1 = await API.invite.invites();
       invites = res1 || [];
     } catch (e) {
       appState.setError(e);
     } finally {
-      appState.$state.isSubmitting = false;
+      appState.isSubmitting = false;
     }
   }
 
   async function addInvite() {
     try {
       isAddInviteSubmitting = true;
-      if (inviteEmail === appState.$state.user.email) {
+      if (inviteEmail === appState.user.email) {
         throw "Oops something went wrong. You aren't able to invite yourself.";
       }
       await API.invite.invite(inviteEmail);
       await API.invite.inviteAuth(inviteEmail);
       const inv: Invitation = {
-        email: appState.$state.user.email,
+        email: appState.user.email,
         inviteEmail,
         createdAt: new Date().toISOString(),
         confirmedAt: null,
@@ -159,7 +159,7 @@
       </thead>
       <tbody>
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.email === appState.$state.user.email}
+          {#if inv.email === appState.user.email}
             <tr>
               <td data-label="Invited">{inv.inviteEmail}</td>
               <td data-label="Status" class="text-center">
@@ -236,7 +236,7 @@
       </thead>
       <tbody>
         {#each invites as inv, key (inv.email + inv.inviteEmail)}
-          {#if inv.inviteEmail === appState.$state.user.email}
+          {#if inv.inviteEmail === appState.user.email}
             <tr>
               <td data-label="Invited By">{inv.email}</td>
               <td data-label="Status" class="text-center">

@@ -7,8 +7,8 @@
   //import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   //import { PayoutEthABI } from "../contracts/PayoutEth";
   import { API } from "./ts/api.ts";
-  import { appState } from "ts/state.ts";
-  import { formatBalance, formatDate, timeSince } from "./services";
+  import { appState } from "ts/state.svelte.ts";
+  import { formatBalance, formatDate, timeSince } from "./ts/services.svelte.ts";
   import type { PayoutResponse } from "./types/backend";
   import type { PayoutConfig } from "./types/payout";
   //import setSigner from "./setSigner";
@@ -282,6 +282,6 @@
       <p class="p-2 m-2">No contributions received so far.</p>
     {/if}
   {:catch err}
-    {(appState.$state.error = err)}
+    {(appState.error = err)}
   {/await}
 </Navigation>

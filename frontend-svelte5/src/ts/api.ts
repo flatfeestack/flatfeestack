@@ -1,7 +1,7 @@
 import ky from "ky";
 
-import { appState } from "ts/state.ts";
-import {refresh, removeToken} from "ts/auth.ts";
+import { appState } from "ts/state.svelte.ts";
+import {refresh, removeToken} from "auth/auth.svelte.ts";
 import type {
   ChartDataTotal,
   ClientSecret,
@@ -19,9 +19,8 @@ import type {
   UserStatus,
   PayoutResponse,
   PublicUser,
-  UserBalance,
+  UserBalance, Token,
 } from "types/backend.ts";
-import type { Token } from "types/auth.ts";
 import type { DaoConfig, PayoutConfig } from "types/payout.ts";
 /*import type {
   Comment,
@@ -63,11 +62,11 @@ function createAuthenticatedApi(prefix: string, timeout: number) {
             throw new Error("Refresh token is missing");
           }
           if (appState.isAccessTokenExpired()) {
-            const accessToken = await refresh(refreshToken);
-            request.headers.set('Authorization', `Bearer ${accessToken}`);
+            const token = await refresh(refreshToken);
+            request.headers.set('Authorization', `Bearer ${token.access_token}`);
             return;
           }
-          request.headers.set('Authorization', `Bearer ${appState.$state.accessToken}`);
+          request.headers.set('Authorization', `Bearer ${appState.getAccessToken()}`);
         }
       ],
       afterResponse: [
@@ -75,8 +74,8 @@ function createAuthenticatedApi(prefix: string, timeout: number) {
           if (response.status !== 200) {
             if (response.status === 429) {
               //expired, clear access token
-              appState.$state.accessToken = "";
-              appState.$state.accessTokenExpire = 0;
+              appState.accessToken = "";
+              appState.accessTokenExpire = 0;
               return;
             } else if (response.status === 404 && _request.url === "login") {
               //user unknown, clear access and refresh token
@@ -117,7 +116,11 @@ export const API = {
   },
   auth: {
     login: (email: string) =>
-        auth.post(`login/${email}`).json<Token | null>(),
+        auth.post(`login/${email}`).then(async response =>
+            response.headers.get('content-length') === '0'
+                ? response.ok
+                : response.json<Token>()
+        ),
     confirm: (email: string, emailToken: string) =>
         auth.post(`confirm/${email}/${emailToken}`).json<Token>(),
     refresh: (refresh_token: string, email: string) =>

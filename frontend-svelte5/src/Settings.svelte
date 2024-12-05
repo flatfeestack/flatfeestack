@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import Navigation from "./Navigation.svelte";
   import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.ts";
-  import { formatDate, timeSince } from "./services";
+  import {appState} from "./ts/state.svelte.ts";
+  import { formatDate, timeSince } from "./ts/services.svelte.ts";
   import type { GitUser } from "./types/backend";
   import { emailValidationPattern } from "./utils";
 
@@ -14,8 +14,8 @@
   let newEmail = "";
 
   $: {
-    if (typeof username === "undefined" && appState.$state.user.name) {
-      username = appState.$state.user.name;
+    if (typeof username === "undefined" && appState.user.name) {
+      username = appState.user.name;
     }
   }
 
@@ -34,7 +34,7 @@
         return;
       }
       API.user.setImage(data);
-      appState.$state.user.image = data;
+      appState.user.image = data;
     };
   };
 
@@ -44,7 +44,7 @@
         API.user.clearName();
       } else {
         API.user.setName(username);
-        appState.$state.user.name = username;
+        appState.user.name = username;
       }
     } catch (e) {
       appState.setError(e);
@@ -78,7 +78,7 @@
   const deleteImage = async () => {
     try {
       await API.user.deleteImage();
-      appState.$state.user.image = null;
+      appState.user.image = null;
     } catch (e) {
       appState.setError(e);
     }
@@ -189,7 +189,7 @@
   <h2 class="p-2 m-2">Account Settings</h2>
   <div class="grid-2">
     <p class="p-2 m-2 nobreak">Email:</p>
-    <span class="p-2 m-2">{appState.$state.user.email}</span>
+    <span class="p-2 m-2">{appState.user.email}</span>
     <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
     <input
       id="username-input"
@@ -209,12 +209,12 @@
       >Profile picture:</label
     >
     <div>
-      {#if appState.$state.user.image}
+      {#if appState.user.image}
         <div class="image-container">
           <button class="upload accessible-btn" on:click={deleteImage}>
             <i class ="fa-trash-can"></i>
           </button>
-          <img class="image-org" src={appState.$state.user.image} alt="profile img" />
+          <img class="image-org" src={appState.user.image} alt="profile img" />
         </div>
       {:else}
         <button

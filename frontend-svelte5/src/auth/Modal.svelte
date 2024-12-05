@@ -7,7 +7,7 @@
 <style>
     .max {
         width: 100vw;
-        height: 75vh;
+        height: 80vh;
         display: flex;
         justify-content: center;
         align-items: center;

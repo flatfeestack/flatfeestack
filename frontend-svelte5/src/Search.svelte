@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import type { Repo } from "./types/backend";
 
   import Dots from "./Dots.svelte";
@@ -28,15 +28,15 @@
   };
 
   onMount(async () => {
-    if (!appState.$state.loadedSponsoredRepos) {
+    if (!appState.loadedSponsoredRepos) {
       try {
-        appState.$state.isSubmitting = true;
-        appState.$state.sponsoredRepos = await API.user.getSponsored();
-        appState.$state.loadedSponsoredRepos = true;
+        appState.isSubmitting = true;
+        appState.sponsoredRepos = await API.user.getSponsored();
+        appState.loadedSponsoredRepos = true;
       } catch (e) {
         appState.setError(e as Error);
       } finally {
-        appState.$state.isSubmitting = false;
+        appState.isSubmitting = false;
       }
     }
   });
@@ -63,9 +63,9 @@
 
 <Navigation>
   <div class="p-2">
-    {#if appState.$state.sponsoredRepos.length > 0}
+    {#if appState.sponsoredRepos.length > 0}
       <div class="m-2 wrap">
-        {#each appState.$state.sponsoredRepos as repo, key (repo.uuid)}
+        {#each appState.sponsoredRepos as repo, key (repo.uuid)}
           <RepoCard {repo} />
         {/each}
       </div>

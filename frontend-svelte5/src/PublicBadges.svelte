@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import type { ContributionSummary, User } from "./types/backend";
 
   export let uuid: string;

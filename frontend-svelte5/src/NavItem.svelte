@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
 
   export let href: string;
   export let icon: string;
@@ -14,7 +14,7 @@
   }
 </style>
 
-<a {href} class={appState.$state.route === href ? `selected` : ``}>
+<a {href} class={appState.route === href ? `selected` : ``}>
   <i class="{icon}"></i>
   <span class="hide-sx">{label}</span>
 </a>

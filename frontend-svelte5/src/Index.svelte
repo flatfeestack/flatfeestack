@@ -18,7 +18,7 @@
     import LoginConfirm from "./auth/LoginConfirm.svelte";
     import {API} from "./ts/api.ts";
     import {onMount} from "svelte";
-    import {appState} from "./ts/state.ts";
+    import {appState} from "./ts/state.svelte.ts";
 
     const routes: Route[] = [
         {path: "/user/search", component: Search},
@@ -39,8 +39,8 @@
     ];
 
     onMount(async () => {
-        if (!appState.$state.config) {
-            appState.$state.config = await API.config.config();
+        if (!appState.config) {
+            appState.config = await API.config.config();
         }
     });
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import { getColor1 } from "./utils";
   import type { Repo } from "./types/backend";
 
@@ -10,7 +10,7 @@
   const onSponsor = async () => {
     try {
       const res = await API.repos.tag(repo.uuid);
-      appState.$state.sponsoredRepos = [...appState.$state.sponsoredRepos, res];
+      appState.sponsoredRepos = [...appState.sponsoredRepos, res];
       star = true;
     } catch (e) {
       appState.setError(e);
@@ -19,7 +19,7 @@
   };
 
   $: {
-    const tmp = appState.$state.sponsoredRepos.find((r: Repo) => {
+    const tmp = appState.sponsoredRepos.find((r: Repo) => {
       return r.uuid === repo.uuid;
     });
     star = tmp !== undefined;

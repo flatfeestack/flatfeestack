@@ -1,7 +1,7 @@
 <script lang="ts">
   import {goto, query, route} from "@mateothegreat/svelte5-router";
   import {onMount} from "svelte";
-  import {confirm} from "../ts/auth.ts";
+  import {confirm} from "./auth.svelte.ts";
   import Modal from "./Modal.svelte";
   let email = query("email");
   let emailToken = query("emailToken");

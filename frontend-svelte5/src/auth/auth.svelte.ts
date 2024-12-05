@@ -1,19 +1,18 @@
-import { appState } from "ts/state.ts";
+import { appState } from "ts/state.svelte.ts";
 import {API} from "ts/api.ts";
-import type { User } from "types/backend";
-import type { Token } from "types/auth";
+import type {Token, User} from "types/backend.ts";
 import {HTTPError} from "ky";
 
 export const login = async (email: string):Promise<boolean> => {
     const refreshToken = getRefreshToken();
-    if (refreshToken) {
+    if (refreshToken !== null) {
         if (!appState.isAccessTokenExpired()) {
-            return appState.$state.user.email === email;
+            return appState.user.email === email;
         }
         try {
             const { access_token, expires_at } = await refresh(refreshToken, email);
-            appState.$state.accessToken = access_token;
-            appState.$state.accessTokenExpire = expires_at;
+            appState.accessToken = access_token;
+            appState.accessTokenExpire = expires_at;
             return true;
         } catch (e: unknown) {
             if (!(e instanceof HTTPError) || e.response.status !== 404) {
@@ -23,7 +22,7 @@ export const login = async (email: string):Promise<boolean> => {
     }
     //here we actually need to do a login and send out the email
     const token = await API.auth.login(email);
-    if (token) {
+    if (typeof token === 'object' && token !== null) {
         storeToken(token);
         return true;
     }
@@ -33,7 +32,7 @@ export const login = async (email: string):Promise<boolean> => {
 export const confirm = async (email: string, emailToken: string) => {
     const token = await API.auth.confirm(email, emailToken);
     storeToken(token);
-    appState.$state.user  = await API.user.get();
+    appState.user  = await API.user.get();
 };
 
 export async function refresh(refreshToken: string, email: string = ""): Promise<{ access_token: string, expires_at: number }> {
@@ -52,14 +51,14 @@ export async function removeSession(){
 
 export function removeToken(){
     localStorage.removeItem("ffs-refresh");
-    appState.$state.user = <User>{};
-    appState.$state.accessToken = "";
-    appState.$state.accessTokenExpire = 0;
+    appState.user = <User>{};
+    appState.accessToken = "";
+    appState.accessTokenExpire = 0;
 }
 
 export function storeToken (token: Token){
-    appState.$state.accessToken = token.access_token;
-    appState.$state.accessTokenExpire = token.expires_at;
+    appState.accessToken = token.access_token;
+    appState.accessTokenExpire = token.expires_at;
     localStorage.setItem("ffs-refresh", token.refresh_token);
 }
 

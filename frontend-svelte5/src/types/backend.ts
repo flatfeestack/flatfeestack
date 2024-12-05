@@ -1,7 +1,32 @@
+
+export type Token = {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+};
+
 // @ts-ignore
 import { components } from "./generated-backend-types";
 
-export type User = components["schemas"]["User"];
+export type User = {
+    /** Format: uuid */
+    id: string;
+    email: string;
+    name?: string | null;
+    /** Format: date-time */
+    createdAt: string;
+    /** Format: uuid */
+    invitedId?: string;
+    stripeId?: string | null;
+    image?: string | null;
+    paymentMethod?: string | null;
+    last4?: string | null;
+    /** Format: int64 */
+    seats?: number | null;
+    /** Format: int64 */
+    freq?: number | null;
+    role?: string | null;
+};
 
 export type Config = {
     stripePublicApi: string;

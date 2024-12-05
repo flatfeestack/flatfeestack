@@ -2,9 +2,9 @@
   import Navigation from "./Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "./ts/api.ts";
-  import { appState } from "ts/state.ts";
+  import { appState } from "ts/state.svelte.ts";
   import type { Contribution, ContributionSummary } from "./types/backend";
-  import { formatDay, formatBalance } from "./services";
+  import { formatDay, formatBalance } from "./ts/services.svelte.ts";
   /*import {
     Chart,
     LineController,
@@ -232,7 +232,7 @@
                       </button>
                     {/if}
                   {:catch err}
-                    {(appState.$state.error = err.message)}
+                    {(appState.error = err.message)}
                   {/await}
                 </td>
               </tr>
@@ -303,6 +303,6 @@
     <p class="p-2 m-2">No contributions yet.</p>
   {/if}
   <p class="p-2 m-2">
-    Public URL: <a href="/badges/{appState.$state.user.id}">/badges/{appState.$state.user.id}</a>
+    Public URL: <a href="/badges/{appState.user.id}">/badges/{appState.user.id}</a>
   </p>
 </Navigation>

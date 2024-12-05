@@ -9,17 +9,17 @@ importers:
   .:
     dependencies:
       '@fortawesome/fontawesome-free':
-        specifier: ^6.6.0
-        version: 6.6.0
+        specifier: ^6.7.1
+        version: 6.7.1
       '@mateothegreat/svelte5-router':
-        specifier: 0.0.26
-        version: 0.0.26(svelte@5.2.10)
+        specifier: github:tbocek/svelte5-router-dist
+        version: https://codeload.github.com/tbocek/svelte5-router-dist/tar.gz/5de7cae1ee7acfd02b012427cf2438a1d8423d01(svelte@5.5.3)
       '@metamask/detect-provider':
         specifier: ^2.0.0
         version: 2.0.0
       '@stripe/stripe-js':
-        specifier: ^4.10.0
-        version: 4.10.0
+        specifier: ^5.2.0
+        version: 5.2.0
       ethers:
         specifier: ^6.13.4
         version: 6.13.4
@@ -30,18 +30,18 @@ importers:
         specifier: ^9.1.1
         version: 9.1.1
       svelte:
-        specifier: 5.2.10
-        version: 5.2.10
+        specifier: 5.5.3
+        version: 5.5.3
     devDependencies:
       '@rsbuild/core':
-        specifier: 1.0.19
-        version: 1.0.19
+        specifier: 1.1.8
+        version: 1.1.8
       '@rsbuild/plugin-css-minimizer':
         specifier: ^1.0.2
-        version: 1.0.2(@rsbuild/core@1.0.19)(webpack@5.96.1)
+        version: 1.0.2(@rsbuild/core@1.1.8)(webpack@5.96.1)
       '@rsbuild/plugin-svelte':
-        specifier: 1.0.3
-        version: 1.0.3(@babel/core@7.26.0)(@rsbuild/core@1.0.19)(postcss@8.4.49)(svelte@5.2.10)(typescript@5.6.3)
+        specifier: 1.0.5
+        version: 1.0.5(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)
       '@tsconfig/svelte':
         specifier: 5.0.4
         version: 5.0.4
@@ -58,11 +58,14 @@ importers:
         specifier: ^14.2.4
         version: 14.2.4
       svelte-check:
-        specifier: ^4.0.8
-        version: 4.0.8(svelte@5.2.10)(typescript@5.6.3)
+        specifier: ^4.1.1
+        version: 4.1.1(svelte@5.5.3)(typescript@5.7.2)
+      tsconfig-to-swcconfig:
+        specifier: ^2.8.1
+        version: 2.8.1
       typescript:
-        specifier: ^5.6.3
-        version: 5.6.3
+        specifier: ^5.7.2
+        version: 5.7.2
 
 packages:
 
@@ -136,8 +139,11 @@ packages:
     resolution: {integrity: sha512-Z/yiTPj+lDVnF7lWeKCIJzaIkI0vYO87dMpZ4bg4TDrFe4XXLFWL1TbXU27gBP3QccxV9mZICCrnjnYlJjXHOA==}
     engines: {node: '>=6.9.0'}
 
-  '@fortawesome/fontawesome-free@6.6.0':
-    resolution: {integrity: sha512-60G28ke/sXdtS9KZCpZSHHkCbdsOGEhIUGlwq6yhY74UpTiToIh8np7A8yphhM4BWsvNFtIvLpi4co+h9Mr9Ow==}
+  '@fastify/deepmerge@1.3.0':
+    resolution: {integrity: sha512-J8TOSBq3SoZbDhM9+R/u77hP93gz/rajSA+K2kGyijPpORPWUXHUpTaleoj+92As0S9uPRP7Oi8IqMf0u+ro6A==}
+
+  '@fortawesome/fontawesome-free@6.7.1':
+    resolution: {integrity: sha512-ALIk/MOh5gYe1TG/ieS5mVUsk7VUIJTJKPMK9rFFqOgfp0Q3d5QiBXbcOMwUvs37fyZVCz46YjOE6IFeOAXCHA==}
     engines: {node: '>=6'}
 
   '@jest/schemas@29.6.3':
@@ -169,8 +175,9 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@mateothegreat/svelte5-router@0.0.26':
-    resolution: {integrity: sha512-Vr3NVz819KR5wA6Tcy7sSvJQ+84DWPGd+XyUuDP702uNE/gcbaKiQGLAJPQoHA4o0SPibrVEbUeYeB6Ap2Ld/w==}
+  '@mateothegreat/svelte5-router@https://codeload.github.com/tbocek/svelte5-router-dist/tar.gz/5de7cae1ee7acfd02b012427cf2438a1d8423d01':
+    resolution: {tarball: https://codeload.github.com/tbocek/svelte5-router-dist/tar.gz/5de7cae1ee7acfd02b012427cf2438a1d8423d01}
+    version: 0.1.35
     peerDependencies:
       svelte: ^5.0.0
 
@@ -197,8 +204,8 @@ packages:
     resolution: {integrity: sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==}
     engines: {node: '>= 16'}
 
-  '@rsbuild/core@1.0.19':
-    resolution: {integrity: sha512-63DAPvYfRBoUrb51BUPb4Xoqx48MHQ0yLcmnCiqZGpMeKYtTWzD+lyx5va4cr9qvdnIFTAX2BMuYC/j5iSrtTA==}
+  '@rsbuild/core@1.1.8':
+    resolution: {integrity: sha512-UhP260og3aJcqGWpnRcQXLVapdOZZ09JXaQKY+tE55A7nBw8DQy+qrtTsFZYvVKas1bq8GzhGfLxuglCst4Lnw==}
     engines: {node: '>=16.7.0'}
     hasBin: true
 
@@ -210,61 +217,61 @@ packages:
       '@rsbuild/core':
         optional: true
 
-  '@rsbuild/plugin-svelte@1.0.3':
-    resolution: {integrity: sha512-pH3AW2aBicnB7cdKmkoNGn7+ZOFt9RuevCYA3oTxHsaXMX0nKXXZSiBR4Die5ob5Zp6NxbVGMaspRdlL9/3BNA==}
+  '@rsbuild/plugin-svelte@1.0.5':
+    resolution: {integrity: sha512-7J5wvV+8LUn2AcppgPu+OKu3J2Qylj86jRItpRMMIpLI4YBYS6gM9DWOpti4ynr7peWdHrU05s6kE7F/EBKjMw==}
     peerDependencies:
       '@rsbuild/core': 1.x
 
-  '@rspack/binding-darwin-arm64@1.0.14':
-    resolution: {integrity: sha512-dHvlF6T6ctThGDIdvkSdacroA1xlCxfteuppBj8BX/UxzLPr4xsaEtNilfJmFfd2/J02UQyTQauN/9EBuA+YkA==}
+  '@rspack/binding-darwin-arm64@1.1.5':
+    resolution: {integrity: sha512-eEynmyPPl+OGYQ9LRFwiQosyRfcca3OQB73akqY4mqDRl39OyiBjq7347DLHJysgbm9z+B1bsiLuh2xc6mdclQ==}
     cpu: [arm64]
     os: [darwin]
 
-  '@rspack/binding-darwin-x64@1.0.14':
-    resolution: {integrity: sha512-q4Da1Bn/4xTLhhnOkT+fjP2STsSCfp4z03/J/h8tCVG/UYz56Ud3q1UEOK33c5Fxw1C4GlhEh5yYOlSAdxFQLQ==}
+  '@rspack/binding-darwin-x64@1.1.5':
+    resolution: {integrity: sha512-I6HPRgogewU5v1OKe3noEzq2U1FCEYAbW+smy+lPvpTW+3X6PlVMzTT4oelhB0EXDQ+KxjXH9KpOKON1hg/JGg==}
     cpu: [x64]
     os: [darwin]
 
-  '@rspack/binding-linux-arm64-gnu@1.0.14':
-    resolution: {integrity: sha512-JogYtL3VQS9wJ3p3FNhDqinm7avrMsdwz4erP7YCjD7idob93GYAE7dPrHUzSNVnCBYXRaHJYZHDQs7lKVcYZw==}
+  '@rspack/binding-linux-arm64-gnu@1.1.5':
+    resolution: {integrity: sha512-LQnqucNa6Dr6y3By+/M2ARO4jDR3AM+PuCsHgzlYT0RDRLS+Ow3f50WbNBf7eI/DhrEA0aucYL3sz1ljguB3EA==}
     cpu: [arm64]
     os: [linux]
 
-  '@rspack/binding-linux-arm64-musl@1.0.14':
-    resolution: {integrity: sha512-qgybhxI/nnoa8CUz7zKTC0Oh37NZt9uRxsSV7+ZYrfxqbrVCoNVuutPpY724uUHy1M6W34kVEm1uT1N4Ka5cZg==}
+  '@rspack/binding-linux-arm64-musl@1.1.5':
+    resolution: {integrity: sha512-b9L/9HJxrWY4cezPWqgj28I9Xe2XxwLHu8x0CMGobwF2XKR0QQVLAst38RW/EusJ8TURdyvNEOuRZlWEIJuYOw==}
     cpu: [arm64]
     os: [linux]
 
-  '@rspack/binding-linux-x64-gnu@1.0.14':
-    resolution: {integrity: sha512-5vzaDRw3/sGKo3ax/1cU3/cxqNjajwlt2LU288vXNe1/n8oe/pcDfYcTugpOe/A1DqzadanudJszLpFcKsaFtQ==}
+  '@rspack/binding-linux-x64-gnu@1.1.5':
+    resolution: {integrity: sha512-0az52ZXTg/ErCGC1v/oFLWByKAiXvng4euv+prwMWF6p1pA7lfLRLzdibDFO4KgC16Zlfcg3hqs7YikLng4x+w==}
     cpu: [x64]
     os: [linux]
 
-  '@rspack/binding-linux-x64-musl@1.0.14':
-    resolution: {integrity: sha512-4U6QD9xVS1eGme52DuJr6Fg/KdcUfJ+iKwH49Up460dZ/fLvGylnVGA+V0mzPlKi8gfy7NwFuYXZdu3Pwi1YYg==}
+  '@rspack/binding-linux-x64-musl@1.1.5':
+    resolution: {integrity: sha512-EF/LJTtCTkuti2gJnCyvXHC5Q2L5M4+RXm5kj9Bfu/t0Zmmfe6Jd5QUsifgogioeL0ZsH/Pou5QiiVcOFcqFKQ==}
     cpu: [x64]
     os: [linux]
 
-  '@rspack/binding-win32-arm64-msvc@1.0.14':
-    resolution: {integrity: sha512-SjeYw7qqRHYZ5RPClu+ffKZsShQdU3amA1OwC3M0AS6dbfEcji8482St3Y8Z+QSzYRapCEZij9LMM/9ypEhISg==}
+  '@rspack/binding-win32-arm64-msvc@1.1.5':
+    resolution: {integrity: sha512-VEqhK6HwIHby6gtOkxIx66SkqYndiaP1ddZ3X39RLE40TY3KlNgfG/SzbN9J5Qb+8jjq3ogV8n50+wLEGkhiWw==}
     cpu: [arm64]
     os: [win32]
 
-  '@rspack/binding-win32-ia32-msvc@1.0.14':
-    resolution: {integrity: sha512-m1gUiVyz3Z3VYIK/Ayo5CVHBjnEeRk9a+KIpKSsq1yhZItnMgjtr4bKabU9vjxalO4UoaSmVzODJI8lJBlnn5Q==}
+  '@rspack/binding-win32-ia32-msvc@1.1.5':
+    resolution: {integrity: sha512-Yi2BwYehc5/sRVgI7zTGYJKjnV8UszAJt/stWdFHaq82chHiuuF/tQd1WcBUq0Iin9ylBMo16mRJAuFkFmJ74Q==}
     cpu: [ia32]
     os: [win32]
 
-  '@rspack/binding-win32-x64-msvc@1.0.14':
-    resolution: {integrity: sha512-Gbeg+bayMF9VP9xmlxySL/TC2XrS6/LZM/pqcNOTLHx6LMG/VXCcmKB0rOZo8MzLXEt8D/lQmQ/B6g7pSaAw0g==}
+  '@rspack/binding-win32-x64-msvc@1.1.5':
+    resolution: {integrity: sha512-4UArXYqJO1Ni7TmCw1T11JnrwfpoThDdiQ9k1P1voBWK3bDahPEBOptk9ZPu2+ZuRX8hFrvumRKkLY3oy7fTMw==}
     cpu: [x64]
     os: [win32]
 
-  '@rspack/binding@1.0.14':
-    resolution: {integrity: sha512-0wWqFvr9hkF4LgNPgWfkTU0hhkZAMvOytoCs2p+wDX1Up1E/SgJ1U1JAsCxsl1XtUKm7mRvdWHzJmHbza3y89Q==}
+  '@rspack/binding@1.1.5':
+    resolution: {integrity: sha512-RsSkgi56Q5XUXut0qweLSE1C4Ogcm7g/ueKoOgsbHAYVKrCs9/dTFlPHWSIAaI7QWh0GWEePR/MM2O2HIu+1rw==}
 
-  '@rspack/core@1.0.14':
-    resolution: {integrity: sha512-xHl23lxJZNjItGc5YuE9alz3yjb56y7EgJmAcBMPHMqgjtUt8rBu4xd/cSUjbr9/lLF9N4hdyoJiPJOFs9LEjw==}
+  '@rspack/core@1.1.5':
+    resolution: {integrity: sha512-/FmxDeMuW8fJkhz8fHuCu7OiJHFKW78xclEu7LkEujWl4PqJgdWjUL/6FWIj50spRwj6PRfuc31hFSL4hbNfCA==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       '@swc/helpers': '>=0.5.1'
@@ -279,12 +286,12 @@ packages:
   '@sinclair/typebox@0.27.8':
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
 
-  '@stripe/stripe-js@4.10.0':
-    resolution: {integrity: sha512-KrMOL+sH69htCIXCaZ4JluJ35bchuCCznyPyrbN8JXSGQfwBI1SuIEMZNwvy8L8ykj29t6sa5BAAiL7fNoLZ8A==}
+  '@stripe/stripe-js@5.2.0':
+    resolution: {integrity: sha512-2ZpEaezx3S0QPtnske175NDaLvUvaVKd4ePHpUN0QF/uV4BBBBRUy5BvQONDym+utbbW0QhSJoiRPnp4FS+4Vg==}
     engines: {node: '>=12.16'}
 
-  '@swc/helpers@0.5.13':
-    resolution: {integrity: sha512-UoKGxQ3r5kYI9dALKJapMmuK+1zWM/H17Z1+iwnNmzcJRnfFuevZs375TA5rW31pu4BS4NoSy1fRsexDXfWn5w==}
+  '@swc/helpers@0.5.15':
+    resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
   '@trysound/sax@0.2.0':
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
@@ -607,8 +614,8 @@ packages:
     resolution: {integrity: sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==}
     engines: {node: '>= 0.6'}
 
-  core-js@3.38.1:
-    resolution: {integrity: sha512-OP35aUorbU3Zvlx7pjsFdu1rGNnD4pgw/CWoYzRY3t2EzoVT7shKHY1dlAy3f41cGIO7ZDPQimhGFTlEYkG/Hw==}
+  core-js@3.39.0:
+    resolution: {integrity: sha512-raM0ew0/jJUqkJ0E6e8UDtl+y/7ktFivgWvqw8dNSQeNWoSDLvQ1H/RN3aPXB9tBd4/FhyR4RDPGhsNIMsAn7g==}
 
   cross-spawn@7.0.5:
     resolution: {integrity: sha512-ZVJrKKYunU38/76t0RMOulHOnUcbU9GbpWKAOZ0mhjr7CX6FVrH+4FrAapSOekrgFQ3f/8gwMEuIft0aKq6Hug==}
@@ -809,11 +816,11 @@ packages:
     resolution: {integrity: sha512-2NxwbF/hZ0KpepYN0cNbo+FN6XoK7GaHlQhgx/hIZl6Va0bF45RQOOwhLIy8lQDbuCiadSLCBnH2CFYquit5bw==}
     engines: {node: '>=8.0.0'}
 
-  esm-env@1.2.0:
-    resolution: {integrity: sha512-OhSQuHL3mUcaQHjGe8UMG8GsJIJHYYz0flR0h9fiTPNMupLMkb7TvcRD0EeJXW5a8GHBgfz08b6FDLNK7kkPQA==}
+  esm-env@1.2.1:
+    resolution: {integrity: sha512-U9JedYYjCnadUlXk7e1Kr+aENQhtUaoaV9+gZm1T8LC/YBAPJx3NSPIAurFOC0U5vrdSevnUJS2/wUVxGwPhng==}
 
-  esrap@1.2.2:
-    resolution: {integrity: sha512-F2pSJklxx1BlQIQgooczXCPHmcWpn6EsP5oo73LQfonG9fIlIENQ8vMmfGXeojP9MrkzUNAfyU5vdFlR9shHAw==}
+  esrap@1.2.3:
+    resolution: {integrity: sha512-ZlQmCCK+n7SGoqo7DnfKaP1sJZa49P01/dXzmjCASSo04p72w8EksT2NMK8CEX8DhKsfJXANioIw8VyHNsBfvQ==}
 
   esrecurse@4.3.0:
     resolution: {integrity: sha512-KmfKL3b6G+RXvP8N1vr3Tq1kL/oCFgn2NYXEtqP8/L3pKapUA4G8cFVaoF3SU323CD4XypR/ffioHmkti6/Tag==}
@@ -884,11 +891,6 @@ packages:
     resolution: {integrity: sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==}
     engines: {node: '>= 0.6'}
 
-  fsevents@2.3.3:
-    resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
-
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
@@ -903,6 +905,9 @@ packages:
   get-stream@6.0.1:
     resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
     engines: {node: '>=10'}
+
+  get-tsconfig@4.8.1:
+    resolution: {integrity: sha512-k9PN+cFBmaLWtVz29SkUoqU5O0slLuHJXt/2P+tMVFT+phsSGXGkp9t3rQIqdz0e+06EHNGs3oM6ZX1s2zHxRg==}
 
   glob-to-regexp@0.4.1:
     resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
@@ -1433,6 +1438,9 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
   rrweb-cssom@0.7.1:
     resolution: {integrity: sha512-TrEMa7JGdVm0UThDJSx7ddw5nVm3UJS9o9CCIZ72B1vSyEZoziDqBYP3XIoi/12lKrJR8rE3jeFHMok2F/Mnsg==}
 
@@ -1563,8 +1571,8 @@ packages:
     resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
     engines: {node: '>=10'}
 
-  svelte-check@4.0.8:
-    resolution: {integrity: sha512-nYxbPa0GJySVLhrplvpdGGdwst/7r/H9N991PVYk3BtSIuWBw5ihItHCDJu7hE1S0bPSRJ6IJ2yTCQeDUk0ZDg==}
+  svelte-check@4.1.1:
+    resolution: {integrity: sha512-NfaX+6Qtc8W/CyVGS/F7/XdiSSyXz+WGYA9ZWV3z8tso14V2vzjfXviKaTFEzB7g8TqfgO2FOzP6XT4ApSTUTw==}
     engines: {node: '>= 18.0.0'}
     hasBin: true
     peerDependencies:
@@ -1622,8 +1630,8 @@ packages:
       typescript:
         optional: true
 
-  svelte@5.2.10:
-    resolution: {integrity: sha512-ON0OyO7vOmSjTc9mLjusu3vf1I7BvjovbiRB7j84F1WZMXV6dR+Tj4btIzxQxMHfzbGskaFmRa7qjgmBSVBnhQ==}
+  svelte@5.5.3:
+    resolution: {integrity: sha512-0j7XTSg5iXcLNCFcEsIZPtHO7SQeE0KgMcyF1K4K7HkjdKVPumz7dnxeXq5lGJRHfVAMZKqpEJ46rPKPKRJ57Q==}
     engines: {node: '>=18'}
 
   svgo@3.3.2:
@@ -1678,6 +1686,10 @@ packages:
     resolution: {integrity: sha512-tk2G5R2KRwBd+ZN0zaEXpmzdKyOYksXwywulIX95MBODjSzMIuQnQ3m8JxgbhnL1LeVo7lqQKsYa1O3Htl7K5g==}
     engines: {node: '>=18'}
 
+  tsconfig-to-swcconfig@2.8.1:
+    resolution: {integrity: sha512-QxsJZEE0ofziAZTb5phH+As84dovQZOE2sVrB93kLFs5UUlnsCKuT2WGmQt/bNl4sr5YM1MqFDdF6D8vzMnZwQ==}
+    hasBin: true
+
   tslib@2.7.0:
     resolution: {integrity: sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==}
 
@@ -1692,8 +1704,8 @@ packages:
     resolution: {integrity: sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==}
     engines: {node: '>= 0.6'}
 
-  typescript@5.6.3:
-    resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
+  typescript@5.7.2:
+    resolution: {integrity: sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -1937,7 +1949,9 @@ snapshots:
       '@babel/helper-validator-identifier': 7.25.9
     optional: true
 
-  '@fortawesome/fontawesome-free@6.6.0': {}
+  '@fastify/deepmerge@1.3.0': {}
+
+  '@fortawesome/fontawesome-free@6.7.1': {}
 
   '@jest/schemas@29.6.3':
     dependencies:
@@ -1974,9 +1988,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@mateothegreat/svelte5-router@0.0.26(svelte@5.2.10)':
+  '@mateothegreat/svelte5-router@https://codeload.github.com/tbocek/svelte5-router-dist/tar.gz/5de7cae1ee7acfd02b012427cf2438a1d8423d01(svelte@5.5.3)':
     dependencies:
-      svelte: 5.2.10
+      svelte: 5.5.3
 
   '@metamask/detect-provider@2.0.0': {}
 
@@ -2002,21 +2016,19 @@ snapshots:
 
   '@noble/hashes@1.3.2': {}
 
-  '@rsbuild/core@1.0.19':
+  '@rsbuild/core@1.1.8':
     dependencies:
-      '@rspack/core': 1.0.14(@swc/helpers@0.5.13)
+      '@rspack/core': 1.1.5(@swc/helpers@0.5.15)
       '@rspack/lite-tapable': 1.0.1
-      '@swc/helpers': 0.5.13
-      core-js: 3.38.1
-    optionalDependencies:
-      fsevents: 2.3.3
+      '@swc/helpers': 0.5.15
+      core-js: 3.39.0
 
-  '@rsbuild/plugin-css-minimizer@1.0.2(@rsbuild/core@1.0.19)(webpack@5.96.1)':
+  '@rsbuild/plugin-css-minimizer@1.0.2(@rsbuild/core@1.1.8)(webpack@5.96.1)':
     dependencies:
       css-minimizer-webpack-plugin: 5.0.1(webpack@5.96.1)
       reduce-configs: 1.0.0
     optionalDependencies:
-      '@rsbuild/core': 1.0.19
+      '@rsbuild/core': 1.1.8
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/css'
@@ -2026,11 +2038,11 @@ snapshots:
       - lightningcss
       - webpack
 
-  '@rsbuild/plugin-svelte@1.0.3(@babel/core@7.26.0)(@rsbuild/core@1.0.19)(postcss@8.4.49)(svelte@5.2.10)(typescript@5.6.3)':
+  '@rsbuild/plugin-svelte@1.0.5(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)':
     dependencies:
-      '@rsbuild/core': 1.0.19
-      svelte-loader: 3.2.4(svelte@5.2.10)
-      svelte-preprocess: 6.0.3(@babel/core@7.26.0)(postcss@8.4.49)(svelte@5.2.10)(typescript@5.6.3)
+      '@rsbuild/core': 1.1.8
+      svelte-loader: 3.2.4(svelte@5.5.3)
+      svelte-preprocess: 6.0.3(@babel/core@7.26.0)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)
     transitivePeerDependencies:
       - '@babel/core'
       - coffeescript
@@ -2044,61 +2056,61 @@ snapshots:
       - svelte
       - typescript
 
-  '@rspack/binding-darwin-arm64@1.0.14':
+  '@rspack/binding-darwin-arm64@1.1.5':
     optional: true
 
-  '@rspack/binding-darwin-x64@1.0.14':
+  '@rspack/binding-darwin-x64@1.1.5':
     optional: true
 
-  '@rspack/binding-linux-arm64-gnu@1.0.14':
+  '@rspack/binding-linux-arm64-gnu@1.1.5':
     optional: true
 
-  '@rspack/binding-linux-arm64-musl@1.0.14':
+  '@rspack/binding-linux-arm64-musl@1.1.5':
     optional: true
 
-  '@rspack/binding-linux-x64-gnu@1.0.14':
+  '@rspack/binding-linux-x64-gnu@1.1.5':
     optional: true
 
-  '@rspack/binding-linux-x64-musl@1.0.14':
+  '@rspack/binding-linux-x64-musl@1.1.5':
     optional: true
 
-  '@rspack/binding-win32-arm64-msvc@1.0.14':
+  '@rspack/binding-win32-arm64-msvc@1.1.5':
     optional: true
 
-  '@rspack/binding-win32-ia32-msvc@1.0.14':
+  '@rspack/binding-win32-ia32-msvc@1.1.5':
     optional: true
 
-  '@rspack/binding-win32-x64-msvc@1.0.14':
+  '@rspack/binding-win32-x64-msvc@1.1.5':
     optional: true
 
-  '@rspack/binding@1.0.14':
+  '@rspack/binding@1.1.5':
     optionalDependencies:
-      '@rspack/binding-darwin-arm64': 1.0.14
-      '@rspack/binding-darwin-x64': 1.0.14
-      '@rspack/binding-linux-arm64-gnu': 1.0.14
-      '@rspack/binding-linux-arm64-musl': 1.0.14
-      '@rspack/binding-linux-x64-gnu': 1.0.14
-      '@rspack/binding-linux-x64-musl': 1.0.14
-      '@rspack/binding-win32-arm64-msvc': 1.0.14
-      '@rspack/binding-win32-ia32-msvc': 1.0.14
-      '@rspack/binding-win32-x64-msvc': 1.0.14
+      '@rspack/binding-darwin-arm64': 1.1.5
+      '@rspack/binding-darwin-x64': 1.1.5
+      '@rspack/binding-linux-arm64-gnu': 1.1.5
+      '@rspack/binding-linux-arm64-musl': 1.1.5
+      '@rspack/binding-linux-x64-gnu': 1.1.5
+      '@rspack/binding-linux-x64-musl': 1.1.5
+      '@rspack/binding-win32-arm64-msvc': 1.1.5
+      '@rspack/binding-win32-ia32-msvc': 1.1.5
+      '@rspack/binding-win32-x64-msvc': 1.1.5
 
-  '@rspack/core@1.0.14(@swc/helpers@0.5.13)':
+  '@rspack/core@1.1.5(@swc/helpers@0.5.15)':
     dependencies:
       '@module-federation/runtime-tools': 0.5.1
-      '@rspack/binding': 1.0.14
+      '@rspack/binding': 1.1.5
       '@rspack/lite-tapable': 1.0.1
       caniuse-lite: 1.0.30001679
     optionalDependencies:
-      '@swc/helpers': 0.5.13
+      '@swc/helpers': 0.5.15
 
   '@rspack/lite-tapable@1.0.1': {}
 
   '@sinclair/typebox@0.27.8': {}
 
-  '@stripe/stripe-js@4.10.0': {}
+  '@stripe/stripe-js@5.2.0': {}
 
-  '@swc/helpers@0.5.13':
+  '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
 
@@ -2454,7 +2466,7 @@ snapshots:
 
   cookie@0.7.1: {}
 
-  core-js@3.38.1: {}
+  core-js@3.39.0: {}
 
   cross-spawn@7.0.5:
     dependencies:
@@ -2639,9 +2651,9 @@ snapshots:
       esrecurse: 4.3.0
       estraverse: 4.3.0
 
-  esm-env@1.2.0: {}
+  esm-env@1.2.1: {}
 
-  esrap@1.2.2:
+  esrap@1.2.3:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
       '@types/estree': 1.0.6
@@ -2751,9 +2763,6 @@ snapshots:
 
   fresh@0.5.2: {}
 
-  fsevents@2.3.3:
-    optional: true
-
   function-bind@1.1.2: {}
 
   gensync@1.0.0-beta.2:
@@ -2768,6 +2777,10 @@ snapshots:
       hasown: 2.0.2
 
   get-stream@6.0.1: {}
+
+  get-tsconfig@4.8.1:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
 
   glob-to-regexp@0.4.1: {}
 
@@ -3251,6 +3264,8 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
+  resolve-pkg-maps@1.0.0: {}
+
   rrweb-cssom@0.7.1: {}
 
   sade@1.8.1:
@@ -3417,40 +3432,40 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  svelte-check@4.0.8(svelte@5.2.10)(typescript@5.6.3):
+  svelte-check@4.1.1(svelte@5.5.3)(typescript@5.7.2):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       chokidar: 4.0.1
       fdir: 6.4.2
       picocolors: 1.1.1
       sade: 1.8.1
-      svelte: 5.2.10
-      typescript: 5.6.3
+      svelte: 5.5.3
+      typescript: 5.7.2
     transitivePeerDependencies:
       - picomatch
 
   svelte-dev-helper@1.1.9: {}
 
-  svelte-hmr@0.14.12(svelte@5.2.10):
+  svelte-hmr@0.14.12(svelte@5.5.3):
     dependencies:
-      svelte: 5.2.10
+      svelte: 5.5.3
 
-  svelte-loader@3.2.4(svelte@5.2.10):
+  svelte-loader@3.2.4(svelte@5.5.3):
     dependencies:
       loader-utils: 2.0.4
-      svelte: 5.2.10
+      svelte: 5.5.3
       svelte-dev-helper: 1.1.9
-      svelte-hmr: 0.14.12(svelte@5.2.10)
+      svelte-hmr: 0.14.12(svelte@5.5.3)
 
-  svelte-preprocess@6.0.3(@babel/core@7.26.0)(postcss@8.4.49)(svelte@5.2.10)(typescript@5.6.3):
+  svelte-preprocess@6.0.3(@babel/core@7.26.0)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2):
     dependencies:
-      svelte: 5.2.10
+      svelte: 5.5.3
     optionalDependencies:
       '@babel/core': 7.26.0
       postcss: 8.4.49
-      typescript: 5.6.3
+      typescript: 5.7.2
 
-  svelte@5.2.10:
+  svelte@5.5.3:
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@jridgewell/sourcemap-codec': 1.5.0
@@ -3459,8 +3474,8 @@ snapshots:
       acorn-typescript: 1.4.13(acorn@8.14.0)
       aria-query: 5.3.2
       axobject-query: 4.1.0
-      esm-env: 1.2.0
-      esrap: 1.2.2
+      esm-env: 1.2.1
+      esrap: 1.2.3
       is-reference: 3.0.3
       locate-character: 3.0.0
       magic-string: 0.30.12
@@ -3512,6 +3527,11 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
+  tsconfig-to-swcconfig@2.8.1:
+    dependencies:
+      '@fastify/deepmerge': 1.3.0
+      get-tsconfig: 4.8.1
+
   tslib@2.7.0: {}
 
   tslib@2.8.1: {}
@@ -3523,7 +3543,7 @@ snapshots:
       media-typer: 0.3.0
       mime-types: 2.1.35
 
-  typescript@5.6.3: {}
+  typescript@5.7.2: {}
 
   undici-types@6.19.8: {}
 

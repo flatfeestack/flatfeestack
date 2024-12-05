@@ -2,7 +2,7 @@
   import FiatTab from "./FiatTab.svelte";
   import CryptoTab from "./CryptoTab.svelte";
   import Tabs from "./Tabs.svelte";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import { onMount } from "svelte";
   import { API } from "./ts/api.ts";
   import type { Plan } from "./types/backend";
@@ -10,7 +10,7 @@
   // List of tab items with labels, values and assigned components
   let items = [{ label: "Credit Card", value: 1, component: FiatTab }];
 
-  if (appState.$state.config.env === "local" || appState.$state.config.env === "stage") {
+  if (appState.config.env === "local" || appState.config.env === "stage") {
     items.push({
       label: "Crypto Currencies",
       value: 2,
@@ -23,10 +23,10 @@
   let selectedPlan: Plan;
 
   $: {
-    if (appState.$state.config && appState.$state.config.plans) {
-      selectedPlan = appState.$state.config.plans.find((e) => e.freq === currentFreq);
+    if (appState.config && appState.config.plans) {
+      selectedPlan = appState.config.plans.find((e) => e.freq === currentFreq);
       if (!selectedPlan) {
-        selectedPlan =appState.$state.config.plans[0];
+        selectedPlan =appState.config.plans[0];
       }
     }
   }
@@ -82,8 +82,8 @@
   account in accordance with the terms of my agreement with you.
 </p>
 <div class="container-stretch">
-  {#if appState.$state.config.plans}
-    {#each appState.$state.config.plans as { title, desc, disclaimer, freq }}
+  {#if appState.config.plans}
+    {#each appState.config.plans as { title, desc, disclaimer, freq }}
       <div
         class="flex-grow child p-2 m-2 w1-2 card border-primary-500 rounded {currentFreq ===
         freq
@@ -105,7 +105,7 @@
     <input size="5" type="number" min="1" bind:value={currentSeats} /> Seats
   </div>
   <div class="p-2">
-    {#if appState.$state.config.plans}
+    {#if appState.config.plans}
       <div>
         Sponsoring Amount:<span class="bold">$ {total.toFixed(2)}</span>
       </div>

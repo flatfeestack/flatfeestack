@@ -2,7 +2,7 @@
   import {goto, QueryString} from "@mateothegreat/svelte5-router";
   import { emailValidationPattern } from "../utils.ts";
   import Modal from "./Modal.svelte";
-  import {login} from "../ts/auth.ts";
+  import {login} from "./auth.svelte.ts";
 
   let error = $state("");
   let email = $state("");

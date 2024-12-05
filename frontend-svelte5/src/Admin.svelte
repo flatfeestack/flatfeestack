@@ -3,9 +3,9 @@
   import Navigation from "Navigation.svelte";
   import Spinner from "Spinner.svelte";
   import { API } from "ts/api.ts";
-  import { appState } from "ts/state.ts";
-  import { formatDate, formatNowUTC } from "services";
-  import { storeToken } from "ts/auth";
+  import { appState } from "ts/state.svelte.ts";
+  import { formatDate, formatNowUTC } from "ts/services.svelte.ts";
+  import { storeToken } from "auth/auth.svelte.ts";
   import '@fortawesome/fontawesome-free/css/all.min.css'
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
@@ -99,8 +99,8 @@
     try {
       const res = await API.authToken.loginAs(email);
       storeToken(res);
-      appState.$state.user = await API.user.get();
-      appState.$state.loadedSponsoredRepos = false;
+      appState.user = await API.user.get();
+      appState.loadedSponsoredRepos = false;
       goto("/user/search");
     } catch (e) {
       appState.setError(e);

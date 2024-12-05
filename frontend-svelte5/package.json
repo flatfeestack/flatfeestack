@@ -8,25 +8,26 @@
     "stage": "NODE_ENV=production node ssr.mjs -p && npx serve -s dist"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^6.6.0",
-    "@mateothegreat/svelte5-router": "0.0.26",
-    "svelte": "5.2.10",
+    "@fortawesome/fontawesome-free": "^6.7.1",
+    "@mateothegreat/svelte5-router": "github:tbocek/svelte5-router-dist",
+    "svelte": "5.5.3",
     "ky": "^1.7.2",
-    "@stripe/stripe-js": "^4.10.0",
+    "@stripe/stripe-js": "^5.2.0",
     "query-string": "^9.1.1",
     "ethers": "^6.13.4",
     "@metamask/detect-provider": "^2.0.0"
   },
   "devDependencies": {
-    "@rsbuild/core": "1.0.19",
-    "@rsbuild/plugin-svelte": "1.0.3",
+    "@rsbuild/core": "1.1.8",
+    "@rsbuild/plugin-svelte": "1.0.5",
     "@rsbuild/plugin-css-minimizer": "^1.0.2",
     "@tsconfig/svelte": "5.0.4",
     "commander": "^12.1.0",
     "express": "^4.21.1",
     "jsdom": "^25.0.1",
     "serve": "^14.2.4",
-    "svelte-check": "^4.0.8",
-    "typescript": "^5.6.3"
+    "svelte-check": "^4.1.1",
+    "tsconfig-to-swcconfig": "^2.8.1",
+    "typescript": "^5.7.2"
   }
 }

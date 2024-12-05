@@ -1,8 +1,7 @@
-import {appState} from "./ts/state.ts";
+import {appState} from "./state.svelte.ts";
 import { API } from "ts/api.ts";
-import type { ClientSecret } from "types/backend";
+import type { ClientSecret } from "types/backend.ts";
 
-import { get } from "svelte/store";
 import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
 //import { formatUnits } from "ethers";
 
@@ -67,7 +66,7 @@ export const formatDay = (d: Date): string => {
 };
 
 export function minBalanceName(c: string): string {
-  const currency = appState.$state.config.supportedCurrencies[c.toUpperCase()];
+  const currency = appState.config.supportedCurrencies[c.toUpperCase()];
   if (!currency) {
     console.debug("Unknown currency: " + c);
     return c;
@@ -87,11 +86,12 @@ export const formatBalance = (n: bigint, c: string): string => {
       return num.toString(10) + "¢";
     }
   } else {
-    const currency = appState.$state.config.supportedCurrencies[c.toUpperCase()];
+    const currency = appState.config.supportedCurrencies[c.toUpperCase()];
     if (!currency) {
       console.debug("Unknown currency: " + c);
       return n.toString(10);
     }
+    return "";
     //return formatUnits(n, currency.factorPow);
   }
 };
@@ -140,7 +140,7 @@ export const stripePaymentMethod = async (
       (result.error.decline_code ? ", " + result.error.decline_code : "")
     );
   }
-  appState.$state.user =await API.user.updatePaymentMethod(result.setupIntent.payment_method);
+  appState.user =await API.user.updatePaymentMethod(result.setupIntent.payment_method);
 };
 
 export const stripePayment = async (

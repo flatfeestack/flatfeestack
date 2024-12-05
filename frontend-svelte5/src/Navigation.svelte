@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import Spinner from "./Spinner.svelte";
   import NavItem from "./NavItem.svelte";
   import Header from "./Header.svelte";
@@ -62,12 +62,12 @@
     <NavItem href="/user/income" icon="fa-hand-holding-usd" label="Income" />
     <NavItem href="/user/invitations" icon="fa-user-friends" label="Invitations"/>
     <NavItem href="/user/badges" icon="fa-medal" label="Badges" />
-    {#if appState.$state.user.role === "admin"}
+    {#if appState.user.role === "admin"}
       <NavItem href="/user/admin" icon="fa-shield-alt" label="Admin" />
     {/if}
   </nav>
   <div>
-    {#if appState.$state.isSubmitting}<Spinner />{/if}
+    {#if appState.isSubmitting}<Spinner />{/if}
     <slot />
   </div>
 </div>

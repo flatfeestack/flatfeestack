@@ -1,6 +1,6 @@
 <script lang="ts">
   import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.ts";
+  import {appState} from "./ts/state.svelte.ts";
   import { getColor1, getColor2 } from "./utils";
   import type { Repo } from "./types/backend";
 
@@ -11,7 +11,7 @@
     star = false;
     try {
       await API.repos.untag(repo.uuid);
-      appState.$state.sponsoredRepos = appState.$state.sponsoredRepos.filter((r: Repo) => {
+      appState.sponsoredRepos = appState.sponsoredRepos.filter((r: Repo) => {
         return r.uuid !== repo.uuid;
       });
     } catch (e) {

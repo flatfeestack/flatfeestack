@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { appState } from "ts/state.ts";
+  import { appState } from "ts/state.svelte.ts";
   import Dots from "./Dots.svelte";
-  import { stripePayment, stripePaymentMethod } from "./services";
+  import { stripePayment, stripePaymentMethod } from "./ts/services.svelte.ts";
   import { loadStripe } from "@stripe/stripe-js/pure";
   /*import {
     CardCvc,
@@ -25,23 +25,23 @@
   let showSuccess = false;
 
   $: {
-    if (appState.$state.config.stripePublicApi) {
+    if (appState.config.stripePublicApi) {
       load();
     }
   }
 
   async function load() {
-    stripe = await loadStripe(appState.$state.config.stripePublicApi);
+    stripe = await loadStripe(appState.config.stripePublicApi);
   }
 
   const handleSubmit = async () => {
     paymentProcessing = true;
     isSubmitting = true;
     try {
-      if (!appState.$state.user.paymentMethod) {
+      if (!appState.user.paymentMethod) {
         await stripePaymentMethod(stripe, cardElement);
       }
-      await stripePayment(stripe, freq, seats, appState.$state.user.paymentMethod);
+      await stripePayment(stripe, freq, seats, appState.user.paymentMethod);
       showSuccess = true;
     } catch (e) {
       appState.setError(e);
@@ -56,8 +56,8 @@
     try {
       const p1 = API.user.deletePaymentMethod();
       const p2 = API.user.cancelSub();
-      appState.$state.user.paymentMethod = null;
-      appState.$state.user.last4 = null;
+      appState.user.paymentMethod = null;
+      appState.user.last4 = null;
       await p1;
       await p2;
     } catch (e) {
@@ -98,11 +98,11 @@
   }
 </style>
 
-{#if appState.$state.user.paymentMethod}
+{#if appState.user.paymentMethod}
   <div class="container">
     <p class="nobreak">Credit card:</p>
     <div class="container">
-      <span>*** *** *** {appState.$state.user.last4}</span>
+      <span>*** *** *** {appState.user.last4}</span>
       <form class="p-2" on:submit|preventDefault={deletePaymentMethod}>
         <button class="button3" disabled={isSubmitting} type="submit"
           >Cancel
