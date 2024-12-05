@@ -340,6 +340,132 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	}
 }
 
+/*type FoundationSponsoring struct {
+	FoundationID           string
+	FoundationBalanceRepos []FoundationBalanceRepos
+}
+
+type FoundationBalanceRepos struct {
+	Currency      uuid.UUID
+	SponsorAmount big.Int
+	RepoIds       []uuid.UUID
+}*/
+
+type UserDonationRepo struct {
+	TrustedRepoSelected   []uuid.UUID
+	UntrustedRepoSelected []uuid.UUID
+	Currency              string
+	SponsorAmount         big.Int
+}
+
+func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.UUID][]UserDonationRepo, error) {
+	s := `SELECT
+			dc.user_sponsor_id,
+			te.repo_id,
+			dc.balance,
+			dc.currency,
+			te.un_trust_at
+		  FROM trust_event te
+		  INNER JOIN daily_contribution dc ON te.repo_id = dc.repo_id
+		  WHERE dc.user_sponsor_id = $1
+		  	AND dc.day = $2`
+
+	rows, err := DB.Query(s, userId, yesterdayStart)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID][]UserDonationRepo)
+
+	for rows.Next() {
+		var userSponsorID uuid.UUID
+		var repoID uuid.UUID
+		var balance string
+		var currency string
+		var untrustAt sql.NullTime
+
+		err := rows.Scan(&userSponsorID, &repoID, &balance, &currency, &untrustAt)
+		if err != nil {
+			return nil, err
+		}
+
+		userDonationRepos, found := result[userSponsorID]
+		if !found {
+			userDonationRepos = []UserDonationRepo{}
+		}
+
+		sponsorAmount := new(big.Int)
+
+		if balance != "" {
+			sponsorAmount, _ = sponsorAmount.SetString(balance, 10)
+		} else {
+			sponsorAmount = big.NewInt(0)
+		}
+
+		var repoAdded bool
+		for i, repo := range userDonationRepos {
+			if repo.Currency == currency {
+				if untrustAt.Valid {
+					userDonationRepos[i].UntrustedRepoSelected = append(userDonationRepos[i].UntrustedRepoSelected, repoID)
+				} else {
+					userDonationRepos[i].TrustedRepoSelected = append(userDonationRepos[i].TrustedRepoSelected, repoID)
+				}
+
+				userDonationRepos[i].SponsorAmount.Add(&userDonationRepos[i].SponsorAmount, sponsorAmount)
+				repoAdded = true
+				break
+			}
+		}
+
+		if !repoAdded {
+			donationRepo := UserDonationRepo{
+				Currency:              currency,
+				SponsorAmount:         *sponsorAmount,
+				TrustedRepoSelected:   []uuid.UUID{},
+				UntrustedRepoSelected: []uuid.UUID{},
+			}
+
+			if untrustAt.Valid {
+				donationRepo.UntrustedRepoSelected = append(donationRepo.UntrustedRepoSelected, repoID)
+			} else {
+				donationRepo.TrustedRepoSelected = append(donationRepo.TrustedRepoSelected, repoID)
+			}
+
+			userDonationRepos = append(userDonationRepos, donationRepo)
+		}
+
+		result[userSponsorID] = userDonationRepos
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/*func GetFoundationsFromDailyContributions(yesterdayStart time.Time) ([]FoundationSponsoring, error) {
+
+	s := `SELECT
+			me.user_id AS foundation_id,
+			dc.currency,
+			COALESCE(sum(dc.balance), 0) AS total_balance,
+			me.repo_id
+		  FROM daily_contribution dc
+		  INNER JOIN multiplier_event me ON dc.repo_id = me.repo_id
+	      WHERE me.un_multiplier_at IS NULL
+			AND dc.day = $1
+		  GROUP BY dc.currency, me.user_id`
+	rows, err := DB.Query(s, yesterdayStart)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+}*/
+
 func GetActiveSponsors(months int, isPostgres bool) ([]uuid.UUID, error) {
 	var query string
 

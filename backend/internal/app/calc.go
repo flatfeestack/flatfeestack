@@ -139,13 +139,14 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 	return nil
 }
 
-func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
-	var payoutlimit *big.Float
-	var amountPerPart *big.Float
+func getFoundationValues(rids []uuid.UUID, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) (*big.Float, *big.Float, error) {
+	var payoutlimit = big.NewFloat(0.0)
+	var amountPerPart = big.NewFloat(0.0)
 	trustedRepos, err := db.GetTrustedReposFromList(rids)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+
 	if len(trustedRepos) > 0 {
 		var distributable *big.Int
 
@@ -157,7 +158,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 		pool := new(big.Int).Mul(distributable, big.NewInt(int64(len(trustedRepos))))
 		allFoundations, err := db.GetAllFoundationsSupportingRepos(rids)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		parts := len(allFoundations)
 		payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(distributable), big.NewFloat(0.9))
@@ -165,6 +166,15 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 		poolAsFloat := new(big.Float).SetInt(pool)
 		partsAsFloat := big.NewFloat(float64(parts))
 		amountPerPart = new(big.Float).Quo(poolAsFloat, partsAsFloat)
+	}
+
+	return payoutlimit, amountPerPart, nil
+}
+
+func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
+	_, _, err := getFoundationValues(rids, distributeDeduct, distributeAdd, deductFutureContribution)
+	if err != nil {
+		return err
 	}
 
 	for _, rid := range rids {
@@ -256,7 +266,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 				}
 			}
 		}
-		if len(trustedRepos) > 0 {
+		/*if len(trustedRepos) > 0 {
 			var amountFoundation *big.Float
 			foundations, err := db.GetFoundationsSupportingRepo(rid)
 			if err != nil {
@@ -299,7 +309,7 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 					}
 				}
 			}
-		}
+		}*/
 	}
 	return nil
 }
