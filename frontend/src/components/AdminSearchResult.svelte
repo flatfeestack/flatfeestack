@@ -207,7 +207,8 @@
     pointer-events: none;
     opacity: 0.5;
   }
-  div.trust-icons-div a.disabled:hover {
+  div.trust-icons-div a.disabled:hover,
+  #trust-value-button.disabled:hover {
     filter: none;
   }
 
@@ -232,7 +233,8 @@
     transition: background-color 0.1s linear, filter 0.1s linear;
   }
 
-  #analyse-progress-button:disabled {
+  #analyse-progress-button:disabled,
+  #trust-value-button:disabled {
     background-color: var(--primary-100);
     cursor: not-allowed;
   }
@@ -357,6 +359,8 @@
         id="trust-value-button"
         class="square-1 tooltip"
         on:click={showOverlay}
+        class:disabled={$reposWaitingForNewAnalysis.length !== 0}
+        disabled={$reposWaitingForNewAnalysis.length !== 0}
       >
         {repo.healthValue}
         <span class="tooltiptext">Show Repo Assessment</span>
