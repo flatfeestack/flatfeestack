@@ -366,7 +366,7 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 			dc.currency,
 			te.un_trust_at
 		  FROM trust_event te
-		  INNER JOIN daily_contribution dc ON te.repo_id = dc.repo_id
+		  RIGHT JOIN daily_contribution dc ON te.repo_id = dc.repo_id
 		  WHERE dc.user_sponsor_id = $1
 		  	AND dc.day = $2`
 
