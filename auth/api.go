@@ -277,13 +277,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	if cfg.Env == "dev" || cfg.Env == "local" {
-		dev := `{"url":"` + params["url"] + `"}`
-		writeJsonBytes(w, []byte(dev))
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-
+	w.WriteHeader(http.StatusOK)
 }
 
 func serverTime(w http.ResponseWriter, r *http.Request, email string) {
