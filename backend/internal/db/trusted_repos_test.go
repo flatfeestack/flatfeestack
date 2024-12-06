@@ -414,7 +414,7 @@ func TestGetActiveFFSUserCount(t *testing.T) {
 		_ = InsertOrUpdateTrustRepo(&tr1)
 
 		currentTime := time.Now()
-		previousTime := currentTime.AddDate(0, -1, -1)
+		previousTime := currentTime.AddDate(0, -1, -2)
 		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(20), "XBTC", currentTime, currentTime, false)
 		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(38), "XBTC", currentTime, previousTime, false)
 		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime, false)
