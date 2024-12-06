@@ -104,7 +104,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.F
 		return err
 	}
 
-	err = fooBar(currentSponsorDonations, allFoundationsPerUser, parts, yesterdayStart)
+	err = fooBar(currentSponsorDonations, allFoundationsPerUser, parts, yesterdayStart, false)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.F
 		return err
 	}
 
-	err = fooBar(futureSponsorDonations, allFoundationsPerUser, parts, yesterdayStart)
+	err = fooBar(futureSponsorDonations, allFoundationsPerUser, parts, yesterdayStart, true)
 	if err != nil {
 		return err
 	}
@@ -122,11 +122,11 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.F
 	return nil
 }
 
-func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundationsPerUser []db.Foundation, parts int, yesterdayStart time.Time) error {
+func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundationsPerUser []db.Foundation, parts int, yesterdayStart time.Time, futureContribution bool) error {
 	for _, currencyBlock := range sponsorDonations {
 		for _, block := range currencyBlock {
 			if len(block.TrustedRepoSelected) > 0 {
-				/*allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
+				allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
 
 				amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
 
@@ -136,51 +136,8 @@ func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundations
 				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
 
 				for _, foundation := range allFoundationsPerUser {
-					doDeductFoundation(foundation.Id, allRepos, yesterdayStart, amountPerPart)
+					doDeductFoundation(foundation.Id, foundation.RepoIds, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
 				}
-
-				var amountFoundation *big.Float
-				foundations, err := db.GetFoundationsSupportingRepo(rid)
-				if err != nil {
-					return err
-				}
-
-				foundationCount := big.NewInt(int64(len(foundations)))
-				totalAmountForRepo := new(big.Float).Mul(new(big.Float).SetInt(foundationCount), amountPerPart)
-
-				if totalAmountForRepo.Cmp(payoutlimit) > 0 {
-					amountFoundation = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
-				} else {
-					amountFoundation = amountPerPart
-				}
-
-				amountFoundationInt := new(big.Int)
-				amountFoundation.Int(amountFoundationInt)
-
-				for _, foundation := range foundations {
-					checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt)
-					// check if payment was success and if the amount is enaugh
-					if err != nil {
-						return err
-					}
-					if checkDailyLimit {
-						// foundation pays only if there are developers on the repo right now, else to complicated, I dont understand
-						for contributorUserId, w := range uidInMap {
-							amount := calcSharePerUser(amountFoundationInt, w, total)
-							slog.Info("Claim",
-								slog.String("userId", contributorUserId.String()),
-								slog.String("rid", rid.String()),
-								slog.String("add", amountFoundationInt.String()),
-								slog.Float64("weight", w),
-								slog.Float64("total", total),
-								slog.String("amount", amount.String()))
-							err = db.InsertContribution(foundation.Id, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow())
-							if err != nil {
-								return err
-							}
-						}
-					}
-				}*/
 			}
 		}
 	}
@@ -238,8 +195,37 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 	return nil
 }
 
-func doDeductFoundation(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, foundationAmountPerRepo *big.Int, futureContribution bool) error {
+func doDeductFoundation(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, foundationAmountPerRepo *big.Int, payoutlimit *big.Float, futureContribution bool) error {
 	for _, rid := range rids {
+		var amountFoundation *big.Float
+		foundations, err := db.GetFoundationsSupportingRepo(rid)
+		if err != nil {
+			return err
+		}
+
+		foundationCount := big.NewInt(int64(len(foundations)))
+		totalAmountForRepo := new(big.Float).Mul(new(big.Float).SetInt(foundationCount), new(big.Float).SetInt(foundationAmountPerRepo))
+
+		if totalAmountForRepo.Cmp(payoutlimit) > 0 {
+			amountFoundation = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
+		} else {
+			amountFoundation = new(big.Float).SetInt(foundationAmountPerRepo)
+		}
+
+		amountFoundationInt := new(big.Int)
+		amountFoundation.Int(amountFoundationInt)
+
+		for _, foundation := range foundations {
+			checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt)
+			// check if payment was success and if the amount is enaugh
+			if err != nil {
+				return err
+			}
+			if checkDailyLimit {
+				// foundation pays only if there are developers on the repo right now, else to complicated, I dont understand
+			}
+		}
+
 		// Get contributor weights
 		uidInMap, uidNotInMap, total, err := getContributorWeights(rid)
 		if err != nil {
