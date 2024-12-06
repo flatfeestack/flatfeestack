@@ -68,12 +68,12 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 			if err != nil {
 				return err
 			}
-			allFoundationsPerUser, err := db.GetAllFoundationsSupportingRepos(sponsorResults[key].RepoIds)
+			allFoundationsPerUser, parts, err := db.GetAllFoundationsSupportingRepos(sponsorResults[key].RepoIds)
 			if err != nil {
 				return err
 			}
 			if len(allFoundationsPerUser) > 0 {
-				err = c.calcMultiplier(sponsorResults[key].UserId, allFoundationsPerUser, yesterdayStart)
+				err = c.calcMultiplier(sponsorResults[key].UserId, allFoundationsPerUser, parts, yesterdayStart)
 				if err != nil {
 					return err
 				}
@@ -98,13 +98,13 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 	return nil
 }
 
-func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.Foundation, yesterdayStart time.Time) error {
+func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.Foundation, parts int, yesterdayStart time.Time) error {
 	currentSponsorDonations, err := db.GetUserDonationRepos(uid, yesterdayStart, false)
 	if err != nil {
 		return err
 	}
 
-	err = fooBar(currentSponsorDonations, allFoundationsPerUser, yesterdayStart)
+	err = fooBar(currentSponsorDonations, allFoundationsPerUser, parts, yesterdayStart)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.F
 		return err
 	}
 
-	err = fooBar(futureSponsorDonations, allFoundationsPerUser, yesterdayStart)
+	err = fooBar(futureSponsorDonations, allFoundationsPerUser, parts, yesterdayStart)
 	if err != nil {
 		return err
 	}
@@ -122,17 +122,16 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundationsPerUser []db.F
 	return nil
 }
 
-func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundationsPerUser []db.Foundation, yesterdayStart time.Time) error {
+func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundationsPerUser []db.Foundation, parts int, yesterdayStart time.Time) error {
 	for _, currencyBlock := range sponsorDonations {
 		for _, block := range currencyBlock {
 			if len(block.TrustedRepoSelected) > 0 {
-				allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
+				/*allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
 
 				amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
 
 				pool := new(big.Int).Mul(amountPerRepo, big.NewInt(int64(len(block.TrustedRepoSelected))))
 
-				parts := len(allFoundationsPerUser)
 				payoutlimit := new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
 				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
 
@@ -181,7 +180,7 @@ func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundations
 							}
 						}
 					}
-				}
+				}*/
 			}
 		}
 	}
