@@ -379,6 +379,15 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.
 	}
 	defer rows.Close()
 
+	result, err := createUserDonationRepo(rows)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong %v", err)
+	}
+
+	return result, nil
+}
+
+func createUserDonationRepo(rows *sql.Rows) (map[uuid.UUID][]UserDonationRepo, error) {
 	result := make(map[uuid.UUID][]UserDonationRepo)
 
 	for rows.Next() {
