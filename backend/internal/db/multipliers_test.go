@@ -281,10 +281,12 @@ func TestGetAllFoundationsSupportingReposEmpty(t *testing.T) {
 
 	list := []uuid.UUID{r.Id, r2.Id, r3.Id, r4.Id}
 
-	userList, err := GetAllFoundationsSupportingRepos(list)
+	userList, parts, err := GetAllFoundationsSupportingRepos(list)
 	assert.Nil(t, err)
 
 	expected := []Foundation{}
+
+	assert.Equal(t, 0, parts)
 
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
@@ -351,14 +353,16 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	err = InsertOrUpdateMultiplierRepo(&m4)
 	assert.Nil(t, err)
 
-	userList, err := GetAllFoundationsSupportingRepos(list)
+	userList, parts, err := GetAllFoundationsSupportingRepos(list)
 	assert.Nil(t, err)
 
 	expected := []Foundation{
-		{Id: foundation3.Id, MultiplierDailyLimit: 1000, RepoIds: []uuid.UUID{r3.Id}},
 		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r.Id, r2.Id}},
 		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
+		{Id: foundation3.Id, MultiplierDailyLimit: 1000, RepoIds: []uuid.UUID{r3.Id}},
 	}
+
+	assert.Equal(t, 4, parts)
 
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
@@ -375,7 +379,7 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	err = InsertOrUpdateMultiplierRepo(&m5)
 	assert.Nil(t, err)
 
-	/*userList, err = GetAllFoundationsSupportingRepos(list)
+	userList, parts, err = GetAllFoundationsSupportingRepos(list)
 	assert.Nil(t, err)
 
 	expected = []Foundation{
@@ -383,10 +387,11 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
 	}
 
+	assert.Equal(t, 3, parts)
+
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
-	assert.ElementsMatch(t, expected, userList, "The contents of the user list should match the expected set")*/
-
+	assert.ElementsMatch(t, expected, userList, "The contents of the user list should match the expected set")
 }
 
 //func TestSponsorsBetween(t *testing.T) {

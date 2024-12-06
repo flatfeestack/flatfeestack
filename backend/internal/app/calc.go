@@ -126,7 +126,7 @@ func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundations
 	for _, currencyBlock := range sponsorDonations {
 		for _, block := range currencyBlock {
 			if len(block.TrustedRepoSelected) > 0 {
-				/*allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
+				allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
 
 				amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
 
@@ -137,7 +137,7 @@ func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundations
 				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
 
 				for _, foundation := range allFoundationsPerUser {
-					doDeductFoundation(foundation.Id, allRepos, yesterdayStart, amount)
+					doDeductFoundation(foundation.Id, allRepos, yesterdayStart, amountPerPart)
 				}
 
 				var amountFoundation *big.Float
@@ -181,7 +181,7 @@ func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, allFoundations
 							}
 						}
 					}
-				}*/
+				}
 			}
 		}
 	}

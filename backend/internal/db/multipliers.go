@@ -160,9 +160,9 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
 	return userStatus, nil
 }
 
-func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
+func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, int, error) {
 	if len(rids) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	query := `
@@ -175,11 +175,12 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
 
 	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	foundationMap := make(map[uuid.UUID]*Foundation)
+	totalRepoCount := 0
 
 	for rows.Next() {
 		var foundationId uuid.UUID
@@ -188,11 +189,15 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
 
 		err = rows.Scan(&foundationId, &multiplierLimit, &repoId)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
+		totalRepoCount++
+
 		if foundation, exists := foundationMap[foundationId]; exists {
-			foundation.RepoIds = append(foundation.RepoIds, repoId)
+			if !contains(foundation.RepoIds, repoId) {
+				foundation.RepoIds = append(foundation.RepoIds, repoId)
+			}
 		} else {
 			foundationMap[foundationId] = &Foundation{
 				Id:                   foundationId,
@@ -203,7 +208,7 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	foundations := make([]Foundation, 0, len(foundationMap))
@@ -211,7 +216,16 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
 		foundations = append(foundations, *foundation)
 	}
 
-	return foundations, nil
+	return foundations, totalRepoCount, nil
+}
+
+func contains(slice []uuid.UUID, item uuid.UUID) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }
 
 func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
