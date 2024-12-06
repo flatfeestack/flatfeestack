@@ -157,6 +157,21 @@ func InsertUser(user *UserDetail) error {
 	return handleErrMustInsertOne(res)
 }
 
+func InsertFoundation(user *UserDetail) error {
+	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at, multiplier, multiplier_daily_limit) VALUES ($1, $2, $3, $4, $5, $6)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
+	}
+	defer CloseAndLog(stmt)
+
+	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt, user.Multiplier, user.MultiplierDailyLimit)
+	if err != nil {
+		return err
+	}
+
+	return handleErrMustInsertOne(res)
+}
+
 func UpdateStripe(user *UserDetail) error {
 	stmt, err := DB.Prepare(`UPDATE users 
                                    SET stripe_id=$1, stripe_payment_method=$2, stripe_last4=$3

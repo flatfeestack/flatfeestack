@@ -180,13 +180,19 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
 	defer rows.Close()
 
 	var users []User
+	seen := make(map[uuid.UUID]struct{})
+
 	for rows.Next() {
 		var user User
 		err = rows.Scan(&user.Id, &user.Name, &user.Email)
 		if err != nil {
 			return nil, err
 		}
-		users = append(users, user)
+
+		if _, exists := seen[user.Id]; !exists {
+			users = append(users, user)
+			seen[user.Id] = struct{}{}
+		}
 	}
 
 	if err := rows.Err(); err != nil {

@@ -68,6 +68,16 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 			if err != nil {
 				return err
 			}
+			allFoundations, err := db.GetAllFoundationsSupportingRepos(sponsorResults[key].RepoIds)
+			if err != nil {
+				return err
+			}
+			if len(allFoundations) > 0 {
+				err = c.calcMultiplier(sponsorResults[key].UserId, allFoundations, yesterdayStart)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -86,6 +96,29 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 	}
 
 	return nil
+}
+
+func (c *CalcHandler) calcMultiplier(uid uuid.UUID, allFoundations []db.User, yesterdayStart time.Time) error {
+	sponsorDonations, err := db.GetUserDonationRepos(uid, yesterdayStart)
+	if err != nil {
+		return err
+	}
+
+	for _, currencyBlock := range sponsorDonations {
+		for _, block := range currencyBlock {
+			if len(block.TrustedRepoSelected) > 0 {
+				allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
+
+				amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
+
+				pool := new(big.Int).Mul(amountPerRepo, big.NewInt(int64(len(block.TrustedRepoSelected))))
+
+				parts := len(allFoundations)
+				payoutlimit := new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
+				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
+			}
+		}
+	}
 }
 
 func (c *CalcHandler) calcContribution(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time) error {
@@ -139,7 +172,7 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 	return nil
 }
 
-func getFoundationValues(rids []uuid.UUID, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) (*big.Float, *big.Float, error) {
+/*func getFoundationValues(rids []uuid.UUID, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) (*big.Float, *big.Float, error) {
 	var payoutlimit = big.NewFloat(0.0)
 	var amountPerPart = big.NewFloat(0.0)
 	trustedRepos, err := db.GetTrustedReposFromList(rids)
@@ -169,13 +202,13 @@ func getFoundationValues(rids []uuid.UUID, distributeDeduct *big.Int, distribute
 	}
 
 	return payoutlimit, amountPerPart, nil
-}
+}*/
 
 func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, distributeDeduct *big.Int, distributeAdd *big.Int, deductFutureContribution *big.Int) error {
-	_, _, err := getFoundationValues(rids, distributeDeduct, distributeAdd, deductFutureContribution)
+	/*_, _, err := getFoundationValues(rids, distributeDeduct, distributeAdd, deductFutureContribution)
 	if err != nil {
 		return err
-	}
+	}*/
 
 	for _, rid := range rids {
 		//get weights for the contributors

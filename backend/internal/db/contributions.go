@@ -418,36 +418,35 @@ func createUserDonationRepo(rows *sql.Rows) (map[uuid.UUID][]UserDonationRepo, e
 			sponsorAmount = big.NewInt(0)
 		}
 
-		var repoAdded bool
-		for i, repo := range userDonationRepos {
-			if repo.Currency == currency {
-				if isTrusted {
-					userDonationRepos[i].TrustedRepoSelected = append(userDonationRepos[i].TrustedRepoSelected, repoID)
-				} else {
-					userDonationRepos[i].UntrustedRepoSelected = append(userDonationRepos[i].UntrustedRepoSelected, repoID)
-				}
-
-				userDonationRepos[i].SponsorAmount.Add(&userDonationRepos[i].SponsorAmount, sponsorAmount)
-				repoAdded = true
+		var targetRepo *UserDonationRepo
+		for i := range userDonationRepos {
+			if userDonationRepos[i].Currency == currency {
+				targetRepo = &userDonationRepos[i]
 				break
 			}
 		}
 
-		if !repoAdded {
-			donationRepo := UserDonationRepo{
+		if targetRepo == nil {
+			newRepo := UserDonationRepo{
 				Currency:              currency,
-				SponsorAmount:         *sponsorAmount,
+				SponsorAmount:         *big.NewInt(0),
 				TrustedRepoSelected:   []uuid.UUID{},
 				UntrustedRepoSelected: []uuid.UUID{},
 			}
+			userDonationRepos = append(userDonationRepos, newRepo)
+			targetRepo = &userDonationRepos[len(userDonationRepos)-1]
+		}
 
-			if isTrusted {
-				donationRepo.TrustedRepoSelected = append(donationRepo.TrustedRepoSelected, repoID)
-			} else {
-				donationRepo.UntrustedRepoSelected = append(donationRepo.UntrustedRepoSelected, repoID)
+		targetRepo.SponsorAmount.Add(&targetRepo.SponsorAmount, sponsorAmount)
+
+		if isTrusted {
+			if !containsUUID(targetRepo.TrustedRepoSelected, repoID) {
+				targetRepo.TrustedRepoSelected = append(targetRepo.TrustedRepoSelected, repoID)
 			}
-
-			userDonationRepos = append(userDonationRepos, donationRepo)
+		} else {
+			if !containsUUID(targetRepo.UntrustedRepoSelected, repoID) {
+				targetRepo.UntrustedRepoSelected = append(targetRepo.UntrustedRepoSelected, repoID)
+			}
 		}
 
 		result[userSponsorID] = userDonationRepos
@@ -458,6 +457,15 @@ func createUserDonationRepo(rows *sql.Rows) (map[uuid.UUID][]UserDonationRepo, e
 	}
 
 	return result, nil
+}
+
+func containsUUID(slice []uuid.UUID, id uuid.UUID) bool {
+	for _, item := range slice {
+		if item == id {
+			return true
+		}
+	}
+	return false
 }
 
 /*func GetFoundationsFromDailyContributions(yesterdayStart time.Time) ([]FoundationSponsoring, error) {

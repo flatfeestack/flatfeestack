@@ -24,6 +24,25 @@ func insertTestUser(t *testing.T, email string) *UserDetail {
 	return u2
 }
 
+func insertTestFoundation(t *testing.T, email string, multiplierDailyLimit int) *UserDetail {
+	u := User{
+		Id:    uuid.New(),
+		Email: email,
+	}
+	ud := UserDetail{
+		User:                 u,
+		StripeId:             stringPointer("strip-id"),
+		Multiplier:           true,
+		MultiplierDailyLimit: multiplierDailyLimit,
+	}
+
+	err := InsertFoundation(&ud)
+	assert.Nil(t, err)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	return u2
+}
+
 func TestUserNotFound(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()

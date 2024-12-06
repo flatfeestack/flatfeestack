@@ -233,6 +233,7 @@ func TestGetUserDonationReposMany(t *testing.T) {
 	userSponsor := insertTestUser(t, "sponsor")
 	adminSponsor := insertTestUser(t, "admin")
 	userContrib := insertTestUser(t, "contrib")
+	userContrib2 := insertTestUser(t, "contrib2")
 	r := insertTestRepo(t)
 	r2 := insertTestRepo(t)
 	r3 := insertTestRepo(t)
@@ -244,10 +245,17 @@ func TestGetUserDonationReposMany(t *testing.T) {
 
 	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
 	assert.Nil(t, err)
+
 	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
 	assert.Nil(t, err)
 
+	err = InsertContribution(userSponsor.Id, userContrib2.Id, r2.Id, big.NewInt(7), "XBTC", dateNow, time.Time{})
+	assert.Nil(t, err)
+
 	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{})
+	assert.Nil(t, err)
+
+	err = InsertContribution(userSponsor.Id, userContrib2.Id, r3.Id, big.NewInt(10), "USD", dateNow, time.Time{})
 	assert.Nil(t, err)
 
 	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{})
@@ -279,13 +287,13 @@ func TestGetUserDonationReposMany(t *testing.T) {
 		userSponsor.Id: {
 			{
 				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(10),
+				SponsorAmount:         *big.NewInt(17),
 				TrustedRepoSelected:   []uuid.UUID{r.Id, r4.Id},
 				UntrustedRepoSelected: []uuid.UUID{r2.Id},
 			},
 			{
 				Currency:              "USD",
-				SponsorAmount:         *big.NewInt(4),
+				SponsorAmount:         *big.NewInt(14),
 				TrustedRepoSelected:   []uuid.UUID{},
 				UntrustedRepoSelected: []uuid.UUID{r3.Id},
 			},
