@@ -213,11 +213,12 @@
     height: 2.6rem;
     width: 2.6rem;
     border: none;
-    transition: color 0.5s, background-color 0.5s;
+    transition: color 0.5s, transform 1s ease-out;
   }
   button#threshold-setting-button:hover {
-    color: var(--secondary-100);
-    background: var(--secondary-300);
+    background-color: transparent;
+    color: var(--primary-500);
+    transform: rotate(180deg);
   }
 
   .dropdown-content-sort {
@@ -316,8 +317,10 @@
           class="button3"
           id="threshold-setting-button"
           title="Threshold Settings Button"
-          on:click={showOverlay}><Fa icon={faGear} class="m-0 p-0" /></button
+          on:click={showOverlay}
         >
+          <Fa icon={faGear} />
+        </button>
       </div>
 
       <div class="container-col2 m-4">
