@@ -10,6 +10,11 @@ import (
 	"github.com/lib/pq"
 )
 
+var TABLENAMEFUTURECONTRIBUTION = map[bool]string{
+	true:  "future_contribution",
+	false: "daily_contribution",
+}
+
 type Contributions struct {
 	DateFrom time.Time
 	DateTo   time.Time
@@ -19,24 +24,25 @@ type Contributions struct {
 }
 
 type Contribution struct {
-	RepoName         string       `json:"repoName"`
-	RepoUrl          string       `json:"repoUrl"`
-	SponsorName      *string      `json:"sponsorName,omitempty"`
-	SponsorEmail     string       `json:"sponsorEmail"`
-	ContributorName  *string      `json:"contributorName,omitempty"`
-	ContributorEmail string       `json:"contributorEmail"`
-	Balance          *big.Int     `json:"balance"`
-	Currency         string       `json:"currency"`
-	Day              time.Time    `json:"day"`
-	ClaimedAt        JsonNullTime `json:"claimedAt,omitempty"`
+	RepoName          string       `json:"repoName"`
+	RepoUrl           string       `json:"repoUrl"`
+	SponsorName       *string      `json:"sponsorName,omitempty"`
+	SponsorEmail      string       `json:"sponsorEmail"`
+	ContributorName   *string      `json:"contributorName,omitempty"`
+	ContributorEmail  string       `json:"contributorEmail"`
+	Balance           *big.Int     `json:"balance"`
+	Currency          string       `json:"currency"`
+	Day               time.Time    `json:"day"`
+	ClaimedAt         JsonNullTime `json:"claimedAt,omitempty"`
+	FoundationPayment bool         `json:"foundationPayment"`
 }
 
-func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time) error {
+func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time, foudnationPayment bool) error {
 
 	stmt, err := DB.Prepare(`
 				INSERT INTO daily_contribution(id, user_sponsor_id, user_contributor_id, repo_id, 
-				                               balance, currency, day, created_at) 
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8)`)
+				                               balance, currency, day, created_at, foundation_payment) 
+				VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", userSponsorId, err)
 	}
@@ -45,7 +51,7 @@ func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, re
 	var res sql.Result
 	b := balance.String()
 	id := uuid.New()
-	res, err = stmt.Exec(id, userSponsorId, userContributorId, repoId, b, currency, day, createdAt)
+	res, err = stmt.Exec(id, userSponsorId, userContributorId, repoId, b, currency, day, createdAt, foudnationPayment)
 	if err != nil {
 		return err
 	}
@@ -55,7 +61,7 @@ func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, re
 func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
-                 d.balance, d.currency, d.day, d.claimed_at
+                 d.balance, d.currency, d.day, d.claimed_at, d.foundation_payment
             FROM daily_contribution d
                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
                 INNER JOIN users co ON d.user_contributor_id = co.id
@@ -63,7 +69,7 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
             ORDER by d.day`
 	if myContribution {
 		s = `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
-                 d.balance, d.currency, d.day, d.claimed_at
+                 d.balance, d.currency, d.day, d.claimed_at, d.foundation_payment
             FROM daily_contribution d
                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
                 INNER JOIN users co ON d.user_contributor_id = co.id
@@ -82,7 +88,7 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 		var b string
 		err = rows.Scan(
 			&c.RepoName, &c.RepoUrl, &c.SponsorName, &c.SponsorEmail, &c.ContributorName,
-			&c.ContributorEmail, &b, &c.Currency, &c.Day, &c.ClaimedAt)
+			&c.ContributorEmail, &b, &c.Currency, &c.Day, &c.ClaimedAt, &c.FoundationPayment)
 
 		if err != nil {
 			return nil, err
@@ -99,11 +105,11 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 }
 
 func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
-	currency string, day time.Time, createdAt time.Time) error {
+	currency string, day time.Time, createdAt time.Time, foudnationPayment bool) error {
 
 	stmt, err := DB.Prepare(`
-				INSERT INTO future_contribution(id, user_sponsor_id, repo_id, balance, currency, day, created_at) 
-				VALUES($1, $2, $3, $4, $5, $6, $7)`)
+				INSERT INTO future_contribution(id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment) 
+				VALUES($1, $2, $3, $4, $5, $6, $7, $8)`)
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO future_contribution for %v statement event: %v", uid, err)
 	}
@@ -112,7 +118,7 @@ func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
 	var res sql.Result
 	b := balance.String()
 	id := uuid.New()
-	res, err = stmt.Exec(id, uid, repoId, b, currency, day, createdAt)
+	res, err = stmt.Exec(id, uid, repoId, b, currency, day, createdAt, foudnationPayment)
 	if err != nil {
 		return err
 	}
@@ -358,20 +364,20 @@ type UserDonationRepo struct {
 	SponsorAmount         big.Int
 }
 
-func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time) (map[uuid.UUID][]UserDonationRepo, error) {
-	s := `
+func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time, futureContribution bool) (map[uuid.UUID][]UserDonationRepo, error) {
+	s := fmt.Sprintf(`
         SELECT
             dc.user_sponsor_id,
             dc.repo_id,
             dc.balance,
             dc.currency,
             COALESCE(te.trust_at IS NOT NULL AND te.un_trust_at IS NULL, FALSE) AS is_trusted
-        FROM daily_contribution dc
+        FROM %s dc
         LEFT JOIN trust_event te ON te.repo_id = dc.repo_id
         WHERE dc.user_sponsor_id = $1
           AND dc.day = $2
           AND dc.repo_id IS NOT NULL
-    `
+    `, TABLENAMEFUTURECONTRIBUTION[futureContribution])
 
 	rows, err := DB.Query(s, userId, yesterdayStart)
 	if err != nil {

@@ -284,7 +284,7 @@ func TestGetAllFoundationsSupportingReposEmpty(t *testing.T) {
 	userList, err := GetAllFoundationsSupportingRepos(list)
 	assert.Nil(t, err)
 
-	expected := []User{}
+	expected := []Foundation{}
 
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
@@ -306,9 +306,9 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
 	r3 := insertTestRepoGitUrl(t, "git-url3")
-	r4 := insertTestRepoGitUrl(t, "git-url4")
+	//r4 := insertTestRepoGitUrl(t, "git-url4")
 
-	list := []uuid.UUID{r.Id, r2.Id, r3.Id, r4.Id}
+	list := []uuid.UUID{r.Id, r2.Id, r3.Id}
 
 	m1 := MultiplierEvent{
 		Id:           uuid.New(),
@@ -320,16 +320,16 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 
 	m2 := MultiplierEvent{
 		Id:           uuid.New(),
-		Uid:          foundation.Id,
-		RepoId:       r2.Id,
+		Uid:          foundation2.Id,
+		RepoId:       r.Id,
 		EventType:    Active,
 		MultiplierAt: &t002,
 	}
 
 	m3 := MultiplierEvent{
 		Id:           uuid.New(),
-		Uid:          foundation2.Id,
-		RepoId:       r3.Id,
+		Uid:          foundation.Id,
+		RepoId:       r2.Id,
 		EventType:    Active,
 		MultiplierAt: &t002,
 	}
@@ -337,7 +337,7 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	m4 := MultiplierEvent{
 		Id:           uuid.New(),
 		Uid:          foundation3.Id,
-		RepoId:       r4.Id,
+		RepoId:       r3.Id,
 		EventType:    Active,
 		MultiplierAt: &t002,
 	}
@@ -354,17 +354,39 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	userList, err := GetAllFoundationsSupportingRepos(list)
 	assert.Nil(t, err)
 
-	expected := []User{
-		{Id: foundation.Id, Email: foundation.Email, Name: nil},
-		{Id: foundation2.Id, Email: foundation2.Email, Name: nil},
-		{Id: foundation3.Id, Email: foundation3.Email, Name: nil},
+	expected := []Foundation{
+		{Id: foundation3.Id, MultiplierDailyLimit: 1000, RepoIds: []uuid.UUID{r3.Id}},
+		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r.Id, r2.Id}},
+		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
 	}
 
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
-	for _, expectedUser := range expected {
-		assert.Contains(t, userList, expectedUser, "Expected user should be in the user list")
+	assert.ElementsMatch(t, expected, userList, "The contents of the user list should match the expected set")
+
+	m5 := MultiplierEvent{
+		Id:             uuid.New(),
+		Uid:            foundation3.Id,
+		RepoId:         r3.Id,
+		EventType:      Inactive,
+		UnMultiplierAt: &t003,
 	}
+
+	err = InsertOrUpdateMultiplierRepo(&m5)
+	assert.Nil(t, err)
+
+	/*userList, err = GetAllFoundationsSupportingRepos(list)
+	assert.Nil(t, err)
+
+	expected = []Foundation{
+		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r.Id, r2.Id}},
+		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
+	}
+
+	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
+
+	assert.ElementsMatch(t, expected, userList, "The contents of the user list should match the expected set")*/
+
 }
 
 //func TestSponsorsBetween(t *testing.T) {

@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS daily_contribution (
     day                  DATE NOT NULL,
     created_at           TIMESTAMP NOT NULL,
     claimed_at           TIMESTAMP,
+    foundation_payment   BOOLEAN,
     UNIQUE(user_sponsor_id, user_contributor_id, repo_id, day)
 );
 CREATE INDEX IF NOT EXISTS daily_contribution_user_sponsor_id_idx ON daily_contribution(user_sponsor_id);
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS future_contribution (
     currency            VARCHAR(8) NOT NULL,
     day                 DATE NOT NULL,
     created_at          TIMESTAMP NOT NULL,
+    foundation_payment  BOOLEAN,
     UNIQUE(user_sponsor_id, repo_id, currency, day)
 );
 CREATE INDEX IF NOT EXISTS future_contribution_user_sponsor_id_idx ON future_contribution(user_sponsor_id);

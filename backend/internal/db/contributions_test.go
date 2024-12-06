@@ -17,7 +17,7 @@ func TestContributionInsert(t *testing.T) {
 	userContrib := insertTestUser(t, "contrib")
 	r := insertTestRepo(t)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
 	assert.Nil(t, err)
 }
 
@@ -29,15 +29,15 @@ func TestMultiContributionInsert(t *testing.T) {
 	userContrib := insertTestUser(t, "contrib")
 	r := insertTestRepo(t)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
 	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
 	assert.NotNil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(-3), "XBTC", time.Time{}.Add(1), time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(-3), "XBTC", time.Time{}.Add(1), time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(6), "XBTC", time.Time{}.Add(2), time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(6), "XBTC", time.Time{}.Add(2), time.Time{}, false)
 	assert.Nil(t, err)
 
 	m, err := FindSumDailyBalanceByRepoId(r.Id)
@@ -61,15 +61,15 @@ func TestMultiContributionInsert(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
+	assert.Nil(t, err)
+
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
 	m1 := MultiplierEvent{
@@ -145,7 +145,7 @@ func TestGetUserDonationReposEmpty(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected := map[uuid.UUID][]UserDonationRepo{}
@@ -165,7 +165,7 @@ func TestGetUserDonationReposOneTrusted(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
 	tr1 := TrustEvent{
@@ -178,7 +178,7 @@ func TestGetUserDonationReposOneTrusted(t *testing.T) {
 
 	_ = InsertOrUpdateTrustRepo(&tr1)
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected := map[uuid.UUID][]UserDonationRepo{
@@ -206,10 +206,10 @@ func TestGetUserDonationReposOneUntrusted(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected := map[uuid.UUID][]UserDonationRepo{
@@ -243,22 +243,22 @@ func TestGetUserDonationReposMany(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib2.Id, r2.Id, big.NewInt(7), "XBTC", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib2.Id, r2.Id, big.NewInt(7), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib2.Id, r3.Id, big.NewInt(10), "USD", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib2.Id, r3.Id, big.NewInt(10), "USD", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
 	tr1 := TrustEvent{
@@ -280,7 +280,7 @@ func TestGetUserDonationReposMany(t *testing.T) {
 	_ = InsertOrUpdateTrustRepo(&tr1)
 	_ = InsertOrUpdateTrustRepo(&tr2)
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected := map[uuid.UUID][]UserDonationRepo{
@@ -319,15 +319,15 @@ func TestGetUserDonationReposManyDynamic(t *testing.T) {
 	dateNowStr := currentTime.Format("2006-01-02")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
+	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{})
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{})
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
+	assert.Nil(t, err)
+
+	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
 	assert.Nil(t, err)
 
 	tr1 := TrustEvent{
@@ -351,7 +351,7 @@ func TestGetUserDonationReposManyDynamic(t *testing.T) {
 	_ = InsertOrUpdateTrustRepo(&tr1)
 	_ = InsertOrUpdateTrustRepo(&tr2)
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected := map[uuid.UUID][]UserDonationRepo{
@@ -383,7 +383,7 @@ func TestGetUserDonationReposManyDynamic(t *testing.T) {
 
 	_ = InsertOrUpdateTrustRepo(&tr3)
 
-	res, err = GetUserDonationRepos(userSponsor.Id, dateNow)
+	res, err = GetUserDonationRepos(userSponsor.Id, dateNow, false)
 	assert.Nil(t, err)
 
 	expected = map[uuid.UUID][]UserDonationRepo{

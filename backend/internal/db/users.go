@@ -23,6 +23,12 @@ type User struct {
 	CreatedAt time.Time
 }
 
+type Foundation struct {
+	Id                   uuid.UUID   `json:"id"`
+	MultiplierDailyLimit int         `json:"multiplierDailyLimit"`
+	RepoIds              []uuid.UUID `json:"repoIds"`
+}
+
 type UserDetail struct {
 	User
 	InvitedId            *uuid.UUID

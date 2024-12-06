@@ -356,9 +356,9 @@ func TestCountReposForUsers(t *testing.T) {
 
 		uids := []uuid.UUID{uid1, uid2, uid3}
 
-		_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now())
-		_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now())
-		_ = InsertContribution(uid3, uid2, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now())
+		_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
+		_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
+		_ = InsertContribution(uid3, uid2, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
 
 		count, err := CountReposForUsers(uids, 12, false)
 		assert.Nil(t, err)
@@ -415,9 +415,9 @@ func TestGetActiveFFSUserCount(t *testing.T) {
 
 		currentTime := time.Now()
 		previousTime := currentTime.AddDate(0, -1, -1)
-		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(20), "XBTC", currentTime, currentTime)
-		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(38), "XBTC", currentTime, previousTime)
-		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(20), "XBTC", currentTime, currentTime, false)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(38), "XBTC", currentTime, previousTime, false)
+		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime, false)
 
 		count, _ := GetActiveFFSUserCount(r.Id, 1, 6, false)
 		assert.Equal(t, 2, count)

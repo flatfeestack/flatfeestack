@@ -20,7 +20,7 @@ type MultiplierEvent struct {
 func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
 	//first get last multiplier event to check if we need to InsertOrUpdateMultiplierRepo or unset the multiplier
 	//TODO: use mutex
-	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.RepoId)
+	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.Uid, event.RepoId)
 	if err != nil {
 		return err
 	}
@@ -101,16 +101,16 @@ func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
 	}
 }
 
-func FindLastEventMultiplierRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+func FindLastEventMultiplierRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
 	var multiplierAt *time.Time
 	var unMultiplierAt *time.Time
 	var id *uuid.UUID
 	err := DB.
 		QueryRow(`SELECT id, multiplier_at, un_multiplier_at
 			      		FROM multiplier_event 
-						WHERE repo_id=$1 
+						WHERE user_id=$1 AND repo_id=$2 
 						ORDER by multiplier_at DESC LIMIT 1`,
-			rid).Scan(&id, &multiplierAt, &unMultiplierAt)
+			uid, rid).Scan(&id, &multiplierAt, &unMultiplierAt)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil, nil, nil
@@ -160,13 +160,13 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
 	return userStatus, nil
 }
 
-func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
+func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, error) {
 	if len(rids) == 0 {
 		return nil, nil
 	}
 
 	query := `
-		SELECT u.id, u.name, u.email
+		SELECT u.id, u.multiplier_daily_limit, m.repo_id
 		FROM multiplier_event m
 		INNER JOIN users u ON m.user_id = u.id
 		WHERE m.repo_id IN (` + GeneratePlaceholders(len(rids)) + `)
@@ -179,19 +179,26 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
 	}
 	defer rows.Close()
 
-	var users []User
-	seen := make(map[uuid.UUID]struct{})
+	foundationMap := make(map[uuid.UUID]*Foundation)
 
 	for rows.Next() {
-		var user User
-		err = rows.Scan(&user.Id, &user.Name, &user.Email)
+		var foundationId uuid.UUID
+		var repoId uuid.UUID
+		var multiplierLimit int
+
+		err = rows.Scan(&foundationId, &multiplierLimit, &repoId)
 		if err != nil {
 			return nil, err
 		}
 
-		if _, exists := seen[user.Id]; !exists {
-			users = append(users, user)
-			seen[user.Id] = struct{}{}
+		if foundation, exists := foundationMap[foundationId]; exists {
+			foundation.RepoIds = append(foundation.RepoIds, repoId)
+		} else {
+			foundationMap[foundationId] = &Foundation{
+				Id:                   foundationId,
+				MultiplierDailyLimit: multiplierLimit,
+				RepoIds:              []uuid.UUID{repoId},
+			}
 		}
 	}
 
@@ -199,7 +206,12 @@ func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]User, error) {
 		return nil, err
 	}
 
-	return users, nil
+	foundations := make([]Foundation, 0, len(foundationMap))
+	for _, foundation := range foundationMap {
+		foundations = append(foundations, *foundation)
+	}
+
+	return foundations, nil
 }
 
 func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {

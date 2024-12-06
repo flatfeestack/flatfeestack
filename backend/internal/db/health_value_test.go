@@ -212,8 +212,8 @@ func TestGetInternalMetrics(t *testing.T) {
 		uid2 := insertTestUser(t, "email2").Id
 		uid3 := insertTestUser(t, "email3").Id
 
-		_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{})
-		_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(3), "XBTC", time.Time{}, time.Time{})
+		_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
+		_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(3), "XBTC", time.Time{}, time.Time{}, false)
 
 		s1 := SponsorEvent{
 			Id:        uuid.New(),
@@ -263,8 +263,8 @@ func TestGetInternalMetrics(t *testing.T) {
 
 		currentTime := time.Now()
 		previousTime := currentTime.AddDate(0, -3, -1)
-		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
-		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime, false)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime, false)
 
 		s1 := SponsorEvent{
 			Id:        uuid.New(),
@@ -314,8 +314,8 @@ func TestGetInternalMetrics(t *testing.T) {
 
 		currentTime := time.Now()
 		previousTime := currentTime.AddDate(0, -3, -1)
-		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
-		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime, false)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime, false)
 
 		s1 := MultiplierEvent{
 			Id:           uuid.New(),
@@ -385,9 +385,9 @@ func TestGetInternalMetrics(t *testing.T) {
 
 		currentTime := time.Now()
 		previousTime := currentTime.AddDate(0, -3, -1)
-		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime)
-		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime)
-		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime)
+		_ = InsertContribution(uid1, uid3, r2.Id, big.NewInt(2), "XBTC", currentTime, currentTime, false)
+		_ = InsertContribution(uid2, uid3, r2.Id, big.NewInt(3), "XBTC", currentTime, previousTime, false)
+		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime, false)
 
 		internalMetricsFocusSponsorEvent, _ := GetInternalMetrics(r.Id, false)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.SponsorCount)
