@@ -1,6 +1,7 @@
 package db
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -357,9 +358,16 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	assert.Nil(t, err)
 
 	expected := []Foundation{
-		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r.Id, r2.Id}},
+		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r2.Id, r.Id}},
 		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
 		{Id: foundation3.Id, MultiplierDailyLimit: 1000, RepoIds: []uuid.UUID{r3.Id}},
+	}
+
+	for _, f := range expected {
+		sort.Slice(f.RepoIds, func(i, j int) bool { return f.RepoIds[i].String() < f.RepoIds[j].String() })
+	}
+	for _, f := range userList {
+		sort.Slice(f.RepoIds, func(i, j int) bool { return f.RepoIds[i].String() < f.RepoIds[j].String() })
 	}
 
 	assert.Equal(t, 4, parts)
@@ -383,8 +391,15 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	assert.Nil(t, err)
 
 	expected = []Foundation{
-		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r.Id, r2.Id}},
+		{Id: foundation.Id, MultiplierDailyLimit: 200, RepoIds: []uuid.UUID{r2.Id, r.Id}},
 		{Id: foundation2.Id, MultiplierDailyLimit: 400, RepoIds: []uuid.UUID{r.Id}},
+	}
+
+	for _, f := range expected {
+		sort.Slice(f.RepoIds, func(i, j int) bool { return f.RepoIds[i].String() < f.RepoIds[j].String() })
+	}
+	for _, f := range userList {
+		sort.Slice(f.RepoIds, func(i, j int) bool { return f.RepoIds[i].String() < f.RepoIds[j].String() })
 	}
 
 	assert.Equal(t, 3, parts)
