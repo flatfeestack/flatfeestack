@@ -213,7 +213,7 @@
     height: 2.6rem;
     width: 2.6rem;
     border: none;
-    transition: color 0.5s, transform 1s ease-out;
+    transition: color 0.25s, transform 0.5s ease-out;
   }
   button#threshold-setting-button:hover {
     background-color: transparent;
