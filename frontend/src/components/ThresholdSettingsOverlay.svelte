@@ -66,7 +66,6 @@
     setTimeout(async () => {
       reloadHealthRepoCardKey.update(() => 0);
     }, 500);
-
   }
 
   function emptyThresholdInputFields() {
@@ -85,56 +84,81 @@
   }
 
   async function setNewThresholds(threshold: string) {
-    const newHealthValueThreshold: HealthValueThreshold = createHealthValueThreshold({
-      ThContributorCount: {
-        upper: threshold === "ThContributorCount" || threshold === "allThresholds"
-          ? newThContributorCountUpper || $latestThresholds.ThContributorCount.upper
-          : $latestThresholds.ThContributorCount.upper,
-        lower: threshold === "ThContributorCount" || threshold === "allThresholds"
-          ? newThContributorCountLower || $latestThresholds.ThContributorCount.lower
-          : $latestThresholds.ThContributorCount.lower,
-      },
-      ThCommitCount: {
-        upper: threshold === "ThCommitCount" || threshold === "allThresholds"
-          ? newThCommitCountUpper || $latestThresholds.ThCommitCount.upper
-          : $latestThresholds.ThCommitCount.upper,
-        lower: threshold === "ThCommitCount" || threshold === "allThresholds"
-          ? newThCommitCountLower || $latestThresholds.ThCommitCount.lower
-          : $latestThresholds.ThCommitCount.lower,
-      },
-      ThSponsorDonation: {
-        upper: threshold === "ThSponsorDonation" || threshold === "allThresholds"
-          ? newThSponsorDonationUpper || $latestThresholds.ThSponsorDonation.upper
-          : $latestThresholds.ThSponsorDonation.upper,
-        lower: threshold === "ThSponsorDonation" || threshold === "allThresholds"
-          ? newThSponsorDonationLower || $latestThresholds.ThSponsorDonation.lower
-          : $latestThresholds.ThSponsorDonation.lower,
-      },
-      ThRepoStarCount: {
-        upper: threshold === "ThRepoStarCount" || threshold === "allThresholds"
-          ? newThRepoStarCountUpper || $latestThresholds.ThRepoStarCount.upper
-          : $latestThresholds.ThRepoStarCount.upper,
-        lower: threshold === "ThRepoStarCount" || threshold === "allThresholds"
-          ? newThRepoStarCountLower || $latestThresholds.ThRepoStarCount.lower
-          : $latestThresholds.ThRepoStarCount.lower,
-      },
-      ThRepoMultiplier: {
-        upper: threshold === "ThRepoMultiplier" || threshold === "allThresholds"
-          ? newThRepoMultiplierUpper || $latestThresholds.ThRepoMultiplier.upper
-          : $latestThresholds.ThRepoMultiplier.upper,
-        lower: threshold === "ThRepoMultiplier" || threshold === "allThresholds"
-          ? newThRepoMultiplierLower || $latestThresholds.ThRepoMultiplier.lower
-          : $latestThresholds.ThRepoMultiplier.lower,
-      },
-      ThActiveFFSUserCount: {
-        upper: threshold === "ThActiveFFSUserCount" || threshold === "allThresholds"
-          ? newThActiveFFSUserCountUpper || $latestThresholds.ThActiveFFSUserCount.upper
-          : $latestThresholds.ThActiveFFSUserCount.upper,
-        lower: threshold === "ThActiveFFSUserCount" || threshold === "allThresholds"
-          ? newThActiveFFSUserCountLower || $latestThresholds.ThActiveFFSUserCount.lower
-          : $latestThresholds.ThActiveFFSUserCount.lower,
-      },
-    });
+    const newHealthValueThreshold: HealthValueThreshold =
+      createHealthValueThreshold({
+        ThContributorCount: {
+          upper:
+            threshold === "ThContributorCount" || threshold === "allThresholds"
+              ? newThContributorCountUpper ||
+                $latestThresholds.ThContributorCount.upper
+              : $latestThresholds.ThContributorCount.upper,
+          lower:
+            threshold === "ThContributorCount" || threshold === "allThresholds"
+              ? newThContributorCountLower ||
+                $latestThresholds.ThContributorCount.lower
+              : $latestThresholds.ThContributorCount.lower,
+        },
+        ThCommitCount: {
+          upper:
+            threshold === "ThCommitCount" || threshold === "allThresholds"
+              ? newThCommitCountUpper || $latestThresholds.ThCommitCount.upper
+              : $latestThresholds.ThCommitCount.upper,
+          lower:
+            threshold === "ThCommitCount" || threshold === "allThresholds"
+              ? newThCommitCountLower || $latestThresholds.ThCommitCount.lower
+              : $latestThresholds.ThCommitCount.lower,
+        },
+        ThSponsorDonation: {
+          upper:
+            threshold === "ThSponsorDonation" || threshold === "allThresholds"
+              ? newThSponsorDonationUpper ||
+                $latestThresholds.ThSponsorDonation.upper
+              : $latestThresholds.ThSponsorDonation.upper,
+          lower:
+            threshold === "ThSponsorDonation" || threshold === "allThresholds"
+              ? newThSponsorDonationLower ||
+                $latestThresholds.ThSponsorDonation.lower
+              : $latestThresholds.ThSponsorDonation.lower,
+        },
+        ThRepoStarCount: {
+          upper:
+            threshold === "ThRepoStarCount" || threshold === "allThresholds"
+              ? newThRepoStarCountUpper ||
+                $latestThresholds.ThRepoStarCount.upper
+              : $latestThresholds.ThRepoStarCount.upper,
+          lower:
+            threshold === "ThRepoStarCount" || threshold === "allThresholds"
+              ? newThRepoStarCountLower ||
+                $latestThresholds.ThRepoStarCount.lower
+              : $latestThresholds.ThRepoStarCount.lower,
+        },
+        ThRepoMultiplier: {
+          upper:
+            threshold === "ThRepoMultiplier" || threshold === "allThresholds"
+              ? newThRepoMultiplierUpper ||
+                $latestThresholds.ThRepoMultiplier.upper
+              : $latestThresholds.ThRepoMultiplier.upper,
+          lower:
+            threshold === "ThRepoMultiplier" || threshold === "allThresholds"
+              ? newThRepoMultiplierLower ||
+                $latestThresholds.ThRepoMultiplier.lower
+              : $latestThresholds.ThRepoMultiplier.lower,
+        },
+        ThActiveFFSUserCount: {
+          upper:
+            threshold === "ThActiveFFSUserCount" ||
+            threshold === "allThresholds"
+              ? newThActiveFFSUserCountUpper ||
+                $latestThresholds.ThActiveFFSUserCount.upper
+              : $latestThresholds.ThActiveFFSUserCount.upper,
+          lower:
+            threshold === "ThActiveFFSUserCount" ||
+            threshold === "allThresholds"
+              ? newThActiveFFSUserCountLower ||
+                $latestThresholds.ThActiveFFSUserCount.lower
+              : $latestThresholds.ThActiveFFSUserCount.lower,
+        },
+      });
 
     try {
       await API.repos.setNewHealthValueThresholds(newHealthValueThreshold);
@@ -162,7 +186,7 @@
 
 <style>
   button#all-thresholds-button {
-      margin: 1rem 0 0 auto;
+    margin: 1rem 0 0 auto;
   }
 </style>
 
@@ -172,9 +196,9 @@
       <h2>Threshold Settings</h2>
       <div class="container-col2 m-2">
         <p class="m-0">
-          This settings allows you to customize the thresholds of the metrics used
-          to assess repository health. For each metric, you can define lower and
-          upper thresholds that determine how points are allocated:
+          This settings allows you to customize the thresholds of the metrics
+          used to assess repository health. For each metric, you can define
+          lower and upper thresholds that determine how points are allocated:
         </p>
         <ul class="my-2">
           <li>
@@ -389,7 +413,9 @@
                 type="number"
                 class="max-w20"
                 bind:value={newThActiveFFSUserCountLower}
-                placeholder={String($latestThresholds.ThActiveFFSUserCount.lower)}
+                placeholder={String(
+                  $latestThresholds.ThActiveFFSUserCount.lower
+                )}
               />
             </div>
 
@@ -400,7 +426,9 @@
                 type="number"
                 class="max-w20"
                 bind:value={newThActiveFFSUserCountUpper}
-                placeholder={String($latestThresholds.ThActiveFFSUserCount.upper)}
+                placeholder={String(
+                  $latestThresholds.ThActiveFFSUserCount.upper
+                )}
               />
             </div>
           </div>

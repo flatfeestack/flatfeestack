@@ -284,8 +284,7 @@ export const API = {
         .get(`repos/healthvaluethreshold`)
         .json<HealthValueThreshold>(),
     setNewHealthValueThresholds: (thresholdArray: HealthValueThreshold) =>
-      backendToken
-        .put(`repos/healthvaluethreshold`, { json: thresholdArray } ),
+      backendToken.put(`repos/healthvaluethreshold`, { json: thresholdArray }),
     getRepoMetricsById: (repoId: string) =>
       backendToken
         .get(`repos/${repoId}/healthvalue/metrics`)
