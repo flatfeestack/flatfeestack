@@ -104,7 +104,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = fooBar(currentSponsorDonations, parts, yesterdayStart, false)
+	err = calcAndDeductFoundation(currentSponsorDonations, parts, yesterdayStart, false)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = fooBar(futureSponsorDonations, parts, yesterdayStart, true)
+	err = calcAndDeductFoundation(futureSponsorDonations, parts, yesterdayStart, true)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 	return nil
 }
 
-func fooBar(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
+func calcAndDeductFoundation(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
 	for _, currencyBlock := range sponsorDonations {
 		for _, block := range currencyBlock {
 			if len(block.TrustedRepoSelected) > 0 {
