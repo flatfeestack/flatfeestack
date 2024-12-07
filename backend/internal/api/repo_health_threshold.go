@@ -66,9 +66,7 @@ func SetNewThresholds(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	util.WriteJson(w, newThresholds)
 }
 
-// Helper function to validate thresholds
 func validateThresholds(t *db.RepoHealthThreshold) error {
-	// Check if all required threshold fields are present
 	if t.ThContributorCount == nil ||
 		t.ThCommitCount == nil ||
 		t.ThSponsorDonation == nil ||
@@ -78,7 +76,6 @@ func validateThresholds(t *db.RepoHealthThreshold) error {
 		return fmt.Errorf("all threshold fields are required")
 	}
 
-	// Map of thresholds with their names for better error messages
 	thresholds := map[string]*db.Threshold{
 		"contributor_count":     t.ThContributorCount,
 		"commit_count":          t.ThCommitCount,
@@ -89,7 +86,6 @@ func validateThresholds(t *db.RepoHealthThreshold) error {
 	}
 
 	for name, th := range thresholds {
-		// Validate that values are not negative
 		if th.Lower < 0 {
 			return fmt.Errorf("%s lower threshold cannot be negative", name)
 		}
@@ -97,8 +93,6 @@ func validateThresholds(t *db.RepoHealthThreshold) error {
 			return fmt.Errorf("%s upper threshold cannot be negative", name)
 		}
 
-		// Validate that Upper is not less than Lower
-		// Note: They can be equal now
 		if th.Upper < th.Lower {
 			return fmt.Errorf("%s upper threshold cannot be less than lower threshold", name)
 		}
