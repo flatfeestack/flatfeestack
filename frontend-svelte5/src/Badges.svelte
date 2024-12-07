@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Navigation from "./Navigation.svelte";
   import { onMount } from "svelte";
   import { API } from "./ts/api.ts";
   import { appState } from "ts/state.svelte.ts";
@@ -20,6 +19,7 @@
   import { Line, Bar } from "svelte-chartjs";*/
   //import { htmlLegendPlugin } from "utils";
   import '@fortawesome/fontawesome-free/css/all.min.css'
+  import Main from "./Main.svelte";
 
   let contributionSummaries: ContributionSummary[] = [];
   let contributions: Contribution[] = [];
@@ -145,17 +145,13 @@
       text-transform: uppercase;
     }
 
-    td.no-desc {
-      display: inline-block;
-    }
-
     table td:last-child {
       border-bottom: 0;
     }
   }
 </style>
 
-<Navigation>
+<Main>
   {#if contributionSummaries && contributionSummaries.length > 0}
     <h2 class="p-2 m-2">Supported Repositories</h2>
     <div class="container">
@@ -183,14 +179,9 @@
               </td>
               <td data-label="Graph">
                 <div>
-                  <button
-                    class="accessible-btn"
-                    on:click={() =>
-                      showGraph === cs.repo.uuid
-                        ? (showGraph = undefined)
-                        : (showGraph = cs.repo.uuid)}
-                  >
-                    <i class="fa-plus"></i>
+                  <button class="accessible-btn" aria-label={showGraph === cs.repo.uuid ? "Hide graph" : "Show graph"}
+                          onclick={() => showGraph === cs.repo.uuid ? (showGraph = undefined) : (showGraph = cs.repo.uuid)}>
+                    <i class="fas fa-plus" aria-hidden="true"></i>
                   </button>
                 </div>
               </td>
@@ -198,7 +189,7 @@
             {#if showGraph === cs.repo.uuid}
               <tr id="bg-green1">
                 <td colspan="6">
-                  <div id="legend-container" />
+                  <div id="legend-container" ></div>
                   {#await API.repos.graph(cs.repo.uuid, offset)}
                     ...waiting
                   {:then data}
@@ -218,7 +209,7 @@
                     {#if offset > 0}
                       <button
                         class="accessible-btn"
-                        on:click={() => (offset -= 20)}
+                        onclick={() => (offset -= 20)}
                       >
                         Previous 20 <i class="fa-arrow-left"></i>
                       </button>
@@ -226,7 +217,7 @@
                     {#if data.total > offset + 20}
                       <button
                         class="accessible-btn"
-                        on:click={() => (offset += 20)}
+                        onclick={() => (offset += 20)}
                       >
                         <i class="fa-arrow-right"></i> Next 20
                       </button>
@@ -305,4 +296,4 @@
   <p class="p-2 m-2">
     Public URL: <a href="/badges/{appState.user.id}">/badges/{appState.user.id}</a>
   </p>
-</Navigation>
+</Main>

@@ -184,7 +184,7 @@ export const API = {
   },
   repos: {
     search: (s: string) =>
-        backendToken.get(`repos/search?q=${encodeURIComponent(s)}`).json<Repo[] | null>(),
+        backendToken.get(`repos/search?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     searchName: (s: string) =>
         backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     get: (id: number) =>

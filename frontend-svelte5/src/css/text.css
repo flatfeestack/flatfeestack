@@ -8,6 +8,10 @@ h2 {
     margin: 1.75rem 0 0.875rem;
 }
 
+h2:first-child {
+    margin: 0.5rem 0 0.875rem;
+}
+
 h3 {
     font-size: 1.5rem;
     margin: 1.5rem 0 0.75rem;

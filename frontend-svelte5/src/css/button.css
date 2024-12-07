@@ -14,26 +14,28 @@ button:active {
     color: #000;
 }
 button:disabled {
-    background: var(--secondary-500);
+    color: #000;
+    background: var(--secondary-300);
+    cursor: not-allowed;
 }
 
 .button1 {
     background: var(--primary-500);
 }
-.button1:hover {
+.button1:hover:not(:disabled) {
     background: var(--primary-700);
 }
-.button1:active {
+.button1:active:not(:disabled) {
     background: var(--primary-300);
 }
 
 .button2 {
     background: var(--secondary-500);
 }
-.button2:hover {
+.button2:hover:not(:disabled) {
     background: var(--secondary-700);
 }
-.button2:active {
+.button2:active:not(:disabled) {
     background: var(--secondary-300);
 }
 

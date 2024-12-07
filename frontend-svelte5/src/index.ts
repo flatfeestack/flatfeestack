@@ -6,6 +6,7 @@ import 'css/text.css';
 import 'css/border.css';
 import 'css/button.css';
 import 'css/input.css';
+import 'css/layout.css';
 
 hydrate(App, {
     target: document.getElementById('root')!,

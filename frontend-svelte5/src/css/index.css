@@ -17,7 +17,7 @@
 }
 
 body,
-html {
+html,p {
   font-family: "Roboto", sans-serif;
   margin: 0;
   color: var(--secondary-700);
@@ -280,14 +280,7 @@ tbody tr:last-of-type {
   margin: 0 1rem;
 }
 
-.image-org-sx {
-  display: flex;
-  max-height: 2rem;
-  max-width: 2rem;
-  width: auto;
-  margin: 0 0.5rem;
-  border: 2px solid var(--primary-100);
-}
+
 
 .accessible-btn {
   padding: unset;

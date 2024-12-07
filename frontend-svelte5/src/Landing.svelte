@@ -2,7 +2,7 @@
     import {goto} from "@mateothegreat/svelte5-router";
     import {onDestroy, onMount} from "svelte";
     import { initAnimation } from './backgroundAnimation';
-    import Header from "./Header.svelte";
+    import HeaderLanding from "./HeaderLanding.svelte";
 
     let cleanup: (() => void) | undefined;
 
@@ -32,27 +32,10 @@
         padding-top: 1rem;
     }
 
-    .iconSupport {
-        width: 10rem;
-        padding: 2rem;
-        filter: grayscale(100%) opacity(50%);
-        align-content: center;
-        transition: filter 0.5s;
-    }
-
-    .iconSupport:hover {
-        filter: none;
-    }
-
     .flex-row {
         display: flex;
         flex-direction: row;
         justify-content: center;
-    }
-
-    .wrap {
-        flex-wrap: wrap;
-        align-items: center;
     }
 
     main {
@@ -152,8 +135,6 @@
         flex-direction: column;
     }
 
-
-
     .parallax {
         text-align: center;
         justify-content: center;
@@ -204,7 +185,7 @@
 
 
 <main>
-    <Header></Header>
+    <HeaderLanding></HeaderLanding>
     <div class="background-svg">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -250 800 900" id="floor" style="width: 100%">
         <g id="roll2-part2" transform="translate(425,-39)">

@@ -11,6 +11,7 @@
   import { formatBalance, formatDate, timeSince } from "./ts/services.svelte.ts";
   import type { PayoutResponse } from "./types/backend";
   import type { PayoutConfig } from "./types/payout";
+  import Main from "./Main.svelte";
   //import setSigner from "./setSigner";
   //import showMetaMaskRequired from "./showMetaMaskRequired";
 
@@ -145,7 +146,7 @@
   }
 </style>
 
-<Navigation>
+<Main>
   <h2 class="p-2 m-2">Income</h2>
   <p class="p-2 m-2 bold">
     How does FlatFeeStack send the contributions you received?
@@ -284,4 +285,4 @@
   {:catch err}
     {(appState.error = err)}
   {/await}
-</Navigation>
+</Main>

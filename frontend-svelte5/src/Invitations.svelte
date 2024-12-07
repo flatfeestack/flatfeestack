@@ -1,17 +1,16 @@
 <script lang="ts">
-  import Navigation from "./Navigation.svelte";
   import { appState } from "ts/state.svelte.ts";
   import { API } from "./ts/api.ts";
   import { onMount } from "svelte";
-  import type { Invitation, UserStatus } from "./types/backend";
+  import type { Invitation } from "./types/backend";
   import { formatDate, timeSince } from "./ts/services.svelte.ts";
   import Dots from "./Dots.svelte";
   import { emailValidationPattern } from "./utils";
+  import Main from "./Main.svelte";
 
-  let invites: Invitation[] = [];
-  let inviteEmail: string;
-  let isAddInviteSubmitting = false;
-  let statusSponsoredUsers: UserStatus[] = [];
+  let invites = $state<Invitation[]>([]);
+  let inviteEmail= $state("");
+  let isAddInviteSubmitting = $state(false);
 
   async function removeMyInvite(email: string, inviteEmail: string) {
     try {
@@ -60,7 +59,8 @@
     try {
       isAddInviteSubmitting = true;
       if (inviteEmail === appState.user.email) {
-        throw "Oops something went wrong. You aren't able to invite yourself.";
+        appState.setError("Oops something went wrong. You aren't able to invite yourself.");
+        return;
       }
       await API.invite.invite(inviteEmail);
       await API.invite.inviteAuth(inviteEmail);
@@ -81,8 +81,6 @@
 
   onMount(async () => {
     await refreshInvite();
-    const res2 = await API.user.statusSponsoredUsers();
-    statusSponsoredUsers = res2 || [];
   });
 </script>
 
@@ -124,18 +122,10 @@
     table td:last-child {
       border-bottom: 0;
     }
-    table form {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-    }
-    table form button {
-      margin: 0.5rem 0;
-    }
   }
 </style>
 
-<Navigation>
+<Main>
   <h2 class="p-2 m-2">Invite Users</h2>
   <p class="p-2 m-2">
     Invite your friends or co-workers. They will be charged from your account on
@@ -151,14 +141,14 @@
           <th>Date</th>
           <th>Remove</th>
           <th>
-            <button class="accessible-btn" on:click={refreshInvite}>
+            <button class="accessible-btn" onclick={refreshInvite} aria-label="Refresh invitation">
               <i class="fa-sync"></i>
             </button>
           </th>
         </tr>
       </thead>
       <tbody>
-        {#each invites as inv, key (inv.email + inv.inviteEmail)}
+        {#each invites as inv (inv.email + inv.inviteEmail)}
           {#if inv.email === appState.user.email}
             <tr>
               <td data-label="Invited">{inv.inviteEmail}</td>
@@ -173,10 +163,8 @@
                 {timeSince(new Date(inv.createdAt), new Date())} ago
               </td>
               <td data-label="Remove" class="text-center" colspan="2">
-                <button
-                  class="accessible-btn"
-                  on:click={() => removeMyInvite(inv.email, inv.inviteEmail)}
-                  >
+                <button class="accessible-btn" aria-label="Remove invitation"
+                        onclick={() => removeMyInvite(inv.email, inv.inviteEmail)}>
                   <i class="fa-trash"></i>
                 </button
                 >
@@ -186,28 +174,29 @@
         {/each}
         <tr>
           <td colspan="5">
-            <form on:submit|preventDefault={addInvite}>
-              <label for="invite-mail-input" class="p-2">Invite by email:</label
-              >
+            <div class="flex items-center">
+              <label for="invite-mail-input" class="p-2">Invite by email:</label>
               <input
-                id="invite-mail-input"
-                size="24"
-                maxlength="50"
-                type="email"
-                pattern={emailValidationPattern}
-                required
-                bind:value={inviteEmail}
+                      id="invite-mail-input"
+                      size="24"
+                      maxlength="50"
+                      type="email"
+                      pattern={emailValidationPattern}
+                      required
+                      bind:value={inviteEmail}
               />
               <button
-                class="ml-5 p-2 button1"
-                type="submit"
-                disabled={isAddInviteSubmitting}
-                >Invite
+                      class="ml-5 p-2 button1"
+                      onclick={addInvite}
+                      disabled={isAddInviteSubmitting || !inviteEmail || !inviteEmail.match(emailValidationPattern)}
+                      aria-label="Send invitation"
+              >
+                Invite
                 {#if isAddInviteSubmitting}
                   <Dots />
                 {/if}
               </button>
-            </form>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -225,17 +214,15 @@
           <th>Status</th>
           <th>Date</th>
           <th>Action</th>
-          <th
-            ><button class="accessible-btn" on:click={refreshInvite}
-              >
-            <i class="fa-sync"></i>
-          </button
-            ></th
-          >
+          <th>
+            <button class="accessible-btn" onclick={refreshInvite} aria-label="Refresh invitations">
+              <i class="fas fa-sync" aria-hidden="true"></i>
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
-        {#each invites as inv, key (inv.email + inv.inviteEmail)}
+        {#each invites as inv (inv.email + inv.inviteEmail)}
           {#if inv.inviteEmail === appState.user.email}
             <tr>
               <td data-label="Invited By">{inv.email}</td>
@@ -251,16 +238,21 @@
               </td>
               <td data-label="Action" class="text-center" colspan="2">
                 <button
-                  class="accessible-btn"
-                  on:click={() => removeByInvite(inv.email, inv.inviteEmail)}
-                  ><i class="fa-trash"></i></button
+                        class="accessible-btn"
+                        onclick={() => removeByInvite(inv.email, inv.inviteEmail)}
+                        aria-label="Remove invitation"
                 >
+                  <i class="fas fa-trash" aria-hidden="true"></i>
+                </button>
+
                 {#if !inv.confirmedAt}
                   <button
-                    class="accessible-btn"
-                    on:click={() => acceptInvite(inv.email)}
-                    ><i class="fa-check"></i></button
+                          class="accessible-btn"
+                          onclick={() => acceptInvite(inv.email)}
+                          aria-label="Accept invitation"
                   >
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                  </button>
                 {/if}
               </td>
             </tr>
@@ -269,4 +261,4 @@
       </tbody>
     </table>
   </div>
-</Navigation>
+</Main>

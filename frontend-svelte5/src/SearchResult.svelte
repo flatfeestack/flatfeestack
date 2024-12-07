@@ -4,8 +4,8 @@
   import { getColor1 } from "./utils";
   import type { Repo } from "./types/backend";
 
-  export let repo: Repo;
-  let star = false;
+  let { repo } = $props<{ repo: Repo }>();
+  let star = $state(false);
 
   const onSponsor = async () => {
     try {
@@ -18,12 +18,12 @@
     }
   };
 
-  $: {
+  $effect(() => {
     const tmp = appState.sponsoredRepos.find((r: Repo) => {
       return r.uuid === repo.uuid;
     });
     star = tmp !== undefined;
-  }
+  });
 </script>
 
 <style>
@@ -63,7 +63,7 @@
 >
   <div>
     {#if !star}
-      <a href={"#"} on:click|preventDefault={onSponsor}>
+      <a href={"#"} onclick={onSponsor} aria-label="Add star">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 573.655 550.909"

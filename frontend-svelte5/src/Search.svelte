@@ -5,16 +5,19 @@
   import type { Repo } from "./types/backend";
 
   import Dots from "./Dots.svelte";
-  import Navigation from "./Navigation.svelte";
   import RepoCard from "./RepoCard.svelte";
   import SearchResult from "./SearchResult.svelte";
   import {route} from "@mateothegreat/svelte5-router";
+  import Main from "./Main.svelte";
 
-  let search = "";
-  let searchRepos: Repo[] = [];
-  let isSearchSubmitting = false;
+  let search = $state("");
+  let searchRepos = $state<Repo[]>([]);
+  let isSearchSubmitting = $state(false);
+  let isSearchDisabled = $state(false);
 
-  $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
+  $effect(() => {
+    isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
+  });
 
   const handleSearch = async () => {
     try {
@@ -48,12 +51,6 @@
     flex-wrap: wrap;
   }
   @media screen and (max-width: 600px) {
-    form {
-      flex-direction: column;
-    }
-    form button {
-      margin: 0.5rem 0;
-    }
     h2,
     p {
       word-break: break-word;
@@ -61,11 +58,11 @@
   }
 </style>
 
-<Navigation>
+<Main>
   <div class="p-2">
     {#if appState.sponsoredRepos.length > 0}
       <div class="m-2 wrap">
-        {#each appState.sponsoredRepos as repo, key (repo.uuid)}
+        {#each appState.sponsoredRepos as repo (repo.uuid)}
           <RepoCard {repo} />
         {/each}
       </div>
@@ -87,22 +84,20 @@
       project will not receive any contributions.
     </p>
 
-    <div class="m-2">
-      <form class="flex" on:submit|preventDefault={handleSearch}>
-        <input type="text" bind:value={search} />
-        <button class="button1 ml-5" type="submit" disabled={isSearchDisabled}
-          >Search{#if isSearchSubmitting}<Dots />{/if}</button
-        >
-      </form>
+    <div class="flex">
+      <input type="text" bind:value={search}/>
+      <button class="button1 ml-5" onclick={handleSearch} disabled={isSearchDisabled} aria-label="Search">
+        Search{#if isSearchSubmitting}<Dots />{/if}
+      </button>
     </div>
 
     {#if searchRepos?.length > 0}
       <h2 class="m-2">Results</h2>
       <div>
-        {#each searchRepos as repo, key (repo.uuid)}
+        {#each searchRepos as repo (repo.uuid)}
           <SearchResult {repo} />
         {/each}
       </div>
     {/if}
   </div>
-</Navigation>
+</Main>

@@ -2,10 +2,10 @@
   import queryString from "query-string";
   import {route} from "@mateothegreat/svelte5-router";
 
-  export let location;
+  let { location } = $props<{ location: any }>();
 
-  let queryParams;
-  $: queryParams = queryString.parse(location.search);
+  let queryParams = $state<any>();
+  $effect(() => { queryParams = queryString.parse(location.search);});
 </script>
 
 <div class="centerContainer">
@@ -15,7 +15,7 @@
       Your MetaMask browser plugin is currently connected to the network with ID {queryParams.actual}.
       However, FlatFeeStack requires to use {queryParams.required}. Please
       change your network in MetaMask and
-      <a use:route href="">click here</a> to return to the previous page.
+      <a use:route href="/">click here</a> to return to the previous page.
     </p>
   </div>
 </div>

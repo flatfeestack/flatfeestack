@@ -1,23 +1,23 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Navigation from "./Navigation.svelte";
   import { API } from "./ts/api.ts";
   import {appState} from "./ts/state.svelte.ts";
   import { formatDate, timeSince } from "./ts/services.svelte.ts";
   import type { GitUser } from "./types/backend";
   import { emailValidationPattern } from "./utils";
+  import Main from "./Main.svelte";
 
-  let fileInput;
-  let username: undefined | string;
+  let username = $state("");
 
-  let gitEmails: GitUser[] = [];
-  let newEmail = "";
+  let fileInput= $state();
+  let gitEmails = $state<GitUser[]>([]);
+  let newEmail = $state("");
 
-  $: {
-    if (typeof username === "undefined" && appState.user.name) {
+  $effect(() => {
+    if (username === "" && appState.user.name) {
       username = appState.user.name;
     }
-  }
+  });
 
   const onFileSelected = (e:any) => {
     let image = e.target.files[0];
@@ -38,7 +38,7 @@
     };
   };
 
-  function handleUsernameChangeg() {
+  function handleUsernameChange() {
     try {
       if (username === "") {
         API.user.clearName();
@@ -174,30 +174,17 @@
     table td:last-child {
       border-bottom: 0;
     }
-    table form {
-      display: flex;
-      flex-direction: column;
-    }
-    table form button {
-      margin-top: 15px;
-      margin-left: 0;
-    }
   }
 </style>
 
-<Navigation>
-  <h2 class="p-2 m-2">Account Settings</h2>
+<Main>
+  <h2>Account Settings</h2>
   <div class="grid-2">
     <p class="p-2 m-2 nobreak">Email:</p>
     <span class="p-2 m-2">{appState.user.email}</span>
     <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
-    <input
-      id="username-input"
-      type="text"
-      class="m-4 max-w20"
-      bind:value={username}
-      on:change={handleUsernameChangeg}
-      placeholder="Name on the badge"
+    <input id="username-input" type="text" class="m-4 max-w20"
+           bind:value={username} onchange={handleUsernameChange} placeholder="Name on the badge"
     />
     {#if username === "" || typeof username === "undefined"}
       <p class="p-rl-4 m-0 user-hint">
@@ -205,33 +192,23 @@
         badges.
       </p>
     {/if}
-    <label for="profile-picture-upload" class="p-2 m-2 nobreak"
-      >Profile picture:</label
-    >
+    <label for="profile-picture-upload" class="p-2 m-2 nobreak">
+      Profile picture:
+    </label>
     <div>
       {#if appState.user.image}
         <div class="image-container">
-          <button class="upload accessible-btn" on:click={deleteImage}>
-            <i class ="fa-trash-can"></i>
+          <button class="upload accessible-btn" onclick={deleteImage} aria-label="Delete image">
+            <i class ="fas fa-trash-can"></i>
           </button>
           <img class="image-org" src={appState.user.image} alt="profile img" />
         </div>
       {:else}
-        <button
-          id="profile-picture-upload"
-          class="upload accessible-btn"
-          on:click={() => {
-            fileInput.click();
-          }}
-        >
-          <i class="fa-upload"></i>
-          <input
-            style="display:none"
-            type="file"
-            accept=".jpg, .jpeg, .png"
-            on:change={(e) => onFileSelected(e)}
-            bind:this={fileInput}
-          />
+        <button id="profile-picture-upload" class="upload accessible-btn"
+                onclick={() => {fileInput.click();}} aria-label="Upload profile picture">
+          <i class="fas fa-upload" aria-hidden="true"></i>
+          <input style="display:none" type="file" accept=".jpg, .jpeg, .png"
+                  onchange={(e) => onFileSelected(e)} bind:this={fileInput} aria-hidden="true"/>
         </button>
       {/if}
     </div>
@@ -256,15 +233,12 @@
         </tr>
       </thead>
       <tbody>
-        {#each gitEmails as email, key (email.email)}
+        {#each gitEmails as email (email.email)}
           <tr>
             <td data-label="Email">{email.email}</td>
 
             {#if email.confirmedAt}
-              <td
-                data-label="Confirmation"
-                title={formatDate(new Date(email.confirmedAt))}
-              >
+              <td data-label="Confirmation" title={formatDate(new Date(email.confirmedAt))}>
                 {timeSince(new Date(email.confirmedAt), new Date())} ago
               </td>
             {:else}
@@ -273,10 +247,7 @@
               </td>
             {/if}
             <td data-label="Delete">
-              <button
-                class="accessible-btn"
-                on:click={() => removeEmail(email.email)}
-              >
+              <button class="accessible-btn" onclick={() => removeEmail(email.email)} aria-label="Remove email">
                 <i class="fa-trash"></i>
               </button>
             </td>
@@ -284,23 +255,17 @@
         {/each}
         <tr>
           <td colspan="3">
-            <form class="p-2" on:submit|preventDefault={handleAddEmail}>
-              <input
-                id="email-input"
-                name="email"
-                type="email"
-                pattern={emailValidationPattern}
-                required
-                bind:value={newEmail}
-                placeholder="Email"
-              />
-              <button class="ml-5 p-2 button1" type="submit"
-                >Add Git Email
+            <div>
+              <input id="email-input" name="email" type="email" pattern={emailValidationPattern}
+                     required bind:value={newEmail} placeholder="Email"/>
+              <button class="button1" onclick={handleAddEmail}
+                      disabled={!newEmail || !newEmail.match(emailValidationPattern)} aria-label="Add Git Email">
+                Add Git Email
               </button>
-            </form>
+            </div>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
-</Navigation>
+</Main>
