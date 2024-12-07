@@ -97,20 +97,6 @@
     }
   }
 
-  // async function newRepoAssessment() {
-  //   console.log("repoMetrics before", repoMetrics);
-  //   try {
-  //     await API.repos.triggerNewRepoAssessment(repo.uuid);
-  //     partialHealthValues = await API.repos.getPartialHealthValues(repo.uuid);
-  //     repoMetrics = await API.repos.getRepoMetricsById(repo.uuid);
-  //     setPartialHealthValues();
-  //     setRepoMetricsVariables();
-  //   } catch (e) {
-  //     $error = e;
-  //   }
-  //   console.log("repoMetrics after", repoMetrics);
-  // }
-
   function initRepoMetricsChart() {
     const chartConfigs = [
       {
