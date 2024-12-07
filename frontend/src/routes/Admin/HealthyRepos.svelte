@@ -16,12 +16,13 @@
     trustedRepos,
     reloadAdminSearchKey,
     reposWaitingForNewAnalysis,
+    reloadHealthRepoCardKey,
   } from "../../ts/mainStore";
   import type { Repo } from "../../types/backend";
   import Dots from "../../components/Dots.svelte";
   import Navigation from "../../components/Navigation.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
-  import TrustedRepoCard from "../../components/HealthyRepoCard.svelte";
+  import HealthyRepoCard from "../../components/HealthyRepoCard.svelte";
   import ThresholdSettingsOverlay from "../../components/ThresholdSettingsOverlay.svelte";
 
   let icon: IconDefinition;
@@ -400,7 +401,9 @@
         {#if $trustedRepos.length > 0}
           <div class="cards-overflow-x">
             {#each sortedTrustedRepos as repo, key (repo.uuid)}
-              <TrustedRepoCard {repo} />
+              {#key $reloadHealthRepoCardKey}
+                <HealthyRepoCard {repo} />
+              {/key}
             {/each}
           </div>
         {/if}

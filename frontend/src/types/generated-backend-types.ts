@@ -465,6 +465,22 @@ export interface paths {
         };
       };
     };
+    put: {
+      /** @description Array of HealthValueThreshold objects to be sent to the backend. */
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["HealthValueThreshold"];
+        };
+      };
+      responses: {
+        /** @description Successfully processed the HealthValueThreshold array. */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
   };
   "/repos/{id}/healthvalue/partial": {
     get: {
