@@ -30,8 +30,85 @@
     }
   }
 
-  function setNewThresholds() {
-    console.log($latestThresholds);
+  function createHealthValueThreshold({
+    ThContributorCount,
+    ThCommitCount,
+    ThSponsorDonation,
+    ThRepoStarCount,
+    ThRepoMultiplier,
+    ThActiveFFSUserCount,
+  }) {
+    return {
+      id: 0,
+      createdAt: 0,
+      ThContributorCount: { ...ThContributorCount },
+      ThCommitCount: { ...ThCommitCount },
+      ThSponsorDonation: { ...ThSponsorDonation },
+      ThRepoStarCount: { ...ThRepoStarCount },
+      ThRepoMultiplier: { ...ThRepoMultiplier },
+      ThActiveFFSUserCount: { ...ThActiveFFSUserCount },
+    };
+  }
+
+  function setNewThresholds(threshold: string): void {
+    console.log("latest thresholds:", $latestThresholds);
+
+    const newHealthValueThreshold = createHealthValueThreshold({
+      ThContributorCount:
+        threshold === "ThContributorCount" || threshold === "allThresholds"
+          ? {
+              upper: newThContributorCountUpper,
+              lower: newThContributorCountLower,
+            }
+          : {
+              upper: $latestThresholds.ThContributorCount.upper,
+              lower: $latestThresholds.ThContributorCount.lower,
+            },
+      ThCommitCount:
+        threshold === "ThCommitCount" || threshold === "allThresholds"
+          ? { upper: newThCommitCountUpper, lower: newThCommitCountLower }
+          : {
+              upper: $latestThresholds.ThCommitCount.upper,
+              lower: $latestThresholds.ThCommitCount.lower,
+            },
+      ThSponsorDonation:
+        threshold === "ThSponsorDonation" || threshold === "allThresholds"
+          ? {
+              upper: newThSponsorDonationUpper,
+              lower: newThSponsorDonationLower,
+            }
+          : {
+              upper: $latestThresholds.ThSponsorDonation.upper,
+              lower: $latestThresholds.ThSponsorDonation.lower,
+            },
+      ThRepoStarCount:
+        threshold === "ThRepoStarCount" || threshold === "allThresholds"
+          ? { upper: newThRepoStarCountUpper, lower: newThRepoStarCountLower }
+          : {
+              upper: $latestThresholds.ThRepoStarCount.upper,
+              lower: $latestThresholds.ThRepoStarCount.lower,
+            },
+      ThRepoMultiplier:
+        threshold === "ThRepoMultiplier" || threshold === "allThresholds"
+          ? { upper: newThRepoMultiplierUpper, lower: newThRepoMultiplierLower }
+          : {
+              upper: $latestThresholds.ThRepoMultiplier.upper,
+              lower: $latestThresholds.ThRepoMultiplier.lower,
+            },
+      ThActiveFFSUserCount:
+        threshold === "ThActiveFFSUserCount" || threshold === "allThresholds"
+          ? {
+              upper: newThActiveFFSUserCountUpper,
+              lower: newThActiveFFSUserCountLower,
+            }
+          : {
+              upper: $latestThresholds.ThActiveFFSUserCount.upper,
+              lower: $latestThresholds.ThActiveFFSUserCount.lower,
+            },
+    });
+
+    console.log("new thresholds:", newHealthValueThreshold);
+
     // try {
     //   if (newDailyLimit >= 1) {
     //     API.user.setMultiplierDailyLimit(newDailyLimit);
@@ -109,8 +186,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThContributorCount")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
@@ -143,8 +221,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThCommitCount")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
@@ -177,8 +256,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThSponsorDonation")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
@@ -211,8 +291,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThRepoMultiplier")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
@@ -245,8 +326,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThRepoStarCount")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
@@ -279,8 +361,9 @@
           </div>
         </div>
 
-        <button on:click={setNewThresholds} class="ml-5 p-2 button1"
-          >Set Thresholds</button
+        <button
+          on:click={() => setNewThresholds("ThActiveFFSUserCount")}
+          class="ml-5 p-2 button1">Set Thresholds</button
         >
       </div>
     </div>
