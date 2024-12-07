@@ -191,12 +191,20 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 	return m, nil
 }
 
-func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+func FindSumFutureSponsors(userSponsorId uuid.UUID, multiplierFoundationContribution bool) (map[string]*big.Int, error) {
+	var foundation string
+	if multiplierFoundationContribution {
+		foundation = ""
+	} else {
+		foundation = "NOT "
+	}
+
 	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
+		Query(fmt.Sprintf(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
                      WHERE user_sponsor_id = $1
-                     GROUP BY currency`, userSponsorId)
+					 	AND %sfoundation_payment
+                     GROUP BY currency`, foundation), userSponsorId)
 
 	if err != nil {
 		return nil, err
