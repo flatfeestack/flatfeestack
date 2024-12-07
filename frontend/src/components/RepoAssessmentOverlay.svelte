@@ -21,6 +21,7 @@
     Tooltip,
   } from "chart.js";
   import { onDestroy, onMount } from "svelte";
+  import { fade } from "svelte/transition";
 
   export let repo: Repo;
 
@@ -391,7 +392,7 @@
   }
 </style>
 
-<div class="container-col">
+<div class="container-col" transition:fade={{ duration: 500 }}>
   <h2>Assessment of {repo.name}</h2>
   <div class="container-col2 m-2">
     <h3>
