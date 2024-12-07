@@ -303,8 +303,6 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	foundation := insertTestFoundation(t, "email", 200)
 	foundation2 := insertTestFoundation(t, "email2", 400)
 	foundation3 := insertTestFoundation(t, "email3", 1000)
-	_ = insertTestUser(t, "email4")
-	_ = insertTestUser(t, "email5")
 
 	r := insertTestRepoGitUrl(t, "git-url")
 	r2 := insertTestRepoGitUrl(t, "git-url2")
@@ -407,6 +405,111 @@ func TestGetAllFoundationsSupportingReposMany(t *testing.T) {
 	assert.Equal(t, len(expected), len(userList), "The number of users returned should match the expected number")
 
 	assert.ElementsMatch(t, expected, userList, "The contents of the user list should match the expected set")
+}
+
+func TestGetFoundationsSupportingRepoEmpty(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	r := insertTestRepoGitUrl(t, "git-url")
+
+	userDetails, err := GetFoundationsSupportingRepo(r.Id)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 0, len(userDetails))
+}
+
+func TestGetFoundationsSupportingRepoMany(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "email", 200)
+	foundation2 := insertTestFoundation(t, "email2", 400)
+	foundation3 := insertTestFoundation(t, "email3", 1000)
+
+	r := insertTestRepoGitUrl(t, "git-url")
+
+	m1 := MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation.Id,
+		RepoId:       r.Id,
+		EventType:    Active,
+		MultiplierAt: &t001,
+	}
+
+	m2 := MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation2.Id,
+		RepoId:       r.Id,
+		EventType:    Active,
+		MultiplierAt: &t002,
+	}
+
+	m3 := MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation3.Id,
+		RepoId:       r.Id,
+		EventType:    Active,
+		MultiplierAt: &t002,
+	}
+
+	err := InsertOrUpdateMultiplierRepo(&m1)
+	assert.Nil(t, err)
+	err = InsertOrUpdateMultiplierRepo(&m2)
+	assert.Nil(t, err)
+	err = InsertOrUpdateMultiplierRepo(&m3)
+	assert.Nil(t, err)
+
+	actualFoundations, err := GetFoundationsSupportingRepo(r.Id)
+	assert.Nil(t, err)
+
+	expectedFoundations := []Foundation{
+		{
+			Id:                   foundation.Id,
+			MultiplierDailyLimit: 200,
+		},
+		{
+			Id:                   foundation2.Id,
+			MultiplierDailyLimit: 400,
+		},
+		{
+			Id:                   foundation3.Id,
+			MultiplierDailyLimit: 1000,
+		},
+	}
+
+	assert.Equal(t, len(expectedFoundations), len(actualFoundations), "The number of foundations should match the expected count")
+
+	assert.ElementsMatch(t, expectedFoundations, actualFoundations, "The returned foundations should match the expected foundations")
+
+	m4 := MultiplierEvent{
+		Id:             uuid.New(),
+		Uid:            foundation3.Id,
+		RepoId:         r.Id,
+		EventType:      Inactive,
+		UnMultiplierAt: &t003,
+	}
+
+	err = InsertOrUpdateMultiplierRepo(&m4)
+	assert.Nil(t, err)
+
+	actualFoundations, err = GetFoundationsSupportingRepo(r.Id)
+	assert.Nil(t, err)
+
+	expectedFoundations = []Foundation{
+		{
+			Id:                   foundation.Id,
+			MultiplierDailyLimit: 200,
+		},
+		{
+			Id:                   foundation2.Id,
+			MultiplierDailyLimit: 400,
+		},
+	}
+
+	assert.Equal(t, len(expectedFoundations), len(actualFoundations), "The number of foundations should match the expected count")
+
+	assert.ElementsMatch(t, expectedFoundations, actualFoundations, "The returned foundations should match the expected foundations")
 }
 
 //func TestSponsorsBetween(t *testing.T) {

@@ -351,28 +351,37 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	return handleErrMustInsertOne(res)
 }
 
-func CheckDailyLimitStillAdheredTo(foundation *UserDetail, amount *big.Int) (bool, error) {
+func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, yesterdayStart time.Time) (bool, error) {
 	if foundation == nil {
 		return false, fmt.Errorf("foundation cannot be nil")
 	}
 
+	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
+
 	query := `
-		SELECT COALESCE(SUM(amount), 0)
-		FROM contributions
+		SELECT COALESCE(SUM(balance), 0)
+		FROM daily_contribution
 		WHERE
-			foundation_id = $1
-			AND created_at >= NOW() - INTERVAL '1 day'`
+			user_sponsor_id = $1
+			AND foundation_payment
+			AND day = $2`
 
-	var dailySum *big.Int
+	var dailySumInt int64
 
-	err := DB.QueryRow(query, foundation.Id).Scan(&dailySum)
+	err := DB.QueryRow(query, foundation.Id, yesterdayStart).Scan(&dailySumInt)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			if amount.Cmp(multiplierDailyLimit) <= 0 {
+				return true, nil
+			}
+			return false, nil
+		}
 		return false, fmt.Errorf("failed to calculate daily contributions: %v", err)
 	}
 
-	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
+	dailySum := big.NewInt(dailySumInt)
 
-	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) < 0 {
+	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) <= 0 {
 		return true, nil
 	}
 

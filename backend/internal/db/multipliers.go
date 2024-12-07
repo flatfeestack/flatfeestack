@@ -134,9 +134,8 @@ func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 	return scanRepo(rows)
 }
 
-func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
-	s := `SELECT u.id, u.stripe_id, u.invited_id, u.stripe_payment_method, u.stripe_last4, 
-                u.email, u.name, u.image, u.seats, u.freq, u.created_at, u.multiplier, u.multiplier_daily_limit
+func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
+	s := `SELECT u.id, u.multiplier_daily_limit
             FROM multiplier_event m
 			INNER JOIN users u ON m.user_id = u.id
 			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
@@ -146,18 +145,16 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]UserDetail, error) {
 	}
 	defer CloseAndLog(rows)
 
-	var userStatus []UserDetail
+	var foundations []Foundation
 	for rows.Next() {
-		var u UserDetail
-		err = rows.Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
-			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
-			&u.Multiplier, &u.MultiplierDailyLimit)
+		var foundation Foundation
+		err = rows.Scan(&foundation.Id, &foundation.MultiplierDailyLimit)
 		if err != nil {
 			return nil, err
 		}
-		userStatus = append(userStatus, u)
+		foundations = append(foundations, foundation)
 	}
-	return userStatus, nil
+	return foundations, nil
 }
 
 func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, int, error) {
