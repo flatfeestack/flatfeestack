@@ -17,13 +17,14 @@
   import Payments from "../routes/Payments.svelte";
   import Test from "../routes/Admin/Test.svelte";
   import HealthyRepos from "../routes/Admin/HealthyRepos.svelte";
-  import RepoAssessment from "../routes/Admin/RepoAssessment.svelte";
   import ForwardGitEmail from "../routes/ForwardGitEmail.svelte";
   import Settings from "../routes/Settings.svelte";
   import ConfirmInvite from "../routes/ConfirmInvite.svelte";
   import Invitations from "../routes/Invitations.svelte";
   import DifferentChainId from "../routes/DifferentChainId.svelte";
   import PrivateRoute from "../routes/PrivateRoute.svelte";
+
+  import TermsAndConditions from "../routes/TermsAndConditions.svelte";
 
   import DAOHome from "../routes/DAO/Home.svelte";
   import DAOVotes from "../routes/DAO/Votes.svelte";
@@ -107,9 +108,6 @@
         <PrivateRoute path="/user/admin/healthy-repos">
           <HealthyRepos />
         </PrivateRoute>
-        <PrivateRoute path="/user/admin/healthy-repo-assessment">
-          <RepoAssessment />
-        </PrivateRoute>
 
         <Route path="/dao/home" component={DAOHome} />
         <Route path="/dao/votes" component={DAOVotes} />
@@ -132,6 +130,7 @@
           component={DAOEditDiscussion}
         />
 
+        <Route path="/terms-conditions" component={TermsAndConditions} />
         <Route path="/differentChainId" component={DifferentChainId} />
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />

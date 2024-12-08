@@ -567,6 +567,55 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Repo'
+  /repos/healthvaluethreshold:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HealthValueThreshold'
+    put:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      requestBody:
+        description: Array of HealthValueThreshold objects to be sent to the backend.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HealthValueThreshold'
+      responses:
+        '200':
+          description: Successfully processed the HealthValueThreshold array.
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /repos/{id}/healthvalue/partial:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartialHealthValues'
   /repos/{id}:
     get:
       tags:
@@ -589,6 +638,26 @@ paths:
                 $ref: '#/components/schemas/Repo'
         '404':
           description: Not Found
+  /repos/{id}/forceAnalyzer:
+    post:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error       
   /repos/{id}/tag:
     post:
       tags:
@@ -605,10 +674,6 @@ paths:
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Repo'
         '400':
           description: Bad Request
         '500':
@@ -780,6 +845,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RepoHealthValue'
+        '400':
+          description: Bad Request
+  /repos/{id}/healthvalue/metrics:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth: [ Admin ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepoMetrics'
         '400':
           description: Bad Request
   /hooks/stripe:
@@ -1193,6 +1280,8 @@ components:
         healthValue:
           type: number
           format: float
+        analyzed:
+          type: boolean
       required:
         - uuid
         - score
@@ -1206,6 +1295,93 @@ components:
           type: number
       required:
         - uuid
+    HealthValueThreshold:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        ThContributorCount:
+          $ref: '#/components/schemas/Threshold'
+        ThCommitCount:
+            $ref: '#/components/schemas/Threshold'
+        ThSponsorDonation:
+            $ref: '#/components/schemas/Threshold'
+        ThRepoStarCount:
+            $ref: '#/components/schemas/Threshold'
+        ThRepoMultiplier:
+            $ref: '#/components/schemas/Threshold'
+        ThActiveFFSUserCount:
+            $ref: '#/components/schemas/Threshold'
+    Threshold:
+      type: object
+      properties:
+        upper:
+          type: integer
+          format: int64
+        lower:
+          type: integer
+          format: int64
+      required:
+        - upper
+        - lower
+    RepoMetrics:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        repoid:
+          type: string
+          format: uuid
+        createdat:
+          type: string
+          format: date-time
+        contributorcount:
+          type: integer
+          format: int64
+        commitcount:
+          type: integer
+          format: int64
+        sponsorcount:
+          type: integer
+          format: int64
+        repostarcount:
+          type: integer
+          format: int64
+        repomultipliercount:
+          type: integer
+          format: int64
+        activeffsusercount:
+          type: integer
+          format: int64
+    PartialHealthValues:
+      type: object
+      properties:
+        repoid:
+          type: string
+          format: uuid
+        contributorvalue:
+          type: number
+          format: float
+        commitvalue:
+          type: number
+          format: float
+        sponsorvalue:
+          type: number
+          format: float
+        repostarvalue:
+          type: number
+          format: float
+        repomultipliervalue:
+          type: number
+          format: float
+        activeffsuservalue:
+          type: number
+          format: float
     PaymentEvent:
       type: array
       items:

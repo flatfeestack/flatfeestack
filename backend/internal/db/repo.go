@@ -19,6 +19,7 @@ type Repo struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	TrustAt     time.Time `json:"trustAt"`
 	HealthValue float64   `json:"healthValue"`
+	Analyzed    bool      `json:"analyzed"`
 }
 
 func InsertOrUpdateRepo(repo *Repo) error {

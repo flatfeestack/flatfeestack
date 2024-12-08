@@ -22,7 +22,7 @@ func getTestData(r *Repo) *RepoHealthMetrics {
 		Id:                  newMetricsId,
 		RepoId:              r.Id,
 		CreatedAt:           parsedTime,
-		ContributerCount:    rand.Intn(100) + 1,
+		ContributorCount:    rand.Intn(100) + 1,
 		CommitCount:         rand.Intn(100) + 1,
 		SponsorCount:        rand.Intn(100) + 1,
 		RepoStarCount:       rand.Intn(100) + 1,
@@ -139,7 +139,7 @@ func TestUpdateHealthValue(t *testing.T) {
 
 	alteredRepoMetrics := *newRepoMetrics
 	alteredRepoMetrics.RepoMultiplierCount = rand.Intn(100) + 1
-	alteredRepoMetrics.ContributerCount = rand.Intn(100) + 1
+	alteredRepoMetrics.ContributorCount = rand.Intn(100) + 1
 	alteredRepoMetrics.RepoStarCount = rand.Intn(100) + 1
 	assert.NotEqual(t, newRepoMetrics, alteredRepoMetrics)
 

@@ -435,7 +435,7 @@ func exists(path string) (bool, error) {
 	return false, err
 }
 
-// func getTotalContributersCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
+// func getTotalContributorsCommits(contributionMap map[string]Contribution) (*ContribCommitCount, error) {
 // 	commitCounter := 0
 // 	contribCounter := len(contributionMap)
 // 	for _, contribution := range contributionMap {
@@ -443,7 +443,7 @@ func exists(path string) (bool, error) {
 // 	}
 
 // 	return &ContribCommitCount{
-// 		ContributerCount: contribCounter,
+// 		ContributorCount: contribCounter,
 // 		CommitCount:      commitCounter,
 // 	}, nil
 // }
