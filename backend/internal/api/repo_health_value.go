@@ -127,6 +127,9 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.ContributorCount = contributorCount
 	repoHealthMetrics.CommitCount = commitCount
 
+	slog.Info("inserting new repo health metrics",
+		slog.Any("Repo: %v", repoHealthMetrics))
+
 	err = db.InsertRepoHealthMetrics(*repoHealthMetrics)
 	if err != nil {
 		return err
@@ -138,6 +141,8 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHealthMetrics, error) {
 	internalHealthMetric, err := db.GetInternalMetrics(repoId, isPostgres)
 	if err != nil {
+		slog.Warn("issues getting internalHealthMetrics",
+			slog.Any("error", err))
 		return &db.RepoHealthMetrics{
 			SponsorCount:        0,
 			RepoStarCount:       0,

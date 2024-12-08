@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -239,6 +240,7 @@ func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 		SponsorCount:        rand.Intn(100) + 1,
 		RepoStarCount:       rand.Intn(100) + 1,
 		RepoMultiplierCount: rand.Intn(100) + 1,
+		RepoWeight:          rand.Intn(100) + 1,
 	}, nil
 }
 
@@ -255,8 +257,12 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	multiplierCount, err := GetMultiplierCount(repoId, activeSponsors, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			slog.Error("no multiplier count available",
+				slog.Any("error", err))
 			multiplierCount = 0
 		} else {
+			slog.Error("couldn't query Multiplier Count",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to fetch multiplier count: %v", err)
 		}
 	}
@@ -265,8 +271,12 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	starCount, err := GetStarCount(repoId, activeSponsors, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			slog.Error("no star count available",
+				slog.Any("error", err))
 			starCount = 0
 		} else {
+			slog.Error("couldn't query Star Count",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to fetch star count: %v", err)
 		}
 	}
@@ -276,8 +286,12 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	repoWeightTmp, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			slog.Error("no repo weight available",
+				slog.Any("error", err))
 			repoWeight = 0
 		} else {
+			slog.Error("couldn't query repo weight",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to calculate repo weight: %v", err)
 		}
 	} else {
