@@ -132,7 +132,38 @@ func FindTrustedRepos() ([]Repo, error) {
 	return scanRepoWithTrustEvent(rows)
 }
 
-// no unit testing
+func GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
+	if len(rids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT repo_id
+		FROM trust_event
+		WHERE repo_id IN (` + GeneratePlaceholders(len(rids)) + `)`
+
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trustedRepos []uuid.UUID
+	for rows.Next() {
+		var repoID uuid.UUID
+		if err := rows.Scan(&repoID); err != nil {
+			return nil, err
+		}
+		trustedRepos = append(trustedRepos, repoID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return trustedRepos, nil
+}
+
 func GeneratePlaceholders(n int) string {
 	var placeholders []string
 	for i := 1; i <= n; i++ {
@@ -141,7 +172,6 @@ func GeneratePlaceholders(n int) string {
 	return strings.Join(placeholders, ", ")
 }
 
-// no unit testing
 func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 	result := make([]interface{}, len(values))
 	for i, v := range values {
@@ -150,11 +180,10 @@ func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 	return result
 }
 
-// no unit testing
 func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
 	var query string
 
-	if len(userIds) == 0 {
+	if len(userIds) == 0 || months < 0 {
 		return 0, nil
 	}
 
@@ -183,31 +212,30 @@ func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, 
 	return count, nil
 }
 
-// no unit testing
-func GetRepoWeight(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (float64, error) {
+func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	userIds, err := FindUsersByGitEmails(emails)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	activeUsers, err := FilterActiveUsers(userIds, activeUserMinMonths, isPostgres)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
 	if len(activeUsers) == 0 {
-		return 0.0, nil
+		return 0, nil
 	}
 
 	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
-		return 0.0, err
+		return 0, err
 	}
 
-	return float64(trustedRepoCount), nil
+	return trustedRepoCount, nil
 }

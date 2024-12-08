@@ -2,15 +2,16 @@ package api
 
 import (
 	"backend/internal/db"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetUserBalance(t *testing.T) {
@@ -57,7 +58,7 @@ func TestGetUserBalance(t *testing.T) {
 		repoId, err := db.SetupRepo("github.com/hello-world")
 		require.Nil(t, err)
 
-		err = db.InsertContribution(userDetail.Id, userDetail.Id, *repoId, big.NewInt(3370000), "USD", time.Now(), time.Now())
+		err = db.InsertContribution(userDetail.Id, userDetail.Id, *repoId, big.NewInt(3370000), "USD", time.Now(), time.Now(), false)
 		require.Nil(t, err)
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/me/balance", nil)
@@ -80,7 +81,7 @@ func TestGetUserBalance(t *testing.T) {
 		repoId, err := db.SetupRepo("github.com/hello-world")
 		require.Nil(t, err)
 
-		err = db.InsertFutureContribution(userDetail.Id, *repoId, big.NewInt(12), "USD", time.Now(), time.Now())
+		err = db.InsertFutureContribution(userDetail.Id, *repoId, big.NewInt(12), "USD", time.Now(), time.Now(), false)
 		require.Nil(t, err)
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/me/balance", nil)
@@ -103,10 +104,10 @@ func TestGetUserBalance(t *testing.T) {
 		repoId, err := db.SetupRepo("github.com/hello-world")
 		require.Nil(t, err)
 
-		err = db.InsertFutureContribution(userDetail.Id, *repoId, big.NewInt(100), "USD", time.Now(), time.Now())
+		err = db.InsertFutureContribution(userDetail.Id, *repoId, big.NewInt(100), "USD", time.Now(), time.Now(), false)
 		require.Nil(t, err)
 
-		err = db.InsertContribution(userDetail.Id, userDetail.Id, *repoId, big.NewInt(200), "USD", time.Now(), time.Now())
+		err = db.InsertContribution(userDetail.Id, userDetail.Id, *repoId, big.NewInt(200), "USD", time.Now(), time.Now(), false)
 		require.Nil(t, err)
 
 		request, _ := http.NewRequest(http.MethodPost, "/users/me/balance", nil)

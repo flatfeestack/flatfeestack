@@ -88,14 +88,12 @@ func UpdateRepoHealthValue(w http.ResponseWriter, r *http.Request, repoHealthMet
 func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	contributerCount := 0
 	var commitCount int
-	var repoWeight float64
 	var repoHealthMetrics *db.RepoHealthMetrics
 	var err error
 
 	for _, email := range data {
 		contributerCount++
 		commitCount += email.CommitCount
-		repoWeight += email.Weight
 	}
 
 	repoHealthMetrics, err = manageInternalHealthMetrics(repoId, true)
@@ -108,7 +106,6 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.CreatedAt = util.TimeNow()
 	repoHealthMetrics.ContributerCount = contributerCount
 	repoHealthMetrics.CommitCount = commitCount
-	repoHealthMetrics.RepoWeight = repoWeight
 
 	err = db.InsertRepoHealthMetrics(*repoHealthMetrics)
 	if err != nil {
@@ -132,6 +129,7 @@ func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHea
 		SponsorCount:        internalHealthMetric.SponsorCount,
 		RepoStarCount:       internalHealthMetric.RepoStarCount,
 		RepoMultiplierCount: internalHealthMetric.RepoMultiplierCount,
+		ActiveFFSUserCount:  internalHealthMetric.ActiveFFSUserCount,
 	}
 
 	return &repoHealthMetrics, nil
