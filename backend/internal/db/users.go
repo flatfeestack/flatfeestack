@@ -399,7 +399,7 @@ func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency st
 		return false, err
 	}
 
-	totalSpending, err := FindSumDailySponsorsFromFoundation(foundation.Id, currency)
+	totalSpending, err := FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, currency)
 	if err != nil {
 		return false, err
 	}

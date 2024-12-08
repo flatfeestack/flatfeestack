@@ -340,6 +340,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserStatus'
+  /users/me/balanceFoundation:
+    get:
+      tags:
+        - Users
+      security:
+        - bearerAuth: [ User ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatus'
   /users/contrib-snd:
     post:
       tags:

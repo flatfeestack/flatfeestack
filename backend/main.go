@@ -216,6 +216,7 @@ func main() {
 	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
 	router.HandleFunc("GET /users/me/balance", middlewareJwtAuthUserLog(api2.UserBalance))
+	router.HandleFunc("GET /users/me/balanceFoundation", middlewareJwtAuthUserLog(api2.FoundationBalance))
 	router.HandleFunc("GET /users/summary/{uuid}", api2.UserSummary2)
 	router.HandleFunc("GET /users/by/{email}", util.BasicAuth(credentials, api2.GetUserByEmail))
 

@@ -8,13 +8,13 @@
   import FiatTab from "../components/PaymentTabs/FiatTab.svelte";
   import CryptoTab from "../components/PaymentTabs/CryptoTab.svelte";
   import Tabs from "../components/Tabs.svelte";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import Fa from "svelte-fa";
   import Navigation from "../components/Navigation.svelte";
   import { API } from "../ts/api";
   import { error, user, config } from "../ts/mainStore";
-  import { formatDate, timeSince } from "../ts/services";
-  import type { GitUser } from "../types/backend";
+  import { formatDate, formatBalance, timeSince } from "../ts/services";
+  import type { GitUser, UserBalance } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
   import { fade } from "svelte/transition";
 
@@ -39,7 +39,9 @@
   let showMultiplierInfo = false;
   let dailyLimit: number = 100;
   let newDailyLimit;
-  let total: number = 0;
+  let total: number = 100;
+  let foundationBalances: UserBalance[] = [];
+  let intervalId: ReturnType<typeof setInterval>;
 
   $: {
     if (typeof username === "undefined" && $user.name) {
@@ -158,14 +160,24 @@
     }
   }
 
+  const fetchData = async () => {
+    foundationBalances = await API.user.foundationBalance();
+  };
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
       const res1 = await pr1;
       gitEmails = res1 ? res1 : gitEmails;
+      await fetchData();
+      intervalId = setInterval(fetchData, 5000);
     } catch (e) {
       $error = e;
     }
+  });
+
+  onDestroy(() => {
+    clearInterval(intervalId);
   });
 </script>
 
@@ -499,6 +511,31 @@
       <div class="p-2 m-2">
         <Tabs {items} {total} seats={1} freq={1} />
       </div>
+      {#if foundationBalances}
+        <h2 class="p-2 m-2">Balances</h2>
+        <div class="container">
+          <table>
+            <thead>
+              <tr>
+                <th>Balance</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each foundationBalances as row}
+                <tr>
+                  <td>{formatBalance(row.balance, row.currency)}</td>
+                  <td>{row.currency}</td>
+                </tr>
+              {:else}
+                <tr>
+                  <td colspan="5">No Data</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     </div>
   {/if}
 </Navigation>

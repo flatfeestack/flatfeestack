@@ -191,7 +191,41 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 	return m, nil
 }
 
-func FindSumDailySponsorsFromFoundation(userId uuid.UUID, currency string) (*big.Int, error) {
+func FindSumDailySponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := DB.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+        			 FROM daily_contribution 
+                     WHERE user_sponsor_id = $1
+					 	AND foundation_payment
+                     GROUP BY currency`, userSponsorId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
+func FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency string) (*big.Int, error) {
 	query := `
 			SELECT COALESCE(sum(balance), 0)
                FROM daily_contribution 
@@ -218,6 +252,40 @@ func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error)
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
                      WHERE user_sponsor_id = $1
+                     GROUP BY currency`, userSponsorId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
+func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := DB.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+        			 FROM future_contribution 
+                     WHERE user_sponsor_id = $1
+					 	AND foundation_payment
                      GROUP BY currency`, userSponsorId)
 
 	if err != nil {
