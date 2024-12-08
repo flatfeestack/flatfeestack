@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.svelte.ts";
-  import type { Repo } from "./types/backend";
+  import { API } from "../ts/api.ts";
+  import {appState} from "../ts/state.svelte.ts";
+  import type { Repo } from "../types/backend.ts";
 
-  import Dots from "./Dots.svelte";
-  import RepoCard from "./RepoCard.svelte";
-  import SearchResult from "./SearchResult.svelte";
+  import Dots from "../Dots.svelte";
+  import RepoCard from "../RepoCard.svelte";
+  import SearchResult from "../SearchResult.svelte";
   import {route} from "@mateothegreat/svelte5-router";
-  import Main from "./Main.svelte";
+  import Main from "../Main.svelte";
 
   let search = $state("");
   let searchRepos = $state<Repo[]>([]);

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "./ts/api.ts";
+  import { API } from "../ts/api.ts";
   import { appState } from "ts/state.svelte.ts";
-  import type { Contribution, ContributionSummary } from "./types/backend";
-  import { formatDay, formatBalance } from "./ts/services.svelte.ts";
+  import type { Contribution, ContributionSummary } from "../types/backend.ts";
+  import { formatDay, formatBalance } from "../ts/services.svelte.ts";
   /*import {
     Chart,
     LineController,
@@ -19,7 +19,7 @@
   import { Line, Bar } from "svelte-chartjs";*/
   //import { htmlLegendPlugin } from "utils";
   import '@fortawesome/fontawesome-free/css/all.min.css'
-  import Main from "./Main.svelte";
+  import Main from "../Main.svelte";
 
   let contributionSummaries: ContributionSummary[] = [];
   let contributions: Contribution[] = [];

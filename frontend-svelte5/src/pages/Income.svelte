@@ -2,16 +2,16 @@
   import { BrowserProvider, Contract, Signature } from "ethers";
   import { onMount } from "svelte";
   //import {goto} from "@mateothegreat/svelte5-router";
-  import Navigation from "./Navigation.svelte";
-  import Spinner from "./Spinner.svelte";
+  import Navigation from "../Navigation.svelte";
+  import Spinner from "../Spinner.svelte";
   //import { PayoutERC20ABI } from "../contracts/PayoutERC20";
   //import { PayoutEthABI } from "../contracts/PayoutEth";
-  import { API } from "./ts/api.ts";
+  import { API } from "../ts/api.ts";
   import { appState } from "ts/state.svelte.ts";
-  import { formatBalance, formatDate, timeSince } from "./ts/services.svelte.ts";
-  import type { PayoutResponse } from "./types/backend";
-  import type { PayoutConfig } from "./types/payout";
-  import Main from "./Main.svelte";
+  import { formatBalance, formatDate, timeSince } from "../ts/services.svelte.ts";
+  import type { PayoutResponse } from "../types/backend.ts";
+  import type { PayoutConfig } from "../types/payout.ts";
+  import Main from "../Main.svelte";
   //import setSigner from "./setSigner";
   //import showMetaMaskRequired from "./showMetaMaskRequired";
 

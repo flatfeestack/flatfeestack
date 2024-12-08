@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API } from "./ts/api.ts";
-  import {appState} from "./ts/state.svelte.ts";
-  import { formatDate, timeSince } from "./ts/services.svelte.ts";
-  import type { GitUser } from "./types/backend";
-  import { emailValidationPattern } from "./utils";
-  import Main from "./Main.svelte";
+  import { API } from "../ts/api.ts";
+  import {appState} from "../ts/state.svelte.ts";
+  import { formatDate, timeSince } from "../ts/services.svelte.ts";
+  import type { GitUser } from "../types/backend.ts";
+  import { emailValidationPattern } from "../utils.ts";
+  import Main from "../Main.svelte";
 
   let username = $state("");
 

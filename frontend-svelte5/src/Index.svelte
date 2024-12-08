@@ -2,18 +2,18 @@
     import type {Route} from "@mateothegreat/svelte5-router";
     import {Router} from "@mateothegreat/svelte5-router";
 
-    import Landing from './Landing.svelte';
+    import Landing from './pages/Landing.svelte';
     import Login from "./auth/Login.svelte";
     import CatchAllRoute from "./CatchAllRoute.svelte";
     import DifferentChainId from "./DifferentChainId.svelte";
     import PublicBadges from "./PublicBadges.svelte";
-    import Search from "./Search.svelte";
-    import Payments from "./Payments.svelte";
-    import Settings from "./Settings.svelte";
-    import Income from "./Income.svelte";
-    import Badges from "./Badges.svelte";
-    import Invitations from "./Invitations.svelte";
-    import Admin from "./Admin.svelte";
+    import Search from "./pages/Search.svelte";
+    import Payments from "./pages/Payments.svelte";
+    import Settings from "./pages/Settings.svelte";
+    import Income from "./pages/Income.svelte";
+    import Badges from "./pages/Badges.svelte";
+    import Invitations from "./pages/Invitations.svelte";
+    import Admin from "./pages/Admin.svelte";
     import LoginWait from "./auth/LoginWait.svelte";
     import LoginConfirm from "./auth/LoginConfirm.svelte";
     import {API} from "./ts/api.ts";

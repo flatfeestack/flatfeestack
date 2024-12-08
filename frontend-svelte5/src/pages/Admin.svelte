@@ -6,7 +6,7 @@
   import { formatDate, formatNowUTC } from "ts/services.svelte.ts";
   import { storeToken } from "auth/auth.svelte.ts";
   import '@fortawesome/fontawesome-free/css/all.min.css'
-  import Main from "./Main.svelte";
+  import Main from "../Main.svelte";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();

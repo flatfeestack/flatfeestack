@@ -1,8 +1,8 @@
 <script lang="ts">
     import {goto} from "@mateothegreat/svelte5-router";
     import {onDestroy, onMount} from "svelte";
-    import { initAnimation } from './backgroundAnimation';
-    import HeaderLanding from "./HeaderLanding.svelte";
+    import { initAnimation } from '../backgroundAnimation.ts';
+    import HeaderLanding from "../HeaderLanding.svelte";
 
     let cleanup: (() => void) | undefined;
 

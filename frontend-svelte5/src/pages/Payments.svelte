@@ -1,11 +1,11 @@
 <script lang="ts">
-  import {appState} from "./ts/state.svelte.ts";
-  import { API } from "./ts/api.ts";
+  import {appState} from "../ts/state.svelte.ts";
+  import { API } from "../ts/api.ts";
   import { onMount, onDestroy } from "svelte";
-  import type { UserBalance } from "./types/backend";
-  import { formatBalance } from "./ts/services.svelte.ts";
-  import PaymentSelection from "./PaymentSelection.svelte";
-  import Main from "./Main.svelte";
+  import type { UserBalance } from "../types/backend.ts";
+  import { formatBalance } from "../ts/services.svelte.ts";
+  import PaymentSelection from "../PaymentSelection.svelte";
+  import Main from "../Main.svelte";
 
   let userBalances: UserBalance[] = [];
   let intervalId:any;

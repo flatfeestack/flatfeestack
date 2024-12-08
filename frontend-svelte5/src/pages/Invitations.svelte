@@ -1,12 +1,12 @@
 <script lang="ts">
   import { appState } from "ts/state.svelte.ts";
-  import { API } from "./ts/api.ts";
+  import { API } from "../ts/api.ts";
   import { onMount } from "svelte";
-  import type { Invitation } from "./types/backend";
-  import { formatDate, timeSince } from "./ts/services.svelte.ts";
-  import Dots from "./Dots.svelte";
-  import { emailValidationPattern } from "./utils";
-  import Main from "./Main.svelte";
+  import type { Invitation } from "../types/backend.ts";
+  import { formatDate, timeSince } from "../ts/services.svelte.ts";
+  import Dots from "../Dots.svelte";
+  import { emailValidationPattern } from "../utils.ts";
+  import Main from "../Main.svelte";
 
   let invites = $state<Invitation[]>([]);
   let inviteEmail= $state("");
