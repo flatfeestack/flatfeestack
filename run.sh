@@ -60,6 +60,7 @@ parse_params() {
     -sb | --skip-build) include_build=false;;
     -sd | --skip-start-docker) include_docker_start=false;;
     -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain .stripe;;
+    -rmdb | --remove-db) sudo rm -rf .db;;
     -?*) die "Unknown option: $1";;
     *) break ;;
     esac

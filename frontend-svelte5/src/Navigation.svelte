@@ -10,18 +10,20 @@
     isSidebarCollapsed = windowWidth <= 768;
   }
 
-  const navItems = [
+  let navItems = $state([
     { icon: 'fa-user-cog', label: 'Settings', path: '/user/settings' },
     { icon: 'fa-search', label: 'Search', path: '/user/search' },
     { icon: 'fa-credit-card', label: 'Payments', path: '/user/payments' },
     { icon: 'fa-hand-holding-usd', label: 'Income', path: '/user/income' },
     { icon: 'fa-user-friends', label: 'Invitations', path: '/user/invitations' },
     { icon: 'fa-medal', label: 'Badges', path: '/user/badges' },
-  ];
+  ]);
 
-  if(appState.user.role === "admin") {
-    navItems.push({ icon: 'fa-shield-alt', label: 'Admin', path: '/user/badadminges' });
-  }
+  $effect(() => {
+    if (appState.user.role === "admin" && !navItems.some(item => item.path === '/user/admin')) {
+      navItems.push({ icon: 'fa-shield-alt', label: 'Admin', path: '/user/admin' });
+    }
+  });
 
 </script>
 

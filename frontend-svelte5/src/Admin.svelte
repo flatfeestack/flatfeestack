@@ -1,12 +1,12 @@
 <script lang="ts">
   import {goto} from "@mateothegreat/svelte5-router";
-  import Navigation from "Navigation.svelte";
   import Spinner from "Spinner.svelte";
   import { API } from "ts/api.ts";
   import { appState } from "ts/state.svelte.ts";
   import { formatDate, formatNowUTC } from "ts/services.svelte.ts";
   import { storeToken } from "auth/auth.svelte.ts";
   import '@fortawesome/fontawesome-free/css/all.min.css'
+  import Main from "./Main.svelte";
 
   //let promisePendingPayouts =API.payouts.payoutInfos();
   let promiseTime = API.payouts.time();
@@ -138,7 +138,7 @@
   }
 </style>
 
-<Navigation>
+<Main>
   <h2 class="p-2 m-2">Time</h2>
   <div class="container m-2 p-2">
     {#await promiseTime}
@@ -150,22 +150,22 @@
     {/await}
   </div>
 
-  {#if appState.$state.config.env === "local" || appState.$state.config.env === "dev"}
+  {#if appState.config.env === "local" || appState.config.env === "dev"}
     <h2 class="p-2 m-2">Timewarp</h2>
     <div class="container">
-      <button class="button1 m-2" on:click={() => handleWarp(1)}>
+      <button class="button1 m-2" onclick={() => handleWarp(1)}>
         Timewarp 1 hour
       </button>
-      <button class="button1 m-2" on:click={() => handleWarp(24)}>
+      <button class="button1 m-2" onclick={() => handleWarp(24)}>
         Timewarp 1 day
       </button>
-      <button class="button1 m-2" on:click={() => handleWarp(160)}>
+      <button class="button1 m-2" onclick={() => handleWarp(160)}>
         Timewarp 1 week
       </button>
-      <button class="button1 m-2" on:click={() => handleWarp(600)}>
+      <button class="button1 m-2" onclick={() => handleWarp(600)}>
         Timewarp 25 days
       </button>
-      <button class="button1 m-2" on:click={() => handleWarp(8640)}>
+      <button class="button1 m-2" onclick={() => handleWarp(8640)}>
         Timewarp 360 days year
       </button>
     </div>
@@ -186,10 +186,10 @@
         <tbody>
           {#if userEmails && userEmails.length > 1}
             {#each userEmails as userEmail}
-              {#if appState.$state.user.email !== userEmail}
+              {#if appState.user.email !== userEmail}
                 <tr>
                   <td>{userEmail}</td>
-                  <td><button class="accessible-btn" on:click={() => loginAs(userEmail)} aria-label="Email">
+                  <td><button class="accessible-btn" onclick={() => loginAs(userEmail)} aria-label="Email">
                     <i class="fa-sign-in-alt"></i>
                   </button>
                   </td>
@@ -204,88 +204,82 @@
         </tbody>
       </table>
     {:catch err}
-      {appState.setError(err)}
+      {() => {appState.setError(err)}}
     {/await}
   </div>
 
   <h2 class="p-2 m-2">Fake User</h2>
   <div class="container m-2 p-2">
-    <form class="flex form-single" on:submit|preventDefault={handleFakeUsers}>
+    <div class="flex">
       <label class="mr-2" for="fake-user">Email:</label>
       <input
-        class="ml-2"
-        name="fake-user"
-        type="text"
-        bind:value={fakeUserEmail}
+              class="ml-2"
+              name="fake-user"
+              type="text"
+              bind:value={fakeUserEmail}
       />
-      <button class="button1 mt-2 mb-2" type="submit">Add Fake User</button>
-    </form>
+      <button class="button1 mt-2 mb-2" onclick={handleFakeUsers}>Add Fake User</button>
+    </div>
   </div>
 
   <h2 class="p-2 m-2">Fake Payment</h2>
   <div class="container m-2 p-2">
-    <form class="flex form-single" on:submit|preventDefault={handleFakePayment}>
+    <div class="flex form-single">
       <div class="mt-2 mb-2">
         <label class="mr-2" for="fake-payment-email">Email:</label>
         <input
-          class="ml-2"
-          type="text"
-          name="fake-payment-email"
-          bind:value={fakePaymentEmail}
+                class="ml-2"
+                type="text"
+                name="fake-payment-email"
+                bind:value={fakePaymentEmail}
         />
       </div>
       <div class="mt-2 mb-2">
         <label class="mr-2" for="fake-payment-seats">Seats:</label>
         <input
-          class="ml-2"
-          type="text"
-          name="fake-payment-seats"
-          bind:value={seats}
+                class="ml-2"
+                type="text"
+                name="fake-payment-seats"
+                bind:value={seats}
         />
       </div>
-
-      <button class="button1 mt-2 mb-2" type="submit">Add Fake Payment</button>
-    </form>
+      <button class="button1 mt-2 mb-2" onclick={handleFakePayment}>Add Fake Payment</button>
+    </div>
   </div>
 
   <h2 class="p-2 m-2">Fake Contribution</h2>
   <div class="container m-2 p-2">
-    <form
-      class="flex form-single"
-      on:submit|preventDefault={handleFakeContribution}
-    >
+    <div class="flex form-single">
       <label class="mr-2" for="fake-contribution">Contribution:</label>
       <textarea
-        name="fake-contribution"
-        class="ml-2"
-        bind:value={json}
-        rows="10"
-        cols="50"
+              name="fake-contribution"
+              class="ml-2"
+              bind:value={json}
+              rows="10"
+              cols="50"
       ></textarea>
-      <button class="button1 mt-2 mb-2" type="submit"
-        >Add Fake Contribution</button
-      >
-    </form>
+      <button class="button1 mt-2 mb-2" onclick={handleFakeContribution}>
+        Add Fake Contribution
+      </button>
+    </div>
   </div>
 
   <h2 class="p-2 m-2">Payout Action</h2>
   <div class="container m-2 p-2">
-    <form class="flex form-single" on:submit|preventDefault={payout}>
+    <div class="flex form-single">
       <label class="mr-2" for="fake-payout">Exchange Rate USD to ETH: </label>
       <input
-        class="ml-2"
-        name="fake-payout"
-        type="text"
-        bind:value={exchangeRate}
+              class="ml-2"
+              name="fake-payout"
+              type="text"
+              bind:value={exchangeRate}
       />
-
-      <button class="button1 mt-2 mb-2 disabled:opacity-75" type="submit">
+      <button class="button1 mt-2 mb-2 disabled:opacity-75" onclick={payout}>
         Payout
       </button>
-
       {#if showSuccess}
         <div class="p-2 m-2">Payment successful!</div>
       {/if}
-    </form>
+    </div>
   </div>
-</Navigation>
+</Main>

@@ -8,10 +8,6 @@
 </script>
 
 <style>
-  .selected {
-    background-color: var(--primary-300);
-    color: var(--primary-900);
-  }
 </style>
 
 <a {href} class={appState.route === href ? `selected` : ``}>

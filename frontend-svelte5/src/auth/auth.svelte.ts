@@ -1,13 +1,14 @@
 import { appState } from "ts/state.svelte.ts";
 import {API} from "ts/api.ts";
 import type {Token, User} from "types/backend.ts";
-import {HTTPError} from "ky";
 
 export const login = async (email: string):Promise<boolean> => {
     const refreshToken = getRefreshToken();
     if (refreshToken !== null) {
         if (!appState.isAccessTokenExpired()) {
-            return appState.user.email === email;
+            if(appState.user.email === email) {
+                return true;
+            }
         }
         try {
             const { access_token, expires_at } = await refresh(refreshToken, email);
@@ -15,9 +16,7 @@ export const login = async (email: string):Promise<boolean> => {
             appState.accessTokenExpire = expires_at;
             return true;
         } catch (e: unknown) {
-            if (!(e instanceof HTTPError) || e.response.status !== 404) {
-                throw e;
-            }
+            //this can fail, if it does go on and send out email
         }
     }
     //here we actually need to do a login and send out the email

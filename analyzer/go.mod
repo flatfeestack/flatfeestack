@@ -9,8 +9,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/libgit2/git2go/v34 v34.0.0
-	github.com/stretchr/testify v1.9.0
-	golang.org/x/text v0.20.0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/text v0.21.0
 )
 
 require (
