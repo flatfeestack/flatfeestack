@@ -351,7 +351,7 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	return handleErrMustInsertOne(res)
 }
 
-func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, yesterdayStart time.Time) (bool, error) {
+func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (bool, error) {
 	if foundation == nil {
 		return false, fmt.Errorf("foundation cannot be nil")
 	}
@@ -364,11 +364,12 @@ func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, yest
 		WHERE
 			user_sponsor_id = $1
 			AND foundation_payment
-			AND day = $2`
+			AND currency = $2
+			AND day = $3`
 
 	var dailySumInt int64
 
-	err := DB.QueryRow(query, foundation.Id, yesterdayStart).Scan(&dailySumInt)
+	err := DB.QueryRow(query, foundation.Id, currency, yesterdayStart).Scan(&dailySumInt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			if amount.Cmp(multiplierDailyLimit) <= 0 {
@@ -382,6 +383,28 @@ func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, yest
 	dailySum := big.NewInt(dailySumInt)
 
 	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) <= 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (bool, error) {
+	if foundation == nil {
+		return false, fmt.Errorf("foundation cannot be nil")
+	}
+
+	totalBalance, err := FindSumPaymentFromFoundation(foundation.Id, PayInSuccess, currency)
+	if err != nil {
+		return false, err
+	}
+
+	totalSpending, err := FindSumDailySponsorsFromFoundation(foundation.Id, currency)
+	if err != nil {
+		return false, err
+	}
+
+	if new(big.Int).Add(totalSpending, amount).Cmp(totalBalance) <= 0 {
 		return true, nil
 	}
 
