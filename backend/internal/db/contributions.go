@@ -3,10 +3,11 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"math/big"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type Contributions struct {
@@ -337,4 +338,87 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	default:
 		return big.NewInt(0), err
 	}
+}
+
+func GetActiveSponsors(months int, isPostgres bool) ([]uuid.UUID, error) {
+	var query string
+
+	if isPostgres {
+		query = fmt.Sprintf(`
+            WITH trusted_repos AS (
+                SELECT repo_id
+                FROM trust_event
+                WHERE un_trust_at IS NULL
+            )
+            SELECT DISTINCT dc.user_sponsor_id
+            FROM daily_contribution dc
+            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+            WHERE dc.created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
+	} else {
+		query = fmt.Sprintf(`
+            WITH trusted_repos AS (
+                SELECT repo_id
+                FROM trust_event
+                WHERE un_trust_at IS NULL
+            )
+            SELECT DISTINCT dc.user_sponsor_id
+            FROM daily_contribution dc
+            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+            WHERE dc.created_at >= date('now', '-%d month')`, months)
+	}
+
+	rows, err := DB.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var sponsors []uuid.UUID
+	for rows.Next() {
+		var sponsor uuid.UUID
+		if err := rows.Scan(&sponsor); err != nil {
+			return nil, err
+		}
+		sponsors = append(sponsors, sponsor)
+	}
+
+	return sponsors, nil
+}
+
+func FilterActiveUsers(userIds []uuid.UUID, months int, isPostgres bool) ([]uuid.UUID, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+
+	var query string
+	if isPostgres {
+		query = fmt.Sprintf(`
+			SELECT DISTINCT user_sponsor_id 
+			FROM daily_contribution 
+			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
+			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
+	} else {
+		query = fmt.Sprintf(`
+			SELECT DISTINCT user_sponsor_id 
+			FROM daily_contribution 
+			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
+			AND created_at >= date('now', '-%d month')`, months)
+	}
+
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(userIds)...)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var activeUsers []uuid.UUID
+	for rows.Next() {
+		var userId uuid.UUID
+		if err := rows.Scan(&userId); err != nil {
+			return nil, err
+		}
+		activeUsers = append(activeUsers, userId)
+	}
+	return activeUsers, nil
 }

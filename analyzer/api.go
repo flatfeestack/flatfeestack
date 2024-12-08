@@ -29,12 +29,14 @@ type AnalysisCallback struct {
 	RequestId uuid.UUID       `json:"requestId"`
 	Error     string          `json:"error,omitempty"`
 	Result    []FlatFeeWeight `json:"result"`
+	RepoId    uuid.UUID       `json:"repoid"`
 }
 
 type FlatFeeWeight struct {
-	Names  []string `json:"names"`
-	Email  string   `json:"email"`
-	Weight float64  `json:"weight"`
+	Names       []string `json:"names"`
+	Email       string   `json:"email"`
+	Weight      float64  `json:"weight"`
+	CommitCount int      `json:"commitcount"`
 }
 
 func analyze(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +76,7 @@ func analyzeBackground(request AnalysisRequest) {
 	callbackToWebhook(AnalysisCallback{
 		RequestId: request.Id,
 		Result:    weightsMap,
+		RepoId:    request.RepoId,
 	}, cfg.BackendCallbackUrl)
 
 	slog.Debug("Finished request %s\n", request.Id)

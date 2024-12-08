@@ -1,4 +1,6 @@
-backend
 .idea
 .env
+docs
+backend
+ysArch/
 tmp

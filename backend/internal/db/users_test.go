@@ -1,9 +1,10 @@
 package db
 
 import (
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func insertTestUser(t *testing.T, email string) *UserDetail {
@@ -83,4 +84,46 @@ func TestUserUpdateInvite(t *testing.T) {
 	u2, err := FindUserById(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, u2.InvitedId, &i)
+}
+
+func TestUserMultiplierSet(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	u := insertTestUser(t, "email")
+	UpdateMultiplier(u.Id, true)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, true, u2.Multiplier)
+}
+
+func TestUserMultiplierUnset(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	u := insertTestUser(t, "email")
+	UpdateMultiplier(u.Id, true)
+	UpdateMultiplier(u.Id, false)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, false, u2.Multiplier)
+}
+
+func TestUserMultiplierDailyLimit(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	u := insertTestUser(t, "email")
+	UpdateMultiplierDailyLimit(u.Id, 1200)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, 1200, u2.MultiplierDailyLimit)
+}
+
+func TestUserMultiplierDailyLimitChange(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+	u := insertTestUser(t, "email")
+	UpdateMultiplierDailyLimit(u.Id, 1200)
+	UpdateMultiplierDailyLimit(u.Id, 600)
+	u2, err := FindUserById(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, 600, u2.MultiplierDailyLimit)
 }

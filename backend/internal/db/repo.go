@@ -3,8 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Repo struct {
@@ -16,6 +17,8 @@ type Repo struct {
 	Score       uint32    `json:"score"`
 	Source      *string   `json:"source"`
 	CreatedAt   time.Time `json:"createdAt"`
+	TrustAt     time.Time `json:"trustAt"`
+	HealthValue float64   `json:"healthValue"`
 }
 
 func InsertOrUpdateRepo(repo *Repo) error {
@@ -52,6 +55,26 @@ func FindRepoById(repoId uuid.UUID) (*Repo, error) {
 	}
 }
 
+func FindRepoWithTrustDateById(repoId uuid.UUID) (*Repo, error) {
+	var r Repo
+	err := DB.
+		QueryRow(`SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, r.created_at, 
+                         t.trust_at
+                  FROM repo r
+                  LEFT JOIN trust_event t ON r.id = t.repo_id
+                  WHERE r.id = $1 AND (t.un_trust_at IS NULL OR t.un_trust_at IS NULL)`, repoId).
+		Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.CreatedAt, &r.TrustAt)
+
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		return &r, nil
+	default:
+		return nil, err
+	}
+}
+
 func FindReposByName(name string) ([]Repo, error) {
 	rows, err := DB.Query("SELECT id, url, git_url, name, description, source FROM repo WHERE name=$1", name)
 	if err != nil {
@@ -66,6 +89,19 @@ func scanRepo(rows *sql.Rows) ([]Repo, error) {
 	for rows.Next() {
 		var r Repo
 		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source)
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, r)
+	}
+	return repos, nil
+}
+
+func scanRepoWithTrustEvent(rows *sql.Rows) ([]Repo, error) {
+	repos := []Repo{}
+	for rows.Next() {
+		var r Repo
+		err := rows.Scan(&r.Id, &r.Url, &r.GitUrl, &r.Name, &r.Description, &r.Source, &r.TrustAt)
 		if err != nil {
 			return nil, err
 		}

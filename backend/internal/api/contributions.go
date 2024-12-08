@@ -4,10 +4,11 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -145,7 +146,7 @@ func FakeContribution(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	}
 
 	for _, v := range repoMap.Weights {
-		err = db.InsertAnalysisResponse(a.Id, v.Email, v.Names, v.Weight, util.TimeNow())
+		err = db.InsertAnalysisResponse(a.Id, a.RepoId, v.Email, v.Names, v.Weight, util.TimeNow())
 		if err != nil {
 			slog.Error("Error while inserting analysis response",
 				slog.Any("error", err))

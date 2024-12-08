@@ -2,10 +2,11 @@ package db
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAnalysisRequest(t *testing.T) {
@@ -173,11 +174,11 @@ func TestAnalysisResponse(t *testing.T) {
 	err = InsertAnalysisRequest(a, time.Now())
 	assert.Nil(t, err)
 
-	err = InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.5, time.Now())
+	err = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.5, time.Now())
 	assert.Nil(t, err)
-	err = InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.4, time.Now())
+	err = InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.4, time.Now())
 	assert.NotNil(t, err)
-	err = InsertAnalysisResponse(a.Id, "tom2", []string{"tom2"}, 0.4, time.Now())
+	err = InsertAnalysisResponse(a.Id, a.RepoId, "tom2", []string{"tom2"}, 0.4, time.Now())
 	assert.Nil(t, err)
 
 	ar, err := FindAnalysisResults(a.Id)
@@ -208,8 +209,8 @@ func TestFindRepoContribution(t *testing.T) {
 		GitUrl:   *r.GitUrl,
 	}
 	InsertAnalysisRequest(a, time.Now())
-	InsertAnalysisResponse(a.Id, "tom", []string{"tom"}, 0.5, time.Now())
-	InsertAnalysisResponse(a.Id, "tom2", []string{"tom2"}, 0.4, time.Now())
+	InsertAnalysisResponse(a.Id, a.RepoId, "tom", []string{"tom"}, 0.5, time.Now())
+	InsertAnalysisResponse(a.Id, a.RepoId, "tom2", []string{"tom2"}, 0.4, time.Now())
 
 	a2 := AnalysisRequest{
 		Id:       uuid.New(),
@@ -219,8 +220,8 @@ func TestFindRepoContribution(t *testing.T) {
 		GitUrl:   *r.GitUrl,
 	}
 	InsertAnalysisRequest(a2, time.Now())
-	InsertAnalysisResponse(a2.Id, "tom", []string{"tom"}, 0.4, time.Now())
-	InsertAnalysisResponse(a2.Id, "tom2", []string{"tom2"}, 0.3, time.Now())
+	InsertAnalysisResponse(a2.Id, a2.RepoId, "tom", []string{"tom"}, 0.4, time.Now())
+	InsertAnalysisResponse(a2.Id, a2.RepoId, "tom2", []string{"tom2"}, 0.3, time.Now())
 
 	c, _ := FindRepoContribution(r.Id)
 	assert.Equal(t, 4, len(c))

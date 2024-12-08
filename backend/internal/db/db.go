@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"log/slog"
 	"math/big"
@@ -15,6 +13,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -96,7 +97,7 @@ func handleErrMustInsertOne(res sql.Result) error {
 	if nr == 0 {
 		return fmt.Errorf("0 rows affacted, need at least 1")
 	} else if nr != 1 {
-		return fmt.Errorf("Only 1 row needs to be affacted, got %v", nr)
+		return fmt.Errorf("only 1 row needs to be affacted, got %v", nr)
 	}
 	return nil
 }
@@ -183,6 +184,7 @@ func RunSQL(files ...string) error {
 
 			//https://stackoverflow.com/questions/12682405/strip-out-c-style-comments-from-a-byte
 			re := regexp.MustCompile("(?s)//.*?\n|/\\*.*?\\*/|(?s)--.*?\n|(?s)#.*?\n")
+
 			newBytes := re.ReplaceAll(fileBytes, nil)
 
 			requests := strings.Split(string(newBytes), ";")
@@ -199,6 +201,7 @@ func RunSQL(files ...string) error {
 			slog.Info("ignoring file %v (%v)", slog.String("file", file), slog.Any("error", err))
 		}
 	}
+
 	return nil
 }
 

@@ -6,15 +6,16 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -568,7 +569,7 @@ func setupContributor(t *testing.T, repoId uuid.UUID, from time.Time, to time.Ti
 	err := db.InsertAnalysisRequest(a, now)
 	assert.Nil(t, err)
 	for k, v := range email {
-		err = db.InsertAnalysisResponse(a.Id, v, []string{v}, weight[k], now)
+		err = db.InsertAnalysisResponse(a.Id, a.RepoId, v, []string{v}, weight[k], now)
 		assert.Nil(t, err)
 	}
 }

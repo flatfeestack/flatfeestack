@@ -19,6 +19,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.9.0
 	github.com/stripe/stripe-go/v76 v76.25.0
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/text v0.20.0
 )
 

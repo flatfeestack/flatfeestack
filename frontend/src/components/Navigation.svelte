@@ -23,7 +23,7 @@
     padding-top: 2rem;
     display: flex;
     flex-flow: column;
-    min-width: 12rem;
+    min-width: 14rem;
     background-color: var(--secondary-100);
     border-right: solid 1px var(--secondary-300);
     white-space: nowrap;
@@ -39,6 +39,10 @@
   nav :global(a:hover) {
     background-color: var(--primary-300);
     color: var(--primary-900);
+  }
+
+  .page-content {
+    width: calc(100vw - 16rem);
   }
 
   @media (max-width: 36rem) {
@@ -76,10 +80,20 @@
     <NavItem href="/user/badges" icon={faMedal} label="Badges" />
 
     {#if $user.role === "admin"}
-      <NavItem href="/user/admin" icon={faShieldAlt} label="Admin" />
+      <NavItem href="/user/admin/test" icon={faShieldAlt} label="Test" />
+      <NavItem
+        href="/user/admin/healthy-repos"
+        icon={faShieldAlt}
+        label="Healthy Repos"
+      />
+      <NavItem
+        href="/user/admin/healthy-repo-assessment"
+        icon={faShieldAlt}
+        label="Repo Assessment"
+      />
     {/if}
   </nav>
-  <div>
+  <div class="page-content">
     {#if $isSubmitting}<Spinner />{/if}
     <slot />
   </div>

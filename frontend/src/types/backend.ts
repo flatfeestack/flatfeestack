@@ -17,6 +17,8 @@ export type ContributionSummary = components["schemas"]["RepoBalance"];
 
 export type Repo = components["schemas"]["Repo"];
 
+export type RepoHealthValue = components["schemas"]["RepoHealthValue"];
+
 export type GitUser = components["schemas"]["GitUser"];
 
 export type Invitation = components["schemas"]["Invitation"];

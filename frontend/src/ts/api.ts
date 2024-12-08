@@ -18,6 +18,7 @@ import type {
   PayoutResponse,
   PublicUser,
   UserBalance,
+  RepoHealthValue,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -201,8 +202,13 @@ export const API = {
       backendToken.put(`users/me/method/${method}`).json<User>(),
     deletePaymentMethod: () => backendToken.delete(`users/me/method`),
     getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getMultiplier: () => backendToken.get("users/me/multiplied").json<Repo[]>(),
     setName: (name: string) => backendToken.put(`users/me/name/${name}`),
     clearName: () => backendToken.put(`users/me/clear/name`),
+    setMultiplier: (isSet: boolean) =>
+      backendToken.put(`users/me/multiplier/${isSet}`),
+    setMultiplierDailyLimit: (amount: number) =>
+      backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
     setImage: (image: string) =>
       backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () => backendToken.delete(`users/me/image`),
@@ -254,10 +260,20 @@ export const API = {
     tag: (repoId: string) =>
       backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
     untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
+    setMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
+    unsetMultiplier: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
       backendToken
         .get(`repos/${repoId}/${offset}/graph`)
         .json<ChartDataTotal>(),
+    trust: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+    untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
+    getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
+    getHealthValue: (repoId: string) =>
+      backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),
