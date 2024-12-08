@@ -5,15 +5,29 @@
     faUpload,
     faTrashCan,
   } from "@fortawesome/free-solid-svg-icons";
+  import FiatTab from "../components/PaymentTabs/FiatTab.svelte";
+  import CryptoTab from "../components/PaymentTabs/CryptoTab.svelte";
+  import Tabs from "../components/Tabs.svelte";
   import { onMount } from "svelte";
   import Fa from "svelte-fa";
   import Navigation from "../components/Navigation.svelte";
   import { API } from "../ts/api";
-  import { error, user } from "../ts/mainStore";
+  import { error, user, config } from "../ts/mainStore";
   import { formatDate, timeSince } from "../ts/services";
   import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
   import { fade } from "svelte/transition";
+
+  // List of tab items with labels, values and assigned components
+  let items = [{ label: "Credit Card", value: 1, component: FiatTab }];
+
+  if ($config.env == "local" || $config.env == "staging") {
+    items.push({
+      label: "Crypto Currencies",
+      value: 2,
+      component: CryptoTab,
+    });
+  }
 
   let fileInput;
   let username: undefined | string;
@@ -25,6 +39,7 @@
   let showMultiplierInfo = false;
   let dailyLimit: number = 100;
   let newDailyLimit;
+  let total: number = 0;
 
   $: {
     if (typeof username === "undefined" && $user.name) {
@@ -36,7 +51,7 @@
     }
 
     if ($user.multiplierDailyLimit) {
-      dailyLimit = $user.multiplierDailyLimit;
+      total = dailyLimit = $user.multiplierDailyLimit;
     }
   }
 
@@ -126,7 +141,7 @@
     try {
       if (newDailyLimit >= 1) {
         API.user.setMultiplierDailyLimit(newDailyLimit);
-        dailyLimit = newDailyLimit;
+        total = dailyLimit = newDailyLimit;
         $user.multiplierDailyLimit = newDailyLimit;
         newDailyLimit = "";
       } else {
@@ -480,6 +495,9 @@
         <button on:click={setDailyLimit} class="ml-5 p-2 button1"
           >Set Daily Limit</button
         >
+      </div>
+      <div class="p-2 m-2">
+        <Tabs {items} {total} seats={1} freq={1} />
       </div>
     </div>
   {/if}

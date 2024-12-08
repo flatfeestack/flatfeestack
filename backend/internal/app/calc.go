@@ -224,15 +224,16 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 		amountFoundation.Int(amountFoundationInt)
 
 		for _, foundation := range foundations {
-			checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt, yesterdayStart)
-			// check if payment was success and if the amount is enaugh
+			checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt, currency, yesterdayStart)
 			if err != nil {
 				return err
 			}
-			if checkDailyLimit {
+			checkFondsAmountEnough, err := db.CheckFondsAmountEnough(&foundation, amountFoundationInt, currency)
+			if err != nil {
+				return err
+			}
+			if checkDailyLimit && checkFondsAmountEnough {
 				for email, w := range uidNotInMap {
-					//pretend that this user is also part of the total, which he is not, but we want
-					//to show him what his/her share would be
 					newTotal := total + w
 					amount := calcSharePerUser(amountFoundationInt, w, newTotal)
 					slog.Info("Unclaimed / not in map",

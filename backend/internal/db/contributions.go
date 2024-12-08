@@ -191,20 +191,34 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 	return m, nil
 }
 
-func FindSumFutureSponsors(userSponsorId uuid.UUID, multiplierFoundationContribution bool) (map[string]*big.Int, error) {
-	var foundation string
-	if multiplierFoundationContribution {
-		foundation = ""
-	} else {
-		foundation = "NOT "
+func FindSumDailySponsorsFromFoundation(userId uuid.UUID, currency string) (*big.Int, error) {
+	query := `
+			SELECT COALESCE(sum(balance), 0)
+               FROM daily_contribution 
+               WHERE user_sponsor_id = $1
+			   	AND foundation_payment
+				AND currency = $3`
+
+	var balanceSumInt int64
+
+	err := DB.QueryRow(query, userId, currency).Scan(&balanceSumInt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return big.NewInt(0), nil
+		}
+		return nil, fmt.Errorf("this is an unexpected error: %v", err)
 	}
 
+	return big.NewInt(balanceSumInt), nil
+}
+
+func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := DB.
-		Query(fmt.Sprintf(`SELECT currency, COALESCE(sum(balance), 0)
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
                      WHERE user_sponsor_id = $1
-					 	AND %sfoundation_payment
-                     GROUP BY currency`, foundation), userSponsorId)
+                     GROUP BY currency`, userSponsorId)
 
 	if err != nil {
 		return nil, err
