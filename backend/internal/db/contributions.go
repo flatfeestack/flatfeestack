@@ -125,6 +125,35 @@ func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
 	return handleErrMustInsertOne(res)
 }
 
+func InsertOrUpdateFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
+	currency string, day time.Time, createdAt time.Time, foundationPayment bool) error {
+
+	stmt, err := DB.Prepare(`
+        INSERT INTO future_contribution(
+            id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (user_sponsor_id, repo_id, currency, day) 
+        DO UPDATE SET 
+            balance = future_contribution.balance + EXCLUDED.balance,
+            created_at = EXCLUDED.created_at,
+            foundation_payment = EXCLUDED.foundation_payment
+    `)
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO future_contribution for %v statement event: %v", uid, err)
+	}
+	defer CloseAndLog(stmt)
+
+	b := balance.String()
+	id := uuid.New()
+
+	_, err = stmt.Exec(id, uid, repoId, b, currency, day, createdAt, foundationPayment)
+	if err != nil {
+		return fmt.Errorf("failed to insert or update future_contribution for %v: %v", uid, err)
+	}
+
+	return nil
+}
+
 func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
