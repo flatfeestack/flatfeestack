@@ -19,6 +19,15 @@ export type Repo = components["schemas"]["Repo"];
 
 export type RepoHealthValue = components["schemas"]["RepoHealthValue"];
 
+export type HealthValueThreshold =
+  components["schemas"]["HealthValueThreshold"];
+
+export type Threshold = components["schemas"]["Threshold"];
+
+export type PartialHealthValues = components["schemas"]["PartialHealthValues"];
+
+export type RepoMetrics = components["schemas"]["RepoMetrics"];
+
 export type GitUser = components["schemas"]["GitUser"];
 
 export type Invitation = components["schemas"]["Invitation"];

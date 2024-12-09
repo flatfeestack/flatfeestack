@@ -23,7 +23,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["GitUser"][];
+            "application/json": (components["schemas"]["GitUser"])[];
           };
         };
       };
@@ -39,9 +39,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
     delete: {
@@ -52,9 +50,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -67,17 +63,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -87,7 +79,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Repo"][];
+            "application/json": (components["schemas"]["Repo"])[];
           };
         };
       };
@@ -99,7 +91,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Repo"][];
+            "application/json": (components["schemas"]["Repo"])[];
           };
         };
       };
@@ -116,9 +108,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -126,9 +116,7 @@ export interface paths {
     put: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -143,9 +131,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -160,9 +146,7 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -177,17 +161,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -217,17 +197,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
       };
     };
   };
@@ -247,9 +223,7 @@ export interface paths {
           };
         };
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -295,7 +269,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Contribution"][];
+            "application/json": (components["schemas"]["Contribution"])[];
           };
         };
       };
@@ -307,7 +281,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Contribution"][];
+            "application/json": (components["schemas"]["Contribution"])[];
           };
         };
       };
@@ -319,7 +293,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/js  on": components["schemas"]["RepoBalance"][];
+            "application/js  on": (components["schemas"]["RepoBalance"])[];
           };
         };
       };
@@ -336,7 +310,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["RepoBalance"][];
+            "application/json": (components["schemas"]["RepoBalance"])[];
           };
         };
       };
@@ -368,13 +342,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -393,9 +363,7 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -410,13 +378,11 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["PublicUser"][];
+            "application/json": (components["schemas"]["PublicUser"])[];
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -437,13 +403,9 @@ export interface paths {
           };
         };
         /** @description No Content */
-        204: {
-          content: never;
-        };
+        204: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -453,13 +415,11 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Repo"][];
+            "application/json": (components["schemas"]["Repo"])[];
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -474,13 +434,11 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Repo"][];
+            "application/json": (components["schemas"]["Repo"])[];
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -490,7 +448,47 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Repo"][];
+            "application/json": (components["schemas"]["Repo"])[];
+          };
+        };
+      };
+    };
+  };
+  "/repos/healthvaluethreshold": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["HealthValueThreshold"])[];
+          };
+        };
+      };
+    };
+    put: {
+      /** @description Array of HealthValueThreshold objects to be sent to the backend. */
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["HealthValueThreshold"];
+        };
+      };
+      responses: {
+        /** @description Successfully processed the HealthValueThreshold array. */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
+      };
+    };
+  };
+  "/repos/{id}/healthvalue/partial": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": (components["schemas"]["PartialHealthValues"])[];
           };
         };
       };
@@ -511,9 +509,24 @@ export interface paths {
           };
         };
         /** @description Not Found */
-        404: {
-          content: never;
+        404: never;
+      };
+    };
+  };
+  "/repos/{id}/forceAnalyzer": {
+    post: {
+      parameters: {
+        path: {
+          id: string;
         };
+      };
+      responses: {
+        /** @description OK */
+        200: never;
+        /** @description Bad Request */
+        400: never;
+        /** @description Internal Server Error */
+        500: never;
       };
     };
   };
@@ -526,19 +539,11 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Repo"];
-          };
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -557,13 +562,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -582,13 +583,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -607,13 +604,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -632,13 +625,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -657,13 +646,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -683,9 +668,7 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -704,9 +687,26 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
+        400: never;
+      };
+    };
+  };
+  "/repos/{id}/healthvalue/metrics": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
         };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RepoMetrics"];
+          };
+        };
+        /** @description Bad Request */
+        400: never;
       };
     };
   };
@@ -714,13 +714,9 @@ export interface paths {
     post: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Service Unavailable */
-        503: {
-          content: never;
-        };
+        503: never;
       };
     };
   };
@@ -728,13 +724,9 @@ export interface paths {
     post: {
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -747,13 +739,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -766,17 +754,11 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
         /** @description Internal Server Error */
-        500: {
-          content: never;
-        };
+        500: never;
       };
     };
   };
@@ -798,13 +780,11 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": string[];
+            "application/json": (string)[];
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -818,9 +798,7 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -833,13 +811,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -849,13 +823,11 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["Invitation"][];
+            "application/json": (components["schemas"]["Invitation"])[];
           };
         };
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -868,13 +840,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -887,13 +855,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -906,13 +870,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -925,13 +885,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -945,13 +901,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -964,13 +916,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -983,13 +931,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -999,20 +943,16 @@ export interface paths {
         content: {
           "application/json": {
             data?: {
-              [key: string]: string;
+              [key: string]: string | undefined;
             };
           };
         };
       };
       responses: {
         /** @description OK */
-        200: {
-          content: never;
-        };
+        200: never;
         /** @description Bad Request */
-        400: {
-          content: never;
-        };
+        400: never;
       };
     };
   };
@@ -1040,8 +980,6 @@ export interface components {
       /** Format: int64 */
       freq?: number | null;
       role?: string | null;
-      multiplier?: boolean | null;
-      multiplierDailyLimit?: number | null;
     };
     Claims: {
       iss?: string | null;
@@ -1078,12 +1016,67 @@ export interface components {
       trustAt?: string;
       /** Format: float */
       healthValue?: number;
+      analyzed?: boolean;
     };
     RepoHealthValue: {
       repoid?: string;
       healthvalue?: number;
     };
-    PaymentEvent: {
+    HealthValueThreshold: {
+      /** Format: uuid */
+      id?: string;
+      /** Format: date-time */
+      createdAt?: string;
+      ThContributorCount?: components["schemas"]["Threshold"];
+      ThCommitCount?: components["schemas"]["Threshold"];
+      ThSponsorDonation?: components["schemas"]["Threshold"];
+      ThRepoStarCount?: components["schemas"]["Threshold"];
+      ThRepoMultiplier?: components["schemas"]["Threshold"];
+      ThActiveFFSUserCount?: components["schemas"]["Threshold"];
+    };
+    Threshold: {
+      /** Format: int64 */
+      upper: number;
+      /** Format: int64 */
+      lower: number;
+    };
+    RepoMetrics: {
+      /** Format: uuid */
+      id?: string;
+      /** Format: uuid */
+      repoid?: string;
+      /** Format: date-time */
+      createdat?: string;
+      /** Format: int64 */
+      contributorcount?: number;
+      /** Format: int64 */
+      commitcount?: number;
+      /** Format: int64 */
+      sponsorcount?: number;
+      /** Format: int64 */
+      repostarcount?: number;
+      /** Format: int64 */
+      repomultipliercount?: number;
+      /** Format: int64 */
+      activeffsusercount?: number;
+    };
+    PartialHealthValues: {
+      /** Format: uuid */
+      repoid?: string;
+      /** Format: float */
+      contributorvalue?: number;
+      /** Format: float */
+      commitvalue?: number;
+      /** Format: float */
+      sponsorvalue?: number;
+      /** Format: float */
+      repostarvalue?: number;
+      /** Format: float */
+      repomultipliervalue?: number;
+      /** Format: float */
+      activeffsuservalue?: number;
+    };
+    PaymentEvent: ({
         /** Format: uuid */
         id: string;
         /** Format: uuid */
@@ -1100,7 +1093,7 @@ export interface components {
         freq: number;
         /** Format: date-time */
         createdAt?: string;
-      }[];
+      })[];
     UserStatus: {
       /** Format: uuid */
       userId?: string;
@@ -1109,10 +1102,10 @@ export interface components {
       name?: string | null;
       daysLeft?: number;
     };
-    UserBalance: {
+    UserBalance: ({
         currency?: string;
         balance?: number;
-      }[];
+      })[];
     Contribution: {
       repoName: string;
       repoUrl: string;
@@ -1133,7 +1126,7 @@ export interface components {
     RepoBalance: {
       repo: components["schemas"]["Repo"];
       currencyBalance: {
-        [key: string]: string;
+        [key: string]: string | undefined;
       };
     };
     EmailToken: {
@@ -1145,12 +1138,12 @@ export interface components {
       days?: number;
       /** Format: int32 */
       total?: number;
-      datasets?: components["schemas"]["Dataset"][];
-      labels?: string[];
+      datasets?: (components["schemas"]["Dataset"])[];
+      labels?: (string)[];
     };
     Dataset: {
       label?: string;
-      data?: number[];
+      data?: (number)[];
       fill?: boolean;
       backgroundColor?: string;
       borderColor?: string;
@@ -1160,11 +1153,11 @@ export interface components {
     WebhookCallback: {
       requestId?: string;
       error?: string | null;
-      result?: components["schemas"]["FlatFeeWeight"][];
+      result?: (components["schemas"]["FlatFeeWeight"])[];
       repoid?: string;
     };
     FlatFeeWeight: {
-      names?: string[];
+      names?: (string)[];
       email?: string;
       weight?: number;
       /** Format: int32 */
@@ -1177,10 +1170,10 @@ export interface components {
     };
     Config: {
       stripePublicApi?: string;
-      plans?: components["schemas"]["Plan"][];
+      plans?: (components["schemas"]["Plan"])[];
       env?: string;
       supportedCurrencies?: {
-        [key: string]: components["schemas"]["Currency"];
+        [key: string]: components["schemas"]["Currency"] | undefined;
       };
     };
     /**
@@ -1235,7 +1228,7 @@ export interface components {
       endDate: string;
       name: string;
       url: string;
-      weights?: components["schemas"]["FlatFeeWeight"][];
+      weights?: (components["schemas"]["FlatFeeWeight"])[];
     };
     PayoutResponse: {
       /** Format: int64 */
@@ -1259,8 +1252,6 @@ export interface components {
   headers: never;
   pathItems: never;
 }
-
-export type $defs = Record<string, never>;
 
 export type external = Record<string, never>;
 

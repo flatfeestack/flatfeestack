@@ -16,13 +16,14 @@ func getRepoHealthThresholdtTestData() *RepoHealthThreshold {
 	parsedTime, _ := time.Parse("2006-01-02 15:04:05.999999999", formatted)
 
 	newThresholdData := RepoHealthThreshold{
-		Id:                 newId,
-		CreatedAt:          parsedTime,
-		ThContributerCount: &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
-		ThCommitCount:      &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
-		ThSponsorDonation:  &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
-		ThRepoStarCount:    &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
-		ThRepoMultiplier:   &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		Id:                   newId,
+		CreatedAt:            parsedTime,
+		ThContributorCount:   &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		ThCommitCount:        &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		ThSponsorDonation:    &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		ThRepoStarCount:      &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		ThRepoMultiplier:     &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
+		ThActiveFFSUserCount: &Threshold{Upper: rand.Int() + 1, Lower: rand.Int() + 1},
 	}
 
 	return &newThresholdData
@@ -53,7 +54,7 @@ func TestGetLatestThresholds(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 
-	res, err := GetLatestThresholds()
+	_, err := GetLatestThresholds()
 	assert.Nil(t, err)
 
 	for range 5 {
@@ -62,7 +63,7 @@ func TestGetLatestThresholds(t *testing.T) {
 	newRepoHealthThreshold := getRepoHealthThresholdtTestData()
 	_ = InsertRepoHealthThreshold(*newRepoHealthThreshold)
 
-	res, err = GetLatestThresholds()
+	res, err := GetLatestThresholds()
 	assert.Nil(t, err)
 	assert.Equal(t, newRepoHealthThreshold, res)
 }

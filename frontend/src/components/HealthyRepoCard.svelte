@@ -1,5 +1,6 @@
 <script lang="ts">
   import { API } from "../ts/api";
+  import { faClose } from "@fortawesome/free-solid-svg-icons";
   import {
     error,
     trustedRepos,
@@ -9,6 +10,8 @@
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
   import { onDestroy } from "svelte";
+  import RepoAssessmentOverlay from "./RepoAssessmentOverlay.svelte";
+  import Fa from "svelte-fa";
 
   export let repo: Repo;
   let verifiedStar = true;
@@ -18,6 +21,7 @@
   let intervalId: NodeJS.Timer | null = null;
   let repoHealthValue: Number | "NA";
   const undoDuration: number = 5000;
+  let assessmentOverlayVisible: boolean = false;
 
   $: {
     const tmp = $trustedRepos.find((r: Repo) => {
@@ -102,6 +106,14 @@
     unTrustProgress = 100;
   }
 
+  function showOverlay() {
+    assessmentOverlayVisible = true;
+  }
+
+  function hideOverlay() {
+    assessmentOverlayVisible = false;
+  }
+
   onDestroy(async () => {
     // setTimeout(async () => {
     //
@@ -166,13 +178,15 @@
     width: 2em;
   }
 
-  p.square-1 {
+  button.square-1 {
     margin: 0.25em;
-    height: 1.7em;
-    width: 1.7em;
+    height: 2.5em;
+    min-width: 2.5em;
+    width: auto;
+    color: black;
   }
 
-  #trust-value-p {
+  #trust-value-button {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -182,11 +196,63 @@
     padding: 0.2em;
     font-size: 0.9rem;
     font-weight: bold;
+    transition: background-color 0.1s linear, filter 0.1s linear;
+  }
+
+  #trust-value-button:hover {
+    background-color: var(--primary-100);
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
 
   .color :global(a:hover) {
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.7));
   }
+
+  .assessment-overlay {
+    position: fixed;
+    display: block;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(
+      221,
+      221,
+      221,
+      0.3
+    ); /* secondary-200 with 30% opacity */
+    z-index: 2;
+  }
+
+  .overlay-container {
+    position: absolute;
+    width: 60vw;
+    height: 90vh;
+    background-color: white;
+    color: black;
+    overflow-y: auto;
+    margin: 5vh 20vw;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  #close-overlay-button {
+    position: absolute;
+    top: 5vh;
+    right: 21vw;
+    z-index: 3;
+  }
+
+  @media screen and (min-width: 2000px) {
+    .overlay-container {
+      width: 1185px;
+      margin: 5vh calc((100vw - 1185px) / 2);
+    }
+    #close-overlay-button {
+      right: calc(((100vw - 1185px) / 2) + 1vw);
+    }
+  }
+
   @media screen and (max-width: 600px) {
     .child {
       max-width: unset;
@@ -257,7 +323,14 @@
         </a>
       {/if}
     </div>
-    <p id="trust-value-p" class="square-1">{repoHealthValue}</p>
+    <button
+      id="trust-value-button"
+      class="square-1 tooltip"
+      on:click={showOverlay}
+    >
+      {repoHealthValue}
+      <span class="tooltiptext">Show Repo Assessment</span>
+    </button>
   </div>
   {#if repo}
     <div title={repo.name}>
@@ -271,4 +344,22 @@
       </a>
     </div>
   {/if}
+</div>
+
+<div
+  class:assessment-overlay={assessmentOverlayVisible}
+  class:hidden={!assessmentOverlayVisible}
+  role="button"
+  tabindex="0"
+>
+  <button
+    id="close-overlay-button"
+    class="button3 m-2 px-100"
+    on:click={hideOverlay}>close <Fa icon={faClose} class="ml-5" /></button
+  >
+  <div class="overlay-container">
+    {#if assessmentOverlayVisible}
+      <RepoAssessmentOverlay {repo} />
+    {/if}
+  </div>
 </div>

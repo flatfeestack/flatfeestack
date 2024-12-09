@@ -121,6 +121,7 @@ func (rs *RepoHandler) UnsetMultiplierRepo(w http.ResponseWriter, r *http.Reques
 func (rs *RepoHandler) TrustRepo(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	idStr := r.PathValue("id")
 	repoId, err := uuid.Parse(idStr)
+
 	if err != nil {
 		slog.Error("Not a valid id",
 			slog.Any("error", err))
@@ -151,8 +152,8 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	contributions, err := db.FindRepoContribution(repoId)
-	contributors, err := db.FindRepoContributors(repoId)
+	contributions, _ := db.FindRepoContribution(repoId)
+	contributors, _ := db.FindRepoContributors(repoId)
 
 	offsetString := r.PathValue("offset")
 	offset, err := strconv.Atoi(offsetString)
@@ -395,8 +396,10 @@ func GetTrustedRepos(w http.ResponseWriter, r *http.Request, user *db.UserDetail
 		value, err := getRepoHealthValue(repo.Id)
 		if err != nil {
 			repos[i].HealthValue = 0
+			repos[i].Analyzed = false
 		} else {
 			repos[i].HealthValue = value.HealthValue
+			repos[i].Analyzed = true
 		}
 	}
 
@@ -490,11 +493,55 @@ func (rh *RepoHandler) SearchRepoGitHub(w http.ResponseWriter, r *http.Request, 
 		healthValue, err := getRepoHealthValue(repo.Id)
 		if err != nil {
 			repo.HealthValue = 0.0
+			repo.Analyzed = false
 		} else {
 			repo.HealthValue = healthValue.HealthValue
+			repo.Analyzed = true
 		}
+
 		repos = append(repos, *repo)
 	}
 
 	util.WriteJson(w, repos)
+}
+
+func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	idStr := r.PathValue("id")
+	repoId, err := uuid.Parse(idStr)
+	if err != nil {
+		slog.Error("Not a valid id",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
+
+	repo, err := db.FindRepoById(repoId)
+	if err != nil {
+		slog.Error("Could not find repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusInternalServerError, RepositoryNotFoundErrorMessage)
+		return
+	}
+
+	lastAnalysis, err := db.FindRepoHealthMetricsByRepoId(repoId)
+	if err != nil || lastAnalysis == nil {
+		slog.Error("Could not find repo metrics. Requesting analysis.",
+			slog.Any("error", err))
+		err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
+		if err != nil {
+			slog.Warn("Could not submit analysis request",
+				slog.Any("error", err))
+		}
+		return
+	}
+
+	if time.Since(lastAnalysis.CreatedAt) > time.Hour {
+		err = rs.c.RequestAnalysis(repo.Id, *repo.GitUrl)
+		if err != nil {
+			slog.Warn("Could not submit analysis request",
+				slog.Any("error", err))
+		}
+	} else {
+		util.WriteErrorf(w, http.StatusInternalServerError, ForcingRepoAnalysisTooSoon)
+	}
 }

@@ -241,6 +241,7 @@ func main() {
 
 	//repo
 	router.HandleFunc("GET /repos/{id}", middlewareJwtAuthUserLog(api2.GetRepoByID))
+	router.HandleFunc("POST /repos/{id}/forceAnalyze", middlewareJwtAuthAdminLog(rh.ForceAnalyzeRepo))
 	router.HandleFunc("POST /repos/{id}/tag", middlewareJwtAuthUserLog(rh.TagRepo))
 	router.HandleFunc("POST /repos/{id}/untag", middlewareJwtAuthUserLog(rh.UnTagRepo))
 	router.HandleFunc("POST /repos/{id}/setMultiplier", middlewareJwtAuthUserLog(rh.SetMultiplierRepo))
@@ -250,6 +251,10 @@ func main() {
 	router.HandleFunc("POST /repos/{id}/untrust", middlewareJwtAuthAdminLog(rh.UnTrustRepo))
 	router.HandleFunc("GET /repos/{id}/{offset}/graph", middlewareJwtAuthUserLog(api2.Graph))
 	router.HandleFunc("GET /repos/{id}/healthvalue", middlewareJwtAuthUserLog(api2.GetRepoHealthValueByRepoId))
+	router.HandleFunc("GET /repos/{id}/healthvalue/metrics", middlewareJwtAuthAdminLog(api2.GetRepoMetricsById))
+	router.HandleFunc("GET /repos/{id}/healthvalue/partial", middlewareJwtAuthAdminLog(api2.GetPartialHealthValuesById))
+	router.HandleFunc("GET /repos/healthvaluethreshold", middlewareJwtAuthAdminLog(api2.GetLatestThresholds))
+	router.HandleFunc("PUT /repos/healthvaluethreshold", middlewareJwtAuthAdminLog(api2.SetNewThresholds))
 	//payment
 
 	//hooks
