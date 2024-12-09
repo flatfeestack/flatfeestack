@@ -39,6 +39,7 @@
   let showMultiplierInfo = false;
   let dailyLimit: number = 100;
   let newDailyLimit;
+  let newDailyLimitForBackend;
   let total: number = 100;
   let foundationBalances: UserBalance[] = [];
   let intervalId: ReturnType<typeof setInterval>;
@@ -53,7 +54,7 @@
     }
 
     if ($user.multiplierDailyLimit) {
-      total = dailyLimit = $user.multiplierDailyLimit;
+      total = dailyLimit = ($user.multiplierDailyLimit / 1000000);
     }
   }
 
@@ -142,9 +143,10 @@
   function setDailyLimit() {
     try {
       if (newDailyLimit >= 1) {
-        API.user.setMultiplierDailyLimit(newDailyLimit);
+        newDailyLimitForBackend = (parseInt(newDailyLimit) * 1000000)
+        API.user.setMultiplierDailyLimit(newDailyLimitForBackend);
         total = dailyLimit = newDailyLimit;
-        $user.multiplierDailyLimit = newDailyLimit;
+        $user.multiplierDailyLimit = newDailyLimitForBackend;
         newDailyLimit = "";
       } else {
         $error = "The daily limit must be a number greater than or equalt to 1";

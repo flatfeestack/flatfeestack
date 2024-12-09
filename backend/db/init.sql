@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     freq                   BIGINT DEFAULT 365,
     created_at             TIMESTAMP NOT NULL,
     multiplier             BOOLEAN DEFAULT FALSE, /*Multiplier set*/
-    multiplier_daily_limit NUMERIC(78) DEFAULT 100 /*Multiplier Daily Amount*/
+    multiplier_daily_limit NUMERIC(78) DEFAULT 100000000 /*Multiplier Daily Amount*/
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email); /*we search for emails*/
 CREATE INDEX IF NOT EXISTS users_invited_id_idx ON users(invited_id);
