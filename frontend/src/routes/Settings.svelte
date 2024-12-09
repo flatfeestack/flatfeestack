@@ -54,7 +54,7 @@
     }
 
     if ($user.multiplierDailyLimit) {
-      total = dailyLimit = ($user.multiplierDailyLimit / 1000000);
+      total = dailyLimit = $user.multiplierDailyLimit / 1000000;
     }
   }
 
@@ -143,7 +143,7 @@
   function setDailyLimit() {
     try {
       if (newDailyLimit >= 1) {
-        newDailyLimitForBackend = (parseInt(newDailyLimit) * 1000000)
+        newDailyLimitForBackend = parseInt(newDailyLimit) * 1000000;
         API.user.setMultiplierDailyLimit(newDailyLimitForBackend);
         total = dailyLimit = newDailyLimit;
         $user.multiplierDailyLimit = newDailyLimitForBackend;
