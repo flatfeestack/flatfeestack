@@ -20,7 +20,7 @@ type MultiplierEvent struct {
 func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
 	//first get last multiplier event to check if we need to InsertOrUpdateMultiplierRepo or unset the multiplier
 	//TODO: use mutex
-	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.RepoId)
+	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.Uid, event.RepoId)
 	if err != nil {
 		return err
 	}
@@ -101,16 +101,16 @@ func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
 	}
 }
 
-func FindLastEventMultiplierRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+func FindLastEventMultiplierRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
 	var multiplierAt *time.Time
 	var unMultiplierAt *time.Time
 	var id *uuid.UUID
 	err := DB.
 		QueryRow(`SELECT id, multiplier_at, un_multiplier_at
 			      		FROM multiplier_event 
-						WHERE repo_id=$1 
+						WHERE user_id=$1 AND repo_id=$2 
 						ORDER by multiplier_at DESC LIMIT 1`,
-			rid).Scan(&id, &multiplierAt, &unMultiplierAt)
+			uid, rid).Scan(&id, &multiplierAt, &unMultiplierAt)
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil, nil, nil
@@ -132,6 +132,97 @@ func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 	}
 	defer CloseAndLog(rows)
 	return scanRepo(rows)
+}
+
+func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
+	s := `SELECT u.id, u.multiplier_daily_limit
+            FROM multiplier_event m
+			INNER JOIN users u ON m.user_id = u.id
+			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
+	rows, err := DB.Query(s, rid)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var foundations []Foundation
+	for rows.Next() {
+		var foundation Foundation
+		err = rows.Scan(&foundation.Id, &foundation.MultiplierDailyLimit)
+		if err != nil {
+			return nil, err
+		}
+		foundations = append(foundations, foundation)
+	}
+	return foundations, nil
+}
+
+func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, int, error) {
+	if len(rids) == 0 {
+		return nil, 0, nil
+	}
+
+	query := `
+		SELECT u.id, u.multiplier_daily_limit, m.repo_id
+		FROM multiplier_event m
+		INNER JOIN users u ON m.user_id = u.id
+		WHERE m.repo_id IN (` + GeneratePlaceholders(len(rids)) + `)
+		AND u.multiplier
+		AND m.un_multiplier_at IS NULL`
+
+	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	foundationMap := make(map[uuid.UUID]*Foundation)
+	totalRepoCount := 0
+
+	for rows.Next() {
+		var foundationId uuid.UUID
+		var repoId uuid.UUID
+		var multiplierLimit int
+
+		err = rows.Scan(&foundationId, &multiplierLimit, &repoId)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		totalRepoCount++
+
+		if foundation, exists := foundationMap[foundationId]; exists {
+			if !contains(foundation.RepoIds, repoId) {
+				foundation.RepoIds = append(foundation.RepoIds, repoId)
+			}
+		} else {
+			foundationMap[foundationId] = &Foundation{
+				Id:                   foundationId,
+				MultiplierDailyLimit: multiplierLimit,
+				RepoIds:              []uuid.UUID{repoId},
+			}
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	foundations := make([]Foundation, 0, len(foundationMap))
+	for _, foundation := range foundationMap {
+		foundations = append(foundations, *foundation)
+	}
+
+	return foundations, totalRepoCount, nil
+}
+
+func contains(slice []uuid.UUID, item uuid.UUID) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }
 
 func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {

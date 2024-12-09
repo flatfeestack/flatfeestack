@@ -159,6 +159,337 @@ func TestOneContributor(t *testing.T) {
 	assert.Equal(t, 0, len(m3))
 }
 
+func TestFoundationWithOneContributorTrusted(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	//create foudnation with 2000 limit spending per day and add fonds
+	foundation := setupFoundation(t, "foundation@ffs.ch f1", 2000000000)
+	setupFunds(t, *foundation, "USD", 1, 1, 2000000000, day1)
+
+	//we have 5 sponsors, but only the first sponsor added funds
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+
+	//we have 4 contributors, 1 has added a git email
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+
+	//we have 4 repos, ste is contribution with 0.5 to tomp2p
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
+
+	// foundation is setting multiplier on first repo
+	err := setupMultiplier(t, foundation, repos[0], day1)
+	assert.Nil(t, err)
+
+	//tom is sponsoring the repo tomp2p at time 0
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
+	assert.Nil(t, err)
+
+	// now we trust the first repo mic is in this example an admin
+	err = setupTrusted(t, sponsors[1], repos[0], day1)
+	assert.Nil(t, err)
+
+	//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
+	err = c.DailyRunner(day3)
+	assert.Nil(t, err)
+
+	//now check the daily_contribution because top(sponsor) has not contributed to a trusted repo, the foundation does not pay anything
+	m1, err := db.FindSumDailyContributors(*contributors[0])
+	assert.Nil(t, err)
+	//125468750 / 365 = 343750 + 297002 (330003 * 0.9) from founation
+	assert.Equal(t, "627005", m1["USD"].String())
+
+	m2, err := db.FindSumDailySponsorsFromFoundation(*foundation)
+	assert.Nil(t, err)
+	assert.Len(t, m2, 1)
+}
+
+func TestFoundationWithSponsorTrustedAndUntrusted(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	//create foudnation with 2000 limit spending per day and add fonds
+	foundation1 := setupFoundation(t, "foundation@ffs.ch f1", 2000000000)
+	setupFunds(t, *foundation1, "USD", 1, 1, 2000000000, day1)
+
+	foundation2 := setupFoundation(t, "foundation2@ffs.ch f2", 4000000000)
+	setupFunds(t, *foundation2, "USD", 1, 1, 4000000000, day1)
+
+	//we have 5 sponsors, but only the first sponsor added funds
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+
+	//we have 4 contributors, 3 have added a git email
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+	setupGitEmail(t, *contributors[1], "pea@pea.pea")
+	setupGitEmail(t, *contributors[2], "luc@luc.luc")
+
+	//we have 4 repos, ste is contribution with 0.5 to tomp2p
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
+	setupContributor(t, *repos[1], day1, day3, []string{"pea@pea.pea"}, []float64{0.5})
+	setupContributor(t, *repos[2], day1, day3, []string{"luc@luc.luc"}, []float64{0.5})
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	// now we trust the first and second repo mic is in this example an admin
+	err := setupTrusted(t, sponsors[1], repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupTrusted(t, sponsors[1], repos[1], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	// foundation1 is setting multiplier on all repo
+	err = setupMultiplier(t, foundation1, repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupMultiplier(t, foundation1, repos[1], day1)
+	assert.Nil(t, err)
+
+	err = setupMultiplier(t, foundation1, repos[2], day1)
+	assert.Nil(t, err)
+
+	// foundation2 is setting multiplier on first repo
+	err = setupMultiplier(t, foundation2, repos[0], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//tom is sponsoring the repos tomp2p, neow3j and sql at time 0
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupSponsor(t, sponsors[0], repos[1], day1)
+	assert.Nil(t, err)
+
+	err = setupSponsor(t, sponsors[0], repos[2], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
+	err = c.DailyRunner(day3)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//now check the daily_contribution because top(sponsor) has not contributed to a trusted repo, the foundation does not pay anything
+	m1, err := db.FindSumDailyContributors(*contributors[0])
+	assert.Nil(t, err)
+	//110001 + 49500 + 49500 from 2 founations
+	assert.Equal(t, "209001", m1["USD"].String())
+
+	m2, err := db.FindSumDailyContributors(*contributors[1])
+	assert.Nil(t, err)
+	//110001 + 55000 from founation 1
+	assert.Equal(t, "165001", m2["USD"].String())
+
+	m3, err := db.FindSumDailyContributors(*contributors[2])
+	assert.Nil(t, err)
+	//110001 + 55000 from founation 1
+	assert.Equal(t, "165001", m3["USD"].String())
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	expectedFoundation1 := map[string]*big.Int{
+		"USD": big.NewInt(159500),
+	}
+
+	m4, err := db.FindSumDailySponsorsFromFoundation(*foundation1)
+	assert.Nil(t, err)
+	assert.Len(t, m4, len(expectedFoundation1))
+
+	for k, v := range expectedFoundation1 {
+		assert.NotNil(t, m4[k])
+		assert.Equal(t, v, m4[k])
+	}
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	expectedFoundation2 := map[string]*big.Int{
+		"USD": big.NewInt(49500),
+	}
+
+	m5, err := db.FindSumDailySponsorsFromFoundation(*foundation2)
+	assert.Nil(t, err)
+	assert.Len(t, m5, len(expectedFoundation2))
+
+	for k, v := range expectedFoundation2 {
+		assert.NotNil(t, m5[k])
+		assert.Equal(t, v, m5[k])
+	}
+}
+
+func TestFoundationHasNotEnoughFonds(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	//create foudnation with 2000 limit spending per day and add fonds
+	foundation1 := setupFoundation(t, "foundation@ffs.ch f1", 2000000000)
+	setupFunds(t, *foundation1, "USD", 1, 1, 2000000000, day1)
+
+	foundation2 := setupFoundation(t, "foundation2@ffs.ch f2", 4000000000)
+	setupFunds(t, *foundation2, "USD", 1, 1, 45000, day1)
+
+	//we have 5 sponsors, but only the first sponsor added funds
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+
+	//we have 4 contributors, 3 have added a git email
+	contributors := setupUsers(t, "ste@ste.ste c1", "pea@pea.pea c2", "luc@luc.luc c3", "nic@nic.nic c4")
+	setupGitEmail(t, *contributors[0], "ste@ste.ste")
+	setupGitEmail(t, *contributors[1], "pea@pea.pea")
+	setupGitEmail(t, *contributors[2], "luc@luc.luc")
+
+	//we have 4 repos, ste is contribution with 0.5 to tomp2p
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	setupContributor(t, *repos[0], day1, day3, []string{"ste@ste.ste"}, []float64{0.5})
+	setupContributor(t, *repos[1], day1, day3, []string{"pea@pea.pea"}, []float64{0.5})
+	setupContributor(t, *repos[2], day1, day3, []string{"luc@luc.luc"}, []float64{0.5})
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	// now we trust the first and second repo mic is in this example an admin
+	err := setupTrusted(t, sponsors[1], repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupTrusted(t, sponsors[1], repos[1], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	// foundation1 is setting multiplier on all repo
+	err = setupMultiplier(t, foundation1, repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupMultiplier(t, foundation1, repos[1], day1)
+	assert.Nil(t, err)
+
+	err = setupMultiplier(t, foundation1, repos[2], day1)
+	assert.Nil(t, err)
+
+	// foundation2 is setting multiplier on first repo
+	err = setupMultiplier(t, foundation2, repos[0], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//tom is sponsoring the repos tomp2p, neow3j and sql at time 0
+	err = setupSponsor(t, sponsors[0], repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupSponsor(t, sponsors[0], repos[1], day1)
+	assert.Nil(t, err)
+
+	err = setupSponsor(t, sponsors[0], repos[2], day1)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//run the daily runner for the second day, so that means we have a full day 2 that needs to be processed
+	err = c.DailyRunner(day3)
+	assert.Nil(t, err)
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	//now check the daily_contribution because top(sponsor) has not contributed to a trusted repo, the foundation does not pay anything
+	m1, err := db.FindSumDailyContributors(*contributors[0])
+	assert.Nil(t, err)
+	//110001 + 49500 from founation 1
+	assert.Equal(t, "159501", m1["USD"].String())
+
+	m2, err := db.FindSumDailyContributors(*contributors[1])
+	assert.Nil(t, err)
+	//110001 + 55000 from founation 1
+	assert.Equal(t, "165001", m2["USD"].String())
+
+	m3, err := db.FindSumDailyContributors(*contributors[2])
+	assert.Nil(t, err)
+	//110001 + 55000 from founation 1
+	assert.Equal(t, "165001", m3["USD"].String())
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	expectedFoundation1 := map[string]*big.Int{
+		"USD": big.NewInt(159500),
+	}
+
+	m4, err := db.FindSumDailySponsorsFromFoundation(*foundation1)
+	assert.Nil(t, err)
+	assert.Len(t, m4, len(expectedFoundation1))
+
+	for k, v := range expectedFoundation1 {
+		assert.NotNil(t, m4[k])
+		assert.Equal(t, v, m4[k])
+	}
+
+	// --------------------------------------------------------------------------------------------------------------------------------------------
+
+	m5, err := db.FindSumDailySponsorsFromFoundation(*foundation2)
+	assert.Nil(t, err)
+	assert.Len(t, m5, 0)
+}
+
+func TestMultipleFuturesForFoundation(t *testing.T) {
+	db.SetupTestData()
+	defer db.TeardownTestData()
+
+	//create foudnation with 2000 limit spending per day and add fonds
+	foundation := setupFoundation(t, "foundation@ffs.ch f1", 2000000000)
+	setupFunds(t, *foundation, "USD", 1, 1, 2000000000, day1)
+
+	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
+	setupFunds(t, *sponsors[0], "USD", 1, 365, api.Plans[1].PriceBase, day1)
+
+	repos := setupRepos(t, "tomp2p r1", "neow3j r2", "sql r3", "linux r4")
+	contributors := setupUsers(t, "hello@example.com c1", "hello2@example.com c1")
+	setupContributor(t, *repos[0], day1, day1, []string{"hello@example.com"}, []float64{1.0})
+
+	err := setupSponsor(t, sponsors[0], repos[0], day1)
+	require.Nil(t, err)
+
+	err = setupTrusted(t, sponsors[1], repos[0], day1)
+	assert.Nil(t, err)
+
+	err = setupMultiplier(t, foundation, repos[0], day1)
+	assert.Nil(t, err)
+
+	err = c.DailyRunner(day3)
+	require.Nil(t, err)
+
+	m1, err := db.FindSumFutureSponsorsFromFoundation(*foundation)
+	require.Nil(t, err)
+	assert.Equal(t, "330003", m1["USD"].String())
+
+	// set up contributors for day 3
+	setupContributor(t, *repos[0], day3, day3, []string{"hello@example.com"}, []float64{1.0})
+	setupGitEmail(t, *contributors[0], "hello@example.com")
+
+	setupContributor(t, *repos[1], day3, day3, []string{"hello2@example.com"}, []float64{1.0})
+	setupGitEmail(t, *contributors[1], "hello2@example.com")
+	err = setupSponsor(t, sponsors[0], repos[1], day2)
+	require.Nil(t, err)
+
+	// calculate for day 4
+	err = c.DailyRunner(day4)
+	require.Nil(t, err)
+
+	m1, err = db.FindSumFutureSponsorsFromFoundation(*foundation)
+	require.Nil(t, err)
+	// 330002 divided by two repositories gives 165001 (rounding error with integers)
+	assert.Equal(t, "1", m1["USD"].String())
+
+	m1, err = db.FindSumDailySponsorsFromFoundation(*foundation)
+	assert.Nil(t, err)
+	// trusted only of 2 repos -> 330002 * 0.9 = 297001 + 165001 (from future_contribution) = 462002
+	assert.Equal(t, "462002", m1["USD"].String())
+}
+
 func TestOneContributorLowFunds(t *testing.T) {
 	db.SetupTestData()
 	defer db.TeardownTestData()
@@ -651,4 +982,66 @@ func setupUser(email string) (*uuid.UUID, error) {
 		return nil, err
 	}
 	return &u.Id, nil
+}
+
+func setupFoundation(t *testing.T, email string, multiplierDailyLimit int) *uuid.UUID {
+	u := db.User{
+		Id:    uuid.New(),
+		Email: email,
+	}
+	ud := db.UserDetail{
+		User:                 u,
+		StripeId:             util.StringPointer("strip-id"),
+		Multiplier:           true,
+		MultiplierDailyLimit: multiplierDailyLimit,
+	}
+
+	err := db.InsertFoundation(&ud)
+	assert.Nil(t, err)
+
+	return &u.Id
+}
+
+func setupMultiplier(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
+	e := db.MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          *userId,
+		RepoId:       *repoId,
+		EventType:    db.Active,
+		MultiplierAt: &day,
+	}
+	return db.InsertOrUpdateMultiplierRepo(&e)
+}
+
+func setupUnMultiplier(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
+	e := db.MultiplierEvent{
+		Id:             uuid.New(),
+		Uid:            *userId,
+		RepoId:         *repoId,
+		EventType:      db.Inactive,
+		UnMultiplierAt: &day,
+	}
+	return db.InsertOrUpdateMultiplierRepo(&e)
+}
+
+func setupTrusted(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
+	e := db.TrustEvent{
+		Id:        uuid.New(),
+		Uid:       *userId,
+		RepoId:    *repoId,
+		EventType: db.Active,
+		TrustAt:   &day,
+	}
+	return db.InsertOrUpdateTrustRepo(&e)
+}
+
+func setupUnTrusted(t *testing.T, userId *uuid.UUID, repoId *uuid.UUID, day time.Time) error {
+	e := db.TrustEvent{
+		Id:        uuid.New(),
+		Uid:       *userId,
+		RepoId:    *repoId,
+		EventType: db.Inactive,
+		UnTrustAt: &day,
+	}
+	return db.InsertOrUpdateTrustRepo(&e)
 }

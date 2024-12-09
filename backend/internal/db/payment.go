@@ -3,11 +3,12 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"log/slog"
 	"math/big"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // string mapping
@@ -147,6 +148,62 @@ func FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.
 	}
 
 	return m, nil
+}
+
+func FindSumPaymentByCurrencyFoundation(userId uuid.UUID, status string) (map[string]*big.Int, error) {
+	rows, err := DB.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+               FROM payment_in_event 
+               WHERE user_id = $1 AND status = $2 AND freq = 1
+               GROUP BY currency`, userId, status)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
+func FindSumPaymentFromFoundation(userId uuid.UUID, status string, currency string) (*big.Int, error) {
+	query := `
+			SELECT COALESCE(sum(balance), 0)
+               FROM payment_in_event 
+               WHERE user_id = $1
+			   	AND status = $2
+				AND freq = 1
+				AND currency = $3`
+
+	var balanceSumInt int64
+
+	err := DB.QueryRow(query, userId, status, currency).Scan(&balanceSumInt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return big.NewInt(0), nil
+		}
+		return nil, fmt.Errorf("this is an unexpected error: %v", err)
+	}
+
+	return big.NewInt(balanceSumInt), nil
 }
 
 func FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.Int, int64, int64, *time.Time, error) {

@@ -248,6 +248,8 @@ export const API = {
       backend.get(`users/${userId}`).json<PublicUser>(),
     userBalance: () =>
       backendToken.get(`users/me/balance`).json<UserBalance[]>(),
+    foundationBalance: () =>
+      backendToken.get(`users/me/balanceFoundation`).json<UserBalance[]>(),
   },
   repos: {
     search: (s: string) =>
