@@ -980,6 +980,9 @@ export interface components {
       /** Format: int64 */
       freq?: number | null;
       role?: string | null;
+      multiplier?: boolean;
+      /** Format: int64 */
+      multiplierDailyLimit?: number;
     };
     Claims: {
       iss?: string | null;

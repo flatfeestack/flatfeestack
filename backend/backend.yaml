@@ -1195,6 +1195,11 @@ components:
         role:
           type: string
           nullable: true
+        multiplier:
+          type: boolean
+        multiplierDailyLimit:
+          type: integer
+          format: int64
       required:
         - id
         - email
