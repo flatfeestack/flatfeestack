@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { API } from "../../ts/api";
   import {
     faCaretUp,
+    faClose,
+    faGear,
     type IconDefinition,
   } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
@@ -12,12 +14,16 @@
     isSubmitting,
     loadedTrustedRepos,
     trustedRepos,
+    reloadAdminSearchKey,
+    reposWaitingForNewAnalysis,
+    reloadHealthRepoCardKey,
   } from "../../ts/mainStore";
   import type { Repo } from "../../types/backend";
   import Dots from "../../components/Dots.svelte";
   import Navigation from "../../components/Navigation.svelte";
   import AdminSearchResult from "../../components/AdminSearchResult.svelte";
-  import TrustedRepoCard from "../../components/HealthyRepoCard.svelte";
+  import HealthyRepoCard from "../../components/HealthyRepoCard.svelte";
+  import ThresholdSettingsOverlay from "../../components/ThresholdSettingsOverlay.svelte";
 
   let icon: IconDefinition;
   let search = "";
@@ -27,6 +33,8 @@
   let sortingFunction: (a: Repo, b: Repo) => number;
   let sortingTitle: string;
   let amountOfShownRepos: number = 50;
+  let intervalId: any;
+  let thresholdSettingsOverlayVisible: boolean = false;
 
   $: isSearchDisabled = search.trim().length === 0 || isSearchSubmitting;
 
@@ -37,6 +45,37 @@
     )
     .sort(sortingFunction)
     .slice(0, amountOfShownRepos);
+
+  $: {
+    if ($reposWaitingForNewAnalysis.length > 0) {
+      startBackendPolling();
+    } else {
+      stopBackendPolling();
+    }
+  }
+
+  async function startBackendPolling() {
+    if ($reloadAdminSearchKey === 0) {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(async () => {
+        reloadAdminSearchKey.update((key) => key + 1);
+        try {
+          searchRepos = await API.repos.search(search);
+        } catch (e) {
+          $error = e;
+        }
+      }, 5000);
+    }
+  }
+
+  function stopBackendPolling() {
+    if ($reposWaitingForNewAnalysis.length === 0) {
+      clearInterval(intervalId);
+      intervalId = null;
+      reloadAdminSearchKey.update(() => 0);
+    } else {
+    }
+  }
 
   const handleSearch = async () => {
     try {
@@ -77,6 +116,14 @@
   sortingFunction = sortByDateDesc;
   sortingTitle = "Date - Recently Added";
 
+  function showOverlay() {
+    thresholdSettingsOverlayVisible = true;
+  }
+
+  function hideOverlay() {
+    thresholdSettingsOverlayVisible = false;
+  }
+
   onMount(async () => {
     if (!$loadedTrustedRepos) {
       try {
@@ -89,6 +136,12 @@
         $isSubmitting = false;
       }
     }
+  });
+
+  onDestroy(async () => {
+    reloadAdminSearchKey.update(() => 0);
+    if (intervalId) clearInterval(intervalId);
+    reposWaitingForNewAnalysis.update(() => []);
   });
 </script>
 
@@ -155,6 +208,20 @@
     background: #555;
   }
 
+  button#threshold-setting-button {
+    padding: 0.25rem;
+    font-size: 2rem;
+    height: 2.6rem;
+    width: 2.6rem;
+    border: none;
+    transition: color 0.25s, transform 0.5s ease-out;
+  }
+  button#threshold-setting-button:hover {
+    background-color: transparent;
+    color: var(--primary-500);
+    transform: rotate(180deg);
+  }
+
   .dropdown-content-sort {
     min-width: 16rem;
     max-width: 20rem;
@@ -183,6 +250,51 @@
     width: 100%;
   }
 
+  .threshold-overlay {
+    position: fixed;
+    display: block;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(
+      221,
+      221,
+      221,
+      0.3
+    ); /* secondary-200 with 30% opacity */
+    z-index: 2;
+  }
+
+  .overlay-container {
+    position: absolute;
+    width: 60vw;
+    height: 90vh;
+    background-color: white;
+    color: black;
+    overflow-y: auto;
+    margin: 5vh 20vw;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  #close-overlay-button {
+    position: absolute;
+    top: 5vh;
+    right: 21vw;
+    z-index: 3;
+  }
+
+  @media screen and (min-width: 2000px) {
+    .overlay-container {
+      width: 1185px;
+      margin: 5vh calc((100vw - 1185px) / 2);
+    }
+    #close-overlay-button {
+      right: calc(((100vw - 1185px) / 2) + 1vw);
+    }
+  }
+
   @media screen and (max-width: 600px) {
     form {
       flex-direction: column;
@@ -200,7 +312,17 @@
 <Navigation>
   <div class="grid-healthy-repos">
     <div class="healty-repos-div">
-      <h2 class="p-2 m-2">Healthy Repositories</h2>
+      <div class="container-small justify-between">
+        <h2 class="p-2 m-2">Healthy Repositories</h2>
+        <button
+          class="button3"
+          id="threshold-setting-button"
+          title="Threshold Settings Button"
+          on:click={showOverlay}
+        >
+          <Fa icon={faGear} />
+        </button>
+      </div>
 
       <div class="container-col2 m-4">
         <div class="container-small justify-between w-100">
@@ -279,7 +401,9 @@
         {#if $trustedRepos.length > 0}
           <div class="cards-overflow-x">
             {#each sortedTrustedRepos as repo, key (repo.uuid)}
-              <TrustedRepoCard {repo} />
+              {#key $reloadHealthRepoCardKey}
+                <HealthyRepoCard {repo} />
+              {/key}
             {/each}
           </div>
         {/if}
@@ -305,12 +429,32 @@
             <h3 class="m-2">Results</h3>
             <div class="wrap-container">
               {#each searchRepos as repo, key (repo.uuid)}
-                <AdminSearchResult {repo} />
+                {#key $reloadAdminSearchKey}
+                  <AdminSearchResult {repo} />
+                {/key}
               {/each}
             </div>
           </div>
         {/if}
       </div>
+    </div>
+  </div>
+
+  <div
+    class:threshold-overlay={thresholdSettingsOverlayVisible}
+    class:hidden={!thresholdSettingsOverlayVisible}
+    role="button"
+    tabindex="0"
+  >
+    <button
+      id="close-overlay-button"
+      class="button3 m-2 px-100"
+      on:click={hideOverlay}>close <Fa icon={faClose} class="ml-5" /></button
+    >
+    <div class="overlay-container">
+      {#if thresholdSettingsOverlayVisible}
+        <ThresholdSettingsOverlay />
+      {/if}
     </div>
   </div>
 </Navigation>

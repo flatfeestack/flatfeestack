@@ -86,11 +86,6 @@
         icon={faShieldAlt}
         label="Healthy Repos"
       />
-      <NavItem
-        href="/user/admin/healthy-repo-assessment"
-        icon={faShieldAlt}
-        label="Repo Assessment"
-      />
     {/if}
   </nav>
   <div class="page-content">

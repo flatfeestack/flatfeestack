@@ -80,7 +80,9 @@ h1 {
 .pt-0 {
   padding-top: 0;
 }
-
+.p-0 {
+  padding: 0;
+}
 .p-1 {
   padding: 0.25rem;
 }
@@ -124,6 +126,12 @@ h1 {
 .ml-0 {
   margin-left: 0;
 }
+.mr-5 {
+  margin-right: 0.5rem;
+}
+.mr-10 {
+  margin-right: 1rem;
+}
 .m-0 {
   margin: 0;
 }
@@ -141,7 +149,10 @@ h1 {
   margin-bottom: 2rem;
 }
 .mt-2 {
-  margin-top: 0.5rem;
+  margin: 0.5rem 0 0 0;
+}
+.mt-4 {
+  margin: 1rem 0 0 0;
 }
 .mt-20 {
   margin-top: 2rem;
@@ -157,6 +168,9 @@ h1 {
 }
 .mb-20 {
   margin-bottom: 2rem;
+}
+.mtrl-4 {
+  margin: 1rem 1rem 0 1rem;
 }
 
 .m-2 {
@@ -561,6 +575,10 @@ tbody tr:last-of-type {
   display: inline;
 }
 
+.hidden {
+  display: none;
+}
+
 /* Drop Down Menu Template*/
 .dropdown {
   position: relative;
@@ -625,4 +643,30 @@ tbody tr:last-of-type {
 
 .dropdown:hover .drop-button svg {
   transform: rotate(180deg);
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: auto;
+  background-color: var(--primary-100);
+  color: black;
+  text-align: center;
+  border-radius: 0.5em;
+  padding: 0.25rem;
+  position: absolute;
+  top: 110%;
+  z-index: 3;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
 }
