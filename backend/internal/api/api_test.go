@@ -5,15 +5,16 @@ import (
 	"backend/internal/db"
 	"backend/pkg/util"
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -50,6 +51,25 @@ func insertTestUser(t *testing.T, email string) *db.UserDetail {
 	}
 
 	err := db.InsertUser(&ud)
+	assert.Nil(t, err)
+	u2, err := db.FindUserById(u.Id)
+	assert.Nil(t, err)
+	return u2
+}
+
+func insertTestFoundation(t *testing.T, email string, multiplierDailyLimit int) *db.UserDetail {
+	u := db.User{
+		Id:    uuid.New(),
+		Email: email,
+	}
+	ud := db.UserDetail{
+		User:                 u,
+		StripeId:             stringPointer("strip-id"),
+		Multiplier:           true,
+		MultiplierDailyLimit: multiplierDailyLimit,
+	}
+
+	err := db.InsertFoundation(&ud)
 	assert.Nil(t, err)
 	u2, err := db.FindUserById(u.Id)
 	assert.Nil(t, err)

@@ -263,6 +263,18 @@ export interface paths {
       };
     };
   };
+  "/users/me/balanceFoundation": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserStatus"];
+          };
+        };
+      };
+    };
+  };
   "/users/contrib-snd": {
     post: {
       responses: {

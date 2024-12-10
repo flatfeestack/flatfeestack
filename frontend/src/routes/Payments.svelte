@@ -1,6 +1,6 @@
 <script lang="ts">
   import Navigation from "../components/Navigation.svelte";
-  import { error } from "../ts/mainStore";
+  import { user, error } from "../ts/mainStore";
   import { API } from "../ts/api";
   import { onMount, onDestroy } from "svelte";
   import type { UserBalance } from "../types/backend";
@@ -8,7 +8,7 @@
   import PaymentSelection from "../components/PaymentSelection.svelte";
 
   let userBalances: UserBalance[] = [];
-  let intervalId: number;
+  let intervalId: ReturnType<typeof setInterval>;
 
   const fetchData = async () => {
     userBalances = await API.user.userBalance();

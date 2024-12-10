@@ -23,7 +23,7 @@ func getTestData(a, b, c, d, e, f int) *db.RepoHealthMetrics {
 		SponsorCount:        c,
 		RepoStarCount:       d,
 		RepoMultiplierCount: e,
-		RepoWeight:          f,
+		ActiveFFSUserCount:  f,
 	}
 
 	return &newRepoMetrics

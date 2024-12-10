@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     freq                   BIGINT DEFAULT 365,
     created_at             TIMESTAMP NOT NULL,
     multiplier             BOOLEAN DEFAULT FALSE, /*Multiplier set*/
-    multiplier_daily_limit NUMERIC(78) DEFAULT 100 /*Multiplier Daily Amount*/
+    multiplier_daily_limit NUMERIC(78) DEFAULT 100000000 /*Multiplier Daily Amount*/
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email); /*we search for emails*/
 CREATE INDEX IF NOT EXISTS users_invited_id_idx ON users(invited_id);
@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS daily_contribution (
     day                  DATE NOT NULL,
     created_at           TIMESTAMP NOT NULL,
     claimed_at           TIMESTAMP,
+    foundation_payment   BOOLEAN,
     UNIQUE(user_sponsor_id, user_contributor_id, repo_id, day)
 );
 CREATE INDEX IF NOT EXISTS daily_contribution_user_sponsor_id_idx ON daily_contribution(user_sponsor_id);
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS future_contribution (
     currency            VARCHAR(8) NOT NULL,
     day                 DATE NOT NULL,
     created_at          TIMESTAMP NOT NULL,
+    foundation_payment  BOOLEAN,
     UNIQUE(user_sponsor_id, repo_id, currency, day)
 );
 CREATE INDEX IF NOT EXISTS future_contribution_user_sponsor_id_idx ON future_contribution(user_sponsor_id);
@@ -211,10 +213,11 @@ VALUES (
   '2022-12-31 23:59:59.999999999',
   '{"lower": 4, "upper": 13}',
   '{"lower": 40, "upper": 130}',
+  '{"lower": 1, "upper": 10}',
+  '{"lower": 5, "upper": 20}',
   '{"lower": 1, "upper": 5}',
-  '{"lower": 5, "upper": 20}',
-  '{"lower": 5, "upper": 20}',
-  '{"lower": 5, "upper": 20}')
+  '{"lower": 1, "upper": 10}'
+)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS repo_health_metrics (
@@ -226,6 +229,6 @@ CREATE TABLE IF NOT EXISTS repo_health_metrics (
     sponsor_donation            NUMERIC(78),
     repo_star_count             NUMERIC(78),
     repo_multiplier_count       NUMERIC(78),
-    repo_weight                 NUMERIC(78)
+    active_ffs_user_count       NUMERIC(78)
 );
 CREATE INDEX IF NOT EXISTS repo_health_metrics_repo_id_idx ON repo_health_metrics(repo_id);

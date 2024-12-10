@@ -6,17 +6,18 @@ import (
 	"backend/pkg/util"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/google/uuid"
-	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/google/uuid"
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 )
 
 type PayoutInfoDTO struct {
@@ -248,8 +249,7 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
 	if err != nil {
-		slog.Error("Error while finding sum payments by currency",
-			slog.Any("error", err))
+		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
@@ -257,22 +257,53 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//either the user spent it on a repo that does not have any devs who can claim
 	mFut, err := db.FindSumFutureSponsors(user.Id)
 	if err != nil {
-		slog.Error("Error while finding sum future sponsors",
-			slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
-		return
-	}
-	//or the user spent it on for a repo with a dev who can claim
-	mSub, err := db.FindSumDailySponsors(user.Id)
-	if err != nil {
-		slog.Error("Error while finding sum daily sponsors",
-			slog.Any("error", err))
+		slog.Error("Error while finding sum future sponsors", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
+	//or the user spent it on for a repo with a dev who can claim
+	mSub, err := db.FindSumDailySponsors(user.Id)
+	if err != nil {
+		slog.Error("Error while finding sum daily sponsors", slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		return
+	}
+
+	calculateAndRespondBalances(w, mAdd, mFut, mSub, GenericErrorMessage)
+}
+
+func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
+	mAdd, err := db.FindSumPaymentByCurrencyFoundation(user.Id, db.PayInSuccess)
+	if err != nil {
+		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		return
+	}
+
+	//either the user spent it on a repo that does not have any devs who can claim
+	mFut, err := db.FindSumFutureSponsorsFromFoundation(user.Id)
+	if err != nil {
+		slog.Error("Error while finding sum future sponsors", slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		return
+	}
+
+	//or the user spent it on for a repo with a dev who can claim
+	mSub, err := db.FindSumDailySponsorsFromFoundation(user.Id)
+	if err != nil {
+		slog.Error("Error while finding sum daily sponsors", slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
+		return
+	}
+
+	calculateAndRespondBalances(w, mAdd, mFut, mSub, GenericErrorMessage)
+}
+
+func calculateAndRespondBalances(w http.ResponseWriter, mAdd, mFut, mSub map[string]*big.Int, errorMessage string) {
 	totalUserBalances := []TotalUserBalance{}
-	for currency, _ := range mAdd {
+
+	for currency := range mAdd {
 		if mSub[currency] != nil {
 			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mSub[currency])
 			mSub[currency] = big.NewInt(0)
@@ -281,7 +312,6 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mFut[currency])
 			mFut[currency] = big.NewInt(0)
 		}
-		//
 		totalUserBalances = append(totalUserBalances, TotalUserBalance{
 			Currency: currency,
 			Balance:  mAdd[currency],
@@ -291,29 +321,25 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	//now sanity check if all the deducted mSub/mFut are set to zero
 	for currency, balance := range mSub {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			slog.Error("Something is off with",
-				slog.String("currency", currency))
-			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			slog.Error("Something is off with", slog.String("currency", currency))
+			util.WriteErrorf(w, http.StatusBadRequest, errorMessage)
 			return
 		}
 	}
 	for currency, balance := range mFut {
 		if balance.Cmp(big.NewInt(0)) != 0 {
-			slog.Error("Something is off with",
-				slog.String("currency", currency))
-			util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+			slog.Error("Something is off with", slog.String("currency", currency))
+			util.WriteErrorf(w, http.StatusBadRequest, errorMessage)
 			return
 		}
 	}
 
-	err = json.NewEncoder(w).Encode(totalUserBalances)
+	err := json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
-		slog.Error("Could not encode json",
-			slog.Any("error", err))
+		slog.Error("Could not encode json", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
 		return
 	}
-
 }
 
 func SignNeo(privateKeyHex string, userId uuid.UUID, amount *big.Int) (string, error) {

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -20,6 +21,12 @@ type User struct {
 	Email     string    `json:"email"`
 	Name      *string   `json:"name,omitempty"`
 	CreatedAt time.Time
+}
+
+type Foundation struct {
+	Id                   uuid.UUID   `json:"id"`
+	MultiplierDailyLimit int         `json:"multiplierDailyLimit"`
+	RepoIds              []uuid.UUID `json:"repoIds"`
 }
 
 type UserDetail struct {
@@ -116,7 +123,7 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	}
 }
 
-func GetUserThatSponsoredTrustedRepo() ([]User, error) {
+/*func GetUserThatSponsoredTrustedRepo() ([]User, error) {
 	s := `SELECT
 				DISTINCT user_sponsor_id AS user_id
 			FROM
@@ -139,7 +146,7 @@ func GetUserThatSponsoredTrustedRepo() ([]User, error) {
 		userStatus = append(userStatus, userState)
 	}
 	return userStatus, nil
-}
+}*/
 
 func InsertUser(user *UserDetail) error {
 	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
@@ -149,6 +156,21 @@ func InsertUser(user *UserDetail) error {
 	defer CloseAndLog(stmt)
 
 	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt)
+	if err != nil {
+		return err
+	}
+
+	return handleErrMustInsertOne(res)
+}
+
+func InsertFoundation(user *UserDetail) error {
+	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at, multiplier, multiplier_daily_limit) VALUES ($1, $2, $3, $4, $5, $6)")
+	if err != nil {
+		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
+	}
+	defer CloseAndLog(stmt)
+
+	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt, user.Multiplier, user.MultiplierDailyLimit)
 	if err != nil {
 		return err
 	}
@@ -327,4 +349,64 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 		return err
 	}
 	return handleErrMustInsertOne(res)
+}
+
+func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (bool, error) {
+	if foundation == nil {
+		return false, fmt.Errorf("foundation cannot be nil")
+	}
+
+	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
+
+	query := `
+		SELECT COALESCE(SUM(balance), 0)
+		FROM daily_contribution
+		WHERE
+			user_sponsor_id = $1
+			AND foundation_payment
+			AND currency = $2
+			AND day = $3`
+
+	var dailySumInt int64
+
+	err := DB.QueryRow(query, foundation.Id, currency, yesterdayStart).Scan(&dailySumInt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			if amount.Cmp(multiplierDailyLimit) <= 0 {
+				return true, nil
+			}
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to calculate daily contributions: %v", err)
+	}
+
+	dailySum := big.NewInt(dailySumInt)
+
+	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) <= 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (bool, error) {
+	if foundation == nil {
+		return false, fmt.Errorf("foundation cannot be nil")
+	}
+
+	totalBalance, err := FindSumPaymentFromFoundation(foundation.Id, PayInSuccess, currency)
+	if err != nil {
+		return false, err
+	}
+
+	totalSpending, err := FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, currency)
+	if err != nil {
+		return false, err
+	}
+
+	if new(big.Int).Add(totalSpending, amount).Cmp(totalBalance) <= 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
