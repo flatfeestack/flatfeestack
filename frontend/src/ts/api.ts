@@ -19,6 +19,9 @@ import type {
   PublicUser,
   UserBalance,
   RepoHealthValue,
+  HealthValueThreshold,
+  RepoMetrics,
+  PartialHealthValues,
 } from "../types/backend";
 import type { Token } from "../types/auth";
 import { token } from "./mainStore";
@@ -256,6 +259,8 @@ export const API = {
       backendToken
         .get(`repos/search?q=${encodeURIComponent(s)}`)
         .json<Repo[] | null>(),
+    triggerNewRepoAssessment: (repoId: string) =>
+      backendToken.post(`repos/${repoId}/forceAnalyze`),
     searchName: (s: string) =>
       backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     get: (id: number) => backendToken.get(`repos/${id}`),
@@ -276,6 +281,20 @@ export const API = {
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
     getHealthValue: (repoId: string) =>
       backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
+    getLatestHealthValueThresholds: () =>
+      backendToken
+        .get(`repos/healthvaluethreshold`)
+        .json<HealthValueThreshold>(),
+    setNewHealthValueThresholds: (thresholdArray: HealthValueThreshold) =>
+      backendToken.put(`repos/healthvaluethreshold`, { json: thresholdArray }),
+    getRepoMetricsById: (repoId: string) =>
+      backendToken
+        .get(`repos/${repoId}/healthvalue/metrics`)
+        .json<RepoMetrics>(),
+    getPartialHealthValues: (repoId: string) =>
+      backendToken
+        .get(`repos/${repoId}/healthvalue/partial`)
+        .json<PartialHealthValues>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

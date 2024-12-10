@@ -257,6 +257,11 @@
     border-radius: 50%;
   }
 
+  img#no-multiplier-img,
+  img#multiplier-img {
+    width: 1.3rem;
+  }
+
   @media screen and (max-width: 600px) {
     .grid-2 {
       display: flex;
@@ -472,14 +477,23 @@
         transition:fade={{ duration: 250 }}
       >
         What are multiplier options? Multiplier options allow you to boost your
-        support for your favorite projects. When enabled, a special icon (ICON
-        HERE) appears in the search tab. <br />
+        support for your favorite projects. When enabled, a special icon
+        <img
+          id="no-multiplier-img"
+          src="/images/no-multiplier-coin.svg"
+          alt="No Multiplier Icon"
+        />
+        appears in the search tab.
+        <br />
         By clicking the multiplier icon next to a repository, you activate a multiplier
-        to support it. This means that each time another FlatFeeStack user donates
-        to that repository, you'll automatically contribute up to 0.9% of their initial
-        donation as well. <br />
-        If you're interested in the exact mechanism of this feature, you can read
-        it <strong>here</strong>.
+        sponsoring to support it and the icon changes to
+        <img
+          id="multiplier-img"
+          src="/images/multiplier-coin.svg"
+          alt="Multiplier Icon"
+        />. This means that each time another FlatFeeStack user donates to that
+        repository, you'll automatically contribute up to 0.9% of their initial
+        donation as well.
       </p>
     {/if}
   </div>
@@ -493,8 +507,7 @@
         Your tipping limit is set to <strong
           >${new Intl.NumberFormat("de-CH", { useGrouping: true }).format(
             dailyLimit
-          )}</strong
-        > per day.
+          )}</strong> per day.
       </p>
       <div class="container">
         <label for="daily-limit-input">Daily Limit </label>

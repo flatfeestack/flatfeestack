@@ -24,6 +24,8 @@
   import DifferentChainId from "../routes/DifferentChainId.svelte";
   import PrivateRoute from "../routes/PrivateRoute.svelte";
 
+  import TermsAndConditions from "../routes/TermsAndConditions.svelte";
+
   import DAOHome from "../routes/DAO/Home.svelte";
   import DAOVotes from "../routes/DAO/Votes.svelte";
   import DAOMembership from "../routes/DAO/Membership.svelte";
@@ -128,6 +130,7 @@
           component={DAOEditDiscussion}
         />
 
+        <Route path="/terms-conditions" component={TermsAndConditions} />
         <Route path="/differentChainId" component={DifferentChainId} />
         <Route path="/badges/:uuid" component={PublicBadges} />
         <Route path="/forgot" component={Forgot} />
