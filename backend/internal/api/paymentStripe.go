@@ -128,12 +128,7 @@ func StripePaymentInitial(w http.ResponseWriter, r *http.Request, user *db.UserD
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	//params.Params.Metadata = map[string]string{}
-	//params.Params.Metadata["userId"] = user.Id.String()
-	//params.Params.Metadata["externalId"] = e.String()
-	//params.Params.Metadata["fee"] = strconv.FormatInt(plan.FeePrm, 10)
-	//params.Params.Metadata["freq"] = strconv.FormatInt(freq, 10)
-	//params.Params.Metadata["seats"] = strconv.FormatInt(seats, 10)
+
 	params.Metadata = map[string]string{
 		"userId":     user.Id.String(),
 		"externalId": e.String(),

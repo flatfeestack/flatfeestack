@@ -261,6 +261,7 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 				}
 
 				if futureContribution {
+					// TODO: to perstist the history of the future cintribution DB table for foudnations, there should be an separate DB table with own unique fields
 					slog.Info("Unclaimed / deducted",
 						slog.String("rid", rid.String()),
 						slog.Float64("total", total),
