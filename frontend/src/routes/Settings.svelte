@@ -5,29 +5,15 @@
     faUpload,
     faTrashCan,
   } from "@fortawesome/free-solid-svg-icons";
-  import FiatTab from "../components/PaymentTabs/FiatTab.svelte";
-  import CryptoTab from "../components/PaymentTabs/CryptoTab.svelte";
-  import Tabs from "../components/Tabs.svelte";
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import Fa from "svelte-fa";
   import Navigation from "../components/Navigation.svelte";
   import { API } from "../ts/api";
-  import { error, user, config } from "../ts/mainStore";
-  import { formatDate, formatBalance, timeSince } from "../ts/services";
-  import type { GitUser, UserBalance } from "../types/backend";
+  import { error, user } from "../ts/mainStore";
+  import { formatDate, timeSince } from "../ts/services";
+  import type { GitUser } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
   import { fade } from "svelte/transition";
-
-  // List of tab items with labels, values and assigned components
-  let items = [{ label: "Credit Card", value: 1, component: FiatTab }];
-
-  if ($config.env == "local" || $config.env == "staging") {
-    items.push({
-      label: "Crypto Currencies",
-      value: 2,
-      component: CryptoTab,
-    });
-  }
 
   let fileInput;
   let username: undefined | string;
@@ -37,12 +23,6 @@
 
   let multiplierActive: undefined | boolean;
   let showMultiplierInfo = false;
-  let dailyLimit: number = 100;
-  let newDailyLimit;
-  let newDailyLimitForBackend;
-  let total: number = 100;
-  let foundationBalances: UserBalance[] = [];
-  let intervalId: ReturnType<typeof setInterval>;
 
   $: {
     if (typeof username === "undefined" && $user.name) {
@@ -51,10 +31,6 @@
 
     if (typeof multiplierActive === "undefined" && $user.multiplier) {
       multiplierActive = $user.multiplier;
-    }
-
-    if ($user.multiplierDailyLimit) {
-      total = dailyLimit = $user.multiplierDailyLimit / 1000000;
     }
   }
 
@@ -140,46 +116,14 @@
     showMultiplierInfo = !showMultiplierInfo;
   }
 
-  function setDailyLimit() {
-    try {
-      if (newDailyLimit >= 1) {
-        newDailyLimitForBackend = parseInt(newDailyLimit) * 1000000;
-        API.user.setMultiplierDailyLimit(newDailyLimitForBackend);
-        total = dailyLimit = newDailyLimit;
-        $user.multiplierDailyLimit = newDailyLimitForBackend;
-        newDailyLimit = "";
-      } else {
-        $error = "The daily limit must be a number greater than or equalt to 1";
-      }
-    } catch (e) {
-      $error = e;
-    }
-  }
-
-  function handleLimitKeyDown(event) {
-    if (event.key === "Enter") {
-      setDailyLimit();
-    }
-  }
-
-  const fetchData = async () => {
-    foundationBalances = await API.user.foundationBalance();
-  };
-
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
       const res1 = await pr1;
       gitEmails = res1 ? res1 : gitEmails;
-      await fetchData();
-      intervalId = setInterval(fetchData, 5000);
     } catch (e) {
       $error = e;
     }
-  });
-
-  onDestroy(() => {
-    clearInterval(intervalId);
   });
 </script>
 
@@ -497,61 +441,4 @@
       </p>
     {/if}
   </div>
-  {#if multiplierActive}
-    <div
-      class="container-col"
-      id="tipping-limit-div"
-      style="margin-left: 2rem;"
-    >
-      <p>
-        Your tipping limit is set to <strong
-          >${new Intl.NumberFormat("de-CH", { useGrouping: true }).format(
-            dailyLimit
-          )}</strong
-        > per day.
-      </p>
-      <div class="container">
-        <label for="daily-limit-input">Daily Limit </label>
-        <input
-          id="daily-limit-input"
-          type="number"
-          class="m-4 max-w20"
-          bind:value={newDailyLimit}
-          on:keydown={handleLimitKeyDown}
-          placeholder="$"
-        />
-        <button on:click={setDailyLimit} class="ml-5 p-2 button1"
-          >Set Daily Limit</button
-        >
-      </div>
-      <div class="p-2 m-2">
-        <Tabs {items} {total} seats={1} freq={1} />
-      </div>
-      {#if foundationBalances}
-        <h2 class="p-2 m-2">Balances</h2>
-        <div class="container">
-          <table>
-            <thead>
-              <tr>
-                <th>Balance</th>
-                <th>Currency</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each foundationBalances as row}
-                <tr>
-                  <td>{formatBalance(row.balance, row.currency)}</td>
-                  <td>{row.currency}</td>
-                </tr>
-              {:else}
-                <tr>
-                  <td colspan="5">No Data</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </div>
-  {/if}
 </Navigation>
