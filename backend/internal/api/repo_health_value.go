@@ -127,6 +127,9 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 	repoHealthMetrics.ContributorCount = contributorCount
 	repoHealthMetrics.CommitCount = commitCount
 
+	slog.Info("inserting new repo health metrics",
+		slog.Any("Repo: %v", repoHealthMetrics))
+
 	err = db.InsertRepoHealthMetrics(*repoHealthMetrics)
 	if err != nil {
 		return err
@@ -138,6 +141,8 @@ func manageRepoHealthMetrics(data []FlatFeeWeight, repoId uuid.UUID) error {
 func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHealthMetrics, error) {
 	internalHealthMetric, err := db.GetInternalMetrics(repoId, isPostgres)
 	if err != nil {
+		slog.Warn("issues getting internalHealthMetrics",
+			slog.Any("error", err))
 		return &db.RepoHealthMetrics{
 			SponsorCount:        0,
 			RepoStarCount:       0,
@@ -216,7 +221,7 @@ func calculatePartialHealthValues(weights *db.MetricWeight, threshold *db.RepoHe
 		SponsorValue:        calcValue(metrics.SponsorCount, threshold.ThSponsorDonation.Lower, threshold.ThSponsorDonation.Upper, weights.WeightSponsorDonation),
 		RepoStarValue:       calcValue(metrics.RepoStarCount, threshold.ThRepoStarCount.Lower, threshold.ThRepoStarCount.Upper, weights.WeightRepoStarCount),
 		RepoMultiplierValue: calcValue(metrics.RepoMultiplierCount, threshold.ThRepoMultiplier.Lower, threshold.ThRepoMultiplier.Upper, weights.WeightRepoMultiplier),
-		ActiveFFSUserValue:  calcValue(metrics.RepoWeight, threshold.ThActiveFFSUserCount.Lower, threshold.ThActiveFFSUserCount.Upper, weights.WeightActiveFFSUserCount),
+		ActiveFFSUserValue:  calcValue(metrics.ActiveFFSUserCount, threshold.ThActiveFFSUserCount.Lower, threshold.ThActiveFFSUserCount.Upper, weights.WeightActiveFFSUserCount),
 	}
 }
 

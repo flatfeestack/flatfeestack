@@ -15,6 +15,7 @@ export const config = writable<Config>(<Config>{});
 export const token = writable<string>("");
 export const sponsoredRepos = writable<Repo[]>([]);
 export const multiplierSponsoredRepos = writable<Repo[]>([]);
+export const multiplierCountByRepo = writable<Map<string, number>>(new Map());
 export const loadedSponsoredRepos = writable<boolean>(false);
 export const loadedMultiplierRepos = writable<boolean>(false);
 export const route = writable("");

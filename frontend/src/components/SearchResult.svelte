@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { API } from "../ts/api";
   import {
     user,
@@ -6,18 +7,18 @@
     sponsoredRepos,
     trustedRepos,
     multiplierSponsoredRepos,
+    multiplierCountByRepo,
   } from "../ts/mainStore";
   import { getColor1 } from "../ts/utils";
   import type { Repo } from "../types/backend";
   import { faClose } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
+  import { get } from "svelte/store";
 
   export let repo: Repo;
   let repoIsHealthy = false;
   let star = false;
   let multiplier = false;
-
-  let multiplierAmount = 0;
 
   const onSponsor = async () => {
     try {
@@ -40,6 +41,11 @@
       const resMultiplier = await API.repos.setMultiplier(repo.uuid);
       $multiplierSponsoredRepos = [...$multiplierSponsoredRepos, resMultiplier];
       multiplier = true;
+
+      multiplierCountByRepo.update((counts) => {
+        counts[repo.uuid] = (counts[repo.uuid] || 0) + 1;
+        return counts;
+      });
     } catch (e) {
       $error = e;
       star = false;
@@ -59,6 +65,21 @@
     );
     multiplier = tmpMultiplier !== undefined;
   }
+
+  onMount(async () => {
+    try {
+      const initialCount = await API.repos.getMultiplierCount(repo.uuid);
+
+      multiplierCountByRepo.update((counts) => {
+        return {
+          ...counts,
+          [repo.uuid]: initialCount,
+        };
+      });
+    } catch (e) {
+      console.error("Failed to fetch initial multiplier count:", e);
+    }
+  });
 </script>
 
 <style>
@@ -269,7 +290,7 @@
     </div>
 
     <div class="container-small icons-div" id="multiplier-sponsor-amount-div">
-      {multiplierAmount}
+      {$multiplierCountByRepo[repo.uuid]}
       <Fa icon={faClose} />
     </div>
   </div>

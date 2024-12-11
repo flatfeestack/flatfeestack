@@ -18,7 +18,7 @@ type RepoHealthMetrics struct {
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
 	RepoMultiplierCount int       `json:"repomultipliercount"`
-	RepoWeight          int       `json:"activeffsusercount"`
+	ActiveFFSUserCount  int       `json:"reposponsordonated"`
 }
 
 type InternalHealthMetrics struct {
@@ -246,6 +246,7 @@ func GetInternalMetricsDummy() (*RepoHealthMetrics, error) {
 		SponsorCount:        rand.Intn(100) + 1,
 		RepoStarCount:       rand.Intn(100) + 1,
 		RepoMultiplierCount: rand.Intn(100) + 1,
+		ActiveFFSUserCount:  rand.Intn(100) + 1,
 	}, nil
 }
 
@@ -262,8 +263,12 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	multiplierCount, err := GetMultiplierCount(repoId, activeSponsors, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			slog.Error("no multiplier count available",
+				slog.Any("error", err))
 			multiplierCount = 0
 		} else {
+			slog.Error("couldn't query Multiplier Count",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to fetch multiplier count: %v", err)
 		}
 	}
@@ -272,22 +277,29 @@ func GetInternalMetrics(repoId uuid.UUID, isPostgres bool) (*RepoHealthMetrics, 
 	starCount, err := GetStarCount(repoId, activeSponsors, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			slog.Error("no star count available",
+				slog.Any("error", err))
 			starCount = 0
 		} else {
+			slog.Error("couldn't query Star Count",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to fetch star count: %v", err)
 		}
 	}
 	metrics.RepoStarCount = starCount
 
-	activeFFSUserCount, err := GetRepoWeight(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
+	activeFFSUserCount, err := GetActiveFFSUserCount(repoId, activeUserMinMonths, latestRepoSponsoringMonths, isPostgres)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			activeFFSUserCount = 0.0
+			activeFFSUserCount = 0
 		} else {
+			slog.Error("couldn't query repo weight",
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to calculate active ffs user count: %v", err)
 		}
 	}
-	metrics.ActiveFFSUserCount = int(activeFFSUserCountTmp)
+
+	metrics.ActiveFFSUserCount = activeFFSUserCount
 
 	err = DB.QueryRow(
 		`SELECT COUNT(DISTINCT user_sponsor_id)

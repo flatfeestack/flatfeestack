@@ -303,18 +303,34 @@
   <div class="flex-row">
     <div class="flex-row card max-w50 cardLeft">
       <div>
-        <h2>Why Crypto Currencies?</h2>
+        <h2>How to Boost Your Sponsoring to the Next Level?</h2>
         <div class="max-w40">
-          Payin with credit card, payout with crypto currencies. With crypto
-          currencies, the payout is without restrictions and anyone can receive
-          funding. It took Github <a
-            href="https://news.ycombinator.com/item?id=25648849">two years</a
-          >
-          to get the license for Iran. These restrictions do not apply to crypto
-          currencies. We chose crypto currency based on: (1) energy-friendly, (2)
-          popularity, (3) decentralization.
+          It’s simple — with FlatFeeStack! <br />
+          Introducing Multiplier Sponsoring — our innovative new feature that amplifies
+          your impact. Activate it on your repository, and every time another FlatFeeStack
+          user makes a donation, you automatically add a bonus donation on top.
+          <br />
+          Why wait? Empower the projects you love while enjoying the highest level
+          of security — designed and delivered by our team of top-notch developers.
         </div>
       </div>
+      <div>
+        <img
+          class="icon bottom"
+          src="/images/multiplier-coin-landing.svg"
+          alt="seat icon bw"
+        />
+        <img
+          class="icon top"
+          src="/images/multiplier-coin.svg"
+          alt="metric icon color"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-row">
+    <div class="flex-row card max-w50 cardLeft">
       <div>
         <img
           class="icon bottom"
@@ -326,6 +342,19 @@
           src="/images/cc.svg"
           alt="crypto currencies icon bw"
         />
+      </div>
+      <div>
+        <h2>Why Crypto Currencies?</h2>
+        <div class="max-w40">
+          Payin with credit card, payout with crypto currencies. With crypto
+          currencies, the payout is without restrictions and anyone can receive
+          funding. It took Github <a
+            href="https://news.ycombinator.com/item?id=25648849">two years</a
+          >
+          to get the license for Iran. These restrictions do not apply to crypto
+          currencies. We chose crypto currency based on: (1) energy-friendly, (2)
+          popularity, (3) decentralization.
+        </div>
       </div>
     </div>
   </div>

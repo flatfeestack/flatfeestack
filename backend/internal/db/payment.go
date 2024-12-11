@@ -150,6 +150,39 @@ func FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.
 	return m, nil
 }
 
+func FindSumPaymentByCurrencyFoundation(userId uuid.UUID, status string) (map[string]*big.Int, error) {
+	rows, err := DB.
+		Query(`SELECT currency, COALESCE(sum(balance), 0)
+               FROM payment_in_event 
+               WHERE user_id = $1 AND status = $2 AND freq = 1
+               GROUP BY currency`, userId, status)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	m := make(map[string]*big.Int)
+	for rows.Next() {
+		var c, b string
+		err = rows.Scan(&c, &b)
+		if err != nil {
+			return nil, err
+		}
+		b1, ok := new(big.Int).SetString(b, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a big.int %v", b1)
+		}
+		if m[c] == nil {
+			m[c] = b1
+		} else {
+			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+		}
+	}
+
+	return m, nil
+}
+
 func FindSumPaymentFromFoundation(userId uuid.UUID, status string, currency string) (*big.Int, error) {
 	query := `
 			SELECT COALESCE(sum(balance), 0)

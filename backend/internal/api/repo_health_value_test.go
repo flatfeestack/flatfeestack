@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/rand"
 )
 
 func getTestData(a, b, c, d, e, f int) *db.RepoHealthMetrics {
@@ -24,7 +23,7 @@ func getTestData(a, b, c, d, e, f int) *db.RepoHealthMetrics {
 		SponsorCount:        c,
 		RepoStarCount:       d,
 		RepoMultiplierCount: e,
-		ActiveFFSUserCount:  rand.Int(),
+		ActiveFFSUserCount:  f,
 	}
 
 	return &newRepoMetrics

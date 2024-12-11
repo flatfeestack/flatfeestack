@@ -23,7 +23,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["GitUser"])[];
+            "application/json": components["schemas"]["GitUser"][];
           };
         };
       };
@@ -39,7 +39,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
     delete: {
@@ -50,7 +52,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -63,13 +67,17 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -79,7 +87,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Repo"])[];
+            "application/json": components["schemas"]["Repo"][];
           };
         };
       };
@@ -91,7 +99,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Repo"])[];
+            "application/json": components["schemas"]["Repo"][];
           };
         };
       };
@@ -108,7 +116,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -116,7 +126,9 @@ export interface paths {
     put: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -131,7 +143,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -146,7 +160,9 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -161,13 +177,17 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -197,13 +217,17 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
     delete: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
       };
     };
   };
@@ -223,7 +247,9 @@ export interface paths {
           };
         };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -263,13 +289,25 @@ export interface paths {
       };
     };
   };
+  "/users/me/balanceFoundation": {
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserStatus"];
+          };
+        };
+      };
+    };
+  };
   "/users/contrib-snd": {
     post: {
       responses: {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Contribution"])[];
+            "application/json": components["schemas"]["Contribution"][];
           };
         };
       };
@@ -281,7 +319,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Contribution"])[];
+            "application/json": components["schemas"]["Contribution"][];
           };
         };
       };
@@ -293,7 +331,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/js  on": (components["schemas"]["RepoBalance"])[];
+            "application/js  on": components["schemas"]["RepoBalance"][];
           };
         };
       };
@@ -310,7 +348,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["RepoBalance"])[];
+            "application/json": components["schemas"]["RepoBalance"][];
           };
         };
       };
@@ -342,9 +380,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -363,7 +405,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -378,11 +422,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["PublicUser"])[];
+            "application/json": components["schemas"]["PublicUser"][];
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -403,9 +449,13 @@ export interface paths {
           };
         };
         /** @description No Content */
-        204: never;
+        204: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -415,11 +465,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Repo"])[];
+            "application/json": components["schemas"]["Repo"][];
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -434,11 +486,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Repo"])[];
+            "application/json": components["schemas"]["Repo"][];
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -448,7 +502,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Repo"])[];
+            "application/json": components["schemas"]["Repo"][];
           };
         };
       };
@@ -460,7 +514,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["HealthValueThreshold"])[];
+            "application/json": components["schemas"]["HealthValueThreshold"][];
           };
         };
       };
@@ -474,11 +528,17 @@ export interface paths {
       };
       responses: {
         /** @description Successfully processed the HealthValueThreshold array. */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -488,7 +548,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["PartialHealthValues"])[];
+            "application/json": components["schemas"]["PartialHealthValues"][];
           };
         };
       };
@@ -509,7 +569,9 @@ export interface paths {
           };
         };
         /** @description Not Found */
-        404: never;
+        404: {
+          content: never;
+        };
       };
     };
   };
@@ -522,11 +584,17 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -539,11 +607,17 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -562,9 +636,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -583,9 +661,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -604,9 +686,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -625,9 +711,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -646,9 +736,13 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -668,7 +762,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -687,7 +783,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -706,7 +804,30 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/repos/{id}/multiplierCount": {
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Number"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -714,9 +835,13 @@ export interface paths {
     post: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Service Unavailable */
-        503: never;
+        503: {
+          content: never;
+        };
       };
     };
   };
@@ -724,9 +849,13 @@ export interface paths {
     post: {
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -739,9 +868,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -754,11 +887,17 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
         /** @description Internal Server Error */
-        500: never;
+        500: {
+          content: never;
+        };
       };
     };
   };
@@ -780,11 +919,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (string)[];
+            "application/json": string[];
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -798,7 +939,9 @@ export interface paths {
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -811,9 +954,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -823,11 +970,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": (components["schemas"]["Invitation"])[];
+            "application/json": components["schemas"]["Invitation"][];
           };
         };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -840,9 +989,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -855,9 +1008,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -870,9 +1027,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -885,9 +1046,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -901,9 +1066,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -916,9 +1085,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -931,9 +1104,13 @@ export interface paths {
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -943,16 +1120,20 @@ export interface paths {
         content: {
           "application/json": {
             data?: {
-              [key: string]: string | undefined;
+              [key: string]: string;
             };
           };
         };
       };
       responses: {
         /** @description OK */
-        200: never;
+        200: {
+          content: never;
+        };
         /** @description Bad Request */
-        400: never;
+        400: {
+          content: never;
+        };
       };
     };
   };
@@ -980,6 +1161,8 @@ export interface components {
       /** Format: int64 */
       freq?: number | null;
       role?: string | null;
+      multiplier?: boolean | null;
+      multiplierDailyLimit?: number | null;
     };
     Claims: {
       iss?: string | null;
@@ -1076,7 +1259,7 @@ export interface components {
       /** Format: float */
       activeffsuservalue?: number;
     };
-    PaymentEvent: ({
+    PaymentEvent: {
         /** Format: uuid */
         id: string;
         /** Format: uuid */
@@ -1093,7 +1276,7 @@ export interface components {
         freq: number;
         /** Format: date-time */
         createdAt?: string;
-      })[];
+      }[];
     UserStatus: {
       /** Format: uuid */
       userId?: string;
@@ -1102,10 +1285,10 @@ export interface components {
       name?: string | null;
       daysLeft?: number;
     };
-    UserBalance: ({
+    UserBalance: {
         currency?: string;
         balance?: number;
-      })[];
+      }[];
     Contribution: {
       repoName: string;
       repoUrl: string;
@@ -1126,7 +1309,7 @@ export interface components {
     RepoBalance: {
       repo: components["schemas"]["Repo"];
       currencyBalance: {
-        [key: string]: string | undefined;
+        [key: string]: string;
       };
     };
     EmailToken: {
@@ -1138,12 +1321,12 @@ export interface components {
       days?: number;
       /** Format: int32 */
       total?: number;
-      datasets?: (components["schemas"]["Dataset"])[];
-      labels?: (string)[];
+      datasets?: components["schemas"]["Dataset"][];
+      labels?: string[];
     };
     Dataset: {
       label?: string;
-      data?: (number)[];
+      data?: number[];
       fill?: boolean;
       backgroundColor?: string;
       borderColor?: string;
@@ -1153,11 +1336,11 @@ export interface components {
     WebhookCallback: {
       requestId?: string;
       error?: string | null;
-      result?: (components["schemas"]["FlatFeeWeight"])[];
+      result?: components["schemas"]["FlatFeeWeight"][];
       repoid?: string;
     };
     FlatFeeWeight: {
-      names?: (string)[];
+      names?: string[];
       email?: string;
       weight?: number;
       /** Format: int32 */
@@ -1168,12 +1351,16 @@ export interface components {
       time?: string;
       offset?: string;
     };
+    Number: {
+      /** Format: int64 */
+      number?: number;
+    };
     Config: {
       stripePublicApi?: string;
-      plans?: (components["schemas"]["Plan"])[];
+      plans?: components["schemas"]["Plan"][];
       env?: string;
       supportedCurrencies?: {
-        [key: string]: components["schemas"]["Currency"] | undefined;
+        [key: string]: components["schemas"]["Currency"];
       };
     };
     /**
@@ -1228,7 +1415,7 @@ export interface components {
       endDate: string;
       name: string;
       url: string;
-      weights?: (components["schemas"]["FlatFeeWeight"])[];
+      weights?: components["schemas"]["FlatFeeWeight"][];
     };
     PayoutResponse: {
       /** Format: int64 */
@@ -1252,6 +1439,8 @@ export interface components {
   headers: never;
   pathItems: never;
 }
+
+export type $defs = Record<string, never>;
 
 export type external = Record<string, never>;
 

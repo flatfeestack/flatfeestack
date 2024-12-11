@@ -72,6 +72,8 @@ func (c *CalcHandler) DailyRunner(now time.Time) error {
 			if err != nil {
 				return err
 			}
+			slog.Info("Parts for Multiplier",
+				slog.Int("parts", parts))
 			if len(allFoundationsPerUser) > 0 {
 				err = c.calcMultiplier(sponsorResults[key].UserId, parts, yesterdayStart)
 				if err != nil {
@@ -132,7 +134,12 @@ func calcAndDeductFoundation(sponsorDonations map[uuid.UUID][]db.UserDonationRep
 
 				pool := new(big.Int).Mul(amountPerRepo, big.NewInt(int64(len(block.TrustedRepoSelected))))
 
-				payoutlimit := new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
+				var payoutlimit *big.Float
+				if futureContribution {
+					payoutlimit = new(big.Float).SetInt(amountPerRepo)
+				} else {
+					payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
+				}
 				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
 
 				err := doDeductFoundation(allRepos, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
@@ -206,6 +213,7 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 		}
 
 		var amountFoundation *big.Float
+		// TODO: foundations length is used for calculating the price per foundation, but it is not validated if a foundation can pay the new calculated amount
 		foundations, err := db.GetFoundationsSupportingRepo(rid)
 		if err != nil {
 			return err
@@ -232,6 +240,7 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 			if err != nil {
 				return err
 			}
+
 			if checkDailyLimit && checkFondsAmountEnough {
 				for email, w := range uidNotInMap {
 					newTotal := total + w
@@ -252,21 +261,50 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 				}
 
 				if futureContribution {
+					// TODO: to perstist the history of the future cintribution DB table for foudnations, there should be an separate DB table with own unique fields
 					slog.Info("Unclaimed / deducted",
 						slog.String("rid", rid.String()),
 						slog.Float64("total", total),
 						slog.String("deduct", amountFoundationInt.String()))
-					err = db.InsertFutureContribution(foundation.Id, rid, amountFoundationInt, currency, yesterdayStart, util.TimeNow(), true)
+					err = db.InsertOrUpdateFutureContribution(foundation.Id, rid, amountFoundationInt, currency, yesterdayStart, util.TimeNow(), true)
 					if err != nil {
 						return err
 					}
 				} else {
+					mFut, err := db.FindSumFutureSponsorsFromFoundation(foundation.Id)
+					if err != nil {
+						return err
+					}
+
+					distributeFutureAdd := amountFoundationInt
+					var deductFutureContribution *big.Int
+					var distributable *big.Int
+					if mFut[currency] != nil {
+						distributeFutureAdd = new(big.Int).Div(mFut[currency], big.NewInt(int64(len(rids))))
+						deductFutureContribution = new(big.Int).Neg(distributeFutureAdd)
+					}
+
+					if deductFutureContribution != nil {
+						err = db.InsertFutureContribution(foundation.Id, rid, deductFutureContribution, currency, yesterdayStart, util.TimeNow(), true)
+						if err != nil {
+							return err
+						}
+
+						slog.Info("futureContributionTest2",
+							slog.Any("yesterdayStart", yesterdayStart),
+							slog.String("amountFoundationInt", deductFutureContribution.String()))
+
+						distributable = new(big.Int).Add(distributeFutureAdd, amountFoundationInt)
+					} else {
+						distributable = distributeFutureAdd
+					}
+
 					for contributorUserId, w := range uidInMap {
-						amount := calcSharePerUser(amountFoundationInt, w, total)
+						amount := calcSharePerUser(distributable, w, total)
 						slog.Info("Claim",
 							slog.String("userId", contributorUserId.String()),
 							slog.String("rid", rid.String()),
-							slog.String("add", amountFoundationInt.String()),
+							slog.String("add", distributable.String()),
 							slog.Float64("weight", w),
 							slog.Float64("total", total),
 							slog.String("amount", amount.String()))
@@ -353,50 +391,6 @@ func doDeduct(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currenc
 				}
 			}
 		}
-		/*if len(trustedRepos) > 0 {
-			var amountFoundation *big.Float
-			foundations, err := db.GetFoundationsSupportingRepo(rid)
-			if err != nil {
-				return err
-			}
-
-			foundationCount := big.NewInt(int64(len(foundations)))
-			totalAmountForRepo := new(big.Float).Mul(new(big.Float).SetInt(foundationCount), amountPerPart)
-
-			if totalAmountForRepo.Cmp(payoutlimit) > 0 {
-				amountFoundation = new(big.Float).Quo(payoutlimit, new(big.Float).SetInt(foundationCount))
-			} else {
-				amountFoundation = amountPerPart
-			}
-
-			amountFoundationInt := new(big.Int)
-			amountFoundation.Int(amountFoundationInt)
-
-			for _, foundation := range foundations {
-				checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt)
-				// check if payment was success and if the amount is enaugh
-				if err != nil {
-					return err
-				}
-				if checkDailyLimit {
-					// foundation pays only if there are developers on the repo right now, else to complicated, I dont understand
-					for contributorUserId, w := range uidInMap {
-						amount := calcSharePerUser(amountFoundationInt, w, total)
-						slog.Info("Claim",
-							slog.String("userId", contributorUserId.String()),
-							slog.String("rid", rid.String()),
-							slog.String("add", amountFoundationInt.String()),
-							slog.Float64("weight", w),
-							slog.Float64("total", total),
-							slog.String("amount", amount.String()))
-						err = db.InsertContribution(foundation.Id, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow())
-						if err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}*/
 	}
 	return nil
 }

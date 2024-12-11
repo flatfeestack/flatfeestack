@@ -152,8 +152,21 @@ func Graph(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
 		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
 	}
-	contributions, _ := db.FindRepoContribution(repoId)
-	contributors, _ := db.FindRepoContributors(repoId)
+	contributions, err := db.FindRepoContribution(repoId)
+	if err != nil {
+		slog.Error("Error trying to find contributions with associated repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
+
+	contributors, err := db.FindRepoContributors(repoId)
+	if err != nil {
+		slog.Error("Error trying to find contributors with associated repo",
+			slog.Any("error", err))
+		util.WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+		return
+	}
 
 	offsetString := r.PathValue("offset")
 	offset, err := strconv.Atoi(offsetString)
@@ -544,4 +557,16 @@ func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, 
 	} else {
 		util.WriteErrorf(w, http.StatusInternalServerError, ForcingRepoAnalysisTooSoon)
 	}
+}
+
+func GetMultiplierCountById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	repoId := uuid.MustParse(r.PathValue("id"))
+	multiplierCount, err := db.GetFoundationsSupportingRepo(repoId)
+
+	if err != nil {
+		util.WriteErrorf(w, http.StatusNoContent, "Could not get the amount of multiplier on repo id error: %v", err)
+		return
+	}
+
+	util.WriteJson(w, int64(len(multiplierCount)))
 }

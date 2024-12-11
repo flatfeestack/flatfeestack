@@ -128,7 +128,6 @@ func TestFindRepoHealthMetricsByRepoIdHistoryEmpty(t *testing.T) {
 	assert.Empty(t, result)
 }
 
-// done
 func TestUpdateHealthValue(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
@@ -151,7 +150,6 @@ func TestUpdateHealthValue(t *testing.T) {
 	assert.Equal(t, alteredRepoMetrics, *result)
 }
 
-// done
 func TestFindHealthValueById(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
@@ -171,7 +169,6 @@ func TestScanRepohealthMetricsEmptyRows(t *testing.T) {
 	assert.Empty(t, result)
 }
 
-// done
 func TestGetAllTrustValues(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
@@ -189,7 +186,6 @@ func TestGetAllTrustValues(t *testing.T) {
 	assert.Len(t, result, 13)
 }
 
-// not finished, need to merge multiplier to finish the test
 func TestGetInternalMetrics(t *testing.T) {
 	t.Run("empty situation", func(t *testing.T) {
 		SetupTestData()

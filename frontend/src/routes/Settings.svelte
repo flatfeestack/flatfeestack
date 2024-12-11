@@ -8,13 +8,13 @@
   import FiatTab from "../components/PaymentTabs/FiatTab.svelte";
   import CryptoTab from "../components/PaymentTabs/CryptoTab.svelte";
   import Tabs from "../components/Tabs.svelte";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import Fa from "svelte-fa";
   import Navigation from "../components/Navigation.svelte";
   import { API } from "../ts/api";
   import { error, user, config } from "../ts/mainStore";
-  import { formatDate, timeSince } from "../ts/services";
-  import type { GitUser } from "../types/backend";
+  import { formatDate, formatBalance, timeSince } from "../ts/services";
+  import type { GitUser, UserBalance } from "../types/backend";
   import { emailValidationPattern } from "../ts/utils";
   import { fade } from "svelte/transition";
 
@@ -39,7 +39,10 @@
   let showMultiplierInfo = false;
   let dailyLimit: number = 100;
   let newDailyLimit;
-  let total: number = 0;
+  let newDailyLimitForBackend;
+  let total: number = 100;
+  let foundationBalances: UserBalance[] = [];
+  let intervalId: ReturnType<typeof setInterval>;
 
   $: {
     if (typeof username === "undefined" && $user.name) {
@@ -51,7 +54,7 @@
     }
 
     if ($user.multiplierDailyLimit) {
-      total = dailyLimit = $user.multiplierDailyLimit;
+      total = dailyLimit = $user.multiplierDailyLimit / 1000000;
     }
   }
 
@@ -140,9 +143,10 @@
   function setDailyLimit() {
     try {
       if (newDailyLimit >= 1) {
-        API.user.setMultiplierDailyLimit(newDailyLimit);
+        newDailyLimitForBackend = parseInt(newDailyLimit) * 1000000;
+        API.user.setMultiplierDailyLimit(newDailyLimitForBackend);
         total = dailyLimit = newDailyLimit;
-        $user.multiplierDailyLimit = newDailyLimit;
+        $user.multiplierDailyLimit = newDailyLimitForBackend;
         newDailyLimit = "";
       } else {
         $error = "The daily limit must be a number greater than or equalt to 1";
@@ -158,14 +162,24 @@
     }
   }
 
+  const fetchData = async () => {
+    foundationBalances = await API.user.foundationBalance();
+  };
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
       const res1 = await pr1;
       gitEmails = res1 ? res1 : gitEmails;
+      await fetchData();
+      intervalId = setInterval(fetchData, 5000);
     } catch (e) {
       $error = e;
     }
+  });
+
+  onDestroy(() => {
+    clearInterval(intervalId);
   });
 </script>
 
@@ -241,6 +255,11 @@
 
   .slider.round:before {
     border-radius: 50%;
+  }
+
+  img#no-multiplier-img,
+  img#multiplier-img {
+    width: 1.3rem;
   }
 
   @media screen and (max-width: 600px) {
@@ -458,14 +477,23 @@
         transition:fade={{ duration: 250 }}
       >
         What are multiplier options? Multiplier options allow you to boost your
-        support for your favorite projects. When enabled, a special icon (ICON
-        HERE) appears in the search tab. <br />
+        support for your favorite projects. When enabled, a special icon
+        <img
+          id="no-multiplier-img"
+          src="/images/no-multiplier-coin.svg"
+          alt="No Multiplier Icon"
+        />
+        appears in the search tab.
+        <br />
         By clicking the multiplier icon next to a repository, you activate a multiplier
-        to support it. This means that each time another FlatFeeStack user donates
-        to that repository, you'll automatically contribute up to 0.9% of their initial
-        donation as well. <br />
-        If you're interested in the exact mechanism of this feature, you can read
-        it <strong>here</strong>.
+        sponsoring to support it and the icon changes to
+        <img
+          id="multiplier-img"
+          src="/images/multiplier-coin.svg"
+          alt="Multiplier Icon"
+        />. This means that each time another FlatFeeStack user donates to that
+        repository, you'll automatically contribute up to 0.9% of their initial
+        donation as well.
       </p>
     {/if}
   </div>
@@ -499,6 +527,31 @@
       <div class="p-2 m-2">
         <Tabs {items} {total} seats={1} freq={1} />
       </div>
+      {#if foundationBalances}
+        <h2 class="p-2 m-2">Balances</h2>
+        <div class="container">
+          <table>
+            <thead>
+              <tr>
+                <th>Balance</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each foundationBalances as row}
+                <tr>
+                  <td>{formatBalance(row.balance, row.currency)}</td>
+                  <td>{row.currency}</td>
+                </tr>
+              {:else}
+                <tr>
+                  <td colspan="5">No Data</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     </div>
   {/if}
 </Navigation>

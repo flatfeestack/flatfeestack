@@ -5,6 +5,7 @@
     error,
     sponsoredRepos,
     multiplierSponsoredRepos,
+    multiplierCountByRepo,
   } from "../ts/mainStore";
   import { getColor1, getColor2 } from "../ts/utils";
   import type { Repo } from "../types/backend";
@@ -24,6 +25,15 @@
     await API.repos.unsetMultiplier(repo.uuid);
     $multiplierSponsoredRepos = $multiplierSponsoredRepos.filter((r: Repo) => {
       return r.uuid !== repo.uuid;
+    });
+
+    multiplierCountByRepo.update((counts) => {
+      if (counts[repo.uuid] > 1) {
+        counts[repo.uuid] -= 1;
+      } else {
+        delete counts[repo.uuid];
+      }
+      return counts;
     });
   }
 
@@ -57,6 +67,11 @@
       const resMultiplier = await API.repos.setMultiplier(repo.uuid);
       $multiplierSponsoredRepos = [...$multiplierSponsoredRepos, resMultiplier];
       multiplier = true;
+
+      multiplierCountByRepo.update((counts) => {
+        counts[repo.uuid] = (counts[repo.uuid] || 0) + 1;
+        return counts;
+      });
     } catch (e) {
       $error = e;
     }
