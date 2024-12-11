@@ -192,6 +192,7 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM daily_contribution 
                      WHERE user_sponsor_id = $1
+					 	AND foundation_payment = FALSE
                      GROUP BY currency`, userSponsorId)
 
 	if err != nil {
@@ -276,11 +277,69 @@ func FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency str
 	return big.NewInt(balanceSumInt), nil
 }
 
+func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]*big.Int, error) {
+	rows, err := DB.Query(`
+		SELECT currency, repo_id, COALESCE(SUM(balance), 0)
+		FROM (
+			SELECT currency, repo_id, balance
+			FROM daily_contribution
+			WHERE user_sponsor_id = $1
+				AND foundation_payment = FALSE
+			
+			UNION ALL
+			
+			SELECT currency, repo_id, balance
+			FROM future_contribution
+			WHERE user_sponsor_id = $1
+				AND foundation_payment = FALSE
+		) combined_contributions
+		GROUP BY currency, repo_id
+	`, userSponsorId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	contributions := make(map[string]map[uuid.UUID]*big.Int)
+	for rows.Next() {
+		var currency string
+		var repoID uuid.UUID
+		var balanceStr string
+
+		err = rows.Scan(&currency, &repoID, &balanceStr)
+		if err != nil {
+			return nil, err
+		}
+
+		balance, ok := new(big.Int).SetString(balanceStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
+		}
+
+		if contributions[currency] == nil {
+			contributions[currency] = make(map[uuid.UUID]*big.Int)
+		}
+
+		if _, exists := contributions[currency][repoID]; exists {
+			return nil, fmt.Errorf("unexpected duplicate entry for currency: %v, repo_id: %v", currency, repoID)
+		}
+		contributions[currency][repoID] = balance
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return contributions, nil
+}
+
 func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
 	rows, err := DB.
 		Query(`SELECT currency, COALESCE(sum(balance), 0)
         			 FROM future_contribution 
                      WHERE user_sponsor_id = $1
+					 	AND foundation_payment = FALSE
                      GROUP BY currency`, userSponsorId)
 
 	if err != nil {
@@ -341,6 +400,59 @@ func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*b
 	}
 
 	return m, nil
+}
+
+func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]*big.Int, error) {
+	rows, err := DB.Query(`
+		SELECT currency, repo_id, COALESCE(SUM(balance), 0)
+		FROM (
+			SELECT currency, repo_id, balance
+			FROM daily_contribution
+			WHERE user_sponsor_id = $1
+				AND foundation_payment
+			
+			UNION ALL
+			
+			SELECT currency, repo_id, balance
+			FROM future_contribution
+			WHERE user_sponsor_id = $1
+				AND foundation_payment
+		) combined_contributions
+		GROUP BY currency, repo_id
+	`, userSponsorId)
+
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	contributions := make(map[string]map[uuid.UUID]*big.Int)
+	for rows.Next() {
+		var currency string
+		var repoID uuid.UUID
+		var balanceStr string
+
+		err = rows.Scan(&currency, &repoID, &balanceStr)
+		if err != nil {
+			return nil, err
+		}
+
+		balance, ok := new(big.Int).SetString(balanceStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
+		}
+
+		if contributions[currency] == nil {
+			contributions[currency] = make(map[uuid.UUID]*big.Int)
+		}
+
+		if _, exists := contributions[currency][repoID]; exists {
+			return nil, fmt.Errorf("unexpected duplicate entry for currency: %v, repo_id: %v", currency, repoID)
+		}
+		contributions[currency][repoID] = balance
+	}
+
+	return contributions, nil
 }
 
 //TODO: integrate with loop above

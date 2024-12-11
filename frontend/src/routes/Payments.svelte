@@ -57,21 +57,32 @@
   <div class="container">
     {#if userBalances}
       <div class="container-col2 m-2 history-container">
-        <h3 class="balance-title">Your Current Sponsoring Balance: __</h3>
         <div class="container">
           <table>
             <caption>Sponsoring History</caption>
             <thead>
               <tr>
-                <th>Balance</th>
+                <th>Repo</th>
+                <th>Amount</th>
                 <th>Currency</th>
+                <th>Balance</th>
               </tr>
             </thead>
             <tbody>
-              {#each userBalances as row}
+              {#each userBalances.slice().reverse() as row}
                 <tr>
-                  <td>{formatBalance(row.balance, row.currency)}</td>
-                  <td>{row.currency}</td>
+                  <td>{row.repoName || "N/A"}</td>
+                  <td
+                    >{row.balance
+                      ? formatBalance(row.balance, row.currency)
+                      : "N/A"}</td
+                  >
+                  <td>{row.currency || "N/A"}</td>
+                  <td
+                    >{row.totalBalance
+                      ? formatBalance(row.totalBalance, row.currency)
+                      : "N/A"}</td
+                  >
                 </tr>
               {:else}
                 <tr>
@@ -85,21 +96,32 @@
     {/if}
     {#if foundationBalances && $user.multiplier}
       <div class="container-col2 m-2 history-container">
-        <h3 class="balance-title">Current Multiplier Sponsoring Balance: __</h3>
         <div class="container">
           <table>
             <caption>Multiplier Sponsoring History</caption>
             <thead>
               <tr>
-                <th>Balance</th>
+                <th>Repo</th>
+                <th>Amount</th>
                 <th>Currency</th>
+                <th>Balance</th>
               </tr>
             </thead>
             <tbody>
-              {#each foundationBalances as row}
+              {#each foundationBalances.slice().reverse() as row}
                 <tr>
-                  <td>{formatBalance(row.balance, row.currency)}</td>
-                  <td>{row.currency}</td>
+                  <td>{row.repoName || "N/A"}</td>
+                  <td
+                    >{row.balance
+                      ? formatBalance(row.balance, row.currency)
+                      : "N/A"}</td
+                  >
+                  <td>{row.currency || "N/A"}</td>
+                  <td
+                    >{row.totalBalance
+                      ? formatBalance(row.totalBalance, row.currency)
+                      : "N/A"}</td
+                  >
                 </tr>
               {:else}
                 <tr>

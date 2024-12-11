@@ -283,7 +283,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["UserStatus"];
+            "application/json": components["schemas"]["UserBalance"];
           };
         };
       };
@@ -295,7 +295,7 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["UserStatus"];
+            "application/json": components["schemas"]["UserBalance"];
           };
         };
       };
@@ -1287,7 +1287,11 @@ export interface components {
     };
     UserBalance: {
         currency?: string;
+        /** Format: uuid */
+        repoId?: string;
+        repoName?: string;
         balance?: number;
+        totalBalance?: number;
       }[];
     Contribution: {
       repoName: string;
