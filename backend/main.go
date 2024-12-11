@@ -256,6 +256,7 @@ func main() {
 	router.HandleFunc("GET /repos/{id}/healthvalue/partial", middlewareJwtAuthAdminLog(api2.GetPartialHealthValuesById))
 	router.HandleFunc("GET /repos/healthvaluethreshold", middlewareJwtAuthAdminLog(api2.GetLatestThresholds))
 	router.HandleFunc("PUT /repos/healthvaluethreshold", middlewareJwtAuthAdminLog(api2.SetNewThresholds))
+	router.HandleFunc("GET /repos/{id}/multiplierCount", middlewareJwtAuthUserLog(api2.GetMultiplierCountById))
 	//payment
 
 	//hooks

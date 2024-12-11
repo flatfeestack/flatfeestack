@@ -295,6 +295,8 @@ export const API = {
       backendToken
         .get(`repos/${repoId}/healthvalue/partial`)
         .json<PartialHealthValues>(),
+    getMultiplierCount: (repoId: string) =>
+      backendToken.get(`repos/${repoId}/multiplierCount`).json<number>(),
   },
   invite: {
     invites: () => backendToken.get("invite").json<Invitation[]>(),

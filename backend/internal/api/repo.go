@@ -558,3 +558,15 @@ func (rs *RepoHandler) ForceAnalyzeRepo(w http.ResponseWriter, r *http.Request, 
 		util.WriteErrorf(w, http.StatusInternalServerError, ForcingRepoAnalysisTooSoon)
 	}
 }
+
+func GetMultiplierCountById(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) {
+	repoId := uuid.MustParse(r.PathValue("id"))
+	multiplierCount, err := db.GetFoundationsSupportingRepo(repoId)
+
+	if err != nil {
+		util.WriteErrorf(w, http.StatusNoContent, "Could not get the amount of multiplier on repo id error: %v", err)
+		return
+	}
+
+	util.WriteJson(w, int64(len(multiplierCount)))
+}

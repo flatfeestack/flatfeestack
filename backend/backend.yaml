@@ -843,7 +843,7 @@ paths:
       tags:
         - Repos
       security:
-        - bearerAuth:  [ User]
+        - bearerAuth:  [ User ]
       parameters:
         - name: id
           in: path
@@ -880,6 +880,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RepoMetrics'
+        '400':
+          description: Bad Request
+  /repos/{id}/multiplierCount:
+    get:
+      tags:
+        - Repos
+      security:
+        - bearerAuth:  [ User ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Number'
         '400':
           description: Bad Request
   /hooks/stripe:
@@ -1587,6 +1609,12 @@ components:
           format: date-time
         offset:
           type: string
+    Number:
+      type: object
+      properties:
+        number:
+          type: integer
+          format: int64
     Config:
       type: object
       properties:
