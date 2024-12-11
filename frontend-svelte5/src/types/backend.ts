@@ -26,6 +26,8 @@ export type User = {
     /** Format: int64 */
     freq?: number | null;
     role?: string | null;
+    multiplier: boolean;
+    multiplierDailyLimit: number;
 };
 
 export type Config = {
@@ -45,7 +47,25 @@ export type UserStatus = components["schemas"]["UserStatus"];
 
 export type PaymentEvent = components["schemas"]["PaymentEvent"];
 
-export type Repo = components["schemas"]["Repo"];
+export type Repo = {
+
+        /** Format: uuid */
+        uuid: string;
+        url?: string | null;
+        gitUrl?: string | null;
+        name?: string | null;
+        description?: string | null;
+        /** Format: uint32 */
+        score: number;
+        source?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        trustAt: string;
+        /** Format: float */
+        healthValue: number;
+        analyzed: boolean;
+
+};
 
 export type GitUser = components["schemas"]["GitUser"];
 
@@ -74,7 +94,7 @@ export type Contribution = {
 };
 
 export type ContributionSummary = {
-    repo: components["schemas"]["Repo"];
+    repo: Repo;
     currencyBalance: {
         [key: string]: bigint;
     };
@@ -101,3 +121,64 @@ export type  UserBalance = ({
     currency: string;
     balance: number;
 })[];
+
+export type RepoHealthValue = ({
+    repoid?: string;
+    healthvalue?: number;
+});
+
+export type Threshold= ({
+    /** Format: int64 */
+    upper: number;
+    /** Format: int64 */
+    lower: number;
+});
+
+export type HealthValueThreshold = ({
+    id?: string;
+    /** Format: date-time */
+    createdAt?: string;
+    ThContributorCount?: Threshold;
+    ThCommitCount?: Threshold;
+    ThSponsorDonation?: Threshold;
+    ThRepoStarCount?: Threshold;
+    ThRepoMultiplier?: Threshold;
+    ThActiveFFSUserCount?: Threshold;
+});
+
+export type RepoMetrics= ({
+    /** Format: uuid */
+    id?: string;
+    /** Format: uuid */
+    repoid?: string;
+    /** Format: date-time */
+    createdat?: string;
+    /** Format: int64 */
+    contributorcount?: number;
+    /** Format: int64 */
+    commitcount?: number;
+    /** Format: int64 */
+    sponsorcount?: number;
+    /** Format: int64 */
+    repostarcount?: number;
+    /** Format: int64 */
+    repomultipliercount?: number;
+    /** Format: int64 */
+    activeffsusercount?: number;
+});
+export type PartialHealthValues= ({
+    /** Format: uuid */
+    repoid?: string;
+    /** Format: float */
+    contributorvalue?: number;
+    /** Format: float */
+    commitvalue?: number;
+    /** Format: float */
+    sponsorvalue?: number;
+    /** Format: float */
+    repostarvalue?: number;
+    /** Format: float */
+    repomultipliervalue?: number;
+    /** Format: float */
+    activeffsuservalue?: number;
+});

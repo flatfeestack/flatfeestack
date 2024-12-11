@@ -43,19 +43,7 @@ export interface components {
       /** Format: date-time */
       createdAt?: string | null;
     };
-    Repo: {
-      /** Format: uuid */
-      uuid: string;
-      url?: string | null;
-      gitUrl?: string | null;
-      name?: string | null;
-      description?: string | null;
-      /** Format: uint32 */
-      score: number;
-      source?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-    };
+
     PaymentEvent: ({
         /** Format: uuid */
         id: string;

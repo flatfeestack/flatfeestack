@@ -13,7 +13,7 @@
     import Income from "./pages/Income.svelte";
     import Badges from "./pages/Badges.svelte";
     import Invitations from "./pages/Invitations.svelte";
-    import Admin from "./pages/Admin.svelte";
+    import Admin from "./pages/admin/Admin.svelte";
     import LoginWait from "./auth/LoginWait.svelte";
     import LoginConfirm from "./auth/LoginConfirm.svelte";
     import {API} from "./ts/api.ts";
@@ -28,6 +28,8 @@
         {path: "/user/badges", component: Badges},
         {path: "/user/invitations", component: Invitations},
         {path: "/user/admin", component: Admin},
+        {path: "/user/admin", component: Admin},
+        {path: "/user/healthy-repos", component: Admin},
 
         {path: "/differentChainId", component: DifferentChainId},
         {path: "/badges/:uuid", component: PublicBadges},

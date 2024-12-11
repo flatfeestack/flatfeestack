@@ -19,9 +19,14 @@
     { icon: 'fa-medal', label: 'Badges', path: '/user/badges' },
   ]);
 
+  let adminAdded = false;
+
   $effect(() => {
-    if (appState.user.role === "admin" && !navItems.some(item => item.path === '/user/admin')) {
+    if (appState.user.role === "admin" && !adminAdded) {
       navItems.push({ icon: 'fa-shield-alt', label: 'Admin', path: '/user/admin' });
+      navItems.push({ icon: 'fa-shield-alt', label: 'Healthy Repos', path: '/user/healthy-repos' });
+      navItems.push({ icon: 'fa-shield-alt', label: 'Repo Assessment', path: '/user/healthy-repo-assessment' });
+      adminAdded = true;
     }
   });
 

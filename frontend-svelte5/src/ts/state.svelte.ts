@@ -1,4 +1,4 @@
-import type { User, Config, Repo } from "../types/backend.ts";
+import type {User, Config, Repo, HealthValueThreshold} from "../types/backend.ts";
 
 // Instead of stores, use state
 export class AppState {
@@ -7,10 +7,21 @@ export class AppState {
     user= $state(<User>{});
     config = $state(<Config>{});
     sponsoredRepos=  $state(<Repo[]>[]);
+    multiplierSponsoredRepos=  $state(<Repo[]>[]);
     loadedSponsoredRepos= $state(false);
     route= $state("");
     accessToken= $state("");
     accessTokenExpire= $state(0);
+
+    trustedRepos = $state(<Repo[]>[]);
+    loadedTrustedRepos = $state(false);
+    reposToUnTrustAfterTimeout = $state(<Repo[]>[]);
+    reposInSearchResult = $state(<Repo[]>[]);
+    loadedLatestThresholds = $state(false);
+    latestThresholds =  $state(<HealthValueThreshold>{});
+    reposWaitingForNewAnalysis = $state(<Repo[]>[]);
+    reloadAdminSearchKey = $state(0);
+    reloadHealthRepoCardKey = $state(0);
 
     isAccessTokenExpired(): boolean {
         const expireTime = this.accessTokenExpire;

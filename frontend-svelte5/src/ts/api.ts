@@ -19,7 +19,12 @@ import type {
   UserStatus,
   PayoutResponse,
   PublicUser,
-  UserBalance, Token,
+  UserBalance,
+  Token,
+  RepoHealthValue,
+  HealthValueThreshold,
+  RepoMetrics,
+  PartialHealthValues
 } from "types/backend.ts";
 import type { DaoConfig, PayoutConfig } from "types/payout.ts";
 /*import type {
@@ -143,10 +148,16 @@ export const API = {
         backendToken.delete(`users/me/method`),
     getSponsored: () =>
         backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getMultiplier: () =>
+        backendToken.get("users/me/multiplied").json<Repo[]>(),
     setName: (name: string) =>
         backendToken.put(`users/me/name/${name}`),
     clearName: () =>
         backendToken.put(`users/me/clear/name`),
+    setMultiplier: (isSet: boolean) =>
+        backendToken.put(`users/me/multiplier/${isSet}`),
+    setMultiplierDailyLimit: (amount: number) =>
+        backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
     setImage: (image: string) =>
         backendToken.post(`users/me/image`, { json: { image } }),
     deleteImage: () =>
@@ -193,8 +204,32 @@ export const API = {
         backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
     untag: (repoId: string) =>
         backendToken.post(`repos/${repoId}/untag`),
+    setMultiplier: (repoId: string) =>
+        backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
+    unsetMultiplier: (repoId: string) =>
+        backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
         backendToken.get(`repos/${repoId}/${offset}/graph`).json<ChartDataTotal>(),
+    trust: (repoId: string) =>
+        backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+    untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
+    getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
+    getHealthValue: (repoId: string) =>
+        backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
+    getLatestHealthValueThresholds: () =>
+        backendToken
+            .get(`repos/healthvaluethreshold`)
+            .json<HealthValueThreshold>(),
+    setNewHealthValueThresholds: (thresholdArray: HealthValueThreshold) =>
+        backendToken.put(`repos/healthvaluethreshold`, { json: thresholdArray }),
+    getRepoMetricsById: (repoId: string) =>
+        backendToken
+            .get(`repos/${repoId}/healthvalue/metrics`)
+            .json<RepoMetrics>(),
+    getPartialHealthValues: (repoId: string) =>
+        backendToken
+            .get(`repos/${repoId}/healthvalue/partial`)
+            .json<PartialHealthValues>(),
   },
   invite: {
     invites: () =>
