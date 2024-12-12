@@ -41,12 +41,13 @@ func SetNewThresholds(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 
 	if err := json.NewDecoder(r.Body).Decode(&newThresholds); err != nil {
 		slog.Error("Failed to decode request body", "error", err)
-		util.WriteErrorf(w, http.StatusBadRequest, "Invalid request format")
+		util.WriteErrorf(w, http.StatusBadRequest, "Invalid request format, Thresholds must be integers")
 		return
 	}
 	defer r.Body.Close()
 
-	if err := validateThresholds(&newThresholds); err != nil {
+	err := validateThresholds(&newThresholds)
+	if err != nil {
 		slog.Error("Invalid threshold values", "error", err)
 		util.WriteErrorf(w, http.StatusBadRequest, err.Error())
 		return
@@ -56,7 +57,7 @@ func SetNewThresholds(w http.ResponseWriter, r *http.Request, _ *db.UserDetail) 
 	newThresholds.CreatedAt = time.Now()
 
 	// db call
-	err := db.InsertRepoHealthThreshold(newThresholds)
+	err = db.InsertRepoHealthThreshold(newThresholds)
 	if err != nil {
 		slog.Error("failed to insert new threshold", "error", err)
 		util.WriteErrorf(w, http.StatusBadRequest, "error while inserting new threshold")
