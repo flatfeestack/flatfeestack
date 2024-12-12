@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.30.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/text v0.21.0
 )
 
