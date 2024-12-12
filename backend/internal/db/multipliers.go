@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/google/uuid"
@@ -152,6 +153,43 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
 		if err != nil {
 			return nil, err
 		}
+		foundations = append(foundations, foundation)
+	}
+	return foundations, nil
+}
+
+func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yesterdayStart time.Time) ([]Foundation, error) {
+	s := `SELECT u.id, u.multiplier_daily_limit
+            FROM multiplier_event m
+			INNER JOIN users u ON m.user_id = u.id
+			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
+	rows, err := DB.Query(s, rid)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	var foundations []Foundation
+	for rows.Next() {
+		var foundation Foundation
+		err = rows.Scan(&foundation.Id, &foundation.MultiplierDailyLimit)
+		if err != nil {
+			return nil, err
+		}
+		firstCheck, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(0), currency, yesterdayStart)
+		if err != nil {
+			return nil, err
+		}
+
+		secondCheck, err := CheckFondsAmountEnough(&foundation, big.NewInt(0), currency)
+		if err != nil {
+			return nil, err
+		}
+
+		if firstCheck.Cmp(big.NewInt(-1)) == 0 || secondCheck.Cmp(big.NewInt(-1)) == 0 {
+			continue
+		}
+
 		foundations = append(foundations, foundation)
 	}
 	return foundations, nil

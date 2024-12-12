@@ -333,8 +333,9 @@ func TestFoundationHasNotEnoughFonds(t *testing.T) {
 	foundation1 := setupFoundation(t, "foundation@ffs.ch f1", 2000000000)
 	setupFunds(t, *foundation1, "USD", 1, 1, 2000000000, day1)
 
+	// 13750 are fees
 	foundation2 := setupFoundation(t, "foundation2@ffs.ch f2", 4000000000)
-	setupFunds(t, *foundation2, "USD", 1, 1, 45000, day1)
+	setupFunds(t, *foundation2, "USD", 1, 1, 58750, day1)
 
 	//we have 5 sponsors, but only the first sponsor added funds
 	sponsors := setupUsers(t, "tom@tom.tom s1", "mic@mic.mic s2", "arm@arm.arm s3", "gui@gui.gui s4", "mar@mar.mar s5")
@@ -400,8 +401,8 @@ func TestFoundationHasNotEnoughFonds(t *testing.T) {
 	//now check the daily_contribution because top(sponsor) has not contributed to a trusted repo, the foundation does not pay anything
 	m1, err := db.FindSumDailyContributors(*contributors[0])
 	assert.Nil(t, err)
-	//110001 + 49500 from founation 1
-	assert.Equal(t, "159501", m1["USD"].String())
+	//110001 + 49500 from founation 1 + 45000 from foundation 2
+	assert.Equal(t, "204501", m1["USD"].String())
 
 	m2, err := db.FindSumDailyContributors(*contributors[1])
 	assert.Nil(t, err)
@@ -432,7 +433,7 @@ func TestFoundationHasNotEnoughFonds(t *testing.T) {
 
 	m5, err := db.FindSumDailySponsorsFromFoundation(*foundation2)
 	assert.Nil(t, err)
-	assert.Len(t, m5, 0)
+	assert.Len(t, m5, 1)
 }
 
 func TestMultipleFuturesForFoundation(t *testing.T) {
