@@ -37,6 +37,11 @@ type Contribution struct {
 	FoundationPayment bool         `json:"foundationPayment"`
 }
 
+type ContributionDetail struct {
+	Balance   *big.Int  `json:"balance"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time, foudnationPayment bool) error {
 
 	stmt, err := DB.Prepare(`
@@ -277,37 +282,38 @@ func FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency str
 	return big.NewInt(balanceSumInt), nil
 }
 
-func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]*big.Int, error) {
+func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
 	rows, err := DB.Query(`
-		SELECT currency, repo_id, COALESCE(SUM(balance), 0)
-		FROM (
-			SELECT currency, repo_id, balance
-			FROM daily_contribution
-			WHERE user_sponsor_id = $1
-				AND foundation_payment = FALSE
-			
-			UNION ALL
-			
-			SELECT currency, repo_id, balance
-			FROM future_contribution
-			WHERE user_sponsor_id = $1
-				AND foundation_payment = FALSE
-		) combined_contributions
-		GROUP BY currency, repo_id
-	`, userSponsorId)
+        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at)
+        FROM (
+            SELECT currency, repo_id, balance, created_at
+            FROM daily_contribution
+            WHERE user_sponsor_id = $1
+                AND foundation_payment = FALSE
+
+            UNION ALL
+
+            SELECT currency, repo_id, balance, created_at
+            FROM future_contribution
+            WHERE user_sponsor_id = $1
+                AND foundation_payment = FALSE
+        ) combined_contributions
+        GROUP BY currency, repo_id
+    `, userSponsorId)
 
 	if err != nil {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
 
-	contributions := make(map[string]map[uuid.UUID]*big.Int)
+	contributions := make(map[string]map[uuid.UUID]ContributionDetail)
 	for rows.Next() {
 		var currency string
 		var repoID uuid.UUID
 		var balanceStr string
+		var createdAtStr string
 
-		err = rows.Scan(&currency, &repoID, &balanceStr)
+		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAtStr)
 		if err != nil {
 			return nil, err
 		}
@@ -317,18 +323,24 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
 		}
 
+		const timestampLayout = "2006-01-02 15:04:05.999999-07:00"
+		createdAt, err := time.Parse(timestampLayout, createdAtStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+		}
+
 		if contributions[currency] == nil {
-			contributions[currency] = make(map[uuid.UUID]*big.Int)
+			contributions[currency] = make(map[uuid.UUID]ContributionDetail)
 		}
 
 		if _, exists := contributions[currency][repoID]; exists {
 			return nil, fmt.Errorf("unexpected duplicate entry for currency: %v, repo_id: %v", currency, repoID)
 		}
-		contributions[currency][repoID] = balance
-	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+		contributions[currency][repoID] = ContributionDetail{
+			Balance:   balance,
+			CreatedAt: createdAt,
+		}
 	}
 
 	return contributions, nil
@@ -402,37 +414,38 @@ func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*b
 	return m, nil
 }
 
-func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]*big.Int, error) {
+func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
 	rows, err := DB.Query(`
-		SELECT currency, repo_id, COALESCE(SUM(balance), 0)
-		FROM (
-			SELECT currency, repo_id, balance
-			FROM daily_contribution
-			WHERE user_sponsor_id = $1
-				AND foundation_payment
-			
-			UNION ALL
-			
-			SELECT currency, repo_id, balance
-			FROM future_contribution
-			WHERE user_sponsor_id = $1
-				AND foundation_payment
-		) combined_contributions
-		GROUP BY currency, repo_id
-	`, userSponsorId)
+        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at)
+        FROM (
+            SELECT currency, repo_id, balance, created_at
+            FROM daily_contribution
+            WHERE user_sponsor_id = $1
+                AND foundation_payment
+
+            UNION ALL
+
+            SELECT currency, repo_id, balance, created_at
+            FROM future_contribution
+            WHERE user_sponsor_id = $1
+                AND foundation_payment
+        ) combined_contributions
+        GROUP BY currency, repo_id
+    `, userSponsorId)
 
 	if err != nil {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
 
-	contributions := make(map[string]map[uuid.UUID]*big.Int)
+	contributions := make(map[string]map[uuid.UUID]ContributionDetail)
 	for rows.Next() {
 		var currency string
 		var repoID uuid.UUID
 		var balanceStr string
+		var createdAtStr string
 
-		err = rows.Scan(&currency, &repoID, &balanceStr)
+		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAtStr)
 		if err != nil {
 			return nil, err
 		}
@@ -442,14 +455,24 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
 		}
 
+		const timestampLayout = "2006-01-02 15:04:05.999999-07:00"
+		createdAt, err := time.Parse(timestampLayout, createdAtStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+		}
+
 		if contributions[currency] == nil {
-			contributions[currency] = make(map[uuid.UUID]*big.Int)
+			contributions[currency] = make(map[uuid.UUID]ContributionDetail)
 		}
 
 		if _, exists := contributions[currency][repoID]; exists {
 			return nil, fmt.Errorf("unexpected duplicate entry for currency: %v, repo_id: %v", currency, repoID)
 		}
-		contributions[currency][repoID] = balance
+
+		contributions[currency][repoID] = ContributionDetail{
+			Balance:   balance,
+			CreatedAt: createdAt,
+		}
 	}
 
 	return contributions, nil

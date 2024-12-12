@@ -4,11 +4,12 @@
   import { API } from "../ts/api";
   import { onMount, onDestroy } from "svelte";
   import type { UserBalance } from "../types/backend";
-  import { formatBalance } from "../ts/services";
+  import { formatBalance, formatCreatedAt } from "../ts/services";
   import PaymentSelection from "../components/PaymentSelection.svelte";
+  import { slide } from "svelte/transition";
 
-  let userBalances: UserBalance[] = [];
-  let foundationBalances: UserBalance[] = [];
+  let userBalances: UserBalance = [];
+  let foundationBalances: UserBalance = [];
   let intervalId: ReturnType<typeof setInterval>;
 
   const fetchData = async () => {
@@ -66,23 +67,17 @@
                 <th>Amount</th>
                 <th>Currency</th>
                 <th>Balance</th>
+                <th>Create Date</th>
               </tr>
             </thead>
             <tbody>
-              {#each userBalances.slice().reverse() as row}
+              {#each userBalances as row}
                 <tr>
-                  <td>{row.repoName || "N/A"}</td>
-                  <td
-                    >{row.balance
-                      ? formatBalance(row.balance, row.currency)
-                      : "N/A"}</td
-                  >
-                  <td>{row.currency || "N/A"}</td>
-                  <td
-                    >{row.totalBalance
-                      ? formatBalance(row.totalBalance, row.currency)
-                      : "N/A"}</td
-                  >
+                  <td>{row.repoName}</td>
+                  <td>{formatBalance(row.balance, row.currency)}</td>
+                  <td>{row.currency}</td>
+                  <td>{formatBalance(row.totalBalance, row.currency)}</td>
+                  <td>{formatCreatedAt(row.createdAt)}</td>
                 </tr>
               {:else}
                 <tr>
@@ -105,23 +100,17 @@
                 <th>Amount</th>
                 <th>Currency</th>
                 <th>Balance</th>
+                <th>Create Date</th>
               </tr>
             </thead>
             <tbody>
               {#each foundationBalances.slice().reverse() as row}
                 <tr>
-                  <td>{row.repoName || "N/A"}</td>
-                  <td
-                    >{row.balance
-                      ? formatBalance(row.balance, row.currency)
-                      : "N/A"}</td
-                  >
-                  <td>{row.currency || "N/A"}</td>
-                  <td
-                    >{row.totalBalance
-                      ? formatBalance(row.totalBalance, row.currency)
-                      : "N/A"}</td
-                  >
+                  <td>{row.repoName}</td>
+                  <td>{formatBalance(row.balance, row.currency)}</td>
+                  <td>{row.currency}</td>
+                  <td>{formatBalance(row.totalBalance, row.currency)}</td>
+                  <td>{formatCreatedAt(row.createdAt)}</td>
                 </tr>
               {:else}
                 <tr>

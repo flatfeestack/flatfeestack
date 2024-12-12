@@ -1290,8 +1290,12 @@ export interface components {
         /** Format: uuid */
         repoId?: string;
         repoName?: string;
+        /** Format: bigint */
         balance?: number;
+        /** Format: bigint */
         totalBalance?: number;
+        /** Format: date-time */
+        createdAt?: string;
       }[];
     Contribution: {
       repoName: string;

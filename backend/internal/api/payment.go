@@ -46,7 +46,8 @@ type TotalUserBalance struct {
 	RepoId       uuid.UUID `json:"repoId"`
 	RepoName     string    `json:"repoName"`
 	Balance      *big.Int  `json:"balance"`
-	TotalBalance *big.Int  `json:"totalbalance"`
+	TotalBalance *big.Int  `json:"totalBalance"`
+	CreateDate   string    `json:"createdAt"`
 }
 
 const (
@@ -250,7 +251,7 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 }
 
 func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
+	mAdd, err := db.FindSumPaymentByCurrencyWithDate(user.Id, db.PayInSuccess)
 	if err != nil {
 		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
@@ -268,7 +269,7 @@ func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 }
 
 func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	mAdd, err := db.FindSumPaymentByCurrencyFoundation(user.Id, db.PayInSuccess)
+	mAdd, err := db.FindSumPaymentByCurrencyFoundationWithDate(user.Id, db.PayInSuccess)
 	if err != nil {
 		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
@@ -285,13 +286,13 @@ func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDeta
 	calculateAndRespondBalances(w, mAdd, mCont, GenericErrorMessage)
 }
 
-func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*big.Int, mCont map[string]map[uuid.UUID]*big.Int, errorMessage string) {
+func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.PaymentInfo, mCont map[string]map[uuid.UUID]db.ContributionDetail, errorMessage string) {
 	totalUserBalances := []TotalUserBalance{}
 
 	for currency, totalAdded := range mAdd {
 		if contMap, exists := mCont[currency]; exists && contMap != nil {
 			for repoId, contributionBalance := range mCont[currency] {
-				remainingBalance := new(big.Int).Sub(totalAdded, contributionBalance)
+				remainingBalance := new(big.Int).Sub(totalAdded.Balance, contributionBalance.Balance)
 
 				repo, err := db.FindRepoById(repoId)
 				if err != nil {
@@ -304,12 +305,17 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*big.Int
 					Currency:     currency,
 					RepoId:       repoId,
 					RepoName:     *repo.Name,
-					Balance:      contributionBalance,
+					Balance:      contributionBalance.Balance,
 					TotalBalance: remainingBalance,
+					CreateDate:   contributionBalance.CreatedAt.Format("2006-01-02 15:04:05"),
 				})
 
-				mCont[currency][repoId] = big.NewInt(0)
-				mAdd[currency] = remainingBalance
+				mCont[currency][repoId] = db.ContributionDetail{
+					Balance: big.NewInt(0),
+				}
+				mAdd[currency] = &db.PaymentInfo{
+					Balance: remainingBalance,
+				}
 			}
 		} else {
 			totalUserBalances = append(totalUserBalances, TotalUserBalance{
@@ -317,7 +323,8 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*big.Int
 				RepoId:       uuid.Nil,
 				RepoName:     "N/A",
 				Balance:      big.NewInt(0),
-				TotalBalance: totalAdded,
+				TotalBalance: totalAdded.Balance,
+				CreateDate:   totalAdded.CreatedAt.Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -325,7 +332,7 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*big.Int
 	// Sanity check: Ensure all contributions in mCont are fully accounted for
 	for currency, repos := range mCont {
 		for repoId, balance := range repos {
-			if balance.Cmp(big.NewInt(0)) != 0 {
+			if balance.Balance.Cmp(big.NewInt(0)) != 0 {
 				slog.Error("Contribution balance not zeroed",
 					slog.String("currency", currency),
 					slog.String("repoId", repoId.String()),

@@ -190,15 +190,21 @@ export function minBalanceName(c: string): string {
   return currency.smallest;
 }
 
-export const formatBalance = (n: bigint, c: string): string => {
+export const formatBalance = (n: any, c: string): string => {
+  if (n === undefined || n === null || isNaN(n)) {
+    return "Invalid Balance";
+  }
+
+  const bigIntN = BigInt(n);
+
   if (c === "USD") {
-    if (n > BigInt(1000000) || n <= BigInt(-1000000)) {
-      const num = BigInt(n) / BigInt(1000000);
+    if (bigIntN > BigInt(1000000) || bigIntN <= BigInt(-1000000)) {
+      const num = bigIntN / BigInt(1000000);
       return num.toString(10);
-    } else if (n == BigInt(0)) {
+    } else if (bigIntN === BigInt(0)) {
       return "$0";
     } else {
-      const num = BigInt(n) / BigInt(10000);
+      const num = bigIntN / BigInt(10000);
       return num.toString(10) + "¢";
     }
   } else {
@@ -206,10 +212,18 @@ export const formatBalance = (n: bigint, c: string): string => {
     const currency = conf.supportedCurrencies[c.toUpperCase()];
     if (!currency) {
       console.debug("Unknown currency: " + c);
-      return n.toString(10);
+      return bigIntN.toString(10);
     }
-    return formatUnits(n, currency.factorPow);
+    return formatUnits(bigIntN, currency.factorPow);
   }
+};
+
+export const formatCreatedAt = (createdAt: string): string => {
+  if (createdAt === "0001-01-01 00:00:00") {
+    return new Date().toLocaleString();
+  }
+
+  return new Date(createdAt).toLocaleString();
 };
 
 //https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site

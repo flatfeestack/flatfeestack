@@ -1479,8 +1479,13 @@ components:
             type: string
           balance:
             type: integer
+            format: bigint
           totalBalance:
             type: integer
+            format: bigint
+          createdAt:
+            type: string
+            format: date-time
     Contribution:
       type: object
       properties:
