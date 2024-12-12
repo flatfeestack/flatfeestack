@@ -84,7 +84,7 @@
   }
 
   function handleInputValidation(event) {
-    event.target.value = event.target.value.replace(/[^0-9]/g, ''); // Store last valid value
+    event.target.value = event.target.value.replace(/[^0-9]/g, ""); // Store last valid value
   }
 
   async function setNewThresholds(threshold: string) {
