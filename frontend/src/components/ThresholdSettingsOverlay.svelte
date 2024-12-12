@@ -83,6 +83,10 @@
     newThActiveFFSUserCountUpper = undefined;
   }
 
+  function handleInputValidation(event) {
+    event.target.value = event.target.value.replace(/[^0-9]/g, ''); // Store last valid value
+  }
+
   async function setNewThresholds(threshold: string) {
     const newHealthValueThreshold: HealthValueThreshold =
       createHealthValueThreshold({
@@ -239,6 +243,7 @@
                 class="max-w20"
                 bind:value={newThContributorCountLower}
                 placeholder={String($latestThresholds.ThContributorCount.lower)}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -250,6 +255,7 @@
                 class="max-w20"
                 bind:value={newThContributorCountUpper}
                 placeholder={String($latestThresholds.ThContributorCount.upper)}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
@@ -274,6 +280,7 @@
                 class="max-w20"
                 bind:value={newThCommitCountLower}
                 placeholder={String($latestThresholds.ThCommitCount.lower)}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -285,6 +292,7 @@
                 class="max-w20"
                 bind:value={newThCommitCountUpper}
                 placeholder={String($latestThresholds.ThCommitCount.upper)}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
@@ -309,6 +317,7 @@
                 class="max-w20"
                 bind:value={newThSponsorDonationLower}
                 placeholder={String($latestThresholds.ThSponsorDonation.lower)}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -320,6 +329,7 @@
                 class="max-w20"
                 bind:value={newThSponsorDonationUpper}
                 placeholder={String($latestThresholds.ThSponsorDonation.upper)}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
@@ -344,6 +354,7 @@
                 class="max-w20"
                 bind:value={newThRepoMultiplierLower}
                 placeholder={String($latestThresholds.ThRepoMultiplier.lower)}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -355,6 +366,7 @@
                 class="max-w20"
                 bind:value={newThRepoMultiplierUpper}
                 placeholder={String($latestThresholds.ThRepoMultiplier.upper)}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
@@ -379,6 +391,7 @@
                 class="max-w20"
                 bind:value={newThRepoStarCountLower}
                 placeholder={String($latestThresholds.ThRepoStarCount.lower)}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -390,6 +403,7 @@
                 class="max-w20"
                 bind:value={newThRepoStarCountUpper}
                 placeholder={String($latestThresholds.ThRepoStarCount.upper)}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
@@ -416,6 +430,7 @@
                 placeholder={String(
                   $latestThresholds.ThActiveFFSUserCount.lower
                 )}
+                on:input={handleInputValidation}
               />
             </div>
 
@@ -429,6 +444,7 @@
                 placeholder={String(
                   $latestThresholds.ThActiveFFSUserCount.upper
                 )}
+                on:input={handleInputValidation}
               />
             </div>
           </div>
