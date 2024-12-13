@@ -220,10 +220,18 @@ export const formatBalance = (n: any, c: string): string => {
 
 export const formatCreatedAt = (createdAt: string): string => {
   if (createdAt === "0001-01-01 00:00:00") {
-    return new Date().toLocaleString();
+    return new Date()
+      .toISOString()
+      .replace("T", " ")
+      .replace("Z", "")
+      .split(".")[0];
   }
 
-  return new Date(createdAt).toLocaleString();
+  return new Date(createdAt)
+    .toISOString()
+    .replace("T", " ")
+    .replace("Z", "")
+    .split(".")[0];
 };
 
 //https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site

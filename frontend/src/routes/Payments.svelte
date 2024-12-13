@@ -71,7 +71,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each userBalances.slice().reverse() as row}
+              {#each userBalances as row}
                 <tr>
                   <td>{row.repoName}</td>
                   <td>{formatBalance(row.balance, row.currency)}</td>
@@ -104,7 +104,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each foundationBalances.slice().reverse() as row}
+              {#each foundationBalances as row}
                 <tr>
                   <td>{row.repoName}</td>
                   <td>{formatBalance(row.balance, row.currency)}</td>

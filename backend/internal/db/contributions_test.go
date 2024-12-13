@@ -606,7 +606,7 @@ func TestFindContributionsGroupedByCurrencyAndRepo_OnlyDailyContributions(t *tes
 	repo := insertTestRepo(t)
 
 	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
+	dateNowStr := currentTime.Format("2006-01-02 00:00:00")
 	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
 
 	err := InsertContribution(sponsor.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, currentTime, false)

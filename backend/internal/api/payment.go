@@ -286,6 +286,13 @@ func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDeta
 	calculateAndRespondBalances(w, mAdd, mCont, GenericErrorMessage)
 }
 
+func reverseTotalUserBalances(balances []TotalUserBalance) []TotalUserBalance {
+	for i, j := 0, len(balances)-1; i < j; i, j = i+1, j-1 {
+		balances[i], balances[j] = balances[j], balances[i]
+	}
+	return balances
+}
+
 func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.PaymentInfo, mCont map[string]map[uuid.UUID]db.ContributionDetail, errorMessage string) {
 	totalUserBalances := []TotalUserBalance{}
 
@@ -313,9 +320,7 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.Paym
 				mCont[currency][repoId] = db.ContributionDetail{
 					Balance: big.NewInt(0),
 				}
-				mAdd[currency] = &db.PaymentInfo{
-					Balance: remainingBalance,
-				}
+				totalAdded.Balance = remainingBalance
 			}
 		} else {
 			totalUserBalances = append(totalUserBalances, TotalUserBalance{
@@ -342,6 +347,8 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.Paym
 			}
 		}
 	}
+
+	totalUserBalances = reverseTotalUserBalances(totalUserBalances)
 
 	err := json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {

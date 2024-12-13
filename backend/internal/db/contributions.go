@@ -284,7 +284,7 @@ func FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency str
 
 func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
 	rows, err := DB.Query(`
-        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at)
+        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at) AS latest_created_at
         FROM (
             SELECT currency, repo_id, balance, created_at
             FROM daily_contribution
@@ -299,6 +299,7 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
                 AND foundation_payment = FALSE
         ) combined_contributions
         GROUP BY currency, repo_id
+		ORDER BY latest_created_at ASC
     `, userSponsorId)
 
 	if err != nil {
@@ -323,10 +324,17 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
 		}
 
-		const timestampLayout = "2006-01-02 15:04:05.999999-07:00"
-		createdAt, err := time.Parse(timestampLayout, createdAtStr)
+		const (
+			primaryLayout   = time.RFC3339
+			secondaryLayout = "2006-01-02 15:04:05.999999-07:00"
+		)
+
+		createdAt, err := time.Parse(primaryLayout, createdAtStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			createdAt, err = time.Parse(secondaryLayout, createdAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			}
 		}
 
 		if contributions[currency] == nil {
@@ -416,7 +424,7 @@ func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*b
 
 func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
 	rows, err := DB.Query(`
-        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at)
+        SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at) AS latest_created_at
         FROM (
             SELECT currency, repo_id, balance, created_at
             FROM daily_contribution
@@ -431,6 +439,7 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
                 AND foundation_payment
         ) combined_contributions
         GROUP BY currency, repo_id
+		ORDER BY latest_created_at ASC
     `, userSponsorId)
 
 	if err != nil {
@@ -455,10 +464,17 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
 		}
 
-		const timestampLayout = "2006-01-02 15:04:05.999999-07:00"
-		createdAt, err := time.Parse(timestampLayout, createdAtStr)
+		const (
+			primaryLayout   = time.RFC3339
+			secondaryLayout = "2006-01-02 15:04:05.999999-07:00"
+		)
+
+		createdAt, err := time.Parse(primaryLayout, createdAtStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			createdAt, err = time.Parse(secondaryLayout, createdAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			}
 		}
 
 		if contributions[currency] == nil {
