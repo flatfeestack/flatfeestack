@@ -213,8 +213,7 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 		}
 
 		var amountFoundation *big.Float
-		// TODO: foundations length is used for calculating the price per foundation, but it is not validated if a foundation can pay the new calculated amount
-		foundations, err := db.GetFoundationsSupportingRepo(rid)
+		foundations, err := db.GetValidatedFoundationsSupportingRepo(rid, currency, yesterdayStart)
 		if err != nil {
 			return err
 		}
@@ -228,90 +227,103 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 			amountFoundation = new(big.Float).SetInt(amountPerPart)
 		}
 
-		amountFoundationInt := new(big.Int)
-		amountFoundation.Int(amountFoundationInt)
+		amountFoundationIntToCheck := new(big.Int)
+		amountFoundation.Int(amountFoundationIntToCheck)
 
 		for _, foundation := range foundations {
-			checkDailyLimit, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationInt, currency, yesterdayStart)
-			if err != nil {
-				return err
-			}
-			checkFondsAmountEnough, err := db.CheckFondsAmountEnough(&foundation, amountFoundationInt, currency)
+			amountFoundationToPay, err := db.CheckDailyLimitStillAdheredTo(&foundation, amountFoundationIntToCheck, currency, yesterdayStart)
 			if err != nil {
 				return err
 			}
 
-			if checkDailyLimit && checkFondsAmountEnough {
-				for email, w := range uidNotInMap {
-					newTotal := total + w
-					amount := calcSharePerUser(amountFoundationInt, w, newTotal)
-					slog.Info("Unclaimed / not in map",
-						slog.String("userId", foundation.Id.String()),
-						slog.String("add", amountFoundationInt.String()),
-						slog.Float64("weight", w),
-						slog.Float64("total", newTotal),
-						slog.String("amount", amount.String()))
-					id := uuid.New()
-					err = db.InsertUnclaimed(id, email, rid, amount, currency, yesterdayStart, util.TimeNow())
-					if err != nil {
-						slog.Error("insertUnclaimed failed: %v, %v\n",
-							slog.String("email", email),
-							slog.Any("error", err))
-					}
+			slog.Error("after daily limit check\n",
+				slog.Any("amount", amountFoundationToPay))
+
+			if amountFoundationToPay.Cmp(big.NewInt(-1)) == 0 {
+				continue
+			}
+
+			amountFoundationToPay, err = db.CheckFondsAmountEnough(&foundation, amountFoundationToPay, currency)
+			if err != nil {
+				return err
+			}
+
+			slog.Error("after fonds check\n",
+				slog.Any("amount", amountFoundationToPay))
+
+			if amountFoundationToPay.Cmp(big.NewInt(-1)) == 0 {
+				continue
+			}
+
+			for email, w := range uidNotInMap {
+				newTotal := total + w
+				amount := calcSharePerUser(amountFoundationToPay, w, newTotal)
+				slog.Info("Unclaimed / not in map",
+					slog.String("userId", foundation.Id.String()),
+					slog.String("add", amountFoundationToPay.String()),
+					slog.Float64("weight", w),
+					slog.Float64("total", newTotal),
+					slog.String("amount", amount.String()))
+				id := uuid.New()
+				err = db.InsertUnclaimed(id, email, rid, amount, currency, yesterdayStart, util.TimeNow())
+				if err != nil {
+					slog.Error("insertUnclaimed failed: %v, %v\n",
+						slog.String("email", email),
+						slog.Any("error", err))
+				}
+			}
+
+			if futureContribution {
+				// TODO: to perstist the history of the future cintribution DB table for foudnations, there should be an separate DB table with own unique fields
+				slog.Info("Unclaimed / deducted",
+					slog.String("rid", rid.String()),
+					slog.Float64("total", total),
+					slog.String("deduct", amountFoundationToPay.String()))
+				err = db.InsertOrUpdateFutureContribution(foundation.Id, rid, amountFoundationToPay, currency, yesterdayStart, util.TimeNow(), true)
+				if err != nil {
+					return err
+				}
+			} else {
+				mFut, err := db.FindSumFutureSponsorsFromFoundation(foundation.Id)
+				if err != nil {
+					return err
 				}
 
-				if futureContribution {
-					// TODO: to perstist the history of the future cintribution DB table for foudnations, there should be an separate DB table with own unique fields
-					slog.Info("Unclaimed / deducted",
-						slog.String("rid", rid.String()),
-						slog.Float64("total", total),
-						slog.String("deduct", amountFoundationInt.String()))
-					err = db.InsertOrUpdateFutureContribution(foundation.Id, rid, amountFoundationInt, currency, yesterdayStart, util.TimeNow(), true)
+				distributeFutureAdd := amountFoundationToPay
+				var deductFutureContribution *big.Int
+				var distributable *big.Int
+				if mFut[currency] != nil {
+					distributeFutureAdd = new(big.Int).Div(mFut[currency], big.NewInt(int64(len(rids))))
+					deductFutureContribution = new(big.Int).Neg(distributeFutureAdd)
+				}
+
+				if deductFutureContribution != nil {
+					err = db.InsertFutureContribution(foundation.Id, rid, deductFutureContribution, currency, yesterdayStart, util.TimeNow(), true)
 					if err != nil {
 						return err
 					}
+
+					slog.Info("futureContributionTest2",
+						slog.Any("yesterdayStart", yesterdayStart),
+						slog.String("amountFoundationToPay", deductFutureContribution.String()))
+
+					distributable = new(big.Int).Add(distributeFutureAdd, amountFoundationToPay)
 				} else {
-					mFut, err := db.FindSumFutureSponsorsFromFoundation(foundation.Id)
+					distributable = distributeFutureAdd
+				}
+
+				for contributorUserId, w := range uidInMap {
+					amount := calcSharePerUser(distributable, w, total)
+					slog.Info("Claim",
+						slog.String("userId", contributorUserId.String()),
+						slog.String("rid", rid.String()),
+						slog.String("add", distributable.String()),
+						slog.Float64("weight", w),
+						slog.Float64("total", total),
+						slog.String("amount", amount.String()))
+					err = db.InsertContribution(foundation.Id, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow(), true)
 					if err != nil {
 						return err
-					}
-
-					distributeFutureAdd := amountFoundationInt
-					var deductFutureContribution *big.Int
-					var distributable *big.Int
-					if mFut[currency] != nil {
-						distributeFutureAdd = new(big.Int).Div(mFut[currency], big.NewInt(int64(len(rids))))
-						deductFutureContribution = new(big.Int).Neg(distributeFutureAdd)
-					}
-
-					if deductFutureContribution != nil {
-						err = db.InsertFutureContribution(foundation.Id, rid, deductFutureContribution, currency, yesterdayStart, util.TimeNow(), true)
-						if err != nil {
-							return err
-						}
-
-						slog.Info("futureContributionTest2",
-							slog.Any("yesterdayStart", yesterdayStart),
-							slog.String("amountFoundationInt", deductFutureContribution.String()))
-
-						distributable = new(big.Int).Add(distributeFutureAdd, amountFoundationInt)
-					} else {
-						distributable = distributeFutureAdd
-					}
-
-					for contributorUserId, w := range uidInMap {
-						amount := calcSharePerUser(distributable, w, total)
-						slog.Info("Claim",
-							slog.String("userId", contributorUserId.String()),
-							slog.String("rid", rid.String()),
-							slog.String("add", distributable.String()),
-							slog.Float64("weight", w),
-							slog.Float64("total", total),
-							slog.String("amount", amount.String()))
-						err = db.InsertContribution(foundation.Id, contributorUserId, rid, amount, currency, yesterdayStart, util.TimeNow(), true)
-						if err != nil {
-							return err
-						}
 					}
 				}
 			}

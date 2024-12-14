@@ -2,6 +2,7 @@ package api
 
 import (
 	"backend/internal/db"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -46,7 +47,8 @@ func TestGetUserBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":12}]\n", string(body))
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"00000000-0000-0000-0000-000000000000\",\"repoName\":\"N/A\",\"balance\":0,\"totalBalance\":24,\"createdAt\":\"%s\"}]\n", time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("user made a pay-in and some got distributed to contributors", func(t *testing.T) {
@@ -61,7 +63,8 @@ func TestGetUserBalance(t *testing.T) {
 		err = db.InsertContribution(userDetail.Id, userDetail.Id, *repoId, big.NewInt(3370000), "USD", time.Now(), time.Now(), false)
 		require.Nil(t, err)
 
-		request, _ := http.NewRequest(http.MethodPost, "/users/me/balance", nil)
+		request, err := http.NewRequest(http.MethodGet, "/users/me/balance", nil)
+		assert.Nil(t, err)
 		response := httptest.NewRecorder()
 
 		UserBalance(response, request, userDetail)
@@ -69,7 +72,9 @@ func TestGetUserBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":-3369988}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":3370000,\"totalBalance\":-3369976,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("user made a pay-in and has future contribution", func(t *testing.T) {
@@ -92,7 +97,9 @@ func TestGetUserBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":0}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":12,\"totalBalance\":12,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("user made a pay-in, has future contribution and distributed funds", func(t *testing.T) {
@@ -118,7 +125,9 @@ func TestGetUserBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":100}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":300,\"totalBalance\":500,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 }
 
@@ -154,7 +163,9 @@ func TestGetFoundationBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":20}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"00000000-0000-0000-0000-000000000000\",\"repoName\":\"N/A\",\"balance\":0,\"totalBalance\":20,\"createdAt\":\"%s\"}]\n", time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("foundation made a pay-in and some got payed out to contributors", func(t *testing.T) {
@@ -177,7 +188,9 @@ func TestGetFoundationBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":-3369988}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":3370000,\"totalBalance\":-3369988,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("foundation made a pay-in and has future contribution", func(t *testing.T) {
@@ -200,7 +213,9 @@ func TestGetFoundationBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":0}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":12,\"totalBalance\":0,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 
 	t.Run("foundation made a pay-in, has future contribution and distributed funds", func(t *testing.T) {
@@ -226,6 +241,8 @@ func TestGetFoundationBalance(t *testing.T) {
 		assert.Equal(t, 200, response.Code)
 
 		body, _ := io.ReadAll(response.Body)
-		assert.Equal(t, "[{\"currency\":\"USD\",\"balance\":100}]\n", string(body))
+
+		expected := fmt.Sprintf("[{\"currency\":\"USD\",\"repoId\":\"%s\",\"repoName\":\"name\",\"balance\":300,\"totalBalance\":100,\"createdAt\":\"%s\"}]\n", repoId, time.Now().Format("2006-01-02 15:04:05"))
+		assert.Equal(t, expected, string(body))
 	})
 }

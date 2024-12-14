@@ -405,3 +405,362 @@ func TestGetUserDonationReposManyDynamic(t *testing.T) {
 
 	assert.Equal(t, expected, res)
 }
+
+func TestFindFoundationContributionsGroupedByCurrencyAndRepo_NoContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "sponsor", 2000000000)
+
+	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{}
+	assert.Equal(t, expected, list)
+}
+
+func TestFindFoundationContributionsGroupedByCurrencyAndRepo_OnlyDailyContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "sponsor", 2000000000)
+	user := insertTestUser(t, "contrib")
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	err := InsertContribution(foundation.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", currentTime, currentTime, true)
+	assert.Nil(t, err)
+
+	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"XBTC": {
+			repo.Id: ContributionDetail{
+				Balance:   big.NewInt(5),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, ok := list[currency][repoID]
+			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}
+
+func TestFindFoundationContributionsGroupedByCurrencyAndRepo_OnlyFutureContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "sponsor", 2000000000)
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertFutureContribution(foundation.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"USD": {
+			repo.Id: ContributionDetail{
+				Balance:   big.NewInt(10),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, exists := list[currency][repoID]
+			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}
+
+func TestFindFoundationContributionsGroupedByCurrencyAndRepo_NoFoundationPayment(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "sponsor", 2000000000)
+	user := insertTestUser(t, "contrib")
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertContribution(foundation.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(foundation.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{}
+	assert.Equal(t, expected, list)
+}
+
+func TestFindFoundationContributionsGroupedByCurrencyAndRepo_Many(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	foundation := insertTestFoundation(t, "sponsor", 2000000000)
+	userContrib := insertTestUser(t, "contrib")
+	userContrib2 := insertTestUser(t, "contrib2")
+	r := insertTestRepo(t)
+	r2 := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertContribution(foundation.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	err = InsertContribution(foundation.Id, userContrib2.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	err = InsertContribution(foundation.Id, userContrib.Id, r2.Id, big.NewInt(4), "USD", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	err = InsertContribution(foundation.Id, userContrib2.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(foundation.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(foundation.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, true)
+	assert.Nil(t, err)
+
+	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"XBTC": {
+			r.Id: ContributionDetail{
+				Balance:   big.NewInt(6), // 4 from daily + 2 from future
+				CreatedAt: currentTime,
+			},
+			r2.Id: ContributionDetail{
+				Balance:   big.NewInt(12), // 6 from daily + 6 from future
+				CreatedAt: currentTime,
+			},
+		},
+		"USD": {
+			r2.Id: ContributionDetail{
+				Balance:   big.NewInt(4),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, exists := list[currency][repoID]
+			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo_NoContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	sponsor := insertTestUser(t, "sponsor")
+
+	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{}
+	assert.Equal(t, expected, list)
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo_OnlyDailyContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	sponsor := insertTestUser(t, "sponsor")
+	user := insertTestUser(t, "contrib")
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02 00:00:00")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertContribution(sponsor.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"XBTC": {
+			repo.Id: ContributionDetail{
+				Balance:   big.NewInt(5),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, ok := list[currency][repoID]
+			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo_OnlyFutureContributions(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	sponsor := insertTestUser(t, "sponsor")
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertFutureContribution(sponsor.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"USD": {
+			repo.Id: ContributionDetail{
+				Balance:   big.NewInt(10),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, ok := list[currency][repoID]
+			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo_NoSponsorPayment(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	sponsor := insertTestUser(t, "sponsor")
+	user := insertTestUser(t, "contrib")
+	repo := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertContribution(sponsor.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, time.Time{}, true)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(sponsor.Id, repo.Id, big.NewInt(10), "USD", dateNow, time.Time{}, true)
+	assert.Nil(t, err)
+
+	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{}
+	assert.Equal(t, expected, list)
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo_Many(t *testing.T) {
+	SetupTestData()
+	defer TeardownTestData()
+
+	sponsor := insertTestUser(t, "sponsor")
+	userContrib := insertTestUser(t, "contrib")
+	userContrib2 := insertTestUser(t, "contrib2")
+	r := insertTestRepo(t)
+	r2 := insertTestRepo(t)
+
+	currentTime := time.Now()
+	dateNowStr := currentTime.Format("2006-01-02")
+	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+
+	err := InsertContribution(sponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertContribution(sponsor.Id, userContrib2.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertContribution(sponsor.Id, userContrib.Id, r2.Id, big.NewInt(4), "USD", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertContribution(sponsor.Id, userContrib2.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(sponsor.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	err = InsertFutureContribution(sponsor.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, false)
+	assert.Nil(t, err)
+
+	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	assert.Nil(t, err)
+
+	expected := map[string]map[uuid.UUID]ContributionDetail{
+		"XBTC": {
+			r.Id: ContributionDetail{
+				Balance:   big.NewInt(6), // 4 from daily + 2 from future
+				CreatedAt: currentTime,
+			},
+			r2.Id: ContributionDetail{
+				Balance:   big.NewInt(12), // 6 from daily + 6 from future
+				CreatedAt: currentTime,
+			},
+		},
+		"USD": {
+			r2.Id: ContributionDetail{
+				Balance:   big.NewInt(4),
+				CreatedAt: currentTime,
+			},
+		},
+	}
+
+	for currency, repos := range expected {
+		for repoID, expectedDetail := range repos {
+			actualDetail, exists := list[currency][repoID]
+			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
+
+			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
+		}
+	}
+}

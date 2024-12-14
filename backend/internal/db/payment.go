@@ -44,6 +44,11 @@ type PayTransferEvent struct {
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
+type PaymentInfo struct {
+	Balance   *big.Int
+	CreatedAt time.Time
+}
+
 func InsertPayInEvent(payInEvent PayInEvent) error {
 	stmt, err := DB.Prepare(`INSERT INTO payment_in_event(id, external_id, user_id, balance,  
                                                                 currency, status, seats, freq, created_at) 
@@ -150,9 +155,59 @@ func FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.
 	return m, nil
 }
 
-func FindSumPaymentByCurrencyFoundation(userId uuid.UUID, status string) (map[string]*big.Int, error) {
+func FindSumPaymentByCurrencyWithDate(userId uuid.UUID, status string) (map[string]*PaymentInfo, error) {
 	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
+		Query(`SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
+               FROM payment_in_event 
+               WHERE user_id = $1 AND status = $2
+               GROUP BY currency`, userId, status)
+	if err != nil {
+		return nil, err
+	}
+	defer CloseAndLog(rows)
+
+	m := make(map[string]*PaymentInfo)
+	for rows.Next() {
+		var currency, balance string
+		var createdAtStr string
+		err = rows.Scan(&currency, &balance, &createdAtStr)
+		if err != nil {
+			return nil, err
+		}
+
+		var createdAt time.Time
+		if createdAtStr == "0001-01-01 00:00:00+00:00" || createdAtStr == "" {
+			createdAt = time.Now()
+		} else {
+			const timestampLayout = "2006-01-02T15:04:05Z"
+			var err error
+			createdAt, err = time.Parse(timestampLayout, createdAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			}
+		}
+
+		b1, ok := new(big.Int).SetString(balance, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a valid big.Int: %v", balance)
+		}
+
+		if _, exists := m[currency]; exists {
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", currency)
+		}
+
+		m[currency] = &PaymentInfo{
+			Balance:   b1,
+			CreatedAt: createdAt,
+		}
+	}
+
+	return m, nil
+}
+
+func FindSumPaymentByCurrencyFoundationWithDate(userId uuid.UUID, status string) (map[string]*PaymentInfo, error) {
+	rows, err := DB.
+		Query(`SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
                FROM payment_in_event 
                WHERE user_id = $1 AND status = $2 AND freq = 1
                GROUP BY currency`, userId, status)
@@ -162,21 +217,39 @@ func FindSumPaymentByCurrencyFoundation(userId uuid.UUID, status string) (map[st
 	}
 	defer CloseAndLog(rows)
 
-	m := make(map[string]*big.Int)
+	m := make(map[string]*PaymentInfo)
 	for rows.Next() {
-		var c, b string
-		err = rows.Scan(&c, &b)
+		var currency, balance string
+		var createdAtStr string
+		err = rows.Scan(&currency, &balance, &createdAtStr)
 		if err != nil {
 			return nil, err
 		}
-		b1, ok := new(big.Int).SetString(b, 10)
-		if !ok {
-			return nil, fmt.Errorf("not a big.int %v", b1)
-		}
-		if m[c] == nil {
-			m[c] = b1
+
+		var createdAt time.Time
+		if createdAtStr == "0001-01-01 00:00:00+00:00" || createdAtStr == "" {
+			createdAt = time.Now()
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			const timestampLayout = "2006-01-02T15:04:05Z"
+			var err error
+			createdAt, err = time.Parse(timestampLayout, createdAtStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
+			}
+		}
+
+		b1, ok := new(big.Int).SetString(balance, 10)
+		if !ok {
+			return nil, fmt.Errorf("not a valid big.Int: %v", balance)
+		}
+
+		if _, exists := m[currency]; exists {
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", currency)
+		}
+
+		m[currency] = &PaymentInfo{
+			Balance:   b1,
+			CreatedAt: createdAt,
 		}
 	}
 

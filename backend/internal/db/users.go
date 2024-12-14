@@ -351,9 +351,9 @@ func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
 	return handleErrMustInsertOne(res)
 }
 
-func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (bool, error) {
+func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (*big.Int, error) {
 	if foundation == nil {
-		return false, fmt.Errorf("foundation cannot be nil")
+		return big.NewInt(0), fmt.Errorf("foundation cannot be nil")
 	}
 
 	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
@@ -371,42 +371,48 @@ func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, curr
 
 	err := DB.QueryRow(query, foundation.Id, currency, yesterdayStart).Scan(&dailySumInt)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			if amount.Cmp(multiplierDailyLimit) <= 0 {
-				return true, nil
-			}
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to calculate daily contributions: %v", err)
+		return big.NewInt(0), fmt.Errorf("failed to calculate daily contributions: %v", err)
 	}
 
 	dailySum := big.NewInt(dailySumInt)
 
 	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) <= 0 {
-		return true, nil
+		return amount, nil
 	}
 
-	return false, nil
+	restrictedAmountToPay := new(big.Int).Sub(multiplierDailyLimit, dailySum)
+
+	if restrictedAmountToPay.Cmp(big.NewInt(0)) == 0 {
+		return big.NewInt(-1), nil
+	}
+
+	return restrictedAmountToPay, nil
 }
 
-func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (bool, error) {
+func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (*big.Int, error) {
 	if foundation == nil {
-		return false, fmt.Errorf("foundation cannot be nil")
+		return big.NewInt(0), fmt.Errorf("foundation cannot be nil")
 	}
 
 	totalBalance, err := FindSumPaymentFromFoundation(foundation.Id, PayInSuccess, currency)
 	if err != nil {
-		return false, err
+		return big.NewInt(0), err
 	}
 
 	totalSpending, err := FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, currency)
 	if err != nil {
-		return false, err
+		return big.NewInt(0), err
 	}
 
 	if new(big.Int).Add(totalSpending, amount).Cmp(totalBalance) <= 0 {
-		return true, nil
+		return amount, nil
 	}
 
-	return false, nil
+	restrictedAmountToPay := new(big.Int).Sub(totalBalance, totalSpending)
+
+	if restrictedAmountToPay.Cmp(big.NewInt(0)) == 0 {
+		return big.NewInt(-1), nil
+	}
+
+	return restrictedAmountToPay, nil
 }

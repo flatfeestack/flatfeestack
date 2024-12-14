@@ -249,10 +249,9 @@ export const API = {
         .json<PayoutResponse>(),
     getUser: (userId: string) =>
       backend.get(`users/${userId}`).json<PublicUser>(),
-    userBalance: () =>
-      backendToken.get(`users/me/balance`).json<UserBalance[]>(),
+    userBalance: () => backendToken.get(`users/me/balance`).json<UserBalance>(),
     foundationBalance: () =>
-      backendToken.get(`users/me/balanceFoundation`).json<UserBalance[]>(),
+      backendToken.get(`users/me/balanceFoundation`).json<UserBalance>(),
   },
   repos: {
     search: (s: string) =>

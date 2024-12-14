@@ -339,7 +339,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserStatus'
+                $ref: '#/components/schemas/UserBalance'
   /users/me/balanceFoundation:
     get:
       tags:
@@ -352,7 +352,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserStatus'
+                $ref: '#/components/schemas/UserBalance'
   /users/contrib-snd:
     post:
       tags:
@@ -1472,8 +1472,20 @@ components:
         properties:
           currency:
             type: string
+          repoId:
+            type: string
+            format: uuid
+          repoName:
+            type: string
           balance:
             type: integer
+            format: bigint
+          totalBalance:
+            type: integer
+            format: bigint
+          createdAt:
+            type: string
+            format: date-time
     Contribution:
       type: object
       properties:

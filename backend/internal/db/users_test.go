@@ -159,9 +159,9 @@ func TestCheckDailyLimitStillAdheredToNil(t *testing.T) {
 	yesterdayStop := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	yesterdayStart := yesterdayStop.AddDate(0, 0, -1)
 
-	checked, err := CheckDailyLimitStillAdheredTo(nil, big.NewInt(0), "BTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(nil, big.NewInt(0), "BTC", yesterdayStart)
 	assert.Equal(t, fmt.Errorf("foundation cannot be nil"), err)
-	assert.Equal(t, false, checked)
+	assert.Equal(t, big.NewInt(0), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToNoRowsLessAmount(t *testing.T) {
@@ -179,9 +179,9 @@ func TestCheckDailyLimitStillAdheredToNoRowsLessAmount(t *testing.T) {
 		MultiplierDailyLimit: userFoundation.MultiplierDailyLimit,
 	}
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(190), "BTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(190), "BTC", yesterdayStart)
 	assert.Nil(t, err)
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(190), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToNoRowsMoreAmount(t *testing.T) {
@@ -199,9 +199,9 @@ func TestCheckDailyLimitStillAdheredToNoRowsMoreAmount(t *testing.T) {
 		MultiplierDailyLimit: userFoundation.MultiplierDailyLimit,
 	}
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(210), "BTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(210), "BTC", yesterdayStart)
 	assert.Nil(t, err)
-	assert.Equal(t, false, checked)
+	assert.Equal(t, big.NewInt(200), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToNoContributions(t *testing.T) {
@@ -239,10 +239,9 @@ func TestCheckDailyLimitStillAdheredToNoContributions(t *testing.T) {
 	err = InsertContribution(userFoundation.Id, contributor4.Id, r.Id, big.NewInt(1000), "XBTC", theLastDayStart, time.Time{}, false)
 	assert.Nil(t, err)
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
 	assert.Nil(t, err)
-
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(20), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToInRange(t *testing.T) {
@@ -280,10 +279,9 @@ func TestCheckDailyLimitStillAdheredToInRange(t *testing.T) {
 	err = InsertContribution(userFoundation.Id, contributor4.Id, r.Id, big.NewInt(1000), "XBTC", theLastDayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
 	assert.Nil(t, err)
-
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(20), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToInRangeOuterLimit(t *testing.T) {
@@ -309,7 +307,7 @@ func TestCheckDailyLimitStillAdheredToInRangeOuterLimit(t *testing.T) {
 
 	r := insertTestRepoGitUrl(t, "git-url")
 
-	err := InsertContribution(userFoundation.Id, contributor.Id, r.Id, big.NewInt(29), "XBTC", yesterdayStart, time.Time{}, true)
+	err := InsertContribution(userFoundation.Id, contributor.Id, r.Id, big.NewInt(30), "XBTC", yesterdayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
 	err = InsertContribution(userFoundation.Id, contributor2.Id, r.Id, big.NewInt(50), "XBTC", yesterdayStart, time.Time{}, true)
@@ -321,10 +319,9 @@ func TestCheckDailyLimitStillAdheredToInRangeOuterLimit(t *testing.T) {
 	err = InsertContribution(userFoundation.Id, contributor4.Id, r.Id, big.NewInt(1000), "XBTC", theLastDayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(20), "XBTC", yesterdayStart)
 	assert.Nil(t, err)
-
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(20), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToInRangeJustNotInRange(t *testing.T) {
@@ -362,10 +359,9 @@ func TestCheckDailyLimitStillAdheredToInRangeJustNotInRange(t *testing.T) {
 	err = InsertContribution(userFoundation.Id, contributor4.Id, r.Id, big.NewInt(1000), "XBTC", theLastDayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(21), "XBTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(21), "XBTC", yesterdayStart)
 	assert.Nil(t, err)
-
-	assert.Equal(t, false, checked)
+	assert.Equal(t, big.NewInt(20), amount)
 }
 
 func TestCheckDailyLimitStillAdheredToInRangeJustInRangeOtherCurrency(t *testing.T) {
@@ -394,7 +390,7 @@ func TestCheckDailyLimitStillAdheredToInRangeJustInRangeOtherCurrency(t *testing
 	err := InsertContribution(userFoundation.Id, contributor.Id, r.Id, big.NewInt(30), "XBTC", yesterdayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
-	err = InsertContribution(userFoundation.Id, contributor2.Id, r.Id, big.NewInt(50), "XXBTC", yesterdayStart, time.Time{}, true)
+	err = InsertContribution(userFoundation.Id, contributor2.Id, r.Id, big.NewInt(50), "XXXXBTC", yesterdayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
 	err = InsertContribution(userFoundation.Id, contributor3.Id, r.Id, big.NewInt(100), "XBTC", yesterdayStart, time.Time{}, true)
@@ -403,39 +399,18 @@ func TestCheckDailyLimitStillAdheredToInRangeJustInRangeOtherCurrency(t *testing
 	err = InsertContribution(userFoundation.Id, contributor4.Id, r.Id, big.NewInt(1000), "XBTC", theLastDayStart, time.Time{}, true)
 	assert.Nil(t, err)
 
-	checked, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(21), "XBTC", yesterdayStart)
+	amount, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(24), "XBTC", yesterdayStart)
 	assert.Nil(t, err)
-
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(24), amount)
 }
 
 func TestCheckFondsAmountEnoughFoundationNil(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
 
-	checked, err := CheckFondsAmountEnough(nil, big.NewInt(0), "BTC")
+	amount, err := CheckFondsAmountEnough(nil, big.NewInt(0), "BTC")
 	assert.Equal(t, fmt.Errorf("foundation cannot be nil"), err)
-	assert.Equal(t, false, checked)
-}
-
-func TestCheckFondsAmountEnoughNoRows(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	userFoundation := insertTestFoundation(t, "email5", 200)
-
-	foundation := Foundation{
-		Id:                   userFoundation.Id,
-		MultiplierDailyLimit: userFoundation.MultiplierDailyLimit,
-	}
-
-	checked, err := CheckFondsAmountEnough(&foundation, big.NewInt(0), "BTC")
-	assert.Nil(t, err)
-	assert.Equal(t, true, checked)
-
-	checked2, err := CheckFondsAmountEnough(&foundation, big.NewInt(1), "BTC")
-	assert.Nil(t, err)
-	assert.Equal(t, false, checked2)
+	assert.Equal(t, big.NewInt(0), amount)
 }
 
 func TestCheckFondsAmountEnoughMoreBalanceEqualBalanceLessBalance(t *testing.T) {
@@ -462,17 +437,17 @@ func TestCheckFondsAmountEnoughMoreBalanceEqualBalanceLessBalance(t *testing.T) 
 	err := InsertPayInEvent(ub)
 	assert.Nil(t, err)
 
-	checked, err := CheckFondsAmountEnough(&foundation, big.NewInt(9999), "USD")
+	amount, err := CheckFondsAmountEnough(&foundation, big.NewInt(9999), "USD")
 	assert.Nil(t, err)
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(9999), amount)
 
-	checked2, err := CheckFondsAmountEnough(&foundation, big.NewInt(10000), "USD")
+	amount2, err := CheckFondsAmountEnough(&foundation, big.NewInt(10000), "USD")
 	assert.Nil(t, err)
-	assert.Equal(t, true, checked2)
+	assert.Equal(t, big.NewInt(10000), amount2)
 
-	checked3, err := CheckFondsAmountEnough(&foundation, big.NewInt(10001), "USD")
+	amount3, err := CheckFondsAmountEnough(&foundation, big.NewInt(10001), "USD")
 	assert.Nil(t, err)
-	assert.Equal(t, false, checked3)
+	assert.Equal(t, big.NewInt(10000), amount3)
 }
 
 func TestCheckFondsAmountEnoughWithContribution(t *testing.T) {
@@ -508,11 +483,11 @@ func TestCheckFondsAmountEnoughWithContribution(t *testing.T) {
 	err = InsertContribution(userFoundation.Id, contributor2.Id, r.Id, big.NewInt(300), "XBTC", time.Time{}, time.Time{}, true)
 	assert.Nil(t, err)
 
-	checked, err := CheckFondsAmountEnough(&foundation, big.NewInt(9700), "USD")
+	amount, err := CheckFondsAmountEnough(&foundation, big.NewInt(9700), "USD")
 	assert.Nil(t, err)
-	assert.Equal(t, true, checked)
+	assert.Equal(t, big.NewInt(9700), amount)
 
-	checked2, err := CheckFondsAmountEnough(&foundation, big.NewInt(9701), "USD")
+	amount2, err := CheckFondsAmountEnough(&foundation, big.NewInt(9701), "USD")
 	assert.Nil(t, err)
-	assert.Equal(t, false, checked2)
+	assert.Equal(t, big.NewInt(9700), amount2)
 }

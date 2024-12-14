@@ -42,8 +42,12 @@ type UserBalances struct {
 }
 
 type TotalUserBalance struct {
-	Currency string   `json:"currency"`
-	Balance  *big.Int `json:"balance"`
+	Currency     string    `json:"currency"`
+	RepoId       uuid.UUID `json:"repoId"`
+	RepoName     string    `json:"repoName"`
+	Balance      *big.Int  `json:"balance"`
+	TotalBalance *big.Int  `json:"totalBalance"`
+	CreateDate   string    `json:"createdAt"`
 }
 
 const (
@@ -247,92 +251,104 @@ func PaymentEvent(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 }
 
 func UserBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	mAdd, err := db.FindSumPaymentByCurrency(user.Id, db.PayInSuccess)
+	mAdd, err := db.FindSumPaymentByCurrencyWithDate(user.Id, db.PayInSuccess)
 	if err != nil {
 		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
-	//either the user spent it on a repo that does not have any devs who can claim
-	mFut, err := db.FindSumFutureSponsors(user.Id)
+	mCont, err := db.FindContributionsGroupedByCurrencyAndRepo(user.Id)
 	if err != nil {
-		slog.Error("Error while finding sum future sponsors", slog.Any("error", err))
+		slog.Error("Error while finding sponsor payments", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
-	//or the user spent it on for a repo with a dev who can claim
-	mSub, err := db.FindSumDailySponsors(user.Id)
-	if err != nil {
-		slog.Error("Error while finding sum daily sponsors", slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
-		return
-	}
-
-	calculateAndRespondBalances(w, mAdd, mFut, mSub, GenericErrorMessage)
+	calculateAndRespondBalances(w, mAdd, mCont, GenericErrorMessage)
 }
 
 func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	mAdd, err := db.FindSumPaymentByCurrencyFoundation(user.Id, db.PayInSuccess)
+	mAdd, err := db.FindSumPaymentByCurrencyFoundationWithDate(user.Id, db.PayInSuccess)
 	if err != nil {
 		slog.Error("Error while finding sum payments by currency", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
-	//either the user spent it on a repo that does not have any devs who can claim
-	mFut, err := db.FindSumFutureSponsorsFromFoundation(user.Id)
+	mCont, err := db.FindFoundationContributionsGroupedByCurrencyAndRepo(user.Id)
 	if err != nil {
-		slog.Error("Error while finding sum future sponsors", slog.Any("error", err))
+		slog.Error("Error while finding sponsor multiplier payments", slog.Any("error", err))
 		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
 		return
 	}
 
-	//or the user spent it on for a repo with a dev who can claim
-	mSub, err := db.FindSumDailySponsorsFromFoundation(user.Id)
-	if err != nil {
-		slog.Error("Error while finding sum daily sponsors", slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusBadRequest, UserBalancesError)
-		return
-	}
-
-	calculateAndRespondBalances(w, mAdd, mFut, mSub, GenericErrorMessage)
+	calculateAndRespondBalances(w, mAdd, mCont, GenericErrorMessage)
 }
 
-func calculateAndRespondBalances(w http.ResponseWriter, mAdd, mFut, mSub map[string]*big.Int, errorMessage string) {
+func reverseTotalUserBalances(balances []TotalUserBalance) []TotalUserBalance {
+	for i, j := 0, len(balances)-1; i < j; i, j = i+1, j-1 {
+		balances[i], balances[j] = balances[j], balances[i]
+	}
+	return balances
+}
+
+func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.PaymentInfo, mCont map[string]map[uuid.UUID]db.ContributionDetail, errorMessage string) {
 	totalUserBalances := []TotalUserBalance{}
 
-	for currency := range mAdd {
-		if mSub[currency] != nil {
-			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mSub[currency])
-			mSub[currency] = big.NewInt(0)
+	for currency, totalAdded := range mAdd {
+		if contMap, exists := mCont[currency]; exists && contMap != nil {
+			for repoId, contributionBalance := range mCont[currency] {
+				remainingBalance := new(big.Int).Sub(totalAdded.Balance, contributionBalance.Balance)
+
+				repo, err := db.FindRepoById(repoId)
+				if err != nil {
+					slog.Error("Could not find repo by id", slog.Any("error", err))
+					util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
+					return
+				}
+
+				totalUserBalances = append(totalUserBalances, TotalUserBalance{
+					Currency:     currency,
+					RepoId:       repoId,
+					RepoName:     *repo.Name,
+					Balance:      contributionBalance.Balance,
+					TotalBalance: remainingBalance,
+					CreateDate:   contributionBalance.CreatedAt.Format("2006-01-02 15:04:05"),
+				})
+
+				mCont[currency][repoId] = db.ContributionDetail{
+					Balance: big.NewInt(0),
+				}
+				totalAdded.Balance = remainingBalance
+			}
+		} else {
+			totalUserBalances = append(totalUserBalances, TotalUserBalance{
+				Currency:     currency,
+				RepoId:       uuid.Nil,
+				RepoName:     "N/A",
+				Balance:      big.NewInt(0),
+				TotalBalance: totalAdded.Balance,
+				CreateDate:   totalAdded.CreatedAt.Format("2006-01-02 15:04:05"),
+			})
 		}
-		if mFut[currency] != nil {
-			mAdd[currency] = new(big.Int).Sub(mAdd[currency], mFut[currency])
-			mFut[currency] = big.NewInt(0)
-		}
-		totalUserBalances = append(totalUserBalances, TotalUserBalance{
-			Currency: currency,
-			Balance:  mAdd[currency],
-		})
 	}
 
-	//now sanity check if all the deducted mSub/mFut are set to zero
-	for currency, balance := range mSub {
-		if balance.Cmp(big.NewInt(0)) != 0 {
-			slog.Error("Something is off with", slog.String("currency", currency))
-			util.WriteErrorf(w, http.StatusBadRequest, errorMessage)
-			return
+	// Sanity check: Ensure all contributions in mCont are fully accounted for
+	for currency, repos := range mCont {
+		for repoId, balance := range repos {
+			if balance.Balance.Cmp(big.NewInt(0)) != 0 {
+				slog.Error("Contribution balance not zeroed",
+					slog.String("currency", currency),
+					slog.String("repoId", repoId.String()),
+				)
+				util.WriteErrorf(w, http.StatusBadRequest, errorMessage)
+				return
+			}
 		}
 	}
-	for currency, balance := range mFut {
-		if balance.Cmp(big.NewInt(0)) != 0 {
-			slog.Error("Something is off with", slog.String("currency", currency))
-			util.WriteErrorf(w, http.StatusBadRequest, errorMessage)
-			return
-		}
-	}
+
+	totalUserBalances = reverseTotalUserBalances(totalUserBalances)
 
 	err := json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
