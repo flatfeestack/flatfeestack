@@ -70,10 +70,11 @@ type PayoutInfo struct {
 //	DailySpending *big.Int
 //}
 
-func CreateUser(email string, now time.Time) (*UserDetail, error) {
+func CreateUser(email string, name string, now time.Time) (*UserDetail, error) {
 	user := User{
 		Id:        uuid.New(),
 		Email:     email,
+		Name:      name,
 		CreatedAt: now,
 	}
 	userDetail := UserDetail{

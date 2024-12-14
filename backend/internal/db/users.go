@@ -19,7 +19,7 @@ type PublicUser struct {
 type User struct {
 	Id        uuid.UUID `json:"id"`
 	Email     string    `json:"email"`
-	Name      *string   `json:"name,omitempty"`
+	Name      string    `json:"name"`
 	CreatedAt time.Time
 }
 
@@ -149,13 +149,13 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 }*/
 
 func InsertUser(user *UserDetail) error {
-	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at) VALUES ($1, $2, $3, $4)")
+	stmt, err := DB.Prepare("INSERT INTO users (id, email, name, created_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
 	}
 	defer CloseAndLog(stmt)
 
-	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt)
+	res, err := stmt.Exec(user.Id, user.Email, user.Name, user.CreatedAt)
 	if err != nil {
 		return err
 	}

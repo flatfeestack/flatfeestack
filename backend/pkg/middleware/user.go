@@ -30,7 +30,8 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 		}
 
 		if user == nil {
-			user, err = db.CreateUser(claims.Subject, util.TimeNow())
+			name := util.GetLocalPart(claims.Subject)
+			user, err = db.CreateUser(claims.Subject, name, util.TimeNow())
 			if err != nil {
 				slog.Error("User update error",
 					slog.Any("error", err))

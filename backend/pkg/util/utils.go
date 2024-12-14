@@ -210,3 +210,11 @@ func GetColor1(input string) string {
 	c := strconv.Itoa(int(25 + 10*(5*myHash(input+"c"))))
 	return "hsl(" + a + "," + b + "%," + c + "%)"
 }
+
+func GetLocalPart(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return ""
+}
