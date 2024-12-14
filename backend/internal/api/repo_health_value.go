@@ -147,6 +147,7 @@ func manageInternalHealthMetrics(repoId uuid.UUID, isPostgres bool) (*db.RepoHea
 			SponsorCount:        0,
 			RepoStarCount:       0,
 			RepoMultiplierCount: 0,
+			ActiveFFSUserCount:  0,
 		}, err
 	}
 
