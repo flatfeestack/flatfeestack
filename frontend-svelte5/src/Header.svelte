@@ -46,6 +46,10 @@
             }
         }
     }
+
+    function gotoSettings() {
+        goto('/user/settings');
+    }
 </script>
 
 <svelte:window on:click={handleClickOutside}/>
@@ -136,6 +140,17 @@
                     <div class="menu">
                         <p class="small">Email:</p>
                         <p>{appState.user.email}</p>
+                    </div>
+                    <div
+                            class="menu menu-item"
+                            onclick={gotoSettings}
+                            role="menuitem"
+                            aria-label="Go to settings"
+                            onkeydown={handleKeydown}
+                            tabindex="0"
+                    >
+                        <i class="fas fa-user-cog" aria-hidden="true"></i>
+                        <span>Settings</span>
                     </div>
                     <div
                             class="menu menu-item"

@@ -3,42 +3,57 @@
   import {route, goto} from "@mateothegreat/svelte5-router";
   import {appState} from "ts/state.svelte.ts";
 
-  let windowWidth = $state(0);
-  let isSidebarCollapsed = $state(false);
-
-  function handleResize() {
-    isSidebarCollapsed = windowWidth <= 768;
+  // Types
+  interface NavItem {
+    icon: string;
+    label: string;
+    path: string;
   }
 
-  let navItems = $state([
-    { icon: 'fa-user-cog', label: 'Settings', path: '/user/settings' },
+  let windowWidth = $state(0);
+  let isSidebarCollapsed = $state(false);
+  let manualOverride = $state(false);
+
+  function handleResize() {
+    const shouldBeCollapsed = windowWidth <= 768;
+
+    if (manualOverride && isSidebarCollapsed === shouldBeCollapsed) {
+      manualOverride = false;
+    }
+
+    if (!manualOverride) {
+      isSidebarCollapsed = shouldBeCollapsed;
+    }
+  }
+
+  function toggleSidebar() {
+    manualOverride = true;
+    isSidebarCollapsed = !isSidebarCollapsed;
+  }
+
+  const navItems: NavItem[] = [
     { icon: 'fa-search', label: 'Search', path: '/user/search' },
     { icon: 'fa-credit-card', label: 'Payments', path: '/user/payments' },
     { icon: 'fa-hand-holding-usd', label: 'Income', path: '/user/income' },
     { icon: 'fa-user-friends', label: 'Invitations', path: '/user/invitations' },
     { icon: 'fa-medal', label: 'Badges', path: '/user/badges' },
-  ]);
+  ];
 
-  let adminAdded = false;
-
-  $effect(() => {
-    if (appState.user.role === "admin" && !adminAdded) {
-      navItems.push({ icon: 'fa-shield-alt', label: 'Admin', path: '/user/admin' });
-      navItems.push({ icon: 'fa-shield-alt', label: 'Healthy Repos', path: '/user/healthy-repos' });
-      navItems.push({ icon: 'fa-shield-alt', label: 'Repo Assessment', path: '/user/healthy-repo-assessment' });
-      adminAdded = true;
-    }
-  });
-
+  const navItemsAdmin: NavItem[] = [
+    { icon: 'fa-shield-alt', label: 'Admin', path: '/user/admin' },
+    { icon: 'fa-shield-alt', label: 'Healthy Repos', path: '/user/healthy-repos' },
+    { icon: 'fa-shield-alt', label: 'Repo Assessment', path: '/user/healthy-repo-assessment' },
+  ];
 </script>
 
-<svelte:window
-        bind:innerWidth={windowWidth}
-        on:resize={handleResize}
-/>
+<svelte:window bind:innerWidth={windowWidth} on:resize={handleResize}/>
+
+<link rel="preload" href="/images/ffs-logo-min-white.svg" as="image">
+<link rel="preload" href="/images/ffs-logo-white.svg" as="image">
 
 <style>
   .sidebar {
+    color: white;
     background-color: black;
     height: 100vh;
     transition: width 0.3s ease;
@@ -49,15 +64,14 @@
   }
 
   .sidebar-header {
-    padding: 1rem;
-    color: white;
+    padding: 1rem 0 1rem 1rem;
+    display: flex;
+    justify-content: space-between;
   }
 
   .nav-item {
-    color: white;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1rem 1rem 1rem;
     display: flex;
-    align-items: center;
     gap: 0.75rem;
     cursor: pointer;
     text-decoration: none;
@@ -67,32 +81,41 @@
     text-align: left;
   }
 
-  .nav-item:hover {
+  button:hover {
     background-color: #333;
   }
 
-  @media (max-width: 768px) {
-    .sidebar {
-      width: 4rem;
-    }
+  .toggle-button {
+    cursor: pointer;
+    background: none;
   }
+
 </style>
 
-<nav class="sidebar {isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}">
+<nav class="sidebar">
   <div class="sidebar-header center-flex">
-    <a class="center-flex" href="/" use:route>
-      <img src="/images/ffs-logo-white.svg" alt="FlatFeeStack"/>
+    <a href="/" use:route>
+      <img src={isSidebarCollapsed ? "/images/ffs-logo-min-white.svg" : "/images/ffs-logo-white.svg"} alt="FlatFeeStack"/>
     </a>
+    <button class="toggle-button pr-0 pl-050" onclick={toggleSidebar} aria-label="Toggle sidebar">
+      <i class="fas {isSidebarCollapsed ? 'fa-angle-right': 'fa-angle-left'}"></i>
+    </button>
   </div>
 
   <div class="nav-items">
     {#each navItems as {icon, label, path}}
       <button class="nav-item" onclick={() => goto(path)} aria-label={label}>
         <i class="fas {icon}"></i>
-        {#if !isSidebarCollapsed}
-          <span>{label}</span>
-        {/if}
+        {isSidebarCollapsed ? " " : label}
       </button>
     {/each}
+    {#if appState.user.role === "admin"}
+      {#each navItemsAdmin as {icon, label, path}}
+        <button class="nav-item" onclick={() => goto(path)} aria-label={label}>
+          <i class="fas {icon}"></i>
+          {isSidebarCollapsed ? " " : label}
+        </button>
+      {/each}
+    {/if}
   </div>
 </nav>
