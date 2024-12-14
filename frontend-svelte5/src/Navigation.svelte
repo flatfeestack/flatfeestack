@@ -97,7 +97,7 @@
     <a href="/" use:route>
       <img src={isSidebarCollapsed ? "/images/ffs-logo-min-white.svg" : "/images/ffs-logo-white.svg"} alt="FlatFeeStack"/>
     </a>
-    <button class="toggle-button pr-0 pl-050" onclick={toggleSidebar} aria-label="Toggle sidebar">
+    <button class="toggle-button pr-025 pl-050" onclick={toggleSidebar} aria-label="Toggle sidebar">
       <i class="fas {isSidebarCollapsed ? 'fa-angle-right': 'fa-angle-left'}"></i>
     </button>
   </div>

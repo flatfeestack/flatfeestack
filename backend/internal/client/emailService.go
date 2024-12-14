@@ -152,16 +152,16 @@ func (e *EmailClient) prepareSendEmail(
 			slog.String("email", data["email"]),
 			slog.String("mailTo", data["mailTo"]))
 		lastMailTo = sendgridRequest.MailTo
-		if e.env != "local" {
-			request := SendEmailRequest{
-				SendgridRequest: sendgridRequest,
-				Url:             e.emailUrl,
-				EmailFromName:   e.emailFromName,
-				EmailFrom:       e.emailFrom,
-				EmailToken:      e.emailToken,
-			}
-			sendEmail(&request)
+
+		request := SendEmailRequest{
+			SendgridRequest: sendgridRequest,
+			Url:             e.emailUrl,
+			EmailFromName:   e.emailFromName,
+			EmailFrom:       e.emailFrom,
+			EmailToken:      e.emailToken,
 		}
+		sendEmail(&request)
+
 	} else {
 		slog.Debug("Not sending",
 			slog.String("key", data["key"]),

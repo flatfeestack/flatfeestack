@@ -112,16 +112,6 @@ func UpdateName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	}
 }
 
-func ClearName(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
-	err := db.ClearUserName(user.Id)
-	if err != nil {
-		slog.Error("Could not clear username",
-			slog.Any("error", err))
-		util.WriteErrorf(w, http.StatusInternalServerError, "Could not clear username. Please try again.")
-		return
-	}
-}
-
 func UpdateMultiplierApi(w http.ResponseWriter, r *http.Request, user *db.UserDetail) {
 	isSetEsc := r.PathValue("isSet")
 	isSetStr, err := url.QueryUnescape(isSetEsc)

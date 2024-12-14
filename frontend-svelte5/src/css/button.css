@@ -9,6 +9,7 @@ button {
     align-self: flex-end;
     border: 0;
     transition: background 0.2s;
+    outline: none;
 }
 button:active {
     color: #000;
@@ -41,8 +42,6 @@ button:disabled {
 
 .round {
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    object-fit: cover;
+    width: 480px;
+    height: 480px;
 }

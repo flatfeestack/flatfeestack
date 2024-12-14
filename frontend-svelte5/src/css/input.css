@@ -1,8 +1,18 @@
-input:invalid:not(:placeholder-shown) {
+/* Required fields show error immediately when invalid */
+.required:invalid {
     border: 2px solid red;
 }
 
-input:invalid:not(:placeholder-shown) + .help-text {
+.required:invalid + .help-text {
+    display: block;
+}
+
+/* Optional fields only show error when they have content */
+.optional:invalid:not(:placeholder-shown) {
+    border: 2px solid red;
+}
+
+.optional:invalid:not(:placeholder-shown) + .help-text {
     display: block;
 }
 
@@ -24,6 +34,15 @@ textarea {
     padding: 0.5rem;
     font-size: 1.2rem;
     border-radius: 6px;
+    outline: none;
+}
+
+/* Style checkboxes separately */
+input[type="checkbox"] {
+    width: 1.5rem;
+    height: 1.5rem;
+    cursor: pointer;
+    accent-color: var(--primary-700);
 }
 
 textarea {

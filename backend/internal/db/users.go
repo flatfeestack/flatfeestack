@@ -307,20 +307,6 @@ func UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
 	return handleErrMustInsertOne(res)
 }
 
-func ClearUserName(uid uuid.UUID) error {
-	stmt, err := DB.Prepare("UPDATE users SET name=NULL WHERE id=$1")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-	var res sql.Result
-	res, err = stmt.Exec(uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
 func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
 	stmt, err := DB.Prepare("UPDATE users SET multiplier=$1 WHERE id=$2")
 	if err != nil {

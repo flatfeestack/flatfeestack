@@ -152,8 +152,6 @@ export const API = {
         backendToken.get("users/me/multiplied").json<Repo[]>(),
     setName: (name: string) =>
         backendToken.put(`users/me/name/${name}`),
-    clearName: () =>
-        backendToken.put(`users/me/clear/name`),
     setMultiplier: (isSet: boolean) =>
         backendToken.put(`users/me/multiplier/${isSet}`),
     setMultiplierDailyLimit: (amount: number) =>

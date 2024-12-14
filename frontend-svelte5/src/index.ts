@@ -7,6 +7,7 @@ import 'css/border.css';
 import 'css/button.css';
 import 'css/input.css';
 import 'css/layout.css';
+import 'css/table.css';
 import 'css/new.css';
 
 hydrate(App, {

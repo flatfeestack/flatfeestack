@@ -15,7 +15,7 @@
         flex-direction: row;
     }
     .err-container button {
-        margin-right: 2rem;
+        margin-right: 1rem;
     }
 </style>
 

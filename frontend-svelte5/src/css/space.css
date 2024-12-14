@@ -57,6 +57,9 @@
 .pr-0 {
     padding-right: 0;
 }
+.pr-025 {
+    padding-right: 0.25rem;
+}
 
 /* Margins */
 .m-0 {

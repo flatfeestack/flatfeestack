@@ -12,7 +12,7 @@ export type User = {
     /** Format: uuid */
     id: string;
     email: string;
-    name?: string | null;
+    name: string;
     /** Format: date-time */
     createdAt: string;
     /** Format: uuid */

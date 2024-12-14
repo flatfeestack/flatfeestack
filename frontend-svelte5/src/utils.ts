@@ -115,3 +115,89 @@ const getOrCreateLegendList = (chart, id) => {
 
   return listContainer;
 };*/
+
+//https://github.com/terkelg/skaler, MIT license
+interface ScalerOptions {
+  scale?: number;
+  width?: number;
+  height?: number;
+  name?: string;
+  type?: string;
+  quality?: number
+}
+
+export default function skaler(file: File, options: ScalerOptions = {}): Promise<File> {
+  const {
+    scale,
+    width,
+    height,
+    name = file.name,
+    type = file.type,
+    quality,
+  } = options;
+
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const img = new Image();
+
+      img.onload = () => {
+        const el = document.createElement('canvas');
+        const dir = (width && width < img.width) || (height && height < img.height) ? 'min' : 'max';
+        const stretch = width && height;
+
+        const ratio = scale ? scale : Math[dir](
+            (width ? width / img.width : 1),
+            (height ? height / img.height : 1)
+        );
+
+        const w = el.width = stretch ? (width ?? img.width) : img.width * ratio;
+        const h = el.height = stretch ? (height ?? img.height) : img.height * ratio;
+
+        const ctx = el.getContext('2d');
+        if (!ctx) {
+          rej(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, w, h);
+
+        el.toBlob((blob) => {
+          if (!blob) {
+            rej(new Error('Failed to create blob'));
+            return;
+          }
+          res(new File([blob], name, { type, lastModified: Date.now() }));
+        }, "image/jpeg", quality);
+      };
+      //https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
+
+      img.onerror = () => rej(new Error('Failed to load image'));
+
+      const result = e.target?.result;
+      if (typeof result !== 'string') {
+        rej(new Error('Failed to read file'));
+        return;
+      }
+      img.src = result;
+    };
+
+    reader.onerror = () => rej(new Error('Failed to read file'));
+  });
+}
+
+export function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>;
+
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}

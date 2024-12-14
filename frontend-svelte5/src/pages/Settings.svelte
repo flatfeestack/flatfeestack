@@ -1,55 +1,64 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import {onMount} from "svelte";
   import { API } from "../ts/api.ts";
   import {appState} from "../ts/state.svelte.ts";
   import { formatDate, timeSince } from "../ts/services.svelte.ts";
   import type { GitUser } from "../types/backend.ts";
-  import { emailValidationPattern } from "../utils.ts";
+  import skaler, {debounce, emailValidationPattern} from "../utils.ts";
   import Main from "../Main.svelte";
 
   let username = $state("");
-
-  let fileInput= $state();
+  let fileInput= $state<HTMLInputElement>();
   let gitEmails = $state<GitUser[]>([]);
   let newEmail = $state("");
+  let isVisible = $state(false);
+  let multiplierActive = $state(false);
 
-  $effect(() => {
-    if (username === "" && appState.user.name) {
-      username = appState.user.name;
-    }
-  });
-
-  const onFileSelected = (e:any) => {
-    let image = e.target.files[0];
-    let reader = new FileReader();
-    reader.readAsDataURL(image);
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        appState.setError("not a string?");
-        return;
-      }
-      const data: string = reader.result as string;
-      if (data.length > 200 * 1024) {
-        appState.setError("image too large, max is 200KB");
-        return;
-      }
-      API.user.setImage(data);
-      appState.user.image = data;
-    };
-  };
-
-  function handleUsernameChange() {
+  async function onFileSelected(e: Event) {
     try {
-      if (username === "") {
-        API.user.clearName();
-      } else {
-        API.user.setName(username);
-        appState.user.name = username;
+      const input = e.target as HTMLInputElement;
+      if (!input.files || input.files.length === 0) {
+        appState.setError('No file selected');
+        return;
       }
+      let image = input.files[0];
+
+      const scaledFile = await skaler(image, {width: 480, quality:0.5});
+
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          if (typeof reader.result !== 'string') {
+            reject(new Error('Failed to convert to base64'));
+            return;
+          }
+          resolve(reader.result);
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(scaledFile);
+      });
+      console.log(base64.length);
+      API.user.setImage(base64);
+      appState.user.image = base64;
     } catch (e) {
       appState.setError(e);
     }
   }
+
+  const handleUsernameChange = debounce(async () => {
+    try {
+      if (username !== "") {
+        await API.user.setName(username);
+        appState.user.name = username;
+        isVisible = true;
+        setTimeout(() => {
+          isVisible = false;
+        }, 3000);
+      }
+    } catch (e) {
+      appState.setError(e);
+    }
+  }, 500);
 
   async function handleAddEmail() {
     try {
@@ -84,6 +93,19 @@
     }
   };
 
+  function handleMultiplierToggle() {
+    try {
+      if (multiplierActive) {
+        API.user.setMultiplier(true);
+      } else {
+        API.user.setMultiplier(false);
+      }
+      appState.user.multiplier = multiplierActive;
+    } catch (e) {
+      appState.setError(e);
+    }
+  }
+
   onMount(async () => {
     try {
       const pr1 = API.user.gitEmails();
@@ -93,6 +115,17 @@
       appState.setError(e);
     }
   });
+
+  $effect(() => {
+    if (appState.user.name !== "undefined") {
+      username = appState.user.name;
+    }
+
+    if (appState.user.multiplier) {
+      multiplierActive = appState.user.multiplier;
+    }
+  });
+
 </script>
 
 <style>
@@ -112,100 +145,66 @@
     align-items: center;
   }
 
-  @media screen and (max-width: 600px) {
-    .grid-2 {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .grid-2 p,
-    .grid-2 span,
-    .grid-2 label,
-    .grid-2 input {
-      padding: 0;
-      margin: 0;
-    }
+  .success-checkmark {
+    color: var(--primary-500);
+    margin-left: 0.5rem;
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s linear 300ms, opacity 300ms;
+  }
 
-    .grid-2 input {
-      width: 100%;
-      padding: 0.25em;
-    }
+  .success-checkmark.visible {
+    visibility: visible;
+    opacity: 1;
+    transition: visibility 0s linear 0s, opacity 300ms;
+  }
 
-    .grid-2 span {
-      margin: 10px 0;
-    }
-
-    .grid-2 label {
-      margin: 15px 0;
-    }
-    table {
-      width: 100%;
-    }
-    table thead {
-      border: none;
-      clip: rect(0 0 0 0);
-      height: 1px;
-      margin: -1px;
-      overflow: hidden;
-      padding: 0;
-      position: absolute;
-      width: 1px;
-    }
-
-    table tr {
-      border-bottom: 3px solid #fff;
-      display: block;
-    }
-
-    table td {
-      border-bottom: 1px solid #fff;
-      display: block;
-      font-size: 0.8em;
-      text-align: right;
-    }
-
-    table td::before {
-      content: attr(data-label);
-      float: left;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-
-    table td:last-child {
-      border-bottom: 0;
-    }
+  .mul{
+    width: 1.3rem;
   }
 </style>
 
 <Main>
   <h2>Account Settings</h2>
+  <p class="p-2 m-2">
+    Your email address is permanent and cannot be modified after registration.
+    If you leave the name field empty, we'll automatically use the portion of
+    your email address that appears before the "@" symbol as your display name.
+  </p>
+
   <div class="grid-2">
-    <p class="p-2 m-2 nobreak">Email:</p>
-    <span class="p-2 m-2">{appState.user.email}</span>
-    <label for="username-input" class="p-2 m-2 nobreak">Your name: </label>
-    <input id="username-input" type="text" class="m-4 max-w20"
-           bind:value={username} onchange={handleUsernameChange} placeholder="Name on the badge"
-    />
-    {#if username === "" || typeof username === "undefined"}
-      <p class="p-rl-4 m-0 user-hint">
-        If no username is set, your email address will be used for your public
-        badges.
+    <span class="p-050 nobreak">Email:</span>
+    <div class="p-050">{appState.user.email}</div>
+    <label for="username-input" class="p-050 nobreak">Your name: </label>
+    <div class="p-050">
+    <input bind:value={username}
+           required
+           id="username-input"
+           type="text"
+           class="max-w20 required"
+           oninput={handleUsernameChange}
+           placeholder="Name on the badge"
+           minlength=1
+           aria-describedby="input-name"/>
+      <i class="fas fa-check success-checkmark"
+         class:visible={isVisible}
+         aria-label="Name saved successfully"></i>
+      <p id="input-name" class="p-rl-4 m-0 user-hint help-text">
+        Add a valid user name
       </p>
-    {/if}
-    <label for="profile-picture-upload" class="p-2 m-2 nobreak">
+      </div>
+    <label for="profile-picture-upload" class="p-050 nobreak">
       Profile picture:
     </label>
-    <div>
+    <div class="image-container p-050">
       {#if appState.user.image}
-        <div class="image-container">
-          <button class="upload accessible-btn" onclick={deleteImage} aria-label="Delete image">
-            <i class ="fas fa-trash-can"></i>
-          </button>
-          <img class="image-org" src={appState.user.image} alt="profile img" />
-        </div>
+        <img class="image-org" src={appState.user.image} alt="profile img" />
+        <button class="mx-050 px-050 upload button1" onclick={deleteImage} aria-label="Delete image">
+          <i class ="fas fa-trash-can"></i>
+        </button>
       {:else}
         <button id="profile-picture-upload" class="upload accessible-btn"
-                onclick={() => {fileInput.click();}} aria-label="Upload profile picture">
+                onclick={() => {fileInput? fileInput.click():() => {}}} aria-label="Upload profile picture">
           <i class="fas fa-upload" aria-hidden="true"></i>
           <input style="display:none" type="file" accept=".jpg, .jpeg, .png"
                   onchange={(e) => onFileSelected(e)} bind:this={fileInput} aria-hidden="true"/>
@@ -214,13 +213,11 @@
     </div>
   </div>
 
-  <h2 class="p-2 ml-5 mb-0">Connect your Git Email to this Account</h2>
+  <h2>Connect your Git Email to this Account</h2>
   <p class="p-2 m-2">
-    If you have multiple git email addresses, you can connect these addresses to
-    your FlatFeeStack account. You must verify your git email address. Once
-    validated, the confirmed date will show the validation date. In case you
-    didn't receive a confirmation email, please remove and re-add your git email
-    address.
+    If you have other git email addresses, you can connect these addresses to
+    your FlatFeeStack account. In case you didn't receive a confirmation email,
+    please remove and re-add your git email address.
   </p>
 
   <div class="min-w20 container">
@@ -243,12 +240,13 @@
               </td>
             {:else}
               <td data-label="Confirmation">
-                <i class="fa-clock"></i>
+                <i class="fas fa-clock"></i>
+                {email.createdAt? timeSince(new Date(email.createdAt), new Date()) + ' ago': 'now'}
               </td>
             {/if}
-            <td data-label="Delete">
-              <button class="accessible-btn" onclick={() => removeEmail(email.email)} aria-label="Remove email">
-                <i class="fa-trash"></i>
+            <td data-label="Delete" class="center-flex">
+              <button class="button1" onclick={() => removeEmail(email.email)} aria-label="Remove email">
+                <i class="fas fa-trash"></i>
               </button>
             </td>
           </tr>
@@ -268,4 +266,25 @@
       </tbody>
     </table>
   </div>
+
+  <h2>Boost Your Impact with Multipliers</h2>
+  <p class="p-2 m-2">
+    Multipliers let you amplify support for projects. When enabled, you'll see this icon
+    <img class="mul" src="/images/no-multiplier-coin.svg" alt="No Multiplier Icon" />
+    next to repositories in the search tab.
+
+    To activate a multiplier, click that icon and the icon will change to
+    <img class="mul" src="/images/multiplier-coin.svg" alt="Multiplier Icon" />.
+
+    Here's how it works: When other FlatFeeStack users donate to a multiplied repository,
+    you automatically contribute a small bonus.
+  </p>
+
+  <div class="grid-2">
+    <span class="p-050 nobreak">Enable Multiplier:</span>
+    <div class="p-050">
+      <input type="checkbox" bind:checked={multiplierActive} onchange={handleMultiplierToggle}/>
+    </div>
+  </div>
+
 </Main>

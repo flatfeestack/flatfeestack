@@ -209,10 +209,9 @@ func main() {
 	router.HandleFunc("GET /users/me/sponsored", middlewareJwtAuthUserLog(api2.GetSponsoredRepos))
 	router.HandleFunc("GET /users/me/multiplied", middlewareJwtAuthUserLog(api2.GetMultipliedRepos))
 	router.HandleFunc("PUT /users/me/name/{name}", middlewareJwtAuthUserLog(api2.UpdateName))
-	router.HandleFunc("PUT /users/me/clear/name", middlewareJwtAuthUserLog(api2.ClearName))
 	router.HandleFunc("PUT /users/me/multiplier/{isSet}", middlewareJwtAuthUserLog(api2.UpdateMultiplierApi))
 	router.HandleFunc("PUT /users/me/multiplierDailyLimit/{amount}", middlewareJwtAuthUserLog(api2.UpdateMultiplierDailyLimitApi))
-	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 200*1024))
+	router.HandleFunc("POST /users/me/image", util2.MaxBytes(middlewareJwtAuthUserLog(api2.UpdateImage), 256*1024))
 	router.HandleFunc("DELETE /users/me/image", middlewareJwtAuthUserLog(api2.DeleteImage))
 	router.HandleFunc("POST /users/me/request-payout/{targetCurrency}", middlewareJwtAuthUserLog(rr.RequestPayout))
 	router.HandleFunc("GET /users/me/balance", middlewareJwtAuthUserLog(api2.UserBalance))
@@ -260,7 +259,7 @@ func main() {
 	//payment
 
 	//hooks
-	router.HandleFunc("POST /hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 65536))
+	router.HandleFunc("POST /hooks/stripe", util2.MaxBytes(sh.StripeWebhook, 64*1024))
 	router.HandleFunc("POST /hooks/nowpayments", nh.NowWebhook)
 	router.HandleFunc("POST /hooks/analyzer", util.BasicAuth(credentials, api2.AnalysisEngineHook))
 

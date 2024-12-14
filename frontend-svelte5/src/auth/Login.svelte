@@ -39,6 +39,7 @@
     <label for="email" class="py-025">Email address</label>
     <input  required
             title="Please enter a valid email address"
+            class="optional"
             maxlength="100"
             type="email"
             id="email"

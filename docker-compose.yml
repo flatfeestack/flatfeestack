@@ -6,7 +6,7 @@ services:
     env_file:
       - ${BASE_PATH:-.}/auth/.env
     volumes:
-      - ./auth:/app:rw,delegated
+      - ./auth:/app
     ports:
       - "9081:9081"
       - "2342:2345"
@@ -21,7 +21,7 @@ services:
     env_file:
       - ${BASE_PATH:-.}/backend/.env
     volumes:
-      - ./backend:/app:rw,delegated
+      - ./backend:/app
     ports:
       - "9082:9082"
       - "2340:2345"

@@ -46,14 +46,6 @@ export class AppState {
         return this.accessToken;
     }
 
-    getUser() {
-        return this.user;
-    }
-
-    setUser(newUser: User) {
-        this.user = newUser;
-    }
-
 }
 // Create and export a single instance
 export const appState = new AppState();

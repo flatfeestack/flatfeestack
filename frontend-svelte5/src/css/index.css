@@ -3,12 +3,12 @@
 :root {
   /* Primary (Green) */
   --primary-100: #e1eee4;
-  --primary-300: #84d3a4;
+  --primary-300: #b6e5c8;
   --primary-500: #4caf50;
   --primary-700: #3d6d4d;
   --primary-900: #2a4b35;
 
-  /* Secondary (Gray) */
+  /* Secondary (Gray/Blueish) */
   --secondary-100: #eceff1;
   --secondary-300: #90a4ae;
   --secondary-500: #607d8b;
@@ -17,7 +17,7 @@
 }
 
 body,
-html,p {
+html {
   font-family: "Roboto", sans-serif;
   margin: 0;
   color: var(--secondary-700);
@@ -25,10 +25,6 @@ html,p {
 
   height: 100%;
   font-weight: 300;
-}
-
-button, input:focus {
-  outline: none;
 }
 
 a, img {
@@ -119,27 +115,7 @@ a, img {
 }
 
 /* table styling */
-thead tr {
-  background-color: var(--primary-300);
-  color: #000;
-  text-align: left;
-}
 
-th,
-td {
-  padding: 0.5rem;
-}
-
-tbody tr:nth-of-type(even) {
-  background-color: var(--primary-300);
-}
-tbody tr:nth-of-type(odd) {
-  background-color: var(--primary-100);
-}
-
-tbody tr:last-of-type {
-  border-bottom: 2px solid var(--primary-500);
-}
 
 /* structure / layouting */
 .container {
@@ -178,14 +154,6 @@ tbody tr:last-of-type {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: min-content 1fr;
-  align-items: center;
-  padding: 0.5em;
-  margin: 0.5em;
 }
 
 .wrapper .invalid {
@@ -277,7 +245,6 @@ tbody tr:last-of-type {
 .image-org {
   height: 10rem;
   width: max-content;
-  margin: 0 1rem;
 }
 
 
