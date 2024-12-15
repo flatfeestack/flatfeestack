@@ -278,8 +278,7 @@
             </div>
             <h2>Our Mission</h2>
             <div class="max-w20">
-                &#171;Open-Source contributors should be able to make a living with open
-                source software&#187;
+                &#171;Giving back to the dedicated developers who keep open-source software running&#187;
             </div>
         </div>
     </div>
@@ -324,10 +323,9 @@
             <div>
                 <h2>Why Sponsoring?</h2>
                 <div class="max-w40">
-                    Sponsoring a project gives incentives to its maintainers to add
-                    features, fix bugs, and security patches. Sponsoring puts social
-                    pressure and expectations onto a project. Sponsoring provides
-                    incentives to keep the project active and healthy.
+                    Sponsoring a project gives incentives to its maintainers and
+                    developers to add features, fix bugs, and security patches.
+                    Sponsoring provides incentives to keep the project active and healthy.
                 </div>
             </div>
         </div>
@@ -339,9 +337,10 @@
                 <h2>Why FlatFeeStack?</h2>
                 <div class="max-w40">
                     Donation services such as Open Collective, Patreon, or Github Sponsors
-                    are great to sponsor a dedicated person or a whole projects.
-                    FlatFeeStack distributes the funds according to git metrics. For
-                    $125/year, you can sponsor as many project you like with one click.
+                    are great to sponsor a few dedicated person or project.
+                    FlatFeeStack lets you support many open-source projects - both established
+                    favorites and promising new ones - for just $125/year, with funds distributed
+                    based on git metrics.
                 </div>
             </div>
             <div>
@@ -370,6 +369,31 @@
                     sponsoring amount. Your sponsor badge will show all the projects your
                     company is passionate about.
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-row">
+        <div class="flex-row card max-w50 cardLeft">
+            <div>
+                <h2>How to Boost Your Open Source Ecosystem to the Next Level?</h2>
+                <div class="max-w40">
+                    Multiplier sponsoring amplifies your support. Activate it on your repository,
+                    and every time another FlatFeeStack user makes a donation, you automatically
+                    add a bonus donation on top.
+                </div>
+            </div>
+            <div>
+                <img
+                        class="icon bottom"
+                        src="/images/multiplier-coin-landing.svg"
+                        alt="seat icon bw"
+                />
+                <img
+                        class="icon top"
+                        src="/images/multiplier-coin.svg"
+                        alt="metric icon color"
+                />
             </div>
         </div>
     </div>
