@@ -19,7 +19,7 @@ type RepoHealthMetrics struct {
 	SponsorCount        int       `json:"sponsorcount"`
 	RepoStarCount       int       `json:"repostarcount"`
 	RepoMultiplierCount int       `json:"repomultipliercount"`
-	ActiveFFSUserCount  int       `json:"reposponsordonated"`
+	ActiveFFSUserCount  int       `json:"activeffsusercount"`
 }
 
 type InternalHealthMetrics struct {
