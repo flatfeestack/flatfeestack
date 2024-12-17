@@ -16,15 +16,17 @@
     });
   }
 
-  let dailyLimit: number = 100;
+  let dailyLimit: number;
   let newDailyLimit: any;
   let newDailyLimitForBackend: number;
-  let total: number = 100;
+  let total: number;
 
-  $: {
-    if ($user.multiplierDailyLimit) {
-      total = dailyLimit = $user.multiplierDailyLimit / 1000000;
-    }
+  $: if (!$user.multiplierDailyLimit && dailyLimit === undefined) {
+    dailyLimit = total = 100;
+    newDailyLimit = dailyLimit;
+  } else if ($user.multiplierDailyLimit && dailyLimit === undefined) {
+    dailyLimit = total = $user.multiplierDailyLimit / 1000000;
+    newDailyLimit = dailyLimit;
   }
 
   function setDailyLimit() {
@@ -34,9 +36,9 @@
         API.user.setMultiplierDailyLimit(newDailyLimitForBackend);
         total = dailyLimit = newDailyLimit;
         $user.multiplierDailyLimit = newDailyLimitForBackend;
-        newDailyLimit = "";
       } else {
         $error = "The daily limit must be a number greater than or equalt to 1";
+        newDailyLimit = dailyLimit;
       }
     } catch (e) {
       $error = e;
@@ -48,31 +50,44 @@
       setDailyLimit();
     }
   }
+
+  function handleLimitChange() {
+    setDailyLimit();
+  }
 </script>
 
 <style>
+  .input-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .currency-symbol {
+    position: absolute;
+    right: 0px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1em;
+    color: #666;
+  }
 </style>
 
 <h2 class="p-2 m-2">Multiplier Payment</h2>
 
 <div class="container-col" id="tipping-limit-div">
-  <p>
-    Your Multiplier Sponsoring limit is set to <strong
-      >${new Intl.NumberFormat("de-CH", { useGrouping: true }).format(
-        dailyLimit
-      )}</strong
-    > per day.
-  </p>
   <div class="container">
     <label for="daily-limit-input">Daily Limit </label>
-    <input
-      id="daily-limit-input"
-      type="number"
-      class="m-4 max-w20"
-      bind:value={newDailyLimit}
-      on:keydown={handleLimitKeyDown}
-      placeholder="$"
-    />
+    <div class="input-wrapper">
+      <input
+        id="daily-limit-input"
+        type="number"
+        class="m-4 max-w20 input-field"
+        bind:value={newDailyLimit}
+        on:change={handleLimitChange}
+        on:keydown={handleLimitKeyDown}
+      />
+      <span class="currency-symbol">$</span>
+    </div>
     <button on:click={setDailyLimit} class="ml-5 p-2 button1"
       >Set Daily Limit</button
     >
