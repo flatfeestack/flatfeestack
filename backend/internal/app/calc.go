@@ -106,7 +106,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = calcAndDeductFoundation(currentSponsorDonations, parts, yesterdayStart, false)
+	err = calcAndDeductFoundation(currentSponsorDonations[uid], parts, yesterdayStart, false)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = calcAndDeductFoundation(futureSponsorDonations, parts, yesterdayStart, true)
+	err = calcAndDeductFoundation(futureSponsorDonations[uid], parts, yesterdayStart, true)
 	if err != nil {
 		return err
 	}
@@ -124,27 +124,25 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 	return nil
 }
 
-func calcAndDeductFoundation(sponsorDonations map[uuid.UUID][]db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
-	for _, currencyBlock := range sponsorDonations {
-		for _, block := range currencyBlock {
-			if len(block.TrustedRepoSelected) > 0 {
-				allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
+func calcAndDeductFoundation(sponsorDonations []db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
+	for _, block := range sponsorDonations {
+		if len(block.TrustedRepoSelected) > 0 {
+			allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
 
-				amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
+			amountPerRepo := new(big.Int).Div(&block.SponsorAmount, big.NewInt(int64(len(allRepos))))
 
-				pool := new(big.Int).Mul(amountPerRepo, big.NewInt(int64(len(block.TrustedRepoSelected))))
+			pool := new(big.Int).Mul(amountPerRepo, big.NewInt(int64(len(block.TrustedRepoSelected))))
 
-				var payoutlimit *big.Float
-				if futureContribution {
-					payoutlimit = new(big.Float).SetInt(amountPerRepo)
-				} else {
-					payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
-				}
-				amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
-
-				err := doDeductFoundation(allRepos, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
-				return err
+			var payoutlimit *big.Float
+			if futureContribution {
+				payoutlimit = new(big.Float).SetInt(amountPerRepo)
+			} else {
+				payoutlimit = new(big.Float).Mul(new(big.Float).SetInt(amountPerRepo), big.NewFloat(0.9))
 			}
+			amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
+
+			err := doDeductFoundation(allRepos, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
+			return err
 		}
 	}
 	return nil

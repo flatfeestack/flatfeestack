@@ -389,6 +389,6 @@ func TestGetInternalMetrics(t *testing.T) {
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.SponsorCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoStarCount)
 		assert.Equal(t, 0, internalMetricsFocusSponsorEvent.RepoMultiplierCount)
-		assert.Equal(t, 2, internalMetricsFocusSponsorEvent.ActiveFFSUserCount)
+		assert.Equal(t, 1, internalMetricsFocusSponsorEvent.ActiveFFSUserCount)
 	})
 }

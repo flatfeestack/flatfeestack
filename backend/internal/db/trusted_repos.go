@@ -180,38 +180,6 @@ func ConvertToInterfaceSlice[T any](values []T) []interface{} {
 	return result
 }
 
-func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
-	var query string
-
-	if len(userIds) == 0 || months < 0 {
-		return 0, nil
-	}
-
-	if isPostgres {
-		query = fmt.Sprintf(`
-		SELECT COUNT(repo_id)
-		FROM daily_contribution
-		WHERE
-			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
-			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
-	} else {
-		query = fmt.Sprintf(`
-		SELECT COUNT(repo_id)
-		FROM daily_contribution
-		WHERE
-			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
-			AND created_at >= date('now', '-%d month')`, months)
-	}
-
-	var count int
-	err := DB.QueryRow(query, ConvertToInterfaceSlice(userIds)...).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
 func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
 	emails, err := GetRepoEmails(repoId)
 	if err != nil {
@@ -232,10 +200,5 @@ func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepo
 		return 0, nil
 	}
 
-	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
-	if err != nil {
-		return 0, err
-	}
-
-	return trustedRepoCount, nil
+	return len(activeUsers), nil
 }

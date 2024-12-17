@@ -324,48 +324,6 @@ func TestConvertToInterfaceSlice(t *testing.T) {
 	})
 }
 
-func TestCountReposForUsers(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	t.Run("Empty UserIds", func(t *testing.T) {
-		count, err := CountReposForUsers([]uuid.UUID{}, 6, false)
-		assert.Nil(t, err)
-		assert.Equal(t, 0, count)
-	})
-
-	t.Run("Zero Months", func(t *testing.T) {
-		userIds := []uuid.UUID{uuid.New(), uuid.New()}
-		count, err := CountReposForUsers(userIds, 0, false)
-		assert.Nil(t, err)
-		assert.GreaterOrEqual(t, count, 0)
-	})
-
-	t.Run("Negative Months", func(t *testing.T) {
-		userIds := []uuid.UUID{uuid.New(), uuid.New()}
-		count, err := CountReposForUsers(userIds, -3, false)
-		assert.Nil(t, err)
-		assert.Equal(t, 0, count)
-	})
-
-	t.Run("Large UserIds", func(t *testing.T) {
-		r := insertTestRepo(t)
-
-		uid1 := insertTestUser(t, "email1").Id
-		uid2 := insertTestUser(t, "email2").Id
-		uid3 := insertTestUser(t, "email3").Id
-
-		uids := []uuid.UUID{uid1, uid2, uid3}
-
-		_ = InsertContribution(uid1, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
-		_ = InsertContribution(uid2, uid3, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
-		_ = InsertContribution(uid3, uid2, r.Id, big.NewInt(2), "XBTC", time.Now(), time.Now(), false)
-
-		count, err := CountReposForUsers(uids, 12, false)
-		assert.Nil(t, err)
-		assert.Equal(t, count, 3)
-	})
-}
-
 func TestGetActiveFFSUserCount(t *testing.T) {
 	SetupTestData()
 	defer TeardownTestData()
@@ -420,6 +378,6 @@ func TestGetActiveFFSUserCount(t *testing.T) {
 		_ = InsertContribution(uid1, uid2, r3.Id, big.NewInt(3), "XBTC", currentTime, currentTime, false)
 
 		count, _ := GetActiveFFSUserCount(r.Id, 1, 6, false)
-		assert.Equal(t, 2, count)
+		assert.Equal(t, 1, count)
 	})
 }
