@@ -305,13 +305,9 @@
       <div>
         <h2>How to Boost Your Sponsoring to the Next Level?</h2>
         <div class="max-w40">
-          It’s simple — with FlatFeeStack! <br />
-          Introducing Multiplier Sponsoring — our innovative new feature that amplifies
-          your impact. Activate it on your repository, and every time another FlatFeeStack
-          user makes a donation, you automatically add a bonus donation on top.
-          <br />
-          Why wait? Empower the projects you love while enjoying the highest level
-          of security — designed and delivered by our team of top-notch developers.
+          Multiplier sponsoring amplifies your support. Activate it on your
+          repository, and every time another FlatFeeStack user makes a donation,
+          you automatically add a bonus donation on top.
         </div>
       </div>
       <div>
