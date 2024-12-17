@@ -160,7 +160,8 @@ func FindSumPaymentByCurrencyWithDate(userId uuid.UUID, status string) (map[stri
 		Query(`SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
                FROM payment_in_event 
                WHERE user_id = $1 AND status = $2
-               GROUP BY currency`, userId, status)
+               GROUP BY currency
+			   ORDER BY currency ASC`, userId, status)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +211,8 @@ func FindSumPaymentByCurrencyFoundationWithDate(userId uuid.UUID, status string)
 		Query(`SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
                FROM payment_in_event 
                WHERE user_id = $1 AND status = $2 AND freq = 1
-               GROUP BY currency`, userId, status)
+               GROUP BY currency
+			   ORDER BY currency ASC`, userId, status)
 
 	if err != nil {
 		return nil, err

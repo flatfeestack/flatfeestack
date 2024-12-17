@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 
@@ -286,11 +287,13 @@ func FoundationBalance(w http.ResponseWriter, r *http.Request, user *db.UserDeta
 	calculateAndRespondBalances(w, mAdd, mCont, GenericErrorMessage)
 }
 
-func reverseTotalUserBalances(balances []TotalUserBalance) []TotalUserBalance {
-	for i, j := 0, len(balances)-1; i < j; i, j = i+1, j-1 {
-		balances[i], balances[j] = balances[j], balances[i]
-	}
-	return balances
+func SortTotalUserBalancesDescending(balances []TotalUserBalance) {
+	sort.Slice(balances, func(i, j int) bool {
+		dateI, _ := time.Parse("2006-01-02 15:04:05", balances[i].CreateDate)
+		dateJ, _ := time.Parse("2006-01-02 15:04:05", balances[j].CreateDate)
+
+		return dateI.After(dateJ)
+	})
 }
 
 func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.PaymentInfo, mCont map[string]map[uuid.UUID]db.ContributionDetail, errorMessage string) {
@@ -298,10 +301,27 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.Paym
 
 	for currency, totalAdded := range mAdd {
 		if contMap, exists := mCont[currency]; exists && contMap != nil {
-			for repoId, contributionBalance := range mCont[currency] {
-				remainingBalance := new(big.Int).Sub(totalAdded.Balance, contributionBalance.Balance)
+			type repoEntry struct {
+				RepoId       uuid.UUID
+				Contribution db.ContributionDetail
+			}
 
-				repo, err := db.FindRepoById(repoId)
+			repoEntries := []repoEntry{}
+			for repoId, contributionBalance := range contMap {
+				repoEntries = append(repoEntries, repoEntry{
+					RepoId:       repoId,
+					Contribution: contributionBalance,
+				})
+			}
+
+			sort.Slice(repoEntries, func(i, j int) bool {
+				return repoEntries[i].Contribution.CreatedAt.Before(repoEntries[j].Contribution.CreatedAt)
+			})
+
+			for _, entry := range repoEntries {
+				remainingBalance := new(big.Int).Sub(totalAdded.Balance, entry.Contribution.Balance)
+
+				repo, err := db.FindRepoById(entry.RepoId)
 				if err != nil {
 					slog.Error("Could not find repo by id", slog.Any("error", err))
 					util.WriteErrorf(w, http.StatusInternalServerError, GenericErrorMessage)
@@ -310,14 +330,14 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.Paym
 
 				totalUserBalances = append(totalUserBalances, TotalUserBalance{
 					Currency:     currency,
-					RepoId:       repoId,
+					RepoId:       entry.RepoId,
 					RepoName:     *repo.Name,
-					Balance:      contributionBalance.Balance,
+					Balance:      entry.Contribution.Balance,
 					TotalBalance: remainingBalance,
-					CreateDate:   contributionBalance.CreatedAt.Format("2006-01-02 15:04:05"),
+					CreateDate:   entry.Contribution.CreatedAt.Format("2006-01-02 15:04:05"),
 				})
 
-				mCont[currency][repoId] = db.ContributionDetail{
+				mCont[currency][entry.RepoId] = db.ContributionDetail{
 					Balance: big.NewInt(0),
 				}
 				totalAdded.Balance = remainingBalance
@@ -348,7 +368,7 @@ func calculateAndRespondBalances(w http.ResponseWriter, mAdd map[string]*db.Paym
 		}
 	}
 
-	totalUserBalances = reverseTotalUserBalances(totalUserBalances)
+	SortTotalUserBalancesDescending(totalUserBalances)
 
 	err := json.NewEncoder(w).Encode(totalUserBalances)
 	if err != nil {
