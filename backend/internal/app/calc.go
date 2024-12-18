@@ -106,7 +106,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = calcAndDeductFoundation(currentSponsorDonations[uid], parts, yesterdayStart, false)
+	err = calcAndDeductFoundation(uid, currentSponsorDonations[uid], parts, yesterdayStart, false)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 		return err
 	}
 
-	err = calcAndDeductFoundation(futureSponsorDonations[uid], parts, yesterdayStart, true)
+	err = calcAndDeductFoundation(uid, futureSponsorDonations[uid], parts, yesterdayStart, true)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (c *CalcHandler) calcMultiplier(uid uuid.UUID, parts int, yesterdayStart ti
 	return nil
 }
 
-func calcAndDeductFoundation(sponsorDonations []db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
+func calcAndDeductFoundation(uid uuid.UUID, sponsorDonations []db.UserDonationRepo, parts int, yesterdayStart time.Time, futureContribution bool) error {
 	for _, block := range sponsorDonations {
 		if len(block.TrustedRepoSelected) > 0 {
 			allRepos := append(block.TrustedRepoSelected, block.UntrustedRepoSelected...)
@@ -141,7 +141,7 @@ func calcAndDeductFoundation(sponsorDonations []db.UserDonationRepo, parts int, 
 			}
 			amountPerPart := new(big.Int).Quo(pool, big.NewInt(int64(parts)))
 
-			err := doDeductFoundation(allRepos, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
+			err := doDeductFoundation(uid, allRepos, yesterdayStart, block.Currency, amountPerPart, payoutlimit, futureContribution)
 			return err
 		}
 	}
@@ -199,7 +199,7 @@ func (c *CalcHandler) calcAndDeduct(u *db.UserDetail, rids []uuid.UUID, yesterda
 	return nil
 }
 
-func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency string, amountPerPart *big.Int, payoutlimit *big.Float, futureContribution bool) error {
+func doDeductFoundation(uid uuid.UUID, rids []uuid.UUID, yesterdayStart time.Time, currency string, amountPerPart *big.Int, payoutlimit *big.Float, futureContribution bool) error {
 	for _, rid := range rids {
 		// Get contributor weights
 		uidInMap, uidNotInMap, total, err := getContributorWeights(rid)
@@ -211,7 +211,7 @@ func doDeductFoundation(rids []uuid.UUID, yesterdayStart time.Time, currency str
 		}
 
 		var amountFoundation *big.Float
-		foundations, err := db.GetValidatedFoundationsSupportingRepo(rid, currency, yesterdayStart)
+		foundations, err := db.GetValidatedFoundationsSupportingRepo(uid, rid, currency, yesterdayStart)
 		if err != nil {
 			return err
 		}

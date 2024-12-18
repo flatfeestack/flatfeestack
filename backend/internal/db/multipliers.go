@@ -158,7 +158,7 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
 	return foundations, nil
 }
 
-func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yesterdayStart time.Time) ([]Foundation, error) {
+func GetValidatedFoundationsSupportingRepo(uid uuid.UUID, rid uuid.UUID, currency string, yesterdayStart time.Time) ([]Foundation, error) {
 	s := `SELECT u.id, u.multiplier_daily_limit
             FROM multiplier_event m
 			INNER JOIN users u ON m.user_id = u.id
@@ -176,6 +176,11 @@ func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yeste
 		if err != nil {
 			return nil, err
 		}
+
+		if foundation.Id == uid {
+			continue
+		}
+
 		firstCheck, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(0), currency, yesterdayStart)
 		if err != nil {
 			return nil, err
