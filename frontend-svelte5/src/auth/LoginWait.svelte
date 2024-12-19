@@ -9,7 +9,7 @@
 </style>
 
 <Modal>
-  <h2>Check your inbox</h2>
+  <h1>Check your inbox</h1>
   <div>We've sent a login link to {email}</div>
   <div class="divider"></div>
   <div class="pt-100 small">

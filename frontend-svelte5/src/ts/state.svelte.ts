@@ -8,6 +8,7 @@ export class AppState {
     config = $state(<Config>{});
     sponsoredRepos=  $state(<Repo[]>[]);
     multiplierSponsoredRepos=  $state(<Repo[]>[]);
+    multiplierCountByRepo = $state(<Map<string, number>>new Map());
     loadedSponsoredRepos= $state(false);
     route= $state("");
     accessToken= $state("");

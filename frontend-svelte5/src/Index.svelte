@@ -19,6 +19,7 @@
     import {API} from "./ts/api.ts";
     import {onMount} from "svelte";
     import {appState} from "./ts/state.svelte.ts";
+    import TermsAndConditions from "./auth/TermsAndConditions.svelte";
 
     const routes: Route[] = [
         {path: "/user/search", component: Search},
@@ -33,6 +34,7 @@
 
         {path: "/differentChainId", component: DifferentChainId},
         {path: "/badges/:uuid", component: PublicBadges},
+        {path: "/toc", component: TermsAndConditions},
         {path: "/login-confirm", component: LoginConfirm},
         {path: "/login-wait", component: LoginWait},
         {path: "/login", component: Login},

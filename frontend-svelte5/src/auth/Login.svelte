@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {goto, QueryString} from "@mateothegreat/svelte5-router";
+  import {goto, route, QueryString} from "@mateothegreat/svelte5-router";
   import { emailValidationPattern } from "../utils.ts";
   import Modal from "./Modal.svelte";
   import {login} from "./auth.svelte.ts";
@@ -62,6 +62,6 @@
 
   <div class="divider" ></div>
   <div class="pt-100 small">
-    By continuing, you acknowledge FlatFeeStacks Privacy Policy.
+    By continuing, you acknowledge FlatFeeStacks  <a use:route href="/toc">Privacy Policy</a>.
   </div>
 </Modal>

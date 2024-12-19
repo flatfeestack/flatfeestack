@@ -283,7 +283,11 @@
   <div class="grid-2">
     <span class="p-050 nobreak">Enable Multiplier:</span>
     <div class="p-050">
-      <input type="checkbox" bind:checked={multiplierActive} onchange={handleMultiplierToggle}/>
+
+      <label class="switch">
+        <input type="checkbox" bind:checked={multiplierActive} onchange={handleMultiplierToggle}/>
+        <span class="slider"></span>
+      </label>
     </div>
   </div>
 

@@ -196,20 +196,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//special case to skip email verification
-	for _, noAuthUser := range noAuthUsers {
-		if email == noAuthUser {
-			res, err := findAuthByEmail(email)
-			if err != nil {
-				slog.Error("cannot validate email", slog.Any("error", err))
-				WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
-				return
-			}
-			writeOAuth(w, res)
-			return
-		}
-	}
-
 	emailTokenRnd, err := genToken()
 	if err != nil {
 		slog.Error("RND error email",
@@ -248,6 +234,34 @@ func login(w http.ResponseWriter, r *http.Request) {
 		slog.Error("insert user failed", slog.Any("error", err))
 		WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
 		return
+	}
+
+	//special case to skip email verification
+	//use it only for local development, as this gives you unlimited access
+	if cfg.Env == "local" {
+		for _, noAuthUser := range noAuthUsers {
+			if email == noAuthUser {
+
+				err = updateEmailToken(email, emailTokenRnd)
+				if err != nil {
+					slog.Error("update email token failed",
+						slog.String("email", email),
+						slog.String("token", emailToken),
+						slog.Any("error", err))
+					WriteErrorf(w, http.StatusForbidden, GenericErrorMessage)
+					return
+				}
+
+				res, err := findAuthByEmail(email)
+				if err != nil {
+					slog.Error("cannot validate email", slog.Any("error", err))
+					WriteErrorf(w, http.StatusBadRequest, GenericErrorMessage)
+					return
+				}
+				writeOAuth(w, res)
+				return
+			}
+		}
 	}
 
 	params := map[string]string{}

@@ -1,4 +1,5 @@
---CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- SQLite does NOT automatically create indexes for foreign key columns, PostgreSQL does,
+-- so we create an index also for foreign key columns if they do not exist
 
 CREATE TABLE IF NOT EXISTS users (
     id                     UUID PRIMARY KEY,
@@ -13,8 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     seats                  BIGINT DEFAULT 1,
     freq                   BIGINT DEFAULT 365,
     created_at             TIMESTAMP NOT NULL,
-    multiplier             BOOLEAN DEFAULT FALSE, /*Multiplier set*/
-    multiplier_daily_limit NUMERIC(78) DEFAULT 100000000 /*Multiplier Daily Amount*/
+    multiplier_daily_limit BIGINT DEFAULT -1 /*Multiplier Daily Amount*/
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email); /*we search for emails*/
 CREATE INDEX IF NOT EXISTS users_invited_id_idx ON users(invited_id);
@@ -74,13 +74,11 @@ CREATE INDEX IF NOT EXISTS sponsor_event_user_id_idx ON sponsor_event(user_id);
 CREATE TABLE IF NOT EXISTS trust_event (
     id            UUID PRIMARY KEY,
     repo_id       UUID CONSTRAINT trust_event_repo_id_fk REFERENCES repo(id),
-    user_id       UUID CONSTRAINT trust_event_user_id_fk REFERENCES users(id),
     trust_at      TIMESTAMP NOT NULL,
     un_trust_at   TIMESTAMP,
-    UNIQUE(repo_id, user_id, trust_at)
+    UNIQUE(repo_id, trust_at)
 );
 CREATE INDEX IF NOT EXISTS trust_event_repo_id_idx ON trust_event(repo_id);
-CREATE INDEX IF NOT EXISTS trust_event_user_id_idx ON trust_event(user_id);
 
 CREATE TABLE IF NOT EXISTS multiplier_event (
     id               UUID PRIMARY KEY,
@@ -90,7 +88,6 @@ CREATE TABLE IF NOT EXISTS multiplier_event (
     un_multiplier_at TIMESTAMP,
     UNIQUE(repo_id, user_id, multiplier_at)
 );
-
 CREATE INDEX IF NOT EXISTS multiplier_event_repo_id_idx ON multiplier_event(repo_id);
 CREATE INDEX IF NOT EXISTS multiplier_event_user_id_idx ON multiplier_event(user_id);
 
@@ -165,11 +162,11 @@ CREATE INDEX IF NOT EXISTS future_contribution_user_sponsor_id_idx ON future_con
 CREATE INDEX IF NOT EXISTS future_contribution_repo_id_idx ON future_contribution(repo_id);
 
 CREATE TABLE IF NOT EXISTS invite (
-    id UUID PRIMARY KEY,
-    from_email VARCHAR(64),
-    to_email VARCHAR(64),
+    id           UUID PRIMARY KEY,
+    from_email   VARCHAR(64),
+    to_email     VARCHAR(64),
     confirmed_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
+    created_at   TIMESTAMP NOT NULL,
     UNIQUE (from_email, to_email)
 );
 CREATE INDEX IF NOT EXISTS invite_from_email_idx ON invite(from_email);
@@ -182,53 +179,35 @@ CREATE TABLE IF NOT EXISTS user_emails_sent (
     email_type VARCHAR(64),
     created_at TIMESTAMP NOT NULL
 );
-CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON user_emails_sent(user_id);
+CREATE INDEX IF NOT EXISTS user_emails_sent_user_id_idx ON multiplier_event(user_id);
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_type_idx ON user_emails_sent(email_type); /*we do a count on email_type*/
 CREATE INDEX IF NOT EXISTS user_emails_sent_email_idx ON user_emails_sent(email); /*we do a count on email*/
 
-CREATE TABLE IF NOT EXISTS repo_health_threshold (
-    id                        UUID PRIMARY KEY,
-    created_at                TIMESTAMP,
-    th_contributor_count      JSON,
-    th_commit_count           JSON,
-    th_sponsor_donation       JSON,
-    th_repo_star_count        JSON,
-    th_repo_multiplier        JSON,
-    th_active_ffs_user_count  JSON
-);
-CREATE INDEX IF NOT EXISTS repo_health_threshold_id_idx ON repo_health_threshold(id);
-
--- set initial values for threshold
-INSERT INTO repo_health_threshold (
-  id,
-  created_at,
-  th_contributor_count,
-  th_commit_count,
-  th_sponsor_donation,
-  th_repo_star_count,
-  th_repo_multiplier,
-  th_active_ffs_user_count) 
-VALUES (
-  'b7244c4a-dadd-45f5-bd12-0fcefb5d66c2',
-  '2022-12-31 23:59:59.999999999',
-  '{"lower": 4, "upper": 13}',
-  '{"lower": 40, "upper": 130}',
-  '{"lower": 1, "upper": 10}',
-  '{"lower": 5, "upper": 20}',
-  '{"lower": 1, "upper": 5}',
-  '{"lower": 1, "upper": 10}'
-)
-ON CONFLICT (id) DO NOTHING;
-
 CREATE TABLE IF NOT EXISTS repo_health_metrics (
-    id                          UUID PRIMARY KEY,
-    created_at                  TIMESTAMP NOT NULL,
-    repo_id                     UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
-    contributor_count           NUMERIC(78),
-    commit_count                NUMERIC(78),
-    sponsor_donation            NUMERIC(78),
-    repo_star_count             NUMERIC(78),
-    repo_multiplier_count       NUMERIC(78),
-    active_ffs_user_count       NUMERIC(78)
+    id                    UUID PRIMARY KEY,
+    created_at            TIMESTAMP NOT NULL,
+    repo_id               UUID CONSTRAINT trust_value_repo_id_fk REFERENCES repo(id),
+    contributor_count     NUMERIC(78),
+    commit_count          NUMERIC(78),
+    sponsor_donation      NUMERIC(78),
+    repo_star_count       NUMERIC(78),
+    repo_multiplier_count NUMERIC(78),
+    active_ffs_user_count NUMERIC(78)
 );
-CREATE INDEX IF NOT EXISTS repo_health_metrics_repo_id_idx ON repo_health_metrics(repo_id);
+CREATE INDEX IF NOT EXISTS repo_health_metrics_repo_id_idx ON daily_contribution(repo_id);
+
+CREATE TABLE IF NOT EXISTS config (
+    id         VARCHAR(32) PRIMARY KEY,
+    created_at TIMESTAMP,
+    values     JSON
+);
+-- set initial values for threshold
+INSERT INTO config (id, created_at, values)
+VALUES ('repo_health_threshold',CURRENT_TIMESTAMP,'{
+    "contributors":     {"lower": 4,  "upper": 13},
+    "commits":          {"lower": 40, "upper": 130},
+    "sponsor_donation": {"lower": 1,  "upper": 10},
+    "repo_stars":       {"lower": 5,  "upper": 20},
+    "repo_multiplier":  {"lower": 1,  "upper": 5},
+    "active_ffs_users": {"lower": 1,  "upper": 10}}')
+ON CONFLICT (id) DO NOTHING;

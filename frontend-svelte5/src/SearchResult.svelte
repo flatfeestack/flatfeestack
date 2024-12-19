@@ -5,7 +5,9 @@
   import type { Repo } from "./types/backend";
 
   let { repo } = $props<{ repo: Repo }>();
+  let repoIsHealthy = $state(false);
   let star = $state(false);
+  let multiplier = $state(false);
 
   const onSponsor = async () => {
     try {
@@ -15,6 +17,29 @@
     } catch (e) {
       appState.setError(e);
       star = false;
+    }
+  };
+
+  const onMultiplier = async () => {
+    try {
+      if (!star) {
+        const resSponsor = await API.repos.tag(repo.uuid);
+        appState.sponsoredRepos = [...appState.sponsoredRepos, resSponsor];
+        star = true;
+      }
+      const resMultiplier = await API.repos.setMultiplier(repo.uuid);
+      appState.multiplierSponsoredRepos = [...appState.multiplierSponsoredRepos, resMultiplier];
+      multiplier = true;
+
+      appState.multiplierCountByRepo =
+      multiplierCountByRepo.update((counts) => {
+        counts[repo.uuid] = (counts[repo.uuid] || 0) + 1;
+        return counts;
+      });
+    } catch (e) {
+      appState.setError(e);
+      star = false;
+      multiplier = false;
     }
   };
 
