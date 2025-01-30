@@ -13,8 +13,8 @@ github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 h1:rpfIENRNNilwHwZeG5+P150SMrnN
 github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0/go.mod h1:v57UDF4pDQJcEfFUCRop3lJL149eHGSe9Jvczhzjo/0=
 github.com/dimiro1/banner v1.1.0 h1:TSfy+FsPIIGLzaMPOt52KrEed/omwFO1P15VA8PMUh0=
 github.com/dimiro1/banner v1.1.0/go.mod h1:tbL318TJiUaHxOUNN+jnlvFSgsh/RX7iJaQrGgOiTco=
-github.com/ethereum/go-ethereum v1.14.12 h1:8hl57x77HSUo+cXExrURjU/w1VhL+ShCTJrTwcCQSe4=
-github.com/ethereum/go-ethereum v1.14.12/go.mod h1:RAC2gVMWJ6FkxSPESfbshrcKpIokgQKsVKmAuqdekDY=
+github.com/ethereum/go-ethereum v1.14.13 h1:L81Wmv0OUP6cf4CW6wtXsr23RUrDhKs2+Y9Qto+OgHU=
+github.com/ethereum/go-ethereum v1.14.13/go.mod h1:RAC2gVMWJ6FkxSPESfbshrcKpIokgQKsVKmAuqdekDY=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
 github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=

@@ -6,7 +6,7 @@ require (
 	github.com/MatusOllah/slogcolor v1.4.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/dimiro1/banner v1.1.0
-	github.com/ethereum/go-ethereum v1.14.12
+	github.com/ethereum/go-ethereum v1.14.13
 	github.com/fatih/color v1.18.0
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/go-jose/go-jose/v3 v3.0.3
