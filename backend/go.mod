@@ -1,6 +1,6 @@
 module backend
 
-go 1.23
+go 1.24.0
 
 require (
 	github.com/MatusOllah/slogcolor v1.4.0
@@ -19,7 +19,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.10.0
 	github.com/stripe/stripe-go/v76 v76.25.0
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
+	golang.org/x/exp v0.0.0-20250911091902-df9299821621
 	golang.org/x/text v0.21.0
 )
 
