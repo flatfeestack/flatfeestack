@@ -141,6 +141,10 @@ func SendEmail(sendEmailRequest SendEmailRequest) error {
 	c := &http.Client{
 		Timeout: 15 * time.Second,
 	}
+	
+	if cfg.Dev != "" {
+		slog.Debug("SendEmail", slog.String("Text", sendEmailRequest.SendgridRequest.TextMessage))
+	}
 
 	var jsonData []byte
 	var err error
@@ -155,7 +159,6 @@ func SendEmail(sendEmailRequest SendEmailRequest) error {
 	} else {
 		jsonData, err = json.Marshal(sendEmailRequest.SendgridRequest)
 	}
-
 	if err != nil {
 		return err
 	}

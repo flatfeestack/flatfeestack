@@ -51,7 +51,7 @@ func jwtAuth(next func(w http.ResponseWriter, r *http.Request, claims *jwt.Claim
 					slog.Error("Token expired", slog.String("subject", claims.Subject))
 					WriteErrorf(w, http.StatusUnauthorized, GenericErrorMessage)
 				}
-			} else if claims == nil {
+			} else {
 				if ru != "" {
 					slog.Error("jwtAuth error", slog.Any("error", err))
 					w.Header().Set("Location", ru)

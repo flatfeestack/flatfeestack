@@ -3,7 +3,7 @@ module auth
 go 1.23
 
 require (
-	github.com/MatusOllah/slogcolor v1.4.0
+	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/dimiro1/banner v1.1.0
 	github.com/fatih/color v1.18.0
 	github.com/felixge/httpsnoop v1.0.4

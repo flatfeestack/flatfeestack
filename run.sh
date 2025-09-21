@@ -13,9 +13,9 @@ cleanup() {
 
 setup_colors() {
   if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
-    NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m'
+    NOFMT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' BLUE='\033[0;34m'
   else
-    NOFORMAT='' RED='' GREEN='' ORANGE=''
+    NOFMT='' RED='' GREEN='' YELLOW='' BLUE=''
   fi
 }
 
@@ -23,8 +23,20 @@ msg() {
   echo >&2 -e "${1-}"
 }
 
+msg_ok() {
+  msg "${GREEN}${1-}${NOFMT}"
+}
+
+msg_warn() {
+  msg "${YELLOW}WARN: ${1-}${NOFMT}"
+}
+
+msg_info() {
+  msg "${BLUE}INFO: ${1-}${NOFMT}"
+}
+
 die() {
-  msg "${RED}${1-}${NOFORMAT}"
+  msg "${RED}ERR: ${1-}${NOFMT}"
   exit "${2-1}"
 }
 
@@ -38,17 +50,50 @@ Available options:
 -h, --help               Print this help and exit
 -ss, --skip-stripe       Don't setup stripe
 -sb, --skip-build        Don't run docker-compose build
--sd, --skip-start-docker Don't try to starte docker
 -rm, --remove-data       Remove the database and chain folder
 EOF
   exit
+}
+
+check_envs() {
+  local project="$1"
+  local example_file="${2:-.example.env}"
+  local target_file="${3:-.env}"
+  
+  local project_example="$project/$example_file"
+  local project_target="$project/$target_file"
+  
+  # Skip if no example file exists
+  [[ ! -f "$project_example" ]] && return 0
+  
+  # Create .env from example if missing
+  if [[ ! -f "$project_target" ]]; then
+    cp "$project_example" "$project_target"
+    msg_ok "Created $project_target from $example_file"
+    return 0
+  fi
+  
+  # Check for missing keys
+  local example_keys=$(grep -o '^[^#]*=' "$project_example" | sort)
+  local target_keys=$(grep -o '^[^#]*=' "$project_target" | sort)
+  
+  if ! diff -q <(echo "$example_keys") <(echo "$target_keys") >/dev/null 2>&1; then
+    local missing_keys=$(comm -23 <(echo "$example_keys") <(echo "$target_keys"))
+    if [[ -n "$missing_keys" ]]; then
+      msg_warn "$project_target is missing keys: $(echo "$missing_keys" | tr '\n' ' ')"
+    fi
+    
+    local extra_keys=$(comm -13 <(echo "$example_keys") <(echo "$target_keys"))
+    if [[ -n "$extra_keys" ]]; then
+      msg_info "$project_target has extra keys: $(echo "$extra_keys" | tr '\n' ' ')"
+    fi
+  fi
 }
 
 parse_params() {
   # default values of variables set from params
   include_build=true
   include_stripe=true
-  include_docker_start=true
   external=''
   internal="$PROJECTS"
 
@@ -58,7 +103,6 @@ parse_params() {
     --no-color) NO_COLOR=1 ;;
     -ss | --skip-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}"; include_stripe=false;;
     -sb | --skip-build) include_build=false;;
-    -sd | --skip-start-docker) include_docker_start=false;;
     -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain .stripe;;
     -rmdb | --remove-db) sudo rm -rf .db;;
     -?*) die "Unknown option: $1";;
@@ -74,48 +118,35 @@ parse_params() {
 setup_colors
 parse_params "$@"
 
-# on linux, check if command exists, and start docker if not running
-# also make sure that no other containers are running, since we start all relevant containers
-# here. Use -sd to skip this check, or if you have containers, that you want to keep running
-if [ "$include_docker_start" = true ] && command -v systemctl >/dev/null 2>&1; then
-  if ! systemctl is-active --quiet docker; then
-    msg "Docker is not running. Starting Docker service..."
-    sudo systemctl start docker
+check_envs "analyzer"
+check_envs "backend"
+check_envs "forum"
+check_envs "auth"
+check_envs "db"
 
-    # Wait for Docker to fully start
-    while ! systemctl is-active --quiet docker; do
-        sleep 1
-    done
-    msg "${GREEN}Docker service started successfully${NOFORMAT}"
-  fi
-
-  # Get all running containers and stop them
-  running_containers=$(docker ps -q)
-  if [ -n "$running_containers" ]; then
-    msg "Stopping all running containers..."
-    docker stop $running_containers
-    msg "${GREEN}All containers stopped${NOFORMAT}"
-  else
-    msg "${GREEN}No running containers found${NOFORMAT}"
-  fi
+if ! docker info >/dev/null 2>&1; then
+  die "Docker is not running. Please start Docker and try again"
 fi
 
 if [ "$include_stripe" = true ]; then
-  msg "${GREEN}Setup Stripe${NOFORMAT}"
+  msg "Setup Stripe"
   docker compose build stripe-setup
-  docker compose up stripe-setup
+  if ! docker compose run --rm stripe-setup; then
+    die "Stripe setup failed. Cannot continue without proper Stripe configuration"
+  fi
+  msg_ok "Stripe setup done"
 else
-  msg "${ORANGE}Skip Stripe setup${NOFORMAT}"
+  msg_info "Skip Stripe setup"
 fi
 
 if [ "$include_build" = true ]; then
-  msg "${GREEN}Run: docker compose build ${internal}${NOFORMAT}"
+  msg "Run: docker compose build ${internal}"
   docker compose build ${internal}
 else
-  msg "${ORANGE}Skip: docker compose build ${internal}${NOFORMAT}"
+  msg "Skip: docker compose build ${internal}"
 fi
 
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
-msg "${GREEN}Run: docker compose up --abort-on-container-exit ${internal}${NOFORMAT}"
+msg_ok "Run: docker compose up --abort-on-container-exit ${internal}"
 docker compose up --abort-on-container-exit ${internal}

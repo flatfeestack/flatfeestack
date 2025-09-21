@@ -12,8 +12,15 @@ if [ -f /root/.env ]; then
   #Trying directly with sed -i to edit in place wants to move the file, and the resulting error is:
   #sed: can't move '/root/.config/stripe/.env' to '/root/.config/stripe/.env.bak': Resource busy
   cp /root/.env /tmp/.env
-  #Ugly hack: this triggers the login if not logged in yet, but exits with an error
-  stripe listen --print-secret || true
+  #Ask user to go to website, wait at most 120sec, try to login/get secret, but don't fail yet
+  timeout 120 stripe listen --print-secret || true
+  
+  # Verify authentication worked
+  if ! stripe config --list > /dev/null 2>&1; then
+    echo "Authentication failed"
+    exit 1
+  fi
+  
   #Do it again, this time we are logged in
   STRIPE_SECRET_WEBHOOK=$(stripe listen --print-secret)
   sed -i "s/^STRIPE_SECRET_WEBHOOK=.*/STRIPE_SECRET_API=${STRIPE_SECRET_WEBHOOK}/" /tmp/.env
