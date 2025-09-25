@@ -40,8 +40,8 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2(@rsbuild/core@1.1.8)(webpack@5.96.1)
       '@rsbuild/plugin-svelte':
-        specifier: 1.0.5
-        version: 1.0.5(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)
+        specifier: 1.0.11
+        version: 1.0.11(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)
       '@tsconfig/svelte':
         specifier: 5.0.4
         version: 5.0.4
@@ -217,8 +217,8 @@ packages:
       '@rsbuild/core':
         optional: true
 
-  '@rsbuild/plugin-svelte@1.0.5':
-    resolution: {integrity: sha512-7J5wvV+8LUn2AcppgPu+OKu3J2Qylj86jRItpRMMIpLI4YBYS6gM9DWOpti4ynr7peWdHrU05s6kE7F/EBKjMw==}
+  '@rsbuild/plugin-svelte@1.0.11':
+    resolution: {integrity: sha512-ThmBSTMILWDB+i/P61hgw76UnmFnv7WYYZMjcwqxUXEKM3zobL5jdtEj56wN8yn/xadStM0INjNjHWTf5E7kIQ==}
     peerDependencies:
       '@rsbuild/core': 1.x
 
@@ -2038,7 +2038,7 @@ snapshots:
       - lightningcss
       - webpack
 
-  '@rsbuild/plugin-svelte@1.0.5(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)':
+  '@rsbuild/plugin-svelte@1.0.11(@babel/core@7.26.0)(@rsbuild/core@1.1.8)(postcss@8.4.49)(svelte@5.5.3)(typescript@5.7.2)':
     dependencies:
       '@rsbuild/core': 1.1.8
       svelte-loader: 3.2.4(svelte@5.5.3)
