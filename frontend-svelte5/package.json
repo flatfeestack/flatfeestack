@@ -18,7 +18,7 @@
     "@metamask/detect-provider": "^2.0.0"
   },
   "devDependencies": {
-    "@rsbuild/core": "1.1.8",
+    "@rsbuild/core": "1.5.17",
     "@rsbuild/plugin-svelte": "1.0.5",
     "@rsbuild/plugin-css-minimizer": "^1.0.2",
     "@tsconfig/svelte": "5.0.4",
