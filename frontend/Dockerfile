@@ -1,20 +1,14 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat brotli gzip zstd parallel
 WORKDIR /app
-RUN apk --no-cache add curl
-RUN curl -fsSL "https://github.com/pnpm/pnpm/releases/latest/download/pnpm-linuxstatic-x64" -o /bin/pnpm; chmod +x /bin/pnpm;
+RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
-COPY tsconfig.json tsconfig.node.json vite.config.ts svelte.config.js ./
-COPY ./public ./public
-COPY ./src ./src
+COPY src ./src
+COPY public ./public
+COPY rsbuild.config.ts ssr-prod.mjs ssr-server.mjs tsconfig.json ./
 RUN pnpm build
 
 FROM caddy:2-alpine
-
-RUN apk add --update --no-cache curl
-
 COPY Caddyfile /etc/caddy/Caddyfile
-COPY --from=base /app/dist/client /var/www/html
-
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:9085 || exit 1
+COPY --from=base /app/dist/ /var/www/html

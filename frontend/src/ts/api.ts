@@ -1,5 +1,7 @@
 import ky from "ky";
-import { get } from "svelte/store";
+
+import { appState } from "ts/state.svelte.ts";
+import {refresh, removeToken} from "auth/auth.svelte.ts";
 import type {
   ChartDataTotal,
   ClientSecret,
@@ -18,318 +20,260 @@ import type {
   PayoutResponse,
   PublicUser,
   UserBalance,
+  Token,
   RepoHealthValue,
   HealthValueThreshold,
   RepoMetrics,
-  PartialHealthValues,
-} from "../types/backend";
-import type { Token } from "../types/auth";
-import { token } from "./mainStore";
-import { refresh } from "./services";
-import type { DaoConfig, PayoutConfig } from "../types/payout";
-import type {
+  PartialHealthValues
+} from "types/backend.ts";
+import type { DaoConfig, PayoutConfig } from "types/payout.ts";
+/*import type {
   Comment,
   CommentId,
   CommentInput,
   Post,
   PostId,
   PostInput,
-} from "../types/forum";
+} from "types/forum.ts";*/
 
-async function addToken(request: Request) {
-  const t = get(token);
-  if (t) {
-    request.headers.set("Authorization", "Bearer " + t);
-  } else {
-    const t = await refresh();
-    if (t) {
-      request.headers.set("Retry", "true");
-      request.headers.set("Authorization", "Bearer " + t);
-    } else {
-      throw "could not set access token";
-    }
+const timeout = 5000;
+
+export class ApiError extends Error {
+  constructor(
+      message: string,
+      public statusCode: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
-async function refreshToken(
-  request: Request,
-  options: any,
-  response: Response
-) {
-  if (response.status === 401 && request.headers.get("Retry") !== "true") {
-    console.log("need to refresh due to:" + response);
-    const t = await refresh();
-    request.headers.set("Retry", "true");
-    request.headers.set("Authorization", "Bearer " + t);
-    return ky(request);
-  }
+interface ErrorResponse {
+  error: string;
 }
 
-const restTimeout = 5000;
-
-const authToken = ky.create({
-  prefixUrl: "/auth",
-  timeout: restTimeout,
-  throwHttpErrors: false,
-  hooks: {
-    beforeRequest: [async (request) => addToken(request)],
-    afterResponse: [
-      async (request: Request, options: any, response: Response) => {
-        refreshToken(request, options, response);
-        if (response.status !== 200) {
-          const body = await response.json();
-          if (body.error) {
-            throw new Error(body.error);
+function createAuthenticatedApi(prefix: string, timeout: number) {
+  return ky.create({
+    prefixUrl: prefix,
+    timeout: timeout,
+    throwHttpErrors: false,
+    hooks: {
+      beforeRequest: [
+        async (request) => {
+          // If no token or token is expired, refresh immediately
+          const refreshToken = localStorage.getItem("ffs-refresh");
+          if(!refreshToken) {
+            throw new Error("Refresh token is missing");
           }
-        }
-      },
-    ],
-  },
-});
-
-const backendToken = ky.create({
-  prefixUrl: "/backend",
-  timeout: restTimeout,
-  throwHttpErrors: false,
-  hooks: {
-    beforeRequest: [async (request) => addToken(request)],
-    afterResponse: [
-      async (request: Request, options: any, response: Response) => {
-        refreshToken(request, options, response);
-        if (response.status !== 200) {
-          const body = await response.json();
-          if (body.error) {
-            throw new Error(body.error);
+          if (appState.isAccessTokenExpired()) {
+            const token = await refresh(refreshToken);
+            request.headers.set('Authorization', `Bearer ${token.access_token}`);
+            return;
           }
+          request.headers.set('Authorization', `Bearer ${appState.getAccessToken()}`);
         }
-      },
-    ],
-  },
-});
-
-const auth = ky.create({
-  prefixUrl: "/auth",
-  timeout: restTimeout,
-});
-
-const backend = ky.create({
-  prefixUrl: "/backend",
-  timeout: restTimeout,
-});
-
-const payout = ky.create({
-  prefixUrl: "/payout",
-  timeout: restTimeout,
-});
-
-const search = ky.create({
-  prefixUrl: "/search",
-  timeout: restTimeout,
-});
-
-const forum = ky.create({
-  prefixUrl: "/forum",
-  timeout: restTimeout,
-});
-
-const forumToken = ky.create({
-  prefixUrl: "/forum",
-  timeout: restTimeout,
-  hooks: {
-    beforeRequest: [async (request) => addToken(request)],
-    afterResponse: [
-      async (request: Request, options: any, response: Response) =>
-        refreshToken(request, options, response),
-    ],
-    beforeError: [
-      async (error) => {
-        const { response } = error;
-        if (response) {
-          try {
-            const r = await response.json();
-            if (r.error) {
-              error.message = r.error;
+      ],
+      afterResponse: [
+        async (_request, _options, response) => {
+          if (response.status !== 200) {
+            if (response.status === 429) {
+              //expired, clear access token
+              appState.accessToken = "";
+              appState.accessTokenExpire = 0;
+              return;
+            } else if (response.status === 404 && _request.url === "login") {
+              //user unknown, clear access and refresh token
+              removeToken();
             }
-          } catch (e) {
-            // Handle any errors that occur during the response parsing
-            console.error("Error parsing response:", e);
+            const rawError: ErrorResponse = await response.json();
+            throw new ApiError(rawError.error, response.status);
           }
+          return response;
         }
-        return error;
-      },
-    ],
-  },
-});
+      ]
+    },
+    retry: {
+      limit: 2,
+      statusCodes: [429]
+    }
+  });
+}
+
+const authToken = createAuthenticatedApi("/auth2", timeout);
+const backendToken = createAuthenticatedApi("/backend", timeout);
+//const forumToken = createAuthenticatedApi("/forum", timeout);
+
+const auth = ky.create({prefixUrl: "/auth", timeout});
+const backend = ky.create({prefixUrl: "/backend", timeout});
+const payout = ky.create({prefixUrl: "/payout", timeout});
+const search = ky.create({prefixUrl: "/search", timeout});
+//const forum = ky.create({prefixUrl: "/forum", timeout});
 
 export const API = {
   authToken: {
-    logout: () => authToken.get(`authen/logout?redirect_uri=/`),
+    logout: () =>
+        authToken.get(`logout?redirect_uri=/`),
     timeWarp: (hours: number) =>
-      authToken.post(`admin/timewarp/${hours}`).json<Token>(),
+        authToken.post(`admin/timewarp/${hours}`).json<Token>(),
     loginAs: (email: string) =>
-      authToken.post(`admin/login-as/${email}`).json<Token>(),
+        authToken.post(`admin/login-as/${email}`).json<Token>(),
   },
   auth: {
-    signup: (email: string, password: string) =>
-      auth.post("signup", { json: { email, password } }),
-    login: (email: string, password: string) =>
-      auth.post("login", { json: { email, password } }).json<Token>(),
-    refresh: (refresh: string) =>
-      auth.post("refresh", { json: { refresh_token: refresh } }).json<Token>(),
-    reset: (email: string) => auth.post(`reset/${email}`),
-    confirmInvite: (email: string, password: string, emailToken: string) =>
-      auth
-        .post("confirm/invite", { json: { email, password, emailToken } })
-        .json<Token>(),
-    confirmEmail: (email: string, emailToken: string) =>
-      auth
-        .post("confirm/signup", { json: { email, emailToken } })
-        .json<Token>(),
-    confirmReset: (email: string, password: string, emailToken: string) =>
-      auth
-        .post("confirm/reset", { json: { email, password, emailToken } })
-        .json<Token>(),
+    login: (email: string) =>
+        auth.post(`login/${email}`).then(async response =>
+            response.headers.get('content-length') === '0'
+                ? response.ok
+                : response.json<Token>()
+        ),
+    confirm: (email: string, emailToken: string) =>
+        auth.post(`confirm/${email}/${emailToken}`).json<Token>(),
+    refresh: (refresh_token: string, email: string) =>
+        auth.post("refresh", { json: { refresh_token, email } }).json<Token>(),
   },
   user: {
-    get: () => backendToken.get(`users/me`).json<User>(),
-    gitEmails: () => backendToken.get(`users/me/git-email`).json<GitUser[]>(),
+    get: () =>
+        backendToken.get(`users/me`).json<User>(),
+    gitEmails: () =>
+        backendToken.get(`users/me/git-email`).json<GitUser[]>(),
     confirmGitEmail: (email: string, token: string) =>
-      backendToken.post("users/me/git-email/confirm", {
-        json: { email, token },
-      }),
+        backendToken.post("users/me/git-email/confirm", {json: { email, token },}),
     addEmail: (email: string) =>
-      backendToken.post(`users/me/git-email`, { json: { email } }),
+        backendToken.post(`users/me/git-email`, { json: { email } }),
     removeGitEmail: (email: string) =>
-      backendToken.delete(`users/me/git-email/${email}`),
+        backendToken.delete(`users/me/git-email/${email}`),
     updatePaymentMethod: (method: string) =>
-      backendToken.put(`users/me/method/${method}`).json<User>(),
-    deletePaymentMethod: () => backendToken.delete(`users/me/method`),
-    getSponsored: () => backendToken.get("users/me/sponsored").json<Repo[]>(),
-    getMultiplier: () => backendToken.get("users/me/multiplied").json<Repo[]>(),
-    setName: (name: string) => backendToken.put(`users/me/name/${name}`),
-    clearName: () => backendToken.put(`users/me/clear/name`),
+        backendToken.put(`users/me/method/${method}`).json<User>(),
+    deletePaymentMethod: () =>
+        backendToken.delete(`users/me/method`),
+    getSponsored: () =>
+        backendToken.get("users/me/sponsored").json<Repo[]>(),
+    getMultiplier: () =>
+        backendToken.get("users/me/multiplied").json<Repo[]>(),
+    setName: (name: string) =>
+        backendToken.put(`users/me/name/${name}`),
     setMultiplier: (isSet: boolean) =>
-      backendToken.put(`users/me/multiplier/${isSet}`),
+        backendToken.put(`users/me/multiplier/${isSet}`),
     setMultiplierDailyLimit: (amount: number) =>
-      backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
+        backendToken.put(`users/me/multiplierDailyLimit/${amount}`),
     setImage: (image: string) =>
-      backendToken.post(`users/me/image`, { json: { image } }),
-    deleteImage: () => backendToken.delete(`users/me/image`),
+        backendToken.post(`users/me/image`, { json: { image } }),
+    deleteImage: () =>
+        backendToken.delete(`users/me/image`),
     setupStripe: () =>
-      backendToken.post(`users/me/stripe`).json<ClientSecret>(),
+        backendToken.post(`users/me/stripe`).json<ClientSecret>(),
     stripePayment: (freq: number, seats: number) =>
-      backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
+        backendToken.put(`users/me/stripe/${freq}/${seats}`).json<ClientSecret>(),
     nowPayment: (currency: string, freq: number, seats: number) =>
-      backendToken
-        .post(`users/me/nowPayment/${freq}/${seats}`, { json: { currency } })
-        .json<PaymentResponse>(),
-    cancelSub: () => backendToken.delete(`users/me/stripe`),
-    timeWarp: (hours: number) => backendToken.post(`admin/timewarp/${hours}`),
-    payment: () => backendToken.get(`users/me/payment`).json<PaymentEvent[]>(),
-
+        backendToken.post(`users/me/nowPayment/${freq}/${seats}`, { json: { currency } }).json<PaymentResponse>(),
+    cancelSub: () =>
+        backendToken.delete(`users/me/stripe`),
+    timeWarp: (hours: number) =>
+        backendToken.post(`admin/timewarp/${hours}`),
+    payment: () =>
+        backendToken.get(`users/me/payment`).json<PaymentEvent[]>(),
     statusSponsoredUsers: () =>
-      backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
+        backendToken.post(`users/me/sponsored-users`).json<UserStatus[]>(),
     contributionsSend: () =>
-      backendToken.post(`users/contrib-snd`).json<Contribution[]>(),
+        backendToken.post(`users/contrib-snd`).json<Contribution[]>(),
     contributionsRcv: () =>
-      backendToken.post(`users/contrib-rcv`).json<Contribution[]>(),
+        backendToken.post(`users/contrib-rcv`).json<Contribution[]>(),
     contributionsSummary: () =>
-      backendToken
-        .post(`users/me/contributions-summary`)
-        .json<ContributionSummary[]>(),
+        backendToken.post(`users/me/contributions-summary`).json<ContributionSummary[]>(),
     contributionsSummary2: (uuid: string) =>
-      backend
-        .get(`users/contributions-summary/${uuid}`)
-        .json<ContributionSummary[]>(),
+        backend.get(`users/contributions-summary/${uuid}`).json<ContributionSummary[]>(),
     summary: (uuid: string) =>
-      backend.get(`users/summary/${uuid}`).json<User>(),
+        backend.get(`users/summary/${uuid}`).json<User>(),
     requestPayout: (targetCurrency: "ETH" | "GAS" | "USD") =>
-      backendToken
-        .post(`users/me/request-payout/${targetCurrency}`)
-        .json<PayoutResponse>(),
+        backendToken.post(`users/me/request-payout/${targetCurrency}`).json<PayoutResponse>(),
     getUser: (userId: string) =>
-      backend.get(`users/${userId}`).json<PublicUser>(),
-    userBalance: () => backendToken.get(`users/me/balance`).json<UserBalance>(),
-    foundationBalance: () =>
-      backendToken.get(`users/me/balanceFoundation`).json<UserBalance>(),
+        backend.get(`users/${userId}`).json<PublicUser>(),
+    userBalance: () =>
+        backendToken.get(`users/me/balance`).json<UserBalance[]>(),
   },
   repos: {
     search: (s: string) =>
-      backendToken
-        .get(`repos/search?q=${encodeURIComponent(s)}`)
-        .json<Repo[] | null>(),
-    triggerNewRepoAssessment: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/forceAnalyze`),
+        backendToken.get(`repos/search?q=${encodeURIComponent(s)}`).json<Repo[]>(),
     searchName: (s: string) =>
-      backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
-    get: (id: number) => backendToken.get(`repos/${id}`),
+        backendToken.get(`repos/name?q=${encodeURIComponent(s)}`).json<Repo[]>(),
+    get: (id: number) =>
+        backendToken.get(`repos/${id}`),
     tag: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
-    untag: (repoId: string) => backendToken.post(`repos/${repoId}/untag`),
+        backendToken.post(`repos/${repoId}/tag`).json<Repo>(),
+    untag: (repoId: string) =>
+        backendToken.post(`repos/${repoId}/untag`),
     setMultiplier: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
+        backendToken.post(`repos/${repoId}/setMultiplier`).json<Repo>(),
     unsetMultiplier: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/unsetMultiplier`),
+        backendToken.post(`repos/${repoId}/unsetMultiplier`),
     graph: (repoId: string, offset: number) =>
-      backendToken
-        .get(`repos/${repoId}/${offset}/graph`)
-        .json<ChartDataTotal>(),
+        backendToken.get(`repos/${repoId}/${offset}/graph`).json<ChartDataTotal>(),
     trust: (repoId: string) =>
-      backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
+        backendToken.post(`repos/${repoId}/trust`).json<Repo>(),
     untrust: (repoId: string) => backendToken.post(`repos/${repoId}/untrust`),
     getTrusted: () => backendToken.get("repos/trusted").json<Repo[]>(),
     getHealthValue: (repoId: string) =>
-      backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
+        backendToken.get(`repos/${repoId}/healthvalue`).json<RepoHealthValue>(),
     getLatestHealthValueThresholds: () =>
-      backendToken
-        .get(`repos/healthvaluethreshold`)
-        .json<HealthValueThreshold>(),
+        backendToken
+            .get(`repos/healthvaluethreshold`)
+            .json<HealthValueThreshold>(),
     setNewHealthValueThresholds: (thresholdArray: HealthValueThreshold) =>
-      backendToken.put(`repos/healthvaluethreshold`, { json: thresholdArray }),
+        backendToken.put(`repos/healthvaluethreshold`, { json: thresholdArray }),
     getRepoMetricsById: (repoId: string) =>
-      backendToken
-        .get(`repos/${repoId}/healthvalue/metrics`)
-        .json<RepoMetrics>(),
+        backendToken
+            .get(`repos/${repoId}/healthvalue/metrics`)
+            .json<RepoMetrics>(),
     getPartialHealthValues: (repoId: string) =>
-      backendToken
-        .get(`repos/${repoId}/healthvalue/partial`)
-        .json<PartialHealthValues>(),
-    getMultiplierCount: (repoId: string) =>
-      backendToken.get(`repos/${repoId}/multiplierCount`).json<number>(),
+        backendToken
+            .get(`repos/${repoId}/healthvalue/partial`)
+            .json<PartialHealthValues>(),
   },
   invite: {
-    invites: () => backendToken.get("invite").json<Invitation[]>(),
-    invite: (email: string) => backendToken.post(`invite/${email}`),
-    inviteAuth: (email: string) => authToken.post(`invite/${email}`),
-    delMyInvite: (email: string) => backendToken.delete(`invite/my/${email}`),
-    delByInvite: (email: string) => backendToken.delete(`invite/by/${email}`),
+    invites: () =>
+        backendToken.get("invite").json<Invitation[]>(),
+    invite: (email: string) =>
+        backendToken.post(`invite/${email}`),
+    inviteAuth: (email: string) =>
+        authToken.post(`invite/${email}`),
+    delMyInvite: (email: string) =>
+        backendToken.delete(`invite/my/${email}`),
+    delByInvite: (email: string) =>
+        backendToken.delete(`invite/by/${email}`),
     confirmInvite: (email: string) =>
-      backendToken.post(`confirm/invite/${email}`),
+        backendToken.post(`confirm/invite/${email}`),
   },
   search: {
-    keywords: (keywords: string) => search.get(`search/${keywords}`),
+    keywords: (keywords: string) =>
+        search.get(`search/${keywords}`),
   },
   payouts: {
-    time: () => backendToken.get(`admin/time`).json<Time>(),
-    fakeUser: (email: string) => backendToken.post(`admin/fake/user/${email}`),
+    time: () =>
+        backendToken.get(`admin/time`).json<Time>(),
+    fakeUser: (email: string) =>
+        backendToken.post(`admin/fake/user/${email}`),
     fakePayment: (email: string, seats: number) =>
-      backendToken.post(`admin/fake/payment/${email}/${seats}`),
+        backendToken.post(`admin/fake/payment/${email}/${seats}`),
     fakeContribution: (repo: RepoMapping) =>
-      backendToken.post(`admin/fake/contribution`, { json: repo }),
+        backendToken.post(`admin/fake/contribution`, { json: repo }),
     payout: (exchangeRate: number) =>
-      backendToken.post(`admin/payout/${exchangeRate}`),
+        backendToken.post(`admin/payout/${exchangeRate}`),
   },
   config: {
-    config: () => backend.get(`config`).json<Config>(),
+    config: () =>
+        backend.get(`config`).json<Config>(),
   },
   admin: {
-    users: () => backendToken.post(`admin/users`).json<string[]>(),
+    users: () =>
+        backendToken.post(`admin/users`).json<string[]>(),
   },
   payout: {
-    daoConfig: () => payout.get(`config/dao`).json<DaoConfig>(),
-    payoutConfig: () => payout.get(`config/payout`).json<PayoutConfig>(),
+    daoConfig: () =>
+        payout.get(`config/dao`).json<DaoConfig>(),
+    payoutConfig: () =>
+        payout.get(`config/payout`).json<PayoutConfig>(),
   },
-  forum: {
+  /*forum: {
     getAllPosts: (open?: boolean) => {
       let url = `posts`;
 
@@ -365,5 +309,5 @@ export const API = {
       forumToken.put(`posts/${postId}/close`).json<String>(),
     deleteComment: (postId, commentId) =>
       forumToken.delete(`posts/${postId}/comments/${commentId}`),
-  },
+  },*/
 };

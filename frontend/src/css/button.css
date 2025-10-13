@@ -1,0 +1,47 @@
+/* button styling */
+button {
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 1rem;
+    align-self: flex-end;
+    border: 0;
+    transition: background 0.2s;
+    outline: none;
+}
+button:active {
+    color: #000;
+}
+button:disabled {
+    color: #000;
+    background: var(--secondary-300);
+    cursor: not-allowed;
+}
+
+.button1 {
+    background: var(--primary-500);
+}
+.button1:hover:not(:disabled) {
+    background: var(--primary-700);
+}
+.button1:active:not(:disabled) {
+    background: var(--primary-300);
+}
+
+.button2 {
+    background: var(--secondary-500);
+}
+.button2:hover:not(:disabled) {
+    background: var(--secondary-700);
+}
+.button2:active:not(:disabled) {
+    background: var(--secondary-300);
+}
+
+.round {
+    border-radius: 50%;
+    width: 480px;
+    height: 480px;
+}

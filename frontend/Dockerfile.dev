@@ -1,13 +1,7 @@
-FROM node:20-alpine AS base
-
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat brotli gzip zstd parallel
 WORKDIR /app
-
-RUN apk --no-cache add curl
-
-RUN curl -fsSL "https://github.com/pnpm/pnpm/releases/latest/download/pnpm-linuxstatic-x64" -o /bin/pnpm; chmod +x /bin/pnpm;
-
-COPY package.json pnpm-lock.yaml ./
-
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml rsbuild.config.ts ssr.mjs tsconfig.json ./
 RUN pnpm install
-
-CMD ["pnpm", "hmr"]
+ENTRYPOINT ["pnpm", "run", "dev"]
