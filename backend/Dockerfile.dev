@@ -1,6 +1,6 @@
-FROM golang:1.23-alpine AS base
+FROM golang:1.25-alpine AS base
 RUN apk add --no-cache delve
-RUN go install github.com/air-verse/air@v1.61.1 && go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+RUN go install github.com/air-verse/air@v1.63.0 && go install github.com/go-delve/delve/cmd/dlv@v1.25.2
 WORKDIR /app
 #cache dependencies
 COPY go.* ./

@@ -1,14 +1,13 @@
 package main
 
 import (
-	api2 "backend/internal/api"
-	"backend/internal/app"
-	"backend/internal/client"
-	"backend/internal/cron"
-	"backend/internal/db"
-	"backend/pkg/config"
-	util2 "backend/pkg/middleware"
-	"backend/pkg/util"
+	api2 "backend/api"
+	"backend/client"
+	"backend/cron"
+	"backend/db"
+	"backend/config"
+	util2 "backend/middleware"
+	"backend/util"
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/hex"
@@ -289,7 +288,7 @@ func main() {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	c := app.NewCalcHandler(ac, ec)
+	c := NewCalcHandler(ac, ec)
 	//scheduler
 	cron.CronJobDay(c.DailyRunner, util.TimeNow())
 	cron.CronJobHour(c.HourlyRunner, util.TimeNow())

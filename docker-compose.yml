@@ -89,7 +89,7 @@ services:
     image: ghcr.io/foundry-rs/foundry
     ports:
       - "8545:8545"
-    command: anvil --host 0.0.0.0 --block-time 12
+    command: anvil --host 0.0.0.0 --block-time 12 --state /data/state.json
     volumes:
       - ${CFG_PATH:-.}/.chain/:/data
     stop_grace_period: 1s
