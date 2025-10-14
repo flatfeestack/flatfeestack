@@ -8,7 +8,7 @@ require (
 	github.com/TwiN/go-away v1.6.14
 	github.com/deepmap/oapi-codegen v1.16.3
 	github.com/dimiro1/banner v1.1.0
-	github.com/ethereum/go-ethereum v1.14.12
+	github.com/ethereum/go-ethereum v1.14.13
 	github.com/flatfeestack/go-lib v0.0.6
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-jose/go-jose/v3 v3.0.3
