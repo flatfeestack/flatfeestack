@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PROJECTS='db caddy ganache auth analyzer backend frontend-svelte5 stripe-webhook'
+PROJECTS='db caddy anvil auth analyzer backend frontend stripe-webhook'
 
 # Improved version based on https://betterdev.blog/minimal-safe-bash-script-template/
 set -Eeuo pipefail
@@ -103,20 +103,21 @@ parse_params() {
     --no-color) NO_COLOR=1 ;;
     -ss | --skip-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}"; include_stripe=false;;
     -sb | --skip-build) include_build=false;;
-    -rm | --remove-data) sudo rm -rf .db .ganache .repos .chain .stripe;;
-    -rmdb | --remove-db) sudo rm -rf .db;;
+    -rm | --remove-data) sudo rm -rf .db/** .repos/** .chain/** .stripe/**;;
+    -rmdb | --remove-db) sudo rm -rf .db/**;;
     -?*) die "Unknown option: $1";;
     *) break ;;
     esac
     shift
   done
 
-  #args=("$@")
   return 0
 }
 
 setup_colors
 parse_params "$@"
+
+mkdir -p .db .repos .chain .stripe
 
 check_envs "analyzer"
 check_envs "backend"

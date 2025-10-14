@@ -4,15 +4,16 @@ import (
 	"crypto"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
-	"golang.org/x/text/language"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+	"golang.org/x/text/language"
 )
 
 var (

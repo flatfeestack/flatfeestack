@@ -4,7 +4,7 @@ services:
       context: ./auth
       dockerfile: Dockerfile.dev
     env_file:
-      - ${BASE_PATH:-.}/auth/.env
+      - ${CFG_PATH:-.}/auth/.env
     volumes:
       - ./auth:/app
     ports:
@@ -19,7 +19,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     env_file:
-      - ${BASE_PATH:-.}/backend/.env
+      - ${CFG_PATH:-.}/backend/.env
     volumes:
       - ./backend:/app
     ports:
@@ -32,7 +32,7 @@ services:
   forum:
     build: ./forum
     env_file:
-      - ${BASE_PATH:-.}/forum/.env
+      - ${CFG_PATH:-.}/forum/.env
     ports:
       - "9086:9086"
     depends_on:
@@ -46,32 +46,32 @@ services:
       context: ./analyzer
       dockerfile: Dockerfile.dev
     env_file:
-      - ${BASE_PATH:-.}/analyzer/.env
+      - ${CFG_PATH:-.}/analyzer/.env
     volumes:
-      - ./analyzer:/app:rw,delegated
+      - ./analyzer:/app
       - ${BASE_PATH:-.}/.repos:/tmp/repos
     ports:
       - "9083:9083"
       - "2341:2345"
 
-  frontend-svelte5:
+  frontend:
     build:
-      context: ./frontend-svelte5
+      context: ./frontend
       dockerfile: Dockerfile.dev
     volumes:
-      - ${BASE_PATH:-.}/frontend-svelte5/src:/app/src:rw,delegated
-      - ${BASE_PATH:-.}/frontend-svelte5/public:/app/public:rw,delegated
+      - ${CFG_PATH:-.}/frontend/src:/app/src
+      - ${CFG_PATH:-.}/frontend/public:/app/public
     ports:
       - "9085:3000"
 
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     volumes:
-      - ${BASE_PATH:-.}/.db:/var/lib/postgresql/data:z
+      - ${CFG_PATH:-.}/.db:/var/lib/postgresql/18/docker
     ports:
       - "5432:5432"
     env_file:
-      - ${BASE_PATH:-.}/db/.env
+      - ${CFG_PATH:-.}/db/.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 3s
@@ -85,21 +85,24 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
 
-  ganache:
-    command: '--database.dbPath "/ganache" --logging.verbose --wallet.accounts "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,100000000000000000000" --wallet.accounts "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,100000000000000000000" --wallet.accounts "0xa267530f49f8280200edf313ee7af6b827f2a8bce2897751d06a843f644967b1,100000000000000000000" --wallet.accounts "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e,100000000000000000000" -b 12 --miner.timestampIncrement "12" -h 0.0.0.0'
-    image: "trufflesuite/ganache:v7.9.2"
+  anvil:
+    image: ghcr.io/foundry-rs/foundry
     ports:
       - "8545:8545"
+    command: anvil --host 0.0.0.0 --block-time 12
+    volumes:
+      - ${CFG_PATH:-.}/.chain/:/data
+    stop_grace_period: 1s
 
   stripe-webhook:
     build: ./stripe
     volumes:
-      - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
-    stop_grace_period: 0s
+      - ${CFG_PATH:-.}/.stripe:/root/.config/stripe
+    stop_grace_period: 1s
 
   stripe-setup:
     profiles: [setup]
     build: ./stripe
     volumes:
-      - ${BASE_PATH:-.}/.stripe:/root/.config/stripe
-      - ${BASE_PATH:-.}/backend/.env:/root/.env
+      - ${CFG_PATH:-.}/.stripe:/root/.config/stripe
+      - ${CFG_PATH:-.}/backend/.env:/root/.env

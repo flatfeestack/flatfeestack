@@ -3,12 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+)
+
+var (
+	allowedAlgs = []jose.SignatureAlgorithm{
+		jose.RS256,
+		jose.HS256,
+		jose.EdDSA,
+	}
 )
 
 func jwtAuthAdmin(next func(w http.ResponseWriter, r *http.Request, email string), emails []string) func(http.ResponseWriter, *http.Request) {
@@ -75,18 +84,19 @@ func jwtAuth0(r *http.Request) (*jwt.Claims, error) {
 	}
 	bearerToken := split[1]
 
-	tok, err := jwt.ParseSigned(bearerToken)
+	tok, err := jwt.ParseSigned(bearerToken, allowedAlgs)
 	if err != nil {
 		return nil, fmt.Errorf("ERR-03, could not parse token: %v", bearerToken[1])
 	}
 
 	claims := &jwt.Claims{}
 
-	if tok.Headers[0].Algorithm == string(jose.RS256) {
+	alg := tok.Headers[0].Algorithm
+	if alg == "RS256" {
 		err = tok.Claims(privRSA.Public(), claims)
-	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
+	} else if alg == "HS256" {
 		err = tok.Claims(jwtKey, claims)
-	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
+	} else if alg == "EdDSA" {
 		err = tok.Claims(privEdDSA.Public(), claims)
 	} else {
 		return nil, fmt.Errorf("ERR-04, unknown algorithm: %v", tok.Headers[0].Algorithm)
@@ -107,22 +117,23 @@ func jwtAuth0(r *http.Request) (*jwt.Claims, error) {
 }
 
 func checkRefreshToken(token string) (*RefreshClaims, error) {
-	tok, err := jwt.ParseSigned(token)
+	tok, err := jwt.ParseSigned(token, allowedAlgs)
 	if err != nil {
 		return nil, fmt.Errorf("ERR-check-refresh-01, could not check sig %v", err)
 	}
 	refreshClaims := &RefreshClaims{}
-	if tok.Headers[0].Algorithm == string(jose.RS256) {
+	alg := tok.Headers[0].Algorithm
+	if alg == "RS256" {
 		err := tok.Claims(privRSA.Public(), refreshClaims)
 		if err != nil {
 			return nil, fmt.Errorf("ERR-check-refresh-02, could not parse claims %v", err)
 		}
-	} else if tok.Headers[0].Algorithm == string(jose.HS256) {
+	} else if alg == "HS256" {
 		err := tok.Claims(jwtKey, refreshClaims)
 		if err != nil {
 			return nil, fmt.Errorf("ERR-check-refresh-03, could not parse claims %v", err)
 		}
-	} else if tok.Headers[0].Algorithm == string(jose.EdDSA) {
+	} else if alg == "EdDSA" {
 		err := tok.Claims(privEdDSA.Public(), refreshClaims)
 		if err != nil {
 			return nil, fmt.Errorf("ERR-check-refresh-04, could not parse claims %v", err)
@@ -168,7 +179,7 @@ func encodeAccessToken(subject string, systemMeta map[string]interface{}) (strin
 	if err != nil {
 		return "", fmt.Errorf("JWT access token %v failed: %v", tokenClaims.Subject, err)
 	}
-	accessTokenString, err := jwt.Signed(sig).Claims(systemMeta).Claims(tokenClaims).CompactSerialize()
+	accessTokenString, err := jwt.Signed(sig).Claims(systemMeta).Claims(tokenClaims).Serialize()
 	if err != nil {
 		return "", fmt.Errorf("JWT access token %v failed: %v", tokenClaims.Subject, err)
 	}
@@ -273,7 +284,7 @@ func encodeAnyToken(rc interface{}) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("JWT refresh token %v failed: %v", rc, err)
 	}
-	refreshToken, err := jwt.Signed(sig).Claims(rc).CompactSerialize()
+	refreshToken, err := jwt.Signed(sig).Claims(rc).Serialize()
 	if err != nil {
 		return "", fmt.Errorf("JWT serialize %v failed: %v", rc, err)
 	}
