@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {navigate, route} from 'preveltekit';
+  import {navigate, link} from 'preveltekit';
   import { emailValidationPattern } from "../utils.ts";
   import Modal from "./Modal.svelte";
   import {login} from "./auth.svelte.ts";
@@ -59,6 +59,6 @@
 
   <div class="divider" ></div>
   <div class="pt-100 small">
-    By continuing, you acknowledge FlatFeeStacks  <a use:route href="/toc">Privacy Policy</a>.
+    By continuing, you acknowledge FlatFeeStacks  <a use:link href="/toc">Privacy Policy</a>.
   </div>
 </Modal>

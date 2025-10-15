@@ -3,5 +3,6 @@ RUN apk add --no-cache libc6-compat brotli gzip zstd parallel
 WORKDIR /app
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml tsconfig.json ./
-RUN pnpm install
-ENTRYPOINT ["pnpm", "run", "dev"]
+# without setting this env, TTY is required, and pnpm install fails: ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+ENV CI=true
+ENTRYPOINT ["sh", "-c", "pnpm install && pnpm run dev"]

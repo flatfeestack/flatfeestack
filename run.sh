@@ -8,7 +8,7 @@ trap 'cleanup $?' SIGINT SIGTERM ERR EXIT
 
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
-  # sAdd any cleanup tasks here
+  # Add any cleanup tasks here
 }
 
 setup_colors() {
@@ -42,15 +42,14 @@ die() {
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-ss] [-sb] [-sd] [-rm]
-
+Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS]
 Build and run FlatFeeStack.
 
-Available options:
--h, --help               Print this help and exit
--ss, --skip-stripe       Don't setup stripe
--sb, --skip-build        Don't run docker-compose build
--rm, --remove-data       Remove the database and chain folder
+OPTIONS:
+  -h, --help          Print this help and exit
+  --no-stripe         Skip Stripe setup
+  --clean             Remove all data (database, repos, chain, stripe, node_modules)
+  --clean-db          Remove database only
 EOF
   exit
 }
@@ -92,26 +91,30 @@ check_envs() {
 
 parse_params() {
   # default values of variables set from params
-  include_build=true
-  include_stripe=true
-  external=''
+  stripe=true
   internal="$PROJECTS"
 
   while :; do
     case "${1-}" in
     -h | --help) usage ;;
     --no-color) NO_COLOR=1 ;;
-    -ss | --skip-stripe) external="${external} stripe-webhook"; internal="${internal//stripe-webhook/}"; include_stripe=false;;
-    -sb | --skip-build) include_build=false;;
-    -rm | --remove-data) sudo rm -rf .db/** .repos/** .chain/** .stripe/**;;
-    -rmdb | --remove-db) sudo rm -rf .db/**;;
-    -?*) die "Unknown option: $1";;
+    --no-stripe) 
+      internal="${internal//stripe-webhook/}"
+      stripe=false
+      ;;
+    --clean) 
+      sudo rm -rf .db/** .repos/** .chain/** .stripe/** frontend/node_modules/**
+      msg_ok "Cleaned all data"
+      ;;
+    --clean-db) 
+      sudo rm -rf .db/**
+      msg_ok "Cleaned database"
+      ;;
+    -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
     shift
   done
-
-  return 0
 }
 
 setup_colors
@@ -129,7 +132,7 @@ if ! docker info >/dev/null 2>&1; then
   die "Docker is not running. Please start Docker and try again"
 fi
 
-if [ "$include_stripe" = true ]; then
+if [ "$stripe" = true ]; then
   msg "Setup Stripe"
   docker compose build stripe-setup
   if ! docker compose run --rm stripe-setup; then
@@ -140,14 +143,7 @@ else
   msg_info "Skip Stripe setup"
 fi
 
-if [ "$include_build" = true ]; then
-  msg "Run: docker compose build ${internal}"
-  docker compose build ${internal}
-else
-  msg "Skip: docker compose build ${internal}"
-fi
-
 # https://stackoverflow.com/questions/56844746/how-to-set-uid-and-gid-in-docker-compose
 # https://hub.docker.com/_/postgres
-msg_ok "Run: docker compose up --abort-on-container-exit ${internal}"
-docker compose up --abort-on-container-exit ${internal}
+msg_ok "Run: docker compose up --build --abort-on-container-exit ${internal}"
+docker compose up --build --abort-on-container-exit ${internal}

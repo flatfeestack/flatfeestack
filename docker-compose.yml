@@ -61,6 +61,7 @@ services:
     volumes:
       - ${CFG_PATH:-.}/frontend/src:/app/src
       - ${CFG_PATH:-.}/frontend/public:/app/public
+      - ${CFG_PATH:-.}/frontend/node_modules:/app/node_modules
     ports:
       - "9085:3000"
 
@@ -95,13 +96,13 @@ services:
     stop_grace_period: 1s
 
   stripe-webhook:
-    build: ./stripe
+    image: stripe/stripe-cli
+    command: listen --skip-verify --forward-to http://backend:9082
     volumes:
       - ${CFG_PATH:-.}/.stripe:/root/.config/stripe
     stop_grace_period: 1s
 
   stripe-setup:
-    profiles: [setup]
     build: ./stripe
     volumes:
       - ${CFG_PATH:-.}/.stripe:/root/.config/stripe

@@ -31,8 +31,8 @@ importers:
         version: 2.38.2(typescript@5.9.3)
     devDependencies:
       preveltekit:
-        specifier: ^1.1.3
-        version: 1.1.3(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
+        specifier: ^1.2.2
+        version: 1.2.2(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -715,8 +715,8 @@ packages:
     resolution: {integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preveltekit@1.1.3:
-    resolution: {integrity: sha512-91z4i0FdTAWrFqgGVLLakPUxfRGhD5vP5ywlZNUEjB3dynq9FYNuUKSt+nwE4RPDkiBJlGrWWgf2r/ywp2Afeg==}
+  preveltekit@1.2.2:
+    resolution: {integrity: sha512-1FN9Uj/iWFHhjjNNYYdwZqOYvDWr1JJ+nfV+8xSRxFRhFRyaPoq2Z1brLweloJJ+0BGVG27DJKL0p9D411t1rw==}
     hasBin: true
     peerDependencies:
       svelte: ^5.0.0
@@ -1727,7 +1727,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preveltekit@1.1.3(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3):
+  preveltekit@1.2.2(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3):
     dependencies:
       '@rsbuild/core': 1.5.17
       '@rsbuild/plugin-svelte': 1.0.11(@babel/core@7.26.0)(@rsbuild/core@1.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
