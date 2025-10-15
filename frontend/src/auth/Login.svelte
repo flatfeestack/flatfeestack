@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {goto, route, QueryString} from "@mateothegreat/svelte5-router";
+  import {navigate, route} from 'preveltekit';
   import { emailValidationPattern } from "../utils.ts";
   import Modal from "./Modal.svelte";
   import {login} from "./auth.svelte.ts";
@@ -13,12 +13,9 @@
     try {
       const hasLoggedIn = await login(email);
       if(hasLoggedIn) {
-        goto("/user/search");
+        navigate("/user/search");
       } else {
-        //goto("/login-wait/" + email);
-        const query = new QueryString();
-        query.set("email", email);
-        query.goto("/login-wait");
+        navigate("/login-wait/" + encodeURIComponent(email));
         email = "";
       }
     } catch (e: unknown) {

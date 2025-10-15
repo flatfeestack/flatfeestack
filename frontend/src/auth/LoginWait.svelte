@@ -1,7 +1,7 @@
 <script lang="ts">
   import Modal from "./Modal.svelte";
-  import {query} from "@mateothegreat/svelte5-router";
-  let email = query("email");
+  let { params }: { params: { email: string } } = $props();
+  let email = params.email;
 </script>
 
 <style>

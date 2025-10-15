@@ -1,6 +1,5 @@
 <script lang="ts">
-    import Router from 'preveltekit/Router.svelte';
-    import type { Routes } from 'preveltekit/types';
+    import { Router, type Routes } from 'preveltekit';
     import Landing from './pages/Landing.svelte';
     import Login from "./auth/Login.svelte";
     import CatchAllRoute from "./CatchAllRoute.svelte";
@@ -9,7 +8,7 @@
     import Search from "./pages/Search.svelte";
     import Payments from "./pages/Payments.svelte";
     import Settings from "./pages/Settings.svelte";
-    import Income from "./pages/Income.svelte";
+    //import Income from "./pages/Income.svelte";
     import Badges from "./pages/Badges.svelte";
     import Invitations from "./pages/Invitations.svelte";
     import Admin from "./pages/admin/Admin.svelte";
@@ -24,7 +23,7 @@
         {path: "/user/search", component: Search},
         {path: "/user/payments", component: Payments},
         {path: "/user/settings", component: Settings},
-        {path: "/user/income", component: Income},
+        //{path: "/user/income", component: Income},
         {path: "/user/badges", component: Badges},
         {path: "/user/invitations", component: Invitations},
         {path: "/user/admin", component: Admin},
@@ -35,7 +34,7 @@
         {path: "/badges/:uuid", component: PublicBadges},
         {path: "/toc", component: TermsAndConditions},
         {path: "/login-confirm", component: LoginConfirm},
-        {path: "/login-wait", component: LoginWait},
+        {path: "/login-wait/:email", component: LoginWait},
         {path: "/login", component: Login},
         {path: "/", component: Landing},
         {path: "*", component: CatchAllRoute}
