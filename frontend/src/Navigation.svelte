@@ -1,6 +1,6 @@
 <script lang="ts">
   import '@fortawesome/fontawesome-free/css/all.min.css';
-  import {route, goto} from "@mateothegreat/svelte5-router";
+  import {link, navigate} from "preveltekit";
   import {appState} from "ts/state.svelte.ts";
 
   // Types
@@ -94,7 +94,7 @@
 
 <nav class="sidebar">
   <div class="sidebar-header center-flex">
-    <a href="/" use:route>
+    <a href="/" use:link>
       <img src={isSidebarCollapsed ? "/images/ffs-logo-min-white.svg" : "/images/ffs-logo-white.svg"} alt="FlatFeeStack"/>
     </a>
     <button class="toggle-button pr-025 pl-050" onclick={toggleSidebar} aria-label="Toggle sidebar">
@@ -104,14 +104,14 @@
 
   <div class="nav-items">
     {#each navItems as {icon, label, path}}
-      <button class="nav-item" onclick={() => goto(path)} aria-label={label}>
+      <button class="nav-item" onclick={() => navigate(path)} aria-label={label}>
         <i class="fas {icon}"></i>
         {isSidebarCollapsed ? " " : label}
       </button>
     {/each}
     {#if appState.user.role === "admin"}
       {#each navItemsAdmin as {icon, label, path}}
-        <button class="nav-item" onclick={() => goto(path)} aria-label={label}>
+        <button class="nav-item" onclick={() => navigate(path)} aria-label={label}>
           <i class="fas {icon}"></i>
           {isSidebarCollapsed ? " " : label}
         </button>

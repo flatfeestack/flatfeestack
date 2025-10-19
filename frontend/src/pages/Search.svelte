@@ -7,7 +7,7 @@
   import Dots from "../Dots.svelte";
   import RepoCard from "../RepoCard.svelte";
   import SearchResult from "../SearchResult.svelte";
-  import { route } from "preveltekit";
+  import { link } from "preveltekit";
   import Main from "../Main.svelte";
 
   let search = $state("");
@@ -79,7 +79,7 @@
     <p class="m-2">You can tag as many repositories as you want.</p>
 
     <p class="m-2">
-      Please note that you need <a use:route href="/user/payments">credit</a> on your account
+      Please note that you need <a use:link href="/user/payments">credit</a> on your account
       to support projects. You can still tag them even without any balance, but the
       project will not receive any contributions.
     </p>

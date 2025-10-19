@@ -1,23 +1,23 @@
 <script lang="ts">
-    import {appState} from "ts/state.svelte.ts";
-    import {getRefreshToken, removeSession} from "auth/auth.svelte.ts";
-    import {onMount} from "svelte";
-    import {API} from "./ts/api.ts";
-    import '@fortawesome/fontawesome-free/css/all.min.css'
-    import {goto} from "@mateothegreat/svelte5-router";
-    import Error from './Error.svelte';
+    import { appState } from "ts/state.svelte.ts";
+    import { getRefreshToken, removeSession } from "auth/auth.svelte.ts";
+    import { onMount } from "svelte";
+    import { API } from "./ts/api.ts";
+    import "@fortawesome/fontawesome-free/css/all.min.css";
+    import { navigate } from "preveltekit";
+    import Error from "./Error.svelte";
 
     function logout(event: MouseEvent) {
         event.preventDefault();
         removeSession();
-        goto("/login");
+        navigate("/login");
     }
 
     function handleKeydown(event: KeyboardEvent) {
-        if (event.key === 'Enter' || event.key === ' ') {
+        if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             removeSession();
-            goto("/login");
+            navigate("/login");
         }
     }
 
@@ -40,7 +40,7 @@
 
     function handleClickOutside(event: Event) {
         if (isMenuOpen) {
-            const menu = document.querySelector('.user-menu-container');
+            const menu = document.querySelector(".user-menu-container");
             if (menu && !menu.contains(event.target as Node)) {
                 isMenuOpen = false;
             }
@@ -48,11 +48,76 @@
     }
 
     function gotoSettings() {
-        goto('/user/settings');
+        navigate("/user/settings");
     }
 </script>
 
-<svelte:window on:click={handleClickOutside}/>
+<svelte:window on:click={handleClickOutside} />
+
+<header class="p-050">
+    <nav class="center-flex">
+        <div class="user-menu-container mx-100">
+            {#if appState.user.image}
+                <button
+                    onclick={toggleMenu}
+                    class="round user-menu-button"
+                    aria-label="User menu"
+                >
+                    <img
+                        class="round image-org-sx"
+                        src={appState.user.image}
+                        alt="user profile img"
+                    />
+                </button>
+            {:else}
+                <button
+                    class="round fas fa-user"
+                    onclick={toggleMenu}
+                    aria-label="User menu"
+                ></button>
+            {/if}
+
+            {#if isMenuOpen}
+                <div class="menu-dropdown" role="menu">
+                    <div class="menu">
+                        <p class="small">Email:</p>
+                        <p>{appState.user.email}</p>
+                    </div>
+                    <div
+                        class="menu menu-item"
+                        onclick={gotoSettings}
+                        role="menuitem"
+                        aria-label="Go to settings"
+                        onkeydown={handleKeydown}
+                        tabindex="0"
+                    >
+                        <i class="fas fa-user-cog" aria-hidden="true"></i>
+                        <span>Settings</span>
+                    </div>
+                    <div
+                        class="menu menu-item"
+                        onclick={logout}
+                        role="menuitem"
+                        aria-label="Sign out of your account"
+                        onkeydown={handleKeydown}
+                        tabindex="0"
+                    >
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                        <span>Sign out</span>
+                    </div>
+                </div>
+            {/if}
+        </div>
+        {#if appState.config.env === "local" || appState.config.env === "stage"}
+            <button
+                class="button4 center mx-2"
+                onclick={() => navigate("/dao/home")}>DAO</button
+            >
+        {/if}
+    </nav>
+</header>
+
+<Error />
 
 <style>
     header {
@@ -123,53 +188,3 @@
         margin: 0 0.5rem;
     }
 </style>
-
-<header class="p-050">
-    <nav class="center-flex">
-        <div class="user-menu-container mx-100">
-            {#if appState.user.image}
-                <button onclick={toggleMenu} class="round user-menu-button" aria-label="User menu">
-                    <img class="round image-org-sx" src={appState.user.image} alt="user profile img"/>
-                </button>
-            {:else}
-                <button class="round fas fa-user" onclick={toggleMenu} aria-label="User menu"></button>
-            {/if}
-
-            {#if isMenuOpen}
-                <div class="menu-dropdown" role="menu">
-                    <div class="menu">
-                        <p class="small">Email:</p>
-                        <p>{appState.user.email}</p>
-                    </div>
-                    <div
-                            class="menu menu-item"
-                            onclick={gotoSettings}
-                            role="menuitem"
-                            aria-label="Go to settings"
-                            onkeydown={handleKeydown}
-                            tabindex="0"
-                    >
-                        <i class="fas fa-user-cog" aria-hidden="true"></i>
-                        <span>Settings</span>
-                    </div>
-                    <div
-                            class="menu menu-item"
-                            onclick={logout}
-                            role="menuitem"
-                            aria-label="Sign out of your account"
-                            onkeydown={handleKeydown}
-                            tabindex="0"
-                    >
-                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
-                        <span>Sign out</span>
-                    </div>
-                </div>
-            {/if}
-        </div>
-        {#if appState.config.env === "local" || appState.config.env === "stage"}
-            <button class="button4 center mx-2" onclick={() => goto("/dao/home")}>DAO</button>
-        {/if}
-    </nav>
-</header>
-
-<Error />

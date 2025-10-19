@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
-    import {route} from "@mateothegreat/svelte5-router";
+    import {link} from "preveltekit";
     let {children}: {children: Snippet} = $props();
 </script>
 
@@ -20,7 +20,7 @@
 
 <div class="max">
     <div class="box-container rounded p-125">
-        <a use:route href="/">
+        <a use:link href="/">
             <img class="hide-sx imgNormalLogo" src="/images/ffs-logo.svg" alt="FlatFeeStack"/>
         </a>
         {@render children?.()}

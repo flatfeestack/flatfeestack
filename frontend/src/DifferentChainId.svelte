@@ -1,6 +1,6 @@
 <script lang="ts">
   import queryString from "query-string";
-  import {route} from "preveltekit";
+  import {link} from "preveltekit";
 
   let { location } = $props<{ location: any }>();
 
@@ -15,7 +15,7 @@
       Your MetaMask browser plugin is currently connected to the network with ID {queryParams.actual}.
       However, FlatFeeStack requires to use {queryParams.required}. Please
       change your network in MetaMask and
-      <a use:route href="/">click here</a> to return to the previous page.
+      <a use:link href="/">click here</a> to return to the previous page.
     </p>
   </div>
 </div>

@@ -5,4 +5,4 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml tsconfig.json ./
 # without setting this env, TTY is required, and pnpm install fails: ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
 ENV CI=true
-ENTRYPOINT ["sh", "-c", "pnpm install && pnpm run dev"]
+ENTRYPOINT ["sh", "-c", "pnpm install --no-frozen-lockfile && pnpm run dev"]
