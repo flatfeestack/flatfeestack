@@ -8,8 +8,8 @@
   let email = $derived(searchParams.get("email"));
   let emailToken = $derived(searchParams.get("emailToken"));
 
-  console.log(email);
-  console.log(emailToken);
+  //console.log(email);
+  //console.log(emailToken);
 
   let error =$state("");
 
