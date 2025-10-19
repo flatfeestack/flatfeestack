@@ -3,6 +3,8 @@ RUN apk add --no-cache libc6-compat brotli gzip zstd parallel
 WORKDIR /app
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml tsconfig.json ./
-# without setting this env, TTY is required, and pnpm install fails: ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+#without setting this env, TTY is required, and pnpm install fails: ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
 ENV CI=true
+#documentation, do not forget to set these volumes
+VOLUME ["/app/src", "/app/public", "/app/node_modules"]
 ENTRYPOINT ["sh", "-c", "pnpm install --no-frozen-lockfile && pnpm run dev"]
