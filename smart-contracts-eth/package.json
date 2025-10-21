@@ -10,7 +10,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "ethers": "^6.9.1",
-    "solidity-coverage": "^0.8.5"
+    "solidity-coverage": "^0.8.16"
   },
   "scripts": {
     "hardhat:test": "hardhat test",
