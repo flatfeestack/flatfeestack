@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 abstract contract Base is Ownable {
     /**
@@ -48,7 +49,10 @@ abstract contract Base is Ownable {
         bytes32 messageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", payloadHash));
 
-        require(ECDSA.recover(messageHash, signature) == owner(), "Signature mismatch");
+        require(
+            SignatureChecker.isValidSignatureNow(owner(), messageHash, signature),
+            "Invalid signature"
+        );
 
         uint256 old = payedOut[userId];
         payedOut[userId] = totalPayOut;

@@ -295,6 +295,7 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
+        address council2,
         bytes calldata signature2
     ) internal returns (uint256 proposalId) {
         bytes32 proposalHash = keccak256(
@@ -308,8 +309,12 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         require(councilExecution[proposalId] == false, "Cannot execute twice");
         councilExecution[proposalId] = true;
 
-        address council2 = ECDSA.recover(messageHash, signature2);
-        require(msg.sender != council2);
+        require(msg.sender != council2, "Same signer twice");
+
+        require(
+            SignatureChecker.isValidSignatureNow(council2, messageHash, signature2),
+            "Invalid council signature"
+        );
 
         require(
             FlatFeeStackNFT(address(token())).isCouncilIndex(msg.sender, index1) &&
@@ -326,9 +331,10 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
+        address council2,
         bytes calldata signature2
     ) external returns (uint256 proposalId) {
-        proposalId = requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, signature2);
+        proposalId = requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, council2, signature2);
         _executeOperations(proposalId, targets, values, calldatas, descriptionHash);
         emit ProposalExecuted(proposalId);
         return proposalId;
@@ -341,9 +347,10 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
+        address council2,
         bytes calldata signature2
     ) external returns (uint256 proposalId) {
-        requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, signature2);
+        requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, council2, signature2);
         proposalId = _cancel(targets, values, calldatas, descriptionHash);
         emit ProposalCanceled(proposalId);
         return proposalId;

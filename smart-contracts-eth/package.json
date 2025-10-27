@@ -2,15 +2,16 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "^5.0.1",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "chai": "^4.3.10",
-    "hardhat": "^2.19.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
     "ethers": "^6.9.1",
-    "solidity-coverage": "^0.8.5"
+    "hardhat": "^2.26.3",
+    "solidity-coverage": "^0.8.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "scripts": {
     "hardhat:test": "hardhat test",

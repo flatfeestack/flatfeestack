@@ -3,8 +3,10 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { Contract, ContractTransactionResponse, TransactionResponse, EventLog } from "ethers";
 
+const ERR_PAYOUT_INVALID_SIG = "Invalid signature";
+
 let council1: HardhatEthersSigner, council2: HardhatEthersSigner, user1: HardhatEthersSigner, user2: HardhatEthersSigner, user3: HardhatEthersSigner, user4: HardhatEthersSigner;
-let contractNFT: Contract, contractDAO: Contract, contractUSDC: Contract, contractPayoutEth:Contract, contractPayoutUSDC:Contract;
+let contractNFT: any, contractDAO: any, contractUSDC: any, contractPayoutEth: any, contractPayoutUSDC: any;
  
 async function sign(signer:HardhatEthersSigner, userId:string, payOut:bigint, contract:Contract) : Promise<string> {
   const message = ethers.solidityPackedKeccak256(
@@ -94,7 +96,8 @@ beforeEach("Deploy All Contracts", async function() {
   const addressDAO = receipt?.contractAddress as string;
 
   contractUSDC = await ethers.deployContract("USDC");
-  const addressUSDC = contractUSDC.target as string;
+  await contractUSDC.waitForDeployment();
+  const addressUSDC = await contractUSDC.getAddress();
 
   contractNFT = await ethers.getContractAt("FlatFeeStackNFT", addressNFT);
   contractDAO = await ethers.getContractAt("FlatFeeStackDAO", addressDAO);
@@ -113,7 +116,7 @@ describe("Withdraw Functionality", function () {
     const signature = await sign(council1, ethers.sha256(user1.address), payOutEth, contractPayoutEth);
 
     //test wrong user to withdraw
-    await withdraw(contractPayoutEth, user2, payOutEth, signature, "Signature mismatch");
+    await withdraw(contractPayoutEth, user2, payOutEth, signature, ERR_PAYOUT_INVALID_SIG);
     //correct user, good path
     await withdraw(contractPayoutEth, user1, payOutEth, signature, undefined);
     //correct user, but no funds left
@@ -147,7 +150,7 @@ describe("Withdraw Functionality", function () {
     const signature = await sign(council1, ethers.sha256(user1.address), payOutUSDC, contractPayoutUSDC);
 
     //test wrong user to withdraw
-    await withdraw(contractPayoutUSDC, user2, payOutUSDC, signature, "Signature mismatch");
+    await withdraw(contractPayoutUSDC, user2, payOutUSDC, signature, ERR_PAYOUT_INVALID_SIG);
     //correct user, good path
     await withdraw(contractPayoutUSDC, user1, payOutUSDC, signature, undefined);
     //correct user, but no funds left
@@ -169,7 +172,7 @@ describe("Withdraw Functionality", function () {
     const invalidSignature = "0x" + "00".repeat(65);
     const payOutEth = ethers.parseEther("2") as bigint;
 
-    await withdraw(contractPayoutEth, user1, payOutEth, invalidSignature, "ECDSAInvalidSignature");
+    await withdraw(contractPayoutEth, user1, payOutEth, invalidSignature, ERR_PAYOUT_INVALID_SIG);
   });
 
   it("should fail for invalid signature in Eth", async function () {
@@ -178,7 +181,7 @@ describe("Withdraw Functionality", function () {
     const invalidSignature = "0x" + "00".repeat(65);
     const payOutUSDC = dollar(1);
 
-    await withdraw(contractPayoutUSDC, user1, payOutUSDC, invalidSignature, "ECDSAInvalidSignature");
+    await withdraw(contractPayoutUSDC, user1, payOutUSDC, invalidSignature, ERR_PAYOUT_INVALID_SIG);
   });
 });
 
