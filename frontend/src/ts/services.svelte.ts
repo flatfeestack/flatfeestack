@@ -1,6 +1,6 @@
 import {appState} from "./state.svelte.ts";
 import { API } from "ts/api.ts";
-import type { ClientSecret } from "types/backend.ts";
+import type { ClientSecret, Config } from "types/backend.ts";
 
 import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
 //import { formatUnits } from "ethers";
@@ -65,11 +65,11 @@ export const formatDay = (d: Date): string => {
   );
 };
 
-export function minBalanceName(c: string): string {
-  const currency = appState.config.supportedCurrencies[c.toUpperCase()];
+export function minBalanceName(s: string, config: Config): string {
+  const currency = config.supportedCurrencies[s.toUpperCase()];
   if (!currency) {
-    console.debug("Unknown currency: " + c);
-    return c;
+    console.debug("Unknown currency: " + s);
+    return s;
   }
   return currency.smallest;
 }
@@ -144,7 +144,7 @@ export const stripePaymentMethod = async (
 };
 
 export const stripePayment = async (
-  stripe,
+  stripe: any,
   freq: number,
   seats: number,
   paymentMethod: string

@@ -12,15 +12,23 @@
 
     onMount(async () => {
         try {
-            if (!appState.user.id && getRefreshToken() !== null) {
+            if (!appState.user?.id && getRefreshToken() !== null) {
                 loading = true;
                 appState.user = await API.user.get();
+            }
+            //TODO: remove this, just for debugging
+            if (!appState.config) {
+                appState.config = await API.config.config();
+                console.log("Header loaded config:", appState.config);
+            } else {
+                console.log("Header - config already exists:", appState.config);
             }
         } catch (e) {
             appState.setError(e);
         } finally {
             loading = false;
         }
+        appState.error="test\naoeuaoe aoeu aouaoeu aou aou aoeu aouaoeaou ao aoeu aoeu aoueaoeu aoeu ao uaoeu aoeu aoeu aoeuaoeuaou aoeeu aoeu aou aou aoeu aoeu aoeu aoeu ao";
     });
 </script>
 

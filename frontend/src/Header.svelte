@@ -35,10 +35,18 @@
 
     onMount(async () => {
         try {
-            if (!appState.user.id && getRefreshToken() !== null) {
+            if (!appState.user?.id && getRefreshToken() !== null) {
                 appState.user = await API.user.get();
             }
+            //TODO: remove this, just for debugging
+            if (!appState.config) {
+                appState.config = await API.config.config();
+                console.log("Header loaded config:", appState.config);
+            } else {
+                console.log("Header - config already exists:", appState.config);
+            }
         } catch (e) {
+            console.error(e);
             appState.setError(e);
         }
     });
@@ -68,7 +76,7 @@
 <header class="p-050">
     <nav class="center-flex">
         <div class="user-menu-container mx-100">
-            {#if appState.user.image}
+            {#if appState.user?.image}
                 <button
                     onclick={toggleMenu}
                     class="round user-menu-button"
@@ -94,7 +102,7 @@
                 <div class="menu-dropdown" role="menu">
                     <div class="menu">
                         <p class="small">Email:</p>
-                        <p>{appState.user.email}</p>
+                        <p>{appState.user?.email}</p>
                     </div>
                     <div
                         class="menu menu-item"
@@ -121,7 +129,7 @@
                 </div>
             {/if}
         </div>
-        {#if appState.config.env === "local" || appState.config.env === "stage"}
+        {#if appState.config?.env === "local" || appState.config?.env === "stage"}
             <button
                 class="button4 center mx-2"
                 onclick={() => navigate("/dao/home")}>DAO</button

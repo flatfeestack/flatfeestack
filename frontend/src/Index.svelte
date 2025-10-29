@@ -43,6 +43,7 @@
     onMount(async () => {
         if (!appState.config) {
             appState.config = await API.config.config();
+            console.log("Config", appState.config);
         }
     });
 
