@@ -138,7 +138,12 @@ if [ "$stripe" = true ]; then
   msg "Setup Stripe"
   docker compose build stripe-setup
   if ! docker compose run --rm stripe-setup; then
-    die "Stripe setup failed. Cannot continue without proper Stripe configuration"
+    # this may happen on an expired, you get a 401, but we can remove the .stripe directory
+    # then, it will try with login
+    rm -rf .stripe
+    if ! docker compose run --rm stripe-setup; then
+      die "Stripe setup failed. Cannot continue without proper Stripe configuration"
+    fi
   fi
   msg_ok "Stripe setup done"
 else

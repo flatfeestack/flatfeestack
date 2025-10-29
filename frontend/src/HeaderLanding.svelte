@@ -1,19 +1,18 @@
 <script lang="ts">
     import { appState } from "ts/state.svelte.ts";
-    import {getRefreshToken} from "auth/auth.svelte.ts";
+    import { getRefreshToken } from "auth/auth.svelte.ts";
     import { onMount } from "svelte";
     import { API } from "./ts/api.ts";
-    import '@fortawesome/fontawesome-free/css/all.min.css'
-    import {link, navigate} from "preveltekit";
-    import { fade } from 'svelte/transition';
+    import { link, navigate } from "preveltekit";
+    import { fade } from "svelte/transition";
     import Dots from "./Dots.svelte";
-    import Error from './Error.svelte';
+    import Error from "./Error.svelte";
 
     let loading = false;
 
     onMount(async () => {
         try {
-            if(!appState.user.id && getRefreshToken() !== null) {
+            if (!appState.user.id && getRefreshToken() !== null) {
                 loading = true;
                 appState.user = await API.user.get();
             }
@@ -24,6 +23,41 @@
         }
     });
 </script>
+
+<header class="p-050">
+    <a class="center-flex" href="/" use:link>
+        <img class="logo" src="/images/ffs-logo.svg" alt="FlatFeeStack" />
+    </a>
+    <nav class="center-flex">
+        <div class="auth-button-wrapper center-flex">
+            {#if appState.user?.id}
+                <div transition:fade class="button-overlay">
+                    <button
+                        class="button1 center p-050"
+                        onclick={() => navigate("/user/search")}
+                        >Dashboard</button
+                    >
+                </div>
+            {:else}
+                <div transition:fade class="button-overlay">
+                    <button
+                        class="button1 center p-050"
+                        onclick={() => navigate("/login")}
+                        >Login{#if loading}<Dots></Dots>{/if}</button
+                    >
+                </div>
+            {/if}
+        </div>
+        {#if appState.config?.env === "local" || appState.config?.env === "stage"}
+            <button
+                class="button4 center mx-2"
+                onclick={() => navigate("/dao/home")}>DAO</button
+            >
+        {/if}
+    </nav>
+</header>
+
+<Error></Error>
 
 <style>
     header {
@@ -47,27 +81,3 @@
         transform: translateY(-50%);
     }
 </style>
-
-<header class="p-050">
-    <a class="center-flex" href="/" use:link>
-        <img class="logo" src="/images/ffs-logo.svg" alt="FlatFeeStack"/>
-    </a>
-    <nav class="center-flex">
-        <div class="auth-button-wrapper center-flex">
-            {#if appState.user?.id}
-                <div transition:fade class="button-overlay">
-                    <button class="button1 center p-050" onclick={() => navigate("/user/search")}>Dashboard</button>
-                </div>
-            {:else}
-                <div transition:fade class="button-overlay">
-                    <button class="button1 center p-050" onclick={() => navigate("/login")}>Login{#if loading}<Dots></Dots>{/if}</button>
-                </div>
-            {/if}
-        </div>
-
-        {#if appState.config?.env === "local" || appState.config?.env === "stage"}
-            <button class="button4 center mx-2" onclick={() => navigate("/dao/home")}>DAO</button>
-        {/if}
-    </nav>
-</header>
-<Error></Error>

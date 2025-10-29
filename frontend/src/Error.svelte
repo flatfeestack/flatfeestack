@@ -1,6 +1,10 @@
 <script lang="ts">
     import { appState } from "ts/state.svelte.ts";
-    import '@fortawesome/fontawesome-free/css/all.min.css'
+    import { library, icon } from '@fortawesome/fontawesome-svg-core';
+    import { faClose } from '@fortawesome/free-solid-svg-icons';
+        
+    library.add(faClose);
+    const closeIcon = icon({ prefix: 'fas', iconName: 'close' }).html[0];
 </script>
 
 <style>
@@ -24,7 +28,7 @@
         <div class="w-100">{@html appState.error}</div>
         <div>
             <button class="close accessible-btn" onclick={() => {appState.error = "";}}>
-                ✕
+                {@html closeIcon}
             </button>
         </div>
     </div>

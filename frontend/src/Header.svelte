@@ -3,9 +3,21 @@
     import { getRefreshToken, removeSession } from "auth/auth.svelte.ts";
     import { onMount } from "svelte";
     import { API } from "./ts/api.ts";
-    import "@fortawesome/fontawesome-free/css/all.min.css";
     import { navigate } from "preveltekit";
     import Error from "./Error.svelte";
+    import { library, icon } from "@fortawesome/fontawesome-svg-core";
+    import {
+        faUser,
+        faUserCog,
+        faSignOutAlt,
+    } from "@fortawesome/free-solid-svg-icons";
+
+    library.add(faUser, faUserCog, faSignOutAlt);
+
+    const userIcon = icon({ prefix: "fas", iconName: "user" }).html[0];
+    const settingsIcon = icon({ prefix: "fas", iconName: "user-cog" }).html[0];
+    const signOutIcon = icon({ prefix: "fas", iconName: "sign-out-alt" })
+        .html[0];
 
     function logout(event: MouseEvent) {
         event.preventDefault();
@@ -24,7 +36,6 @@
     onMount(async () => {
         try {
             if (!appState.user.id && getRefreshToken() !== null) {
-                appState.user = await API.user.get();
                 appState.user = await API.user.get();
             }
         } catch (e) {
@@ -71,10 +82,12 @@
                 </button>
             {:else}
                 <button
-                    class="round fas fa-user"
+                    class="round user-icon"
                     onclick={toggleMenu}
                     aria-label="User menu"
-                ></button>
+                >
+                    {@html userIcon}
+                </button>
             {/if}
 
             {#if isMenuOpen}
@@ -91,7 +104,7 @@
                         onkeydown={handleKeydown}
                         tabindex="0"
                     >
-                        <i class="fas fa-user-cog" aria-hidden="true"></i>
+                        {@html settingsIcon}
                         <span>Settings</span>
                     </div>
                     <div
@@ -102,7 +115,7 @@
                         onkeydown={handleKeydown}
                         tabindex="0"
                     >
-                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                        {@html signOutIcon}
                         <span>Sign out</span>
                     </div>
                 </div>
@@ -143,10 +156,6 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-    }
-
-    .user-menu-container button.fas::before {
-        font-size: 1.5rem;
     }
 
     .menu-dropdown {
