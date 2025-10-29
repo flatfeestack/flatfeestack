@@ -11,7 +11,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/flatfeestack/go-lib v0.0.6
 	github.com/getkin/kin-openapi v0.128.0
-	github.com/go-jose/go-jose/v3 v3.0.3
+	github.com/go-jose/go-jose/v3 v3.0.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
