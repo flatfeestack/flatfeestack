@@ -10,9 +10,6 @@ services:
     ports:
       - "9081:9081"
       - "2342:2345"
-    depends_on:
-      db:
-        condition: service_healthy
 
   backend:
     build:
@@ -25,9 +22,6 @@ services:
     ports:
       - "9082:9082"
       - "2340:2345"
-    depends_on:
-      db:
-        condition: service_healthy
 
   forum:
     build: ./forum
@@ -35,11 +29,6 @@ services:
       - ${CFG_PATH:-.}/forum/.env
     ports:
       - "9086:9086"
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_started
 
   analyzer:
     build:
@@ -58,9 +47,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     volumes:
       - ${CFG_PATH:-.}/frontend/src:/app/src
-      - ${CFG_PATH:-.}/frontend/public:/app/public
+      - ${CFG_PATH:-.}/frontend/static:/app/static
       - ${CFG_PATH:-.}/frontend/node_modules:/app/node_modules
     ports:
       - "9085:3000"
@@ -73,11 +65,6 @@ services:
       - "5432:5432"
     env_file:
       - ${CFG_PATH:-.}/db/.env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 3s
-      timeout: 5s
-      retries: 30
 
   caddy:
     image: caddy:2-alpine

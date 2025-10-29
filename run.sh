@@ -120,7 +120,7 @@ parse_params() {
 setup_colors
 parse_params "$@"
 
-mkdir -p .db .repos .chain .stripe
+mkdir -p .db .repos .chain .stripe frontend/node_modules
 
 check_envs "analyzer"
 check_envs "backend"
@@ -131,6 +131,8 @@ check_envs "db"
 if ! docker info >/dev/null 2>&1; then
   die "Docker is not running. Please start Docker and try again"
 fi
+
+export GID=$(id -g)
 
 if [ "$stripe" = true ]; then
   msg "Setup Stripe"

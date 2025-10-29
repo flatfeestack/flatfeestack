@@ -154,7 +154,7 @@ func InitDb(dbDriver string, dbPath string, dbScripts string) error {
 	err = DB.Ping()
 	now := time.Now()
 	for err != nil && now.Add(time.Duration(10)*time.Second).After(time.Now()) {
-		time.Sleep(time.Second)
+		time.Sleep(250 * time.Millisecond)
 		err = DB.Ping()
 	}
 	if err != nil {
