@@ -6,8 +6,8 @@ settings:
 
 devDependencies:
   '@nomicfoundation/hardhat-ethers':
-    specifier: ^3.0.5
-    version: 3.0.5(ethers@6.9.1)(hardhat@2.19.4)
+    specifier: ^3.1.2
+    version: 3.1.2(ethers@6.9.1)(hardhat@2.19.4)
   '@nomicfoundation/hardhat-network-helpers':
     specifier: ^1.0.10
     version: 1.0.10(hardhat@2.19.4)
@@ -654,11 +654,11 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@nomicfoundation/hardhat-ethers@3.0.5(ethers@6.9.1)(hardhat@2.19.4):
-    resolution: {integrity: sha512-RNFe8OtbZK6Ila9kIlHp0+S80/0Bu/3p41HUpaRIoHLm6X3WekTd83vob3rE54Duufu1edCiBDxspBzi2rxHHw==}
+  /@nomicfoundation/hardhat-ethers@3.1.2(ethers@6.9.1)(hardhat@2.19.4):
+    resolution: {integrity: sha512-7xEaz2X8p47qWIAqtV2z03MmusheHm8bvY2mDlxo9JiT2BgSx59GSdv5+mzwOvsuKDbTij7oqDnwFyYOlHREEQ==}
     peerDependencies:
-      ethers: ^6.1.0
-      hardhat: ^2.0.0
+      ethers: ^6.14.0
+      hardhat: ^2.26.0
     dependencies:
       debug: 4.3.4(supports-color@8.1.1)
       ethers: 6.9.1
@@ -1615,6 +1615,7 @@ packages:
 
   /ethereumjs-abi@0.6.8:
     resolution: {integrity: sha512-Tx0r/iXI6r+lRsdvkFDlut0N08jWMnKRZ6Gkq+Nmw75lZe4e6o3EkSnkaBP5NF6+m5PTGAr9JP43N3LyeoglsA==}
+    deprecated: This library has been deprecated and usage is discouraged.
     dependencies:
       bn.js: 4.12.0
       ethereumjs-util: 6.2.1
@@ -1712,7 +1713,6 @@ packages:
       is-hex-prefixed: 1.0.0
       strip-hex-prefix: 1.0.0
     dev: true
-    bundledDependencies: false
 
   /evp_bytestokey@1.0.3:
     resolution: {integrity: sha512-/f2Go4TognH/KvCISP7OUsHn85hT9nUkxxA9BEWxFn+Oj9o8ZNLm/40hdlgSLyuOimsrTKLUMEorQexp/aPQeA==}
@@ -1855,6 +1855,7 @@ packages:
 
   /glob@5.0.15:
     resolution: {integrity: sha512-c9IPMazfRITpmAAKi22dK1VKxGDX9ehhqfABDriL/lzO92xcUKEJPQHrVA/2YHSNFB4iFlykVmWvwo48nr3OxA==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       inflight: 1.0.6
       inherits: 2.0.4
@@ -1865,6 +1866,7 @@ packages:
 
   /glob@7.2.0:
     resolution: {integrity: sha512-lmLf6gtyrPq8tTjSmrO94wBeQbFR3HbLHbuyD69wuyQkImp2hWqMGB47OX65FBkPffO641IP9jWa1z4ivqG26Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       fs.realpath: 1.0.0
       inflight: 1.0.6
@@ -2085,6 +2087,7 @@ packages:
 
   /inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
+    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
     dependencies:
       once: 1.4.0
       wrappy: 1.0.2
@@ -2268,6 +2271,7 @@ packages:
 
   /lodash.isequal@4.5.0:
     resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
+    deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
     dev: true
 
   /lodash@4.17.21:
@@ -2679,6 +2683,7 @@ packages:
 
   /rimraf@2.7.1:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.0
