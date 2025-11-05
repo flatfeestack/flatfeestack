@@ -7,760 +7,472 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestContributionInsert(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
+func TestInsertContribution(t *testing.T) {
+	TruncateAll(db, t)
 
-	userSponsor := insertTestUser(t, "sponsor")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
-	assert.Nil(t, err)
+	err := db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD",
+		time.Now(), time.Now(), false,
+	)
+	require.NoError(t, err)
 }
 
-func TestMultiContributionInsert(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
+func TestFindContributions_AsContributor(t *testing.T) {
+	TruncateAll(db, t)
 
-	userSponsor := insertTestUser(t, "sponsor")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
-	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", time.Time{}, time.Time{}, false)
-	assert.NotNil(t, err)
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1500), "USD", day, time.Now(), false,
+	))
 
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(-3), "XBTC", time.Time{}.Add(1), time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(6), "XBTC", time.Time{}.Add(2), time.Time{}, false)
-	assert.Nil(t, err)
-
-	m, err := FindSumDailyBalanceByRepoId(r.Id)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(5), m["XBTC"])
+	contributions, err := db.FindContributions(contributor.Id, true)
+	require.NoError(t, err)
+	assert.Len(t, contributions, 1)
+	assert.Equal(t, big.NewInt(1500), contributions[0].Balance)
+	assert.Equal(t, "USD", contributions[0].Currency)
+	assert.False(t, contributions[0].FoundationPayment)
 }
 
-/*func TestGetFoundationsFromDailyContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
+func TestFindContributions_AsSponsor(t *testing.T) {
+	TruncateAll(db, t)
 
-	userSponsor := insertTestUser(t, "sponsor")
-	userFoundation := insertTestUser(t, "foundation")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
-	r2 := insertTestRepo(t)
-	r3 := insertTestRepo(t)
-	r4 := insertTestRepo(t)
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
 
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(2500), "EUR", day, time.Now(), false,
+	))
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	m1 := MultiplierEvent{
-		Id:           uuid.New(),
-		Uid:          userFoundation.Id,
-		RepoId:       r.Id,
-		EventType:    Active,
-		MultiplierAt: &t001,
-	}
-
-	m2 := MultiplierEvent{
-		Id:           uuid.New(),
-		Uid:          userFoundation.Id,
-		RepoId:       r2.Id,
-		EventType:    Active,
-		MultiplierAt: &t001,
-	}
-
-	m3 := MultiplierEvent{
-		Id:           uuid.New(),
-		Uid:          userFoundation.Id,
-		RepoId:       r3.Id,
-		EventType:    Active,
-		MultiplierAt: &t001,
-	}
-
-	m4 := MultiplierEvent{
-		Id:           uuid.New(),
-		Uid:          userFoundation.Id,
-		RepoId:       r4.Id,
-		EventType:    Active,
-		MultiplierAt: &t001,
-	}
-
-	err = InsertOrUpdateMultiplierRepo(&m1)
-	assert.Nil(t, err)
-
-	err = InsertOrUpdateMultiplierRepo(&m2)
-	assert.Nil(t, err)
-
-	err = InsertOrUpdateMultiplierRepo(&m3)
-	assert.Nil(t, err)
-
-	err = InsertOrUpdateMultiplierRepo(&m4)
-	assert.Nil(t, err)
-
-	_, err = GetFoundationsFromDailyContributions(dateNow)
-
-	assert.Nil(t, err)
-
-	// Build the expected result
-	// expectedSponsorAmount := big.NewInt(12)
-	// expectedResult := []FoundationCurrencyRepos{
-	// 	{
-	// 		UserId:        userFoundation.Id,
-	// 		Currency:      "XBTC",
-	// 		SponsorAmount: *expectedSponsorAmount,
-	// 		RepoIds:       []uuid.UUID{r.Id},
-	// 	},
-	// }
-
-	// Assert the result
-	//assert.Equal(t, expectedResult, res)
-
-}*/
-
-func TestGetUserDonationReposEmpty(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	userSponsor := insertTestUser(t, "sponsor")
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected := map[uuid.UUID][]UserDonationRepo{}
-
-	assert.Equal(t, expected, res)
+	contributions, err := db.FindContributions(sponsor.Id, false)
+	require.NoError(t, err)
+	assert.Len(t, contributions, 1)
+	assert.Equal(t, big.NewInt(2500), contributions[0].Balance)
+	assert.Equal(t, "EUR", contributions[0].Currency)
 }
 
-func TestGetUserDonationReposOneTrusted(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	userSponsor := insertTestUser(t, "sponsor")
-	adminSponsor := insertTestUser(t, "admin")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
+func TestFindContributions_MultipleContributions(t *testing.T) {
+	TruncateAll(db, t)
 
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo1 := createTestRepo(t, db, "https://github.com/test/repo1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/repo2")
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo1.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo2.Id,
+		big.NewInt(2000), "USD", day.AddDate(0, 0, 1), time.Now(), false,
+	))
 
-	tr1 := TrustEvent{
+	contributions, err := db.FindContributions(contributor.Id, true)
+	require.NoError(t, err)
+	assert.Len(t, contributions, 2)
+}
+
+func TestInsertFutureContribution(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	futureDay := time.Now().AddDate(0, 0, 7)
+	err := db.InsertFutureContribution(
+		sponsor.Id, repo.Id, big.NewInt(5000),
+		"USD", futureDay, time.Now(), false,
+	)
+	require.NoError(t, err)
+}
+
+func TestInsertOrUpdateFutureContribution_Insert(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	futureDay := time.Now().AddDate(0, 0, 7).Truncate(24 * time.Hour)
+	err := db.InsertOrUpdateFutureContribution(
+		sponsor.Id, repo.Id, big.NewInt(3000),
+		"USD", futureDay, time.Now(), false,
+	)
+	require.NoError(t, err)
+
+	balances, err := db.FindSumFutureBalanceByRepoId(repo.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(3000), balances["USD"])
+}
+
+func TestInsertOrUpdateFutureContribution_Update(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	futureDay := time.Now().AddDate(0, 0, 7).Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertOrUpdateFutureContribution(
+		sponsor.Id, repo.Id, big.NewInt(2000),
+		"USD", futureDay, time.Now(), false,
+	))
+
+	require.NoError(t, db.InsertOrUpdateFutureContribution(
+		sponsor.Id, repo.Id, big.NewInt(1000),
+		"USD", futureDay, time.Now(), false,
+	))
+
+	balances, err := db.FindSumFutureBalanceByRepoId(repo.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(3000), balances["USD"])
+}
+
+func TestFindSumDailyContributors(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(500), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(2000), "EUR", day, time.Now(), false,
+	))
+
+	balances, err := db.FindSumDailyContributors(contributor.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(1500), balances["USD"])
+	assert.Equal(t, big.NewInt(2000), balances["EUR"])
+}
+
+func TestFindSumDailyContributors_NoContributions(t *testing.T) {
+	TruncateAll(db, t)
+
+	contributor := createTestUser(t, db, "contributor@example.com")
+
+	balances, err := db.FindSumDailyContributors(contributor.Id)
+	require.NoError(t, err)
+	assert.Empty(t, balances)
+}
+
+func TestFindSumDailySponsors(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(3000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "EUR", day, time.Now(), false,
+	))
+
+	balances, err := db.FindSumDailySponsors(sponsor.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(3000), balances["USD"])
+	assert.Equal(t, big.NewInt(1000), balances["EUR"])
+}
+
+func TestFindSumDailySponsors_ExcludesFoundationPayments(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(2000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), true,
+	))
+
+	balances, err := db.FindSumDailySponsors(sponsor.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(2000), balances["USD"])
+}
+
+func TestFindSumDailySponsorsFromFoundation(t *testing.T) {
+	TruncateAll(db, t)
+
+	foundation := createTestUser(t, db, "foundation@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		foundation.Id, contributor.Id, repo.Id,
+		big.NewInt(5000), "USD", day, time.Now(), true,
+	))
+	require.NoError(t, db.InsertContribution(
+		foundation.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+
+	balances, err := db.FindSumDailySponsorsFromFoundation(foundation.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(5000), balances["USD"])
+}
+
+func TestFindSumDailySponsorsFromFoundationByCurrency(t *testing.T) {
+	TruncateAll(db, t)
+
+	foundation := createTestUser(t, db, "foundation@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		foundation.Id, contributor.Id, repo.Id,
+		big.NewInt(3000), "USD", day, time.Now(), true,
+	))
+	require.NoError(t, db.InsertContribution(
+		foundation.Id, contributor.Id, repo.Id,
+		big.NewInt(2000), "EUR", day, time.Now(), true,
+	))
+
+	balance, err := db.FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, "USD")
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(3000), balance)
+}
+
+func TestFindSumDailySponsorsFromFoundationByCurrency_NoCurrency(t *testing.T) {
+	TruncateAll(db, t)
+	
+	foundation := createTestUser(t, db, "foundation@example.com")
+
+	balance, err := db.FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, "JPY")
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(0), balance)
+}
+
+func TestFindContributionsGroupedByCurrencyAndRepo(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo1 := createTestRepo(t, db, "https://github.com/test/repo1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/repo2")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo1.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo2.Id,
+		big.NewInt(2000), "USD", day, time.Now(), false,
+	))
+
+	contributions, err := db.FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
+	require.NoError(t, err)
+	require.NotNil(t, contributions["USD"])
+	assert.Len(t, contributions["USD"], 2)
+}
+
+func TestFindSumFutureBalanceByRepoId(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	futureDay := time.Now().AddDate(0, 0, 7)
+	require.NoError(t, db.InsertFutureContribution(
+		sponsor.Id, repo.Id, big.NewInt(4000),
+		"USD", futureDay, time.Now(), false,
+	))
+
+	balances, err := db.FindSumFutureBalanceByRepoId(repo.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(4000), balances["USD"])
+}
+
+func TestFindSumDailyBalanceByRepoId(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(7000), "USD", day, time.Now(), false,
+	))
+
+	balances, err := db.FindSumDailyBalanceByRepoId(repo.Id)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(7000), balances["USD"])
+}
+
+func TestFindOwnContributionIds(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(500), "USD", day, time.Now(), false,
+	))
+
+	ids, err := db.FindOwnContributionIds(contributor.Id, "USD")
+	require.NoError(t, err)
+	assert.Len(t, ids, 2)
+}
+
+func TestSumTotalEarnedAmountForContributionIds(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1500), "USD", day, time.Now(), false,
+	))
+
+	ids, err := db.FindOwnContributionIds(contributor.Id, "USD")
+	require.NoError(t, err)
+
+	total, err := db.SumTotalEarnedAmountForContributionIds(ids)
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(2500), total)
+}
+
+func TestSumTotalEarnedAmountForContributionIds_EmptyList(t *testing.T) {
+	TruncateAll(db, t)
+
+	total, err := db.SumTotalEarnedAmountForContributionIds([]uuid.UUID{})
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(0), total)
+}
+
+func TestGetActiveSponsors(t *testing.T) {
+	TruncateAll(db, t)
+
+	sponsor := createTestUser(t, db, "sponsor@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
+
+	trustEvent := &TrustEvent{
 		Id:        uuid.New(),
-		Uid:       adminSponsor.Id,
-		RepoId:    r.Id,
+		Uid:       sponsor.Id,
+		RepoId:    repo.Id,
 		EventType: Active,
-		TrustAt:   &t1,
+		TrustAt:   timePtr(time.Now()),
 	}
+	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
 
-	_ = InsertOrUpdateTrustRepo(&tr1)
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		sponsor.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected := map[uuid.UUID][]UserDonationRepo{
-		userSponsor.Id: {
-			{
-				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(2),
-				TrustedRepoSelected:   []uuid.UUID{r.Id},
-				UntrustedRepoSelected: []uuid.UUID{},
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res)
+	sponsors, err := db.GetActiveSponsors(3)
+	require.NoError(t, err)
+	assert.Contains(t, sponsors, sponsor.Id)
 }
 
-func TestGetUserDonationReposOneUntrusted(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	userSponsor := insertTestUser(t, "sponsor")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
+func TestFilterActiveUsers(t *testing.T) {
+	TruncateAll(db, t)
 
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+	activeUser := createTestUser(t, db, "active@example.com")
+	inactiveUser := createTestUser(t, db, "inactive@example.com")
+	contributor := createTestUser(t, db, "contributor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/repo")
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
+	day := time.Now().Truncate(24 * time.Hour)
+	require.NoError(t, db.InsertContribution(
+		activeUser.Id, contributor.Id, repo.Id,
+		big.NewInt(1000), "USD", day, time.Now(), false,
+	))
 
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected := map[uuid.UUID][]UserDonationRepo{
-		userSponsor.Id: {
-			{
-				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(2),
-				TrustedRepoSelected:   []uuid.UUID{},
-				UntrustedRepoSelected: []uuid.UUID{r.Id},
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res)
+	userIds := []uuid.UUID{activeUser.Id, inactiveUser.Id}
+	activeUsers, err := db.FilterActiveUsers(userIds, 3)
+	require.NoError(t, err)
+	assert.Len(t, activeUsers, 1)
+	assert.Contains(t, activeUsers, activeUser.Id)
 }
 
-func TestGetUserDonationReposMany(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
+func TestFilterActiveUsers_EmptyList(t *testing.T) {
+	TruncateAll(db, t)
 
-	userSponsor := insertTestUser(t, "sponsor")
-	adminSponsor := insertTestUser(t, "admin")
-	userContrib := insertTestUser(t, "contrib")
-	userContrib2 := insertTestUser(t, "contrib2")
-	r := insertTestRepo(t)
-	r2 := insertTestRepo(t)
-	r3 := insertTestRepo(t)
-	r4 := insertTestRepo(t)
+	activeUsers, err := db.FilterActiveUsers([]uuid.UUID{}, 3)
+	require.NoError(t, err)
+	assert.Nil(t, activeUsers)
+}
 
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
+// Helper functions
+func createTestUser(t *testing.T, db *DB, email string) *UserDetail {
+	user := &UserDetail{
+		User: User{
+			Id:        uuid.New(),
+			Email:     email,
+			Name:      "Test User",
+			CreatedAt: time.Now(),
+		},
+	}
+	require.NoError(t, db.InsertUser(user))
+	return user
+}
 
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib2.Id, r2.Id, big.NewInt(7), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib2.Id, r3.Id, big.NewInt(10), "USD", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	tr1 := TrustEvent{
+func createTestRepo(t *testing.T, db *DB, gitUrl string) *Repo {
+	repo := &Repo{
 		Id:        uuid.New(),
-		Uid:       adminSponsor.Id,
-		RepoId:    r.Id,
-		EventType: Active,
-		TrustAt:   &t1,
+		GitUrl:    &gitUrl,
+		CreatedAt: time.Now(),
 	}
-
-	tr2 := TrustEvent{
-		Id:        uuid.New(),
-		Uid:       adminSponsor.Id,
-		RepoId:    r4.Id,
-		EventType: Active,
-		TrustAt:   &t2,
-	}
-
-	_ = InsertOrUpdateTrustRepo(&tr1)
-	_ = InsertOrUpdateTrustRepo(&tr2)
-
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected := map[uuid.UUID][]UserDonationRepo{
-		userSponsor.Id: {
-			{
-				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(17),
-				TrustedRepoSelected:   []uuid.UUID{r.Id, r4.Id},
-				UntrustedRepoSelected: []uuid.UUID{r2.Id},
-			},
-			{
-				Currency:              "USD",
-				SponsorAmount:         *big.NewInt(14),
-				TrustedRepoSelected:   []uuid.UUID{},
-				UntrustedRepoSelected: []uuid.UUID{r3.Id},
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res)
+	require.NoError(t, db.InsertOrUpdateRepo(repo))
+	return repo
 }
 
-func TestGetUserDonationReposManyDynamic(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	userSponsor := insertTestUser(t, "sponsor")
-	adminSponsor := insertTestUser(t, "admin")
-	userContrib := insertTestUser(t, "contrib")
-	r := insertTestRepo(t)
-	r2 := insertTestRepo(t)
-	r3 := insertTestRepo(t)
-	r4 := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(userSponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r2.Id, big.NewInt(2), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r3.Id, big.NewInt(4), "USD", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(userSponsor.Id, userContrib.Id, r4.Id, big.NewInt(6), "XBTC", dateNow, time.Time{}, false)
-	assert.Nil(t, err)
-
-	tr1 := TrustEvent{
-		Id:        uuid.New(),
-		Uid:       adminSponsor.Id,
-		RepoId:    r.Id,
-		EventType: Active,
-		TrustAt:   &t1,
-	}
-
-	idTrustEvent := uuid.New()
-
-	tr2 := TrustEvent{
-		Id:        idTrustEvent,
-		Uid:       adminSponsor.Id,
-		RepoId:    r4.Id,
-		EventType: Active,
-		TrustAt:   &t2,
-	}
-
-	_ = InsertOrUpdateTrustRepo(&tr1)
-	_ = InsertOrUpdateTrustRepo(&tr2)
-
-	res, err := GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected := map[uuid.UUID][]UserDonationRepo{
-		userSponsor.Id: {
-			{
-				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(10),
-				TrustedRepoSelected:   []uuid.UUID{r.Id, r4.Id},
-				UntrustedRepoSelected: []uuid.UUID{r2.Id},
-			},
-			{
-				Currency:              "USD",
-				SponsorAmount:         *big.NewInt(4),
-				TrustedRepoSelected:   []uuid.UUID{},
-				UntrustedRepoSelected: []uuid.UUID{r3.Id},
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res)
-
-	tr3 := TrustEvent{
-		Id:        idTrustEvent,
-		Uid:       adminSponsor.Id,
-		RepoId:    r4.Id,
-		EventType: Inactive,
-		UnTrustAt: &t3,
-	}
-
-	_ = InsertOrUpdateTrustRepo(&tr3)
-
-	res, err = GetUserDonationRepos(userSponsor.Id, dateNow, false)
-	assert.Nil(t, err)
-
-	expected = map[uuid.UUID][]UserDonationRepo{
-		userSponsor.Id: {
-			{
-				Currency:              "XBTC",
-				SponsorAmount:         *big.NewInt(10),
-				TrustedRepoSelected:   []uuid.UUID{r.Id},
-				UntrustedRepoSelected: []uuid.UUID{r2.Id, r4.Id},
-			},
-			{
-				Currency:              "USD",
-				SponsorAmount:         *big.NewInt(4),
-				TrustedRepoSelected:   []uuid.UUID{},
-				UntrustedRepoSelected: []uuid.UUID{r3.Id},
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res)
-}
-
-func TestFindFoundationContributionsGroupedByCurrencyAndRepo_NoContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	foundation := insertTestFoundation(t, "sponsor", 2000000000)
-
-	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{}
-	assert.Equal(t, expected, list)
-}
-
-func TestFindFoundationContributionsGroupedByCurrencyAndRepo_OnlyDailyContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	foundation := insertTestFoundation(t, "sponsor", 2000000000)
-	user := insertTestUser(t, "contrib")
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	err := InsertContribution(foundation.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", currentTime, currentTime, true)
-	assert.Nil(t, err)
-
-	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"XBTC": {
-			repo.Id: ContributionDetail{
-				Balance:   big.NewInt(5),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, ok := list[currency][repoID]
-			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
-}
-
-func TestFindFoundationContributionsGroupedByCurrencyAndRepo_OnlyFutureContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	foundation := insertTestFoundation(t, "sponsor", 2000000000)
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertFutureContribution(foundation.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"USD": {
-			repo.Id: ContributionDetail{
-				Balance:   big.NewInt(10),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, exists := list[currency][repoID]
-			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
-}
-
-func TestFindFoundationContributionsGroupedByCurrencyAndRepo_NoFoundationPayment(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	foundation := insertTestFoundation(t, "sponsor", 2000000000)
-	user := insertTestUser(t, "contrib")
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(foundation.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(foundation.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{}
-	assert.Equal(t, expected, list)
-}
-
-func TestFindFoundationContributionsGroupedByCurrencyAndRepo_Many(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	foundation := insertTestFoundation(t, "sponsor", 2000000000)
-	userContrib := insertTestUser(t, "contrib")
-	userContrib2 := insertTestUser(t, "contrib2")
-	r := insertTestRepo(t)
-	r2 := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(foundation.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	err = InsertContribution(foundation.Id, userContrib2.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	err = InsertContribution(foundation.Id, userContrib.Id, r2.Id, big.NewInt(4), "USD", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	err = InsertContribution(foundation.Id, userContrib2.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(foundation.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(foundation.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, true)
-	assert.Nil(t, err)
-
-	list, err := FindFoundationContributionsGroupedByCurrencyAndRepo(foundation.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"XBTC": {
-			r.Id: ContributionDetail{
-				Balance:   big.NewInt(6), // 4 from daily + 2 from future
-				CreatedAt: currentTime,
-			},
-			r2.Id: ContributionDetail{
-				Balance:   big.NewInt(12), // 6 from daily + 6 from future
-				CreatedAt: currentTime,
-			},
-		},
-		"USD": {
-			r2.Id: ContributionDetail{
-				Balance:   big.NewInt(4),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, exists := list[currency][repoID]
-			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
-}
-
-func TestFindContributionsGroupedByCurrencyAndRepo_NoContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	sponsor := insertTestUser(t, "sponsor")
-
-	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{}
-	assert.Equal(t, expected, list)
-}
-
-func TestFindContributionsGroupedByCurrencyAndRepo_OnlyDailyContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	sponsor := insertTestUser(t, "sponsor")
-	user := insertTestUser(t, "contrib")
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02 00:00:00")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(sponsor.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"XBTC": {
-			repo.Id: ContributionDetail{
-				Balance:   big.NewInt(5),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, ok := list[currency][repoID]
-			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
-}
-
-func TestFindContributionsGroupedByCurrencyAndRepo_OnlyFutureContributions(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	sponsor := insertTestUser(t, "sponsor")
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertFutureContribution(sponsor.Id, repo.Id, big.NewInt(10), "USD", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"USD": {
-			repo.Id: ContributionDetail{
-				Balance:   big.NewInt(10),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, ok := list[currency][repoID]
-			assert.True(t, ok, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
-}
-
-func TestFindContributionsGroupedByCurrencyAndRepo_NoSponsorPayment(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	sponsor := insertTestUser(t, "sponsor")
-	user := insertTestUser(t, "contrib")
-	repo := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(sponsor.Id, user.Id, repo.Id, big.NewInt(5), "XBTC", dateNow, time.Time{}, true)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(sponsor.Id, repo.Id, big.NewInt(10), "USD", dateNow, time.Time{}, true)
-	assert.Nil(t, err)
-
-	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{}
-	assert.Equal(t, expected, list)
-}
-
-func TestFindContributionsGroupedByCurrencyAndRepo_Many(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-
-	sponsor := insertTestUser(t, "sponsor")
-	userContrib := insertTestUser(t, "contrib")
-	userContrib2 := insertTestUser(t, "contrib2")
-	r := insertTestRepo(t)
-	r2 := insertTestRepo(t)
-
-	currentTime := time.Now()
-	dateNowStr := currentTime.Format("2006-01-02")
-	dateNow, _ := time.Parse("2006-01-02", dateNowStr)
-
-	err := InsertContribution(sponsor.Id, userContrib.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(sponsor.Id, userContrib2.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(sponsor.Id, userContrib.Id, r2.Id, big.NewInt(4), "USD", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertContribution(sponsor.Id, userContrib2.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(sponsor.Id, r.Id, big.NewInt(2), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	err = InsertFutureContribution(sponsor.Id, r2.Id, big.NewInt(6), "XBTC", dateNow, currentTime, false)
-	assert.Nil(t, err)
-
-	list, err := FindContributionsGroupedByCurrencyAndRepo(sponsor.Id)
-	assert.Nil(t, err)
-
-	expected := map[string]map[uuid.UUID]ContributionDetail{
-		"XBTC": {
-			r.Id: ContributionDetail{
-				Balance:   big.NewInt(6), // 4 from daily + 2 from future
-				CreatedAt: currentTime,
-			},
-			r2.Id: ContributionDetail{
-				Balance:   big.NewInt(12), // 6 from daily + 6 from future
-				CreatedAt: currentTime,
-			},
-		},
-		"USD": {
-			r2.Id: ContributionDetail{
-				Balance:   big.NewInt(4),
-				CreatedAt: currentTime,
-			},
-		},
-	}
-
-	for currency, repos := range expected {
-		for repoID, expectedDetail := range repos {
-			actualDetail, exists := list[currency][repoID]
-			assert.True(t, exists, "Missing expected repoID: %v for currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.Balance, actualDetail.Balance, "Balance mismatch for repoID: %v and currency: %v", repoID, currency)
-
-			assert.Equal(t, expectedDetail.CreatedAt.UTC(), actualDetail.CreatedAt.UTC(), "CreatedAt mismatch for repoID: %v and currency: %v", repoID, currency)
-		}
-	}
+func timePtr(t time.Time) *time.Time {
+	return &t
 }

@@ -10,11 +10,6 @@ import (
 	"github.com/lib/pq"
 )
 
-var TABLENAMEFUTURECONTRIBUTION = map[bool]string{
-	true:  "future_contribution",
-	false: "daily_contribution",
-}
-
 type Contributions struct {
 	DateFrom time.Time
 	DateTo   time.Time
@@ -42,47 +37,45 @@ type ContributionDetail struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-func InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time, foudnationPayment bool) error {
-
-	stmt, err := DB.Prepare(`
-				INSERT INTO daily_contribution(id, user_sponsor_id, user_contributor_id, repo_id, 
-				                               balance, currency, day, created_at, foundation_payment) 
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO daily_contribution for %v statement event: %v", userSponsorId, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	b := balance.String()
-	id := uuid.New()
-	res, err = stmt.Exec(id, userSponsorId, userContributorId, repoId, b, currency, day, createdAt, foudnationPayment)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+type UserDonationRepo struct {
+	TrustedRepoSelected   []uuid.UUID
+	UntrustedRepoSelected []uuid.UUID
+	Currency              string
+	SponsorAmount         big.Int
 }
 
-func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
+func (db *DB) InsertContribution(userSponsorId uuid.UUID, userContributorId uuid.UUID, repoId uuid.UUID, balance *big.Int, currency string, day time.Time, createdAt time.Time, foundationPayment bool) error {
+	_, err := db.Exec(
+		`INSERT INTO daily_contribution(id, user_sponsor_id, user_contributor_id, repo_id, 
+		                                balance, currency, day, created_at, foundation_payment) 
+		 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		uuid.New(), userSponsorId, userContributorId, repoId, balance.String(), currency, day, createdAt, foundationPayment)
+	return err
+}
+
+func (db *DB) FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Contribution, error) {
 	cs := []Contribution{}
 	s := `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
                  d.balance, d.currency, d.day, d.claimed_at, d.foundation_payment
-            FROM daily_contribution d
-                INNER JOIN users sp ON d.user_sponsor_id = sp.id
-                INNER JOIN users co ON d.user_contributor_id = co.id
-                INNER JOIN repo r ON d.repo_id = r.id WHERE d.user_sponsor_id = $1
-            ORDER by d.day`
+          FROM daily_contribution d
+              INNER JOIN users sp ON d.user_sponsor_id = sp.id
+              INNER JOIN users co ON d.user_contributor_id = co.id
+              INNER JOIN repo r ON d.repo_id = r.id 
+          WHERE d.user_sponsor_id = $1
+          ORDER BY d.day`
+	
 	if myContribution {
 		s = `SELECT r.name, r.url, sp.name, sp.email, co.name, co.email, 
                  d.balance, d.currency, d.day, d.claimed_at, d.foundation_payment
-            FROM daily_contribution d
-                INNER JOIN users sp ON d.user_sponsor_id = sp.id
-                INNER JOIN users co ON d.user_contributor_id = co.id
-                INNER JOIN repo r ON d.repo_id = r.id WHERE d.user_contributor_id = $1
-            ORDER by d.day`
+             FROM daily_contribution d
+                 INNER JOIN users sp ON d.user_sponsor_id = sp.id
+                 INNER JOIN users co ON d.user_contributor_id = co.id
+                 INNER JOIN repo r ON d.repo_id = r.id 
+             WHERE d.user_contributor_id = $1
+             ORDER BY d.day`
 	}
 
-	rows, err := DB.Query(s, contributorUserId)
+	rows, err := db.Query(s, contributorUserId)
 	if err != nil {
 		return nil, err
 	}
@@ -109,62 +102,37 @@ func FindContributions(contributorUserId uuid.UUID, myContribution bool) ([]Cont
 	return cs, nil
 }
 
-func InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
-	currency string, day time.Time, createdAt time.Time, foudnationPayment bool) error {
-
-	stmt, err := DB.Prepare(`
-				INSERT INTO future_contribution(id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment) 
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO future_contribution for %v statement event: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	b := balance.String()
-	id := uuid.New()
-	res, err = stmt.Exec(id, uid, repoId, b, currency, day, createdAt, foudnationPayment)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
-}
-
-func InsertOrUpdateFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
+func (db *DB) InsertFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
 	currency string, day time.Time, createdAt time.Time, foundationPayment bool) error {
-
-	stmt, err := DB.Prepare(`
-        INSERT INTO future_contribution(
-            id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (user_sponsor_id, repo_id, currency, day) 
-        DO UPDATE SET 
-            balance = future_contribution.balance + EXCLUDED.balance,
-            created_at = EXCLUDED.created_at,
-            foundation_payment = EXCLUDED.foundation_payment
-    `)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO future_contribution for %v statement event: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	b := balance.String()
-	id := uuid.New()
-
-	_, err = stmt.Exec(id, uid, repoId, b, currency, day, createdAt, foundationPayment)
-	if err != nil {
-		return fmt.Errorf("failed to insert or update future_contribution for %v: %v", uid, err)
-	}
-
-	return nil
+	_, err := db.Exec(
+		`INSERT INTO future_contribution(id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment) 
+		 VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
+		uuid.New(), uid, repoId, balance.String(), currency, day, createdAt, foundationPayment)
+	return err
 }
 
-func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-        			 FROM daily_contribution 
-                     WHERE user_contributor_id = $1
-                     GROUP BY currency`, userContributorId)
+func (db *DB) InsertOrUpdateFutureContribution(uid uuid.UUID, repoId uuid.UUID, balance *big.Int,
+	currency string, day time.Time, createdAt time.Time, foundationPayment bool) error {
+	_, err := db.Exec(
+		`INSERT INTO future_contribution(
+		     id, user_sponsor_id, repo_id, balance, currency, day, created_at, foundation_payment
+		 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 ON CONFLICT (user_sponsor_id, repo_id, currency, day) 
+		 DO UPDATE SET 
+		     balance = future_contribution.balance + EXCLUDED.balance,
+		     created_at = EXCLUDED.created_at,
+		     foundation_payment = EXCLUDED.foundation_payment`,
+		uuid.New(), uid, repoId, balance.String(), currency, day, createdAt, foundationPayment)
+	return err
+}
+
+func (db *DB) FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM daily_contribution 
+         WHERE user_contributor_id = $1
+         GROUP BY currency`, 
+		userContributorId)
 
 	if err != nil {
 		return nil, err
@@ -185,20 +153,20 @@ func FindSumDailyContributors(userContributorId uuid.UUID) (map[string]*big.Int,
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-        			 FROM daily_contribution 
-                     WHERE user_sponsor_id = $1
-					 	AND foundation_payment = FALSE
-                     GROUP BY currency`, userSponsorId)
+func (db *DB) FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM daily_contribution 
+         WHERE user_sponsor_id = $1 AND foundation_payment = FALSE
+         GROUP BY currency`, 
+		userSponsorId)
 
 	if err != nil {
 		return nil, err
@@ -219,20 +187,20 @@ func FindSumDailySponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) 
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindSumDailySponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-        			 FROM daily_contribution 
-                     WHERE user_sponsor_id = $1
-					 	AND foundation_payment
-                     GROUP BY currency`, userSponsorId)
+func (db *DB) FindSumDailySponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM daily_contribution 
+         WHERE user_sponsor_id = $1 AND foundation_payment = TRUE
+         GROUP BY currency`, 
+		userSponsorId)
 
 	if err != nil {
 		return nil, err
@@ -253,50 +221,49 @@ func FindSumDailySponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*bi
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency string) (*big.Int, error) {
-	query := `
-			SELECT COALESCE(sum(balance), 0)
-               FROM daily_contribution 
-               WHERE user_sponsor_id = $1
-			   	AND foundation_payment
-				AND currency = $3`
-
-	var balanceSumInt int64
-
-	err := DB.QueryRow(query, userId, currency).Scan(&balanceSumInt)
+func (db *DB) FindSumDailySponsorsFromFoundationByCurrency(userId uuid.UUID, currency string) (*big.Int, error) {
+	var balanceStr string
+	err := db.QueryRow(
+		`SELECT COALESCE(sum(balance), 0)
+         FROM daily_contribution 
+         WHERE user_sponsor_id = $1 AND foundation_payment = TRUE AND currency = $2`,
+		userId, currency).Scan(&balanceStr)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return big.NewInt(0), nil
 		}
-		return nil, fmt.Errorf("this is an unexpected error: %v", err)
+		return nil, err
 	}
 
-	return big.NewInt(balanceSumInt), nil
+	balance, ok := new(big.Int).SetString(balanceStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid balance: %v", balanceStr)
+	}
+
+	return balance, nil
 }
 
-func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
-	rows, err := DB.Query(`
+func (db *DB) FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
+	rows, err := db.Query(`
         SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at) AS latest_created_at
         FROM (
             SELECT currency, repo_id, balance, created_at
             FROM daily_contribution
-            WHERE user_sponsor_id = $1
-                AND foundation_payment = FALSE
+            WHERE user_sponsor_id = $1 AND foundation_payment = FALSE
 
             UNION ALL
 
             SELECT currency, repo_id, balance, created_at
             FROM future_contribution
-            WHERE user_sponsor_id = $1
-                AND foundation_payment = FALSE
+            WHERE user_sponsor_id = $1 AND foundation_payment = FALSE
         ) combined_contributions
         GROUP BY currency, repo_id
 		ORDER BY latest_created_at ASC
@@ -312,9 +279,9 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
 		var currency string
 		var repoID uuid.UUID
 		var balanceStr string
-		var createdAtStr string
+		var createdAt time.Time
 
-		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAtStr)
+		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAt)
 		if err != nil {
 			return nil, err
 		}
@@ -322,19 +289,6 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
 		balance, ok := new(big.Int).SetString(balanceStr, 10)
 		if !ok {
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
-		}
-
-		const (
-			primaryLayout   = time.RFC3339
-			secondaryLayout = "2006-01-02 15:04:05.999999-07:00"
-		)
-
-		createdAt, err := time.Parse(primaryLayout, createdAtStr)
-		if err != nil {
-			createdAt, err = time.Parse(secondaryLayout, createdAtStr)
-			if err != nil {
-				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
-			}
 		}
 
 		if contributions[currency] == nil {
@@ -354,13 +308,13 @@ func FindContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[str
 	return contributions, nil
 }
 
-func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-        			 FROM future_contribution 
-                     WHERE user_sponsor_id = $1
-					 	AND foundation_payment = FALSE
-                     GROUP BY currency`, userSponsorId)
+func (db *DB) FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM future_contribution 
+         WHERE user_sponsor_id = $1 AND foundation_payment = FALSE
+         GROUP BY currency`, 
+		userSponsorId)
 
 	if err != nil {
 		return nil, err
@@ -381,20 +335,20 @@ func FindSumFutureSponsors(userSponsorId uuid.UUID) (map[string]*big.Int, error)
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-        			 FROM future_contribution 
-                     WHERE user_sponsor_id = $1
-					 	AND foundation_payment
-                     GROUP BY currency`, userSponsorId)
+func (db *DB) FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM future_contribution 
+         WHERE user_sponsor_id = $1 AND foundation_payment = TRUE
+         GROUP BY currency`, 
+		userSponsorId)
 
 	if err != nil {
 		return nil, err
@@ -415,28 +369,26 @@ func FindSumFutureSponsorsFromFoundation(userSponsorId uuid.UUID) (map[string]*b
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
-	rows, err := DB.Query(`
+func (db *DB) FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID) (map[string]map[uuid.UUID]ContributionDetail, error) {
+	rows, err := db.Query(`
         SELECT currency, repo_id, COALESCE(SUM(balance), 0), MIN(created_at) AS latest_created_at
         FROM (
             SELECT currency, repo_id, balance, created_at
             FROM daily_contribution
-            WHERE user_sponsor_id = $1
-                AND foundation_payment
+            WHERE user_sponsor_id = $1 AND foundation_payment = TRUE
 
             UNION ALL
 
             SELECT currency, repo_id, balance, created_at
             FROM future_contribution
-            WHERE user_sponsor_id = $1
-                AND foundation_payment
+            WHERE user_sponsor_id = $1 AND foundation_payment = TRUE
         ) combined_contributions
         GROUP BY currency, repo_id
 		ORDER BY latest_created_at ASC
@@ -452,9 +404,9 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
 		var currency string
 		var repoID uuid.UUID
 		var balanceStr string
-		var createdAtStr string
+		var createdAt time.Time
 
-		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAtStr)
+		err = rows.Scan(&currency, &repoID, &balanceStr, &createdAt)
 		if err != nil {
 			return nil, err
 		}
@@ -462,19 +414,6 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
 		balance, ok := new(big.Int).SetString(balanceStr, 10)
 		if !ok {
 			return nil, fmt.Errorf("invalid balance format: %v", balanceStr)
-		}
-
-		const (
-			primaryLayout   = time.RFC3339
-			secondaryLayout = "2006-01-02 15:04:05.999999-07:00"
-		)
-
-		createdAt, err := time.Parse(primaryLayout, createdAtStr)
-		if err != nil {
-			createdAt, err = time.Parse(secondaryLayout, createdAtStr)
-			if err != nil {
-				return nil, fmt.Errorf("invalid created_at format: %v", createdAtStr)
-			}
 		}
 
 		if contributions[currency] == nil {
@@ -494,26 +433,13 @@ func FindFoundationContributionsGroupedByCurrencyAndRepo(userSponsorId uuid.UUID
 	return contributions, nil
 }
 
-//TODO: integrate with loop above
-/*for k, _ := range m1 {
-	if m2[k] != nil {
-		m1[k].Balance = new(big.Int).Add(m2[k].Balance, m1[k].Balance)
-	}
-}
-for k, _ := range m2 {
-	if m1[k] == nil {
-		m1[k] = m2[k]
-	}
-}
-
-return m1, nil*/
-
-func FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-                             FROM future_contribution 
-                             WHERE repo_id = $1
-                             GROUP BY currency`, repoId)
+func (db *DB) FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM future_contribution 
+         WHERE repo_id = $1
+         GROUP BY currency`, 
+		repoId)
 
 	if err != nil {
 		return nil, err
@@ -534,19 +460,20 @@ func FindSumFutureBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error)
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindSumDailyBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
-	rows, err := DB.
-		Query(`SELECT currency, COALESCE(sum(balance), 0)
-                             FROM daily_contribution 
-                             WHERE repo_id = $1
-                             GROUP BY currency`, repoId)
+func (db *DB) FindSumDailyBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) {
+	rows, err := db.Query(
+		`SELECT currency, COALESCE(sum(balance), 0)
+         FROM daily_contribution 
+         WHERE repo_id = $1
+         GROUP BY currency`, 
+		repoId)
 
 	if err != nil {
 		return nil, err
@@ -567,18 +494,19 @@ func FindSumDailyBalanceByRepoId(repoId uuid.UUID) (map[string]*big.Int, error) 
 		if m[c] == nil {
 			m[c] = b1
 		} else {
-			return nil, fmt.Errorf("this is unexpected, we have duplicate! %v", c)
+			return nil, fmt.Errorf("unexpected duplicate currency: %v", c)
 		}
 	}
 
 	return m, nil
 }
 
-func FindOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uuid.UUID, error) {
+func (db *DB) FindOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uuid.UUID, error) {
 	contributionIds := []uuid.UUID{}
 
-	s := `SELECT id FROM daily_contribution WHERE user_contributor_id = $1 AND currency = $2`
-	rows, err := DB.Query(s, contributorUserId, currency)
+	rows, err := db.Query(
+		`SELECT id FROM daily_contribution WHERE user_contributor_id = $1 AND currency = $2`,
+		contributorUserId, currency)
 	if err != nil {
 		return nil, err
 	}
@@ -587,21 +515,20 @@ func FindOwnContributionIds(contributorUserId uuid.UUID, currency string) ([]uui
 	for rows.Next() {
 		var id uuid.UUID
 		err = rows.Scan(&id)
-
 		if err != nil {
 			return nil, err
 		}
-
 		contributionIds = append(contributionIds, id)
 	}
 	return contributionIds, nil
 }
 
-func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
+func (db *DB) SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
 	var c string
-	err := DB.
-		QueryRow(`SELECT COALESCE(SUM(balance), 0) AS c FROM daily_contribution WHERE id = ANY($1)`, pq.Array(contributionIds)).
-		Scan(&c)
+	err := db.QueryRow(
+		`SELECT COALESCE(SUM(balance), 0) AS c FROM daily_contribution WHERE id = ANY($1)`,
+		pq.Array(contributionIds)).Scan(&c)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return big.NewInt(0), nil
@@ -616,40 +543,39 @@ func SumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.I
 	}
 }
 
-/*type FoundationSponsoring struct {
-	FoundationID           string
-	FoundationBalanceRepos []FoundationBalanceRepos
-}
+func (db *DB) GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time, futureContribution bool) (map[uuid.UUID][]UserDonationRepo, error) {
+	var s string
+	if futureContribution {
+		s = `
+			SELECT
+				dc.user_sponsor_id,
+				dc.repo_id,
+				dc.balance,
+				dc.currency,
+				COALESCE(te.trust_at IS NOT NULL AND te.un_trust_at IS NULL, FALSE) AS is_trusted
+			FROM future_contribution dc
+			LEFT JOIN trust_event te ON te.repo_id = dc.repo_id
+			WHERE dc.user_sponsor_id = $1
+			  AND dc.day = $2
+			  AND dc.repo_id IS NOT NULL
+		`
+	} else {
+		s = `
+			SELECT
+				dc.user_sponsor_id,
+				dc.repo_id,
+				dc.balance,
+				dc.currency,
+				COALESCE(te.trust_at IS NOT NULL AND te.un_trust_at IS NULL, FALSE) AS is_trusted
+			FROM daily_contribution dc
+			LEFT JOIN trust_event te ON te.repo_id = dc.repo_id
+			WHERE dc.user_sponsor_id = $1
+			  AND dc.day = $2
+			  AND dc.repo_id IS NOT NULL
+		`
+	}
 
-type FoundationBalanceRepos struct {
-	Currency      uuid.UUID
-	SponsorAmount big.Int
-	RepoIds       []uuid.UUID
-}*/
-
-type UserDonationRepo struct {
-	TrustedRepoSelected   []uuid.UUID
-	UntrustedRepoSelected []uuid.UUID
-	Currency              string
-	SponsorAmount         big.Int
-}
-
-func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time, futureContribution bool) (map[uuid.UUID][]UserDonationRepo, error) {
-	s := fmt.Sprintf(`
-        SELECT
-            dc.user_sponsor_id,
-            dc.repo_id,
-            dc.balance,
-            dc.currency,
-            COALESCE(te.trust_at IS NOT NULL AND te.un_trust_at IS NULL, FALSE) AS is_trusted
-        FROM %s dc
-        LEFT JOIN trust_event te ON te.repo_id = dc.repo_id
-        WHERE dc.user_sponsor_id = $1
-          AND dc.day = $2
-          AND dc.repo_id IS NOT NULL
-    `, TABLENAMEFUTURECONTRIBUTION[futureContribution])
-
-	rows, err := DB.Query(s, userId, yesterdayStart)
+	rows, err := db.Query(s, userId, yesterdayStart)
 	if err != nil {
 		return nil, err
 	}
@@ -657,7 +583,7 @@ func GetUserDonationRepos(userId uuid.UUID, yesterdayStart time.Time, futureCont
 
 	result, err := createUserDonationRepo(rows)
 	if err != nil {
-		return nil, fmt.Errorf("something went wrong %v", err)
+		return nil, fmt.Errorf("createUserDonationRepo failed: %w", err)
 	}
 
 	return result, nil
@@ -744,56 +670,19 @@ func containsUUID(slice []uuid.UUID, id uuid.UUID) bool {
 	return false
 }
 
-/*func GetFoundationsFromDailyContributions(yesterdayStart time.Time) ([]FoundationSponsoring, error) {
+func (db *DB) GetActiveSponsors(months int) ([]uuid.UUID, error) {
+	query := fmt.Sprintf(`
+        WITH trusted_repos AS (
+            SELECT repo_id
+            FROM trust_event
+            WHERE un_trust_at IS NULL
+        )
+        SELECT DISTINCT dc.user_sponsor_id
+        FROM daily_contribution dc
+        JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
+        WHERE dc.created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
 
-	s := `SELECT
-			me.user_id AS foundation_id,
-			dc.currency,
-			COALESCE(sum(dc.balance), 0) AS total_balance,
-			me.repo_id
-		  FROM daily_contribution dc
-		  INNER JOIN multiplier_event me ON dc.repo_id = me.repo_id
-	      WHERE me.un_multiplier_at IS NULL
-			AND dc.day = $1
-		  GROUP BY dc.currency, me.user_id`
-	rows, err := DB.Query(s, yesterdayStart)
-
-	if err != nil {
-		return nil, err
-	}
-	defer CloseAndLog(rows)
-
-}*/
-
-func GetActiveSponsors(months int, isPostgres bool) ([]uuid.UUID, error) {
-	var query string
-
-	if isPostgres {
-		query = fmt.Sprintf(`
-            WITH trusted_repos AS (
-                SELECT repo_id
-                FROM trust_event
-                WHERE un_trust_at IS NULL
-            )
-            SELECT DISTINCT dc.user_sponsor_id
-            FROM daily_contribution dc
-            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
-	} else {
-		query = fmt.Sprintf(`
-            WITH trusted_repos AS (
-                SELECT repo_id
-                FROM trust_event
-                WHERE un_trust_at IS NULL
-            )
-            SELECT DISTINCT dc.user_sponsor_id
-            FROM daily_contribution dc
-            JOIN trusted_repos tr ON dc.repo_id = tr.repo_id
-            WHERE dc.created_at >= date('now', '-%d month')`, months)
-	}
-
-	rows, err := DB.Query(query)
-
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -811,27 +700,18 @@ func GetActiveSponsors(months int, isPostgres bool) ([]uuid.UUID, error) {
 	return sponsors, nil
 }
 
-func FilterActiveUsers(userIds []uuid.UUID, months int, isPostgres bool) ([]uuid.UUID, error) {
+func (db *DB) FilterActiveUsers(userIds []uuid.UUID, months int) ([]uuid.UUID, error) {
 	if len(userIds) == 0 {
 		return nil, nil
 	}
 
-	var query string
-	if isPostgres {
-		query = fmt.Sprintf(`
-			SELECT DISTINCT user_sponsor_id 
-			FROM daily_contribution 
-			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
-			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
-	} else {
-		query = fmt.Sprintf(`
-			SELECT DISTINCT user_sponsor_id 
-			FROM daily_contribution 
-			WHERE user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`) 
-			AND created_at >= date('now', '-%d month')`, months)
-	}
+	query := fmt.Sprintf(`
+		SELECT DISTINCT user_sponsor_id 
+		FROM daily_contribution 
+		WHERE user_sponsor_id = ANY($1)
+		AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
 
-	rows, err := DB.Query(query, ConvertToInterfaceSlice(userIds)...)
+	rows, err := db.Query(query, pq.Array(userIds))
 	if err != nil {
 		return nil, err
 	}

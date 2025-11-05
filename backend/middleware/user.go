@@ -12,16 +12,17 @@ import (
 
 type JwtUserHandler struct {
 	*config.Config
+	db *db.DB
 }
 
-func NewJwtUserHandler(cfg *config.Config) *JwtUserHandler {
-	return &JwtUserHandler{Config: cfg}
+func NewJwtUserHandler(db *db.DB, cfg *config.Config) *JwtUserHandler {
+	return &JwtUserHandler{db: db, Config: cfg}
 }
 
 func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Request, u *db.UserDetail)) func(http.ResponseWriter, *http.Request, *jwt.Claims) {
 	return func(w http.ResponseWriter, r *http.Request, claims *jwt.Claims) {
 		// Fetch user from DB
-		user, err := db.FindUserByEmail(claims.Subject)
+		user, err := j.db.FindUserByEmail(claims.Subject)
 		if err != nil {
 			slog.Error("User find error",
 				slog.Any("error", err))
@@ -31,7 +32,7 @@ func (j *JwtUserHandler) JwtUser(next func(w http.ResponseWriter, r *http.Reques
 
 		if user == nil {
 			name := util.GetLocalPart(claims.Subject)
-			user, err = db.CreateUser(claims.Subject, name, util.TimeNow())
+			user, err = j.db.CreateUser(claims.Subject, name, util.TimeNow())
 			if err != nil {
 				slog.Error("User update error",
 					slog.Any("error", err))

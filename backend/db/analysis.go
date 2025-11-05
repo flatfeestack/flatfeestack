@@ -29,56 +29,39 @@ type AnalysisResponse struct {
 	Weight    float64
 }
 
-func InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
-	stmt, err := DB.Prepare("INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, created_at) VALUES($1, $2, $3, $4, $5, $6)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO analysis_request for %v statement event: %v", a.Id, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(a.Id, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, now.Format("2006-01-02"))
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
+	_, err := db.Exec(
+		`INSERT INTO analysis_request(id, repo_id, date_from, date_to, git_url, created_at) 
+		 VALUES($1, $2, $3, $4, $5, $6)`,
+		a.Id, a.RepoId, a.DateFrom, a.DateTo, a.GitUrl, now)
+	return err
 }
 
-func InsertAnalysisResponse(reqId uuid.UUID, repoId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
-
-	bytes, err := json.Marshal(names)
+func (db *DB) InsertAnalysisResponse(reqId uuid.UUID, repoId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
+	namesJSON, err := json.Marshal(names)
 	if err != nil {
-		return fmt.Errorf("cannot marshal %v", err)
+		return fmt.Errorf("cannot marshal names: %w", err)
 	}
 
-	stmt, err := DB.Prepare(`INSERT INTO analysis_response(
-                                     id, analysis_request_id, repo_id, git_email, git_names, weight, created_at) 
-									 VALUES ($1, $2, $3, $4, $5, $6, $7)`)
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO analysis_response for %v statement event: %v", reqId, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(uuid.New(), reqId, repoId, gitEmail, string(bytes), weight, now)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+	_, err = db.Exec(
+		`INSERT INTO analysis_response(id, analysis_request_id, repo_id, git_email, git_names, weight, created_at) 
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		uuid.New(), reqId, repoId, gitEmail, namesJSON, weight, now)
+	return err
 }
 
-// https://stackoverflow.com/questions/3491329/group-by-with-maxdate
-// https://pganalyze.com/docs/log-insights/app-errors/U115
-func FindLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
+func (db *DB) FindLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 	var a AnalysisRequest
 
-	//https://stackoverflow.com/questions/47479973/golang-postgresql-array#47480256
-	err := DB.
-		QueryRow(`SELECT id, repo_id, date_from, date_to, git_url, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
-                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request WHERE repo_id=$1) AS x
-                        WHERE dest_rank = 1`, repoId).
+	err := db.QueryRow(
+		`SELECT id, repo_id, date_from, date_to, git_url, received_at, error 
+		 FROM (
+			 SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
+				 RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+			 FROM analysis_request WHERE repo_id=$1
+		 ) AS x
+		 WHERE dest_rank = 1`, 
+		repoId).
 		Scan(&a.Id, &a.RepoId, &a.DateFrom, &a.DateTo, &a.GitUrl, &a.ReceivedAt, &a.Error)
 
 	switch err {
@@ -91,15 +74,19 @@ func FindLatestAnalysisRequest(repoId uuid.UUID) (*AnalysisRequest, error) {
 	}
 }
 
-func FindAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
+func (db *DB) FindAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	var as []AnalysisRequest
 
-	rows, err := DB.Query(`SELECT id, repo_id, date_from, date_to, git_url, received_at, error FROM (
-                          SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
-                            RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
-                            FROM analysis_request) AS x
-                        WHERE dest_rank = 1 AND date_to <= $1
-                        ORDER BY git_url`, dateTo.Format("2006-01-02"))
+	rows, err := db.Query(
+		`SELECT id, repo_id, date_from, date_to, git_url, received_at, error 
+		 FROM (
+			 SELECT id, repo_id, date_from, date_to, git_url, received_at, error,
+				 RANK() OVER (PARTITION BY repo_id ORDER BY date_to DESC) dest_rank
+			 FROM analysis_request
+		 ) AS x
+		 WHERE dest_rank = 1 AND date_to <= $1
+		 ORDER BY git_url`, 
+		dateTo)
 
 	if err != nil {
 		return nil, err
@@ -117,27 +104,21 @@ func FindAllLatestAnalysisRequest(dateTo time.Time) ([]AnalysisRequest, error) {
 	return as, nil
 }
 
-func UpdateAnalysisRequest(reqId uuid.UUID, now time.Time, errStr *string) error {
-	stmt, err := DB.Prepare(`UPDATE analysis_request set received_at = $1, error = $2 WHERE id = $3`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE analysis_request for statement event: %v", err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(now, errStr, reqId)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateAnalysisRequest(reqId uuid.UUID, now time.Time, errStr *string) error {
+	_, err := db.Exec(
+		`UPDATE analysis_request SET received_at = $1, error = $2 WHERE id = $3`,
+		now, errStr, reqId)
+	return err
 }
 
-func FindAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
+func (db *DB) FindAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
 	var ars []AnalysisResponse
 
-	rows, err := DB.Query(`SELECT id, git_email, git_names, weight
-                                 FROM analysis_response 
-                                 WHERE analysis_request_id = $1`, reqId)
+	rows, err := db.Query(
+		`SELECT id, git_email, git_names, weight
+		 FROM analysis_response 
+		 WHERE analysis_request_id = $1`, 
+		reqId)
 
 	if err != nil {
 		return nil, err
@@ -148,28 +129,31 @@ func FindAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
 		var ar AnalysisResponse
 		var jsonNames string
 		err = rows.Scan(&ar.Id, &ar.GitEmail, &jsonNames, &ar.Weight)
-		var names []string
-		if err := json.Unmarshal([]byte(jsonNames), &names); err != nil {
-			return nil, err
-		}
-		ar.GitNames = names
-
 		if err != nil {
 			return nil, err
 		}
+
+		var names []string
+		if err := json.Unmarshal([]byte(jsonNames), &names); err != nil {
+			return nil, fmt.Errorf("unmarshal git_names: %w", err)
+		}
+		ar.GitNames = names
+
 		ars = append(ars, ar)
 	}
 	return ars, nil
 }
 
-func FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
+func (db *DB) FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 	var cs []Contributions
 
-	rows, err := DB.Query(`SELECT areq.date_from, areq.date_to, ares.git_email, ares.git_names, ares.weight
-                        FROM analysis_request areq
-                        INNER JOIN analysis_response ares on areq.id = ares.analysis_request_id
-                        WHERE areq.repo_id=$1 AND areq.error IS NULL 
-                        ORDER BY areq.date_to, ares.weight DESC, ares.git_email`, repoId)
+	rows, err := db.Query(
+		`SELECT areq.date_from, areq.date_to, ares.git_email, ares.git_names, ares.weight
+		 FROM analysis_request areq
+		 INNER JOIN analysis_response ares ON areq.id = ares.analysis_request_id
+		 WHERE areq.repo_id=$1 AND areq.error IS NULL 
+		 ORDER BY areq.date_to, ares.weight DESC, ares.git_email`, 
+		repoId)
 
 	if err != nil {
 		return nil, err
@@ -180,27 +164,29 @@ func FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 		var c Contributions
 		var jsonNames string
 		err = rows.Scan(&c.DateFrom, &c.DateTo, &c.GitEmail, &jsonNames, &c.Weight)
-
-		var names []string
-		if err := json.Unmarshal([]byte(jsonNames), &names); err != nil {
-			return nil, err
-		}
-		c.GitNames = names
-
 		if err != nil {
 			return nil, err
 		}
+
+		var names []string
+		if err := json.Unmarshal([]byte(jsonNames), &names); err != nil {
+			return nil, fmt.Errorf("unmarshal git_names: %w", err)
+		}
+		c.GitNames = names
+
 		cs = append(cs, c)
 	}
 	return cs, nil
 }
 
-func FindRepoContributors(repoId uuid.UUID) (int, error) {
+func (db *DB) FindRepoContributors(repoId uuid.UUID) (int, error) {
 	var c int
-	err := DB.QueryRow(`SELECT count(distinct git_email) as c
-                        FROM analysis_request areq
-                        INNER JOIN analysis_response ares on areq.id = ares.analysis_request_id
-                        WHERE areq.repo_id=$1 AND areq.error IS NULL`, repoId).Scan(&c)
+	err := db.QueryRow(
+		`SELECT count(distinct git_email) as c
+		 FROM analysis_request areq
+		 INNER JOIN analysis_response ares ON areq.id = ares.analysis_request_id
+		 WHERE areq.repo_id=$1 AND areq.error IS NULL`, 
+		repoId).Scan(&c)
 
 	if err != nil {
 		return 0, err

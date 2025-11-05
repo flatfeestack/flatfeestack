@@ -3,10 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type TrustEvent struct {
@@ -18,113 +18,96 @@ type TrustEvent struct {
 	UnTrustAt *time.Time `json:"un_trust_at"`
 }
 
-func InsertOrUpdateTrustRepo(event *TrustEvent) error {
-	//first get last trusted event to check if we need to InsertOrUpdateTrustRepo or untrust
-	//TODO: use mutex
-	id, trustAt, unTrustAt, err := FindLastEventTrustedRepo(event.RepoId)
+func (db *DB) InsertOrUpdateTrustRepo(event *TrustEvent) error {
+	// First get last trusted event to check if we need to insert or update
+	id, trustAt, unTrustAt, err := db.FindLastEventTrustedRepo(event.RepoId)
 	if err != nil {
 		return err
 	}
 
 	if id == nil && event.EventType == Inactive {
-		return fmt.Errorf("we want to untrust, but we are currently not trusting this repo")
+		return fmt.Errorf("cannot untrust: not currently trusting this repo")
 	}
 
 	if id != nil {
 		if event.EventType == Inactive {
-			if event.TrustAt != nil || event.UnTrustAt == nil { // Not tested
-				return fmt.Errorf("to untrust, we must set the untrust_at, but not the trust_at: "+
+			if event.TrustAt != nil || event.UnTrustAt == nil {
+				return fmt.Errorf("to untrust, must set un_trust_at but not trust_at: "+
 					"event.TrustAt: %v, event.UnTrustAt: %v", event.TrustAt, event.UnTrustAt)
 			}
 			if unTrustAt != nil {
-				return fmt.Errorf("we want to untrust, but we already untrusted it: unTrustAt: %v", unTrustAt)
+				return fmt.Errorf("already untrusted: unTrustAt: %v", unTrustAt)
 			}
 			if unTrustAt == nil && event.UnTrustAt.Before(*trustAt) {
-				return fmt.Errorf("we want to untrust, but the untrust date is before the trust date: trustAt: "+
-					"%v, event.UnTrustAt: %v", trustAt, event.UnTrustAt)
+				return fmt.Errorf("un_trust_at cannot be before trust_at: trustAt: %v, event.UnTrustAt: %v",
+					trustAt, event.UnTrustAt)
 			}
 		} else if event.EventType == Active {
 			if event.TrustAt == nil || event.UnTrustAt != nil {
-				return fmt.Errorf("to trust, we must set the trust_at, but not the untrust_at: "+
+				return fmt.Errorf("to trust, must set trust_at but not un_trust_at: "+
 					"event.TrustAt: %v, event.UnTrustAt: %v", event.TrustAt, event.UnTrustAt)
 			}
-			if unTrustAt == nil { // not tested
-				return fmt.Errorf("we want to trust, but we are already trusting this repo: "+
-					"trust_at: %v, un_trust_at: %v", event.TrustAt, unTrustAt)
+			if unTrustAt == nil {
+				return fmt.Errorf("already trusting this repo: trust_at: %v, un_trust_at: %v",
+					event.TrustAt, unTrustAt)
 			} else {
-				if event.TrustAt.Before(*trustAt) { // both not tested
-					return fmt.Errorf("we want to trust, but we want to trust this repo in the past: "+
-						"event.TrustAt: %v, trustAt: %v", event.TrustAt, trustAt)
+				if event.TrustAt.Before(*trustAt) {
+					return fmt.Errorf("cannot trust in the past: event.TrustAt: %v, trustAt: %v",
+						event.TrustAt, trustAt)
 				}
 				if event.TrustAt.Before(*unTrustAt) {
-					return fmt.Errorf("we want to trust, but we want to trust this repo in the past: "+
-						"event.TrustAt: %v, unTrustAt: %v", event.TrustAt, unTrustAt)
+					return fmt.Errorf("cannot trust before un_trust_at: event.TrustAt: %v, unTrustAt: %v",
+						event.TrustAt, unTrustAt)
 				}
 			}
 		} else {
 			return fmt.Errorf("unknown event type %v", event.EventType)
 		}
-
 	}
 
-	// I don't see this tested anywhere?
 	if event.EventType == Active {
-		stmt, err := DB.Prepare("INSERT INTO trust_event (id, user_id, repo_id, trust_at) VALUES ($1, $2, $3, $4)")
-		if err != nil {
-			return fmt.Errorf("prepare INSERT INTO trust_event for %v statement event: %v", event, err)
-		}
-		defer CloseAndLog(stmt)
-
-		var res sql.Result
-		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.TrustAt)
-		if err != nil {
-			return err
-		}
-		return handleErrMustInsertOne(res)
+		_, err := db.Exec(
+			`INSERT INTO trust_event (id, user_id, repo_id, trust_at) VALUES ($1, $2, $3, $4)`,
+			event.Id, event.Uid, event.RepoId, event.TrustAt)
+		return err
 	} else if event.EventType == Inactive {
-		stmt, err := DB.Prepare("UPDATE trust_event SET un_trust_at=$1 WHERE id=$2 AND un_trust_at IS NULL")
-		if err != nil {
-			return fmt.Errorf("prepare UPDATE trust_event for %v statement failed: %v", id, err)
-		}
-		defer CloseAndLog(stmt)
-
-		var res sql.Result
-		res, err = stmt.Exec(event.UnTrustAt, id)
-		if err != nil {
-			return err
-		}
-		return handleErrMustInsertOne(res)
+		_, err := db.Exec(
+			`UPDATE trust_event SET un_trust_at=$1 WHERE id=$2 AND un_trust_at IS NULL`,
+			event.UnTrustAt, id)
+		return err
 	} else {
 		return fmt.Errorf("unknown event type %v", event.EventType)
 	}
 }
 
-func FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+func (db *DB) FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
 	var trustAt *time.Time
 	var unTrustAt *time.Time
-	var id *uuid.UUID
-	err := DB.
-		QueryRow(`SELECT id, trust_at, un_trust_at
-			      		FROM trust_event 
-						WHERE repo_id=$1 
-						ORDER by trust_at DESC LIMIT 1`,
-			rid).Scan(&id, &trustAt, &unTrustAt)
+	var id uuid.UUID
+	
+	err := db.QueryRow(`
+		SELECT id, trust_at, un_trust_at
+		FROM trust_event 
+		WHERE repo_id=$1 
+		ORDER BY trust_at DESC 
+		LIMIT 1`, rid).Scan(&id, &trustAt, &unTrustAt)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil, nil, nil
 	case nil:
-		return id, trustAt, unTrustAt, nil
+		return &id, trustAt, unTrustAt, nil
 	default:
 		return nil, nil, nil, err
 	}
 }
 
-func FindTrustedRepos() ([]Repo, error) {
-	t := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, t.trust_at
-            FROM trust_event t
-            INNER JOIN repo r ON t.repo_id=r.id
-			WHERE t.un_trust_at IS NULL`
-	rows, err := DB.Query(t)
+func (db *DB) FindTrustedRepos() ([]Repo, error) {
+	rows, err := db.Query(`
+		SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, t.trust_at
+		FROM trust_event t
+		INNER JOIN repo r ON t.repo_id=r.id
+		WHERE t.un_trust_at IS NULL`)
 	if err != nil {
 		return nil, err
 	}
@@ -132,17 +115,16 @@ func FindTrustedRepos() ([]Repo, error) {
 	return scanRepoWithTrustEvent(rows)
 }
 
-func GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
+func (db *DB) GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
 	if len(rids) == 0 {
 		return nil, nil
 	}
 
-	query := `
+	rows, err := db.Query(`
 		SELECT repo_id
 		FROM trust_event
-		WHERE repo_id IN (` + GeneratePlaceholders(len(rids)) + `)`
-
-	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+		WHERE repo_id = ANY($1) AND un_trust_at IS NULL`,
+		pq.Array(rids))
 	if err != nil {
 		return nil, err
 	}
@@ -164,47 +146,18 @@ func GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
 	return trustedRepos, nil
 }
 
-func GeneratePlaceholders(n int) string {
-	var placeholders []string
-	for i := 1; i <= n; i++ {
-		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
-	}
-	return strings.Join(placeholders, ", ")
-}
-
-func ConvertToInterfaceSlice[T any](values []T) []interface{} {
-	result := make([]interface{}, len(values))
-	for i, v := range values {
-		result[i] = v
-	}
-	return result
-}
-
-func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, error) {
-	var query string
-
+func (db *DB) CountReposForUsers(userIds []uuid.UUID, months int) (int, error) {
 	if len(userIds) == 0 || months < 0 {
 		return 0, nil
 	}
 
-	if isPostgres {
-		query = fmt.Sprintf(`
-		SELECT COUNT(repo_id)
-		FROM daily_contribution
-		WHERE
-			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
-			AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months)
-	} else {
-		query = fmt.Sprintf(`
-		SELECT COUNT(repo_id)
-		FROM daily_contribution
-		WHERE
-			user_sponsor_id IN (`+GeneratePlaceholders(len(userIds))+`)
-			AND created_at >= date('now', '-%d month')`, months)
-	}
-
 	var count int
-	err := DB.QueryRow(query, ConvertToInterfaceSlice(userIds)...).Scan(&count)
+	err := db.QueryRow(fmt.Sprintf(`
+		SELECT COUNT(repo_id)
+		FROM daily_contribution
+		WHERE user_sponsor_id = ANY($1)
+		  AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months),
+		pq.Array(userIds)).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
@@ -212,18 +165,18 @@ func CountReposForUsers(userIds []uuid.UUID, months int, isPostgres bool) (int, 
 	return count, nil
 }
 
-func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int, isPostgres bool) (int, error) {
-	emails, err := GetRepoEmails(repoId)
+func (db *DB) GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int) (int, error) {
+	emails, err := db.GetRepoEmails(repoId)
 	if err != nil {
 		return 0, err
 	}
 
-	userIds, err := FindUsersByGitEmails(emails)
+	userIds, err := db.FindUsersByGitEmails(emails)
 	if err != nil {
 		return 0, err
 	}
 
-	activeUsers, err := FilterActiveUsers(userIds, activeUserMinMonths, isPostgres)
+	activeUsers, err := db.FilterActiveUsers(userIds, activeUserMinMonths)
 	if err != nil {
 		return 0, err
 	}
@@ -232,7 +185,7 @@ func GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepo
 		return 0, nil
 	}
 
-	trustedRepoCount, err := CountReposForUsers(activeUsers, latestRepoSponsoringMonths, isPostgres)
+	trustedRepoCount, err := db.CountReposForUsers(activeUsers, latestRepoSponsoringMonths)
 	if err != nil {
 		return 0, err
 	}

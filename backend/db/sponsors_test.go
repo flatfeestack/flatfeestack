@@ -1,419 +1,593 @@
 package db
 
 import (
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	t1 = time.Time{}.Add(time.Duration(1) * time.Second)
-	t2 = time.Time{}.Add(time.Duration(2) * time.Second)
-	t3 = time.Time{}.Add(time.Duration(3) * time.Second)
-	t4 = time.Time{}.Add(time.Duration(4) * time.Second)
-)
+// sponsors.go tests
+func TestInsertOrUpdateSponsor_NewSponsor(t *testing.T) {
+	TruncateAll(db, t)
 
-func TestSponsorTwice(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/sponsor-repo")
 
-	s1 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Active,
-		SponsorAt:   &t1,
-		UnSponsorAt: &t1,
+	sponsorAt := time.Now()
+	sponsorEvent := &SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user.Id,
+		RepoId:    repo.Id,
+		EventType: Active,
+		SponsorAt: &sponsorAt,
 	}
 
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Active,
-		SponsorAt:   &t2,
-		UnSponsorAt: &t2,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	//we want to insertOrUpdateSponsor, but we are already sponsoring this repo
-	err = InsertOrUpdateSponsor(&s2)
-	assert.NotNil(t, err)
-
+	err := db.InsertOrUpdateSponsor(sponsorEvent)
+	require.NoError(t, err)
 }
 
-func TestUnSponsorTwice(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
+func TestInsertOrUpdateSponsor_Unsponsor(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/unsponsor-repo")
+
+	sponsorAt := time.Now()
+	sponsorEvent := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    repo.Id,
 		EventType: Active,
-		SponsorAt: &t1,
+		SponsorAt: &sponsorAt,
+	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent))
+
+	unsponsorAt := time.Now().Add(time.Hour)
+	unsponsorEvent := &SponsorEvent{
+		Uid:           user.Id,
+		RepoId:        repo.Id,
+		EventType:     Inactive,
+		UnSponsorAt:   &unsponsorAt,
 	}
 
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t2,
-	}
-
-	s3 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t3,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-	//we want to unsponsor, but we already unsponsored it
-	err = InsertOrUpdateSponsor(&s3)
-	assert.NotNil(t, err)
-
+	err := db.InsertOrUpdateSponsor(unsponsorEvent)
+	require.NoError(t, err)
 }
 
-func TestUnSponsorWrong(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
+func TestInsertOrUpdateSponsor_ErrorUnsponsorNotSponsoring(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/error-repo")
+
+	unsponsorAt := time.Now()
+	unsponsorEvent := &SponsorEvent{
 		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
+		Uid:         user.Id,
+		RepoId:      repo.Id,
 		EventType:   Inactive,
-		UnSponsorAt: &t1,
+		UnSponsorAt: &unsponsorAt,
 	}
 
-	//we want to unsponsor, but we are currently not sponsoring this repo
-	err := InsertOrUpdateSponsor(&s1)
-	assert.NotNil(t, err)
+	err := db.InsertOrUpdateSponsor(unsponsorEvent)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot unsponsor")
 }
 
-func TestSponsorWrongOrder(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
+func TestInsertOrUpdateSponsor_ErrorAlreadySponsoring(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/double-sponsor")
+
+	sponsorAt := time.Now()
+	sponsorEvent := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    repo.Id,
 		EventType: Active,
-		SponsorAt: &t2,
+		SponsorAt: &sponsorAt,
+	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent))
+
+	sponsorAt2 := time.Now().Add(time.Hour)
+	sponsorEvent2 := &SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user.Id,
+		RepoId:    repo.Id,
+		EventType: Active,
+		SponsorAt: &sponsorAt2,
 	}
 
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t1,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	//we want to unsponsor, but the unsponsor date is before the sponsor date
-	err = InsertOrUpdateSponsor(&s2)
-	assert.NotNil(t, err)
-
+	err := db.InsertOrUpdateSponsor(sponsorEvent2)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already sponsoring")
 }
 
-func TestSponsorWrongOrderActive(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
+func TestInsertOrUpdateSponsor_ReSponsor(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/responsor-repo")
+
+	sponsorAt := time.Now()
+	sponsorEvent := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    repo.Id,
 		EventType: Active,
-		SponsorAt: &t2,
+		SponsorAt: &sponsorAt,
+	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent))
+
+	unsponsorAt := time.Now().Add(time.Hour)
+	unsponsorEvent := &SponsorEvent{
+		Uid:           user.Id,
+		RepoId:        repo.Id,
+		EventType:     Inactive,
+		UnSponsorAt:   &unsponsorAt,
+	}
+	require.NoError(t, db.InsertOrUpdateSponsor(unsponsorEvent))
+
+	reSponsorAt := time.Now().Add(2 * time.Hour)
+	reSponsorEvent := &SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user.Id,
+		RepoId:    repo.Id,
+		EventType: Active,
+		SponsorAt: &reSponsorAt,
 	}
 
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t4,
-	}
-
-	s3 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t3,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-	//we want to unsponsor, but we already unsponsored it at 0001-01-01 00:00:04 +0000 UTC
-	err = InsertOrUpdateSponsor(&s3)
-	assert.NotNil(t, err)
-
+	err := db.InsertOrUpdateSponsor(reSponsorEvent)
+	require.NoError(t, err)
 }
 
-func TestSponsorCorrect(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepo(t)
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+func TestFindLastEventSponsoredRepo(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/last-event")
+
+	sponsorAt := time.Now()
+	sponsorEvent := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    repo.Id,
 		EventType: Active,
-		SponsorAt: &t1,
+		SponsorAt: &sponsorAt,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent))
 
-	s2 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t2,
-	}
-
-	s3 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
-		EventType: Active,
-		SponsorAt: &t3,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s3)
-	assert.Nil(t, err)
-
-	rs, err := FindSponsoredReposByUserId(u.Id)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(rs))
-	assert.Equal(t, r2.Id, rs[0].Id)
-
-	s4 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r2.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t4,
-	}
-	err = InsertOrUpdateSponsor(&s4)
-	assert.Nil(t, err)
-
-	rs, err = FindSponsoredReposByUserId(u.Id)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(rs))
+	id, sponsor, unsponsor, err := db.FindLastEventSponsoredRepo(user.Id, repo.Id)
+	require.NoError(t, err)
+	require.NotNil(t, id)
+	assert.NotNil(t, sponsor)
+	assert.Nil(t, unsponsor)
 }
 
-func TestTwoRepos(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepoGitUrl(t, "git-url")
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+func TestFindLastEventSponsoredRepo_NotFound(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
-		EventType: Active,
-		SponsorAt: &t1,
-	}
-
-	s2 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
-		EventType: Active,
-		SponsorAt: &t2,
-	}
-
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-
-	rs, err := FindSponsoredReposByUserId(u.Id)
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(rs))
+	id, sponsor, unsponsor, err := db.FindLastEventSponsoredRepo(uuid.New(), uuid.New())
+	require.NoError(t, err)
+	assert.Nil(t, id)
+	assert.Nil(t, sponsor)
+	assert.Nil(t, unsponsor)
 }
 
-func TestSponsorsBetween(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepoGitUrl(t, "git-url")
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+func TestFindSponsoredReposByUserId(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	repo1 := createTestRepo(t, db, "https://github.com/test/sponsored1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/sponsored2")
+
+	sponsorAt1 := time.Now()
+	sponsorEvent1 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    repo1.Id,
 		EventType: Active,
-		SponsorAt: &t1,
+		SponsorAt: &sponsorAt1,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent1))
 
-	s2 := SponsorEvent{
+	sponsorAt2 := time.Now()
+	sponsorEvent2 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
+		Uid:       user.Id,
+		RepoId:    repo2.Id,
 		EventType: Active,
-		SponsorAt: &t2,
+		SponsorAt: &sponsorAt2,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent2))
 
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-
-	res, err := FindSponsorsBetween(t3, t4)
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(res[0].RepoIds))
+	repos, err := db.FindSponsoredReposByUserId(user.Id)
+	require.NoError(t, err)
+	assert.Len(t, repos, 2)
 }
 
-func TestSponsorsBetween2(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepoGitUrl(t, "git-url")
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+func TestFindSponsoredReposByUserId_ExcludesUnsponsored(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user := createTestUser(t, db, "sponsor@example.com")
+	sponsoredRepo := createTestRepo(t, db, "https://github.com/test/sponsored")
+	unsponsoredRepo := createTestRepo(t, db, "https://github.com/test/unsponsored")
+
+	sponsorAt1 := time.Now()
+	sponsorEvent1 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user.Id,
+		RepoId:    sponsoredRepo.Id,
 		EventType: Active,
-		SponsorAt: &t1,
+		SponsorAt: &sponsorAt1,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent1))
 
-	s2 := SponsorEvent{
+	sponsorAt2 := time.Now()
+	sponsorEvent2 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
+		Uid:       user.Id,
+		RepoId:    unsponsoredRepo.Id,
 		EventType: Active,
-		SponsorAt: &t2,
+		SponsorAt: &sponsorAt2,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent2))
 
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
+	unsponsorAt := time.Now().Add(time.Hour)
+	unsponsorEvent := &SponsorEvent{
+		Uid:           user.Id,
+		RepoId:        unsponsoredRepo.Id,
+		EventType:     Inactive,
+		UnSponsorAt:   &unsponsorAt,
+	}
+	require.NoError(t, db.InsertOrUpdateSponsor(unsponsorEvent))
 
-	res, err := FindSponsorsBetween(t2, t4)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(res[0].RepoIds))
+	repos, err := db.FindSponsoredReposByUserId(user.Id)
+	require.NoError(t, err)
+	assert.Len(t, repos, 1)
+	assert.Equal(t, sponsoredRepo.Id, repos[0].Id)
 }
 
-func TestSponsorsBetween3(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepoGitUrl(t, "git-url")
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+func TestFindSponsorsBetween(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
+	user1 := createTestUser(t, db, "sponsor1@example.com")
+	user2 := createTestUser(t, db, "sponsor2@example.com")
+	repo1 := createTestRepo(t, db, "https://github.com/test/repo1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/repo2")
+
+	baseTime := time.Now().Truncate(24 * time.Hour)
+
+	sponsorAt := baseTime.AddDate(0, 0, -5)
+	sponsorEvent1 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
+		Uid:       user1.Id,
+		RepoId:    repo1.Id,
 		EventType: Active,
-		SponsorAt: &t1,
+		SponsorAt: &sponsorAt,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent1))
 
-	s2 := SponsorEvent{
+	sponsorEvent2 := &SponsorEvent{
 		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
+		Uid:       user1.Id,
+		RepoId:    repo2.Id,
 		EventType: Active,
-		SponsorAt: &t2,
+		SponsorAt: &sponsorAt,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent2))
 
-	s3 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r2.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t3,
+	sponsorEvent3 := &SponsorEvent{
+		Id:        uuid.New(),
+		Uid:       user2.Id,
+		RepoId:    repo1.Id,
+		EventType: Active,
+		SponsorAt: &sponsorAt,
 	}
+	require.NoError(t, db.InsertOrUpdateSponsor(sponsorEvent3))
 
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s3)
-	assert.Nil(t, err)
+	start := baseTime
+	stop := baseTime.AddDate(0, 0, -10)
 
-	res, err := FindSponsorsBetween(t2, t4)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(res[0].RepoIds))
+	results, err := db.FindSponsorsBetween(start, stop)
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
 }
 
-func TestSponsorsBetween4(t *testing.T) {
-	SetupTestData()
-	defer TeardownTestData()
-	u := insertTestUser(t, "email")
-	r := insertTestRepoGitUrl(t, "git-url")
-	r2 := insertTestRepoGitUrl(t, "git-url2")
+// multipliers.go tests
+func TestInsertOrUpdateMultiplierRepo_NewMultiplier(t *testing.T) {
+	TruncateAll(db, t)
 
-	s1 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r.Id,
-		EventType: Active,
-		SponsorAt: &t1,
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/multiplier-repo")
+
+	multiplierAt := time.Now()
+	multiplierEvent := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
 	}
 
-	s2 := SponsorEvent{
-		Id:        uuid.New(),
-		Uid:       u.Id,
-		RepoId:    r2.Id,
-		EventType: Active,
-		SponsorAt: &t2,
+	err := db.InsertOrUpdateMultiplierRepo(multiplierEvent)
+	require.NoError(t, err)
+}
+
+func TestInsertOrUpdateMultiplierRepo_UnsetMultiplier(t *testing.T) {
+	TruncateAll(db, t)
+
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/unmultiplier-repo")
+
+	multiplierAt := time.Now()
+	multiplierEvent := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent))
+
+	unmultiplierAt := time.Now().Add(time.Hour)
+	unmultiplierEvent := &MultiplierEvent{
+		Uid:              user.Id,
+		RepoId:           repo.Id,
+		EventType:        Inactive,
+		UnMultiplierAt:   &unmultiplierAt,
 	}
 
-	s3 := SponsorEvent{
-		Id:          uuid.New(),
-		Uid:         u.Id,
-		RepoId:      r2.Id,
-		EventType:   Inactive,
-		UnSponsorAt: &t4,
+	err := db.InsertOrUpdateMultiplierRepo(unmultiplierEvent)
+	require.NoError(t, err)
+}
+
+func TestInsertOrUpdateMultiplierRepo_ErrorUnsetNotSet(t *testing.T) {
+	TruncateAll(db, t)
+
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/error-repo")
+
+	unmultiplierAt := time.Now()
+	unmultiplierEvent := &MultiplierEvent{
+		Id:             uuid.New(),
+		Uid:            user.Id,
+		RepoId:         repo.Id,
+		EventType:      Inactive,
+		UnMultiplierAt: &unmultiplierAt,
 	}
 
-	err := InsertOrUpdateSponsor(&s1)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s2)
-	assert.Nil(t, err)
-	err = InsertOrUpdateSponsor(&s3)
-	assert.Nil(t, err)
+	err := db.InsertOrUpdateMultiplierRepo(unmultiplierEvent)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot unset multiplier")
+}
 
-	res, err := FindSponsorsBetween(t3, t4)
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(res[0].RepoIds))
+func TestInsertOrUpdateMultiplierRepo_ErrorAlreadyActive(t *testing.T) {
+	TruncateAll(db, t)
+
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/double-multiplier")
+
+	multiplierAt := time.Now()
+	multiplierEvent := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent))
+
+	multiplierAt2 := time.Now().Add(time.Hour)
+	multiplierEvent2 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt2,
+	}
+
+	err := db.InsertOrUpdateMultiplierRepo(multiplierEvent2)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "multiplier already active")
+}
+
+func TestFindLastEventMultiplierRepo(t *testing.T) {
+	TruncateAll(db, t)
+
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/last-event")
+
+	multiplierAt := time.Now()
+	multiplierEvent := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent))
+
+	id, multiplier, unmultiplier, err := db.FindLastEventMultiplierRepo(user.Id, repo.Id)
+	require.NoError(t, err)
+	require.NotNil(t, id)
+	assert.NotNil(t, multiplier)
+	assert.Nil(t, unmultiplier)
+}
+
+func TestFindLastEventMultiplierRepo_NotFound(t *testing.T) {
+	TruncateAll(db, t)
+
+	id, multiplier, unmultiplier, err := db.FindLastEventMultiplierRepo(uuid.New(), uuid.New())
+	require.NoError(t, err)
+	assert.Nil(t, id)
+	assert.Nil(t, multiplier)
+	assert.Nil(t, unmultiplier)
+}
+
+func TestFindMultiplierRepoByUserId(t *testing.T) {
+	TruncateAll(db, t)
+
+	user := createTestUser(t, db, "multiplier@example.com")
+	repo1 := createTestRepo(t, db, "https://github.com/test/multiplied1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/multiplied2")
+
+	multiplierAt1 := time.Now()
+	multiplierEvent1 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo1.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt1,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent1))
+
+	multiplierAt2 := time.Now()
+	multiplierEvent2 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          user.Id,
+		RepoId:       repo2.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt2,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent2))
+
+	repos, err := db.FindMultiplierRepoByUserId(user.Id)
+	require.NoError(t, err)
+	assert.Len(t, repos, 2)
+}
+
+func TestGetFoundationsSupportingRepo(t *testing.T) {
+	TruncateAll(db, t)
+
+	foundation1 := &UserDetail{
+		User: User{
+			Id:        uuid.New(),
+			Email:     "foundation1@example.com",
+			Name:      "Foundation 1",
+			CreatedAt: time.Now(),
+		},
+		Multiplier:           true,
+		MultiplierDailyLimit: 5000,
+	}
+	require.NoError(t, db.InsertUser(foundation1))
+	require.NoError(t, db.UpdateMultiplier(foundation1.Id, true))
+	require.NoError(t, db.UpdateMultiplierDailyLimit(foundation1.Id, 5000))
+
+	repo := createTestRepo(t, db, "https://github.com/test/supported-repo")
+
+	multiplierAt := time.Now()
+	multiplierEvent := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation1.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent))
+
+	foundations, err := db.GetFoundationsSupportingRepo(repo.Id)
+	require.NoError(t, err)
+	assert.Len(t, foundations, 1)
+	assert.Equal(t, foundation1.Id, foundations[0].Id)
+	assert.Equal(t, 5000, foundations[0].MultiplierDailyLimit)
+}
+
+func TestGetAllFoundationsSupportingRepos(t *testing.T) {
+	TruncateAll(db, t)
+
+	foundation := &UserDetail{
+		User: User{
+			Id:        uuid.New(),
+			Email:     "foundation@example.com",
+			Name:      "Foundation",
+			CreatedAt: time.Now(),
+		},
+		Multiplier:           true,
+		MultiplierDailyLimit: 10000,
+	}
+	require.NoError(t, db.InsertUser(foundation))
+	require.NoError(t, db.UpdateMultiplier(foundation.Id, true))
+	require.NoError(t, db.UpdateMultiplierDailyLimit(foundation.Id, 10000))
+
+	repo1 := createTestRepo(t, db, "https://github.com/test/repo1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/repo2")
+
+	multiplierAt := time.Now()
+	multiplierEvent1 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation.Id,
+		RepoId:       repo1.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent1))
+
+	multiplierEvent2 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          foundation.Id,
+		RepoId:       repo2.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent2))
+
+	foundations, totalCount, err := db.GetAllFoundationsSupportingRepos([]uuid.UUID{repo1.Id, repo2.Id})
+	require.NoError(t, err)
+	assert.Len(t, foundations, 1)
+	assert.Equal(t, 2, totalCount)
+	assert.Len(t, foundations[0].RepoIds, 2)
+}
+
+func TestGetAllFoundationsSupportingRepos_EmptyList(t *testing.T) {
+	TruncateAll(db, t)
+
+	foundations, totalCount, err := db.GetAllFoundationsSupportingRepos([]uuid.UUID{})
+	require.NoError(t, err)
+	assert.Nil(t, foundations)
+	assert.Equal(t, 0, totalCount)
+}
+
+func TestGetMultiplierCount(t *testing.T) {
+	TruncateAll(db, t)
+
+	multiplier1 := createTestUser(t, db, "multiplier1@example.com")
+	multiplier2 := createTestUser(t, db, "multiplier2@example.com")
+	repo := createTestRepo(t, db, "https://github.com/test/multiplied-repo")
+
+	multiplierAt := time.Now()
+	multiplierEvent1 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          multiplier1.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent1))
+
+	multiplierEvent2 := &MultiplierEvent{
+		Id:           uuid.New(),
+		Uid:          multiplier2.Id,
+		RepoId:       repo.Id,
+		EventType:    Active,
+		MultiplierAt: &multiplierAt,
+	}
+	require.NoError(t, db.InsertOrUpdateMultiplierRepo(multiplierEvent2))
+
+	count, err := db.GetMultiplierCount(repo.Id, []uuid.UUID{multiplier1.Id, multiplier2.Id})
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestGetMultiplierCount_EmptyList(t *testing.T) {
+	TruncateAll(db, t)
+	repo := createTestRepo(t, db, "https://github.com/test/no-multipliers")
+
+	count, err := db.GetMultiplierCount(repo.Id, []uuid.UUID{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }

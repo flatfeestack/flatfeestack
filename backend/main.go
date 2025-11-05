@@ -3,9 +3,9 @@ package main
 import (
 	api2 "backend/api"
 	"backend/client"
+	"backend/config"
 	"backend/cron"
 	"backend/db"
-	"backend/config"
 	util2 "backend/middleware"
 	"backend/util"
 	"crypto/sha256"
@@ -180,13 +180,19 @@ func main() {
 		slog.Info("could not display banner...")
 	}
 
-	err = db.InitDb(cfg.DBDriver, cfg.DBPath, cfg.DBScripts)
+	db, err := db.New(cfg.DBDriver, cfg.DBPath)
 	if err != nil {
 		slog.Error("DB not initialized",
 			slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer db.CloseDb()
+
+	// Run migrations
+	if err := db.RunMigrations(); err != nil {
+		slog.Error("Failed to run migrations:", slog.Any("error", err))
+		os.Exit(1)
+	}
 
 	//stripe.Key = cfg.StripeAPISecretKey
 

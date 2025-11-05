@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type MultiplierEvent struct {
@@ -18,116 +19,98 @@ type MultiplierEvent struct {
 	UnMultiplierAt *time.Time `json:"un_multiplier_at"`
 }
 
-func InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
-	//first get last multiplier event to check if we need to InsertOrUpdateMultiplierRepo or unset the multiplier
-	//TODO: use mutex
-	id, multiplierAt, unMultiplierAt, err := FindLastEventMultiplierRepo(event.Uid, event.RepoId)
+func (db *DB) InsertOrUpdateMultiplierRepo(event *MultiplierEvent) error {
+	// First get last multiplier event to check if we need to insert or update
+	id, multiplierAt, unMultiplierAt, err := db.FindLastEventMultiplierRepo(event.Uid, event.RepoId)
 	if err != nil {
 		return err
 	}
 
-	//no event found
+	// No event found
 	if id == nil && event.EventType == Inactive {
-		return fmt.Errorf("we want to unset multiplier, but we are currently not having a multilier on this repo")
+		return fmt.Errorf("cannot unset multiplier: no active multiplier on this repo")
 	}
 
-	//event found
+	// Event found - validate
 	if id != nil {
 		if event.EventType == Inactive {
 			if event.MultiplierAt != nil || event.UnMultiplierAt == nil {
-				return fmt.Errorf("to unset multiplier, we must set the unset multiplier_at, but not the multiplier_at: "+
+				return fmt.Errorf("to unset multiplier, must set un_multiplier_at but not multiplier_at: "+
 					"event.MultiplierAt: %v, event.UnMultiplierAt: %v", event.MultiplierAt, event.UnMultiplierAt)
 			}
 			if unMultiplierAt != nil {
-				return fmt.Errorf("we want to unset multiplier, but we already unset multipliered it: unMultiplierAt: %v", unMultiplierAt)
+				return fmt.Errorf("multiplier already unset: unMultiplierAt: %v", unMultiplierAt)
 			}
 			if unMultiplierAt == nil && event.UnMultiplierAt.Before(*multiplierAt) {
-				return fmt.Errorf("we want to unset multiplier, but the unset multiplier date is before the multiplier date: multiplierAt: "+
-					"%v, event.UnMultiplierAt: %v", multiplierAt, event.UnMultiplierAt)
+				return fmt.Errorf("un_multiplier_at cannot be before multiplier_at: multiplierAt: %v, event.UnMultiplierAt: %v",
+					multiplierAt, event.UnMultiplierAt)
 			}
 		} else if event.EventType == Active {
 			if event.MultiplierAt == nil || event.UnMultiplierAt != nil {
-				return fmt.Errorf("to set multiplier, we must set the multiplier_at, but not the unset multiplier_at: "+
+				return fmt.Errorf("to set multiplier, must set multiplier_at but not un_multiplier_at: "+
 					"event.MultiplierAt: %v, event.UnMultiplierAt: %v", event.MultiplierAt, event.UnMultiplierAt)
 			}
 			if unMultiplierAt == nil {
-				return fmt.Errorf("we want to set multiplier, but we are already having a multilier on this repo: "+
-					"multiplier_at: %v, un_multiplier_at: %v", event.MultiplierAt, unMultiplierAt)
+				return fmt.Errorf("multiplier already active on this repo: multiplier_at: %v, un_multiplier_at: %v",
+					event.MultiplierAt, unMultiplierAt)
 			} else {
 				if event.MultiplierAt.Before(*multiplierAt) {
-					return fmt.Errorf("we want to set multiplier, but we want want to set a multiplier on this repo in the past: "+
-						"event.MultiplierAt: %v, multiplierAt: %v", event.MultiplierAt, multiplierAt)
+					return fmt.Errorf("cannot set multiplier in the past: event.MultiplierAt: %v, multiplierAt: %v",
+						event.MultiplierAt, multiplierAt)
 				}
 				if event.MultiplierAt.Before(*unMultiplierAt) {
-					return fmt.Errorf("we want to set multiplier, but we want want to set a multiplier on this repo in the past: "+
-						"event.MultiplierAt: %v, unMultiplierAt: %v", event.MultiplierAt, unMultiplierAt)
+					return fmt.Errorf("cannot set multiplier before un_multiplier_at: event.MultiplierAt: %v, unMultiplierAt: %v",
+						event.MultiplierAt, unMultiplierAt)
 				}
 			}
 		} else {
 			return fmt.Errorf("unknown event type %v", event.EventType)
 		}
-
 	}
 
 	if event.EventType == Active {
-		//insert
-		stmt, err := DB.Prepare("INSERT INTO multiplier_event (id, user_id, repo_id, multiplier_at) VALUES ($1, $2, $3, $4)")
-		if err != nil {
-			return fmt.Errorf("prepare INSERT INTO multiplier_event for %v statement event: %v", event, err)
-		}
-		defer CloseAndLog(stmt)
-
-		var res sql.Result
-		res, err = stmt.Exec(event.Id, event.Uid, event.RepoId, event.MultiplierAt)
-		if err != nil {
-			return err
-		}
-		return handleErrMustInsertOne(res)
+		_, err := db.Exec(
+			`INSERT INTO multiplier_event (id, user_id, repo_id, multiplier_at) VALUES ($1, $2, $3, $4)`,
+			event.Id, event.Uid, event.RepoId, event.MultiplierAt)
+		return err
 	} else if event.EventType == Inactive {
-		//update
-		stmt, err := DB.Prepare("UPDATE multiplier_event SET un_multiplier_at=$1 WHERE id=$2 AND un_multiplier_at IS NULL")
-		if err != nil {
-			return fmt.Errorf("prepare UPDATE multiplier_event for %v statement failed: %v", id, err)
-		}
-		defer CloseAndLog(stmt)
-
-		var res sql.Result
-		res, err = stmt.Exec(event.UnMultiplierAt, id)
-		if err != nil {
-			return err
-		}
-		return handleErrMustInsertOne(res)
+		_, err := db.Exec(
+			`UPDATE multiplier_event SET un_multiplier_at=$1 WHERE id=$2 AND un_multiplier_at IS NULL`,
+			event.UnMultiplierAt, id)
+		return err
 	} else {
 		return fmt.Errorf("unknown event type %v", event.EventType)
 	}
 }
 
-func FindLastEventMultiplierRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+func (db *DB) FindLastEventMultiplierRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
 	var multiplierAt *time.Time
 	var unMultiplierAt *time.Time
-	var id *uuid.UUID
-	err := DB.
-		QueryRow(`SELECT id, multiplier_at, un_multiplier_at
-			      		FROM multiplier_event 
-						WHERE user_id=$1 AND repo_id=$2 
-						ORDER by multiplier_at DESC LIMIT 1`,
-			uid, rid).Scan(&id, &multiplierAt, &unMultiplierAt)
+	var id uuid.UUID
+	
+	err := db.QueryRow(`
+		SELECT id, multiplier_at, un_multiplier_at
+		FROM multiplier_event 
+		WHERE user_id=$1 AND repo_id=$2 
+		ORDER BY multiplier_at DESC 
+		LIMIT 1`, uid, rid).Scan(&id, &multiplierAt, &unMultiplierAt)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil, nil, nil
 	case nil:
-		return id, multiplierAt, unMultiplierAt, nil
+		return &id, multiplierAt, unMultiplierAt, nil
 	default:
 		return nil, nil, nil, err
 	}
 }
 
-func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
-	s := `SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
-            FROM multiplier_event m
-            INNER JOIN repo r ON m.repo_id=r.id
-			WHERE m.user_id=$1 AND m.un_multiplier_at IS NULL`
-	rows, err := DB.Query(s, userId)
+func (db *DB) FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
+	rows, err := db.Query(`
+		SELECT r.id, r.url, r.git_url, r.name, r.description, r.source
+		FROM multiplier_event m
+		INNER JOIN repo r ON m.repo_id=r.id
+		WHERE m.user_id=$1 AND m.un_multiplier_at IS NULL`, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -135,12 +118,12 @@ func FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 	return scanRepo(rows)
 }
 
-func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
-	s := `SELECT u.id, u.multiplier_daily_limit
-            FROM multiplier_event m
-			INNER JOIN users u ON m.user_id = u.id
-			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
-	rows, err := DB.Query(s, rid)
+func (db *DB) GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
+	rows, err := db.Query(`
+		SELECT u.id, u.multiplier_daily_limit
+		FROM multiplier_event m
+		INNER JOIN users u ON m.user_id = u.id
+		WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`, rid)
 	if err != nil {
 		return nil, err
 	}
@@ -158,12 +141,12 @@ func GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {
 	return foundations, nil
 }
 
-func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yesterdayStart time.Time) ([]Foundation, error) {
-	s := `SELECT u.id, u.multiplier_daily_limit
-            FROM multiplier_event m
-			INNER JOIN users u ON m.user_id = u.id
-			WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`
-	rows, err := DB.Query(s, rid)
+func (db *DB) GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yesterdayStart time.Time) ([]Foundation, error) {
+	rows, err := db.Query(`
+		SELECT u.id, u.multiplier_daily_limit
+		FROM multiplier_event m
+		INNER JOIN users u ON m.user_id = u.id
+		WHERE m.repo_id=$1 AND u.multiplier AND m.un_multiplier_at IS NULL`, rid)
 	if err != nil {
 		return nil, err
 	}
@@ -176,12 +159,13 @@ func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yeste
 		if err != nil {
 			return nil, err
 		}
-		firstCheck, err := CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(0), currency, yesterdayStart)
+		
+		firstCheck, err := db.CheckDailyLimitStillAdheredTo(&foundation, big.NewInt(0), currency, yesterdayStart)
 		if err != nil {
 			return nil, err
 		}
 
-		secondCheck, err := CheckFondsAmountEnough(&foundation, big.NewInt(0), currency)
+		secondCheck, err := db.CheckFondsAmountEnough(&foundation, big.NewInt(0), currency)
 		if err != nil {
 			return nil, err
 		}
@@ -195,20 +179,17 @@ func GetValidatedFoundationsSupportingRepo(rid uuid.UUID, currency string, yeste
 	return foundations, nil
 }
 
-func GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, int, error) {
+func (db *DB) GetAllFoundationsSupportingRepos(rids []uuid.UUID) ([]Foundation, int, error) {
 	if len(rids) == 0 {
 		return nil, 0, nil
 	}
 
-	query := `
+	rows, err := db.Query(`
 		SELECT u.id, u.multiplier_daily_limit, m.repo_id
 		FROM multiplier_event m
 		INNER JOIN users u ON m.user_id = u.id
-		WHERE m.repo_id IN (` + GeneratePlaceholders(len(rids)) + `)
-		AND u.multiplier
-		AND m.un_multiplier_at IS NULL`
-
-	rows, err := DB.Query(query, ConvertToInterfaceSlice(rids)...)
+		WHERE m.repo_id = ANY($1) AND u.multiplier AND m.un_multiplier_at IS NULL`,
+		pq.Array(rids))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -263,33 +244,17 @@ func contains(slice []uuid.UUID, item uuid.UUID) bool {
 	return false
 }
 
-func GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID, isPostgres bool) (int, error) {
+func (db *DB) GetMultiplierCount(repoId uuid.UUID, activeSponsors []uuid.UUID) (int, error) {
 	if len(activeSponsors) == 0 {
 		return 0, nil
 	}
 
-	var query string
-	if isPostgres {
-		query = `
-			SELECT COUNT(DISTINCT user_id)
-			FROM multiplier_event
-			WHERE repo_id = $1 AND user_id = ANY($2) AND un_multiplier_at IS NULL`
-	} else {
-		query = `
-			SELECT COUNT(DISTINCT user_id)
-			FROM multiplier_event
-			WHERE repo_id = ? AND user_id IN (?) AND un_multiplier_at IS NULL`
-	}
-
-	var args []interface{}
-	if isPostgres {
-		args = []interface{}{repoId, ConvertToInterfaceSlice(activeSponsors)}
-	} else {
-		args = append([]interface{}{repoId}, ConvertToInterfaceSlice(activeSponsors)...)
-	}
-
 	var count int
-	err := DB.QueryRow(query, args...).Scan(&count)
+	err := db.QueryRow(`
+		SELECT COUNT(DISTINCT user_id)
+		FROM multiplier_event
+		WHERE repo_id = $1 AND user_id = ANY($2) AND un_multiplier_at IS NULL`,
+		repoId, pq.Array(activeSponsors)).Scan(&count)
 	if err != nil {
 		return 0, err
 	}

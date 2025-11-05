@@ -45,15 +45,14 @@ type UserDetail struct {
 	MultiplierDailyLimit int    `json:"multiplierDailyLimit"`
 }
 
-func FindAllEmails() ([]string, error) {
-	emails := []string{}
-	s := `SELECT email from users`
-	rows, err := DB.Query(s)
+func (db *DB) FindAllEmails() ([]string, error) {
+	rows, err := db.Query(`SELECT email FROM users`)
 	if err != nil {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
 
+	var emails []string
 	for rows.Next() {
 		var email string
 		err = rows.Scan(&email)
@@ -65,16 +64,17 @@ func FindAllEmails() ([]string, error) {
 	return emails, nil
 }
 
-func FindUserByEmail(email string) (*UserDetail, error) {
+func (db *DB) FindUserByEmail(email string) (*UserDetail, error) {
 	var u UserDetail
-	err := DB.
-		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
-                               email, name, image, seats, freq, created_at, multiplier, multiplier_daily_limit
-                        FROM users 
-                        WHERE email=$1`, email).
+	err := db.QueryRow(`
+		SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
+		       email, name, image, seats, freq, created_at, multiplier, multiplier_daily_limit
+		FROM users 
+		WHERE email=$1`, email).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
 			&u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
 			&u.Multiplier, &u.MultiplierDailyLimit)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -85,17 +85,18 @@ func FindUserByEmail(email string) (*UserDetail, error) {
 	}
 }
 
-func FindUserById(uid uuid.UUID) (*UserDetail, error) {
+func (db *DB) FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	var u UserDetail
-	err := DB.
-		QueryRow(`SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
-                               stripe_client_secret, email, name, image, seats, freq, created_at,
-							   multiplier, multiplier_daily_limit                        
-                        FROM users 
-                        WHERE id=$1`, uid).
+	err := db.QueryRow(`
+		SELECT id, stripe_id, invited_id, stripe_payment_method, stripe_last4, 
+		       stripe_client_secret, email, name, image, seats, freq, created_at,
+		       multiplier, multiplier_daily_limit                        
+		FROM users 
+		WHERE id=$1`, uid).
 		Scan(&u.Id, &u.StripeId, &u.InvitedId, &u.PaymentMethod, &u.Last4,
 			&u.StripeClientSecret, &u.Email, &u.Name, &u.Image, &u.Seats, &u.Freq, &u.CreatedAt,
 			&u.Multiplier, &u.MultiplierDailyLimit)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -106,13 +107,14 @@ func FindUserById(uid uuid.UUID) (*UserDetail, error) {
 	}
 }
 
-func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
+func (db *DB) FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	var u PublicUser
-	err := DB.
-		QueryRow(`SELECT id, name, image 
-                        FROM users 
-                        WHERE id=$1`, uid).
+	err := db.QueryRow(`
+		SELECT id, name, image 
+		FROM users 
+		WHERE id=$1`, uid).
 		Scan(&u.Id, &u.Name, &u.Image)
+	
 	switch err {
 	case sql.ErrNoRows:
 		return nil, nil
@@ -123,143 +125,63 @@ func FindPublicUserById(uid uuid.UUID) (*PublicUser, error) {
 	}
 }
 
-/*func GetUserThatSponsoredTrustedRepo() ([]User, error) {
-	s := `SELECT
-				DISTINCT user_sponsor_id AS user_id
-			FROM
-				daily_contribution
-			WHERE
-				created_at >= CURRENT_DATE - INTERVAL '1 month'`
-	rows, err := DB.Query(s)
-	if err != nil {
-		return nil, err
-	}
-	defer CloseAndLog(rows)
-
-	var userStatus []User
-	for rows.Next() {
-		var userState User
-		err = rows.Scan(&userState.Id, &userState.Name, &userState.Email)
-		if err != nil {
-			return nil, err
-		}
-		userStatus = append(userStatus, userState)
-	}
-	return userStatus, nil
-}*/
-
-func InsertUser(user *UserDetail) error {
-	stmt, err := DB.Prepare("INSERT INTO users (id, email, name, created_at) VALUES ($1, $2, $3, $4)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(user.Id, user.Email, user.Name, user.CreatedAt)
-	if err != nil {
-		return err
-	}
-
-	return handleErrMustInsertOne(res)
+func (db *DB) InsertUser(user *UserDetail) error {
+	_, err := db.Exec(
+		`INSERT INTO users (id, email, name, created_at) VALUES ($1, $2, $3, $4)`,
+		user.Id, user.Email, user.Name, user.CreatedAt)
+	return err
 }
 
-func InsertFoundation(user *UserDetail) error {
-	stmt, err := DB.Prepare("INSERT INTO users (id, email, stripe_id, created_at, multiplier, multiplier_daily_limit) VALUES ($1, $2, $3, $4, $5, $6)")
-	if err != nil {
-		return fmt.Errorf("prepare INSERT INTO users for %v statement failed: %v", user, err)
-	}
-	defer CloseAndLog(stmt)
-
-	res, err := stmt.Exec(user.Id, user.Email, user.StripeId, user.CreatedAt, user.Multiplier, user.MultiplierDailyLimit)
-	if err != nil {
-		return err
-	}
-
-	return handleErrMustInsertOne(res)
+func (db *DB) InsertFoundation(user *UserDetail) error {
+	_, err := db.Exec(
+		`INSERT INTO users (id, email, stripe_id, created_at, multiplier, multiplier_daily_limit) 
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		user.Id, user.Email, user.StripeId, user.CreatedAt, user.Multiplier, user.MultiplierDailyLimit)
+	return err
 }
 
-func UpdateStripe(user *UserDetail) error {
-	stmt, err := DB.Prepare(`UPDATE users 
-                                   SET stripe_id=$1, stripe_payment_method=$2, stripe_last4=$3
-                                   WHERE id=$4`)
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", user, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(user.StripeId, user.PaymentMethod, user.Last4, user.Id)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateStripe(user *UserDetail) error {
+	_, err := db.Exec(
+		`UPDATE users 
+		 SET stripe_id=$1, stripe_payment_method=$2, stripe_last4=$3
+		 WHERE id=$4`,
+		user.StripeId, user.PaymentMethod, user.Last4, user.Id)
+	return err
 }
 
-func UpdateUserName(uid uuid.UUID, name string) error {
-	stmt, err := DB.Prepare("UPDATE users SET name=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(name, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateUserName(uid uuid.UUID, name string) error {
+	_, err := db.Exec(
+		`UPDATE users SET name=$1 WHERE id=$2`,
+		name, uid)
+	return err
 }
 
-func UpdateUserImage(uid uuid.UUID, data string) error {
-	stmt, err := DB.Prepare("UPDATE users SET image=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(data, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateUserImage(uid uuid.UUID, data string) error {
+	_, err := db.Exec(
+		`UPDATE users SET image=$1 WHERE id=$2`,
+		data, uid)
+	return err
 }
 
-func DeleteUserImage(uid uuid.UUID) error {
-	stmt, err := DB.Prepare("UPDATE users SET image=NULL WHERE id=$1")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) DeleteUserImage(uid uuid.UUID) error {
+	_, err := db.Exec(
+		`UPDATE users SET image=NULL WHERE id=$1`,
+		uid)
+	return err
 }
 
-func UpdateSeatsFreq(userId uuid.UUID, seats int, freq int) error {
-	stmt, err := DB.Prepare("UPDATE users SET seats=$1, freq=$2 WHERE id=$3")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", userId, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(seats, freq, userId)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateSeatsFreq(userId uuid.UUID, seats int, freq int) error {
+	_, err := db.Exec(
+		`UPDATE users SET seats=$1, freq=$2 WHERE id=$3`,
+		seats, freq, userId)
+	return err
 }
 
-func FindSponsoredUserBalances(invitedUserId uuid.UUID) ([]User, error) {
-	s := `SELECT id, name, email
-          FROM users 
-          WHERE invited_id = $1`
-	rows, err := DB.Query(s, invitedUserId)
+func (db *DB) FindSponsoredUserBalances(invitedUserId uuid.UUID) ([]User, error) {
+	rows, err := db.Query(`
+		SELECT id, name, email
+		FROM users 
+		WHERE invited_id = $1`, invitedUserId)
 	if err != nil {
 		return nil, err
 	}
@@ -277,90 +199,58 @@ func FindSponsoredUserBalances(invitedUserId uuid.UUID) ([]User, error) {
 	return userStatus, nil
 }
 
-func UpdateUserInviteId(uid uuid.UUID, inviteId uuid.UUID) error {
-	stmt, err := DB.Prepare("UPDATE users SET invited_id=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(inviteId, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateUserInviteId(uid uuid.UUID, inviteId uuid.UUID) error {
+	_, err := db.Exec(
+		`UPDATE users SET invited_id=$1 WHERE id=$2`,
+		inviteId, uid)
+	return err
 }
 
-func UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
-	stmt, err := DB.Prepare("UPDATE users SET stripe_client_secret=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(stripeClientSecret, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateClientSecret(uid uuid.UUID, stripeClientSecret string) error {
+	_, err := db.Exec(
+		`UPDATE users SET stripe_client_secret=$1 WHERE id=$2`,
+		stripeClientSecret, uid)
+	return err
 }
 
-func UpdateMultiplier(uid uuid.UUID, isSet bool) error {
-	stmt, err := DB.Prepare("UPDATE users SET multiplier=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(isSet, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateMultiplier(uid uuid.UUID, isSet bool) error {
+	_, err := db.Exec(
+		`UPDATE users SET multiplier=$1 WHERE id=$2`,
+		isSet, uid)
+	return err
 }
 
-func UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
-	stmt, err := DB.Prepare("UPDATE users SET multiplier_daily_limit=$1 WHERE id=$2")
-	if err != nil {
-		return fmt.Errorf("prepare UPDATE users for %v statement failed: %v", uid, err)
-	}
-	defer CloseAndLog(stmt)
-
-	var res sql.Result
-	res, err = stmt.Exec(amount, uid)
-	if err != nil {
-		return err
-	}
-	return handleErrMustInsertOne(res)
+func (db *DB) UpdateMultiplierDailyLimit(uid uuid.UUID, amount int64) error {
+	_, err := db.Exec(
+		`UPDATE users SET multiplier_daily_limit=$1 WHERE id=$2`,
+		amount, uid)
+	return err
 }
 
-func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (*big.Int, error) {
+func (db *DB) CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, currency string, yesterdayStart time.Time) (*big.Int, error) {
 	if foundation == nil {
 		return big.NewInt(0), fmt.Errorf("foundation cannot be nil")
 	}
 
 	multiplierDailyLimit := big.NewInt(int64(foundation.MultiplierDailyLimit))
 
-	query := `
+	var balanceStr string
+	err := db.QueryRow(`
 		SELECT COALESCE(SUM(balance), 0)
 		FROM daily_contribution
-		WHERE
-			user_sponsor_id = $1
-			AND foundation_payment
-			AND currency = $2
-			AND day = $3`
-
-	var dailySumInt int64
-
-	err := DB.QueryRow(query, foundation.Id, currency, yesterdayStart).Scan(&dailySumInt)
+		WHERE user_sponsor_id = $1
+		  AND foundation_payment = TRUE
+		  AND currency = $2
+		  AND day = $3`,
+		foundation.Id, currency, yesterdayStart).Scan(&balanceStr)
 	if err != nil {
-		return big.NewInt(0), fmt.Errorf("failed to calculate daily contributions: %v", err)
+		return big.NewInt(0), fmt.Errorf("failed to calculate daily contributions: %w", err)
 	}
 
-	dailySum := big.NewInt(dailySumInt)
+	dailySum, ok := new(big.Int).SetString(balanceStr, 10)
+	if !ok {
+		return big.NewInt(0), fmt.Errorf("invalid balance: %v", balanceStr)
+	}
 
 	if new(big.Int).Add(dailySum, amount).Cmp(multiplierDailyLimit) <= 0 {
 		return amount, nil
@@ -375,17 +265,17 @@ func CheckDailyLimitStillAdheredTo(foundation *Foundation, amount *big.Int, curr
 	return restrictedAmountToPay, nil
 }
 
-func CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (*big.Int, error) {
+func (db *DB) CheckFondsAmountEnough(foundation *Foundation, amount *big.Int, currency string) (*big.Int, error) {
 	if foundation == nil {
 		return big.NewInt(0), fmt.Errorf("foundation cannot be nil")
 	}
 
-	totalBalance, err := FindSumPaymentFromFoundation(foundation.Id, PayInSuccess, currency)
+	totalBalance, err := db.FindSumPaymentFromFoundation(foundation.Id, PayInSuccess, currency)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 
-	totalSpending, err := FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, currency)
+	totalSpending, err := db.FindSumDailySponsorsFromFoundationByCurrency(foundation.Id, currency)
 	if err != nil {
 		return big.NewInt(0), err
 	}
