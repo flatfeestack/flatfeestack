@@ -50,6 +50,7 @@ OPTIONS:
   --no-stripe         Skip Stripe setup
   --clean             Remove all data (database, repos, chain, stripe, node_modules)
   --clean-db          Remove database only
+  --test-db           Run tests in backend/db
 EOF
   exit
 }
@@ -109,6 +110,14 @@ parse_params() {
     --clean-db) 
       sudo rm -rf .db/**
       msg_ok "Cleaned database"
+      ;;
+    --test-db) 
+      podman build -f backend/Dockerfile.db.test -t backend-db-test backend
+      podman system service --time=0 unix:///tmp/podman.sock & PODMAN_PID=$!
+      podman run --rm --network host -v /tmp/podman.sock:/var/run/docker.sock backend-db-test
+      kill "$PODMAN_PID"
+      msg_ok "Database tested"
+      exit
       ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;

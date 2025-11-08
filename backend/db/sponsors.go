@@ -1,7 +1,6 @@
 package db
 
 import (
-	"backend/util"
 	"database/sql"
 	"fmt"
 	"time"
@@ -114,7 +113,7 @@ func (db *DB) FindSponsoredReposByUserId(userId uuid.UUID) ([]Repo, error) {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanRepo(rows)
+	return scanRepos(rows)
 }
 
 type SponsorResult struct {
@@ -146,7 +145,7 @@ func (db *DB) FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorRes
 			return nil, err
 		}
 
-		if userId != userIdOld && !util.IsUUIDZero(userIdOld) {
+		if userId != userIdOld && !IsUUIDZero(userIdOld) {
 			sponsorResult.UserId = userIdOld
 			sponsorResults = append(sponsorResults, sponsorResult)
 			sponsorResult = SponsorResult{}
@@ -154,15 +153,24 @@ func (db *DB) FindSponsorsBetween(start time.Time, stop time.Time) ([]SponsorRes
 		}
 
 		sponsorResult.RepoIds = append(sponsorResult.RepoIds, repoId)
-		if util.IsUUIDZero(userIdOld) {
+		if IsUUIDZero(userIdOld) {
 			userIdOld = userId
 		}
 	}
 
-	if !util.IsUUIDZero(userId) {
+	if !IsUUIDZero(userId) {
 		sponsorResult.UserId = userId
 		sponsorResults = append(sponsorResults, sponsorResult)
 	}
 
 	return sponsorResults, nil
+}
+
+func IsUUIDZero(id uuid.UUID) bool {
+	for x := 0; x < 16; x++ {
+		if id[x] != 0 {
+			return false
+		}
+	}
+	return true
 }

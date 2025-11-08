@@ -127,7 +127,7 @@ func New(dbDriver string, dbPath string) (db *DB, err error) {
 	}
 
 	for i := 0; i < 40; i++ { // 40 * 250ms = 10s
-		err = db.Ping()
+		err = db1.Ping()
 		if err == nil {
 			break
 		}

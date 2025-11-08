@@ -10,6 +10,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var (
@@ -19,7 +21,7 @@ var (
 	day4 = time.Time{}.Add(time.Duration(3*24) * time.Hour)
 	day5 = time.Time{}.Add(time.Duration(4*24) * time.Hour)
 	day6 = time.Time{}.Add(time.Duration(5*24) * time.Hour)
-	db *DB
+	db   *DB
 )
 
 type TestDb struct {
@@ -33,7 +35,7 @@ func TestMain(m *testing.M) {
 	defer testDb.Close()
 
 	db = testDb.db
-	err := db.RunMigrations(); 
+	err := db.RunMigrations()
 	if err != nil {
 		panic(err)
 	}
@@ -46,10 +48,11 @@ func NewTestDb() *TestDb {
 	ctx := context.Background()
 
 	postgresContainer, err := postgres.Run(ctx,
-		"postgres:16-alpine",
+		"postgres:18-alpine",
 		postgres.WithDatabase("testdb"),
 		postgres.WithUsername("testuser"),
 		postgres.WithPassword("testpass"),
+		testcontainers.WithProvider(testcontainers.ProviderPodman),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
@@ -60,6 +63,7 @@ func NewTestDb() *TestDb {
 	}
 
 	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+
 	if err != nil {
 		postgresContainer.Terminate(ctx)
 		panic(fmt.Errorf("failed to get connection string: %w", err))
@@ -79,7 +83,6 @@ func NewTestDb() *TestDb {
 		ctx:       ctx,
 	}
 }
-
 
 func (td *TestDb) DB() *DB {
 	return td.db

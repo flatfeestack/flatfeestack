@@ -26,7 +26,7 @@ func TestInsertAnalysisRequest(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInsertAnalysisResponse(t *testing.T) {
+func TestInsertRepoMetric(t *testing.T) {
 	TruncateAll(db, t)
 
 	repo := createTestRepo(t, db, "https://github.com/test/analysis-repo")
@@ -44,7 +44,7 @@ func TestInsertAnalysisResponse(t *testing.T) {
 	names := []string{"Contributor Name", "Another Name"}
 	weight := 0.75
 
-	err := db.InsertAnalysisResponse(analysisRequest.Id, repo.Id, gitEmail, names, weight, time.Now())
+	err := db.InsertRepoMetric(analysisRequest.Id, repo.Id, gitEmail, names, weight, time.Now())
 	require.NoError(t, err)
 }
 
@@ -119,31 +119,32 @@ func TestFindAllLatestAnalysisRequest(t *testing.T) {
 func TestFindAllLatestAnalysisRequest_FiltersByDateTo(t *testing.T) {
 	TruncateAll(db, t)
 
-	repo := createTestRepo(t, db, "https://github.com/test/repo")
+	repo1 := createTestRepo(t, db, "https://github.com/test/repo1")
+	repo2 := createTestRepo(t, db, "https://github.com/test/repo2")
 
 	oldDateTo := time.Now().AddDate(0, 0, -10)
 	request1 := AnalysisRequest{
 		Id:       uuid.New(),
-		RepoId:   repo.Id,
+		RepoId:   repo1.Id,
 		DateFrom: oldDateTo.AddDate(0, 0, -30),
 		DateTo:   oldDateTo,
-		GitUrl:   "https://github.com/test/repo",
+		GitUrl:   "https://github.com/test/repo1",
 	}
 	require.NoError(t, db.InsertAnalysisRequest(request1, time.Now()))
 
 	newDateTo := time.Now()
 	request2 := AnalysisRequest{
 		Id:       uuid.New(),
-		RepoId:   repo.Id,
+		RepoId:   repo2.Id,
 		DateFrom: newDateTo.AddDate(0, 0, -30),
 		DateTo:   newDateTo,
-		GitUrl:   "https://github.com/test/repo",
+		GitUrl:   "https://github.com/test/repo2",
 	}
 	require.NoError(t, db.InsertAnalysisRequest(request2, time.Now()))
 
 	found, err := db.FindAllLatestAnalysisRequest(oldDateTo.Add(time.Hour))
 	require.NoError(t, err)
-	assert.Len(t, found, 1)
+	require.Len(t, found, 1)
 	assert.Equal(t, request1.Id, found[0].Id)
 }
 
@@ -214,12 +215,12 @@ func TestFindAnalysisResults(t *testing.T) {
 	gitEmail1 := "contributor1@example.com"
 	names1 := []string{"Contributor One"}
 	weight1 := 0.6
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail1, names1, weight1, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail1, names1, weight1, time.Now()))
 
 	gitEmail2 := "contributor2@example.com"
 	names2 := []string{"Contributor Two", "Alt Name"}
 	weight2 := 0.4
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail2, names2, weight2, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail2, names2, weight2, time.Now()))
 
 	results, err := db.FindAnalysisResults(request.Id)
 	require.NoError(t, err)
@@ -244,7 +245,7 @@ func TestFindRepoContribution(t *testing.T) {
 	gitEmail := "contributor@example.com"
 	names := []string{"Contributor"}
 	weight := 0.8
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail, names, weight, time.Now()))
 
 	contributions, err := db.FindRepoContribution(repo.Id)
 	require.NoError(t, err)
@@ -272,7 +273,7 @@ func TestFindRepoContribution_ExcludesErrors(t *testing.T) {
 	gitEmail := "contributor@example.com"
 	names := []string{"Contributor"}
 	weight := 0.8
-	require.NoError(t, db.InsertAnalysisResponse(successRequest.Id, repo.Id, gitEmail, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(successRequest.Id, repo.Id, gitEmail, names, weight, time.Now()))
 
 	errorRequest := AnalysisRequest{
 		Id:       uuid.New(),
@@ -285,7 +286,7 @@ func TestFindRepoContribution_ExcludesErrors(t *testing.T) {
 	errStr := "analysis failed"
 	require.NoError(t, db.UpdateAnalysisRequest(errorRequest.Id, time.Now(), &errStr))
 
-	require.NoError(t, db.InsertAnalysisResponse(errorRequest.Id, repo.Id, "error@example.com", names, 0.5, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(errorRequest.Id, repo.Id, "error@example.com", names, 0.5, time.Now()))
 
 	contributions, err := db.FindRepoContribution(repo.Id)
 	require.NoError(t, err)
@@ -313,9 +314,9 @@ func TestFindRepoContributors(t *testing.T) {
 	names := []string{"Contributor"}
 	weight := 0.5
 
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail1, names, weight, time.Now()))
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail2, names, weight, time.Now()))
-	require.NoError(t, db.InsertAnalysisResponse(request.Id, repo.Id, gitEmail1, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail1, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail2, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(request.Id, repo.Id, gitEmail1, names, weight, time.Now()))
 
 	count, err := db.FindRepoContributors(repo.Id)
 	require.NoError(t, err)
@@ -340,7 +341,7 @@ func TestFindRepoContributors_ExcludesErrors(t *testing.T) {
 	gitEmail := "contributor@example.com"
 	names := []string{"Contributor"}
 	weight := 0.8
-	require.NoError(t, db.InsertAnalysisResponse(successRequest.Id, repo.Id, gitEmail, names, weight, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(successRequest.Id, repo.Id, gitEmail, names, weight, time.Now()))
 
 	errorRequest := AnalysisRequest{
 		Id:       uuid.New(),
@@ -353,7 +354,7 @@ func TestFindRepoContributors_ExcludesErrors(t *testing.T) {
 	errStr := "analysis failed"
 	require.NoError(t, db.UpdateAnalysisRequest(errorRequest.Id, time.Now(), &errStr))
 
-	require.NoError(t, db.InsertAnalysisResponse(errorRequest.Id, repo.Id, "error@example.com", names, 0.5, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(errorRequest.Id, repo.Id, "error@example.com", names, 0.5, time.Now()))
 
 	count, err := db.FindRepoContributors(repo.Id)
 	require.NoError(t, err)

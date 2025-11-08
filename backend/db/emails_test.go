@@ -289,9 +289,9 @@ func TestGetRepoEmails(t *testing.T) {
 	email2 := "contributor2@example.com"
 	names := []string{"Contributor"}
 
-	require.NoError(t, db.InsertAnalysisResponse(analysisRequest.Id, repo.Id, email1, names, 0.5, time.Now()))
-	require.NoError(t, db.InsertAnalysisResponse(analysisRequest.Id, repo.Id, email2, names, 0.5, time.Now()))
-	require.NoError(t, db.InsertAnalysisResponse(analysisRequest.Id, repo.Id, email1, names, 0.3, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(analysisRequest.Id, repo.Id, email1, names, 0.5, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(analysisRequest.Id, repo.Id, email2, names, 0.5, time.Now()))
+	require.NoError(t, db.InsertRepoMetric(analysisRequest.Id, repo.Id, email1, names, 0.3, time.Now()))
 
 	emails, err := db.GetRepoEmails(repo.Id)
 	require.NoError(t, err)

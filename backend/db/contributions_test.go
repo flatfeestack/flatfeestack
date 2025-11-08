@@ -407,7 +407,7 @@ func TestGetActiveSponsors(t *testing.T) {
 		EventType: Active,
 		TrustAt:   timePtr(time.Now()),
 	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
+	require.NoError(t, db.InsertOrUpdateTrust(trustEvent))
 
 	day := time.Now().Truncate(24 * time.Hour)
 	require.NoError(t, db.InsertContribution(
@@ -464,9 +464,16 @@ func createTestUser(t *testing.T, db *DB, email string) *UserDetail {
 }
 
 func createTestRepo(t *testing.T, db *DB, gitUrl string) *Repo {
+	t.Helper()
+	
+	name := "test-repo"
+	source := "github"
+	
 	repo := &Repo{
 		Id:        uuid.New(),
 		GitUrl:    &gitUrl,
+		Name:      &name,
+		Source:    &source,
 		CreatedAt: time.Now(),
 	}
 	require.NoError(t, db.InsertOrUpdateRepo(repo))

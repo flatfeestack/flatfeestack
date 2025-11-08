@@ -115,7 +115,7 @@ func (db *DB) FindMultiplierRepoByUserId(userId uuid.UUID) ([]Repo, error) {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanRepo(rows)
+	return scanRepos(rows)
 }
 
 func (db *DB) GetFoundationsSupportingRepo(rid uuid.UUID) ([]Foundation, error) {

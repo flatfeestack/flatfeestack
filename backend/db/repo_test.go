@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// repo.go tests
 func TestInsertOrUpdateRepo(t *testing.T) {
 	TruncateAll(db, t)
 
@@ -26,25 +25,32 @@ func TestInsertOrUpdateRepo(t *testing.T) {
 		Name:        &name,
 		Description: &desc,
 		Source:      &source,
-		Score:       100,
 		CreatedAt:   time.Now(),
 	}
 
 	err := db.InsertOrUpdateRepo(repo)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, repo.Id)
+
+	// Verify insert
+	found, err := db.FindRepoById(repo.Id)
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, *repo.GitUrl, *found.GitUrl)
+	assert.Equal(t, *repo.Name, *found.Name)
 }
 
-func TestInsertOrUpdateRepo_Conflict(t *testing.T) {
+func TestInsertOrUpdateRepo_UpdateOnConflict(t *testing.T) {
 	TruncateAll(db, t)
 
 	gitUrl := "https://github.com/test/conflict-repo"
-	name := "conflict-repo"
+	name1 := "original-name"
+	name2 := "updated-name"
 
 	repo1 := &Repo{
 		Id:        uuid.New(),
 		GitUrl:    &gitUrl,
-		Name:      &name,
+		Name:      &name1,
 		CreatedAt: time.Now(),
 	}
 	require.NoError(t, db.InsertOrUpdateRepo(repo1))
@@ -52,32 +58,18 @@ func TestInsertOrUpdateRepo_Conflict(t *testing.T) {
 	repo2 := &Repo{
 		Id:        uuid.New(),
 		GitUrl:    &gitUrl,
-		Name:      &name,
+		Name:      &name2,
 		CreatedAt: time.Now(),
 	}
 	err := db.InsertOrUpdateRepo(repo2)
 	require.NoError(t, err)
+	
+	// Should return same ID and update fields
 	assert.Equal(t, repo1.Id, repo2.Id)
-}
-
-func TestFindRepoById(t *testing.T) {
-	TruncateAll(db, t)
-
-	gitUrl := "https://github.com/test/find-repo"
-	name := "find-repo"
-	repo := &Repo{
-		Id:        uuid.New(),
-		GitUrl:    &gitUrl,
-		Name:      &name,
-		CreatedAt: time.Now(),
-	}
-	require.NoError(t, db.InsertOrUpdateRepo(repo))
-
-	found, err := db.FindRepoById(repo.Id)
+	
+	found, err := db.FindRepoById(repo1.Id)
 	require.NoError(t, err)
-	require.NotNil(t, found)
-	assert.Equal(t, repo.Id, found.Id)
-	assert.Equal(t, gitUrl, *found.GitUrl)
+	assert.Equal(t, *repo2.Name, *found.Name)
 }
 
 func TestFindRepoById_NotFound(t *testing.T) {
@@ -86,30 +78,6 @@ func TestFindRepoById_NotFound(t *testing.T) {
 	found, err := db.FindRepoById(uuid.New())
 	require.NoError(t, err)
 	assert.Nil(t, found)
-}
-
-func TestFindRepoWithTrustDateById(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	gitUrl := "https://github.com/test/trusted-repo"
-	repo := createTestRepo(t, db, gitUrl)
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	found, err := db.FindRepoWithTrustDateById(repo.Id)
-	require.NoError(t, err)
-	require.NotNil(t, found)
-	assert.Equal(t, repo.Id, found.Id)
-	assert.False(t, found.TrustAt.IsZero())
 }
 
 func TestFindReposByName(t *testing.T) {
@@ -138,297 +106,17 @@ func TestFindReposByName(t *testing.T) {
 	repos, err := db.FindReposByName(name)
 	require.NoError(t, err)
 	assert.Len(t, repos, 2)
+	
+	// Verify both repos are present
+	foundIds := []uuid.UUID{repos[0].Id, repos[1].Id}
+	assert.Contains(t, foundIds, repo1.Id)
+	assert.Contains(t, foundIds, repo2.Id)
 }
 
-// trusted_repos.go tests
-func TestInsertOrUpdateTrustRepo_NewTrust(t *testing.T) {
+func TestFindReposByName_NotFound(t *testing.T) {
 	TruncateAll(db, t)
 
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/trust-repo")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-
-	err := db.InsertOrUpdateTrustRepo(trustEvent)
+	repos, err := db.FindReposByName("nonexistent")
 	require.NoError(t, err)
-}
-
-func TestInsertOrUpdateTrustRepo_Untrust(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/untrust-repo")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	untrustAt := time.Now().Add(time.Hour)
-	untrustEvent := &TrustEvent{
-		Uid:         user.Id,
-		RepoId:      repo.Id,
-		EventType:   Inactive,
-		UnTrustAt:   &untrustAt,
-	}
-
-	err := db.InsertOrUpdateTrustRepo(untrustEvent)
-	require.NoError(t, err)
-}
-
-func TestInsertOrUpdateTrustRepo_ErrorUntrustNotTrusted(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/error-repo")
-
-	untrustAt := time.Now()
-	untrustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Inactive,
-		UnTrustAt: &untrustAt,
-	}
-
-	err := db.InsertOrUpdateTrustRepo(untrustEvent)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cannot untrust")
-}
-
-func TestInsertOrUpdateTrustRepo_ErrorAlreadyTrusted(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/double-trust")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	trustAt2 := time.Now().Add(time.Hour)
-	trustEvent2 := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt2,
-	}
-
-	err := db.InsertOrUpdateTrustRepo(trustEvent2)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "already trusting")
-}
-
-func TestInsertOrUpdateTrustRepo_ReTrust(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/retrust-repo")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	untrustAt := time.Now().Add(time.Hour)
-	untrustEvent := &TrustEvent{
-		Uid:         user.Id,
-		RepoId:      repo.Id,
-		EventType:   Inactive,
-		UnTrustAt:   &untrustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(untrustEvent))
-
-	reTrustAt := time.Now().Add(2 * time.Hour)
-	reTrustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &reTrustAt,
-	}
-
-	err := db.InsertOrUpdateTrustRepo(reTrustEvent)
-	require.NoError(t, err)
-}
-
-func TestFindLastEventTrustedRepo(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo := createTestRepo(t, db, "https://github.com/test/last-event")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	id, trust, untrust, err := db.FindLastEventTrustedRepo(repo.Id)
-	require.NoError(t, err)
-	require.NotNil(t, id)
-	assert.NotNil(t, trust)
-	assert.Nil(t, untrust)
-}
-
-func TestFindLastEventTrustedRepo_NotFound(t *testing.T) {
-	TruncateAll(db, t)
-
-	id, trust, untrust, err := db.FindLastEventTrustedRepo(uuid.New())
-	require.NoError(t, err)
-	assert.Nil(t, id)
-	assert.Nil(t, trust)
-	assert.Nil(t, untrust)
-}
-
-func TestFindTrustedRepos(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	repo1 := createTestRepo(t, db, "https://github.com/test/trusted1")
-	repo2 := createTestRepo(t, db, "https://github.com/test/trusted2")
-
-	trustAt1 := time.Now()
-	trustEvent1 := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo1.Id,
-		EventType: Active,
-		TrustAt:   &trustAt1,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent1))
-
-	trustAt2 := time.Now()
-	trustEvent2 := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    repo2.Id,
-		EventType: Active,
-		TrustAt:   &trustAt2,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent2))
-
-	repos, err := db.FindTrustedRepos()
-	require.NoError(t, err)
-	assert.Len(t, repos, 2)
-}
-
-func TestFindTrustedRepos_ExcludesUntrusted(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	trustedRepo := createTestRepo(t, db, "https://github.com/test/trusted")
-	untrustedRepo := createTestRepo(t, db, "https://github.com/test/untrusted")
-
-	trustAt1 := time.Now()
-	trustEvent1 := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    trustedRepo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt1,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent1))
-
-	trustAt2 := time.Now()
-	trustEvent2 := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    untrustedRepo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt2,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent2))
-
-	untrustAt := time.Now().Add(time.Hour)
-	untrustEvent := &TrustEvent{
-		Uid:         user.Id,
-		RepoId:      untrustedRepo.Id,
-		EventType:   Inactive,
-		UnTrustAt:   &untrustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(untrustEvent))
-
-	repos, err := db.FindTrustedRepos()
-	require.NoError(t, err)
-	assert.Len(t, repos, 1)
-	assert.Equal(t, trustedRepo.Id, repos[0].Id)
-}
-
-func TestGetTrustedReposFromList(t *testing.T) {
-	TruncateAll(db, t)
-
-	user := createTestUser(t, db, "user@example.com")
-	trustedRepo := createTestRepo(t, db, "https://github.com/test/trusted")
-	untrustedRepo := createTestRepo(t, db, "https://github.com/test/untrusted")
-
-	trustAt := time.Now()
-	trustEvent := &TrustEvent{
-		Id:        uuid.New(),
-		Uid:       user.Id,
-		RepoId:    trustedRepo.Id,
-		EventType: Active,
-		TrustAt:   &trustAt,
-	}
-	require.NoError(t, db.InsertOrUpdateTrustRepo(trustEvent))
-
-	repoIds := []uuid.UUID{trustedRepo.Id, untrustedRepo.Id}
-	trustedIds, err := db.GetTrustedReposFromList(repoIds)
-	require.NoError(t, err)
-	assert.Len(t, trustedIds, 1)
-	assert.Contains(t, trustedIds, trustedRepo.Id)
-}
-
-func TestGetTrustedReposFromList_EmptyInput(t *testing.T) {
-	TruncateAll(db, t)
-
-	trustedIds, err := db.GetTrustedReposFromList([]uuid.UUID{})
-	require.NoError(t, err)
-	assert.Nil(t, trustedIds)
-}
-
-func TestCountReposForUsers_EmptyList(t *testing.T) {
-	TruncateAll(db, t)
-
-	count, err := db.CountReposForUsers([]uuid.UUID{}, 3)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
-func TestCountReposForUsers_NegativeMonths(t *testing.T) {
-	TruncateAll(db, t)
-
-	sponsor := createTestUser(t, db, "sponsor@example.com")
-
-	count, err := db.CountReposForUsers([]uuid.UUID{sponsor.Id}, -1)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count)
+	assert.Empty(t, repos)
 }

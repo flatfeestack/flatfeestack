@@ -18,17 +18,19 @@ type TrustEvent struct {
 	UnTrustAt *time.Time `json:"un_trust_at"`
 }
 
-func (db *DB) InsertOrUpdateTrustRepo(event *TrustEvent) error {
-	// First get last trusted event to check if we need to insert or update
-	id, trustAt, unTrustAt, err := db.FindLastEventTrustedRepo(event.RepoId)
+func (db *DB) InsertOrUpdateTrust(event *TrustEvent) error {
+	// First get last trust event to check if we need to insert or update
+	id, trustAt, unTrustAt, err := db.FindLastEventTrustedRepo(event.Uid, event.RepoId)
 	if err != nil {
 		return err
 	}
 
+	// No event found
 	if id == nil && event.EventType == Inactive {
 		return fmt.Errorf("cannot untrust: not currently trusting this repo")
 	}
 
+	// Event found - validate
 	if id != nil {
 		if event.EventType == Inactive {
 			if event.TrustAt != nil || event.UnTrustAt == nil {
@@ -80,7 +82,7 @@ func (db *DB) InsertOrUpdateTrustRepo(event *TrustEvent) error {
 	}
 }
 
-func (db *DB) FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
+func (db *DB) FindLastEventTrustedRepo(uid uuid.UUID, rid uuid.UUID) (*uuid.UUID, *time.Time, *time.Time, error) {
 	var trustAt *time.Time
 	var unTrustAt *time.Time
 	var id uuid.UUID
@@ -88,9 +90,9 @@ func (db *DB) FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *
 	err := db.QueryRow(`
 		SELECT id, trust_at, un_trust_at
 		FROM trust_event 
-		WHERE repo_id=$1 
+		WHERE user_id=$1 AND repo_id=$2 
 		ORDER BY trust_at DESC 
-		LIMIT 1`, rid).Scan(&id, &trustAt, &unTrustAt)
+		LIMIT 1`, uid, rid).Scan(&id, &trustAt, &unTrustAt)
 	
 	switch err {
 	case sql.ErrNoRows:
@@ -102,17 +104,17 @@ func (db *DB) FindLastEventTrustedRepo(rid uuid.UUID) (*uuid.UUID, *time.Time, *
 	}
 }
 
-func (db *DB) FindTrustedRepos() ([]Repo, error) {
+func (db *DB) FindTrustedReposByUserId(userId uuid.UUID) ([]Repo, error) {
 	rows, err := db.Query(`
-		SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, t.trust_at
+		SELECT r.id, r.url, r.git_url, r.name, r.description, r.source, r.created_at
 		FROM trust_event t
 		INNER JOIN repo r ON t.repo_id=r.id
-		WHERE t.un_trust_at IS NULL`)
+		WHERE t.user_id=$1 AND t.un_trust_at IS NULL`, userId)
 	if err != nil {
 		return nil, err
 	}
 	defer CloseAndLog(rows)
-	return scanRepoWithTrustEvent(rows)
+	return scanRepos(rows)
 }
 
 func (db *DB) GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
@@ -128,7 +130,7 @@ func (db *DB) GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer CloseAndLog(rows)
 
 	var trustedRepos []uuid.UUID
 	for rows.Next() {
@@ -144,51 +146,4 @@ func (db *DB) GetTrustedReposFromList(rids []uuid.UUID) ([]uuid.UUID, error) {
 	}
 
 	return trustedRepos, nil
-}
-
-func (db *DB) CountReposForUsers(userIds []uuid.UUID, months int) (int, error) {
-	if len(userIds) == 0 || months < 0 {
-		return 0, nil
-	}
-
-	var count int
-	err := db.QueryRow(fmt.Sprintf(`
-		SELECT COUNT(repo_id)
-		FROM daily_contribution
-		WHERE user_sponsor_id = ANY($1)
-		  AND created_at >= CURRENT_DATE - INTERVAL '%d month'`, months),
-		pq.Array(userIds)).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
-func (db *DB) GetActiveFFSUserCount(repoId uuid.UUID, activeUserMinMonths int, latestRepoSponsoringMonths int) (int, error) {
-	emails, err := db.GetRepoEmails(repoId)
-	if err != nil {
-		return 0, err
-	}
-
-	userIds, err := db.FindUsersByGitEmails(emails)
-	if err != nil {
-		return 0, err
-	}
-
-	activeUsers, err := db.FilterActiveUsers(userIds, activeUserMinMonths)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(activeUsers) == 0 {
-		return 0, nil
-	}
-
-	trustedRepoCount, err := db.CountReposForUsers(activeUsers, latestRepoSponsoringMonths)
-	if err != nil {
-		return 0, err
-	}
-
-	return trustedRepoCount, nil
 }

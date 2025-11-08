@@ -37,14 +37,14 @@ func (db *DB) InsertAnalysisRequest(a AnalysisRequest, now time.Time) error {
 	return err
 }
 
-func (db *DB) InsertAnalysisResponse(reqId uuid.UUID, repoId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
+func (db *DB) InsertRepoMetric(reqId uuid.UUID, repoId uuid.UUID, gitEmail string, names []string, weight float64, now time.Time) error {
 	namesJSON, err := json.Marshal(names)
 	if err != nil {
 		return fmt.Errorf("cannot marshal names: %w", err)
 	}
 
 	_, err = db.Exec(
-		`INSERT INTO analysis_response(id, analysis_request_id, repo_id, git_email, git_names, weight, created_at) 
+		`INSERT INTO repo_metrics(id, analysis_request_id, repo_id, git_email, git_names, weight, created_at) 
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		uuid.New(), reqId, repoId, gitEmail, namesJSON, weight, now)
 	return err
@@ -116,7 +116,7 @@ func (db *DB) FindAnalysisResults(reqId uuid.UUID) ([]AnalysisResponse, error) {
 
 	rows, err := db.Query(
 		`SELECT id, git_email, git_names, weight
-		 FROM analysis_response 
+		 FROM repo_metrics 
 		 WHERE analysis_request_id = $1`, 
 		reqId)
 
@@ -148,11 +148,11 @@ func (db *DB) FindRepoContribution(repoId uuid.UUID) ([]Contributions, error) {
 	var cs []Contributions
 
 	rows, err := db.Query(
-		`SELECT areq.date_from, areq.date_to, ares.git_email, ares.git_names, ares.weight
+		`SELECT areq.date_from, areq.date_to, rm.git_email, rm.git_names, rm.weight
 		 FROM analysis_request areq
-		 INNER JOIN analysis_response ares ON areq.id = ares.analysis_request_id
+		 INNER JOIN repo_metrics rm ON areq.id = rm.analysis_request_id
 		 WHERE areq.repo_id=$1 AND areq.error IS NULL 
-		 ORDER BY areq.date_to, ares.weight DESC, ares.git_email`, 
+		 ORDER BY areq.date_to, rm.weight DESC, rm.git_email`, 
 		repoId)
 
 	if err != nil {
@@ -184,7 +184,7 @@ func (db *DB) FindRepoContributors(repoId uuid.UUID) (int, error) {
 	err := db.QueryRow(
 		`SELECT count(distinct git_email) as c
 		 FROM analysis_request areq
-		 INNER JOIN analysis_response ares ON areq.id = ares.analysis_request_id
+		 INNER JOIN repo_metrics rm ON areq.id = rm.analysis_request_id
 		 WHERE areq.repo_id=$1 AND areq.error IS NULL`, 
 		repoId).Scan(&c)
 

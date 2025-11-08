@@ -13,15 +13,15 @@ import (
 
 // string mapping
 const (
-	PayInRequest   string = "REQUEST"
-	PayInSuccess          = "SUCCESS"
-	PayInFee              = "FEE"
-	PayInAction           = "ACTION"
-	PayInMethod           = "METHOD"
-	PayInPartially        = "PARTIALLY"
-	PayInExpired          = "EXPIRED"
-	PayInFailed           = "FAILED"
-	PayInRefunded         = "REFUNDED"
+	PayInRequest   = "REQUEST"
+	PayInSuccess   = "SUCCESS"
+	PayInFee       = "FEE"
+	PayInAction    = "ACTION"
+	PayInMethod    = "METHOD"
+	PayInPartially = "PARTIALLY"
+	PayInExpired   = "EXPIRED"
+	PayInFailed    = "FAILED"
+	PayInRefunded  = "REFUNDED"
 )
 
 type PayInEvent struct {
@@ -51,7 +51,7 @@ type PaymentInfo struct {
 
 func (db *DB) InsertPayInEvent(payInEvent PayInEvent) error {
 	_, err := db.Exec(`
-		INSERT INTO payment_in_event(id, external_id, user_id, balance, currency, status, seats, freq, created_at) 
+		INSERT INTO payment_in_event(id, external_id, user_id, balance, currency, status, seats, freq, created_at)
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		payInEvent.Id, payInEvent.ExternalId, payInEvent.UserId, payInEvent.Balance.String(),
 		payInEvent.Currency, payInEvent.Status, payInEvent.Seats, payInEvent.Freq, payInEvent.CreatedAt)
@@ -60,8 +60,8 @@ func (db *DB) InsertPayInEvent(payInEvent PayInEvent) error {
 
 func (db *DB) FindPayInUser(userId uuid.UUID) ([]PayInEvent, error) {
 	rows, err := db.Query(`
-		SELECT balance, currency, status, seats, freq, created_at 
-		FROM payment_in_event 
+		SELECT balance, currency, status, seats, freq, created_at
+		FROM payment_in_event
 		WHERE user_id = $1`, userId)
 	if err != nil {
 		return nil, err
@@ -88,8 +88,8 @@ func (db *DB) FindPayInExternal(externalId uuid.UUID, status string) (*PayInEven
 	var payInEvent PayInEvent
 	var b string
 	err := db.QueryRow(`
-		SELECT user_id, balance, currency, status, seats, freq, created_at 
-		FROM payment_in_event 
+		SELECT user_id, balance, currency, status, seats, freq, created_at
+		FROM payment_in_event
 		WHERE external_id = $1 AND status = $2`, externalId, status).
 		Scan(&payInEvent.UserId, &b, &payInEvent.Currency, &payInEvent.Status,
 			&payInEvent.Seats, &payInEvent.Freq, &payInEvent.CreatedAt)
@@ -114,7 +114,7 @@ func (db *DB) FindPayInExternal(externalId uuid.UUID, status string) (*PayInEven
 func (db *DB) FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[string]*big.Int, error) {
 	rows, err := db.Query(`
 		SELECT currency, COALESCE(sum(balance), 0)
-		FROM payment_in_event 
+		FROM payment_in_event
 		WHERE user_id = $1 AND status = $2
 		GROUP BY currency`, userId, status)
 
@@ -147,7 +147,7 @@ func (db *DB) FindSumPaymentByCurrency(userId uuid.UUID, status string) (map[str
 func (db *DB) FindSumPaymentByCurrencyWithDate(userId uuid.UUID, status string) (map[string]*PaymentInfo, error) {
 	rows, err := db.Query(`
 		SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
-		FROM payment_in_event 
+		FROM payment_in_event
 		WHERE user_id = $1 AND status = $2
 		GROUP BY currency`, userId, status)
 	if err != nil {
@@ -185,7 +185,7 @@ func (db *DB) FindSumPaymentByCurrencyWithDate(userId uuid.UUID, status string) 
 func (db *DB) FindSumPaymentByCurrencyFoundationWithDate(userId uuid.UUID, status string) (map[string]*PaymentInfo, error) {
 	rows, err := db.Query(`
 		SELECT currency, COALESCE(sum(balance * seats), 0), MIN(created_at)
-		FROM payment_in_event 
+		FROM payment_in_event
 		WHERE user_id = $1 AND status = $2 AND freq = 1
 		GROUP BY currency`, userId, status)
 
@@ -225,7 +225,7 @@ func (db *DB) FindSumPaymentFromFoundation(userId uuid.UUID, status string, curr
 	var balanceStr string
 	err := db.QueryRow(`
 		SELECT COALESCE(sum(balance), 0)
-		FROM payment_in_event 
+		FROM payment_in_event
 		WHERE user_id = $1 AND status = $2 AND freq = 1 AND currency = $3`,
 		userId, status, currency).Scan(&balanceStr)
 
@@ -251,7 +251,7 @@ func (db *DB) FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.In
 	var c time.Time
 	err := db.QueryRow(`
 		SELECT balance, seats, freq, created_at
-		FROM payment_in_event 
+		FROM payment_in_event
 		WHERE user_id = $1 AND currency = $2 AND status = $3
 		ORDER BY created_at DESC
 		LIMIT 1`, userId, currency, PayInSuccess).
@@ -270,7 +270,7 @@ func (db *DB) FindLatestDailyPayment(userId uuid.UUID, currency string) (*big.In
 			slog.Debug("Last payed in balance",
 				slog.String("balance", d1.String()),
 				slog.String("currency", currency))
-			
+
 			db = new(big.Int).Div(d1, big.NewInt(seats))
 			db = new(big.Int).Div(db, big.NewInt(freq))
 			slog.Debug("Daily spending balance",
@@ -294,7 +294,7 @@ func (db *DB) PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
 	if payInEvent == nil {
 		return fmt.Errorf("payment request not found for external_id: %v", externalId)
 	}
-	
+
 	payInEvent.Id = uuid.New()
 	payInEvent.Status = PayInSuccess
 	payInEvent.Balance = new(big.Int).Sub(payInEvent.Balance, fee)
@@ -302,7 +302,7 @@ func (db *DB) PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Store fee
 	payInEvent.Id = uuid.New()
 	payInEvent.Status = PayInFee
@@ -313,10 +313,10 @@ func (db *DB) PaymentSuccess(externalId uuid.UUID, fee *big.Int) error {
 func (db *DB) sumTotalEarnedAmountForContributionIds(contributionIds []uuid.UUID) (*big.Int, error) {
 	var c string
 	err := db.QueryRow(`
-		SELECT COALESCE(SUM(balance), 0) AS c 
-		FROM daily_contribution 
+		SELECT COALESCE(SUM(balance), 0) AS c
+		FROM daily_contribution
 		WHERE id = ANY($1)`, pq.Array(contributionIds)).Scan(&c)
-	
+
 	switch err {
 	case sql.ErrNoRows:
 		return big.NewInt(0), nil
