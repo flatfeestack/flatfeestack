@@ -8,8 +8,8 @@ const ticketType = {
       { name: "sender",   type: "address" },
       { name: "target",   type: "address" },
       { name: "maxCost",  type: "uint256" },
-      { name: "deadline", type: "uint48"   },
-      { name: "chainId",  type: "uint256"  },
+      { name: "deadline", type: "uint48"  },
+      { name: "chainId",  type: "uint256" },
     ],
   };
 

@@ -22,6 +22,14 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+// ERC-4337
+import "@account-abstraction/contracts/core/BasePaymaster.sol";
+import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import "@account-abstraction/contracts/core/EntryPoint.sol";
+import "@account-abstraction/contracts/accounts/SimpleAccount.sol";
+import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import "hardhat/console.sol";
+
 contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pausable, Ownable, ERC721Burnable, EIP712, ERC721Votes {
 
     uint48 constant public MAX_UINT48 = 281474976710655;
@@ -295,7 +303,6 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
-        address council2,
         bytes calldata signature2
     ) internal returns (uint256 proposalId) {
         bytes32 proposalHash = keccak256(
@@ -309,12 +316,8 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         require(councilExecution[proposalId] == false, "Cannot execute twice");
         councilExecution[proposalId] = true;
 
-        require(msg.sender != council2, "Same signer twice");
-
-        require(
-            SignatureChecker.isValidSignatureNow(council2, messageHash, signature2),
-            "Invalid council signature"
-        );
+        address council2 = ECDSA.recover(messageHash, signature2);
+        require(msg.sender != council2);
 
         require(
             FlatFeeStackNFT(address(token())).isCouncilIndex(msg.sender, index1) &&
@@ -331,10 +334,9 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
-        address council2,
         bytes calldata signature2
     ) external returns (uint256 proposalId) {
-        proposalId = requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, council2, signature2);
+        proposalId = requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, signature2);
         _executeOperations(proposalId, targets, values, calldatas, descriptionHash);
         emit ProposalExecuted(proposalId);
         return proposalId;
@@ -347,10 +349,9 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         bytes32 descriptionHash,
         uint256 index1,
         uint256 index2,
-        address council2,
         bytes calldata signature2
     ) external returns (uint256 proposalId) {
-        requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, council2, signature2);
+        requireTwoCouncil(targets, values, calldatas, descriptionHash, index1, index2, signature2);
         proposalId = _cancel(targets, values, calldatas, descriptionHash);
         emit ProposalCanceled(proposalId);
         return proposalId;
@@ -382,5 +383,45 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         // https://eips.ethereum.org/EIPS/eip-6372
         require(clock() == block.timestamp);
         return "mode=timestamp";
+    }
+}
+
+contract FlatFeeStackDAOPaymaster is
+    FlatFeeStackDAO,
+    BasePaymaster
+{
+    constructor(IEntryPoint _entryPoint, address council1, address council2)
+        FlatFeeStackDAO(council1, council2)
+        BasePaymaster(_entryPoint)
+    {}
+
+    function _validatePaymasterUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32, // userOpHash
+        uint256 maxCost
+    ) internal pure override returns (bytes memory context, uint256 validationData) {
+        address sender = userOp.sender;
+        /*FlatFeeStackNFT nft = FlatFeeStackNFT(address(token()));
+        address sender = userOp.sender;
+
+        bool validMember = false;
+        uint256 balance = nft.balanceOf(sender);
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 tokenId = nft.tokenOfOwnerByIndex(sender, i);
+            if (nft.membershipPayed(tokenId) > block.timestamp) {
+                validMember = true;
+                break;
+            }
+        }
+
+        require(validMember, "Not active member");*/
+
+        context = abi.encode(sender, maxCost);
+        validationData = 0;
+    }
+
+    function withdrawETH(address payable to, uint256 amount) external onlyOwner {
+        (bool success,) = to.call{value: amount}("");
+        require(success, "ETH Withdraw failed");
     }
 }

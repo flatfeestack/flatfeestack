@@ -16,5 +16,8 @@
   "scripts": {
     "hardhat:test": "hardhat test",
     "hardhat:compile": "hardhat compile"
+  },
+  "dependencies": {
+    "@account-abstraction/contracts": "^0.8.0"
   }
 }
