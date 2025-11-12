@@ -14,7 +14,7 @@
     "ky": "^1.12.0",
     "@stripe/stripe-js": "^8.0.0",
     "query-string": "^9.3.1",
-    "viem": "^2.38.2"
+    "viem": "^2.39.0"
   },
   "devDependencies": {
     "preveltekit":"^1.2.22",
