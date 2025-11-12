@@ -30,12 +30,12 @@ importers:
         specifier: 5.39.12
         version: 5.39.12
       viem:
-        specifier: ^2.38.2
-        version: 2.38.2(typescript@5.9.3)
+        specifier: ^2.39.0
+        version: 2.39.0(typescript@5.9.3)
     devDependencies:
       preveltekit:
-        specifier: ^1.2.20
-        version: 1.2.20(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
+        specifier: ^1.2.22
+        version: 1.2.22(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -727,8 +727,8 @@ packages:
     resolution: {integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preveltekit@1.2.20:
-    resolution: {integrity: sha512-PC6RLtWDU4vDuXRLDVX9Jb3EKahenwKg6Mb0MEJSxxvFMbRvEtROuZ0tvecysgNaCi4czRJabgqwd9FLl1odrw==}
+  preveltekit@1.2.22:
+    resolution: {integrity: sha512-CjUDcIl+rnY/1xhPtWl16CtKCpKfiuY6lIHtue1++rh6Qdrhn8VtooJTiwrR934cg1RRTTPHPK3TfTzci5YfKw==}
     hasBin: true
     peerDependencies:
       svelte: ^5.0.0
@@ -924,8 +924,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  viem@2.38.2:
-    resolution: {integrity: sha512-MJDiTDD9gfOT7lPQRimdmw+g46hU/aWJ3loqb+tN6UBOO00XEd0O4LJx+Kp5/uCRnMlJr8zJ1bNzCK7eG6gMjg==}
+  viem@2.39.0:
+    resolution: {integrity: sha512-rCN+IfnMESlrg/iPyyVL+M9NS/BHzyyNy72470tFmbTuscY3iPaZGMtJDcHKKV8TC6HV9DjWk0zWX6cpu0juyA==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -1749,7 +1749,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preveltekit@1.2.20(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3):
+  preveltekit@1.2.22(@babel/core@7.26.0)(@swc/helpers@0.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3):
     dependencies:
       '@rsbuild/core': 1.5.17
       '@rsbuild/plugin-svelte': 1.0.11(@babel/core@7.26.0)(@rsbuild/core@1.5.17)(postcss@8.4.49)(svelte@5.39.12)(typescript@5.9.3)
@@ -1963,7 +1963,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  viem@2.38.2(typescript@5.9.3):
+  viem@2.39.0(typescript@5.9.3):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
