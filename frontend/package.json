@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "preveltekit":"^1.2.15",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "ethers": "^6.15.0"
   }
 }

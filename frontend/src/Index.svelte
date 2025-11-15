@@ -18,6 +18,7 @@
     import {onMount} from "svelte";
     import {appState} from "./ts/state.svelte.ts";
     import TermsAndConditions from "./auth/TermsAndConditions.svelte";
+    import ChallengeTask from "./pages/ChallengeTask.svelte";
 
     const routes: Routes = { dynamicRoutes:[
         {path: "/user/search", component: Search},
@@ -30,9 +31,11 @@
         {path: "/user/admin", component: Admin},
         {path: "/user/healthy-repos", component: Admin},
 
+        {path: "/ChallengeTask", component: ChallengeTask},
+
         {path: "/differentChainId", component: DifferentChainId},
         {path: "/badges/:uuid", component: PublicBadges},
-        {path: "/toc", component: TermsAndConditions},
+        {path: "/toc2", component: TermsAndConditions},
         {path: "/login-confirm", component: LoginConfirm},
         {path: "/login-wait/:email", component: LoginWait},
         {path: "/login", component: Login},
