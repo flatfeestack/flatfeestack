@@ -1,7 +1,8 @@
 {
   "devDependencies": {
+    "@account-abstraction/contracts": "^0.8.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "^5.4.0",
     "@types/chai": "^4.3.11",
@@ -16,8 +17,5 @@
   "scripts": {
     "hardhat:test": "hardhat test",
     "hardhat:compile": "hardhat compile"
-  },
-  "dependencies": {
-    "@account-abstraction/contracts": "^0.7.0"
   }
 }

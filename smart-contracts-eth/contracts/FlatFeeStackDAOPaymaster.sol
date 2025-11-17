@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-//TODO clean
+import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 interface IEntryPoint {
     function depositTo(address) external payable;
@@ -23,30 +23,18 @@ interface IFlatFeeStackNFT_Extended is IFlatFeeStackNFT {
 }
 
 contract FlatFeeStackDAOPaymaster {
-
-    // -----------------------------------------------------------
-    // STORAGE
-    // -----------------------------------------------------------
-    IEntryPoint public immutable entryPoint;
+    IEntryPoint public immutable entryPoint = IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
     IFlatFeeStackNFT_Extended public immutable nft;
     address public immutable dao;
 
-    // -----------------------------------------------------------
-    // EVENTS
-    // -----------------------------------------------------------
     event UserOpSponsored(address indexed user, uint256 maxCost);
     event Deposit(address indexed from, uint256 amount);
     event EmergencyWithdraw(address indexed to, uint256 amount);
 
-    // -----------------------------------------------------------
-    // CONSTRUCTOR
-    // -----------------------------------------------------------
-    constructor(address entryPoint_, address nftAddress_, address daoAddress_) {
-        require(entryPoint_ != address(0), "entryPoint zero");
+    constructor(address nftAddress_, address daoAddress_) {
         require(nftAddress_ != address(0), "NFT zero");
         require(daoAddress_ != address(0), "DAO zero");
 
-        entryPoint = IEntryPoint(entryPoint_);
         nft = IFlatFeeStackNFT_Extended(nftAddress_);
         dao = daoAddress_;
     }
@@ -60,10 +48,6 @@ contract FlatFeeStackDAOPaymaster {
         require(msg.sender == dao, "Not DAO");
         _;
     }
-
-    // -----------------------------------------------------------
-    // MEMBERSHIP CHECK LOGIC
-    // -----------------------------------------------------------
 
     /**
      * Returns true if user owns:
@@ -88,10 +72,6 @@ contract FlatFeeStackDAOPaymaster {
         return false;
     }
 
-    // -----------------------------------------------------------
-    // PAYMASTER LOGIC
-    // -----------------------------------------------------------
-
     /**
      * validatePaymasterUserOp (before execution)
      * - Verifies deposit
@@ -108,14 +88,13 @@ contract FlatFeeStackDAOPaymaster {
         onlyEntryPoint
         returns (bytes memory context, uint256 validationData)
     {
-        // Extract sender from PackedUserOperation
         address sender;
         assembly {
             sender := calldataload(userOp.offset)
         }
 
-        require(isAuthorizedMember(sender), "Not a valid member");
-
+        //require(isAuthorizedMember(sender), "Not a valid member");
+        
         require(
             entryPoint.balanceOf(address(this)) >= maxCost,
             "Insufficient PM deposit"
@@ -142,10 +121,6 @@ contract FlatFeeStackDAOPaymaster {
         // For now: no extra charging. Cost already deducted from deposit.
         emit UserOpSponsored(sender, maxCost);
     }
-
-    // -----------------------------------------------------------
-    // PAYMASTER DEPOSIT CONTROLS
-    // -----------------------------------------------------------
 
     /// Adds ETH deposit to EntryPoint for this Paymaster
     function deposit() external payable {

@@ -81,32 +81,32 @@ function dollar(nr:number) {
   return BigInt(nr) * BigInt(1000000);
 }
 
-beforeEach("Deploy All Contracts", async function() {
+beforeEach("Deploy All Contracts", async function () {
   [council1, council2, user1, user2, user3, user4] = await ethers.getSigners();
-  const FlatFeeStackDAO = await ethers.getContractFactory("FlatFeeStackDAO");
-  
-  const deployTx = await FlatFeeStackDAO.getDeployTransaction(council1, council2);
-  const tx = await council1.sendTransaction(deployTx);
-  const receipt = await tx.wait();
 
-  //we need to use eventLogsRaw, as we don't have the NFT contract yet
-  const filteredLogs = await eventLogsRaw(tx, "FlatFeeStackNFTCreated(address,address)");
-  const addressNFTStr = filteredLogs[0].topics[1];
-  const addressNFT = ethers.getAddress(addressNFTStr.replace("000000000000000000000000", ""));
-  const addressDAO = receipt?.contractAddress as string;
+  const NFT = await ethers.getContractFactory("FlatFeeStackNFT");
+  contractNFT = await NFT.deploy(
+    council1.address,
+    council1.address,
+    council2.address
+  );
+  await contractNFT.waitForDeployment();
+
+  const DAO = await ethers.getContractFactory("FlatFeeStackDAO");
+  contractDAO = await DAO.deploy(await contractNFT.getAddress());
+  await contractDAO.waitForDeployment();
 
   contractUSDC = await ethers.deployContract("USDC");
   await contractUSDC.waitForDeployment();
-  const addressUSDC = await contractUSDC.getAddress();
 
-  contractNFT = await ethers.getContractAt("FlatFeeStackNFT", addressNFT);
-  contractDAO = await ethers.getContractAt("FlatFeeStackDAO", addressDAO);
-  
   contractPayoutEth = await ethers.deployContract("PayoutEth");
-  contractPayoutUSDC = await ethers.deployContract("PayoutERC20", [addressUSDC]);
+  await contractPayoutEth.waitForDeployment();
 
-  //console.log("addressUSDC", addressUSDC);
-})
+  contractPayoutUSDC = await ethers.deployContract("PayoutERC20", [
+    await contractUSDC.getAddress(),
+  ]);
+  await contractPayoutUSDC.waitForDeployment();
+});
 
 describe("Withdraw Functionality", function () {
   it("should allow owner to withdraw correct amount in ETH", async function () {

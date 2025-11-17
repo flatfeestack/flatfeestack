@@ -1,4 +1,4 @@
-export const nftAbi = [
+export const FLATFEESTACK_NFT_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
   "function membershipPayed(uint256 tokenId) view returns (uint48)",

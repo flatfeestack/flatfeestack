@@ -6,5 +6,5 @@ import "@account-abstraction/contracts/core/EntryPoint.sol";
 import "@account-abstraction/contracts/core/EntryPointSimulations.sol";
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import "@account-abstraction/contracts/samples/SimpleAccount.sol";
-import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+import "@account-abstraction/contracts/accounts/SimpleAccount.sol";
+import "@account-abstraction/contracts/accounts/SimpleAccountFactory.sol";
