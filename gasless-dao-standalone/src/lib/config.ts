@@ -1,0 +1,5 @@
+export const ENTRY_POINT_ADDRESS = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+export const DAO_ADDRESS = "0x5c35320231aa8677b65c8231ef2637111e7354fb";
+export const PAYMASTER_ADDRESS = "0x92975fc534F1aC8a12826D45C00f501eE397e660";
+export const NFT_ADDRESS = "0x08b0049895ce4c87749b7439cb2ad553cec7caf9";
+export const RPC_URL = "https://api.pimlico.io/v2/11155111/rpc?apikey=pim_Y3GiAJnZqiZ7dF3cQJxamJ";

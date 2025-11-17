@@ -1,0 +1,7 @@
+services:
+  gasless-dao:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
