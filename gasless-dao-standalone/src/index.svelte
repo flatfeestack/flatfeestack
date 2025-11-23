@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { writable } from 'svelte/store';
+    import { writable, get } from 'svelte/store';
     import {
         handleWalletConnect, getPaymasterDeposit,
         getGasCost, waitForConfirmations,
         incrementCounter, waitForTransactionReceipt,
-        checkIsMember, disconnectWallet,
-        autoConnectIfAuthorized
+        disconnectWallet, autoConnectIfAuthorized,
+        checkIsMember
     } from './lib/aaClient';
 
     const status = writable<string>('Not connected');
@@ -19,57 +19,43 @@
     const usePaymaster = writable<Boolean | null>(null);
 
     onMount(async () => {
-        const { eoa: addr, smartAccountAddress, paymasterUsed } = await autoConnectIfAuthorized();
-        eoa.set(addr);
-        smartAccount.set(smartAccountAddress);
-        usePaymaster.set(paymasterUsed);
+        const res = await autoConnectIfAuthorized();
+        eoa.set(res.eoa);
+        smartAccount.set(res.smartAccountAddress);
+        usePaymaster.set(res.paymasterUsed);
 
-        if (addr != null) status.set("Auto Connected");
-	});
+        if (res.eoa) status.set("Auto Connected");
+    });
 
     async function handleConnect() {
         loading.set(true);
 
         try {
-        const { eoa: addr, smartAccountAddress, paymasterUsed } = await handleWalletConnect();
-        eoa.set(addr);
-        smartAccount.set(smartAccountAddress);
-        usePaymaster.set(paymasterUsed);
-        if (addr != null) status.set("Connected");
-        } catch (err) {
-        console.error(err);
-        status.set((err).message);
+            const res = await handleWalletConnect();
+            eoa.set(res.eoa);
+            smartAccount.set(res.smartAccountAddress);
+            usePaymaster.set(res.paymasterUsed);
+
+            if (res.eoa) status.set("Connected");
+        } catch (err: any) {
+            console.error(err);
+            status.set(err?.message ?? 'Failed to connect');
         } finally {
-        loading.set(false);
+            loading.set(false);
         }
     }
 
     async function handleDisconnect(){
         disconnectWallet();
+
         lastTxHash.set(null);
-        status.set(null);
+        status.set('');
         eoa.set(null);
         gasCost.set(null);
         loading.set(false);
         smartAccount.set(null);
         paymasterFunds.set(null);
-    }
-
-    async function checkIsDAOMember(){
-        loading.set(true);
-        status.set("pending...");
-        gasCost.set(null);
-        paymasterFunds.set(null);
-
-        try {
-        const isMember = await checkIsMember();
-        status.set("Is Member: " + isMember);
-        } catch (err) {
-        console.error(err);
-        status.set((err as Error).message);
-        } finally {
-        loading.set(false);
-        }
+        usePaymaster.set(null);
     }
 
     async function handleIncrementCounter() {
@@ -79,33 +65,38 @@
         paymasterFunds.set(null);
 
         try {
-        const { userOpHash, txHash } = await incrementCounter(
-            (text) => status.set(text)
-        );
-        
-        lastTxHash.set(txHash.receipt.transactionHash);
-        status.set("userOp submitted");
+            const { userOpHash, txHash } = await incrementCounter(
+                (text) => status.set(text)
+            );
 
-        const receipt = await waitForTransactionReceipt($lastTxHash);
-        status.set("transaction mined");
+            lastTxHash.set(txHash.receipt.transactionHash);
+            status.set("userOp submitted");
 
-        const cost = await getGasCost($lastTxHash);
-        gasCost.set(cost.totalCostEth);
+            const receipt = await waitForTransactionReceipt(get(lastTxHash));
+            status.set("transaction mined");
 
-        const paymasterDeposit = await getPaymasterDeposit();
-        paymasterFunds.set(paymasterDeposit.eth);
+            const cost = await getGasCost(get(lastTxHash));
+            gasCost.set(cost.totalCostEth);
 
-        await waitForConfirmations(receipt, 3,
-            (text) => status.set(text)
-        );
+            const paymasterDeposit = await getPaymasterDeposit();
+            paymasterFunds.set(paymasterDeposit.eth);
 
-        status.set("success");
-        } catch (err) {
-        console.error(err);
-        status.set((err as Error).message);
+            await waitForConfirmations(receipt, 3,
+                (text) => status.set(text)
+            );
+
+            status.set("success");
+        } catch (err: any) {
+            console.error(err);
+            status.set(err?.message ?? 'Error occurred');
         } finally {
-        loading.set(false);
+            loading.set(false);
         }
+    }
+
+    async function checkIsDAOMember(){
+        let result = await checkIsMember(get(smartAccount) as '0x{string}', get(eoa));
+        status.set("Is Member " + String(result));
     }
 
     async function createProposal() {
@@ -171,18 +162,14 @@
             </section>
             
             {#if $gasCost}
-            <section style="margin-top: 1rem;">
                 <p>
                 <strong>Gas cost (paid by paymaster):</strong> {$gasCost} ETH
                 </p>
-            </section>
             {/if}
             {#if $paymasterFunds}
-            <section style="margin-top: 1rem;">
                 <p>
                 <strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH
                 </p>
-            </section>
             {/if}
         {/if}
 

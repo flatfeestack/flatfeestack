@@ -6,7 +6,6 @@
     "stage": "NODE_ENV=production preveltekit stage"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
     "ox": "^0.8.0",
     "permissionless": "^0.3.2",
     "svelte": "5.39.12",
@@ -21,6 +20,7 @@
     "preveltekit": "^1.2.15",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4"
   }
 }

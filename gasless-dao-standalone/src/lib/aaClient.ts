@@ -1,100 +1,191 @@
 import {
   createPublicClient, createWalletClient,
-  custom, http, encodeFunctionData, formatEther
+  custom, http, encodeFunctionData, formatEther,
+  type PublicClient,
+  type WalletClient,
+  type Hex,
+  type Address,
 } from 'viem';
 import { sepolia } from 'viem/chains';
 import { entryPoint07Abi, entryPoint07Address } from 'viem/account-abstraction';
-
-import { createSmartAccountClient } from 'permissionless';
+import { PIMLICO_URL, SEPOLIA_RPC_URL, PAYMASTER_CONTRACT_ADDRESS, COUNTER_CONTRACT_ADDRESS } from "../config"
+import { createSmartAccountClient, type SmartAccountClient } from 'permissionless';
 import { toSimpleSmartAccount } from 'permissionless/accounts';
 import FlatFeeStackPaymaster from '../../artifacts/contracts/FlatFeeStackDAOPaymaster.sol/FlatFeeStackDAOPaymaster.json' assert { type: "json" };
 
-import dotenv from "dotenv";
-dotenv.config();
+type AAClient = SmartAccountClient<any>;
 
-// Loose typing here to avoid fighting generics for a tutorial
-let smartAccountClient: any = null;
-let eoa: `0x${string}` | null = null;
-let smartAccountAddress: `0x${string}` | null = null;
-let publicClient: any;
-let usePaymaster: Boolean = false;
+type HelperState = {
+  eoa?: Address;
+  smartAccountAddress?: Address;
+  publicClient?: PublicClient;
+  walletClient?: WalletClient;
+  smartAccountClient?: AAClient;
+  usePaymaster: boolean;
+};
 
-const pimlicoUrl = process.env.PIMLICO_URL;
-const sepoliaRpc = process.env.SEPOLIA_RPC_URL;
-const paymasterAddress = process.env.PAYMASTER_CONTRACT_ADDRESS as `0x${string}`;
+const state: HelperState = {
+  usePaymaster: false,
+};
 
-export async function waitForTxStatus(txHash: `0x${string}`) {
-  const receipt = await publicClient.waitForTransactionReceipt({
-    hash: txHash,
-    pollingInterval: 2000, // 2s
+function getEthereum(): any {
+  if (typeof window === 'undefined') {
+    throw new Error('Ethereum provider is only available in the browser.');
+  }
+
+  const anyWindow = window as any;
+  const ethereum = anyWindow.ethereum;
+  if (!ethereum) {
+    throw new Error('MetaMask not found in this browser.');
+  }
+
+  return ethereum;
+}
+
+function ensurePublicClient(): PublicClient {
+  if (!state.publicClient) {
+    throw new Error('Public client not initialized');
+  }
+
+  return state.publicClient;
+}
+
+function ensureSmartAccountClient(): AAClient {
+  if (!state.smartAccountClient || !state.smartAccountAddress) {
+    throw new Error('Smart account not initialized');
+  }
+
+  return state.smartAccountClient;
+}
+
+async function setupSmartAccountFromEOA(eoa: Address) {
+  const ethereum = getEthereum();
+
+  const chainIdHex = (await ethereum.request({ method: 'eth_chainId' })) as string;
+  const sepoliaHex = `0x${sepolia.id.toString(16)}`;
+  if (chainIdHex !== sepoliaHex) {
+    throw new Error('Please switch MetaMask to the Sepolia network.');
+  }
+
+  if (!state.publicClient) {
+    state.publicClient = createPublicClient({
+      chain: sepolia,
+      transport: http(SEPOLIA_RPC_URL, { timeout: 30_000 }),
+    });
+  }
+
+  const publicClient = state.publicClient;
+
+  const walletClient = createWalletClient({
+    account: eoa,
+    chain: sepolia,
+    transport: custom(ethereum),
   });
 
+  const simpleAccount = await toSimpleSmartAccount({
+    client: publicClient as any,
+    owner: walletClient,
+    entryPoint: {
+      address: entryPoint07Address,
+      version: '0.7',
+    },
+  });
+
+  state.eoa = eoa;
+  state.publicClient = publicClient;
+  state.walletClient = walletClient;
+  state.smartAccountAddress = simpleAccount.address;
+
+  const usePaymaster = await checkIsMember(simpleAccount.address, eoa);
+  state.usePaymaster = usePaymaster;
+
+  const smartAccountClient = createSmartAccountClient({
+    account: simpleAccount,
+    chain: sepolia,
+    bundlerTransport: http(PIMLICO_URL),
+    paymaster: {
+      getPaymasterData: async () => {
+        if (!state.usePaymaster) return {};
+        return {
+          paymaster: PAYMASTER_CONTRACT_ADDRESS,
+          paymasterVerificationGasLimit: 100000n,
+          paymasterPostOpGasLimit: 100000n,
+        } as any;
+      },
+    },
+    userOperation: {
+      estimateFeesPerGas: async () => {
+        const fee = await publicClient.estimateFeesPerGas();
+        return {
+          maxFeePerGas: fee.maxFeePerGas,
+          maxPriorityFeePerGas: fee.maxPriorityFeePerGas,
+        };
+      },
+    },
+  });
+
+  state.smartAccountClient = smartAccountClient;
+
   return {
-    status: receipt.status,
-    blockNumber: receipt.blockNumber,
-    gasUsed: receipt.gasUsed,
+    eoa,
+    smartAccountAddress: state.smartAccountAddress,
+    paymasterUsed: state.usePaymaster,
   };
 }
 
-export async function getGasCost(txHash: `0x${string}`) {
+export async function getGasCost(txHash: Hex) {
+  const publicClient = ensurePublicClient();
   const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
 
   const gasUsed = receipt.gasUsed;
   const effectiveGasPrice = receipt.effectiveGasPrice;
-
   const totalCostWei = gasUsed * effectiveGasPrice;
 
   return {
     gasUsed,
     effectiveGasPrice,
     totalCostWei,
-    totalCostEth: formatEther(BigInt(totalCostWei)),
+    totalCostEth: formatEther(totalCostWei),
   };
 }
 
 export async function autoConnectIfAuthorized() {
-    const anyWindow = window as any;
-    const ethereum = anyWindow.ethereum;
-    if (!ethereum) return { eoa: null, smartAccountAddress: null, paymasterUsed: null };
+  try {
+    const ethereum = getEthereum();
 
-    const accounts = await ethereum.request({
-      method: "eth_accounts",
-    });
+    const accounts = (await ethereum.request({
+      method: 'eth_accounts',
+    })) as string[];
 
-    if (accounts && accounts.length > 0) {
-      eoa = accounts[0] as `0x${string}`;
-      return await initSmartAccount();
+    if (!accounts || accounts.length === 0) {
+      return { eoa: null, smartAccountAddress: null, paymasterUsed: null };
     }
 
+    const eoa = accounts[0] as Address;
+    return await setupSmartAccountFromEOA(eoa);
+  } catch {
     return { eoa: null, smartAccountAddress: null, paymasterUsed: null };
   }
+}
 
-  export async function handleWalletConnect(){
-    const anyWindow = window as any;
-    const ethereum = anyWindow.ethereum;
-    if (!ethereum) {
-      throw new Error('MetaMask not found in this browser.');
-    }
+export async function handleWalletConnect() {
+  const ethereum = getEthereum();
 
-    await ethereum.request({
-      method: "wallet_requestPermissions",
-      params: [{ eth_accounts: {} }],
-    });
+  await ethereum.request({
+    method: 'wallet_requestPermissions',
+    params: [{ eth_accounts: {} }],
+  });
 
-    const accounts = await ethereum.request({
-      method: "eth_requestAccounts",
-    });
+  const accounts = (await ethereum.request({
+    method: 'eth_requestAccounts',
+  })) as string[];
 
-    eoa = accounts[0] as `0x${string}`;
-    return await initSmartAccount();
-  }
+  const eoa = accounts[0] as Address;
+  return setupSmartAccountFromEOA(eoa);
+}
 
-export async function initSmartAccount() {
-  const anyWindow = window as any;
-  const ethereum = anyWindow.ethereum;
-  if (!ethereum) {
-    throw new Error('MetaMask not found in this browser.');
-  }
+/*export async function initSmartAccount() {
+  const ethereum = getEthereum();
 
   const accounts = (await ethereum.request({
     method: 'eth_requestAccounts',
@@ -111,7 +202,7 @@ export async function initSmartAccount() {
 
   publicClient = createPublicClient({
     chain: sepolia,
-    transport: http(sepoliaRpc, {
+    transport: http(SEPOLIA_RPC_URL, {
       timeout: 30_000,
     }),
   });
@@ -123,7 +214,7 @@ export async function initSmartAccount() {
   });
 
   const simpleAccount = await toSimpleSmartAccount({
-    client: publicClient,
+    client: publicClient as any,
     owner: walletClient, // MetaMask signer
     entryPoint: {
       address: entryPoint07Address,
@@ -137,7 +228,7 @@ export async function initSmartAccount() {
   smartAccountClient = createSmartAccountClient({
     account: simpleAccount,
     chain: sepolia,
-    bundlerTransport: http(pimlicoUrl),
+    bundlerTransport: http(PIMLICO_URL),
     paymaster: {
       getPaymasterData: async () => {
         if (!usePaymaster) {
@@ -145,7 +236,7 @@ export async function initSmartAccount() {
         }
 
         return {
-          paymaster: paymasterAddress,
+          paymaster: PAYMASTER_CONTRACT_ADDRESS,
           paymasterVerificationGasLimit: 100000n,
           paymasterPostOpGasLimit: 100000n,
         } as any;
@@ -167,22 +258,26 @@ export async function initSmartAccount() {
     smartAccountAddress,
     paymasterUsed: usePaymaster
   };
-}
+}*/
 
 export function disconnectWallet() {
-  eoa = null;
-  smartAccountAddress = null;
-  smartAccountClient = null;
+  state.eoa = undefined;
+  state.smartAccountAddress = undefined;
+  state.smartAccountClient = undefined;
+  state.walletClient = undefined;
+  state.usePaymaster = false;
 
-  console.log("Wallet disconnected");
+  console.log('Wallet disconnected');
 }
 
 export async function getPaymasterDeposit() {
+  const publicClient = ensurePublicClient();
+
   const deposit = await publicClient.readContract({
     address: entryPoint07Address,
     abi: entryPoint07Abi,
-    functionName: "balanceOf",
-    args: [paymasterAddress],
+    functionName: 'balanceOf',
+    args: [PAYMASTER_CONTRACT_ADDRESS],
   });
 
   return {
@@ -191,15 +286,16 @@ export async function getPaymasterDeposit() {
   };
 }
 
-export function getSmartAccountAddress() {
-  if (!smartAccountAddress) {
+export function getSmartAccountAddress(): Address {
+  if (!state.smartAccountAddress) {
     throw new Error('Smart account not initialized yet.');
   }
-  return smartAccountAddress;
+  return state.smartAccountAddress;
 }
 
-export async function incrementCounter(onStatus?: (s: string) => void,) {
-  let counterAddress = process.env.COUNTER_CONTRACT_ADDRESS;
+export async function incrementCounter(onStatus?: (s: string) => void) {
+  const smartAccountClient = ensureSmartAccountClient();
+
   const data = encodeFunctionData({
     abi: [
       {
@@ -214,18 +310,18 @@ export async function incrementCounter(onStatus?: (s: string) => void,) {
     args: [],
   });
 
-  onStatus?.("sending userOp...");
+  onStatus?.('sending userOp...');
   const userOpHash = await smartAccountClient.sendUserOperation({
     calls: [
       {
-        to: counterAddress,
+        to: COUNTER_CONTRACT_ADDRESS,
         data,
         value: 0n,
       },
     ],
   });
 
-  onStatus?.("waiting for receipt...");
+  onStatus?.('waiting for receipt...');
   const txHash = await smartAccountClient.waitForUserOperationReceipt({
     hash: userOpHash,
   });
@@ -233,44 +329,66 @@ export async function incrementCounter(onStatus?: (s: string) => void,) {
   return { userOpHash, txHash };
 }
 
-export async function checkIsMember() {
+export async function checkIsMember(smartAccountAddress?: Address, eoa?: Address): Promise<boolean> {
+  const publicClient = ensurePublicClient();
   const paymasterAbi = FlatFeeStackPaymaster.abi;
-  const resultSA = await publicClient.readContract({
-    address: paymasterAddress,
-    abi: paymasterAbi,
-    functionName: "isAuthorizedMember",
-    args: [smartAccountAddress],
-  });
-  console.log(resultSA);
 
-  const resultEOA = await publicClient.readContract({
-    address: paymasterAddress,
-    abi: paymasterAbi,
-    functionName: "isAuthorizedMember",
-    args: [eoa],
-  });
-  console.log(resultEOA);
-  console.log(eoa);
-  
-  return resultSA || resultEOA;
+  if (!smartAccountAddress && !eoa) return false;
+
+  try {
+    const [resultSA, resultEOA] = await Promise.all([
+      smartAccountAddress
+        ? publicClient.readContract({
+            address: PAYMASTER_CONTRACT_ADDRESS,
+            abi: paymasterAbi,
+            functionName: 'isAuthorizedMember',
+            args: [smartAccountAddress],
+          })
+        : Promise.resolve(false),
+      eoa
+        ? publicClient.readContract({
+            address: PAYMASTER_CONTRACT_ADDRESS,
+            abi: paymasterAbi,
+            functionName: 'isAuthorizedMember',
+            args: [eoa],
+          })
+        : Promise.resolve(false),
+    ]);
+
+    return Boolean(resultSA || resultEOA);
+  } catch (err) {
+    console.warn('checkIsMember failed', err);
+    return false;
+  }
 }
 
-export async function waitForTransactionReceipt(txHash: any){
-  return await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-        pollingInterval: 2000,
-      });
+export async function waitForTransactionReceipt(txHash: Hex) {
+  const publicClient = ensurePublicClient();
+  return publicClient.waitForTransactionReceipt({
+    hash: txHash,
+    pollingInterval: 2000,
+  });
+}
+
+export async function waitForTxStatus(txHash: Hex) {
+  const receipt = await waitForTransactionReceipt(txHash);
+  return {
+    status: receipt.status,
+    blockNumber: receipt.blockNumber,
+    gasUsed: receipt.gasUsed,
+  };
 }
 
 export async function waitForConfirmations(
   receipt: { blockNumber: bigint },
   confirmationsRequired: number,
-  onUpdate: (text: string) => void
+  onUpdate: (text: string) => void,
 ) {
+  const publicClient = ensurePublicClient();
   let confirmations = 0;
 
   while (confirmations < confirmationsRequired) {
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
 
     const block = await publicClient.getBlockNumber();
     confirmations = Number(block - receipt.blockNumber);
@@ -281,7 +399,7 @@ export async function waitForConfirmations(
   return confirmations;
 }
 
-export async function getBalance(address: `0x${string}`) {
-  console.log(address);
+export async function getBalance(address: Address) {
+  const publicClient = ensurePublicClient();
   return publicClient.getBalance({ address });
 }
