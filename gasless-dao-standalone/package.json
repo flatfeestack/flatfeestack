@@ -6,10 +6,11 @@
     "stage": "NODE_ENV=production preveltekit stage"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
+    "ox": "^0.8.0",
     "permissionless": "^0.3.2",
     "svelte": "5.39.12",
-    "viem": "^2.39.3",
-    "ox": "^0.8.0"
+    "viem": "^2.39.3"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.8.0",

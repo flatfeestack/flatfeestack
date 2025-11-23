@@ -1,7 +1,6 @@
 import {
   createPublicClient, createWalletClient,
-  custom, http, encodeFunctionData, formatEther,
-  type Hex,
+  custom, http, encodeFunctionData, formatEther
 } from 'viem';
 import { sepolia } from 'viem/chains';
 import { entryPoint07Abi, entryPoint07Address } from 'viem/account-abstraction';
@@ -10,6 +9,9 @@ import { createSmartAccountClient } from 'permissionless';
 import { toSimpleSmartAccount } from 'permissionless/accounts';
 import FlatFeeStackPaymaster from '../../artifacts/contracts/FlatFeeStackDAOPaymaster.sol/FlatFeeStackDAOPaymaster.json' assert { type: "json" };
 
+import dotenv from "dotenv";
+dotenv.config();
+
 // Loose typing here to avoid fighting generics for a tutorial
 let smartAccountClient: any = null;
 let eoa: `0x${string}` | null = null;
@@ -17,10 +19,9 @@ let smartAccountAddress: `0x${string}` | null = null;
 let publicClient: any;
 let usePaymaster: Boolean = false;
 
-const apiKey = "pim_Y3GiAJnZqiZ7dF3cQJxamJ";
-const pimlicoUrl = `https://api.pimlico.io/v2/${sepolia.id}/rpc?apikey=${apiKey}`;
-const sepoliaRpc = "https://ethereum-sepolia-rpc.publicnode.com";
-const paymasterAddress = "0x3fEc1a6e2dc0775C72C71682402a97e1953b554c" as `0x${string}`;
+const pimlicoUrl = process.env.PIMLICO_URL;
+const sepoliaRpc = process.env.SEPOLIA_RPC_URL;
+const paymasterAddress = process.env.PAYMASTER_CONTRACT_ADDRESS as `0x${string}`;
 
 export async function waitForTxStatus(txHash: `0x${string}`) {
   const receipt = await publicClient.waitForTransactionReceipt({
@@ -197,7 +198,8 @@ export function getSmartAccountAddress() {
   return smartAccountAddress;
 }
 
-export async function incrementCounter(counterAddress: `0x${string}`, onStatus?: (s: string) => void,) {
+export async function incrementCounter(onStatus?: (s: string) => void,) {
+  let counterAddress = process.env.COUNTER_CONTRACT_ADDRESS;
   const data = encodeFunctionData({
     abi: [
       {

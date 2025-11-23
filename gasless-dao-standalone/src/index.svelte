@@ -72,8 +72,6 @@
         }
     }
 
-    const counterAddress = '0x4dDf6C6F97a5d81f7bEd8EAd18e0bc07eC117Bb8' as `0x${string}`;
-
     async function handleIncrementCounter() {
         loading.set(true);
         status.set("pending...");
@@ -82,9 +80,9 @@
 
         try {
         const { userOpHash, txHash } = await incrementCounter(
-            counterAddress,
             (text) => status.set(text)
         );
+        
         lastTxHash.set(txHash.receipt.transactionHash);
         status.set("userOp submitted");
 
