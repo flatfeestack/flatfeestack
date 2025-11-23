@@ -1,22 +1,25 @@
 {
+  "type": "module",
   "scripts": {
     "dev": "preveltekit dev",
     "build": "NODE_ENV=production preveltekit prod",
     "stage": "NODE_ENV=production preveltekit stage"
   },
   "dependencies": {
-    "svelte": "^5.0.0",
-    "viem": "^2.9.16"
+    "permissionless": "^0.3.2",
+    "svelte": "5.39.12",
+    "viem": "^2.39.3",
+    "ox": "^0.8.0"
   },
   "devDependencies": {
-    "@account-abstraction/contracts": "^0.6.0",
-    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-    "@openzeppelin/contracts": "^5.4.0",
-    "@types/node": "^20.10.5",
-    "hardhat": "^2.22.5",
-    "preveltekit": "1.2.18",
-    "svelte-check": "^4.0.0",
-    "svelte-preprocess": "^5.1.0",
-    "typescript": "^5.4.0"
+    "@account-abstraction/contracts": "^0.8.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.22.6",
+    "preveltekit": "^1.2.15",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.9.3"
   }
 }

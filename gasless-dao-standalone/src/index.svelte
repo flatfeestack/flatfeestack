@@ -1,264 +1,194 @@
-<script>
+<script lang="ts">
     import { onMount } from "svelte";
-    import { getTransactionReceipt, decodeEventLog } from "viem";
-    import { createWalletConnection, sendContractTx } from "./lib/wallet.js";
-    import { executeSmartAccountTransaction, pollUserOp } from "./lib/aa.js";
-    import { setupStaticRoutes } from "preveltekit";
-    import { FLATFEESTACK_NFT_ABI, daoAbi } from "./lib/abi"
-    import { NFT_ADDRESS, DAO_ADDRESS } from "./lib/config";
-    import { publicClient } from "./lib/publicClient.js"
+    import { writable } from 'svelte/store';
+    import {
+        handleWalletConnect, getPaymasterDeposit,
+        getGasCost, waitForConfirmations,
+        incrementCounter, waitForTransactionReceipt,
+        checkIsMember, disconnectWallet,
+        autoConnectIfAuthorized
+    } from './lib/aaClient';
 
-    const contractAddress = NFT_ADDRESS;
+    const status = writable<string>('Not connected');
+    const eoa = writable<`0x${string}` | null>(null);
+    const smartAccount = writable<string | null>(null);
+    const lastTxHash = writable<`0x${string}` | null>(null);
+    const loading = writable<boolean>(false);
+    const gasCost = writable<string | null>(null);
+    const paymasterFunds = writable<string | null>(null);
+    const usePaymaster = writable<Boolean | null>(null);
 
-    let walletConnection;
-    let account = $state(null);
-    let isConnected = $state(false);
-    let isTestnet = $state(true);
-    let usePaymaster = $state(true);
-    let hash = $state(null);
-    let status = $state("Connect MetaMask");
-    let fileName = $state(null);
-    let txHash = $state("");
-    let userOpHash = $state("");
-    let smartAccountAddress = $state("");
+    onMount(async () => {
+        const { eoa: addr, smartAccountAddress, paymasterUsed } = await autoConnectIfAuthorized();
+        eoa.set(addr);
+        smartAccount.set(smartAccountAddress);
+        usePaymaster.set(paymasterUsed);
 
-    let proposalDescription = $state("");
-    let proposalTarget = $state("");
-    let proposalCalldata = $state("0x");
-    let proposalId = $state("");
+        if (addr != null) status.set("Auto Connected");
+	});
 
-    onMount(() => {
-        walletConnection = createWalletConnection({
-            onConnected: (acc, testnet = true, switchCancelled = false) => {
-                account = acc;
-                isConnected = true;
-                isTestnet = testnet;
-                status = switchCancelled
-                    ? "Connected but network switch cancelled"
-                    : `Connected to ${acc.slice(0, 6)}...${acc.slice(-4)} on ${testnet ? "Sepolia" : "Mainnet"}`;
-            },
-            onDisconnected: () => {
-                account = null;
-                isConnected = false;
-                hash = null;
-                fileName = null;
-                status = "Connect MetaMask";
-            },
-            onChainChanged: (testnet) => {
-                isTestnet = testnet;
-                if (account) {
-                    status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${testnet ? "Sepolia" : "Mainnet"}`;
-                }
-            },
-            onAccountChanged: (acc) => {
-                account = acc;
-                if (acc) {
-                    status = `Connected to ${acc.slice(0, 6)}...${acc.slice(-4)} on ${isTestnet ? "Sepolia" : "Mainnet"}`;
-                }
-            },
-            onError: (message) => {
-                status = message;
-            },
-        });
+    async function handleConnect() {
+        loading.set(true);
 
-        walletConnection.initialize();
-    });
-
-    async function checkIsCouncil() {
         try {
-            userOpHash = "";
-            txHash = "";
+        const { eoa: addr, smartAccountAddress, paymasterUsed } = await handleWalletConnect();
+        eoa.set(addr);
+        smartAccount.set(smartAccountAddress);
+        usePaymaster.set(paymasterUsed);
+        if (addr != null) status.set("Connected");
+        } catch (err) {
+        console.error(err);
+        status.set((err).message);
+        } finally {
+        loading.set(false);
+        }
+    }
 
-            if (smartAccountAddress) {
-                userOpHash = await executeSmartAccountTransaction(
-                    walletConnection.wallet,
-                    smartAccountAddress,
-                    account,
-                    contractAddress,
-                    FLATFEESTACK_NFT_ABI, //abi
-                    "isCouncilIndex",
-                    [account, 0],
-                    usePaymaster
-                );
-                status = `UserOp submitted: ${userOpHash}`;
-                console.log("User Op Hash: " + userOpHash);
+    async function handleDisconnect(){
+        disconnectWallet();
+        lastTxHash.set(null);
+        status.set(null);
+        eoa.set(null);
+        gasCost.set(null);
+        loading.set(false);
+        smartAccount.set(null);
+        paymasterFunds.set(null);
+    }
 
-                function updateStatus(msg) { status = msg; }
+    async function checkIsDAOMember(){
+        loading.set(true);
+        status.set("pending...");
+        gasCost.set(null);
+        paymasterFunds.set(null);
 
-                const receipt = await pollUserOp(userOpHash, { onUpdate: updateStatus });
-                console.log("Final result:", receipt);
-                txHash = receipt.receipt.transactionHash || "";
-            } else {
-                txHash = await sendContractTx(walletConnection.wallet, account, contractAddress, FLATFEESTACK_NFT_ABI, "isCouncilIndex", [account, 0]);
-                status = `Stored, tx is: ${txHash}`;
-            }
-        } catch (error) {
-            status = `Error: ${error.message}`;
+        try {
+        const isMember = await checkIsMember();
+        status.set("Is Member: " + isMember);
+        } catch (err) {
+        console.error(err);
+        status.set((err as Error).message);
+        } finally {
+        loading.set(false);
+        }
+    }
+
+    const counterAddress = '0x4dDf6C6F97a5d81f7bEd8EAd18e0bc07eC117Bb8' as `0x${string}`;
+
+    async function handleIncrementCounter() {
+        loading.set(true);
+        status.set("pending...");
+        gasCost.set(null);
+        paymasterFunds.set(null);
+
+        try {
+        const { userOpHash, txHash } = await incrementCounter(
+            counterAddress,
+            (text) => status.set(text)
+        );
+        lastTxHash.set(txHash.receipt.transactionHash);
+        status.set("userOp submitted");
+
+        const receipt = await waitForTransactionReceipt($lastTxHash);
+        status.set("transaction mined");
+
+        const cost = await getGasCost($lastTxHash);
+        gasCost.set(cost.totalCostEth);
+
+        const paymasterDeposit = await getPaymasterDeposit();
+        paymasterFunds.set(paymasterDeposit.eth);
+
+        await waitForConfirmations(receipt, 3,
+            (text) => status.set(text)
+        );
+
+        status.set("success");
+        } catch (err) {
+        console.error(err);
+        status.set((err as Error).message);
+        } finally {
+        loading.set(false);
         }
     }
 
     async function createProposal() {
-        status = "Submitting proposal...";
-
-        try {
-            //TODO
-            /*const encodedCalldata = encodeFunctionData({
-                abi: FLATFEESTACK_NFT_ABI,
-                functionName: "isCouncil", //TODO
-                args: proposalCalldata,
-            });*/
-
-            const targets = [proposalTarget];
-            const values = [0];
-            const calldatas = ["0x"];//TODO
-
-            if (smartAccountAddress) {
-                userOpHash = await executeSmartAccountTransaction(
-                    walletConnection.wallet,
-                    smartAccountAddress,
-                    account,
-                    DAO_ADDRESS,
-                    daoAbi,
-                    "propose",
-                    [targets, values, calldatas, proposalDescription],
-                    usePaymaster
-                );
-
-                status = `UserOp submitted: ${userOpHash}`;
-
-                const receipt = await pollUserOp(userOpHash, {
-                    onUpdate: (m) => (status = m),
-                });
-
-                status = `AA proposal created in tx: ${receipt?.receipt?.transactionHash || "unknown"}`;
-
-                return;
-            }
-
-            txHash = await sendContractTx(
-                walletConnection.wallet,
-                account,
-                DAO_ADDRESS,
-                daoAbi,
-                "propose",
-                [targets, values, calldatas, proposalDescription]
-            );
-
-            status = `TX sent: ${txHash}<br>Waiting for proposalId...`;
-
-            const receipt = await publicClient.waitForTransactionReceipt({
-                hash: txHash,
-            });
-
-            const logs = publicClient.decodeEventLog({
-                abi: daoAbi,
-                eventName: "ProposalCreated",
-                data: receipt.logs[0].data,
-                topics: receipt.logs[0].topics,
-            });
-
-            const proposalId = logs.args.proposalId;
-
-            status = `Proposal created! ID: ${proposalId}<br>TX: ${txHash}`;
-        } catch (e) {
-            status = `Error: ${e.message}`;
-        }
+        //TODO tbd
     }
 
-    async function voteOnProposal(support) {
-        if (!proposalId) {
-            status = "Enter a proposalId";
-            return;
-        }
-
-        status = "Submitting vote...";
-
-        try {
-            if (smartAccountAddress) {
-            userOpHash = await executeSmartAccountTransaction(
-                walletConnection.wallet,
-                smartAccountAddress,
-                account,
-                DAO_ADDRESS,
-                daoAbi,
-                "castVote",
-                [proposalId, support],
-                usePaymaster
-            );
-
-            status = `Vote sent through AA: ${userOpHash}`;
-            return;
-            }
-
-            txHash = await sendContractTx(
-            walletConnection.wallet,
-            account,
-            DAO_ADDRESS,
-            daoAbi,
-            "castVote",
-            [proposalId, support]
-            );
-
-            status = `Vote submitted: ${txHash}`;
-            
-        } catch (e) {
-            status = `Error voting: ${e.message}`;
-        }
+    async function voteOnProposal() {
+        //TODO tbd
     }
-
-    const routes = {
-        staticRoutes: [
-            {
-                path: "/",
-                htmlFilename: "index.html",
-            },
-        ],
-    };
-
-    setupStaticRoutes(routes);
 </script>
 
 <div class="container">
     <h1>Paymaster DAO</h1>
 
     <div class="status-box">
-        {#if userOpHash.trim() !== ""}
-            <span>
-                {@html "User Op Hash: " + (userOpHash.replace(/\n/g, "<br>") + "<br>")}
-            </span>
-        {/if}
-        {#if txHash.trim() !== ""}
-            <span>
-                {@html "Tx Hash: " + (txHash.replace(/\n/g, "<br>") + "<br>")}
-            </span>
-        {/if}
-        <span>{@html status.replace(/\n/g, "<br>")}</span>
+        <span>{$status}</span>
     </div>
 
     <div class="controls">
-        {#if !isConnected}
-            <button onclick={() => walletConnection.connect(isTestnet)} class="btn btn-connect">
-                Connect MetaMask
+        {#if !$eoa}
+            <button on:click={handleConnect} disabled={$loading} class="btn btn-primary">
+            Connect MetaMask
             </button>
         {:else}
-            <label class="input-group">
-                <span>Smart Account (optional):</span>
-                <input type="text" bind:value={smartAccountAddress} placeholder="0x..." class="address-input" />
-            </label>
-            
-            <button onclick={() => walletConnection.disconnect()} class="btn btn-secondary">Disconnect</button>
+            <button on:click={handleDisconnect} disabled={$loading} class="btn btn-primary">
+            Disconnect MetaMask
+            </button>
         {/if}
 
-        <button onclick={checkIsCouncil} class="btn btn-primary">Check is Council</button>
+        {#if $smartAccount}
+            <section style="margin-top: 1rem;">
+            <p>
+                <strong>EOA:</strong> {$eoa}<br />
+                <strong>Smart account:</strong> {$smartAccount}<br />
+                <strong>Using Paymaster:</strong> {String($usePaymaster)}
+            </p>
 
-        <label class="network-toggle">
-            <input type="checkbox" bind:checked={usePaymaster} />
-            <span>Use Paymaster (Gasless)</span>
-        </label>
+            <div class="button-column">
+                <button on:click={checkIsDAOMember} disabled={$loading} class="btn btn-primary">
+                    Check Is DAO Member
+                </button>
 
-        <hr>
+                <button on:click={handleIncrementCounter} disabled={$loading} class="btn btn-primary">
+                    [TEST] Increment Counter
+                </button>
+            </div>
 
-        <h2>DAO Proposal</h2>
+            </section>
+        {/if}
+
+        {#if $lastTxHash}
+            <section style="margin-top: 1rem;">
+            <p>
+                Last tx hash:
+                <a
+                href={`https://sepolia.etherscan.io/tx/${$lastTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                >
+                View on Etherscan
+                </a>
+            </p>
+            </section>
+            
+            {#if $gasCost}
+            <section style="margin-top: 1rem;">
+                <p>
+                <strong>Gas cost (paid by paymaster):</strong> {$gasCost} ETH
+                </p>
+            </section>
+            {/if}
+            {#if $paymasterFunds}
+            <section style="margin-top: 1rem;">
+                <p>
+                <strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH
+                </p>
+            </section>
+            {/if}
+        {/if}
+
+        <!--<h2>DAO Proposal</h2>
 
         <div class="input-group">
         <span>Proposal Target</span>
@@ -292,11 +222,17 @@
             <button onclick={() => voteOnProposal(0)} class="btn btn-secondary">Against</button>
             <button onclick={() => voteOnProposal(1)} class="btn btn-primary">For</button>
             <button onclick={() => voteOnProposal(2)} class="btn btn-secondary">Abstain</button>
-        </div>
+        </div>-->
     </div>
 </div>
 
 <style>
+    .button-column {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
     .container {
         max-width: 520px;
         margin: 40px auto;
@@ -330,20 +266,6 @@
         gap: 14px;
     }
 
-    .input-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        font-size: 14px;
-    }
-
-    .address-input {
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        font-size: 14px;
-    }
-
     .btn {
         padding: 12px 20px;
         border-radius: 10px;
@@ -352,23 +274,6 @@
         font-size: 15px;
         font-weight: 600;
         transition: all 0.15s ease;
-    }
-
-    .btn-connect {
-        background: #0077ff;
-        color: white;
-    }
-
-    .btn-connect:hover {
-        background: #005fcc;
-    }
-
-    .btn-secondary {
-        background: #e9e9e9;
-    }
-
-    .btn-secondary:hover {
-        background: #d5d5d5;
     }
 
     .btn-primary {
@@ -380,22 +285,8 @@
         background: #419445;
     }
 
-    .network-toggle {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 4px;
-        font-size: 14px;
-    }
-
     .status-box span {
         display: block;
         margin-bottom: 4px;
     }
-
-    input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-    }
-
 </style>

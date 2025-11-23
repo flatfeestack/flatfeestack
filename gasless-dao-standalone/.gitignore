@@ -1,5 +1,9 @@
 # Hardhat
-artifacts/
+artifacts/@account-abstraction
+artifacts/@openzeppelin
+artifacts/build-info
+artifacts/hardhat
+
 cache/
 typechain/
 typechain-types/
