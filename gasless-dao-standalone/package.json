@@ -9,14 +9,13 @@
     "ox": "^0.8.0",
     "permissionless": "^0.3.2",
     "svelte": "5.39.12",
-    "viem": "^2.39.3"
+    "viem": "^2.40.3"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.8.0",
     "@typechain/ethers-v6": "^0.5.1",
-    "@typechain/hardhat": "^9.1.0",
-    "ethers": "^6.15.0",
-    "hardhat": "^2.22.6",
+    "@typechain/hardhat": "^9.1.1",
+    "hardhat": "^3.0.2",
     "preveltekit": "^1.2.15",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",

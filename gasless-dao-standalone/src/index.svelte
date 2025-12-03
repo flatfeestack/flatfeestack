@@ -9,7 +9,7 @@
         checkIsMember
     } from './lib/aaClient';
 
-    const status = writable<string>('Not connected');
+    const statusFeed = writable<string[]>([]);
     const eoa = writable<`0x${string}` | null>(null);
     const smartAccount = writable<string | null>(null);
     const lastTxHash = writable<`0x${string}` | null>(null);
@@ -23,9 +23,20 @@
         eoa.set(res.eoa);
         smartAccount.set(res.smartAccountAddress);
         usePaymaster.set(res.paymasterUsed);
-
-        if (res.eoa) status.set("Auto Connected");
     });
+
+    function formatTime(date = new Date()) {
+        return date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+        });
+    }
+
+    function pushStatus(msg: string) {
+        const stampedMsg = `[${formatTime()}] ${msg}`;
+        statusFeed.update((l) => [...l, stampedMsg]);
+    }
 
     async function handleConnect() {
         loading.set(true);
@@ -35,11 +46,8 @@
             eoa.set(res.eoa);
             smartAccount.set(res.smartAccountAddress);
             usePaymaster.set(res.paymasterUsed);
-
-            if (res.eoa) status.set("Connected");
         } catch (err: any) {
             console.error(err);
-            status.set(err?.message ?? 'Failed to connect');
         } finally {
             loading.set(false);
         }
@@ -49,7 +57,6 @@
         disconnectWallet();
 
         lastTxHash.set(null);
-        status.set('');
         eoa.set(null);
         gasCost.set(null);
         loading.set(false);
@@ -60,20 +67,20 @@
 
     async function handleIncrementCounter() {
         loading.set(true);
-        status.set("pending...");
+        pushStatus("Preparing UserOperation ...");
         gasCost.set(null);
         paymasterFunds.set(null);
 
         try {
-            const { userOpHash, txHash } = await incrementCounter(
-                (text) => status.set(text)
+            const { userOpHash, receipt } = await incrementCounter(
+                (text) => pushStatus(text)
             );
 
-            lastTxHash.set(txHash.receipt.transactionHash);
-            status.set("userOp submitted");
+            lastTxHash.set(receipt.receipt.transactionHash);
+            pushStatus("UserOperation submitted");
 
-            const receipt = await waitForTransactionReceipt(get(lastTxHash));
-            status.set("transaction mined");
+            const txReceipt = await waitForTransactionReceipt(get(lastTxHash));
+            pushStatus("Transaction included in a block");
 
             const cost = await getGasCost(get(lastTxHash));
             gasCost.set(cost.totalCostEth);
@@ -81,14 +88,14 @@
             const paymasterDeposit = await getPaymasterDeposit();
             paymasterFunds.set(paymasterDeposit.eth);
 
-            await waitForConfirmations(receipt, 3,
-                (text) => status.set(text)
+            await waitForConfirmations(txReceipt, 3,
+                (text) => pushStatus(text)
             );
 
-            status.set("success");
+            pushStatus("UserOperation Success");
         } catch (err: any) {
             console.error(err);
-            status.set(err?.message ?? 'Error occurred');
+            pushStatus(err?.message ?? 'Error occurred');
         } finally {
             loading.set(false);
         }
@@ -96,7 +103,7 @@
 
     async function checkIsDAOMember(){
         let result = await checkIsMember(get(smartAccount) as '0x{string}', get(eoa));
-        status.set("Is Member " + String(result));
+        pushStatus("Is Member " + String(result));
     }
 
     async function createProposal() {
@@ -108,170 +115,156 @@
     }
 </script>
 
-<div class="container">
-    <h1>Paymaster DAO</h1>
-
-    <div class="status-box">
-        <span>{$status}</span>
-    </div>
-
-    <div class="controls">
+<div class="app-layout">
+    <div class="top-right">
         {#if !$eoa}
-            <button on:click={handleConnect} disabled={$loading} class="btn btn-primary">
-            Connect MetaMask
+            <button on:click={handleConnect} disabled={$loading} class="btn btn-secondary">
+                Connect
             </button>
         {:else}
-            <button on:click={handleDisconnect} disabled={$loading} class="btn btn-primary">
-            Disconnect MetaMask
+            <button on:click={handleDisconnect} disabled={$loading} class="btn btn-secondary">
+                Disconnect
             </button>
-        {/if}
 
-        {#if $smartAccount}
-            <section style="margin-top: 1rem;">
-            <p>
-                <strong>EOA:</strong> {$eoa}<br />
-                <strong>Smart account:</strong> {$smartAccount}<br />
-                <strong>Using Paymaster:</strong> {String($usePaymaster)}
-            </p>
-
-            <div class="button-column">
-                <button on:click={checkIsDAOMember} disabled={$loading} class="btn btn-primary">
-                    Check Is DAO Member
-                </button>
-
-                <button on:click={handleIncrementCounter} disabled={$loading} class="btn btn-primary">
-                    [TEST] Increment Counter
-                </button>
+            <div class="connection-status">
+                Connected as<br />
+                <span>{$eoa}</span>
             </div>
-
-            </section>
         {/if}
+    </div>
 
-        {#if $lastTxHash}
-            <section style="margin-top: 1rem;">
-            <p>
-                Last tx hash:
-                <a
-                href={`https://sepolia.etherscan.io/tx/${$lastTxHash}`}
-                target="_blank"
-                rel="noreferrer"
-                >
-                View on Etherscan
-                </a>
-            </p>
-            </section>
-            
-            {#if $gasCost}
-                <p>
-                <strong>Gas cost (paid by paymaster):</strong> {$gasCost} ETH
-                </p>
+    <div class="container">
+        <h1>Paymaster DAO</h1>
+
+        <div class="controls">
+            {#if $smartAccount}
+                <section style="margin-top: 1rem;">
+                    <p>
+                        <strong>Smart account:</strong> {$smartAccount}<br />
+                        <strong>Using Paymaster:</strong> {String($usePaymaster)}
+                    </p>
+
+                    <div class="button-column">
+                        <button on:click={checkIsDAOMember} disabled={$loading} class="btn btn-primary">
+                            Check Is DAO Member
+                        </button>
+
+                        <button on:click={handleIncrementCounter} disabled={$loading} class="btn btn-primary">
+                            [TEST] Increment Counter
+                        </button>
+                    </div>
+                </section>
             {/if}
-            {#if $paymasterFunds}
-                <p>
-                <strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH
-                </p>
+
+            {#if $lastTxHash}
+                <section style="margin-top: 1rem;">
+                    <p>
+                        Last tx hash:
+                        <a href={`https://sepolia.etherscan.io/tx/${$lastTxHash}`} target="_blank">
+                            View on Etherscan
+                        </a>
+                    </p>
+
+                    {#if $gasCost}
+                        <p><strong>Gas cost:</strong> {$gasCost} ETH</p>
+                    {/if}
+
+                    {#if $paymasterFunds}
+                        <p><strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH</p>
+                    {/if}
+                </section>
             {/if}
-        {/if}
-
-        <!--<h2>DAO Proposal</h2>
-
-        <div class="input-group">
-        <span>Proposal Target</span>
-        <input type="text" bind:value={proposalTarget} placeholder="0xContract..." class="address-input" />
         </div>
+    </div>
 
-        <div class="input-group">
-        <span>Calldata (hex)</span>
-        <input type="text" bind:value={proposalCalldata} placeholder="0x..." class="address-input" />
-        </div>
-
-        <div class="input-group">
-        <span>Description</span>
-        <input type="text" bind:value={proposalDescription} placeholder="Description" class="address-input" />
-        </div>
-
-        <button onclick={createProposal} class="btn btn-primary">
-            Create Proposal
-        </button>
-
-        <hr>
-
-        <h2>Vote on Proposal</h2>
-
-        <div class="input-group">
-        <span>Proposal ID</span>
-            <input type="text" bind:value={proposalId} placeholder="e.g. 123" class="address-input" />
-        </div>
-
-        <div class="controls-row" style="display:flex; gap:10px;">
-            <button onclick={() => voteOnProposal(0)} class="btn btn-secondary">Against</button>
-            <button onclick={() => voteOnProposal(1)} class="btn btn-primary">For</button>
-            <button onclick={() => voteOnProposal(2)} class="btn btn-secondary">Abstain</button>
-        </div>-->
+    <div class="status-feed">
+        {#each $statusFeed as entry}
+            <div class="feed-item">{entry}</div>
+        {/each}
     </div>
 </div>
 
+
 <style>
-    .button-column {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
+.app-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    position: relative;
+}
 
-    .container {
-        max-width: 520px;
-        margin: 40px auto;
-        padding: 24px;
-        border-radius: 14px;
-        background: #ffffff;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-        font-family: system-ui, sans-serif;
-    }
+.top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
 
-    h1 {
-        text-align: center;
-        margin-bottom: 28px;
-        font-size: 28px;
-    }
+.connection-status {
+    font-size: 12px;
+    color: #555;
+}
+.connection-status span {
+    font-size: 12px;
+    word-break: break-all;
+}
 
-    .status-box {
-        margin-bottom: 24px;
-        padding: 16px;
-        background: #f7f7f9;
-        border-radius: 10px;
-        border: 1px solid #e3e3e8;
-        font-size: 14px;
-        line-height: 1.5;
-        word-break: break-all;
-    }
+.status-feed {
+    margin-top: 80px;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 12px;
+    border-left: 1px solid #ddd;
+    background: #fafafa;
+    font-size: 14px;
+}
 
-    .controls {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-    }
+.feed-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    word-break: break-word;
+}
 
-    .btn {
-        padding: 12px 20px;
-        border-radius: 10px;
-        border: none;
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 600;
-        transition: all 0.15s ease;
-    }
+.button-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
 
-    .btn-primary {
-        background: #4caf50;
-        color: white;
-    }
+.container {
+    max-width: 520px;
+    padding: 24px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    font-family: system-ui, sans-serif;
+    margin-top: 60px;
+}
 
-    .btn-primary:hover {
-        background: #419445;
-    }
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
 
-    .status-box span {
-        display: block;
-        margin-bottom: 4px;
-    }
+.btn-primary {
+    background: #4caf50;
+    color: white;
+}
+
+.btn-secondary {
+    background: #444;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #419445;
+}
 </style>

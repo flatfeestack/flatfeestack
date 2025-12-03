@@ -184,82 +184,6 @@ export async function handleWalletConnect() {
   return setupSmartAccountFromEOA(eoa);
 }
 
-/*export async function initSmartAccount() {
-  const ethereum = getEthereum();
-
-  const accounts = (await ethereum.request({
-    method: 'eth_requestAccounts',
-  })) as string[];
-  eoa = accounts[0] as `0x${string}`;
-
-  const chainIdHex = (await ethereum.request({
-    method: 'eth_chainId',
-  })) as string;
-  const sepoliaHex = `0x${sepolia.id.toString(16)}`;
-  if (chainIdHex !== sepoliaHex) {
-    throw new Error('Please switch MetaMask to the Sepolia network.');
-  }
-
-  publicClient = createPublicClient({
-    chain: sepolia,
-    transport: http(SEPOLIA_RPC_URL, {
-      timeout: 30_000,
-    }),
-  });
-
-  const walletClient = createWalletClient({
-    account: eoa,
-    chain: sepolia,
-    transport: custom(ethereum),
-  });
-
-  const simpleAccount = await toSimpleSmartAccount({
-    client: publicClient as any,
-    owner: walletClient, // MetaMask signer
-    entryPoint: {
-      address: entryPoint07Address,
-      version: '0.7',
-    },
-  });
-
-  smartAccountAddress = simpleAccount.address;
-  usePaymaster = await checkIsMember();
-
-  smartAccountClient = createSmartAccountClient({
-    account: simpleAccount,
-    chain: sepolia,
-    bundlerTransport: http(PIMLICO_URL),
-    paymaster: {
-      getPaymasterData: async () => {
-        if (!usePaymaster) {
-          return {}; // no paymaster
-        }
-
-        return {
-          paymaster: PAYMASTER_CONTRACT_ADDRESS,
-          paymasterVerificationGasLimit: 100000n,
-          paymasterPostOpGasLimit: 100000n,
-        } as any;
-      },
-    },
-    userOperation: {
-      estimateFeesPerGas: async () => {
-        const fee = await publicClient.estimateFeesPerGas();
-        return {
-          maxFeePerGas: fee.maxFeePerGas,
-          maxPriorityFeePerGas: fee.maxPriorityFeePerGas,
-        };
-      },
-    },
-  });
-
-  return {
-    eoa,
-    smartAccountAddress,
-    paymasterUsed: usePaymaster
-  };
-}*/
-
 export function disconnectWallet() {
   state.eoa = undefined;
   state.smartAccountAddress = undefined;
@@ -310,7 +234,8 @@ export async function incrementCounter(onStatus?: (s: string) => void) {
     args: [],
   });
 
-  onStatus?.('sending userOp...');
+  onStatus?.("Waiting for signature ...");
+
   const userOpHash = await smartAccountClient.sendUserOperation({
     calls: [
       {
@@ -321,12 +246,12 @@ export async function incrementCounter(onStatus?: (s: string) => void) {
     ],
   });
 
-  onStatus?.('waiting for receipt...');
-  const txHash = await smartAccountClient.waitForUserOperationReceipt({
+  onStatus?.('UserOperation is being processed by Bundler ...');
+  const receipt = await smartAccountClient.waitForUserOperationReceipt({
     hash: userOpHash,
   });
 
-  return { userOpHash, txHash };
+  return { userOpHash, receipt };
 }
 
 export async function checkIsMember(smartAccountAddress?: Address, eoa?: Address): Promise<boolean> {
@@ -386,6 +311,7 @@ export async function waitForConfirmations(
 ) {
   const publicClient = ensurePublicClient();
   let confirmations = 0;
+  let lastUpdatedConfirmation = -1;
 
   while (confirmations < confirmationsRequired) {
     await new Promise((r) => setTimeout(r, 2000));
@@ -393,7 +319,10 @@ export async function waitForConfirmations(
     const block = await publicClient.getBlockNumber();
     confirmations = Number(block - receipt.blockNumber);
 
-    onUpdate(`confirmations: ${confirmations}/${confirmationsRequired}`);
+    if (lastUpdatedConfirmation < 0 || lastUpdatedConfirmation < confirmations){
+      onUpdate(`Confirmations: ${confirmations}/${confirmationsRequired}`);
+      lastUpdatedConfirmation = confirmations;
+    }
   }
 
   return confirmations;
