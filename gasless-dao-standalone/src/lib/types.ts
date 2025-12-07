@@ -1,3 +1,8 @@
+import {
+  type Address,
+  type Hex,
+} from 'viem';
+
 export interface ProposalView {
     id: bigint;
     description: string;
@@ -13,4 +18,16 @@ export interface ProposalView {
 export interface ProposalViewExtended extends ProposalView {
     startDate?: Date;
     endDate?: Date;
+}
+
+export type MembershipTokenInfo = {
+  tokenId: bigint;
+  membershipPaidUntil: bigint;
+};
+
+export interface ProposalDetails {
+  targets: Address[];
+  values: bigint[];
+  calldatas: Hex[];
+  description: string;
 }

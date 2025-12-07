@@ -8,11 +8,14 @@ import {
 } from 'viem';
 import { sepolia } from 'viem/chains';
 import { entryPoint07Abi, entryPoint07Address } from 'viem/account-abstraction';
-import { PIMLICO_URL, SEPOLIA_RPC_URL, PAYMASTER_CONTRACT_ADDRESS, COUNTER_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS } from "../config"
+import { PIMLICO_URL, SEPOLIA_RPC_URL, PAYMASTER_CONTRACT_ADDRESS, COUNTER_CONTRACT_ADDRESS } from "../config"
 import { createSmartAccountClient, type SmartAccountClient } from 'permissionless';
 import { toSimpleSmartAccount } from 'permissionless/accounts';
 import FlatFeeStackPaymaster from '../../artifacts/contracts/FlatFeeStackDAOPaymaster.sol/FlatFeeStackDAOPaymaster.json' assert { type: "json" };
-import { pushStatus } from "./statusfeed";
+import FlatFeeStackDAO from '../../artifacts/contracts/FlatFeeStackNFTandDAO.sol/FlatFeeStackDAO.json' assert { type: "json" };
+import FlatFeeStackNFT from '../../artifacts/contracts/FlatFeeStackNFTandDAO.sol/FlatFeeStackNFT.json' assert { type: "json" };
+import { DAO_CONTRACT_ADDRESS } from "../config";
+import { type MembershipTokenInfo } from './types'
 
 type AAClient = SmartAccountClient<any>;
 
@@ -43,7 +46,7 @@ function getEthereum(): any {
   return ethereum;
 }
 
-function ensurePublicClient(): PublicClient {
+export function ensurePublicClient(): PublicClient {
   if (!state.publicClient) {
     throw new Error('Public client not initialized');
   }
@@ -59,11 +62,11 @@ export function ensureSmartAccountClient(): AAClient {
   return state.smartAccountClient;
 }
 
-export function getPublicClient(): PublicClient {
-  if (!state.publicClient)
-    throw new Error("PublicClient not initialized");
-  
-  return state.publicClient;
+export function getSmartAccountAddress(): Address {
+  if (!state.smartAccountAddress) {
+    throw new Error('Smart account not initialized yet.');
+  }
+  return state.smartAccountAddress;
 }
 
 async function setupSmartAccountFromEOA(eoa: Address) {
@@ -218,14 +221,7 @@ export async function getPaymasterDeposit() {
   };
 }
 
-export function getSmartAccountAddress(): Address {
-  if (!state.smartAccountAddress) {
-    throw new Error('Smart account not initialized yet.');
-  }
-  return state.smartAccountAddress;
-}
-
-export async function incrementCounter() {
+export async function incrementCounter(onStatus?: (s: string) => void) {
   const smartAccountClient = ensureSmartAccountClient();
 
   const data = encodeFunctionData({
@@ -242,7 +238,7 @@ export async function incrementCounter() {
     args: [],
   });
 
-  pushStatus("Waiting for signature ...");
+  onStatus?.("Waiting for signature ...");
 
   const userOpHash = await smartAccountClient.sendUserOperation({
     calls: [
@@ -254,7 +250,7 @@ export async function incrementCounter() {
     ],
   });
 
-  pushStatus('UserOperation is being processed by Bundler ...');
+  onStatus?.('UserOperation is being processed by Bundler ...');
   const receipt = await smartAccountClient.waitForUserOperationReceipt({
     hash: userOpHash,
   });
@@ -315,6 +311,7 @@ export async function waitForTxStatus(txHash: Hex) {
 export async function waitForConfirmations(
   receipt: { blockNumber: bigint },
   confirmationsRequired: number,
+  onUpdate: (text: string) => void,
 ) {
   const publicClient = ensurePublicClient();
   let confirmations = 0;
@@ -327,7 +324,7 @@ export async function waitForConfirmations(
     confirmations = Number(block - receipt.blockNumber);
 
     if (lastUpdatedConfirmation < 0 || lastUpdatedConfirmation < confirmations){
-      pushStatus(`Confirmations: ${confirmations}/${confirmationsRequired}`);
+      onUpdate(`Confirmations: ${confirmations}/${confirmationsRequired}`);
       lastUpdatedConfirmation = confirmations;
     }
   }
@@ -341,48 +338,310 @@ export async function getBalance(address: Address) {
   return formatEther(balance);
 }
 
-export async function fundPaymaster(amountEth: string) {
-  const smartAccountClient = ensureSmartAccountClient();
-  const amountWei = parseEther(String(amountEth));
+/**
+ * Resolve the NFT (membership) contract address from the DAO
+ */
+export async function getDaoTokenAddress(): Promise<Address> {
+  const publicClient = ensurePublicClient();
 
-  const data = encodeFunctionData({
-    abi: entryPoint07Abi,
-    functionName: 'depositTo',
-    args: [PAYMASTER_CONTRACT_ADDRESS],
+  return publicClient.readContract({
+    address: DAO_CONTRACT_ADDRESS,
+    abi: FlatFeeStackDAO.abi as any,
+    functionName: 'token',
+  }) as Promise<Address>;
+}
+
+/**
+ * List membership NFTs owned by a given address
+ */
+export async function listMembershipTokens(owner: Address): Promise<MembershipTokenInfo[]> {
+  const publicClient = ensurePublicClient();
+  const nftAddress = await getDaoTokenAddress();
+
+  const balance: bigint = await publicClient.readContract({
+    address: nftAddress,
+    abi: FlatFeeStackNFT.abi as any,
+    functionName: 'balanceOf',
+    args: [owner],
   });
 
-  pushStatus("Waiting for signature ...");
+  const results: MembershipTokenInfo[] = [];
+
+  for (let i = 0n; i < balance; i++) {
+    const tokenId: bigint = await publicClient.readContract({
+      address: nftAddress,
+      abi: FlatFeeStackNFT.abi as any,
+      functionName: 'tokenOfOwnerByIndex',
+      args: [owner, i],
+    });
+
+    const paidUntil: bigint = await publicClient.readContract({
+      address: nftAddress,
+      abi: FlatFeeStackNFT.abi as any,
+      functionName: 'membershipPayed',
+      args: [tokenId],
+    });
+
+    results.push({ tokenId, membershipPaidUntil: paidUntil });
+  }
+
+  console.log(results);
+  return results;
+}
+
+/**
+ * Transfer a membership NFT from the connected EOA to the smart account
+ * This is required so the paymaster can recognize the smart account as a member
+ */
+/*export async function transferMembershipToSmartAccount(tokenId: bigint, onStatus?: (s: string) => void) {
+  if (!state.walletClient || !state.eoa || !state.smartAccountAddress) {
+    throw new Error('Wallet not connected');
+  }
+
+  const publicClient = ensurePublicClient();
+  const nftAddress = await getDaoTokenAddress();
+
+  onStatus?.(`Transferring membership token #${tokenId} to smart account...`);
+
+  const hash = await state.walletClient.writeContract({
+    address: nftAddress,
+    abi: FlatFeeStackNFT.abi as any,
+    functionName: 'safeTransferFrom',
+    args: [state.eoa, state.smartAccountAddress, tokenId],
+    chain: sepolia,
+    account: state.eoa,
+  });
+
+  onStatus?.('Waiting for transfer confirmation...');
+  await publicClient.waitForTransactionReceipt({ hash });
+
+  onStatus?.('✓ Membership NFT transferred to smart account');
+  return hash;
+}*/
+
+/**
+ * Transfer a membership NFT back from the smart account to the EOA
+ * Uses the smart account to call safeTransferFrom(smartAccount -> eoa)
+ */
+/*export async function transferMembershipToEOA(tokenId: bigint, onStatus?: (s: string) => void) {
+  const smartAccountClient = ensureSmartAccountClient();
+  const publicClient = ensurePublicClient();
+  if (!state.eoa || !state.smartAccountAddress) {
+    throw new Error('Wallet not connected');
+  }
+
+  const nftAddress = await getDaoTokenAddress();
+
+  const data = encodeFunctionData({
+    abi: FlatFeeStackNFT.abi as any,
+    functionName: 'safeTransferFrom',
+    args: [state.smartAccountAddress, state.eoa, tokenId],
+  });
+
+  onStatus?.(`Transferring membership token #${tokenId} back to EOA...`);
 
   const userOpHash = await smartAccountClient.sendUserOperation({
     calls: [
       {
-        to: entryPoint07Address,
+        to: nftAddress,
         data,
-        value: amountWei,
+        value: 0n,
       },
     ],
   });
-}
 
-export async function delegateVotesToSmartAccount(smartAccountAddress: Address) {
-  const client = ensureSmartAccountClient();
+  const receipt = await smartAccountClient.waitForUserOperationReceipt({ hash: userOpHash });
+  onStatus?.('✓ Membership NFT transferred back to EOA');
+  return { userOpHash, receipt };
+}*/
+
+/**
+ * Renew/pay membership for a token owned by the smart account or eoa
+ * This makes the token a valid membership (membershipPayed >= now)
+ * Requires the EOA to have ETH for the membership fee (0.1 ETH by default)
+ */
+export async function renewMembership(tokenId: bigint, onStatus?: (s: string) => void) {
+  const smartAccountClient = ensureSmartAccountClient();
+  const publicClient = ensurePublicClient();
+  const nftAddress = await getDaoTokenAddress();
+
+  // Get the membership fee
+  const membershipFee: bigint = await publicClient.readContract({
+    address: nftAddress,
+    abi: FlatFeeStackNFT.abi as any,
+    functionName: 'membershipFee',
+  });
+
+  onStatus?.(`Renewing membership for token #${tokenId}...`);
+  onStatus?.(`Membership fee: ${formatEther(membershipFee)} ETH`);
+
+  const eoaBalance = await publicClient.getBalance({ address: state.eoa! });
+  if (eoaBalance < membershipFee) {
+    throw new Error(
+      `EOA balance too low. Need ${formatEther(
+        membershipFee
+      )} ETH, have ${formatEther(eoaBalance)} ETH`
+    );
+  }
 
   const data = encodeFunctionData({
-    abi: [
+    abi: FlatFeeStackNFT.abi as any,
+    functionName: 'payMembership',
+    args: [tokenId],
+  });
+
+  onStatus?.('Submitting membership payment UserOperation...');
+
+  // EOA sends the fee, Smart Account signs the operation
+  const userOpHash = await smartAccountClient.sendUserOperation({
+    calls: [
       {
-        name: "delegate",
-        type: "function",
-        stateMutability: "nonpayable",
-        inputs: [{ name: "delegatee", type: "address" }]
-      }
+        to: nftAddress,
+        data,
+        value: membershipFee,
+      },
     ],
-    functionName: "delegate",
-    args: [smartAccountAddress]
+    onSigningRequest: async ({ request }) => {
+      // This ensures MetaMask asks the EOA to approve sending funds
+      return await state.walletClient!.signTransaction(request);
+    },
+  });
+  /*const userOpHash = await smartAccountClient.sendUserOperation({
+    calls: [
+      {
+        to: nftAddress,
+        data,
+        value: membershipFee,
+      },
+    ],
+  });*/
+
+  onStatus?.('Waiting for membership renewal confirmation...');
+  const receipt = await smartAccountClient.waitForUserOperationReceipt({
+    hash: userOpHash,
   });
 
-  const userOpHash = await client.sendUserOperation({
-    calls: [{ to: NFT_CONTRACT_ADDRESS, data }]
+  onStatus?.(`✓ Membership renewed for token #${tokenId}`);
+  return { userOpHash, receipt };
+}
+
+/**
+ * Create a governance proposal via smart account (gasless if member)
+ * @param proposal - Object containing targets, values, calldatas, and description
+ * @param onStatus - Callback for status updates
+ * @returns proposalId and receipt
+ */
+export async function createProposal(
+  proposal: ProposalDetails,
+  onStatus?: (s: string) => void
+) {
+  const smartAccountClient = ensureSmartAccountClient();
+  const publicClient = ensurePublicClient();
+
+  onStatus?.("Checking membership authorization...");
+  
+  // Verify membership before attempting proposal
+  const isMember = await checkIsMember(state.smartAccountAddress, state.eoa);
+  onStatus?.(`Membership check: ${isMember ? "✓ Member" : "✗ Not a member"}`);
+  
+  if (!isMember) {
+    throw new Error(
+      "Cannot create proposal: You must be a DAO member. " +
+      "Ensure your EOA or smart account owns an active membership NFT."
+    );
+  }
+
+  // Check smart account balance for gas
+  const saBalance = await publicClient.getBalance({ address: state.smartAccountAddress! });
+  onStatus?.(`Smart account balance: ${formatEther(saBalance)} ETH`);
+
+  // Encode the propose function call
+  const data = encodeFunctionData({
+    abi: FlatFeeStackDAO.abi as any,
+    functionName: 'propose',
+    args: [
+      proposal.targets,
+      proposal.values,
+      proposal.calldatas,
+      proposal.description,
+    ],
   });
 
-  return client.waitForUserOperationReceipt({ hash: userOpHash });
+  console.log('📝 Encoded proposal data:', {
+    to: DAO_CONTRACT_ADDRESS,
+    data,
+    dataLength: data.length,
+    targetCount: proposal.targets.length,
+    targets: proposal.targets,
+    values: proposal.values.map(v => v.toString()),
+    calldatas: proposal.calldatas,
+    description: proposal.description,
+  });
+
+  if (proposal.targets.length === 0) {
+    console.warn('⚠️ WARNING: Creating proposal with NO actions (empty targets)');
+  }
+
+  onStatus?.("Preparing proposal UserOperation ...");
+
+  try {
+    const userOpHash = await smartAccountClient.sendUserOperation({
+      calls: [
+        {
+          to: DAO_CONTRACT_ADDRESS,
+          data,
+          value: 0n,
+        },
+      ],
+      // Explicitly set gas limits to avoid estimation failures
+      // propose() requires significant gas for storage writes and Governor logic
+      callGasLimit: 500000n,
+      verificationGasLimit: 500000n,
+      preVerificationGas: 100000n,
+    });
+
+    console.log('✉️ UserOp sent with hash:', userOpHash);
+
+    onStatus?.("Proposal UserOperation is being processed by Bundler ...");
+    const receipt = await smartAccountClient.waitForUserOperationReceipt({
+      hash: userOpHash,
+    });
+
+    onStatus?.(`UserOp receipt status: ${receipt.receipt.status}`);
+    console.log('📦 UserOp Receipt:', {
+      userOpHash,
+      txHash: receipt.receipt.transactionHash,
+      status: receipt.receipt.status,
+      gasUsed: receipt.receipt.gasUsed,
+      logs: receipt.receipt.logs,
+    });
+
+    // Verify proposal was created by checking all proposals
+    try {
+      const proposals = await publicClient.readContract({
+        address: DAO_CONTRACT_ADDRESS,
+        abi: FlatFeeStackDAO.abi as any,
+        functionName: 'getAllProposals',
+      }) as any[];
+      onStatus?.(`✅ Proposal created! DAO now has ${proposals.length} proposal(s)`);
+      if (proposals.length > 0) {
+        const latest = proposals[proposals.length - 1];
+        console.log('Latest proposal:', {
+          id: latest.id?.toString(),
+          description: latest.description,
+          proposer: latest.proposer,
+        });
+      }
+    } catch (err: any) {
+      console.warn('❌ Could not verify proposal creation:', err.message);
+    }
+
+    return { userOpHash, receipt };
+  } catch (err: any) {
+    // If error includes revert data, try to decode it
+    if (err.message?.includes('0x447b05d0')) {
+      throw new Error('Proposal creation failed: Check if you have sufficient gas or if the DAO allows proposals');
+    }
+    throw err;
+  }
 }

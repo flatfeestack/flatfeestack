@@ -29,7 +29,7 @@ interface ISimpleAccount {
 contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pausable, Ownable, ERC721Burnable, EIP712, ERC721Votes {
 
     uint48 constant public MAX_UINT48 = 281474976710655;
-    uint256 public membershipFee = 1 ether;
+    uint256 public membershipFee = 0.1 ether;
     uint48 public membershipPeriod = 1 * 365 * 24 * 60 * 60; // 1 year
     mapping(uint256 => uint48) public membershipPayed;
     uint256 public currentTokenId;
@@ -239,8 +239,12 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
     mapping(uint256 => Proposal) public proposals;
     uint256[] public proposalIds;
     uint256 public proposalCount;
+    
+    // Council override for voting delay (0 = use default calculation)
+    uint256 public councilVotingDelayOverride;
 
     event BylawsChanged(uint256 indexed oldHash, uint256 indexed newHash);
+    event VotingDelayOverrideSet(uint256 indexed newDelay);
 
     constructor(address council1, address council2)
         Governor("FlatFeeStackDAO")
@@ -248,8 +252,51 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         GovernorVotes(IVotes(new FlatFeeStackNFT(address(this), address(council1), address(council2))))
         GovernorVotesQuorumFraction(20) /* 20% */ {}
 
+    function _isMemberOrOwner(address account) internal view returns (bool) {
+        FlatFeeStackNFT nft = FlatFeeStackNFT(address(token()));
+
+        // Direct owner or SA owns NFT
+        uint256 count = nft.balanceOf(account);
+        for (uint256 i = 0; i < count; i++) {
+            uint256 tokenId = nft.tokenOfOwnerByIndex(account, i);
+            if (nft.isCouncil(tokenId)) return true;
+            if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
+        }
+
+        // Smart account > EOA owner
+        try ISimpleAccount(account).owner() returns (address eoa) {
+            uint256 eoaCount = nft.balanceOf(eoa);
+            for (uint256 i = 0; i < eoaCount; i++) {
+                uint256 tokenId = nft.tokenOfOwnerByIndex(eoa, i);
+                if (nft.isCouncil(tokenId)) return true;
+                if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
+            }
+        } catch {}
+
+        return false;
+    }
+
+    function _isCouncilOrOwner(address account, uint256 index) internal view returns (bool) {
+        FlatFeeStackNFT nft = FlatFeeStackNFT(address(token()));
+
+        // Direct
+        if (nft.isCouncilIndex(account, index)) return true;
+
+        // Smart account > check owner
+        try ISimpleAccount(account).owner() returns (address eoa) {
+            if (nft.isCouncilIndex(eoa, index)) return true;
+        } catch {}
+
+        return false;
+    }
+
     function votingDelay() public view
         override(Governor, GovernorSettings) returns (uint256) {
+        // If council has set an override, use it
+        if (councilVotingDelayOverride > 0) {
+            return councilVotingDelayOverride;
+        }
+        
         /* 
         The width of a slot is 7 days, so if a proposer proposes a vote in the middle of slot 1, 
         the delay will be set that this vote starts at end of slot 2 and beginning of slot 3. This
@@ -305,6 +352,62 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         return q;
     }
 
+    function proposalThreshold()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        if (_isMemberOrOwner(msg.sender)) return 0;
+
+        return super.proposalThreshold();
+    }
+
+    function _getVotes(
+        address account,
+        uint256 timepoint,
+        bytes memory params
+    )
+        internal
+        view
+        override(Governor, GovernorVotes)
+        returns (uint256)
+    {
+        if (_isMemberOrOwner(account)) return 1;
+
+        return super._getVotes(account, timepoint, params);
+    }
+
+    /**
+     * Council-only function to override the voting delay for testing purposes.
+     * Set to 0 to restore default slot-based calculation.
+     */
+    function setCouncilVotingDelayOverride(
+        uint256 newDelay,
+        uint256 index1,
+        uint256 index2,
+        bytes calldata signature2
+    ) external {
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked(address(this), "setVotingDelay", newDelay))
+            )
+        );
+
+        address council2 = ECDSA.recover(messageHash, signature2);
+        require(msg.sender != council2, "Same council");
+
+        require(
+            _isCouncilOrOwner(msg.sender, index1) &&
+            _isCouncilOrOwner(council2, index2),
+            "No council sigs"
+        );
+
+        councilVotingDelayOverride = newDelay;
+        emit VotingDelayOverrideSet(newDelay);
+    }
+
     function _queueOperations(uint256, address[] memory, uint256[] memory, bytes[] memory, bytes32) 
         internal view override returns (uint48) {
         return SafeCast.toUint48(super.votingDelay());
@@ -331,12 +434,13 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         councilExecution[proposalId] = true;
 
         address council2 = ECDSA.recover(messageHash, signature2);
-        require(msg.sender != council2);
+        require(msg.sender != council2, "Same council");
 
         require(
-            FlatFeeStackNFT(address(token())).isCouncilIndex(msg.sender, index1) &&
-            FlatFeeStackNFT(address(token())).isCouncilIndex(council2, index2),
-            "No council sigs");
+            _isCouncilOrOwner(msg.sender, index1) &&
+            _isCouncilOrOwner(council2, index2),
+            "No council sigs"
+        );
 
         return proposalId;
     }
@@ -370,7 +474,6 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         emit ProposalCanceled(proposalId);
         return proposalId;
     }
-
 
     /**
      * Sets a new hash value (newHash) of bylaws and emits an event indicating 
@@ -456,57 +559,5 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
             abstainVotes: ab,
             proposer: p.proposer
         });
-    }
-
-    function _isMemberOrOwner(address account) internal view returns (bool) {
-        FlatFeeStackNFT nft = FlatFeeStackNFT(address(token()));
-
-        // Check Smart Account (or normal account) NFT ownership
-        uint256 count = nft.balanceOf(account);
-        for (uint256 i = 0; i < count; i++) {
-            uint256 tokenId = nft.tokenOfOwnerByIndex(account, i);
-
-            if (nft.isCouncil(tokenId)) return true;
-            if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
-        }
-
-        // Check EOA behind a Smart Account
-        try ISimpleAccount(account).owner() returns (address eoa) {
-            uint256 eoaCount = nft.balanceOf(eoa);
-            for (uint256 i = 0; i < eoaCount; i++) {
-                uint256 tokenId = nft.tokenOfOwnerByIndex(eoa, i);
-
-                if (nft.isCouncil(tokenId)) return true;
-                if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
-            }
-        } catch {
-            // ignore
-        }
-
-        return false;
-    }
-
-    function proposalThreshold() public view
-        override(Governor, GovernorSettings)
-        returns (uint256)
-    {
-        if (_isMemberOrOwner(msg.sender)) return 0;
-
-        return super.proposalThreshold();
-    }
-
-    function _getVotes(
-        address account,
-        uint256 timepoint,
-        bytes memory params
-    ) 
-        internal 
-        view 
-        override(Governor, GovernorVotes)
-        returns (uint256)
-    {
-        if (_isMemberOrOwner(account)) return 1;
-
-        return super._getVotes(account, timepoint, params);
     }
 }
