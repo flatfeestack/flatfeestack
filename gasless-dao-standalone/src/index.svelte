@@ -1,510 +1,271 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { writable, get } from 'svelte/store';
-    import { createWalletClient, custom, encodePacked, keccak256 } from 'viem';
-    import { sepolia } from 'viem/chains';
-    import {
-        handleWalletConnect, getPaymasterDeposit,
-        getGasCost, waitForConfirmations,
-        incrementCounter, waitForTransactionReceipt,
-        disconnectWallet, autoConnectIfAuthorized,
-        checkIsMember, getBalance, listMembershipTokens,
-        createProposal, ensurePublicClient,
-        renewMembership
-    } from './lib/aaClient';
-    import { loadAllProposals, voteOnProposal as castVote, getProposal } from "./lib/dao";
-    import { ProposalViewExtended, ProposalDetails } from "./lib/types";
-    import { DAO_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS } from './config';
-    import FlatFeeStackNFT from '../artifacts/contracts/FlatFeeStackNFTandDAO.sol/FlatFeeStackNFT.json' assert { type: "json" };
+    import { writable, get } from "svelte/store";
+    import { createLogger } from "./lib/logger";
+    import { createAAContext, type AAContext } from "./lib/aa/context";
+    import { listMembershipTokens, renewMembership } from "./lib/aa/membership";
+    import { createProposal } from "./lib/aa/proposals";
+    import { voteOnProposal, loadAllProposals } from "./lib/dao/index";
+    import { getPaymasterDeposit, isMember } from "./lib/aa/paymaster";
+    import { sendUserOp } from "./lib/viem/write";
+    import { finalizeUserOp } from "./lib/aaClient";
+    import { COUNTER_CONTRACT_ADDRESS, NFT_COUNCIL_1, NFT_COUNCIL_2 } from "./config";
+    import { executeVotingDelay, prepareVotingDelaySignature, executeMint, prepareMintSignature } from "./lib/dao/council";
+    import { encodeFunctionData, formatEther } from "viem";
+
+    const COUNTER_ABI = [
+        { name: "increment", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] }
+    ] as const;
 
     const statusFeed = writable<string[]>([]);
     const eoa = writable<`0x${string}` | null>(null);
-    const smartAccount = writable<`0x${string}` | null>(null);
-    const lastTxHash = writable<`0x${string}` | null>(null);
-    const loading = writable<boolean>(false);
-    const retrieving = writable<boolean>(false);
-    const gasCost = writable<string | null>(null);
-    const paymasterFunds = writable<string | null>(null);
-    const usePaymaster = writable<boolean | null>(null);
+    const ctx = writable<AAContext | null>(null);
+
+    const proposals = writable<any[]>([]);
+    const membershipTokens = writable<any[]>([]);
+    const selectedTokenId = writable<string | null>(null);
+
     const eoaBalance = writable<string | null>(null);
     const smartAccountBalance = writable<string | null>(null);
-    const proposals = writable<ProposalViewExtended[]>([]);
-    const showProposalForm = writable<boolean>(false);
-    const proposalTitle = writable<string>("");
-    const proposalDescription = writable<string>("");
-    const membershipTokens = writable<{ tokenId: bigint; membershipPaidUntil: bigint; }[]>([]);
-    const selectedTokenId = writable<string | null>(null);
+    const usingPaymaster = writable<boolean>(false);
+
+    const lastTxHash = writable<`0x${string}` | null>(null);
+    const gasCost = writable<string | null>(null);
+    const paymasterFunds = writable<string | null>(null);
+    const loading = writable(false);
+    const retrieving = writable(false);
+    const showProposalForm = writable(false);
+
+    const proposalTitle = writable("");
+    const proposalDescription = writable("");
 
     let isDebug = false;
     let mintTargetAddress = "";
 
-    onMount(async () => {
-        if(typeof window != "undefined"){
+    onMount(() => {
+        if (typeof window !== "undefined") {
             isDebug = window.location.hash === "#debug";
         }
 
-        const res = await autoConnectIfAuthorized();
-        eoa.set(res.eoa);
-        smartAccount.set(res.smartAccountAddress);
-        usePaymaster.set(res.paymasterUsed);
-
-        await getBalances();
+        tryAutoConnect();
     });
 
-    function formatTime(date = new Date()) {
-        return date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-        });
+    let log = createLogger((msg: string) => {
+        statusFeed.update((l) => [...l, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    });
+
+    function shortAddress(addr: string, first = 6, last = 4) {
+        return `${addr.slice(0, first)}...${addr.slice(-last)}`;
     }
 
     function pushStatus(msg: string) {
-        const stampedMsg = `[${formatTime()}] ${msg}`;
-        statusFeed.update((l) => [...l, stampedMsg]);
+        log.ui(msg);
     }
 
     function resetStatusFeed(){
         statusFeed.set([]);
     }
 
-    export function shortAddress(addr: string, first = 7, last = 5) {
-        if (!addr) return "";
-        return `${addr.slice(0, first)}...${addr.slice(-last)}`;
+    async function tryAutoConnect() {
+        if (typeof window === "undefined") return;
+
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) {
+            log.warn("MetaMask not found — cannot auto-connect");
+            return;
+        }
+
+        try {
+            const accounts: string[] = await ethereum.request({
+                method: "eth_accounts"
+            });
+
+            if (!accounts || accounts.length === 0) {
+                return;
+            }
+
+            const locEoa = accounts[0] as `0x${string}`;
+            eoa.set(locEoa);
+
+            ctx.set(await createAAContext(locEoa));
+            
+            await loadBalances();
+
+            log.info("Auto-connect successful.");
+
+        } catch (err: any) {
+            console.error("Auto-connect failed", err);
+        }
     }
 
-    async function getBalances(){
-        if($eoa) eoaBalance.set(await getBalance($eoa));
-        if($smartAccount) smartAccountBalance.set(await getBalance($smartAccount));
+    async function loadBalances() {
+        const c = get(ctx);
+        if (!c) return;
+
+        let ebal = await c.public.getBalance({ address: c.eoa });
+        let sbal = await c.public.getBalance({ address: c.smartAccount });
+
+        console.log()
+        eoaBalance.set(formatEther(ebal));
+        smartAccountBalance.set(formatEther(sbal));
     }
 
     async function handleConnect() {
         loading.set(true);
-
         try {
-            const res = await handleWalletConnect();
-            eoa.set(res.eoa);
-            smartAccount.set(res.smartAccountAddress);
-            usePaymaster.set(res.paymasterUsed);
+            const ethereum = (window as any).ethereum;
+            if (!ethereum) throw new Error("MetaMask not found");
 
-            await getBalances();
-        } catch (err: any) {
-            console.error(err);
+            await ethereum.request({
+                method: "wallet_requestPermissions",
+                params: [{ eth_accounts: {} }],
+            });
+
+            const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+            const eo = accounts[0] as `0x${string}`;
+
+            eoa.set(eo);
+
+            const context = await createAAContext(eo, log);
+            ctx.set(context);
+            usingPaymaster.set(context.usePaymaster);
+
+            await loadBalances();
+        } catch (err) {
+            log.error("Connection failed", err);
         } finally {
             loading.set(false);
         }
     }
 
-    async function handleDisconnect(){
-        disconnectWallet();
-
-        lastTxHash.set(null);
+    function handleDisconnect() {
         eoa.set(null);
-        gasCost.set(null);
-        loading.set(false);
-        smartAccount.set(null);
-        paymasterFunds.set(null);
-        usePaymaster.set(null);
+        ctx.set(null);
+        proposals.set([]);
+        membershipTokens.set([]);
         eoaBalance.set(null);
         smartAccountBalance.set(null);
-        proposalTitle.set("");
-        proposalDescription.set("");
-        membershipTokens.set([]);
-        selectedTokenId.set(null);
+        lastTxHash.set(null);
+        gasCost.set(null);
+        paymasterFunds.set(null);
+        statusFeed.set([]);
+        usingPaymaster.set(false);
+        log.info("Disconnected wallet");
     }
 
     async function handleIncrementCounter() {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect first");
+
         loading.set(true);
-        pushStatus("Preparing UserOperation ...");
-        gasCost.set(null);
-        paymasterFunds.set(null);
+        pushStatus("Submitting counter increment...");
 
         try {
-            const { userOpHash, receipt } = await incrementCounter();
+            const data = encodeFunctionData({
+                abi: COUNTER_ABI,
+                functionName: "increment",
+                args: []
+            });
 
-            lastTxHash.set(receipt.receipt.transactionHash);
-            pushStatus("UserOperation submitted");
-
-            const txReceipt = await waitForTransactionReceipt(get(lastTxHash));
-            pushStatus("Transaction included in a block");
-
-            const cost = await getGasCost(get(lastTxHash));
-            gasCost.set(cost.totalCostEth);
-
-            const paymasterDeposit = await getPaymasterDeposit();
-            paymasterFunds.set(paymasterDeposit.eth);
-            await getBalances();
-
-            await waitForConfirmations(txReceipt, 3,
-                (text) => pushStatus(text)
+            const { hash, receipt } = await sendUserOp(
+                c.smartClient,
+                COUNTER_CONTRACT_ADDRESS,
+                data
             );
 
-            pushStatus("UserOperation Success");
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error occurred');
+            //lastTxHash.set(receipt.receipt.transactionHash);
+            pushStatus("Counter increment submitted");
+
+            await finalizeUserOp(hash, c, {
+                logger: log,
+                setLastTxHash: (h) => lastTxHash.set(h),
+                onBalancesUpdated: loadBalances,
+                onPaymasterFunds: (h) => paymasterFunds.set(h),
+                onGasCost: (h) => gasCost.set(h)
+            });
+            
+            //const paymasterDep = await getPaymasterDeposit(c.public);
+            //paymasterFunds.set(c.public.formatEther ? c.public.formatEther(paymasterDep) : String(paymasterDep));
+
+            //await loadBalances();
+        } catch (err) {
+            log.error("Increment counter error", err);
         } finally {
             loading.set(false);
         }
-    }
-
-    async function checkIsDAOMember(){
-        console.log("Checking if member")
-        let result = await checkIsMember(get(smartAccount), get(eoa));
-        console.log("IsMember: " + result);
-        pushStatus("Is Member " + String(result));
     }
 
     async function handleLoadProposals() {
-        loading.set(true);
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect wallet first");
+
         retrieving.set(true);
-        
-        try {
-            pushStatus("Loading all proposals...");
-            const allProposals = await loadAllProposals();
-            proposals.set(allProposals);
-            pushStatus(`✓ Loaded ${allProposals.length} proposal(s)`);
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error loading proposals');
-        } finally {
-            loading.set(false);
-            retrieving.set(false);
-        }
-    }
-
-    async function handleSetVotingDelay() {
         loading.set(true);
+
+        pushStatus("Loading proposals...");
+
         try {
-            pushStatus("🏛️ Setting voting delay to 60 seconds...");
-            
-            const daoAddress = DAO_CONTRACT_ADDRESS as `0x${string}`;
-            const newDelay = 60n;
-            const council1 = "0x4a152972bc6fec8fd44c716b4f994090cca835d9";
-            const council2 = "0x11e12a6fbd1126187502fd5430253ad189d0831f";
-            const currentEOA = $eoa;
-            
-            pushStatus(`Connected as: ${currentEOA}`);
-            pushStatus(`Is Council2? ${currentEOA === council2.toLowerCase()}`);
-            pushStatus(`Is Council1? ${currentEOA === council1.toLowerCase()}`);
-            
-            // Step 1: Check which council member is connected
-            if (currentEOA === council2.toLowerCase()) {
-                // Council2 is connected - generate signature
-                pushStatus("✓ Council2 detected - generating signature...");
-                
-                // @ts-ignore
-                if (!window.ethereum) {
-                    throw new Error("MetaMask not found");
-                }
-                
-                // @ts-ignore
-                const walletClient = createWalletClient({
-                    chain: sepolia,
-                    // @ts-ignore
-                    transport: custom(window.ethereum)
-                });
-                
-                const packed = encodePacked(
-                    ["address", "string", "uint256"],
-                    [daoAddress, "setVotingDelay", newDelay]
-                );
-                const innerHash = keccak256(packed);
-                
-                pushStatus(`Hash to sign: ${innerHash}`);
-                
-                // Use personal_sign directly to avoid viem adding extra prefix
-                // The contract expects: ECDSA.recover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", innerHash)), signature)
-                // personal_sign will add the prefix for us
-                // @ts-ignore
-                const signature = await window.ethereum.request({
-                    method: 'personal_sign',
-                    params: [innerHash, currentEOA]
-                }) as `0x${string}`;
-                
-                pushStatus("✓ Signature generated!");
-                pushStatus(`Signature: ${signature.substring(0, 20)}...`);
-                pushStatus("");
-                pushStatus("⚠️ Now switch to Council1 and click the button again");
-                pushStatus(`Council1 address: ${council1}`);
-                pushStatus("");
-                pushStatus("Signature will be stored temporarily...");
-                
-                // Store signature in sessionStorage
-                sessionStorage.setItem('council2_signature', signature);
-                
-            } else if (currentEOA === council1.toLowerCase()) {
-                // Council1 is connected - execute with council2's signature
-                pushStatus("✓ Council1 detected - executing transaction...");
-                
-                const signature2 = sessionStorage.getItem('council2_signature') as `0x${string}`;
-                if (!signature2) {
-                    throw new Error("Council2 signature not found. Please connect as Council2 first and click the button to generate signature.");
-                }
-                
-                pushStatus("✓ Using Council2 signature from session");
-                pushStatus(`Signature: ${signature2.substring(0, 20)}...`);
-                
-                // Verify the signature before sending
-                const { recoverMessageAddress } = await import('viem');
-                
-                const packed2 = encodePacked(
-                    ["address", "string", "uint256"],
-                    [daoAddress, "setVotingDelay", newDelay]
-                );
-                const innerHash2 = keccak256(packed2);
-                
-                const recoveredAddress = await recoverMessageAddress({
-                    message: { raw: innerHash2 },
-                    signature: signature2
-                });
-                
-                pushStatus(`Signature recovers to: ${recoveredAddress}`);
-                pushStatus(`Expected Council2: ${council2}`);
-                pushStatus(`Match? ${recoveredAddress.toLowerCase() === council2.toLowerCase()}`);
-                
-                if (recoveredAddress.toLowerCase() !== council2.toLowerCase()) {
-                    throw new Error(`Signature verification failed! Recovered ${recoveredAddress} but expected ${council2}`);
-                }
-                
-                // @ts-ignore
-                if (!window.ethereum) {
-                    throw new Error("MetaMask not found");
-                }
-                
-                // @ts-ignore
-                const walletClient = createWalletClient({
-                    chain: sepolia,
-                    // @ts-ignore
-                    transport: custom(window.ethereum)
-                });
-                
-                const daoAbi = [
-                    {
-                        name: 'setCouncilVotingDelayOverride',
-                        type: 'function',
-                        stateMutability: 'nonpayable',
-                        inputs: [
-                            { name: 'newDelay', type: 'uint256' },
-                            { name: 'index1', type: 'uint256' },
-                            { name: 'index2', type: 'uint256' },
-                            { name: 'signature2', type: 'bytes' }
-                        ],
-                        outputs: []
-                    },
-                    {
-                        name: 'votingDelay',
-                        type: 'function',
-                        stateMutability: 'view',
-                        inputs: [],
-                        outputs: [{ type: 'uint256' }]
-                    }
-                ] as const;
-                
-                const publicClient = ensurePublicClient();
-                
-                // Double-check both council members are valid
-                const nftAddress = await publicClient.readContract({
-                    address: daoAddress,
-                    abi: [{ name: 'token', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
-                    functionName: 'token'
-                }) as `0x${string}`;
-                
-                pushStatus(`NFT contract: ${nftAddress}`);
-                
-                const isCouncil1 = await publicClient.readContract({
-                    address: nftAddress,
-                    abi: [{ name: 'isCouncilIndex', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }],
-                    functionName: 'isCouncilIndex',
-                    args: [currentEOA as `0x${string}`, 0n]
-                });
-                
-                const isCouncil2 = await publicClient.readContract({
-                    address: nftAddress,
-                    abi: [{ name: 'isCouncilIndex', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'bool' }] }],
-                    functionName: 'isCouncilIndex',
-                    args: [recoveredAddress as `0x${string}`, 0n]
-                });
-                
-                pushStatus(`Council1 (${currentEOA}) valid at index 0? ${isCouncil1}`);
-                pushStatus(`Council2 (${recoveredAddress}) valid at index 0? ${isCouncil2}`);
-                
-                if (!isCouncil1 || !isCouncil2) {
-                    throw new Error("One or both council members not valid at index 0");
-                }
-                
-                pushStatus("Sending transaction...");
-                const txHash = await walletClient.writeContract({
-                    address: daoAddress,
-                    abi: daoAbi,
-                    functionName: 'setCouncilVotingDelayOverride',
-                    args: [newDelay, 0n, 0n, signature2],
-                    account: currentEOA,
-                    gas: 500000n
-                });
-                
-                pushStatus(`Transaction sent: ${txHash}`);
-                pushStatus("Waiting for confirmation...");
-                
-                const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-                
-                if (receipt.status === 'success') {
-                    const actualDelay = await publicClient.readContract({
-                        address: daoAddress,
-                        abi: daoAbi,
-                        functionName: 'votingDelay'
-                    });
-                    
-                    pushStatus("✅ SUCCESS!");
-                    pushStatus(`Voting delay now: ${actualDelay.toString()} seconds`);
-                    pushStatus("New proposals will start voting in ~1 minute!");
-                    
-                    // Clear the stored signature
-                    sessionStorage.removeItem('council2_signature');
-                } else {
-                    throw new Error("Transaction failed");
-                }
-                
-            } else {
-                throw new Error(`Please connect as Council1 (${council1}) or Council2 (${council2})`);
-            }
-            
-            console.log("Council execution completed");
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error preparing voting delay change');
+            const items = await loadAllProposals(c);
+            proposals.set(items);
+            pushStatus(`Loaded ${items.length} proposals`);
+        } catch (err) {
+            log.error("Error loading proposals", err);
         } finally {
+            retrieving.set(false);
             loading.set(false);
         }
-    }
-
-    export async function handleMintNewMembership(newMember: `0x${string}`, tokenId: bigint) {
-        const nftAddress = NFT_CONTRACT_ADDRESS as `0x${string}`;
-        const council1 = "0x4a152972bc6fec8fd44c716b4f994090cca835d9"; 
-        const council2 = "0x11e12a6fbd1126187502fd5430253ad189d0831f"; 
-
-        const publicClient = ensurePublicClient();
-        const currentEOA = $eoa;
-
-        const payloadHash = keccak256(
-            encodePacked(
-                ["address", "string", "address", "string", "uint256"],
-                [nftAddress, "safeMint", newMember, "#", tokenId]
-            )
-        );
-
-        // Council2 signs first
-        if (currentEOA === council2.toLowerCase()) {
-            const sig2 = await window.ethereum.request({
-                method: "personal_sign",
-                params: [payloadHash, currentEOA]
-            });
-
-            sessionStorage.setItem("debug_mint_sig2", sig2);
-            alert("Council2 signature saved! Now switch wallet to Council1.");
-            return;
-        }
-
-        // Council1 executes mint
-        if (currentEOA === council1.toLowerCase()) {
-            const sig2 = sessionStorage.getItem("debug_mint_sig2");
-            if (!sig2) throw new Error("Council2 signature missing!");
-
-            // Council1 signs
-            const sig1 = await window.ethereum.request({
-                method: "personal_sign",
-                params: [payloadHash, currentEOA]
-            });
-
-            const walletClient = createWalletClient({
-                chain: sepolia,
-                transport: custom(window.ethereum)
-            });
-
-            const txHash = await walletClient.writeContract({
-                address: nftAddress,
-                abi: FlatFeeStackNFT.abi,
-                functionName: "safeMint",
-                args: [newMember, 1n, sig1, 2n, sig2],
-                account: currentEOA,
-                gas: 500000n
-            });
-
-            const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-            sessionStorage.removeItem("debug_mint_sig2");
-            return receipt;
-        }
-
-        throw new Error(`Connect as Council1 (${council1}) or Council2 (${council2})`);
     }
 
     async function handleCreateProposal() {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect first");
+
         loading.set(true);
-        gasCost.set(null);
-        paymasterFunds.set(null);
+        pushStatus("Preparing proposal...");
 
         try {
-            pushStatus("Preparing proposal UserOperation ...");
-            
-            const proposal: ProposalDetails = {
-                targets: [get(smartAccount) as `0x${string}`],
+            const proposal = {
+                targets: [c.smartAccount],
                 values: [0n],
-                calldatas: ['0x'],
-                description: `${get(proposalTitle)}\n\n${get(proposalDescription)}`,
+                calldatas: ["0x"],
+                description: `${get(proposalTitle)}\n\n${get(proposalDescription)}`
             };
 
-            const { receipt } = await createProposal(proposal, (text) => pushStatus(text));
-
+            const { receipt } = await createProposal(c, proposal, log);
             lastTxHash.set(receipt.receipt.transactionHash);
-            pushStatus("Proposal UserOperation submitted");
 
-            const txReceipt = await waitForTransactionReceipt(get(lastTxHash));
-            pushStatus("Proposal transaction included in a block");
-
-            const cost = await getGasCost(get(lastTxHash));
-            gasCost.set(cost.totalCostEth);
-
-            const paymasterDeposit = await getPaymasterDeposit();
-            paymasterFunds.set(paymasterDeposit.eth);
-
-            await waitForConfirmations(txReceipt, 3, (text) => pushStatus(text));
-
-            pushStatus("Proposal created successfully!");
+            pushStatus("Proposal submitted");
             showProposalForm.set(false);
             proposalTitle.set("");
             proposalDescription.set("");
-            
-            // Reload proposals list
-            await handleLoadProposals();
 
-            await getBalances();
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error occurred');
+            await handleLoadProposals();
+            await loadBalances();
+        } catch (err) {
+            log.error("Proposal error", err);
         } finally {
             loading.set(false);
         }
     }
 
     async function handleLoadMembershipTokens() {
-        if (!get(eoa)) {
-            pushStatus("Connect wallet first");
-            return;
-        }
+        const c = get(ctx);
+        const eo = get(eoa);
+        if (!c || !eo) return pushStatus("Connect first");
 
         loading.set(true);
+        pushStatus("Loading membership tokens...");
+
         try {
-            const tokens = await listMembershipTokens(get(eoa) as `0x${string}`);
-            console.log("" + tokens);
+            const tokens = await listMembershipTokens(c, eo);
             membershipTokens.set(tokens);
-            if (tokens.length > 0) {
+
+            if (tokens.length > 0)
                 selectedTokenId.set(tokens[0].tokenId.toString());
-            }
-            pushStatus(tokens.length ? "Membership tokens loaded" : "No membership tokens found");
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error loading membership tokens');
+
+            pushStatus(`Loaded ${tokens.length} token(s)`);
+        } catch (err) {
+            log.error("Token load error", err);
         } finally {
             loading.set(false);
         }
@@ -512,44 +273,126 @@
 
     async function handleRenewMembership() {
         const tokenId = get(selectedTokenId);
-        if (!tokenId) {
-            pushStatus("Select a token id first");
-            return;
-        }
+        const c = get(ctx);
+        if (!tokenId || !c) return pushStatus("Select a token");
 
         loading.set(true);
         try {
-            pushStatus("Renewing membership for token " + tokenId + "...");
-            const tokenIdBigInt = BigInt(tokenId as string);
-            await renewMembership(tokenIdBigInt, (msg) => pushStatus(msg));
-            pushStatus("Membership renewed successfully!");
-            
-            // Reload tokens to refresh state
+            await renewMembership(c, BigInt(tokenId), log);
+            pushStatus("Membership renewed");
             await handleLoadMembershipTokens();
-
-            await getBalances();
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error renewing membership');
+        } catch (err) {
+            log.error("Renew membership error", err);
         } finally {
             loading.set(false);
         }
     }
 
-    async function handleVote(proposalId: bigint, support: number) {
-        loading.set(true);
-        try {
-            pushStatus(`Submitting vote (${support === 1 ? 'For' : support === 0 ? 'Against' : 'Abstain'})...`);
-            await castVote(proposalId, support, (msg) => pushStatus(msg));
-            pushStatus("✓ Vote submitted successfully!");
-            
-            // Reload proposals to show updated vote counts
-            await handleLoadProposals();
+    async function handleVote(id: bigint, support: number) {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect first");
 
-            await getBalances();
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error submitting vote');
+        loading.set(true);
+        pushStatus("Submitting vote...");
+
+        try {
+            await voteOnProposal(c, id, support, log);
+            pushStatus("Vote submitted");
+            await handleLoadProposals();
+        } catch (err) {
+            log.error("Vote error", err);
+        } finally {
+            loading.set(false);
+        }
+    }
+
+    async function handleCheckIsDAOMember() {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect wallet first");
+
+        loading.set(true);
+
+        try {
+            const member = await isMember(c.public, c.smartAccount, c.eoa);
+            pushStatus(`DAO Membership: ${member ? "YES" : "NO"}`);
+        } catch (err) {
+            log.error("Membership check failed", err);
+        } finally {
+            loading.set(false);
+        }
+    }
+
+    async function handleSetVotingDelay() {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect wallet first");
+
+        const delay = 60n;
+        const council1 = NFT_COUNCIL_1;
+        const council2 = NFT_COUNCIL_2;
+
+        loading.set(true);
+
+        try {
+            if (c.eoa.toLowerCase() === council2.toLowerCase()) {
+                // Council2 signs
+                const { signature } = await prepareVotingDelaySignature(c, delay);
+                sessionStorage.setItem("council2_sig_vdelay", signature);
+                pushStatus("Signature saved. Switch to Council1.");
+            } else if (c.eoa.toLowerCase() === council1.toLowerCase()) {
+                // Council1 executes
+                const sig2 = sessionStorage.getItem("council2_sig_vdelay") as `0x${string}`;
+                if (!sig2) throw new Error("Council2 signature missing!");
+
+                await executeVotingDelay(c, delay, sig2, log);
+                pushStatus("Voting delay updated!");
+
+                sessionStorage.removeItem("council2_sig_vdelay");
+            } else {
+                pushStatus("You must be a council member.");
+            }
+        } catch (err) {
+            log.error("Voting delay error", err);
+        } finally {
+            loading.set(false);
+        }
+    }
+
+    async function handleMintNewMembership() {
+        const c = get(ctx);
+        if (!c) return pushStatus("Connect first");
+
+        const newMember = mintTargetAddress as `0x${string}`;
+        const tokenId = BigInt(Date.now());
+        const council1 = NFT_COUNCIL_1;
+        const council2 = NFT_COUNCIL_2;
+
+        loading.set(true);
+
+        try {
+            if (c.eoa.toLowerCase() === council2.toLowerCase()) {
+                const { signature } = await prepareMintSignature(c, newMember, tokenId);
+                sessionStorage.setItem("debug_mint_sig2", signature);
+                pushStatus("Council2 signature saved. Switch to Council1.");
+            } 
+            else if (c.eoa.toLowerCase() === council1.toLowerCase()) {
+                const sig2 = sessionStorage.getItem("debug_mint_sig2") as `0x${string}`;
+                if (!sig2) throw new Error("Missing council2 signature!");
+
+                const sig1 = await (window as any).ethereum.request({
+                    method: "personal_sign",
+                    params: [/* same payloadHash */, c.eoa]
+                });
+
+                await executeMint(c, newMember, tokenId, sig1, sig2, log);
+
+                pushStatus("Membership minted!");
+                sessionStorage.removeItem("debug_mint_sig2");
+            } 
+            else {
+                pushStatus("You must be council1 or council2");
+            }
+        } catch (err) {
+            log.error("Mint membership error", err);
         } finally {
             loading.set(false);
         }
@@ -578,14 +421,14 @@
         <h1>Paymaster DAO</h1>
 
         <div class="controls">
-            {#if $smartAccount}
+            {#if $ctx}
                 <section style="margin-top: 1rem;">
                     <p>
                         {#if $eoaBalance}
                             <strong>EOA Balance:</strong> {$eoaBalance} ETH <br/>
                         {/if}
 
-                        <strong>Smart account:</strong> {shortAddress($smartAccount)} <br/>
+                        <strong>Smart account:</strong> {shortAddress($ctx.smartAccount)} <br/>
                         {#if $smartAccountBalance}
                             <strong>Smart Account Balance:</strong> {$smartAccountBalance} ETH <br/>
                         {/if}
@@ -596,16 +439,16 @@
                             <input
                                 id="paymasterToggle"
                                 type="checkbox"
-                                bind:checked={$usePaymaster}
+                                bind:checked={$ctx.usePaymaster}
                             />
                             <span class="slider round"></span>
                         </label>
 
-                        <span class="toggle-state">{ $usePaymaster ? "Yes" : "No" }</span>
+                        <span class="toggle-state">{ $ctx.usePaymaster ? "Yes" : "No" }</span>
                     </p>
 
                     <div class="button-column">
-                        <button on:click={checkIsDAOMember} disabled={$loading} class="btn btn-primary">
+                        <button on:click={handleCheckIsDAOMember} disabled={$loading} class="btn btn-primary">
                             Check Is DAO Member
                         </button>
 
@@ -676,7 +519,7 @@
                                 bind:value={mintTargetAddress}
                             />
                             <button
-                                on:click={() => handleMintNewMembership(mintTargetAddress as `0x${string}`, BigInt(Date.now()))}
+                                on:click={handleMintNewMembership}
                                 class="btn btn-secondary"
                                 style="background: #ff9800;">
                                 Mint new Membership (Councils)
@@ -822,7 +665,7 @@
 
     <div class="status-feed">
         <button 
-            on:click={() => resetStatusFeed()} 
+            on:click={() => resetStatusFeed()}
             class="btn"
         >
             Clear
