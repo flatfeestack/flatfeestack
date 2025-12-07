@@ -1,6 +1,6 @@
 import {
   createPublicClient, createWalletClient,
-  custom, http, encodeFunctionData, formatEther,
+  custom, http, encodeFunctionData, formatEther, parseEther,
   type PublicClient,
   type WalletClient,
   type Hex,
@@ -8,10 +8,11 @@ import {
 } from 'viem';
 import { sepolia } from 'viem/chains';
 import { entryPoint07Abi, entryPoint07Address } from 'viem/account-abstraction';
-import { PIMLICO_URL, SEPOLIA_RPC_URL, PAYMASTER_CONTRACT_ADDRESS, COUNTER_CONTRACT_ADDRESS } from "../config"
+import { PIMLICO_URL, SEPOLIA_RPC_URL, PAYMASTER_CONTRACT_ADDRESS, COUNTER_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS } from "../config"
 import { createSmartAccountClient, type SmartAccountClient } from 'permissionless';
 import { toSimpleSmartAccount } from 'permissionless/accounts';
 import FlatFeeStackPaymaster from '../../artifacts/contracts/FlatFeeStackDAOPaymaster.sol/FlatFeeStackDAOPaymaster.json' assert { type: "json" };
+import { pushStatus } from "./statusfeed";
 
 type AAClient = SmartAccountClient<any>;
 
@@ -50,12 +51,19 @@ function ensurePublicClient(): PublicClient {
   return state.publicClient;
 }
 
-function ensureSmartAccountClient(): AAClient {
+export function ensureSmartAccountClient(): AAClient {
   if (!state.smartAccountClient || !state.smartAccountAddress) {
     throw new Error('Smart account not initialized');
   }
 
   return state.smartAccountClient;
+}
+
+export function getPublicClient(): PublicClient {
+  if (!state.publicClient)
+    throw new Error("PublicClient not initialized");
+  
+  return state.publicClient;
 }
 
 async function setupSmartAccountFromEOA(eoa: Address) {
@@ -217,7 +225,7 @@ export function getSmartAccountAddress(): Address {
   return state.smartAccountAddress;
 }
 
-export async function incrementCounter(onStatus?: (s: string) => void) {
+export async function incrementCounter() {
   const smartAccountClient = ensureSmartAccountClient();
 
   const data = encodeFunctionData({
@@ -234,7 +242,7 @@ export async function incrementCounter(onStatus?: (s: string) => void) {
     args: [],
   });
 
-  onStatus?.("Waiting for signature ...");
+  pushStatus("Waiting for signature ...");
 
   const userOpHash = await smartAccountClient.sendUserOperation({
     calls: [
@@ -246,7 +254,7 @@ export async function incrementCounter(onStatus?: (s: string) => void) {
     ],
   });
 
-  onStatus?.('UserOperation is being processed by Bundler ...');
+  pushStatus('UserOperation is being processed by Bundler ...');
   const receipt = await smartAccountClient.waitForUserOperationReceipt({
     hash: userOpHash,
   });
@@ -307,7 +315,6 @@ export async function waitForTxStatus(txHash: Hex) {
 export async function waitForConfirmations(
   receipt: { blockNumber: bigint },
   confirmationsRequired: number,
-  onUpdate: (text: string) => void,
 ) {
   const publicClient = ensurePublicClient();
   let confirmations = 0;
@@ -320,7 +327,7 @@ export async function waitForConfirmations(
     confirmations = Number(block - receipt.blockNumber);
 
     if (lastUpdatedConfirmation < 0 || lastUpdatedConfirmation < confirmations){
-      onUpdate(`Confirmations: ${confirmations}/${confirmationsRequired}`);
+      pushStatus(`Confirmations: ${confirmations}/${confirmationsRequired}`);
       lastUpdatedConfirmation = confirmations;
     }
   }
@@ -330,5 +337,52 @@ export async function waitForConfirmations(
 
 export async function getBalance(address: Address) {
   const publicClient = ensurePublicClient();
-  return publicClient.getBalance({ address });
+  let balance = await publicClient.getBalance({ address });
+  return formatEther(balance);
+}
+
+export async function fundPaymaster(amountEth: string) {
+  const smartAccountClient = ensureSmartAccountClient();
+  const amountWei = parseEther(String(amountEth));
+
+  const data = encodeFunctionData({
+    abi: entryPoint07Abi,
+    functionName: 'depositTo',
+    args: [PAYMASTER_CONTRACT_ADDRESS],
+  });
+
+  pushStatus("Waiting for signature ...");
+
+  const userOpHash = await smartAccountClient.sendUserOperation({
+    calls: [
+      {
+        to: entryPoint07Address,
+        data,
+        value: amountWei,
+      },
+    ],
+  });
+}
+
+export async function delegateVotesToSmartAccount(smartAccountAddress: Address) {
+  const client = ensureSmartAccountClient();
+
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "delegate",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [{ name: "delegatee", type: "address" }]
+      }
+    ],
+    functionName: "delegate",
+    args: [smartAccountAddress]
+  });
+
+  const userOpHash = await client.sendUserOperation({
+    calls: [{ to: NFT_CONTRACT_ADDRESS, data }]
+  });
+
+  return client.waitForUserOperationReceipt({ hash: userOpHash });
 }

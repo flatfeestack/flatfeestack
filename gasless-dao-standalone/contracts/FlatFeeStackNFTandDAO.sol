@@ -22,6 +22,10 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+interface ISimpleAccount {
+    function owner() external view returns (address);
+}
+
 contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pausable, Ownable, ERC721Burnable, EIP712, ERC721Votes {
 
     uint48 constant public MAX_UINT48 = 281474976710655;
@@ -209,9 +213,32 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
 }
 
 contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction {
-
     uint256 public bylawsHash;
     mapping(uint256 => bool) public councilExecution;
+
+    struct Proposal {
+        uint256 id;
+        string description;
+        uint256 startTime;
+        uint256 endTime;
+        address proposer;
+    }
+
+    struct ProposalView {
+        uint256 id;
+        string description;
+        uint256 startTime;
+        uint256 endTime;
+        uint8 proposalState;
+        uint256 againstVotes;
+        uint256 forVotes;
+        uint256 abstainVotes;
+        address proposer;
+    }
+
+    mapping(uint256 => Proposal) public proposals;
+    uint256[] public proposalIds;
+    uint256 public proposalCount;
 
     event BylawsChanged(uint256 indexed oldHash, uint256 indexed newHash);
 
@@ -276,11 +303,6 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
             return 2;
         }
         return q;
-    }
-
-    function proposalThreshold() public view 
-        override(Governor, GovernorSettings) returns (uint256) {
-        return super.proposalThreshold();
     }
 
     function _queueOperations(uint256, address[] memory, uint256[] memory, bytes[] memory, bytes32) 
@@ -375,5 +397,116 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         // https://eips.ethereum.org/EIPS/eip-6372
         require(clock() == block.timestamp);
         return "mode=timestamp";
+    }
+
+    function _propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        address proposer
+    ) internal override returns (uint256 proposalId) {
+        proposalId = super._propose(targets, values, calldatas, description, proposer);
+
+        uint256 start = block.timestamp + votingDelay();
+        uint256 end = start + votingPeriod();
+
+        Proposal storage p = proposals[proposalId];
+        p.id = proposalId;
+        p.startTime = start;
+        p.endTime = end;
+        p.description = description;
+        p.proposer = proposer;
+
+        proposalIds.push(proposalId);
+        proposalCount++;
+
+        return proposalId;
+    }
+
+    function getAllProposals()
+        external
+        view
+        returns (Proposal[] memory list)
+    {
+        list = new Proposal[](proposalCount);
+
+        for (uint256 i = 0; i < proposalCount; i++) {
+            uint256 id = proposalIds[i];
+            list[i] = proposals[id];
+        }
+    }
+
+    function getProposal(uint256 proposalId)
+        external
+        view
+        returns (ProposalView memory viewData)
+    {
+        Proposal storage p = proposals[proposalId];
+        (uint256 ag, uint256 fo, uint256 ab) = proposalVotes(proposalId);
+
+        return ProposalView({
+            id: p.id,
+            description: p.description,
+            startTime: p.startTime,
+            endTime: p.endTime,
+            proposalState: uint8(this.state(proposalId)),
+            againstVotes: ag,
+            forVotes: fo,
+            abstainVotes: ab,
+            proposer: p.proposer
+        });
+    }
+
+    function _isMemberOrOwner(address account) internal view returns (bool) {
+        FlatFeeStackNFT nft = FlatFeeStackNFT(address(token()));
+
+        // Check Smart Account (or normal account) NFT ownership
+        uint256 count = nft.balanceOf(account);
+        for (uint256 i = 0; i < count; i++) {
+            uint256 tokenId = nft.tokenOfOwnerByIndex(account, i);
+
+            if (nft.isCouncil(tokenId)) return true;
+            if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
+        }
+
+        // Check EOA behind a Smart Account
+        try ISimpleAccount(account).owner() returns (address eoa) {
+            uint256 eoaCount = nft.balanceOf(eoa);
+            for (uint256 i = 0; i < eoaCount; i++) {
+                uint256 tokenId = nft.tokenOfOwnerByIndex(eoa, i);
+
+                if (nft.isCouncil(tokenId)) return true;
+                if (nft.membershipPayed(tokenId) >= block.timestamp) return true;
+            }
+        } catch {
+            // ignore
+        }
+
+        return false;
+    }
+
+    function proposalThreshold() public view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        if (_isMemberOrOwner(msg.sender)) return 0;
+
+        return super.proposalThreshold();
+    }
+
+    function _getVotes(
+        address account,
+        uint256 timepoint,
+        bytes memory params
+    ) 
+        internal 
+        view 
+        override(Governor, GovernorVotes)
+        returns (uint256)
+    {
+        if (_isMemberOrOwner(account)) return 1;
+
+        return super._getVotes(account, timepoint, params);
     }
 }

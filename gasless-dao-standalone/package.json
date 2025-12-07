@@ -14,7 +14,7 @@
   "devDependencies": {
     "@account-abstraction/contracts": "^0.8.0",
     "@typechain/ethers-v6": "^0.5.1",
-    "@typechain/hardhat": "^9.1.1",
+    "@typechain/hardhat": "^9.1.0",
     "hardhat": "^3.0.2",
     "preveltekit": "^1.2.15",
     "ts-node": "^10.9.2",

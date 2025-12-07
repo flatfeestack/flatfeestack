@@ -15,6 +15,10 @@ interface IFlatFeeStackNFT {
     function isCouncil(uint256 tokenId) external view returns (bool);
 }
 
+interface ISimpleAccount {
+    function owner() external view returns (address);
+}
+
 contract FlatFeeStackDAOPaymaster is IPaymaster, Ownable {
     using MessageHashUtils for bytes32;
     IEntryPoint public immutable entryPoint;
@@ -68,14 +72,7 @@ contract FlatFeeStackDAOPaymaster is IPaymaster, Ownable {
         }
 
         // else check for the EOA
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        bytes32 signedHash = userOpHash.toEthSignedMessageHash();
-
-        address eoa = ECDSA.recover(
-            signedHash,
-            userOp.signature
-        );
-
+        address eoa = ISimpleAccount(smartAccount).owner();
         return isAuthorizedMember(eoa);
     }
 
