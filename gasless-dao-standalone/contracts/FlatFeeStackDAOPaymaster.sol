@@ -37,26 +37,12 @@ contract FlatFeeStackDAOPaymaster is IPaymaster, Ownable {
     }
 
     /**
-     * Returns true if user owns:
+     * Returns true if user owns a token:
      *  - A council token (always valid)
-     *  - A member token with unexpired membershipPayed
+     *  - A member token with a token (expired or unexpired)
      */
     function isAuthorizedMember(address user) public view returns (bool) {
-        uint256 count = nft.balanceOf(user);
-        if (count == 0) return false;
-
-        for (uint256 i = 0; i < count; i++) {
-            uint256 tokenId = nft.tokenOfOwnerByIndex(user, i);
-
-            // Council tokens are always allowed
-            if (nft.isCouncil(tokenId)) return true;
-
-            // Normal membership
-            if (nft.membershipPayed(tokenId) >= block.timestamp)
-                return true;
-        }
-
-        return false;
+        return nft.balanceOf(user) > 0;
     }
 
     function isAuthorizedUserOp(PackedUserOperation calldata userOp)

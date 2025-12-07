@@ -1,6 +1,6 @@
 import {
   createPublicClient, createWalletClient,
-  custom, http, encodeFunctionData, formatEther, parseEther,
+  custom, http, encodeFunctionData, formatEther,
   type PublicClient,
   type WalletClient,
   type Hex,
@@ -107,6 +107,8 @@ async function setupSmartAccountFromEOA(eoa: Address) {
   state.walletClient = walletClient;
   state.smartAccountAddress = simpleAccount.address;
 
+  await ensureSmartAccountDeployment(publicClient, simpleAccount);
+
   const usePaymaster = await checkIsMember(simpleAccount.address, eoa);
   state.usePaymaster = usePaymaster;
 
@@ -142,6 +144,30 @@ async function setupSmartAccountFromEOA(eoa: Address) {
     smartAccountAddress: state.smartAccountAddress,
     paymasterUsed: state.usePaymaster,
   };
+}
+
+async function ensureSmartAccountDeployment(publicClient: PublicClient, simpleAccount: any){
+  const saAddress = simpleAccount.address;
+  const saCode = await publicClient.getCode({ address: saAddress });
+  const isDeployed = saCode && saCode !== "0x";
+
+  if (!isDeployed) {
+    console.log("Smart Account not deployed — deploying now...");
+
+    const deployClient = createSmartAccountClient({
+      account: simpleAccount,
+      chain: sepolia,
+      bundlerTransport: http(PIMLICO_URL),
+    });
+
+    const deployOpHash = await deployClient.sendUserOperation({
+      calls: [],
+    });
+
+    await deployClient.waitForUserOperationReceipt({ hash: deployOpHash });
+
+    console.log("Smart Account deployed:", saAddress);
+  }
 }
 
 export async function getGasCost(txHash: Hex) {
@@ -390,72 +416,6 @@ export async function listMembershipTokens(owner: Address): Promise<MembershipTo
 }
 
 /**
- * Transfer a membership NFT from the connected EOA to the smart account
- * This is required so the paymaster can recognize the smart account as a member
- */
-/*export async function transferMembershipToSmartAccount(tokenId: bigint, onStatus?: (s: string) => void) {
-  if (!state.walletClient || !state.eoa || !state.smartAccountAddress) {
-    throw new Error('Wallet not connected');
-  }
-
-  const publicClient = ensurePublicClient();
-  const nftAddress = await getDaoTokenAddress();
-
-  onStatus?.(`Transferring membership token #${tokenId} to smart account...`);
-
-  const hash = await state.walletClient.writeContract({
-    address: nftAddress,
-    abi: FlatFeeStackNFT.abi as any,
-    functionName: 'safeTransferFrom',
-    args: [state.eoa, state.smartAccountAddress, tokenId],
-    chain: sepolia,
-    account: state.eoa,
-  });
-
-  onStatus?.('Waiting for transfer confirmation...');
-  await publicClient.waitForTransactionReceipt({ hash });
-
-  onStatus?.('✓ Membership NFT transferred to smart account');
-  return hash;
-}*/
-
-/**
- * Transfer a membership NFT back from the smart account to the EOA
- * Uses the smart account to call safeTransferFrom(smartAccount -> eoa)
- */
-/*export async function transferMembershipToEOA(tokenId: bigint, onStatus?: (s: string) => void) {
-  const smartAccountClient = ensureSmartAccountClient();
-  const publicClient = ensurePublicClient();
-  if (!state.eoa || !state.smartAccountAddress) {
-    throw new Error('Wallet not connected');
-  }
-
-  const nftAddress = await getDaoTokenAddress();
-
-  const data = encodeFunctionData({
-    abi: FlatFeeStackNFT.abi as any,
-    functionName: 'safeTransferFrom',
-    args: [state.smartAccountAddress, state.eoa, tokenId],
-  });
-
-  onStatus?.(`Transferring membership token #${tokenId} back to EOA...`);
-
-  const userOpHash = await smartAccountClient.sendUserOperation({
-    calls: [
-      {
-        to: nftAddress,
-        data,
-        value: 0n,
-      },
-    ],
-  });
-
-  const receipt = await smartAccountClient.waitForUserOperationReceipt({ hash: userOpHash });
-  onStatus?.('✓ Membership NFT transferred back to EOA');
-  return { userOpHash, receipt };
-}*/
-
-/**
  * Renew/pay membership for a token owned by the smart account or eoa
  * This makes the token a valid membership (membershipPayed >= now)
  * Requires the EOA to have ETH for the membership fee (0.1 ETH by default)
@@ -475,14 +435,7 @@ export async function renewMembership(tokenId: bigint, onStatus?: (s: string) =>
   onStatus?.(`Renewing membership for token #${tokenId}...`);
   onStatus?.(`Membership fee: ${formatEther(membershipFee)} ETH`);
 
-  const eoaBalance = await publicClient.getBalance({ address: state.eoa! });
-  if (eoaBalance < membershipFee) {
-    throw new Error(
-      `EOA balance too low. Need ${formatEther(
-        membershipFee
-      )} ETH, have ${formatEther(eoaBalance)} ETH`
-    );
-  }
+  await ensureSmartAccountHasFunds(membershipFee, onStatus);
 
   const data = encodeFunctionData({
     abi: FlatFeeStackNFT.abi as any,
@@ -506,15 +459,6 @@ export async function renewMembership(tokenId: bigint, onStatus?: (s: string) =>
       return await state.walletClient!.signTransaction(request);
     },
   });
-  /*const userOpHash = await smartAccountClient.sendUserOperation({
-    calls: [
-      {
-        to: nftAddress,
-        data,
-        value: membershipFee,
-      },
-    ],
-  });*/
 
   onStatus?.('Waiting for membership renewal confirmation...');
   const receipt = await smartAccountClient.waitForUserOperationReceipt({
@@ -523,6 +467,35 @@ export async function renewMembership(tokenId: bigint, onStatus?: (s: string) =>
 
   onStatus?.(`✓ Membership renewed for token #${tokenId}`);
   return { userOpHash, receipt };
+}
+
+async function ensureSmartAccountHasFunds(amount: bigint, onStatus?: (msg: string) => void) {
+  const publicClient = ensurePublicClient();
+  const walletClient = state.walletClient!;
+  const smartAccountAddress = state.smartAccountAddress!;
+
+  // 1. Get smart account balance
+  const saBalance = await publicClient.getBalance({ address: smartAccountAddress });
+
+  if (saBalance >= amount) {
+    onStatus?.(`Smart Account already has enough ETH (${formatEther(saBalance)}).`);
+    return;
+  }
+
+  // 2. Calculate missing amount
+  const needed = amount - saBalance;
+  onStatus?.(`Smart Account needs ${formatEther(needed)} ETH. Sending from EOA...`);
+
+  // 3. Send ETH from EOA -> Smart Account
+  const txHash = await walletClient.sendTransaction({
+    to: smartAccountAddress,
+    value: needed,
+  });
+
+  onStatus?.(`Waiting for deposit tx...`);
+  await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+  onStatus?.(`✓ Sent ${formatEther(needed)} ETH to Smart Account.`);
 }
 
 /**

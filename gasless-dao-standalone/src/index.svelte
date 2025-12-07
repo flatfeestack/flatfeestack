@@ -22,6 +22,7 @@
     const smartAccount = writable<`0x${string}` | null>(null);
     const lastTxHash = writable<`0x${string}` | null>(null);
     const loading = writable<boolean>(false);
+    const retrieving = writable<boolean>(false);
     const gasCost = writable<string | null>(null);
     const paymasterFunds = writable<string | null>(null);
     const usePaymaster = writable<boolean | null>(null);
@@ -33,8 +34,6 @@
     const proposalDescription = writable<string>("");
     const membershipTokens = writable<{ tokenId: bigint; membershipPaidUntil: bigint; }[]>([]);
     const selectedTokenId = writable<string | null>(null);
-    const saMembershipTokens = writable<{ tokenId: bigint; membershipPaidUntil: bigint; }[]>([]);
-    const selectedSaTokenId = writable<string | null>(null);
 
     let isDebug = false;
     let mintTargetAddress = "";
@@ -65,31 +64,13 @@
         statusFeed.update((l) => [...l, stampedMsg]);
     }
 
-    async function refreshProposals() {
-        pushStatus("Loading proposals ...");
-        try{
-            const proposalList = await loadAllProposals();
-            console.log("# of retrieved proposals: " + proposalList.length);
-            proposals.set([]);
-            const extendedList = [];
+    function resetStatusFeed(){
+        statusFeed.set([]);
+    }
 
-            for (const p of proposalList) {
-                let prop = await getProposal(p.id);
-                const extended: ProposalViewExtended = {
-                    ...prop,
-                    startDate: new Date(Number(prop.startTime) * 1000),
-                    endDate: new Date(Number(prop.endTime) * 1000),
-                };
-                console.log("Pushing: " + extended);
-                extendedList.push(extended);
-            }
-
-            proposals.set(extendedList);
-            pushStatus("Proposals loaded");
-        } catch (err) {
-            console.error(err);
-            pushStatus("Failed to load proposals");
-        }
+    export function shortAddress(addr: string, first = 7, last = 5) {
+        if (!addr) return "";
+        return `${addr.slice(0, first)}...${addr.slice(-last)}`;
     }
 
     async function getBalances(){
@@ -126,6 +107,10 @@
         usePaymaster.set(null);
         eoaBalance.set(null);
         smartAccountBalance.set(null);
+        proposalTitle.set("");
+        proposalDescription.set("");
+        membershipTokens.set([]);
+        selectedTokenId.set(null);
     }
 
     async function handleIncrementCounter() {
@@ -172,6 +157,8 @@
 
     async function handleLoadProposals() {
         loading.set(true);
+        retrieving.set(true);
+        
         try {
             pushStatus("Loading all proposals...");
             const allProposals = await loadAllProposals();
@@ -182,6 +169,7 @@
             pushStatus(err?.message ?? 'Error loading proposals');
         } finally {
             loading.set(false);
+            retrieving.set(false);
         }
     }
 
@@ -392,57 +380,63 @@
 
     export async function handleMintNewMembership(newMember: `0x${string}`, tokenId: bigint) {
         const nftAddress = NFT_CONTRACT_ADDRESS as `0x${string}`;
-        const council1 = "0x4a152972bc6fec8fd44c716b4f994090cca835d9";
-        const council2 = "0x11e12a6fbd1126187502fd5430253ad189d0831f";
+        const council1 = "0x4a152972bc6fec8fd44c716b4f994090cca835d9"; 
+        const council2 = "0x11e12a6fbd1126187502fd5430253ad189d0831f"; 
+
         const publicClient = ensurePublicClient();
         const currentEOA = $eoa;
 
-        const packed = encodePacked(
-            ["address", "string", "address", "string", "uint256"],
-            [nftAddress, "safeMint", newMember, "#", tokenId]
+        const payloadHash = keccak256(
+            encodePacked(
+                ["address", "string", "address", "string", "uint256"],
+                [nftAddress, "safeMint", newMember, "#", tokenId]
+            )
         );
-
-        const innerHash = keccak256(packed);
 
         // Council2 signs first
         if (currentEOA === council2.toLowerCase()) {
-            const signature2 = await (window as any).ethereum.request({
+            const sig2 = await window.ethereum.request({
                 method: "personal_sign",
-                params: [innerHash, currentEOA]
+                params: [payloadHash, currentEOA]
             });
 
-            sessionStorage.setItem("debug_mint_signature2", signature2);
-            alert("Council2 signature saved. Now switch wallet to Council1.");
+            sessionStorage.setItem("debug_mint_sig2", sig2);
+            alert("Council2 signature saved! Now switch wallet to Council1.");
             return;
         }
 
         // Council1 executes mint
         if (currentEOA === council1.toLowerCase()) {
-            const signature2 = sessionStorage.getItem("debug_mint_signature2");
-            if (!signature2) throw new Error("Council2 signature missing. Sign first!");
+            const sig2 = sessionStorage.getItem("debug_mint_sig2");
+            if (!sig2) throw new Error("Council2 signature missing!");
+
+            // Council1 signs
+            const sig1 = await window.ethereum.request({
+                method: "personal_sign",
+                params: [payloadHash, currentEOA]
+            });
 
             const walletClient = createWalletClient({
                 chain: sepolia,
-                transport: custom((window as any).ethereum)
+                transport: custom(window.ethereum)
             });
 
-            // Execute safeMint 
             const txHash = await walletClient.writeContract({
                 address: nftAddress,
                 abi: FlatFeeStackNFT.abi,
                 functionName: "safeMint",
-                args: [newMember, 0n, "0x", 0n, signature2], //signature1 is unused because council1 = msg.sender
+                args: [newMember, 1n, sig1, 2n, sig2],
                 account: currentEOA,
-                gas: 400000n,
+                gas: 500000n
             });
 
             const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-            sessionStorage.removeItem("debug_mint_signature2");
 
+            sessionStorage.removeItem("debug_mint_sig2");
             return receipt;
         }
 
-        throw new Error(`Connect wallet as either Council1 (${council1}) or Council2 (${council2})`);
+        throw new Error(`Connect as Council1 (${council1}) or Council2 (${council2})`);
     }
 
     async function handleCreateProposal() {
@@ -451,10 +445,6 @@
         paymasterFunds.set(null);
 
         try {
-            // Ensure smart account is deployed first
-            //pushStatus("Ensuring smart account is deployed...");
-            //await deploySmartAccountIfNeeded((msg) => pushStatus(msg));
-
             pushStatus("Preparing proposal UserOperation ...");
             
             const proposal: ProposalDetails = {
@@ -487,6 +477,8 @@
             
             // Reload proposals list
             await handleLoadProposals();
+
+            await getBalances();
         } catch (err: any) {
             console.error(err);
             pushStatus(err?.message ?? 'Error occurred');
@@ -518,30 +510,8 @@
         }
     }
 
-    async function handleLoadSmartAccountTokens() {
-        if (!get(smartAccount)) {
-            pushStatus("Connect and deploy smart account first");
-            return;
-        }
-
-        loading.set(true);
-        try {
-            const tokens = await listMembershipTokens(get(smartAccount) as `0x${string}`);
-            saMembershipTokens.set(tokens);
-            if (tokens.length > 0) {
-                selectedSaTokenId.set(tokens[0].tokenId.toString());
-            }
-            pushStatus(tokens.length ? "Smart account membership tokens loaded" : "No tokens on smart account");
-        } catch (err: any) {
-            console.error(err);
-            pushStatus(err?.message ?? 'Error loading smart account tokens');
-        } finally {
-            loading.set(false);
-        }
-    }
-
     async function handleRenewMembership() {
-        const tokenId = get(selectedSaTokenId) || get(selectedTokenId);
+        const tokenId = get(selectedTokenId);
         if (!tokenId) {
             pushStatus("Select a token id first");
             return;
@@ -555,7 +525,9 @@
             pushStatus("Membership renewed successfully!");
             
             // Reload tokens to refresh state
-            await handleLoadSmartAccountTokens();
+            await handleLoadMembershipTokens();
+
+            await getBalances();
         } catch (err: any) {
             console.error(err);
             pushStatus(err?.message ?? 'Error renewing membership');
@@ -573,6 +545,8 @@
             
             // Reload proposals to show updated vote counts
             await handleLoadProposals();
+
+            await getBalances();
         } catch (err: any) {
             console.error(err);
             pushStatus(err?.message ?? 'Error submitting vote');
@@ -589,14 +563,14 @@
                 Connect
             </button>
         {:else}
+            <div class="connection-status">
+                Connected as<br />
+                <span>{shortAddress($eoa)}</span>
+            </div>
+
             <button on:click={handleDisconnect} disabled={$loading} class="btn btn-secondary">
                 Disconnect
             </button>
-
-            <div class="connection-status">
-                Connected as<br />
-                <span>{$eoa}</span>
-            </div>
         {/if}
     </div>
 
@@ -607,7 +581,15 @@
             {#if $smartAccount}
                 <section style="margin-top: 1rem;">
                     <p>
-                        <strong>Smart account:</strong> {$smartAccount}<br />
+                        {#if $eoaBalance}
+                            <strong>EOA Balance:</strong> {$eoaBalance} ETH <br/>
+                        {/if}
+
+                        <strong>Smart account:</strong> {shortAddress($smartAccount)} <br/>
+                        {#if $smartAccountBalance}
+                            <strong>Smart Account Balance:</strong> {$smartAccountBalance} ETH <br/>
+                        {/if}
+                        
                         <label for="paymasterToggle"><strong>Using Paymaster:</strong></label>
 
                         <label class="switch">
@@ -631,21 +613,13 @@
                             [TEST] Increment Counter
                         </button>
 
-                        <!--<button on:click={handleFundSmartAccount} disabled={$loading} class="btn btn-primary">
-                            Fund Smart Account (0.01 ETH)
-                        </button>
-
-                        <button on:click={handleDeploySmartAccount} disabled={$loading} class="btn btn-primary">
-                            Deploy Smart Account
-                        </button>-->
-
                         <button on:click={handleLoadMembershipTokens} disabled={$loading} class="btn btn-primary">
-                            Load Membership Tokens (EOA)
+                            Load Membership Tokens (EOA or Smart Account)
                         </button>
 
                         {#if $membershipTokens.length > 0}
                             <div class="form-group">
-                                <label for="membership-token">Select token to transfer</label>
+                                <label for="membership-token">Select token</label>
                                 <select
                                     id="membership-token"
                                     bind:value={$selectedTokenId}
@@ -663,45 +637,32 @@
                                     {/each}
                                 </select>
                             </div>
-                            <button on:click={handleRenewMembership} disabled={$loading} class="btn btn-primary">
-                                Renew Membership for Token
-                            </button>
-                            <!--<button on:click={handleTransferMembership} disabled={$loading} class="btn btn-primary">
-                                Transfer Token to Smart Account
-                            </button>-->
+                            {#if $selectedTokenId}
+                                <button on:click={handleRenewMembership} disabled={$loading} class="btn btn-primary">
+                                    Renew Membership for Token
+                                </button>
+                            {/if}
                         {/if}
 
-                        <button on:click={handleLoadSmartAccountTokens} disabled={$loading} class="btn btn-primary">
-                            Load Membership Tokens (Smart Account)
-                        </button>
+                        <div class="result-box">
+                            <h3>Result</h3>
+                            {#if $lastTxHash}
+                                <p>
+                                    <strong>Last tx hash: </strong>
+                                    <a href={`https://sepolia.etherscan.io/tx/${$lastTxHash}`} target="_blank">
+                                        View on Etherscan
+                                    </a> <br>
 
-                        {#if $saMembershipTokens.length > 0}
-                            <div class="form-group">
-                                <label for="sa-membership-token">Select token to send back to EOA</label>
-                                <select
-                                    id="sa-membership-token"
-                                    bind:value={$selectedSaTokenId}
-                                    disabled={$loading}
-                                >
-                                    {#each $saMembershipTokens as token}
-                                        <option value={token.tokenId}>
-                                            Token #{token.tokenId} -
-                                            {#if token.membershipPaidUntil == 281474976710655n}
-                                                valid forever (council)
-                                            {:else}
-                                                valid until {new Date(Number(token.membershipPaidUntil) * 1000).toLocaleDateString()}
-                                            {/if}
-                                        </option>
-                                    {/each}
-                                </select>
-                            </div>
-                            <!--<button on:click={handleTransferMembershipBack} disabled={$loading} class="btn btn-primary">
-                                Transfer Token to EOA
-                            </button>-->
-                            <button on:click={handleRenewMembership} disabled={$loading} class="btn btn-primary">
-                                Renew Membership for Token
-                            </button>
-                        {/if}
+                                    {#if $gasCost}
+                                        <strong>Gas cost:</strong> {$gasCost} ETH <br>
+                                    {/if}
+
+                                    {#if $paymasterFunds}
+                                        <strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH
+                                    {/if}
+                                </p>
+                            {/if}
+                        </div>
 
                         {#if isDebug}
                             <hr style="margin: 1rem 0; border: 1px solid #ccc;" />
@@ -725,193 +686,147 @@
                                 Set 1-Minute Voting Delay (Councils)
                             </button>
                         {/if}
-
-                        <!--<button on:click={handleDebugEntryPoint} disabled={$loading} class="btn btn-secondary">
-                            Check EntryPoint Configuration
-                        </button>
-
-                        <button on:click={handleDebugPaymaster} disabled={$loading} class="btn btn-secondary">
-                            Debug Paymaster Authorization
-                        </button>
-
-                        <button on:click={handleDebugProposalThreshold} disabled={$loading} class="btn btn-secondary">
-                            Test DAO Proposal Threshold
-                        </button>
-
-                        <button on:click={handleDebugProposeFunctionSignature} disabled={$loading} class="btn btn-secondary">
-                            Inspect propose() Function
-                        </button>
-
-                        <button on:click={handleDebugGovernanceEligibility} disabled={$loading} class="btn btn-secondary">
-                            🧪 Check Why Proposals Fail
-                        </button>
-
-                        <small style="display: block; margin-top: 0.5rem; color: #666;">
-                            ℹ️ Open browser console (F12) to see debug output
-                        </small>-->
-
-                        <hr style="margin: 1rem 0; border: 1px solid #ccc;" />
-                        <h4 style="margin-top: 0;">📋 Governance Proposals</h4>
-
-                        <button on:click={handleLoadProposals} disabled={$loading} class="btn btn-secondary">
-                            {$loading ? "Loading..." : "Load All Proposals"}
-                        </button>
-
-                        <button on:click={() => showProposalForm.set(!$showProposalForm)} disabled={$loading} class="btn btn-primary">
-                            {$showProposalForm ? "Cancel" : "Create Proposal"}
-                        </button>
                     </div>
                 </section>
-            {/if}
-
-            {#if $showProposalForm}
-                    <section style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
-                        <h3>Create New Proposal</h3>
-                        
-                        <div class="form-group">
-                            <label for="proposal-title">Title</label>
-                            <input 
-                                id="proposal-title"
-                                type="text" 
-                                bind:value={$proposalTitle}
-                                placeholder="Proposal title"
-                                disabled={$loading}
-                            />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="proposal-description">Description</label>
-                            <textarea 
-                                id="proposal-description"
-                                bind:value={$proposalDescription}
-                                placeholder="Proposal description"
-                                rows="4"
-                                disabled={$loading}
-                            ></textarea>
-                        </div>
-
-                        <div class="form-note">
-                            <small>Note: This simple form creates a proposal with no actions. For complex proposals with contract calls, use custom calldata.</small>
-                        </div>
-
-                        <button 
-                            on:click={handleCreateProposal} 
-                            disabled={$loading || !$proposalTitle.trim()} 
-                            class="btn btn-primary"
-                            style="width: 100%;"
-                        >
-                            {$loading ? "Submitting..." : "Submit Proposal"}
-                        </button>
-                    </section>
-                {/if}
-
-                {#if $proposals.length > 0}
-                    <section style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
-                        <h3>Active Proposals ({$proposals.length})</h3>
-                        
-                        {#each $proposals as proposal}
-                            <div class="proposal-card">
-                                <div class="proposal-header">
-                                    <span class="proposal-id">#{proposal.id.toString().slice(0, 8)}...</span>
-                                    <span class="proposal-state state-{proposal.proposalState}">
-                                        {['Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'][proposal.proposalState] || 'Unknown'}
-                                    </span>
-                                </div>
-                                
-                                <div class="proposal-description">
-                                    {proposal.description.split('\n\n')[0] || proposal.description.substring(0, 100)}
-                                    {#if proposal.description.length > 100}...{/if}
-                                </div>
-                                
-                                <div class="proposal-meta">
-                                    <small>
-                                        <strong>Proposer:</strong> {proposal.proposer.slice(0, 6)}...{proposal.proposer.slice(-4)}
-                                    </small>
-                                    <small>
-                                        <strong>Voting:</strong> 
-                                        For: {proposal.forVotes.toString()} | 
-                                        Against: {proposal.againstVotes.toString()} | 
-                                        Abstain: {proposal.abstainVotes.toString()}
-                                    </small>
-                                    <small>
-                                        <strong>Start:</strong> {new Date(Number(proposal.startTime) * 1000).toLocaleDateString()}
-                                    </small>
-                                    <small>
-                                        <strong>End:</strong> {new Date(Number(proposal.endTime) * 1000).toLocaleDateString()}
-                                    </small>
-                                </div>
-                                
-                                {#if proposal.proposalState === 1}
-                                    <div class="vote-buttons">
-                                        <button 
-                                            on:click={() => handleVote(proposal.id, 1)} 
-                                            disabled={$loading}
-                                            class="btn-vote btn-vote-for"
-                                        >
-                                            👍 Vote For
-                                        </button>
-                                        <button 
-                                            on:click={() => handleVote(proposal.id, 0)} 
-                                            disabled={$loading}
-                                            class="btn-vote btn-vote-against"
-                                        >
-                                            👎 Vote Against
-                                        </button>
-                                        <button 
-                                            on:click={() => handleVote(proposal.id, 2)} 
-                                            disabled={$loading}
-                                            class="btn-vote btn-vote-abstain"
-                                        >
-                                            🤷 Abstain
-                                        </button>
-                                    </div>
-                                {:else if proposal.proposalState === 0}
-                                    <div class="vote-notice">
-                                        ⏳ Voting starts on {new Date(Number(proposal.startTime) * 1000).toLocaleString()}
-                                    </div>
-                                {:else}
-                                    <div class="vote-notice">
-                                        Voting ended
-                                    </div>
-                                {/if}
-                            </div>
-                        {/each}
-                    </section>
-                {/if}
-
-            <section style="margin-top: 1rem;">
-                {#if $eoaBalance}
-                    <p><strong>EOA Balance:</strong> {$eoaBalance} ETH</p>
-                {/if}
-
-                {#if $smartAccountBalance}
-                    <p><strong>Smart Account Balance:</strong> {$smartAccountBalance} ETH</p>
-                {/if}
-            </section>
-
-            {#if $lastTxHash}
-                <section style="margin-top: 1rem;">
-                    <p>
-                        Last tx hash:
-                        <a href={`https://sepolia.etherscan.io/tx/${$lastTxHash}`} target="_blank">
-                            View on Etherscan
-                        </a>
-                    </p>
-
-                    {#if $gasCost}
-                        <p><strong>Gas cost:</strong> {$gasCost} ETH</p>
-                    {/if}
-
-                    {#if $paymasterFunds}
-                        <p><strong>Remaining Paymaster Funds:</strong> {$paymasterFunds} ETH</p>
-                    {/if}
-                </section>
-            {/if}
-
+            {/if}            
         </div>
     </div>
 
+    <div class="middle-section">
+        <h2 style="margin-top: 0;">Governance Proposals</h2>
+
+        <button on:click={handleLoadProposals} disabled={$loading} class="btn btn-secondary">
+            {$retrieving ? "Retrieving..." : "Load All Proposals"}
+        </button>
+
+        <button on:click={() => showProposalForm.set(!$showProposalForm)} disabled={$loading} class="btn btn-primary">
+            {$showProposalForm ? "Cancel" : "Create Proposal"}
+        </button>
+        {#if $showProposalForm}
+            <section class="proposal-section" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                <h3>Create New Proposal</h3>
+                
+                <div class="form-group">
+                    <label for="proposal-title">Title</label>
+                    <input 
+                        id="proposal-title"
+                        type="text" 
+                        bind:value={$proposalTitle}
+                        placeholder="Proposal title"
+                        disabled={$loading}
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="proposal-description">Description</label>
+                    <textarea 
+                        id="proposal-description"
+                        bind:value={$proposalDescription}
+                        placeholder="Proposal description"
+                        rows="4"
+                        disabled={$loading}
+                    ></textarea>
+                </div>
+
+                <div class="form-note">
+                    <small>Note: This simple form creates a proposal with no actions. For complex proposals with contract calls, use custom calldata.</small>
+                </div>
+
+                <button 
+                    on:click={handleCreateProposal} 
+                    disabled={$loading || !$proposalTitle.trim()}
+                    class="btn btn-primary"
+                    style="width: 100%;"
+                >
+                    {$loading ? "Submitting..." : "Submit Proposal"}
+                </button>
+            </section>
+        {/if}
+
+        {#if $proposals.length > 0}
+            <section class="proposal-section" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                <h3>Proposals ({$proposals.length})</h3>
+                
+                <div class="proposal-list">
+                    {#each $proposals as proposal}
+                        <div class="proposal-card">
+                            <div class="proposal-header">
+                                <span class="proposal-id">#{proposal.id.toString().slice(0, 8)}...</span>
+                                <span class="proposal-state state-{proposal.proposalState}">
+                                    {['Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'][proposal.proposalState] || 'Unknown'}
+                                </span>
+                            </div>
+                            
+                            <div class="proposal-description">
+                                {proposal.description.split('\n\n')[0] || proposal.description.substring(0, 100)}
+                                {#if proposal.description.length > 100}...{/if}
+                            </div>
+                            
+                            <div class="proposal-meta">
+                                <small>
+                                    <strong>Proposer:</strong> {proposal.proposer.slice(0, 6)}...{proposal.proposer.slice(-4)}
+                                </small>
+                                <small>
+                                    <strong>Voting:</strong> 
+                                    For: {proposal.forVotes.toString()} | 
+                                    Against: {proposal.againstVotes.toString()} | 
+                                    Abstain: {proposal.abstainVotes.toString()}
+                                </small>
+                                <small>
+                                    <strong>Start:</strong> {new Date(Number(proposal.startTime) * 1000).toLocaleDateString()}
+                                </small>
+                                <small>
+                                    <strong>End:</strong> {new Date(Number(proposal.endTime) * 1000).toLocaleDateString()}
+                                </small>
+                            </div>
+                            
+                            {#if proposal.proposalState === 1}
+                                <div class="vote-buttons">
+                                    <button 
+                                        on:click={() => handleVote(proposal.id, 1)} 
+                                        disabled={$loading}
+                                        class="btn-vote btn-vote-for"
+                                    >
+                                        👍 Vote For
+                                    </button>
+                                    <button 
+                                        on:click={() => handleVote(proposal.id, 0)} 
+                                        disabled={$loading}
+                                        class="btn-vote btn-vote-against"
+                                    >
+                                        👎 Vote Against
+                                    </button>
+                                    <button 
+                                        on:click={() => handleVote(proposal.id, 2)} 
+                                        disabled={$loading}
+                                        class="btn-vote btn-vote-abstain"
+                                    >
+                                        🤷 Abstain
+                                    </button>
+                                </div>
+                            {:else if proposal.proposalState === 0}
+                                <div class="vote-notice">
+                                    ⏳ Voting starts on {new Date(Number(proposal.startTime) * 1000).toLocaleString()}
+                                </div>
+                            {:else}
+                                <div class="vote-notice">
+                                    Voting ended
+                                </div>
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+            </section>
+        {/if}
+    </div>
+
     <div class="status-feed">
+        <button 
+            on:click={() => resetStatusFeed()} 
+            class="btn"
+        >
+            Clear
+        </button>
         {#each $statusFeed as entry}
             <div class="feed-item">{entry}</div>
         {/each}
@@ -921,9 +836,11 @@
 <style>
 .app-layout {
     display: grid;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 1fr 300px;
     gap: 20px;
     position: relative;
+    min-height: 100vh;
+    overflow: visible;
 }
 
 .top-right {
@@ -932,17 +849,17 @@
     right: 20px;
     text-align: right;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-end;
-    gap: 8px;
+    gap: 10px;
 }
 
 .connection-status {
-    font-size: 12px;
+    font-size: 14px;
     color: #555;
 }
 .connection-status span {
-    font-size: 12px;
+    font-size: 14px;
     word-break: break-all;
 }
 
@@ -968,6 +885,10 @@
     gap: 0.75rem;
 }
 
+h1 {
+    margin-top: 0;
+}
+
 .container {
     max-width: 520px;
     padding: 24px;
@@ -975,7 +896,7 @@
     background: #ffffff;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     font-family: system-ui, sans-serif;
-    margin-top: 60px;
+    margin-top: 20px;
 }
 
 .btn {
@@ -1041,6 +962,35 @@
     border-radius: 4px;
     font-size: 12px;
     color: #666;
+}
+
+.middle-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 1rem;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    font-family: system-ui, sans-serif;
+    margin-top: 60px;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.middle-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+.middle-section::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.proposal-section {
+    width: 100%;
+    max-width: 600px;
 }
 
 .proposal-card {
@@ -1214,5 +1164,48 @@ input:checked + .slider:before {
 
 .toggle-state {
     min-width: 32px;
+}
+
+.proposal-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.proposal-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.proposal-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.result-box {
+    margin-top: 20px;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    font-size: 14px;
+    max-width: 520px;
+}
+
+.result-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.result-box p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+button:disabled,
+.btn:disabled {
+    opacity: 0.75 !important;
+    cursor: not-allowed;
+    filter: brightness(0.8);
 }
 </style>

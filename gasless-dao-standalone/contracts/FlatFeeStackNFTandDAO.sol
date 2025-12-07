@@ -92,7 +92,6 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
         
         _safeMint(addr, tokenId);
         _delegate(addr, addr);
-        payMembership(tokenId);
     }
 
     function payMembership(uint256 tokenId) public payable {
@@ -106,7 +105,8 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
         membershipPayed[tokenId] = old + membershipPeriod;
         
         //send to DAO
-        payable(owner()).transfer(msg.value);
+        //(bool success,) = payable(owner()).call{value: msg.value}("");
+        //require(success, "ETH transfer to DAO failed");
         emit MembershipPayed(msg.sender, tokenId, msg.value);
     }
 
@@ -204,7 +204,8 @@ contract FlatFeeStackNFT is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pa
     }
 
     function emergencyEth() external onlyOwner {
-        payable(owner()).transfer(address(this).balance);
+        (bool success,) = payable(owner()).call{value: address(this).balance}("");
+        require(success, "ETH transfer failed");
     }
 
     function emergencyERC20(address token) external onlyOwner {
@@ -321,8 +322,6 @@ contract FlatFeeStackDAO is Governor, GovernorSettings, GovernorCountingSimple, 
         override(Governor, GovernorSettings) returns (uint256) {
         return super.votingPeriod();
     }
-
-    
 
     function quorum(uint256 timepoint) public view
         override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
