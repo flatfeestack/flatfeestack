@@ -4,6 +4,7 @@ import FlatFeeStackDAO from "../../../artifacts/contracts/FlatFeeStackNFTandDAO.
 import { DAO_CONTRACT_ADDRESS } from "../../config";
 import { sendUserOp } from "../viem/write";
 import type { AAContext } from "../aa/context";
+import { on } from "svelte/events";
 
 const DAO_ABI = FlatFeeStackDAO.abi as Abi;
 
@@ -63,5 +64,5 @@ export async function voteOnProposal(
     });
 
     log.info("Submitting vote…");
-    return sendUserOp(ctx.smartClient, DAO_CONTRACT_ADDRESS, data);
+    return sendUserOp(ctx.smartClient, DAO_CONTRACT_ADDRESS, data, 0n, log);
 }

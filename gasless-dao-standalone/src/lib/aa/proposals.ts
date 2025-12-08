@@ -34,5 +34,5 @@ export async function createProposal(
 
     log.info("Submitting proposal via smart account…");
 
-    return sendUserOp(ctx.smartClient, DAO_CONTRACT_ADDRESS, data);
+    return sendUserOp(ctx.smartClient, DAO_CONTRACT_ADDRESS, data, 0n, log);
 }

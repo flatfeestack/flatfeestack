@@ -33,6 +33,9 @@ export async function finalizeUserOp(
 
     if (!userOpHash) return;
 
+    logger?.info("UserOperation sent to bundler.");
+    logger?.info(`Waiting for transaction to be mined...`);
+
     const publicClient = ctx.public;
     const uoReceipt = await ctx.smartClient.waitForUserOperationReceipt({
         hash: userOpHash
@@ -41,10 +44,9 @@ export async function finalizeUserOp(
     const txHash = uoReceipt.receipt.transactionHash;
     setLastTxHash?.(txHash);
 
-    logger?.info(`Waiting for transaction receipt...`);
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    logger?.info(`Included in block`);
+    logger?.info?.(`Transaction mined in block ${receipt.blockNumber}.`);
 
     const gasCost = await getGasCost(txHash, publicClient);
     if (onGasCost){
@@ -57,7 +59,7 @@ export async function finalizeUserOp(
     }
 
     if (confirmations > 0) {
-        logger?.info(`Waiting for ${confirmations} confirmation(s)...`);
+        logger?.info(`Waiting for ${confirmations} confirmations...`);
         await waitForConfirmations(
             { blockNumber: receipt.blockNumber },
             confirmations,

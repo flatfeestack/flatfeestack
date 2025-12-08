@@ -51,5 +51,5 @@ export async function renewMembership(ctx: AAContext, tokenId: bigint, log: any)
         args: [tokenId]
     });
 
-    return await sendUserOp(ctx.smartClient, nft, data, fee);
+    return await sendUserOp(ctx.smartClient, nft, data, fee, log);
 }

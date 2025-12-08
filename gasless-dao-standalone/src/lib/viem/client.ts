@@ -7,7 +7,6 @@ import {
     type WalletClient,
     type Address
 } from "viem";
-
 import { sepolia } from "viem/chains";
 import { entryPoint07Address } from "viem/account-abstraction";
 import { createSmartAccountClient, type SmartAccountClient } from "permissionless";

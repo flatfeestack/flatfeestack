@@ -54,7 +54,8 @@
     });
 
     let log = createLogger((msg: string) => {
-        statusFeed.update((l) => [...l, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+        const entry = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        statusFeed.update((l) => [entry, ...l]);
     });
 
     function shortAddress(addr: string, first = 6, last = 4) {
@@ -73,10 +74,7 @@
         if (typeof window === "undefined") return;
 
         const ethereum = (window as any).ethereum;
-        if (!ethereum) {
-            log.warn("MetaMask not found — cannot auto-connect");
-            return;
-        }
+        if (!ethereum) { return; }
 
         try {
             const accounts: string[] = await ethereum.request({
@@ -161,7 +159,7 @@
         if (!c) return pushStatus("Connect first");
 
         loading.set(true);
-        pushStatus("Submitting counter increment...");
+        pushStatus("Preparing counter increment UserOp...");
 
         try {
             const data = encodeFunctionData({
@@ -169,15 +167,14 @@
                 functionName: "increment",
                 args: []
             });
-
-            const { hash, receipt } = await sendUserOp(
+            
+            const hash = await sendUserOp(
                 c.smartClient,
                 COUNTER_CONTRACT_ADDRESS,
-                data
+                data,
+                0n,
+                log
             );
-
-            //lastTxHash.set(receipt.receipt.transactionHash);
-            pushStatus("Counter increment submitted");
 
             await finalizeUserOp(hash, c, {
                 logger: log,
@@ -186,11 +183,6 @@
                 onPaymasterFunds: (h) => paymasterFunds.set(h),
                 onGasCost: (h) => gasCost.set(h)
             });
-            
-            //const paymasterDep = await getPaymasterDeposit(c.public);
-            //paymasterFunds.set(c.public.formatEther ? c.public.formatEther(paymasterDep) : String(paymasterDep));
-
-            //await loadBalances();
         } catch (err) {
             log.error("Increment counter error", err);
         } finally {
@@ -224,7 +216,7 @@
         if (!c) return pushStatus("Connect first");
 
         loading.set(true);
-        pushStatus("Preparing proposal...");
+        pushStatus("Preparing proposal create...");
 
         try {
             const calldata = encodeFunctionData({
@@ -240,7 +232,7 @@
                 description: `${get(proposalTitle)}: ${get(proposalDescription)}`
             };
 
-            const { hash, receipt } = await createProposal(c, proposal, log);
+            const hash = await createProposal(c, proposal, log);
 
             await finalizeUserOp(hash, c, {
                 logger: log,
@@ -250,9 +242,6 @@
                 onGasCost: (h) => gasCost.set(h)
             });
 
-            //lastTxHash.set(receipt.receipt.transactionHash);
-
-            pushStatus("Proposal submitted");
             showProposalForm.set(false);
             proposalTitle.set("");
             proposalDescription.set("");
@@ -295,8 +284,10 @@
         if (!tokenId || !c) return pushStatus("Select a token");
 
         loading.set(true);
+        pushStatus("Preparing renew membership...");
+
         try {
-            const { hash, receipt } = await renewMembership(c, BigInt(tokenId), log);
+            const hash = await renewMembership(c, BigInt(tokenId), log);
 
             await finalizeUserOp(hash, c, {
                 logger: log,
@@ -320,9 +311,10 @@
         if (!c) return pushStatus("Connect first");
 
         loading.set(true);
+        pushStatus("Preparing vote...");
 
         try {
-            const { hash, receipt } = await voteOnProposal(c, id, support, log);
+            const hash = await voteOnProposal(c, id, support, log);
 
             await finalizeUserOp(hash, c, {
                 logger: log,
@@ -432,6 +424,10 @@
 </script>
 
 <div class="app-layout">
+    <div class="top-left">
+        <h1>Paymaster DAO</h1>
+    </div>
+
     <div class="top-right">
         {#if !$eoa}
             <button on:click={handleConnect} disabled={$loading} class="btn btn-secondary">
@@ -449,10 +445,10 @@
         {/if}
     </div>
 
-    <div class="container">
-        <h1>Paymaster DAO</h1>
+    <div>
+        <div class="container">
+            <h2>Membership</h2>
 
-        <div class="controls">
             {#if $ctx}
                 <section style="margin-top: 1rem;">
                     <p>
@@ -482,10 +478,6 @@
                     <div class="button-column">
                         <button on:click={handleCheckIsDAOMember} disabled={$loading} class="btn btn-primary">
                             Check Is DAO Member
-                        </button>
-
-                        <button on:click={handleIncrementCounter} disabled={$loading} class="btn btn-primary">
-                            [TEST] Increment Counter
                         </button>
 
                         <button on:click={handleLoadMembershipTokens} disabled={$loading} class="btn btn-primary">
@@ -560,6 +552,10 @@
                             <button on:click={handleSetVotingDelay} disabled={$loading} class="btn btn-secondary" style="background: #ff9800;">
                                 Set 1-Minute Voting Delay (Councils)
                             </button>
+
+                            <button on:click={handleIncrementCounter} disabled={$loading} class="btn btn-secondary" style="background: #ff9800;">
+                                [TEST] Increment Counter
+                            </button>
                         {/if}
                     </div>
                 </section>
@@ -568,15 +564,17 @@
     </div>
 
     <div class="middle-section">
-        <h2 style="margin-top: 0;">Governance Proposals</h2>
+        <h2>Proposals</h2>
 
-        <button on:click={handleLoadProposals} disabled={$loading} class="btn btn-secondary">
-            {$retrieving ? "Retrieving..." : "Load All Proposals"}
-        </button>
+        <div class="button-column">
+            <button on:click={handleLoadProposals} disabled={$loading} class="btn btn-secondary">
+                {$retrieving ? "Retrieving..." : "Load All Proposals"}
+            </button>
 
-        <button on:click={() => showProposalForm.set(!$showProposalForm)} disabled={$loading} class="btn btn-primary">
-            {$showProposalForm ? "Cancel" : "Create Proposal"}
-        </button>
+            <button on:click={() => showProposalForm.set(!$showProposalForm)} disabled={$loading} class="btn btn-primary">
+                {$showProposalForm ? "Cancel" : "Create Proposal"}
+            </button>
+        </div>
         {#if $showProposalForm}
             <section class="proposal-section" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
                 <h3>Create New Proposal</h3>
@@ -711,47 +709,115 @@
 <style>
 .app-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr 300px;
+    grid-template-columns: 1fr 1fr 400px;
     gap: 20px;
     position: relative;
-    min-height: 100vh;
+    min-height: 95vh;
     overflow: visible;
+    font-family: system-ui, sans-serif;
 }
 
 .top-right {
     position: absolute;
-    top: 20px;
+    top: 10px;
     right: 20px;
     text-align: right;
     display: flex;
     flex-direction: row;
     align-items: flex-end;
     gap: 10px;
+    margin-bottom: 12px;
 }
 
-.connection-status {
-    font-size: 14px;
-    color: #555;
-}
-.connection-status span {
-    font-size: 14px;
-    word-break: break-all;
+.top-left {
+    position: absolute;
+    top: 12px;
+    left: 20px;
 }
 
+h1, h2, h3, h4 {
+    margin-top: 0;
+}
+
+.container,
+.middle-section,
+.status-feed,
+.result-box {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.container,
+.middle-section,
 .status-feed {
-    margin-top: 80px;
-    height: calc(100vh - 120px);
-    overflow-y: auto;
-    padding: 12px;
-    border-left: 1px solid #ddd;
-    background: #fafafa;
-    font-size: 14px;
+    margin-top: 56px;
 }
 
-.feed-item {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-    word-break: break-word;
+.container {
+    max-width: 520px;
+    padding: 24px;
+}
+
+.middle-section {
+    display: flex;
+    flex-direction: column;
+    padding-right: 8px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.result-box {
+    margin-top: 20px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    font-size: 14px;
+    max-width: 520px;
+}
+
+.result-box h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.result-box p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+button,
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.15s, opacity 0.2s;
+}
+
+button:disabled,
+.btn:disabled {
+    opacity: 0.75 !important;
+    cursor: not-allowed;
+    filter: brightness(0.8);
+}
+
+.btn-primary {
+    background: #4caf50;
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-vote-for:hover:not(:disabled) {
+    background: #419445;
+}
+
+.btn-secondary {
+    background: #444;
+    color: #fff;
 }
 
 .button-column {
@@ -760,41 +826,38 @@
     gap: 0.75rem;
 }
 
-h1 {
-    margin-top: 0;
-}
-
-.container {
-    max-width: 520px;
-    padding: 24px;
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-    font-family: system-ui, sans-serif;
-    margin-top: 20px;
-}
-
-.btn {
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
+.connection-status {
     font-size: 14px;
-    font-weight: 600;
+    color: #555;
 }
 
-.btn-primary {
-    background: #4caf50;
-    color: white;
+.connection-status span {
+    font-size: 14px;
+    word-break: break-all;
 }
 
-.btn-secondary {
-    background: #444;
-    color: white;
+.middle-section::-webkit-scrollbar,
+.proposal-list::-webkit-scrollbar {
+    width: 8px;
 }
 
-.btn-primary:hover {
-    background: #419445;
+.middle-section::-webkit-scrollbar-thumb,
+.proposal-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.status-feed {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.feed-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    word-break: break-word;
+    font-size: 18px;
 }
 
 .form-group {
@@ -809,7 +872,8 @@ h1 {
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+select {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ddd;
@@ -839,33 +903,18 @@ h1 {
     color: #666;
 }
 
-.middle-section {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    margin-top: 1rem;
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-    font-family: system-ui, sans-serif;
-    margin-top: 60px;
-    max-height: 100vh;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.middle-section::-webkit-scrollbar {
-    width: 8px;
-}
-
-.middle-section::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-}
-
 .proposal-section {
     width: 100%;
     max-width: 600px;
+    margin-top: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+.proposal-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
 }
 
 .proposal-card {
@@ -897,14 +946,14 @@ h1 {
     text-transform: uppercase;
 }
 
-.state-0 { background: #ffc107; color: #000; } /* Pending */
-.state-1 { background: #2196f3; color: #fff; } /* Active */
-.state-2 { background: #9e9e9e; color: #fff; } /* Canceled */
-.state-3 { background: #f44336; color: #fff; } /* Defeated */
-.state-4 { background: #4caf50; color: #fff; } /* Succeeded */
-.state-5 { background: #ff9800; color: #fff; } /* Queued */
-.state-6 { background: #757575; color: #fff; } /* Expired */
-.state-7 { background: #8bc34a; color: #fff; } /* Executed */
+.state-0 { background: #ffc107; color: #000; }
+.state-1 { background: #2196f3; color: #fff; }
+.state-2 { background: #9e9e9e; color: #fff; }
+.state-3 { background: #f44336; color: #fff; }
+.state-4 { background: #4caf50; color: #fff; }
+.state-5 { background: #ff9800; color: #fff; }
+.state-6 { background: #757575; color: #fff; }
+.state-7 { background: #8bc34a; color: #fff; }
 
 .proposal-description {
     margin-bottom: 8px;
@@ -921,10 +970,6 @@ h1 {
     color: #666;
     border-top: 1px solid #e0e0e0;
     padding-top: 8px;
-}
-
-.proposal-meta small {
-    display: block;
 }
 
 .vote-buttons {
@@ -953,16 +998,12 @@ h1 {
 
 .btn-vote-for {
     background: #4caf50;
-    color: white;
-}
-
-.btn-vote-for:hover:not(:disabled) {
-    background: #419445;
+    color: #fff;
 }
 
 .btn-vote-against {
     background: #f44336;
-    color: white;
+    color: #fff;
 }
 
 .btn-vote-against:hover:not(:disabled) {
@@ -971,7 +1012,7 @@ h1 {
 
 .btn-vote-abstain {
     background: #9e9e9e;
-    color: white;
+    color: #fff;
 }
 
 .btn-vote-abstain:hover:not(:disabled) {
@@ -989,6 +1030,8 @@ h1 {
     color: #856404;
 }
 
+/* ============= Toggle Switch ============= */
+
 .switch {
     position: relative;
     display: inline-block;
@@ -996,29 +1039,24 @@ h1 {
     height: 24px;
 }
 
-/* Hide HTML checkbox */
 .switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
 
-/* The slider UI */
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-color: #aaa;
     transition: 0.2s;
     border-radius: 24px;
 }
 
 .slider:before {
-    position: absolute;
     content: "";
+    position: absolute;
     height: 18px;
     width: 18px;
     left: 3px;
@@ -1028,9 +1066,8 @@ h1 {
     border-radius: 50%;
 }
 
-/* Checked state */
 input:checked + .slider {
-    background-color: #4CAF50;
+    background-color: #4caf50;
 }
 
 input:checked + .slider:before {
@@ -1041,46 +1078,4 @@ input:checked + .slider:before {
     min-width: 32px;
 }
 
-.proposal-list {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.proposal-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.proposal-list::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-}
-
-.result-box {
-    margin-top: 20px;
-    padding: 16px;
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    font-size: 14px;
-    max-width: 520px;
-}
-
-.result-box h3 {
-    margin: 0 0 10px 0;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.result-box p {
-    margin: 8px 0;
-    line-height: 1.4;
-}
-
-button:disabled,
-.btn:disabled {
-    opacity: 0.75 !important;
-    cursor: not-allowed;
-    filter: brightness(0.8);
-}
 </style>
