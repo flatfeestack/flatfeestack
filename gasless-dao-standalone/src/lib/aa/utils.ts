@@ -1,4 +1,5 @@
 import type { Abi, Address } from "viem";
+import { formatEther } from "viem";
 import type { AAContext } from "./context";
 import { readContract } from "../viem/read";
 
@@ -22,36 +23,34 @@ export async function getDaoTokenAddress(ctx: AAContext): Promise<Address> {
 
 export async function ensureSmartAccountHasFunds(
     ctx: AAContext,
-    requiredAmount: bigint,
+    amount: bigint,
     log?: any
 ) {
-    const saAddr = ctx.smartAccount;
+    const sa = ctx.smartAccount;
     const publicClient = ctx.public;
+    const walletClient = ctx.wallet;
 
-    const currentBalance = await publicClient.getBalance({ address: saAddr });
+    // check current SA balance
+    const balance = await publicClient.getBalance({ address: sa });
 
-    if (currentBalance >= requiredAmount) {
-        log?.info?.(
-            `Smart account already has sufficient ETH (${publicClient.formatEther?.(currentBalance) ?? currentBalance} ETH)`
-        );
+    if (balance >= amount) {
         return;
     }
 
-    const lacking = requiredAmount - currentBalance;
-
+    // compute missing amount
+    const needed = amount - balance;
     log?.info?.(
-        `Smart account is missing ${publicClient.formatEther?.(lacking) ?? lacking} ETH, sending from EOA...`
+        `Smart Account needs ${formatEther(needed)} ETH. Sending from EOA...`
     );
 
-    // EOA sends ETH directly to the smart account
-    const txHash = await ctx.wallet.sendTransaction({
-        to: saAddr,
-        value: lacking
+    // EOA funds the Smart Account
+    const txHash = await walletClient.sendTransaction({
+        to: sa,
+        value: needed
     });
 
+    log?.info?.(`Waiting for deposit tx`);
     await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    log?.info?.(
-        `Sent ${publicClient.formatEther?.(lacking) ?? lacking} ETH → Smart Account`
-    );
+    log?.info?.(`✓ Smart Account funded with ${formatEther(needed)} ETH`);
 }

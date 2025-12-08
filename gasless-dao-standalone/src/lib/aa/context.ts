@@ -31,6 +31,7 @@ export async function createAAContext(eoa: Address, log = createLogger()) {
     };
 
     log.info(`Membership: ${ctx.isMember}`);
+    console.log("SA: " + smartAccountAddress);
 
     return ctx;
 }

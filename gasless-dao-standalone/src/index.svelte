@@ -6,12 +6,15 @@
     import { listMembershipTokens, renewMembership } from "./lib/aa/membership";
     import { createProposal } from "./lib/aa/proposals";
     import { voteOnProposal, loadAllProposals } from "./lib/dao/index";
-    import { getPaymasterDeposit, isMember } from "./lib/aa/paymaster";
+    import { isMember } from "./lib/aa/paymaster";
     import { sendUserOp } from "./lib/viem/write";
     import { finalizeUserOp } from "./lib/aaClient";
-    import { COUNTER_CONTRACT_ADDRESS, NFT_COUNCIL_1, NFT_COUNCIL_2 } from "./config";
+    import { COUNTER_CONTRACT_ADDRESS, DAO_CONTRACT_ADDRESS, NFT_COUNCIL_1, NFT_COUNCIL_2 } from "./config";
     import { executeVotingDelay, prepareVotingDelaySignature, executeMint, prepareMintSignature } from "./lib/dao/council";
-    import { encodeFunctionData, formatEther } from "viem";
+    import { encodeFunctionData, formatEther, type Abi } from "viem";
+    import FlatFeeStackDAO from "../artifacts/contracts/FlatFeeStackNFTandDAO.sol/FlatFeeStackDAO.json";
+
+    const DAO_ABI = FlatFeeStackDAO.abi as Abi;
 
     const COUNTER_ABI = [
         { name: "increment", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] }
@@ -224,15 +227,30 @@
         pushStatus("Preparing proposal...");
 
         try {
+            const calldata = encodeFunctionData({
+                abi: DAO_ABI,
+                functionName: "setNewBylawsHash",
+                args: [Date.now()]
+            });
+
             const proposal = {
-                targets: [c.smartAccount],
+                targets: [DAO_CONTRACT_ADDRESS],
                 values: [0n],
-                calldatas: ["0x"],
-                description: `${get(proposalTitle)}\n\n${get(proposalDescription)}`
+                calldatas: [calldata],
+                description: `${get(proposalTitle)}: ${get(proposalDescription)}`
             };
 
-            const { receipt } = await createProposal(c, proposal, log);
-            lastTxHash.set(receipt.receipt.transactionHash);
+            const { hash, receipt } = await createProposal(c, proposal, log);
+
+            await finalizeUserOp(hash, c, {
+                logger: log,
+                setLastTxHash: (h) => lastTxHash.set(h),
+                onBalancesUpdated: loadBalances,
+                onPaymasterFunds: (h) => paymasterFunds.set(h),
+                onGasCost: (h) => gasCost.set(h)
+            });
+
+            //lastTxHash.set(receipt.receipt.transactionHash);
 
             pushStatus("Proposal submitted");
             showProposalForm.set(false);
@@ -278,7 +296,16 @@
 
         loading.set(true);
         try {
-            await renewMembership(c, BigInt(tokenId), log);
+            const { hash, receipt } = await renewMembership(c, BigInt(tokenId), log);
+
+            await finalizeUserOp(hash, c, {
+                logger: log,
+                setLastTxHash: (h) => lastTxHash.set(h),
+                onBalancesUpdated: loadBalances,
+                onPaymasterFunds: (h) => paymasterFunds.set(h),
+                onGasCost: (h) => gasCost.set(h)
+            });
+
             pushStatus("Membership renewed");
             await handleLoadMembershipTokens();
         } catch (err) {
@@ -293,10 +320,18 @@
         if (!c) return pushStatus("Connect first");
 
         loading.set(true);
-        pushStatus("Submitting vote...");
 
         try {
-            await voteOnProposal(c, id, support, log);
+            const { hash, receipt } = await voteOnProposal(c, id, support, log);
+
+            await finalizeUserOp(hash, c, {
+                logger: log,
+                setLastTxHash: (h) => lastTxHash.set(h),
+                onBalancesUpdated: loadBalances,
+                onPaymasterFunds: (h) => paymasterFunds.set(h),
+                onGasCost: (h) => gasCost.set(h)
+            });
+
             pushStatus("Vote submitted");
             await handleLoadProposals();
         } catch (err) {
@@ -378,12 +413,9 @@
                 const sig2 = sessionStorage.getItem("debug_mint_sig2") as `0x${string}`;
                 if (!sig2) throw new Error("Missing council2 signature!");
 
-                const sig1 = await (window as any).ethereum.request({
-                    method: "personal_sign",
-                    params: [/* same payloadHash */, c.eoa]
-                });
-
-                await executeMint(c, newMember, tokenId, sig1, sig2, log);
+                const { signature } = await prepareMintSignature(c, newMember, tokenId);
+                
+                await executeMint(c, newMember, tokenId, signature, sig2, log);
 
                 pushStatus("Membership minted!");
                 sessionStorage.removeItem("debug_mint_sig2");

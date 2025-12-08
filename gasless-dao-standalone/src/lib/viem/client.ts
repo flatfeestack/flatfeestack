@@ -77,7 +77,16 @@ export async function createClientBundle(eoa: Address, usePaymaster: boolean): P
     const undeployed = !saCode || saCode === "0x";
 
     if (undeployed) {
-        const hash = await smartClient.sendUserOperation({ calls: [] });
+        const hash = await smartClient.sendUserOperation({ 
+            calls: [
+                {
+                    to: eoa,
+                    value: 0n,
+                    data: "0x"
+                }
+            ]
+        });
+
         await smartClient.waitForUserOperationReceipt({ hash });
     }
 

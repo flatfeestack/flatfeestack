@@ -31,8 +31,9 @@ export async function finalizeUserOp(
         onGasCost
     } = opts;
 
-    const publicClient = ctx.public;
+    if (!userOpHash) return;
 
+    const publicClient = ctx.public;
     const uoReceipt = await ctx.smartClient.waitForUserOperationReceipt({
         hash: userOpHash
     });
@@ -115,6 +116,7 @@ export async function waitForConfirmations(
 
     const block = await publicClient.getBlockNumber();
     confirmations = Number(block - receipt.blockNumber);
+    if (confirmations == 0) continue;
 
     if (lastUpdatedConfirmation < 0 || lastUpdatedConfirmation < confirmations){
       onUpdate(`Confirmations: ${confirmations}/${confirmationsRequired}`);

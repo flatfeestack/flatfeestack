@@ -1,8 +1,9 @@
 import type { Address, Abi } from "viem";
-import { encodeFunctionData } from "viem";
+import { encodeFunctionData, formatEther } from "viem";
 import { readContract } from "../viem/read";
+import { sendUserOp } from "../viem/write";
 import FlatFeeStackNFT from "../../../artifacts/contracts/FlatFeeStackNFTandDAO.sol/FlatFeeStackNFT.json";
-import { getDaoTokenAddress } from "./utils";
+import { getDaoTokenAddress, ensureSmartAccountHasFunds } from "./utils";
 import type { AAContext } from "./context";
 
 const NFT_ABI = FlatFeeStackNFT.abi as Abi;
@@ -39,6 +40,10 @@ export async function listMembershipTokens(ctx: AAContext, owner: Address) {
 export async function renewMembership(ctx: AAContext, tokenId: bigint, log: any) {
     const nft = await getDaoTokenAddress(ctx);
     const fee = await readContract<bigint>(ctx.public, nft, NFT_ABI, "membershipFee");
+    
+    log?.info(`Membership fee: ${formatEther(fee)} ETH`);
+
+    await ensureSmartAccountHasFunds(ctx, fee, log);
 
     const data = encodeFunctionData({
         abi: NFT_ABI,
@@ -46,12 +51,5 @@ export async function renewMembership(ctx: AAContext, tokenId: bigint, log: any)
         args: [tokenId]
     });
 
-    const { hash, receipt } = await ctx.smartClient.sendUserOperation({
-        calls: [{ to: nft, data, value: fee }]
-    });
-
-    await ctx.smartClient.waitForUserOperationReceipt({ hash });
-
-    log.info("Membership renewed.");
-    return receipt;
+    return await sendUserOp(ctx.smartClient, nft, data, fee);
 }
