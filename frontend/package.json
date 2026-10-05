@@ -17,7 +17,7 @@
     "viem": "^2.38.2"
   },
   "devDependencies": {
-    "preveltekit":"^1.2.22",
+    "preveltekit":"^1.2.25",
     "typescript": "^5.9.3"
   }
 }
